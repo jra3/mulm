@@ -1,0 +1,37 @@
+{
+  "name": "mulm",
+  "version": "1.0.0",
+  "description": "a Breeder Awards Program management platform",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon --exec ts-node src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jra3/mulm.git"
+  },
+  "author": "John Allen",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jra3/mulm/issues"
+  },
+  "homepage": "https://github.com/jra3/mulm#readme",
+  "dependencies": {
+    "koa": "^2.16.0",
+    "koa-router": "^13.0.1",
+    "koa-views": "^8.1.0",
+    "pug": "^3.0.3"
+  },
+  "devDependencies": {
+    "@types/koa": "^2.15.0",
+    "@types/koa-router": "^7.4.8",
+    "@types/koa-views": "^2.0.4",
+    "@types/pug": "^2.0.10",
+    "nodemon": "^2.0.22",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.2"
+  },
+  "keywords": []
+}

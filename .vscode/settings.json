@@ -1,0 +1,88 @@
+{
+	"[diff]": {
+		"files.insertFinalNewline": false,
+		"files.trimTrailingWhitespace": false,
+	},
+    "[git-commit]": {
+		"editor.insertSpaces": true,
+		"editor.tabSize": 2,
+		// Default is to have 2 rulers, one for the title (50) and one for the body (72), which is
+		// obviously insane.
+		"editor.rulers": [
+			{ "column": 72 },
+		],
+	},
+	"[json]": {
+		// We have a lot of these that are generated but sometimes we tinker with them by hand and
+		// we don't want VS Code messing with the line endings.
+		"files.insertFinalNewline": false,
+	},
+	"[javascript]": { "editor.defaultFormatter": "dbaeumer.vscode-eslint" },
+	"[typescript]": { "editor.defaultFormatter": "dbaeumer.vscode-eslint" },
+	"editor.codeActionsOnSave": {
+		"source.fixAll.eslint": "explicit"
+	},
+	"editor.rulers": [
+		// Comments wrap to 100
+		{ "column": 100, "color": "transparent" },
+		// Visual indicator at 120 columns
+		{ "column": 120 },
+	],
+	"editor.tabSize": 4,
+	"editor.trimAutoWhitespace": true,
+	"eslint.execArgv": [
+		"--max_old_space_size=8192",
+	],
+	"eslint.codeActionsOnSave.rules": [
+		// This can change the semantic meaning of a condition without consulting the developer
+		// first.
+		"!@typescript-eslint/no-unnecessary-condition",
+		"!@typescript-eslint/no-unnecessary-type-assertion",
+		"!@typescript-eslint/prefer-readonly",
+		"!prefer-const",
+		"*",
+	],
+	"eslint.experimental.useFlatConfig": true,
+	"eslint.format.enable": true,
+	"eslint.lintTask.enable": true,
+	"eslint.lintTask.options": "packages --cache",
+	"eslint.rules.customizations": [ {
+		"rule": "@stylistic/eol-last",
+		"severity": "off",
+	}, {
+		"rule": "@stylistic/no-trailing-spaces",
+		"severity": "off",
+	} ],
+	"eslint.useESLintClass": true,
+	"eslint.validate": [
+		"javascript",
+		"javascriptreact",
+		"typescriptreact",
+	],
+	"files.associations": {
+		".browserslistrc": "ini",
+	},
+	"files.exclude": {
+		"**/cdk.out": true,
+		"**/dist": true,
+		"**/node_modules": true,
+		"**/*.tsbuildinfo": true,
+		".pnpm": true,
+	},
+	"files.insertFinalNewline": true,
+	"files.trimTrailingWhitespace": true,
+	"search.exclude": {
+		"**/__generated__": true,
+		"packages/api-server/server-query-ids.json": true,
+		"pnpm-lock.yaml": true,
+	},
+	"shellcheck.customArgs": [ "-e", "SC1091,SC2016", "-x" ],
+	"stylelint.validate": [
+		"css",
+		"postcss",
+	],
+	"task.allowAutomaticTasks": "on",
+	"typescript.enablePromptUseWorkspaceTsdk": true,
+	"typescript.preferences.quoteStyle": "double",
+	"typescript.tsdk": "./node_modules/typescript/lib",
+}

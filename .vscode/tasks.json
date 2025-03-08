@@ -1,0 +1,93 @@
+{
+	"version": "1.0.0",
+	"tasks": [ {
+		"label": "TypeScript",
+		"group": "build",
+		"command": "npx",
+		"args": [ "tsc", "--build", "--watch" ],
+		"problemMatcher": "$tsc-watch",
+		"isBackground": true,
+		"presentation": {
+			"panel": "dedicated",
+		},
+		"icon": { "id": "zap" },
+	}, {
+		"label": "Koa",
+		"group": "build",
+		"command": "npm",
+		"args": [ "start" ],
+		"options": {
+			"cwd": "${workspaceFolder}/server",
+			"env": {
+				"VSCODE": "yes",
+			},
+		},
+		"isBackground": true,
+		"presentation": {
+			"panel": "dedicated",
+		},
+		"icon": { "id": "globe" },
+		"problemMatcher": [ {
+			"applyTo": "closedDocuments",
+			"fileLocation": "absolute",
+			"owner": "eslint",
+			"source": "eslint",
+			"pattern": {
+				"regexp": "([^ ]+): line (\\d+), col (\\d+), (Error|Warning) - (.*?) \\(([^ ]+)\\)",
+				"file": 1,
+				"line": 2,
+				"column": 3,
+				"severity": 4,
+				"message": 5,
+				"code": 6,
+			},
+			"background": {
+				"activeOnStart": true,
+				"beginsPattern": {
+					"regexp": "WebPack compilation starting.",
+				},
+				"endsPattern": {
+					"regexp": "\\(webpack[^)]+\\) compiled",
+				}
+			},
+		}, {
+			"applyTo": "closedDocuments",
+			"fileLocation": "absolute",
+			"owner": "Stylelint",
+			"source": "Stylelint",
+			"pattern": {
+				// This is the same as the eslint matcher, except "error|warning" is lower case. Lucky us!
+				"regexp": "([^ ]+): line (\\d+), col (\\d+), (error|warning) - (.*?) \\(([^ ]+)\\)",
+				"file": 1,
+				"line": 2,
+				"column": 3,
+				"severity": 4,
+				"message": 5,
+				"code": 6,
+			},
+			"background": {
+				"activeOnStart": true,
+				"beginsPattern": {
+					"regexp": "WebPack compilation starting",
+				},
+				"endsPattern": {
+					"regexp": "\\(webpack[^)]+\\) compiled",
+				}
+			},
+		} ],
+	}, {
+		"type": "eslint",
+		"label": "Lint TypeScript & JavaScript",
+		"icon": {
+			"id": "light-bulb"
+		},
+		"problemMatcher": [
+			"$eslint-stylish"
+		],
+		"presentation": {
+			"close": true,
+			"reveal": "silent",
+			"revealProblems": "onProblem",
+		}
+	} ],
+}
