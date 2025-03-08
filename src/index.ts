@@ -16,6 +16,10 @@ router.get('/', async (ctx) => {
   await ctx.render('index', { title: 'Home Page', message: 'Welcome to Koa with Pug!' });
 });
 
+router.get('/clicked', async (ctx) => {
+  ctx.body = "Clicked";
+});
+
 app.use(router.routes()).use(router.allowedMethods());
 
 const PORT = process.env.PORT || 4200;

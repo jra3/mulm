@@ -2,6 +2,9 @@ doctype html
 html
   head
     title= title
+    script(src='https://unpkg.com/htmx.org@2.0.4')
+
   body
     h1= message
     a(href='/about') About
+    button(hx-get='/clicked', hx-swap='innerHtml') Click me

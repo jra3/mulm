@@ -24,7 +24,8 @@
     "koa": "^2.16.0",
     "koa-router": "^13.0.1",
     "koa-views": "^8.1.0",
-    "pug": "^3.0.3"
+    "pug": "^3.0.3",
+    "sqlite3": "^5.1.7"
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",
