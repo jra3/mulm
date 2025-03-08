@@ -13,7 +13,7 @@ app.use(
   );
 
 router.get('/', async (ctx) => {
-    await ctx.render('index', { title: 'Home Page', message: 'Welcome to Koa with Pug!' });
+  await ctx.render('index', { title: 'Home Page', message: 'Welcome to Koa with Pug!' });
 });
 
 app.use(router.routes()).use(router.allowedMethods());
