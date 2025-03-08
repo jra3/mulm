@@ -2,6 +2,7 @@ import Koa from 'koa';
 import Router from 'koa-router';
 import views from 'koa-views';
 import path from 'path';
+import { getReadDBConnecton } from "./db";
 
 const app = new Koa();
 const router = new Router();
@@ -17,6 +18,14 @@ router.get('/', async (ctx) => {
 });
 
 router.get('/clicked', async (ctx) => {
+  const db = getReadDBConnecton();
+  db.all('SELECT * FROM submissions', (err, rows) => {
+    if (err) {
+      console.error(err.message);
+    } else {
+      console.log(rows);
+    }
+  });
   ctx.body = "Clicked";
 });
 
