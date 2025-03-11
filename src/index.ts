@@ -1,22 +1,23 @@
 import Koa from 'koa';
 import Router from 'koa-router';
 import views from 'koa-views';
+import serve from 'koa-static';
 import path from 'path';
 import bodyParser from 'koa-bodyparser';
 import { getMembersList, MemberDetails } from "./data";
 import { addSubmission, approveSubmission, getOutstandingSubmissions } from "./db/submissions";
+import { z } from "zod";
 
 const app = new Koa();
+app.use(bodyParser());
+app.use(serve(path.join(__dirname, '..', 'public')));
+app.use(
+  views(path.join(__dirname, 'views'), {
+    extension: 'pug',
+  })
+);
 
 const router = new Router();
-
-app.use(bodyParser());
-
-app.use(
-    views(path.join(__dirname, 'views'), {
-      extension: 'pug',
-    })
-  );
 
 router.get('/', async (ctx) => {
   await ctx.render('index', { title: 'Home Page', message: 'Welcome to BAS!' });
@@ -33,9 +34,7 @@ router.get('/admin/bap/queue', async (ctx) => {
 
 router.post('/admin/bap/approve', async (ctx) => {
   const { id, points, approvedBy } = ctx.request.body as {id?: number, points?: number, approvedBy?: string };
-
   console.log(id, points, approvedBy);
-
   if (!id || !points || !approvedBy) {
     ctx.status = 400;
     ctx.body = "Invalid input";

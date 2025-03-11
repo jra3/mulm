@@ -3,11 +3,10 @@ html
   head
     title= title
     script(src='https://unpkg.com/htmx.org@2.0.4')
+    link(rel='stylesheet', href='/index.css')
 
-  body
-    h1= message
-    a(href='/bap/submit') New Submission
-
-    button(
-      hx-get="clicked"
-    ) Click Me
+  body.flex.items-center.justify-center
+    .flex-col
+      h1.m-4= message
+      a.m-2(href='/bap/submit') New Submission
+      button(hx-get="clicked") Click Me

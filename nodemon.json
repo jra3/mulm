@@ -1,0 +1,5 @@
+{
+    "watch": ["src", "public"],
+    "ext": "ts,css,json,pug",
+    "exec": "npm run postcss && ts-node src/index.ts"
+}
