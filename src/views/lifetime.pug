@@ -1,0 +1,22 @@
+doctype html
+
+html
+  head
+    title= title
+    script(src='https://unpkg.com/htmx.org@2.0.4')
+
+  body
+    h1= title
+
+    table
+      tr
+        td Member Name
+        td Total Points
+      each levelName in levelsOrder
+        tr
+          td(colspan="2")=levelName
+
+        each member in levels.get(levelName)
+          tr
+            td=member.memberName
+            td=member.totalPoints

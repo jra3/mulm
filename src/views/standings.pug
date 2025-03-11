@@ -1,0 +1,18 @@
+doctype html
+
+html
+  head
+    title= title
+    script(src='https://unpkg.com/htmx.org@2.0.4')
+
+  body
+    h1= title
+    table
+      tr
+        th Member Name
+        th Points
+
+      each member in standings
+        tr
+          td=member[0]
+          td=member[1]

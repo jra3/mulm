@@ -6,5 +6,8 @@ html
 
   body
     h1= message
-    a(href='/about') About
-    button(hx-get='/clicked', hx-swap='innerHtml') Click me
+    a(href='/bap/submit') New Submission
+
+    button(
+      hx-get="clicked"
+    ) Click Me

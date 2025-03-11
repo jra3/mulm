@@ -1,0 +1,28 @@
+doctype html
+html
+    head
+        title= title
+        script(src='https://unpkg.com/htmx.org@2.0.4')
+        style(src='./output.css')
+
+    body(class="bg-gray-200")
+        h1 New BAP Submission
+
+    <form hx-post="/bap/submit" hx-target="#response" hx-swap="innerHTML">
+        form
+
+            label Member Name
+            input(
+                name="memberName",
+                type="text",
+                placeholder="Member Name", class="border-2 border-gray-300 p-2 m-2")
+
+            label Common Name
+            input(
+                name="speciesCommonName",
+                type="text",
+                placeholder="Species Name", class="border-2 border-gray-300 p-2 m-2")
+
+            button(type="submit") Submit
+
+        div(id="response")
