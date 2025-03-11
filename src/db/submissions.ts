@@ -45,4 +45,15 @@ export function getAllSubmissions() {
     return query<Submission>("SELECT * FROM submissions");
 }
 
-//console.log(getOutstandingSubmissions())
+export function approveSubmission(id: number, points: number, approvedBy: string) {
+    try {
+        const conn = getWriteDBConnecton();
+        const stmt = conn.prepare(`UPDATE submissions SET points = ?, approved_by = ?, date_approved = ? WHERE id = ?`);
+        stmt.run(points, approvedBy, new Date().toISOString(), id);
+        conn.close();
+    } catch (err) {
+        console.error(err);
+        throw new Error("Failed to update submission");
+    }
+}
+

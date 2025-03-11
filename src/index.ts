@@ -2,10 +2,9 @@ import Koa from 'koa';
 import Router from 'koa-router';
 import views from 'koa-views';
 import path from 'path';
-import { getWriteDBConnecton } from "./db/conn";
 import bodyParser from 'koa-bodyparser';
 import { getMembersList, MemberDetails } from "./data";
-import { addSubmission } from "./db/submissions";
+import { addSubmission, approveSubmission, getOutstandingSubmissions } from "./db/submissions";
 
 const app = new Koa();
 
@@ -21,6 +20,30 @@ app.use(
 
 router.get('/', async (ctx) => {
   await ctx.render('index', { title: 'Home Page', message: 'Welcome to BAS!' });
+});
+
+router.get('/admin/bap/queue', async (ctx) => {
+  const submissions = getOutstandingSubmissions();
+  // check for auth
+  await ctx.render('queue', {
+    title: 'BAP Submission Queue',
+    submissions,
+  });
+})
+
+router.post('/admin/bap/approve', async (ctx) => {
+  const { id, points, approvedBy } = ctx.request.body as {id?: number, points?: number, approvedBy?: string };
+
+  console.log(id, points, approvedBy);
+
+  if (!id || !points || !approvedBy) {
+    ctx.status = 400;
+    ctx.body = "Invalid input";
+    return;
+  }
+
+  approveSubmission(id, points, approvedBy);
+
 });
 
 router.get('/bap/standings/:year', async (ctx) => {

@@ -1,0 +1,26 @@
+doctype html
+
+html
+  head
+    title= title
+    script(src='https://unpkg.com/htmx.org@2.0.4')
+
+  body
+    h1= title
+    .flex
+      div Member Name
+      div Species Name
+      div Submission Date
+
+      each sub in submissions
+        form(hx-post="/admin/bap/approve")
+          .flex
+            div= sub.member_name
+            div= sub.species_name
+            div= sub.submission_date
+            input(name="id", type="hidden", value=sub.id)
+            input(name="approvedBy", type="hidden", value="honk")
+            input(name="points", type="text" placeholder="Points")
+
+            button(type="submit") Approve
+
