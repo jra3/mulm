@@ -1,6 +1,6 @@
 import { getWriteDBConnecton, query } from "./conn";
 
-type Submission = {
+export type Submission = {
     id: number;
     submission_date: string;
     member_name: string;

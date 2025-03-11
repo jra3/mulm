@@ -5,7 +5,7 @@ import serve from 'koa-static';
 import path from 'path';
 import bodyParser from 'koa-bodyparser';
 import { getMembersList, MemberDetails } from "./data";
-import { addSubmission, approveSubmission, getOutstandingSubmissions } from "./db/submissions";
+import { addSubmission, approveSubmission, getOutstandingSubmissions, Submission } from "./db/submissions";
 import { z } from "zod";
 
 const app = new Koa();
@@ -32,9 +32,31 @@ router.get('/admin/bap/queue', async (ctx) => {
   });
 })
 
+router.get('/admin/sub/:subId', async (ctx) => {
+  const subId = parseInt(ctx.params.subId);
+  if (!subId) {
+    ctx.status = 400;
+    ctx.body = "Invalid input";
+    return;
+  }
+
+  //const submission = getSubmissionById(subId);
+  const submission: Submission = {
+    id: subId,
+    submission_date: new Date().toISOString(),
+    member_name: "Alice",
+    species_name: `Species ${subId}`,
+  };
+
+  await ctx.render('review', {
+    submission,
+    isAdmin: true,
+  });
+
+});
+
 router.post('/admin/bap/approve', async (ctx) => {
   const { id, points, approvedBy } = ctx.request.body as {id?: number, points?: number, approvedBy?: string };
-  console.log(id, points, approvedBy);
   if (!id || !points || !approvedBy) {
     ctx.status = 400;
     ctx.body = "Invalid input";
@@ -42,7 +64,6 @@ router.post('/admin/bap/approve', async (ctx) => {
   }
 
   approveSubmission(id, points, approvedBy);
-
 });
 
 router.get('/bap/standings/:year', async (ctx) => {

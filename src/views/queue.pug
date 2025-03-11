@@ -17,7 +17,7 @@ html
 
       - const stringCell = []
       each sub in submissions
-        a(href=`/bap/submission/${sub.id}`)
+        a(href=`/admin/sub/${sub.id}`)
           .flex.justify-between
             p.min-w-40(class=stringCell)= sub.member_name
             p.min-w-80(class=stringCell)= sub.species_name
