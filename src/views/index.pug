@@ -5,8 +5,9 @@ html
     script(src='https://unpkg.com/htmx.org@2.0.4')
     link(rel='stylesheet', href='/index.css')
 
-  body.flex.items-center.justify-center
-    .flex-col
-      h1.m-4= message
-      a.m-2(href='/bap/submit') New Submission
-      button(hx-get="clicked") Click Me
+  body.flex.justify-center.items-center
+    .flex.flex-col.items-center.space-y-4.bg-white.p-6.rounded-lg.shadow-lg
+      h2.text-2xl.p2= message
+      a.p-4(href='/bap/submit') New BAP Submission
+      a.p-4(href='/bap/lifetime') Lifetime Standings
+      a.p-4(href='/bap/standings/2022') Annual Standings

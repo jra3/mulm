@@ -20,7 +20,7 @@ app.use(
 const router = new Router();
 
 router.get('/', async (ctx) => {
-  await ctx.render('index', { title: 'Home Page', message: 'Welcome to BAS!' });
+  await ctx.render('index', { title: 'BAS BAP/HAP Portal', message: 'Welcome to BAS!' });
 });
 
 router.get('/admin/bap/queue', async (ctx) => {

@@ -4,7 +4,7 @@
   "description": "a Breeder Awards Program management platform",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon --exec ts-node src/index.ts",
+    "dev": "concurrently nodemon \"postcss src/**/*.css --base src --dir public --watch\"",
     "postcss": "postcss src/**/*.css --base src --dir public",
     "build": "tsc",
     "start": "node dist/index.js",
@@ -44,6 +44,7 @@
     "@typescript-eslint/eslint-plugin": "^8.26.0",
     "@typescript-eslint/parser": "^8.26.0",
     "autoprefixer": "^10.4.21",
+    "concurrently": "^9.1.2",
     "eslint": "^9.22.0",
     "globals": "^16.0.0",
     "nodemon": "^2.0.22",
