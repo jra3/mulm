@@ -1,29 +1,25 @@
 doctype html
-
 html
   head
     title= title
     script(src='https://unpkg.com/htmx.org@2.0.4')
     link(rel='stylesheet', href='/index.css')
 
-  body.flex-col
-    h2.text-2xl= title
+  body.flex.justify-center.items-center
+    .flex-col.justify-center.text-center.items-center.bg-white.p-6.rounded-lg.shadow-lg
+      h2.text-2xl.p-2= title
 
-    - const heading = ['font-bold', 'text-lg', 'm-2'];
-    .flex
-      span.min-w-200(class=heading) Member Name
-      span(class=heading) Species Name
-      span(class=heading) Submission Date
+      - const heading = ['font-bold', 'text-lg'];
+      .flex.w-full
+        p.min-w-40(class=heading) Member Name
+        p.min-w-80(class=heading) Species Name
+        p.min-w-40(class=heading) Submission Date
 
-    each sub in submissions
-      form(hx-post="/admin/bap/approve")
-        .flex
-          span= sub.member_name
-          span= sub.species_name
-          span= sub.submission_date
-          input(name="id", type="hidden", value=sub.id)
-          input(name="approvedBy", type="hidden", value="honk")
-          input(name="points", type="text" placeholder="Points")
-
-          button(type="submit") Approve
+      - const stringCell = []
+      each sub in submissions
+        a(href=`/bap/submission/${sub.id}`)
+          .flex.justify-between
+            p.min-w-40(class=stringCell)= sub.member_name
+            p.min-w-80(class=stringCell)= sub.species_name
+            p.min-w-40(class=stringCell)= sub.submission_date
 
