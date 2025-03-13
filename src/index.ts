@@ -8,7 +8,7 @@ import { getMembersList, MemberDetails } from "./data";
 import { addSubmission, approveSubmission, getOutstandingSubmissions, Submission } from "./db/submissions";
 import { z } from "zod";
 import { text } from "stream/consumers";
-import { foodTypes, getClassOptions, spawnLocations, speciesTypesAndClasses } from "./submissionSchema";
+import { bapSchema, foodTypes, getClassOptions, spawnLocations, speciesTypesAndClasses } from "./submissionSchema";
 
 const app = new Koa();
 app.use(bodyParser());
@@ -161,19 +161,16 @@ router.get('/bap/submit', async (ctx) => {
   });
 });
 
-router.post('/ajax/bap', async (ctx) => {
-  // TODO zod validation
-  const form = ctx.request.body as any;
-  await ctx.render('bapForm/form', {
-    form,
-    classOptions: getClassOptions(form.speciesType as string),
-  });
-});
-
 router.post('/bap/submit', async (ctx) => {
-  console.log()
+  const parsed = bapSchema.safeParse(ctx.request.body);
+
+  if (!parsed.success) {
+    ctx.status = 400;
+    console.log(parsed.error.errors);
+  }
+
+  console.log(parsed);
   const { memberName, speciesCommonName } = ctx.request.body as { memberName?: string, speciesCommonName?: string };
-  console.log(ctx.request.body);
 
   if (!memberName || !speciesCommonName) {
     ctx.status = 400;
@@ -185,7 +182,20 @@ router.post('/bap/submit', async (ctx) => {
   ctx.body = "Submitted";
 });
 
-router.get('/ajax/selectType', async (ctx) => {
+router.post('/ajax/bap', async (ctx) => {
+  // TODO zod validation
+  const form = ctx.request.body as any;
+  await ctx.render('bapForm/form', {
+    form,
+    classOptions: getClassOptions(form.speciesType as string),
+    foodTypes,
+    spawnLocations,
+  });
+});
+
+router.get('/ajax/onSelectType', async (ctx) => {
+  console.log(ctx.query);
+
   const speciesType = ctx.query.speciesType as string ?? "Fish";
   const options = speciesTypesAndClasses[speciesType]!
   await ctx.render('onSelectType', {

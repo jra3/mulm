@@ -1,13 +1,14 @@
-- const formClasses = ['flex-col', 'justify-center', 'text-center', 'items-center', 'bg-white', 'p-6', 'rounded-lg', 'shadow-lg'];
-- const textInput = ['border-2', 'border-gray-300', 'p-2', 'm-2'];
-- const card = ['flex-col', 'justify-center', 'text-center', 'items-center', 'bg-white', 'p-6', 'rounded-lg', 'shadow-lg'];
+- const formClasses = ['flex-col', 'bg-white', 'p-6', 'rounded-lg', 'shadow-lg'];
+- const labelClasses = ['text-sm', 'leading-none', 'font-medium', 'select-none'];
+- const textInput = ['border-2', 'border-input', 'flex', 'h-9', 'w-full', 'min-w-0', 'rounded-md', 'px-3', 'py-1', 'text-base', 'shadow-xs', 'outline-none', 'border-gray-300', 'rounded-lg'];
+- const card = ['bg-white', 'p-6', 'rounded-lg', 'shadow-lg'];
 
 form#bapForm(
 	hx-post="/bap/submit",
 	class=formClasses)
 
-	div
-		label Member Name
+	div.grid.gap-2
+		label(class=labelClasses) Member Name
 		input(
 			value=form.memberName,
 			name="memberName",
@@ -15,103 +16,208 @@ form#bapForm(
 			placeholder="Member Name",
 			class=textInput)
 
-	div
-		label Water Type
-		select(
-			value=form.waterType,
-			name="waterType",
-			class=textInput)
-			option(value="Fresh") Fresh
-			option(value="Brackish") Brackish
-			option(value="Salt") Salt
+	div.card
+		p.font-semibold.p-4 Species Details
 
-	div
-		label Species Type
-		select(
-			value=form.speciesType,
-			name="speciesType",
-			hx-post="/ajax/bap"
-			hx-target="#bapForm"
-			class=textInput)
-			option(value="Fish") Fish
-			option(value="Invert") Invert
-			option(value="Plant") Plant
-			option(value="Coral") Coral
+		div.space-y-4
 
-	div
-		label Species Class
-		select#class(
-			value=form.speciesClass,
-			name="speciesClass",
-			placeHolder="Select a Class",
-			class=textInput)
-			each option in classOptions
-				option(value=option.value)= option.text
+			div.grid.grid-cols-2.w-full.gap-2
+				div.grid.gap-2
+					label(class=labelClasses) Water Type
+					select(
+						value=form.waterType,
+						name="waterType",
+						class=textInput)
+						option(value="Fresh") Fresh
+						option(value="Brackish") Brackish
+						option(value="Salt") Salt
 
-	div
-		label Species Common Name
-		input(
-			value=form.speciesCommonName,
-			name="speciesCommonName",
-			type="text",
-			placeholder="Guppy",
-			class=textInput)
+				div.grid.gap-2
+					label(class=labelClasses) Species Type
+					select(
+						hx-get="/ajax/onSelectType"
+						hx-target="#class"
+						value=form.speciesType,
+						name="speciesType",
+						class=textInput)
 
-	div
-		label Species Latin Name
-		input(
-			value=form.speciesLatinName,
-			name="speciesLatinName",
-			type="text",
-			placeholder="Species Name",
-			class=textInput)
+						option(value="Fish") Fish
+						option(value="Invert") Invert
+						option(value="Plant") Plant
+						option(value="Coral") Coral
 
-	div
-		label # of Fry
-		input(
-			value=form.count,
-			name="count",
-			type="text",
-			placeholder="Zillions",
-			class=textInput)
+			div.grid.gap-2
+				label(class=labelClasses) Species Class
+				select#class(
+					value=form.speciesClass,
+					name="speciesClass",
+					placeHolder="Select a Class",
+					class=textInput)
+					each option in classOptions
+						option(value=option.value)= option.text
 
-	script(src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.4.1/js/tom-select.complete.js")
+			div.grid.gap-2
+				label(class=labelClasses) Species Common Name
+				input(
+					class=textInput,
+					value=form.speciesCommonName,
+					name="speciesCommonName",
+					type="text",
+					placeholder="Guppy")
 
-	select#foods(
-		multiple,
-		class="tom-select",
-		name="foods",
-		placeHolder="Select all foods fed")
-		each food in foodTypes
-			option(value=food)= food
+			div.grid.gap-2
+				label(class=labelClasses) Species Latin Name
+				input(
+					class=textInput,
+					value=form.speciesLatinName,
+					name="speciesLatinName",
+					type="text",
+					placeholder="Species Name")
 
-	select#spawns(
-		multiple
-		class="tom-select",
-		name="spawnLocations",
-		placeHolder="Select all spawning locations")
-		each loc in spawnLocations
-			option(value=loc)= loc
+			div.grid.gap-2
+				label(class=labelClasses) # of Fry
+				input(
+					class=textInput,
+					value=form.count,
+					name="count",
+					type="text",
+					placeholder="Zillions")
 
-	script.
-		var settings = {
-			hideSelected: true,
-			create: true,
-		};
+			script(src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.4.1/js/tom-select.complete.js")
 
-		document.addEventListener('DOMContentLoaded', function() {
-			new TomSelect("#foods", settings);
-			new TomSelect("#spawns", settings);
-		});
+			div.grid.gap-2
+				label(class=labelClasses) Foods
+				select#foods(
+					multiple,
+					class="tom-select",
+					name="foods",
+					placeHolder="Select all foods fed")
 
-		document.body.addEventListener('htmx:afterSwap', function(evt) {
-			document.querySelectorAll(".tom-select").forEach(select => {
-				if (select.tomselect) {
-					select.tomselect.destroy();
-					}
+					each food in foodTypes
+						option(value=food)= food
+
+			div.grid.gap-2
+				label(class=labelClasses) Spawn Locations
+				select#spawns(
+					multiple
+					class="tom-select",
+					name="spawnLocations",
+					placeHolder="Select all spawning locations")
+					each loc in spawnLocations
+						option(value=loc)= loc
+
+			script.
+				var settings = {
+					hideSelected: true,
+					create: true,
+				};
+
+				document.addEventListener('DOMContentLoaded', function() {
+					console.log("asdfasdf");
+					new TomSelect("#foods", settings);
+					new TomSelect("#spawns", settings);
 				});
-			new TomSelect(select.id, settings);
-		});
+
+	div.card
+		p.font-semibold.p-4 Tank Details
+
+		div.space-y-4.grid.grid-cols-2.w-full.gap-2
+			div.grid.gap-2
+				label(class=labelClasses) Tank Size
+				input(
+					class=textInput,
+					value=form.tankSize,
+					name="tankSize",
+					type="text",
+					placeholder="5g, 20 Long, 100g stock tank...")
+			div.grid.gap-2
+				label(class=labelClasses) Filter Type
+				input(
+					class=textInput,
+					value=form.filterType,
+					name="filterType",
+					type="text",
+					placeholder="Sponge, HOB...")
+			div.grid.gap-2
+				label(class=labelClasses) Water Change Volume (%)
+				input(
+					class=textInput,
+					value=form.changeVolume,
+					name="changeVolume",
+					type="text",
+					placeholder="")
+			div.grid.gap-2
+				label(class=labelClasses) Water Change Frequency
+				input(
+					class=textInput,
+					value=form.changeFrequency,
+					name="changeFrequency",
+					type="text",
+					placeholder="")
+			div.grid.gap-2
+				label(class=labelClasses) Water Change Frequency
+				input(
+					class=textInput,
+					value=form.changeFrequency,
+					name="changeFrequency",
+					type="text",
+					placeholder="")
+			div.grid.gap-2
+				label(class=labelClasses) Temperature
+				input(
+					class=textInput,
+					value=form.temperature,
+					name="temperature",
+					type="text",
+					placeholder="")
+			div.grid.gap-2
+				label(class=labelClasses) pH
+				input(
+					class=textInput,
+					value=form.temperature,
+					name="pH",
+					type="text",
+					placeholder="7.0")
+			div.grid.gap-2
+				label(class=labelClasses) GH
+				input(
+					class=textInput,
+					value=form.temperature,
+					name="GH",
+					type="text",
+					placeholder="200ppm, 10 dH...")
+			div.grid.gap-2
+				label(class=labelClasses) Specific Gravity
+				input(
+					class=textInput,
+					value=form.specificGravity,
+					name="specificGravity",
+					type="text",
+					placeholder="1.025...")
+			div.grid.gap-2
+				label(class=labelClasses) Substrate Type
+				input(
+					class=textInput,
+					value=form.substrateType,
+					name="substrateType",
+					type="text",
+					placeholder="Gravel, Sand, Bare Bottom...")
+			div.grid.gap-2
+				label(class=labelClasses) Substrate Depth
+				input(
+					class=textInput,
+					value=form.substrateDepth,
+					name="substrateDepth",
+					type="text",
+					placeholder="2\"...")
+			div.grid.gap-2
+				label(class=labelClasses) Substrate Color
+				input(
+					class=textInput,
+					value=form.substrateColor,
+					name="substrateColor",
+					type="text",
+					placeholder="Brown, White, Hot Pink...")
 
 	div
 		button(type="submit") Submit
