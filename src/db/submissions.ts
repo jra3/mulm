@@ -1,3 +1,4 @@
+import { FormValues } from "../submissionSchema";
 import { getWriteDBConnecton, query } from "./conn";
 
 export type Submission = {
@@ -11,11 +12,60 @@ export type Submission = {
     points?: number;
 };
 
-export function addSubmission(memberName: string, speciesName: string) {
+export function addSubmission(form: FormValues, submit: boolean) {
     try {
         const conn = getWriteDBConnecton();
-        const stmt = conn.prepare("INSERT INTO submissions (member_name, species_name) VALUES (?, ?)");
-        stmt.run(memberName, speciesName);
+        const stmt = conn.prepare(`
+            INSERT INTO submissions
+            (
+                member_name,
+                species_type,
+                species_class,
+                species_common_name,
+                species_latin_name,
+                water_type,
+                count,
+
+                tank_size,
+                filter_type,
+                water_change_volume,
+                water_change_frequency,
+                temperature,
+                pH,
+                GH,
+                specific_gravity,
+                substrate_type,
+                substrate_depth,
+                substrate_color,
+
+                submitted_on)
+            VALUES
+            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        console.log(form);
+        stmt.run(
+            form.memberName,
+            form.speciesType,
+            form.speciesClass,
+            form.speciesCommonName,
+            form.speciesLatinName,
+            form.waterType,
+            form.count,
+            form.tankSize,
+            form.filterType,
+
+            form.changeVolume,
+            form.changeFrequency,
+            form.temperature,
+            form.pH,
+            form.GH,
+            form.specificGravity,
+            form.substrateType,
+            form.substrateDepth,
+            form.substrateColor,
+
+            submit ? new Date().toISOString() : null,
+        );
         conn.close();
     } catch (err) {
         console.error(err);
@@ -38,7 +88,11 @@ export function getSubmissionsInDateRange(startDate: Date, endDate: Date) {
 }
 
 export function getOutstandingSubmissions() {
-    return query<Submission>("SELECT * FROM submissions WHERE date_approved IS NULL");
+    return query<Submission>(`
+        SELECT * FROM submissions
+        WHERE submitted_on IS NOT NULL
+        AND approved_on IS NULL
+    `);
 }
 
 export function getAllSubmissions() {

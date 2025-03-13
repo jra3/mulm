@@ -163,22 +163,14 @@ router.get('/bap/submit', async (ctx) => {
 
 router.post('/bap/submit', async (ctx) => {
   const parsed = bapSchema.safeParse(ctx.request.body);
-
   if (!parsed.success) {
-    ctx.status = 400;
-    console.log(parsed.error.errors);
-  }
-
-  console.log(parsed);
-  const { memberName, speciesCommonName } = ctx.request.body as { memberName?: string, speciesCommonName?: string };
-
-  if (!memberName || !speciesCommonName) {
     ctx.status = 400;
     ctx.body = "Invalid input";
     return;
   }
-  console.log(ctx.request.body);
-  addSubmission(memberName, speciesCommonName);
+
+  console.log(parsed.data);
+  addSubmission(parsed.data!, true);
   ctx.body = "Submitted";
 });
 

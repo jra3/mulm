@@ -35,4 +35,4 @@ CREATE TABLE submissions (
 );
 
 CREATE INDEX idx_member_name ON submissions (member_name);
-CREATE INDEX idx_date_approved ON submissions (date_approved);
+CREATE INDEX idx_date_approved ON submissions (approved_on);
