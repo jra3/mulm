@@ -7,6 +7,8 @@ import bodyParser from 'koa-bodyparser';
 import { getMembersList, MemberDetails } from "./data";
 import { addSubmission, approveSubmission, getOutstandingSubmissions, Submission } from "./db/submissions";
 import { z } from "zod";
+import { text } from "stream/consumers";
+import { foodTypes, getClassOptions, spawnLocations, speciesTypesAndClasses } from "./submissionSchema";
 
 const app = new Koa();
 app.use(bodyParser());
@@ -148,21 +150,48 @@ router.get('/bap/lifetime', async (ctx) => {
 });
 
 router.get('/bap/submit', async (ctx) => {
-  await ctx.render('bap-submission', { title: 'BAP Submission' });
+  await ctx.render('bap-submission', {
+    title: 'BAP Submission',
+    form: {
+      speciesClass: "Fish",
+    },
+    classOptions: getClassOptions("Fish"),
+    foodTypes,
+    spawnLocations,
+  });
+});
+
+router.post('/ajax/bap', async (ctx) => {
+  // TODO zod validation
+  const form = ctx.request.body as any;
+  await ctx.render('bapForm/form', {
+    form,
+    classOptions: getClassOptions(form.speciesType as string),
+  });
 });
 
 router.post('/bap/submit', async (ctx) => {
-  const { memberName, speciesCommonName } = ctx.request.body as {memberName?: string, speciesCommonName?: string};
+  console.log()
+  const { memberName, speciesCommonName } = ctx.request.body as { memberName?: string, speciesCommonName?: string };
+  console.log(ctx.request.body);
 
   if (!memberName || !speciesCommonName) {
     ctx.status = 400;
     ctx.body = "Invalid input";
     return;
   }
-
+  console.log(ctx.request.body);
   addSubmission(memberName, speciesCommonName);
   ctx.body = "Submitted";
+});
 
+router.get('/ajax/selectType', async (ctx) => {
+  const speciesType = ctx.query.speciesType as string ?? "Fish";
+  const options = speciesTypesAndClasses[speciesType]!
+  await ctx.render('onSelectType', {
+    options: options.map(v => ({ value: v, text: v })),
+    showLightAndFerts: speciesType === "Plant" || speciesType === "Coral",
+  });
 });
 
 app.use(router.routes()).use(router.allowedMethods());

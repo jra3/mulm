@@ -1,29 +1,11 @@
 doctype html
 html
-  head
-    title= title
-    script(src='https://unpkg.com/htmx.org@2.0.4')
-    link(rel='stylesheet', href='/index.css')
+	head
+		title= title
+		script(src='https://unpkg.com/htmx.org@2.0.4')
+		link(rel='stylesheet', href='/index.css')
+		link(rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.4.1/css/tom-select.bootstrap4.min.css")
 
-  body.flex.justify-center.items-center
-    form.flex-col.justify-center.text-center.items-center.bg-white.p-6.rounded-lg.shadow-lg
-      h2.text-2xl.p-2 New BAP Submission
-
-      div
-        label Member Name
-        input(
-          name="memberName",
-          type="text",
-          placeholder="Member Name", class="border-2 border-gray-300 p-2 m-2")
-
-      div
-        label Common Name
-        input(
-          name="speciesCommonName",
-          type="text",
-          placeholder="Species Name", class="border-2 border-gray-300 p-2 m-2")
-
-      div
-        button(type="submit") Submit
-
-      div(id="response")
+	body.flex.flex-col.justify-center.items-center
+		h2.text-2xl.p-2 New BAP Submission
+		include bapForm/form.pug

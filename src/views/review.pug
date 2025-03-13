@@ -1,0 +1,12 @@
+doctype html
+html
+  head
+    title= title
+    script(src='https://unpkg.com/htmx.org@2.0.4')
+    link(rel='stylesheet', href='/index.css')
+
+  body.flex.justify-center.items-center
+    .flex-col.justify-center.text-center.items-center.bg-white.p-6.rounded-lg.shadow-lg
+
+    label Member Name
+    p= submission.member_name

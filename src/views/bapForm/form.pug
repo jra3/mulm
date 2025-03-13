@@ -1,0 +1,119 @@
+- const formClasses = ['flex-col', 'justify-center', 'text-center', 'items-center', 'bg-white', 'p-6', 'rounded-lg', 'shadow-lg'];
+- const textInput = ['border-2', 'border-gray-300', 'p-2', 'm-2'];
+- const card = ['flex-col', 'justify-center', 'text-center', 'items-center', 'bg-white', 'p-6', 'rounded-lg', 'shadow-lg'];
+
+form#bapForm(
+	hx-post="/bap/submit",
+	class=formClasses)
+
+	div
+		label Member Name
+		input(
+			value=form.memberName,
+			name="memberName",
+			type="text",
+			placeholder="Member Name",
+			class=textInput)
+
+	div
+		label Water Type
+		select(
+			value=form.waterType,
+			name="waterType",
+			class=textInput)
+			option(value="Fresh") Fresh
+			option(value="Brackish") Brackish
+			option(value="Salt") Salt
+
+	div
+		label Species Type
+		select(
+			value=form.speciesType,
+			name="speciesType",
+			hx-post="/ajax/bap"
+			hx-target="#bapForm"
+			class=textInput)
+			option(value="Fish") Fish
+			option(value="Invert") Invert
+			option(value="Plant") Plant
+			option(value="Coral") Coral
+
+	div
+		label Species Class
+		select#class(
+			value=form.speciesClass,
+			name="speciesClass",
+			placeHolder="Select a Class",
+			class=textInput)
+			each option in classOptions
+				option(value=option.value)= option.text
+
+	div
+		label Species Common Name
+		input(
+			value=form.speciesCommonName,
+			name="speciesCommonName",
+			type="text",
+			placeholder="Guppy",
+			class=textInput)
+
+	div
+		label Species Latin Name
+		input(
+			value=form.speciesLatinName,
+			name="speciesLatinName",
+			type="text",
+			placeholder="Species Name",
+			class=textInput)
+
+	div
+		label # of Fry
+		input(
+			value=form.count,
+			name="count",
+			type="text",
+			placeholder="Zillions",
+			class=textInput)
+
+	script(src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.4.1/js/tom-select.complete.js")
+
+	select#foods(
+		multiple,
+		class="tom-select",
+		name="foods",
+		placeHolder="Select all foods fed")
+		each food in foodTypes
+			option(value=food)= food
+
+	select#spawns(
+		multiple
+		class="tom-select",
+		name="spawnLocations",
+		placeHolder="Select all spawning locations")
+		each loc in spawnLocations
+			option(value=loc)= loc
+
+	script.
+		var settings = {
+			hideSelected: true,
+			create: true,
+		};
+
+		document.addEventListener('DOMContentLoaded', function() {
+			new TomSelect("#foods", settings);
+			new TomSelect("#spawns", settings);
+		});
+
+		document.body.addEventListener('htmx:afterSwap', function(evt) {
+			document.querySelectorAll(".tom-select").forEach(select => {
+				if (select.tomselect) {
+					select.tomselect.destroy();
+					}
+				});
+			new TomSelect(select.id, settings);
+		});
+
+	div
+		button(type="submit") Submit
+
+
