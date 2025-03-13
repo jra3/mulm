@@ -1,2 +1,28 @@
 @import "tailwindcss";
 
+select {
+    appearance: none; /* Removes default styles */
+    -webkit-appearance: none; /* Safari */
+    -moz-appearance: none; /* Firefox */
+}
+
+.select-wrapper {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+  }
+
+  .select-wrapper select {
+    width: 100%;
+    padding-right: 2rem; /* Make space for custom arrow */
+  }
+
+  .select-wrapper::after {
+    content: "▾"; /* Unicode down arrow */
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: #888;
+  }

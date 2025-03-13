@@ -215,9 +215,6 @@
   .min-w-0 {
     min-width: calc(var(--spacing) * 0);
   }
-  .min-w-400 {
-    min-width: calc(var(--spacing) * 400);
-  }
   .grid-cols-2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -249,19 +246,12 @@
   .rounded-md {
     border-radius: var(--radius-md);
   }
-  .border {
-    border-style: var(--tw-border-style);
-    border-width: 1px;
-  }
   .border-2 {
     border-style: var(--tw-border-style);
     border-width: 2px;
   }
   .border-gray-300 {
     border-color: var(--color-gray-300);
-  }
-  .bg-transparent {
-    background-color: transparent;
   }
   .bg-white {
     background-color: var(--color-white);
@@ -348,6 +338,29 @@
     user-select: none;
   }
 }
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+.select-wrapper {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+.select-wrapper select {
+  width: 100%;
+  padding-right: 2rem;
+}
+.select-wrapper::after {
+  content: "▾";
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #888;
+}
 @property --tw-space-y-reverse {
   syntax: "*";
   inherits: false;
@@ -421,4 +434,3 @@
   inherits: false;
   initial-value: 0 0 #0000;
 }
-

@@ -1,6 +1,7 @@
 - const formClasses = ['flex-col', 'bg-white', 'p-6', 'rounded-lg', 'shadow-lg'];
 - const labelClasses = ['text-sm', 'leading-none', 'font-medium', 'select-none'];
 - const textInput = ['border-2', 'border-input', 'flex', 'h-9', 'w-full', 'min-w-0', 'rounded-md', 'px-3', 'py-1', 'text-base', 'shadow-xs', 'outline-none', 'border-gray-300', 'rounded-lg'];
+- const selectInput = ['bg-white', 'border-2', 'border-input', 'flex', 'h-9', 'w-full', 'min-w-0', 'rounded-md', 'px-3', 'py-1', 'text-base', 'shadow-xs', 'outline-none', 'border-gray-300', 'rounded-lg'];
 - const card = ['bg-white', 'p-6', 'rounded-lg', 'shadow-lg'];
 
 form#bapForm(
@@ -24,37 +25,40 @@ form#bapForm(
 			div.grid.grid-cols-2.w-full.gap-2
 				div.grid.gap-2
 					label(class=labelClasses) Water Type
-					select(
-						value=form.waterType,
-						name="waterType",
-						class=textInput)
-						option(value="Fresh") Fresh
-						option(value="Brackish") Brackish
-						option(value="Salt") Salt
+					div.select-wrapper
+						select#waterType(
+							class=selectInput
+							value=form.waterType
+							name="waterType")
+							option(value="Fresh") Fresh
+							option(value="Brackish") Brackish
+							option(value="Salt") Salt
 
 				div.grid.gap-2
 					label(class=labelClasses) Species Type
-					select(
-						hx-get="/ajax/onSelectType"
-						hx-target="#class"
-						value=form.speciesType,
-						name="speciesType",
-						class=textInput)
+					div.select-wrapper
+						select#speciesType(
+							hx-get="/ajax/onSelectType"
+							hx-target="#class"
+							class=selectInput
+							value=form.speciesType
+							name="speciesType")
 
-						option(value="Fish") Fish
-						option(value="Invert") Invert
-						option(value="Plant") Plant
-						option(value="Coral") Coral
+							option(value="Fish") Fish
+							option(value="Invert") Invert
+							option(value="Plant") Plant
+							option(value="Coral") Coral
 
 			div.grid.gap-2
 				label(class=labelClasses) Species Class
-				select#class(
-					value=form.speciesClass,
-					name="speciesClass",
-					placeHolder="Select a Class",
-					class=textInput)
-					each option in classOptions
-						option(value=option.value)= option.text
+				div.select-wrapper
+					select#class(
+						class=selectInput
+						value=form.speciesClass,
+						name="speciesClass",
+						placeHolder="Select a Class")
+						each option in classOptions
+							option(value=option.value)= option.text
 
 			div.grid.gap-2
 				label(class=labelClasses) Species Common Name
@@ -113,7 +117,6 @@ form#bapForm(
 				};
 
 				document.addEventListener('DOMContentLoaded', function() {
-					console.log("asdfasdf");
 					new TomSelect("#foods", settings);
 					new TomSelect("#spawns", settings);
 				});
