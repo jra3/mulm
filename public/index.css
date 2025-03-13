@@ -243,9 +243,6 @@
   .rounded-lg {
     border-radius: var(--radius-lg);
   }
-  .rounded-md {
-    border-radius: var(--radius-md);
-  }
   .border-2 {
     border-style: var(--tw-border-style);
     border-width: 2px;
@@ -342,6 +339,24 @@ select {
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
+  display: flex;
+  height: calc(var(--spacing) * 9);
+  width: 100%;
+  min-width: calc(var(--spacing) * 0);
+  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
+  border-style: var(--tw-border-style);
+  border-width: 2px;
+  border-color: var(--color-gray-300);
+  background-color: var(--color-white);
+  padding-inline: calc(var(--spacing) * 3);
+  padding-block: calc(var(--spacing) * 1);
+  font-size: var(--text-base);
+  line-height: var(--tw-leading, var(--text-base--line-height));
+  --tw-shadow: 0 1px 2px 0 var(--tw-shadow-color, rgb(0 0 0 / 0.05));
+  box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  --tw-outline-style: none;
+  outline-style: none;
 }
 .select-wrapper {
   position: relative;

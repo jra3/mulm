@@ -1,7 +1,6 @@
 - const formClasses = ['flex-col', 'bg-white', 'p-6', 'rounded-lg', 'shadow-lg'];
 - const labelClasses = ['text-sm', 'leading-none', 'font-medium', 'select-none'];
-- const textInput = ['border-2', 'border-input', 'flex', 'h-9', 'w-full', 'min-w-0', 'rounded-md', 'px-3', 'py-1', 'text-base', 'shadow-xs', 'outline-none', 'border-gray-300', 'rounded-lg'];
-- const selectInput = ['bg-white', 'border-2', 'border-input', 'flex', 'h-9', 'w-full', 'min-w-0', 'rounded-md', 'px-3', 'py-1', 'text-base', 'shadow-xs', 'outline-none', 'border-gray-300', 'rounded-lg'];
+- const textInput = ['border-2', 'flex', 'h-9', 'w-full', 'min-w-0', 'px-3', 'py-1', 'text-base', 'shadow-xs', 'outline-none', 'border-gray-300', 'rounded-lg'];
 - const card = ['bg-white', 'p-6', 'rounded-lg', 'shadow-lg'];
 
 form#bapForm(
@@ -27,7 +26,6 @@ form#bapForm(
 					label(class=labelClasses) Water Type
 					div.select-wrapper
 						select#waterType(
-							class=selectInput
 							value=form.waterType
 							name="waterType")
 							option(value="Fresh") Fresh
@@ -40,7 +38,6 @@ form#bapForm(
 						select#speciesType(
 							hx-get="/ajax/onSelectType"
 							hx-target="#class"
-							class=selectInput
 							value=form.speciesType
 							name="speciesType")
 
@@ -53,7 +50,6 @@ form#bapForm(
 				label(class=labelClasses) Species Class
 				div.select-wrapper
 					select#class(
-						class=selectInput
 						value=form.speciesClass,
 						name="speciesClass",
 						placeHolder="Select a Class")
@@ -87,14 +83,11 @@ form#bapForm(
 					type="text",
 					placeholder="Zillions")
 
-			script(src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.4.1/js/tom-select.complete.js")
-
 			div.grid.gap-2
 				label(class=labelClasses) Foods
 				select#foods(
-					multiple,
-					class="tom-select",
-					name="foods",
+					multiple
+					name="foods"
 					placeHolder="Select all foods fed")
 
 					each food in foodTypes
@@ -104,9 +97,9 @@ form#bapForm(
 				label(class=labelClasses) Spawn Locations
 				select#spawns(
 					multiple
-					class="tom-select",
-					name="spawnLocations",
+					name="spawnLocations"
 					placeHolder="Select all spawning locations")
+
 					each loc in spawnLocations
 						option(value=loc)= loc
 
