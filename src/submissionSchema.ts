@@ -12,36 +12,36 @@ const waterTypeEnum = z.enum(["Fresh", "Brackish", "Salt"]);
 const speciesTypeEnum = z.enum(["Fish", "Invert", "Plant", "Coral"]);
 
 export const bapSchema = z.object({
-  memberName: z.string().min(1),
+  memberName: z.string().nonempty({ message: "Required" }),
   waterType: waterTypeEnum,
   speciesType: speciesTypeEnum,
   date: z.date(),
-  speciesClass: z.string().min(1),
-  speciesLatinName: z.string().min(1),
-  speciesCommonName: z.string().min(1),
+  speciesClass: z.string().nonempty({ message: "Required" }),
+  speciesLatinName: z.string().nonempty({ message: "Required" }),
+  speciesCommonName: z.string().nonempty({ message: "Required" }),
   count: z.string().optional(),
   foods: z.array(z.string()).optional(),
   spawnLocations: z.array(z.string()).optional(),
   propagationMethod: z.string().optional(),
 
-  tankSize: z.string().min(1),
-  filterType: z.string().min(1),
-  changeVolume: z.string().min(1),
-  changeFrequency: z.string().min(1),
-  temperature: z.string().min(1),
-  pH: z.string().min(1),
-  GH: z.string().min(1),
+  tankSize: z.string().nonempty({ message: "Required" }),
+  filterType: z.string().nonempty({ message: "Required" }),
+  changeVolume: z.string().nonempty({ message: "Required" }),
+  changeFrequency: z.string().nonempty({ message: "Required" }),
+  temperature: z.string().nonempty({ message: "Required" }),
+  pH: z.string().nonempty({ message: "Required" }),
+  GH: z.string().nonempty({ message: "Required" }),
   specificGravity: z.string().optional(),
-  substrateType: z.string().min(1),
-  substrateDepth: z.string().min(1),
-  substrateColor: z.string().min(1),
+  substrateType: z.string().nonempty({ message: "Required" }),
+  substrateDepth: z.string().nonempty({ message: "Required" }),
+  substrateColor: z.string().nonempty({ message: "Required" }),
 
   lightType: z.string().optional(),
   lightStrength: z.string().optional(),
   lightHours: z.string().optional(),
 
-  /*
 
+  /*
   ferts: z.array(
     z.object({
       substance: z.string(),

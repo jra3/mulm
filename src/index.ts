@@ -28,10 +28,10 @@ router.get('/', async (ctx) => {
 // Entrypoint for BAP/HAP submission
 router.get('/submit', async (ctx) => {
   const selectedType = String(ctx.query.speciesType ?? "Fish");
-  console.log(selectedType);
   await ctx.render('submit', {
     title: 'BAP Submission',
     form: ctx.query,
+    errors: new Map(),
     classOptions: getClassOptions(selectedType),
     waterTypes,
     speciesTypes,
@@ -167,10 +167,27 @@ router.get('/admin/sub/:subId', async (ctx) => {
 // Save a new submission, potentially submitting it
 router.post('/sub', async (ctx) => {
   console.log(ctx.request.body);
+
   const parsed = bapSchema.safeParse(ctx.request.body);
   if (!parsed.success) {
-    ctx.status = 400;
-    ctx.body = "Invalid input";
+
+    const errors = new Map<string, string>();
+    parsed.error.issues.forEach((issue) => {
+      errors.set(String(issue.path[0]), issue.message);
+    });
+
+    const selectedType = String(ctx.query.speciesType ?? "Fish");
+    await ctx.render('submit', {
+      title: 'BAP Submission',
+      form: ctx.request.body,
+      errors,
+      classOptions: getClassOptions(selectedType),
+      waterTypes,
+      speciesTypes,
+      foodTypes,
+      spawnLocations,
+      isLivestock: isLivestock(selectedType),
+    });
     return;
   }
 

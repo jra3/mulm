@@ -1,31 +1,52 @@
 include style.pug
 include supplementLine.pug
 
-form#bapForm(hx-post="/sub", class=formClasses)
-
+mixin bapTextInput(labelText, name, placeholder)
 	div.grid.gap-2
-		label(class=labelClasses) Member Name
+		label(class=labelClasses)= labelText
 		input(
-			value=form.memberName,
-			name="memberName",
-			type="text",
-			placeholder="Member Name",
-			hx-on:input="sessionStorage.setItem(this.name, this.value)"
-			class=textInput)
+			value=form[name]
+			name=name
+			type="text"
+			placeholder=placeholder
+			class=textInput
+			class=errors.has(name) ? "border-red-400" : "")
+		if errors.has(name)
+			div(class="text-red-400")= errors.get(name)
+
+mixin bapSimpleSelectInput(labelText, name)
+	div.grid.gap-2
+		label(class=labelClasses)= labelText
+		div.select-wrapper
+			select(value=form[name] name=name)
+				block
+
+mixin bapMultiSelectInput(labelText, name, id)
+	div.grid.gap-2
+		label(class=labelClasses)= labelText
+		select(value=form[name] name=name multiple id=id)
+			block
+	script.
+		var settings = {
+			hideSelected: true,
+			create: true,
+		};
+		document.addEventListener('DOMContentLoaded', function() {
+			new TomSelect(id, settings);
+		});
+
+form#bapForm(hx-post="/sub", class=formClasses)
+	+bapTextInput("Member Name", "memberName", "Jacques Cousteau")
 
 	div.card
 		p.font-semibold.p-4 Species Details
 
 		div.space-y-4
 			div.grid.grid-cols-2.w-full.gap-2
-				div.grid.gap-2
-					label(class=labelClasses) Water Type
-					div.select-wrapper
-						select#waterType(
-							name="waterType")
-							for water in waterTypes
-								- const selected = water === form.waterType;
-								option(value=water, selected=selected)= water
+				+bapSimpleSelectInput("Water Type", "waterType")
+					for water in waterTypes
+						- const selected = water === form.waterType;
+						option(value=water, selected=selected)= water
 
 				div.grid.gap-2
 					label(class=labelClasses) Species Type
@@ -43,204 +64,47 @@ form#bapForm(hx-post="/sub", class=formClasses)
 								- const selected = speciesType === form.speciesType;
 								option(value=speciesType, selected=selected)= speciesType
 
-			div.grid.gap-2
-				label(class=labelClasses) Species Class
-				div.select-wrapper
-					select#class(
-						value=form.speciesClass,
-						name="speciesClass",
-						placeHolder="Select a Class")
-						each option in classOptions
-							option(value=option.value)= option.text
+			+bapSimpleSelectInput("Species Class", "speciesClass")
+				each option in classOptions
+					option(value=option.value)= option.text
 
-			div.grid.gap-2
-				label(class=labelClasses) Species Common Name
-				input(
-					class=textInput,
-					value=form.speciesCommonName,
-					name="speciesCommonName",
-					type="text",
-					placeholder="Guppy")
-
-			div.grid.gap-2
-				label(class=labelClasses) Species Latin Name
-				input(
-					class=textInput,
-					value=form.speciesLatinName,
-					name="speciesLatinName",
-					type="text",
-					placeholder="Species Name")
-
-			div.grid.gap-2#fryCount(class=livestockOnly)
-				label(class=labelClasses) # of Fry
-				input(
-					class=textInput,
-					name="count",
-					type="text",
-					placeholder="Zillions")
+			+bapTextInput("Species Common Name", "speciesCommonName", "Guppy")
+			+bapTextInput("Species Latin Name", "speciesLatinName", "Poecilia reticulata")
 
 			if isLivestock
-				div.grid.gap-2
-					label(class=labelClasses) Foods
-					select#foods(
-						multiple
-						name="foods"
-						placeHolder="Select all foods fed")
-						each food in foodTypes
-							option(value=food)= food
+				+bapTextInput("# of Fry", "count", "Zillions")
 
-				div.grid.gap-2
-					label(class=labelClasses) Spawn Locations
-					select#spawns(
-						multiple
-						name="spawnLocations"
-						placeHolder="Select all spawning locations")
-						each loc in spawnLocations
-							option(value=loc)= loc
+				+bapMultiSelectInput("Foods", "foods", "foods")
+					each food in foodTypes
+						option(value=food)= food
 
-				script.
-					var settings = {
-						hideSelected: true,
-						create: true,
-					};
+				+bapMultiSelectInput("Spawn Locations", "spawnLocations", "spawns")
+					each loc in spawnLocations
+						option(value=loc)= loc
 
-					document.addEventListener('DOMContentLoaded', function() {
-						new TomSelect("#foods", settings);
-						new TomSelect("#spawns", settings);
-					});
 			else
-				div.grid.gap-2
-					label(class=labelClasses) Propagation Method
-					input(
-						class=textInput,
-						value=form.propagationMethod,
-						name="propagationMethod",
-						type="text",
-						placeholder="Chainsaw...")
+				+bapTextInput("Propagation Method", "propagationMethod", "Cuttings, Runners, Seed...")
 
 	div.card
 		p.font-semibold.p-4 Tank Details
 
 		div.space-y-4.grid.grid-cols-2.w-full.gap-2
-			div.grid.gap-2
-				label(class=labelClasses) Tank Size
-				input(
-					class=textInput,
-					value=form.tankSize,
-					autocomplete="on"
-					name="tankSize",
-					type="text",
-					placeholder="5g, 20 Long, 100g stock tank...")
-			div.grid.gap-2
-				label(class=labelClasses) Filter Type
-				input(
-					class=textInput,
-					value=form.filterType,
-					autocomplete="on"
-					name="filterType",
-					type="text",
-					placeholder="Sponge, HOB...")
-			div.grid.gap-2
-				label(class=labelClasses) Water Change Volume (%)
-				input(
-					class=textInput,
-					value=form.changeVolume,
-					name="changeVolume",
-					type="text",
-					placeholder="")
-			div.grid.gap-2
-				label(class=labelClasses) Water Change Frequency
-				input(
-					class=textInput,
-					value=form.changeFrequency,
-					autocomplete="on"
-					name="changeFrequency",
-					type="text",
-					placeholder="")
-			div.grid.gap-2
-				label(class=labelClasses) Temperature
-				input(
-					class=textInput,
-					value=form.temperature,
-					name="temperature",
-					type="text",
-					placeholder="")
-			div.grid.gap-2
-				label(class=labelClasses) pH
-				input(
-					class=textInput,
-					value=form.temperature,
-					name="pH",
-					type="text",
-					placeholder="7.0")
-			div.grid.gap-2
-				label(class=labelClasses) GH
-				input(
-					class=textInput,
-					value=form.temperature,
-					name="GH",
-					type="text",
-					placeholder="200ppm, 10 dH...")
-			div.grid.gap-2
-				label(class=labelClasses) Specific Gravity
-				input(
-					class=textInput,
-					value=form.specificGravity,
-					name="specificGravity",
-					type="text",
-					placeholder="1.025...")
-			div.grid.gap-2
-				label(class=labelClasses) Substrate Type
-				input(
-					class=textInput,
-					value=form.substrateType,
-					autocomplete="on"
-					name="substrateType",
-					type="text",
-					placeholder="Gravel, Sand, Bare Bottom...")
-			div.grid.gap-2
-				label(class=labelClasses) Substrate Depth
-				input(
-					class=textInput,
-					value=form.substrateDepth,
-					autocomplete="on"
-					name="substrateDepth",
-					type="text",
-					placeholder="2\"...")
-			div.grid.gap-2
-				label(class=labelClasses) Substrate Color
-				input(
-					class=textInput,
-					value=form.substrateColor,
-					autocomplete="on"
-					name="substrateColor",
-					type="text",
-					placeholder="Brown, White, Hot Pink...")
+			+bapTextInput("Tank Size", "tankSize", "5g, 20 Long...")
+			+bapTextInput("Filter Type", "filterType", "Sponge, HOB...")
+			+bapTextInput("Water Change Volume (%)", "changeVolume", "10%, 25%...")
+			+bapTextInput("Water Change Frequency", "changeFrequency", "Daily, Weekly, Never...")
+			+bapTextInput("Temperature", "temperature", "75F...")
+			+bapTextInput("pH", "pH", "6.8...")
+			+bapTextInput("Hardness (GH)", "GH", "200ppm, 10dH...")
+			+bapTextInput("Specific Gravity", "specificGravity", "1.025...")
+			+bapTextInput("Substrate Type", "substrateType", "Gravel, Sand, Bare...")
+			+bapTextInput("Substrate Depth", "substrateDepth", "2\"...")
+			+bapTextInput("Substrate Color", "substrateColor", "Brown, White, Hot Pink...")
+
 			if !isLivestock
-				div.grid.gap-2#lights(class=[nonLivestock])
-					label(class=labelClasses) Light Type
-					input(
-						class=textInput,
-						value=form.lightType,
-						name="lightType",
-						type="text",
-						placeholder="LED, Sunlight, Fluorescent...")
-				div.grid.gap-2#lights(class=[nonLivestock])
-					label(class=labelClasses) Light Strength
-					input(
-						class=textInput,
-						value=form.lightStrength,
-						name="lightStrength",
-						type="text",
-						placeholder="Watts, PAR...")
-				div.grid.gap-2#lights(class=[nonLivestock])
-					label(class=labelClasses) Light Hours
-					input(
-						class=textInput,
-						value=form.lightHours,
-						name="lightHours",
-						type="text",
-						placeholder="16 hours...")
+				+bapTextInput("Lighting Type", "lightType", "LED, Sunlight, Ambient...")
+				+bapTextInput("Light Strength", "lightStrength", "200W, 5 PAR...")
+				+bapTextInput("Light Hours", "lightHours", "16...")
 
 		.flex.mt-4.gap-2.w-full.justify-center-center.text-center.items-center.hidden
 			button.p-2.rounded-md(class="bg-red-500 text-white") Clear
@@ -305,7 +169,6 @@ form#bapForm(hx-post="/sub", class=formClasses)
 
 	div.m-2
 		button(type="submit") Submit
-
 
 	script.
 		document.addEventListener("DOMContentLoaded", function () {
