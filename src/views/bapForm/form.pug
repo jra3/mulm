@@ -10,6 +10,7 @@ form#bapForm(hx-post="/sub", class=formClasses)
 			name="memberName",
 			type="text",
 			placeholder="Member Name",
+			hx-on:input="sessionStorage.setItem(this.name, this.value)"
 			class=textInput)
 
 	div.card
@@ -126,6 +127,7 @@ form#bapForm(hx-post="/sub", class=formClasses)
 				input(
 					class=textInput,
 					value=form.tankSize,
+					autocomplete="on"
 					name="tankSize",
 					type="text",
 					placeholder="5g, 20 Long, 100g stock tank...")
@@ -134,6 +136,7 @@ form#bapForm(hx-post="/sub", class=formClasses)
 				input(
 					class=textInput,
 					value=form.filterType,
+					autocomplete="on"
 					name="filterType",
 					type="text",
 					placeholder="Sponge, HOB...")
@@ -150,6 +153,7 @@ form#bapForm(hx-post="/sub", class=formClasses)
 				input(
 					class=textInput,
 					value=form.changeFrequency,
+					autocomplete="on"
 					name="changeFrequency",
 					type="text",
 					placeholder="")
@@ -190,6 +194,7 @@ form#bapForm(hx-post="/sub", class=formClasses)
 				input(
 					class=textInput,
 					value=form.substrateType,
+					autocomplete="on"
 					name="substrateType",
 					type="text",
 					placeholder="Gravel, Sand, Bare Bottom...")
@@ -198,6 +203,7 @@ form#bapForm(hx-post="/sub", class=formClasses)
 				input(
 					class=textInput,
 					value=form.substrateDepth,
+					autocomplete="on"
 					name="substrateDepth",
 					type="text",
 					placeholder="2\"...")
@@ -206,6 +212,7 @@ form#bapForm(hx-post="/sub", class=formClasses)
 				input(
 					class=textInput,
 					value=form.substrateColor,
+					autocomplete="on"
 					name="substrateColor",
 					type="text",
 					placeholder="Brown, White, Hot Pink...")
@@ -214,7 +221,7 @@ form#bapForm(hx-post="/sub", class=formClasses)
 					label(class=labelClasses) Light Type
 					input(
 						class=textInput,
-						value=form.substrateColor,
+						value=form.lightType,
 						name="lightType",
 						type="text",
 						placeholder="LED, Sunlight, Fluorescent...")
@@ -222,7 +229,7 @@ form#bapForm(hx-post="/sub", class=formClasses)
 					label(class=labelClasses) Light Strength
 					input(
 						class=textInput,
-						value=form.substrateColor,
+						value=form.lightStrength,
 						name="lightStrength",
 						type="text",
 						placeholder="Watts, PAR...")
@@ -230,10 +237,15 @@ form#bapForm(hx-post="/sub", class=formClasses)
 					label(class=labelClasses) Light Hours
 					input(
 						class=textInput,
-						value=form.substrateColor,
+						value=form.lightHours,
 						name="lightHours",
 						type="text",
 						placeholder="16 hours...")
+
+		.flex.mt-4.gap-2.w-full.justify-center-center.text-center.items-center.hidden
+			button.p-2.rounded-md(class="bg-red-500 text-white") Clear
+			button.p-2.rounded-md(class="bg-black text-white") Save
+			button.p-2.rounded-md(class="bg-black text-white") Load
 
 	if !isLivestock
 		div.card
@@ -293,3 +305,18 @@ form#bapForm(hx-post="/sub", class=formClasses)
 
 	div.m-2
 		button(type="submit") Submit
+
+
+	script.
+		document.addEventListener("DOMContentLoaded", function () {
+			document.querySelectorAll("input, textarea, select").forEach((el) => {
+				if (el.name && sessionStorage.getItem(el.name) != undefined) {
+					if (el.type === "checkbox") {
+						el.checked = sessionStorage.getItem(el.name) === "true";
+					} else {
+
+						el.value = sessionStorage.getItem(el.name);
+					}
+				}
+			})
+		});
