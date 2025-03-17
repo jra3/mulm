@@ -5,10 +5,8 @@ import serve from 'koa-static';
 import path from 'path';
 import bodyParser from 'koa-bodyparser';
 import { getMembersList, MemberDetails } from "./data";
-import { addSubmission, approveSubmission, getOutstandingSubmissions, Submission } from "./db/submissions";
-import { z } from "zod";
-import { text } from "stream/consumers";
-import { bapSchema, foodTypes, getClassOptions, spawnLocations, speciesTypesAndClasses } from "./submissionSchema";
+import { addSubmission, approveSubmission, deleteSubmission, getApprovedSubmissionsInDateRange, getOutstandingSubmissions, getSubmissionById } from "./db/submissions";
+import { bapSchema, foodTypes, getClassOptions, isLivestock, spawnLocations, waterTypes, speciesTypes } from "./submissionSchema";
 
 const app = new Koa();
 app.use(bodyParser());
@@ -21,54 +19,34 @@ app.use(
 
 const router = new Router();
 
+// Regular Views ///////////////////////////////////////////////////
+
 router.get('/', async (ctx) => {
   await ctx.render('index', { title: 'BAS BAP/HAP Portal', message: 'Welcome to BAS!' });
 });
 
-router.get('/admin/bap/queue', async (ctx) => {
-  const submissions = getOutstandingSubmissions();
-  // check for auth
-  await ctx.render('queue', {
-    title: 'BAP Submission Queue',
-    submissions,
+// Entrypoint for BAP/HAP submission
+router.get('/submit', async (ctx) => {
+  const selectedType = String(ctx.query.speciesType ?? "Fish");
+  console.log(selectedType);
+  await ctx.render('submit', {
+    title: 'BAP Submission',
+    form: ctx.query,
+    classOptions: getClassOptions(selectedType),
+    waterTypes,
+    speciesTypes,
+    foodTypes,
+    spawnLocations,
+    isLivestock: isLivestock(selectedType),
   });
-})
-
-router.get('/admin/sub/:subId', async (ctx) => {
-  const subId = parseInt(ctx.params.subId);
-  if (!subId) {
-    ctx.status = 400;
-    ctx.body = "Invalid input";
-    return;
-  }
-
-  //const submission = getSubmissionById(subId);
-  const submission: Submission = {
-    id: subId,
-    submission_date: new Date().toISOString(),
-    member_name: "Alice",
-    species_name: `Species ${subId}`,
-  };
-
-  await ctx.render('review', {
-    submission,
-    isAdmin: true,
-  });
-
 });
 
-router.post('/admin/bap/approve', async (ctx) => {
-  const { id, points, approvedBy } = ctx.request.body as {id?: number, points?: number, approvedBy?: string };
-  if (!id || !points || !approvedBy) {
-    ctx.status = 400;
-    ctx.body = "Invalid input";
-    return;
-  }
-
-  approveSubmission(id, points, approvedBy);
+// Entrypoint for BAP/HAP submission
+router.get('/submit/addSupplement', async (ctx) => {
+  await ctx.render('bapForm/supplementSingleLine');
 });
 
-router.get('/bap/standings/:year', async (ctx) => {
+router.get('/standings/:year', async (ctx) => {
   const year = parseInt(ctx.params.year);
 
   if (isNaN(year) || year < 2020) {
@@ -76,31 +54,16 @@ router.get('/bap/standings/:year', async (ctx) => {
     ctx.body = "Invalid year";
     return;
   }
-
   const startDate = new Date(year - 1, 7, 1);
   const endDate = new Date(year, 6, 31);
 
-  // const submissions: {memberName: string, points: number, approvalDate?: Date}[] = getSubmissions(true, startDate, endDate);
+  const submissions = getApprovedSubmissionsInDateRange(startDate, endDate);
 
-  const approvalDate = new Date(year, 1, 1);
-  const submissions = [
-    { memberName: "Lucifer", points: 66, approvalDate },
-    { memberName: "Alice", points: 100, approvalDate },
-    { memberName: "Alice", points: 100, approvalDate },
-    { memberName: "Alice", points: 100, approvalDate },
-    { memberName: "Bob", points: 10, approvalDate },
-    { memberName: "Lucifer", points: 600, approvalDate },
-    // not approved
-    { memberName: "Lucifer", points: 999 },
-  ];
-
+  // Collate approved submissions into standings
   const standings = new Map<string, number>();
   submissions.forEach((submission) => {
-    console.log(submission);
-    if (submission.approvalDate != null) {
-      const currentPoints =  standings.get(submission.memberName) ?? 0;
-      standings.set(submission.memberName, currentPoints + submission.points);
-    }
+    const currentPoints = standings.get(submission.member_name) ?? 0;
+    standings.set(submission.member_name, currentPoints + submission.points!);
   });
 
   const sortedStandings = Array.from(standings.entries()).sort((a, b) => b[1] - a[1]);
@@ -110,11 +73,8 @@ router.get('/bap/standings/:year', async (ctx) => {
   });
 });
 
-
-router.get('/bap/lifetime', async (ctx) => {
-
+router.get('/lifetime', async (ctx) => {
   const levels = new Map<string, MemberDetails[]>();
-
   for (const member of getMembersList()) {
     const level = member.level ?? "Participant";
     if (!levels.has(level)) {
@@ -149,19 +109,64 @@ router.get('/bap/lifetime', async (ctx) => {
   });
 });
 
-router.get('/bap/submit', async (ctx) => {
-  await ctx.render('bap-submission', {
-    title: 'BAP Submission',
-    form: {
-      speciesClass: "Fish",
-    },
-    classOptions: getClassOptions("Fish"),
-    foodTypes,
-    spawnLocations,
+// Admin Views /////////////////////////////////////////////////////
+
+router.get('/admin/queue', async (ctx) => {
+  const submissions = getOutstandingSubmissions();
+  // TODO check for auth
+  await ctx.render('admin/queue', {
+    title: 'Submission Queue',
+    submissions,
   });
+})
+
+// This is a specializatin on router.patch('/sub/:subId'), we could get by with
+// one version
+router.post('/admin/approve', async (ctx) => {
+  // TODO zod validation
+  // TODO auth
+  const { id, points, approvedBy } = ctx.request.body as { id?: number, points?: number, approvedBy?: string };
+  if (!id || !points || !approvedBy) {
+    ctx.status = 400;
+    ctx.body = "Invalid input";
+    return;
+  }
+  approveSubmission(id, points, approvedBy);
 });
 
-router.post('/bap/submit', async (ctx) => {
+// Submissions /////////////////////////////////////////////////////
+
+async function viewSub(ctx: Koa.ParameterizedContext, isAdmin: boolean) {
+  const subId = parseInt(ctx.params.subId);
+
+  if (!subId) {
+    ctx.status = 400;
+    ctx.body = "Invalid submission id";
+    return;
+  }
+
+  const submission = getSubmissionById(subId);
+  if (!submission) {
+    ctx.status = 404;
+    ctx.body = "Submission not found";
+    return;
+  }
+
+  await ctx.render('submission/review', {
+    submission,
+    isAdmin,
+  });
+}
+
+router.get('/sub/:subId', async (ctx) => viewSub(ctx, false));
+router.get('/admin/sub/:subId', async (ctx) => {
+  // TODO do auth check
+  return viewSub(ctx, true);
+});
+
+// Save a new submission, potentially submitting it
+router.post('/sub', async (ctx) => {
+  console.log(ctx.request.body);
   const parsed = bapSchema.safeParse(ctx.request.body);
   if (!parsed.success) {
     ctx.status = 400;
@@ -174,30 +179,35 @@ router.post('/bap/submit', async (ctx) => {
   ctx.body = "Submitted";
 });
 
-router.post('/ajax/bap', async (ctx) => {
-  // TODO zod validation
-  const form = ctx.request.body as any;
-  await ctx.render('bapForm/form', {
-    form,
-    classOptions: getClassOptions(form.speciesType as string),
-    foodTypes,
-    spawnLocations,
-  });
-});
+// Admin can always update
+// User can update if not submitted
+router.patch('/sub/:subId', async (ctx) => {
+  const subId = parseInt(ctx.params.subId);
 
-router.get('/ajax/onSelectType', async (ctx) => {
-  console.log(ctx.query);
+  if (!subId) {
+    ctx.status = 400;
+    ctx.body = "Invalid submission id";
+    return;
+  }
 
-  const speciesType = ctx.query.speciesType as string ?? "Fish";
-  const options = speciesTypesAndClasses[speciesType]!
-  await ctx.render('onSelectType', {
-    options: options.map(v => ({ value: v, text: v })),
-    showLightAndFerts: speciesType === "Plant" || speciesType === "Coral",
-  });
-});
+  console.log("Implement patch");
+})
+
+// Admin can always delete
+// User can delete if not approved
+router.delete('/sub/:subId', async (ctx) => {
+  const subId = parseInt(ctx.params.subId);
+
+  if (!subId) {
+    ctx.status = 400;
+    ctx.body = "Invalid submission id";
+    return;
+  }
+
+  deleteSubmission(subId);
+})
 
 app.use(router.routes()).use(router.allowedMethods());
-
 const PORT = process.env.PORT || 4200;
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);

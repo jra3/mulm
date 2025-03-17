@@ -8,78 +8,21 @@ export function getClassOptions(speciesType: string) {
   return options.map((option) => ({ value: option, text: option }));
 }
 
-export const speciesTypesAndClasses: Record<string, string[]> = {
-  "Fish": [
-    "Anabantoids",
-    "Brackish Water",
-    "Catfish & Loaches",
-    "Characins",
-    "Cichlids",
-    "Cyprinids",
-    "Killifish",
-    "Livebearers",
-    "Miscellaneous",
-    "Marine",
-    "Native",
-  ],
-  "Invert": [
-    "Snail",
-    "Shrimp",
-    "Other",
-  ],
-  "Plant": [
-    "Apongetons & Criniums",
-    "Anubias & Lagenandra",
-    "Cryptocoryne",
-    "Floating Plants",
-    "Primative Plants",
-    "Rosette Plants",
-    "Stem Plants",
-    "Sword Plants",
-    "Water Lilles",
-  ],
-  "Coral": [
-    "Hard",
-    "Soft",
-  ],
-}
-
-export const foodTypes = [
-  "Live",
-  "Frozen",
-  "Flake",
-  "Pellet",
-  "Freeze Dried",
-  "Vegetable",
-  "Gel",
-  "Insect",
-];
-
-export const spawnLocations = [
-  "Rock",
-  "Log",
-  "Cave",
-  "Plant",
-  "Glass",
-  "Peat",
-  "Pipe",
-  "Mop",
-  "Filter Tube",
-  "Earth",
-];
+const waterTypeEnum = z.enum(["Fresh", "Brackish", "Salt"]);
+const speciesTypeEnum = z.enum(["Fish", "Invert", "Plant", "Coral"]);
 
 export const bapSchema = z.object({
   memberName: z.string().min(1),
-  waterType: z.enum(["Fresh", "Brackish", "Salt"]),
-  speciesType: z.enum(["Fish", "Invert", "Plant", "Coral"]),
-  //date: z.date(),
+  waterType: waterTypeEnum,
+  speciesType: speciesTypeEnum,
+  date: z.date(),
   speciesClass: z.string().min(1),
   speciesLatinName: z.string().min(1),
   speciesCommonName: z.string().min(1),
   count: z.string().optional(),
-  //foods: z.array(z.string()).optional(),
-  //spawnLocations: z.array(z.string()).optional(),
-  //propagationMethod: z.string().optional(),
+  foods: z.array(z.string()).optional(),
+  spawnLocations: z.array(z.string()).optional(),
+  propagationMethod: z.string().optional(),
 
   tankSize: z.string().min(1),
   filterType: z.string().min(1),
@@ -93,10 +36,10 @@ export const bapSchema = z.object({
   substrateDepth: z.string().min(1),
   substrateColor: z.string().min(1),
 
-/*   lightType: z.string().optional(),
+  lightType: z.string().optional(),
   lightStrength: z.string().optional(),
   lightHours: z.string().optional(),
- */
+
   /*
 
   ferts: z.array(
@@ -137,5 +80,69 @@ export const bapSchema = z.object({
 //  (data) => isLivestock(data.speciesType) || data.CO2 !== "YES" || Boolean(data.CO2Description),
 //  { message: "Requied", path: ["CO2Description"], }
 //)
+
+export const speciesTypes = speciesTypeEnum.options;
+export const waterTypes = waterTypeEnum.options;
+
+export const foodTypes = [
+  "Live",
+  "Frozen",
+  "Flake",
+  "Pellet",
+  "Freeze Dried",
+  "Vegetable",
+  "Gel",
+  "Insect",
+];
+
+export const spawnLocations = [
+  "Rock",
+  "Log",
+  "Cave",
+  "Plant",
+  "Glass",
+  "Peat",
+  "Pipe",
+  "Mop",
+  "Filter Tube",
+  "Earth",
+];
+
+export const speciesTypesAndClasses: Record<string, string[]> = {
+  "Fish": [
+    "Anabantoids",
+    "Brackish Water",
+    "Catfish & Loaches",
+    "Characins",
+    "Cichlids",
+    "Cyprinids",
+    "Killifish",
+    "Livebearers",
+    "Miscellaneous",
+    "Marine",
+    "Native",
+  ],
+  "Invert": [
+    "Snail",
+    "Shrimp",
+    "Other",
+  ],
+  "Plant": [
+    "Apongetons & Criniums",
+    "Anubias & Lagenandra",
+    "Cryptocoryne",
+    "Floating Plants",
+    "Primative Plants",
+    "Rosette Plants",
+    "Stem Plants",
+    "Sword Plants",
+    "Water Lilles",
+  ],
+  "Coral": [
+    "Hard",
+    "Soft",
+  ],
+}
+
 
 export type FormValues = z.infer<typeof bapSchema>;

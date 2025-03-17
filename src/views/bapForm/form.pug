@@ -1,11 +1,7 @@
-- const formClasses = ['flex-col', 'bg-white', 'p-6', 'rounded-lg', 'shadow-lg'];
-- const labelClasses = ['text-sm', 'leading-none', 'font-medium', 'select-none'];
-- const textInput = ['border-2', 'flex', 'h-9', 'w-full', 'min-w-0', 'px-3', 'py-1', 'text-base', 'shadow-xs', 'outline-none', 'border-gray-300', 'rounded-lg'];
-- const card = ['bg-white', 'p-6', 'rounded-lg', 'shadow-lg'];
+include style.pug
+include supplementLine.pug
 
-form#bapForm(
-	hx-post="/bap/submit",
-	class=formClasses)
+form#bapForm(hx-post="/sub", class=formClasses)
 
 	div.grid.gap-2
 		label(class=labelClasses) Member Name
@@ -20,31 +16,31 @@ form#bapForm(
 		p.font-semibold.p-4 Species Details
 
 		div.space-y-4
-
 			div.grid.grid-cols-2.w-full.gap-2
 				div.grid.gap-2
 					label(class=labelClasses) Water Type
 					div.select-wrapper
 						select#waterType(
-							value=form.waterType
 							name="waterType")
-							option(value="Fresh") Fresh
-							option(value="Brackish") Brackish
-							option(value="Salt") Salt
+							for water in waterTypes
+								- const selected = water === form.waterType;
+								option(value=water, selected=selected)= water
 
 				div.grid.gap-2
 					label(class=labelClasses) Species Type
 					div.select-wrapper
-						select#speciesType(
-							hx-get="/ajax/onSelectType"
-							hx-target="#class"
+						select(
 							value=form.speciesType
-							name="speciesType")
-
-							option(value="Fish") Fish
-							option(value="Invert") Invert
-							option(value="Plant") Plant
-							option(value="Coral") Coral
+							name="speciesType"
+							hx-get="/submit"
+							hx-include="closest form"
+							hx-swap="outerHTML"
+							hx-target="#bapForm"
+							hx-select="#bapForm"
+							hx-push-url="false")
+							for speciesType in speciesTypes
+								- const selected = speciesType === form.speciesType;
+								option(value=speciesType, selected=selected)= speciesType
 
 			div.grid.gap-2
 				label(class=labelClasses) Species Class
@@ -74,45 +70,52 @@ form#bapForm(
 					type="text",
 					placeholder="Species Name")
 
-			div.grid.gap-2
+			div.grid.gap-2#fryCount(class=livestockOnly)
 				label(class=labelClasses) # of Fry
 				input(
 					class=textInput,
-					value=form.count,
 					name="count",
 					type="text",
 					placeholder="Zillions")
 
-			div.grid.gap-2
-				label(class=labelClasses) Foods
-				select#foods(
-					multiple
-					name="foods"
-					placeHolder="Select all foods fed")
+			if isLivestock
+				div.grid.gap-2
+					label(class=labelClasses) Foods
+					select#foods(
+						multiple
+						name="foods"
+						placeHolder="Select all foods fed")
+						each food in foodTypes
+							option(value=food)= food
 
-					each food in foodTypes
-						option(value=food)= food
+				div.grid.gap-2
+					label(class=labelClasses) Spawn Locations
+					select#spawns(
+						multiple
+						name="spawnLocations"
+						placeHolder="Select all spawning locations")
+						each loc in spawnLocations
+							option(value=loc)= loc
 
-			div.grid.gap-2
-				label(class=labelClasses) Spawn Locations
-				select#spawns(
-					multiple
-					name="spawnLocations"
-					placeHolder="Select all spawning locations")
+				script.
+					var settings = {
+						hideSelected: true,
+						create: true,
+					};
 
-					each loc in spawnLocations
-						option(value=loc)= loc
-
-			script.
-				var settings = {
-					hideSelected: true,
-					create: true,
-				};
-
-				document.addEventListener('DOMContentLoaded', function() {
-					new TomSelect("#foods", settings);
-					new TomSelect("#spawns", settings);
-				});
+					document.addEventListener('DOMContentLoaded', function() {
+						new TomSelect("#foods", settings);
+						new TomSelect("#spawns", settings);
+					});
+			else
+				div.grid.gap-2
+					label(class=labelClasses) Propagation Method
+					input(
+						class=textInput,
+						value=form.propagationMethod,
+						name="propagationMethod",
+						type="text",
+						placeholder="Chainsaw...")
 
 	div.card
 		p.font-semibold.p-4 Tank Details
@@ -206,8 +209,87 @@ form#bapForm(
 					name="substrateColor",
 					type="text",
 					placeholder="Brown, White, Hot Pink...")
+			if !isLivestock
+				div.grid.gap-2#lights(class=[nonLivestock])
+					label(class=labelClasses) Light Type
+					input(
+						class=textInput,
+						value=form.substrateColor,
+						name="lightType",
+						type="text",
+						placeholder="LED, Sunlight, Fluorescent...")
+				div.grid.gap-2#lights(class=[nonLivestock])
+					label(class=labelClasses) Light Strength
+					input(
+						class=textInput,
+						value=form.substrateColor,
+						name="lightStrength",
+						type="text",
+						placeholder="Watts, PAR...")
+				div.grid.gap-2#lights(class=[nonLivestock])
+					label(class=labelClasses) Light Hours
+					input(
+						class=textInput,
+						value=form.substrateColor,
+						name="lightHours",
+						type="text",
+						placeholder="16 hours...")
 
-	div
+	if !isLivestock
+		div.card
+			p.font-semibold.p-4 Supplements
+
+			div
+			.flex-col.gap-2#supplements
+				if !!form.supplementType
+					each type, index in form.supplementType
+						+supplementLine(type, form.supplementType[index])
+				else
+					+supplementLine("", "")
+
+			button(
+				hx-get="/submit/addSupplement"
+				hx-swap="beforeend"
+				hx-target="#supplements"
+			) Add +
+
+			fieldset.flex
+				- const hasCO2 = form.CO2 === 'yes';
+				legend CO2?
+				label
+					input(
+						type="radio"
+						name="CO2"
+						value="yes"
+						checked=hasCO2
+						required
+						hx-get="/submit"
+						hx-include="closest form"
+						hx-swap="outerHTML"
+						hx-target="#bapForm"
+						hx-select="#bapForm"
+						hx-push-url="false")
+					| Yes
+				label
+					input(
+						type="radio"
+						name="CO2"
+						value="no"
+						checked=!hasCO2
+						hx-get="/submit"
+						hx-include="closest form"
+						hx-swap="outerHTML"
+						hx-target="#bapForm"
+						hx-select="#bapForm"
+						hx-push-url="false")
+					| No
+
+			if hasCO2
+				textarea.w-full(
+					class=textInput,
+					name="CO2Description"
+					rows="4"
+					placeholder="Describe CO2 injection...")
+
+	div.m-2
 		button(type="submit") Submit
-
-

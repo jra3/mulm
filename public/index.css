@@ -182,6 +182,12 @@
   .absolute {
     position: absolute;
   }
+  .m-2 {
+    margin: calc(var(--spacing) * 2);
+  }
+  .m-16 {
+    margin: calc(var(--spacing) * 16);
+  }
   .mx-auto {
     margin-inline: auto;
   }
@@ -190,6 +196,9 @@
   }
   .grid {
     display: grid;
+  }
+  .hidden {
+    display: none;
   }
   .table {
     display: table;
@@ -242,6 +251,9 @@
   }
   .rounded-lg {
     border-radius: var(--radius-lg);
+  }
+  .rounded-md {
+    border-radius: var(--radius-md);
   }
   .border-2 {
     border-style: var(--tw-border-style);
