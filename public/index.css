@@ -256,9 +256,6 @@
   .rounded-md {
     border-radius: var(--radius-md);
   }
-  .border-red-400 {
-    border-color: var(--color-red-400);
-  }
   .bg-black {
     background-color: var(--color-black);
   }
@@ -416,6 +413,9 @@ select {
   --tw-shadow: 0 1px 2px 0 var(--tw-shadow-color, rgb(0 0 0 / 0.05));
   box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
 }
+.ts-control.error {
+  border-color: var(--color-red-400);
+}
 .ts-control .item {
   margin: calc(var(--spacing) * 0);
   display: flex;
@@ -520,4 +520,3 @@ select {
   inherits: false;
   initial-value: solid;
 }
-

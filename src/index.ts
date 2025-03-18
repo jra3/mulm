@@ -166,8 +166,6 @@ router.get('/admin/sub/:subId', async (ctx) => {
 
 // Save a new submission, potentially submitting it
 router.post('/sub', async (ctx) => {
-  console.log(ctx.request.body);
-
   const parsed = bapSchema.safeParse(ctx.request.body);
   if (!parsed.success) {
 
@@ -177,7 +175,7 @@ router.post('/sub', async (ctx) => {
     });
 
     const selectedType = String(ctx.query.speciesType ?? "Fish");
-    await ctx.render('submit', {
+    await ctx.render('bapForm/form', {
       title: 'BAP Submission',
       form: ctx.request.body,
       errors,
@@ -191,7 +189,6 @@ router.post('/sub', async (ctx) => {
     return;
   }
 
-  console.log(parsed.data);
   addSubmission(parsed.data!, true);
   ctx.body = "Submitted";
 });
