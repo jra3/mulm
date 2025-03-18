@@ -4,9 +4,44 @@ html
 		title= title
 		script(src='https://unpkg.com/htmx.org@2.0.4')
 		script(src="https://cdn.jsdelivr.net/npm/tom-select@2.4.3/dist/js/tom-select.complete.min.js")
-		link(href="https://cdn.jsdelivr.net/npm/tom-select@2.4.3/dist/css/tom-select.css" rel="stylesheet")
+		link(rel='stylesheet' href='/tom-select.css')
 		link(rel='stylesheet' href='/index.css')
 
 	body.flex.flex-col.justify-center.items-center
 		h2.text-2xl.p-2 New BAP Submission
 		include bapForm/form.pug
+
+		script.
+			function initTomSelects() {
+				document.querySelectorAll("select.tom-select").forEach((select) => {
+					if (select.tomselect) {
+						select.tomselect.destroy();
+					}
+
+					new TomSelect(select, {
+						hideSelected: true,
+						create: true,
+					});
+				});
+			}
+
+			document.addEventListener("htmx:load", function () {
+				initTomSelects();
+			});
+
+			document.addEventListener("DOMContentLoaded", function () {
+				initTomSelects();
+
+				document.querySelectorAll("input, textarea, select").forEach((el) => {
+					if (el.name && sessionStorage.getItem(el.name) != undefined) {
+						if (el.type === "checkbox") {
+							el.checked = sessionStorage.getItem(el.name) === "true";
+						} else {
+							el.value = sessionStorage.getItem(el.name);
+						}
+					}
+				})
+			});
+
+			htmx.logAll();
+

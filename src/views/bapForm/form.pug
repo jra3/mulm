@@ -1,15 +1,15 @@
 include style.pug
 include supplementLine.pug
 
-mixin bapTextInput(labelText, name, placeholder)
+mixin bapTextInput(labelText, name, placeholder, type="text")
 	div.grid.gap-2
-		label(class=labelClasses)= labelText
-		input(
+		label(class=labelClasses, for=name)= labelText
+		input.text-input(
+			id=name
 			value=form[name]
 			name=name
-			type="text"
+			type=type
 			placeholder=placeholder
-			class=textInput
 			class=errors.has(name) ? "border-red-400" : "")
 		if errors.has(name)
 			div(class="text-red-400")= errors.get(name)
@@ -24,16 +24,8 @@ mixin bapSimpleSelectInput(labelText, name)
 mixin bapMultiSelectInput(labelText, name, id)
 	div.grid.gap-2
 		label(class=labelClasses)= labelText
-		select(value=form[name] name=name multiple id=id)
+		select.tom-select(value=form[name] name=name multiple id=id)
 			block
-	script.
-		var settings = {
-			hideSelected: true,
-			create: true,
-		};
-		document.addEventListener('DOMContentLoaded', function() {
-			new TomSelect(id, settings);
-		});
 
 form#bapForm(hx-post="/sub", class=formClasses)
 	+bapTextInput("Member Name", "memberName", "Jacques Cousteau")
@@ -64,9 +56,11 @@ form#bapForm(hx-post="/sub", class=formClasses)
 								- const selected = speciesType === form.speciesType;
 								option(value=speciesType, selected=selected)= speciesType
 
-			+bapSimpleSelectInput("Species Class", "speciesClass")
-				each option in classOptions
-					option(value=option.value)= option.text
+				+bapSimpleSelectInput("Species Class", "speciesClass")
+					each option in classOptions
+						option(value=option.value)= option.text
+				- const dateLabel = isLivestock ? "Date Spawned" : "Date Propagated";
+				+bapTextInput(dateLabel, "date", "", "date")
 
 			+bapTextInput("Species Common Name", "speciesCommonName", "Guppy")
 			+bapTextInput("Species Latin Name", "speciesLatinName", "Poecilia reticulata")
@@ -169,17 +163,3 @@ form#bapForm(hx-post="/sub", class=formClasses)
 
 	div.m-2
 		button(type="submit") Submit
-
-	script.
-		document.addEventListener("DOMContentLoaded", function () {
-			document.querySelectorAll("input, textarea, select").forEach((el) => {
-				if (el.name && sessionStorage.getItem(el.name) != undefined) {
-					if (el.type === "checkbox") {
-						el.checked = sessionStorage.getItem(el.name) === "true";
-					} else {
-
-						el.value = sessionStorage.getItem(el.name);
-					}
-				}
-			})
-		});

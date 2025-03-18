@@ -4,7 +4,15 @@ select {
 	appearance: none; /* Removes default styles */
 	-webkit-appearance: none; /* Safari */
 	-moz-appearance: none; /* Firefox */
-	@apply border-2 bg-white flex h-9 w-full min-w-0 rounded-md px-3 py-1 text-base shadow-xs outline-none border-gray-300 rounded-lg;
+	@apply border-2 bg-white flex h-9 w-full min-w-0 px-3 py-1 text-base shadow-xs border-gray-300 rounded-lg;
+}
+
+.card {
+	@apply bg-white p-6 rounded-lg shadow-lg
+}
+
+.text-input {
+	@apply border-2 bg-white flex h-9 w-full min-w-0 px-3 py-1 text-base shadow-xs border-gray-300 rounded-lg;
 }
 
 .select-wrapper {
@@ -27,3 +35,30 @@ select {
 	pointer-events: none;
 	color: #888;
 }
+
+.ts-control {
+	@apply font-medium border-2 h-9 px-3 py-1 shadow-xs border-gray-300 rounded-lg z-[1] flex gap-1;
+}
+
+.ts-control .item {
+	@apply m-0 p-1 rounded-lg bg-gray-200 flex items-center;
+}
+
+.ts-control .item.active {
+	@apply bg-gray-300;
+}
+
+.ts-dropdown {
+	@apply border-2 border-gray-300 bg-white shadow-xs rounded-lg z-[10];
+	position: absolute;
+	top: 100%;
+	left: 0;
+	width: 100%;
+}
+
+.ts-dropdown,
+.ts-control,
+.ts-control input {
+	@apply text-base;
+}
+
