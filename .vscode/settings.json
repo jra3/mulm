@@ -28,7 +28,7 @@
 		// Visual indicator at 120 columns
 		{ "column": 120 },
 	],
-	"editor.tabSize": 4,
+	"editor.tabSize": 2,
 	"editor.trimAutoWhitespace": true,
 	"eslint.execArgv": [
 		"--max_old_space_size=8192",
@@ -85,4 +85,10 @@
 	"typescript.enablePromptUseWorkspaceTsdk": true,
 	"typescript.preferences.quoteStyle": "double",
 	"typescript.tsdk": "./node_modules/typescript/lib",
+	"editor.fontSize": 14,
+	"editor.renderWhitespace": "trailing",
+	"prettier.useTabs": true,
+	"editor.comments.insertSpace": true,
+  "editor.detectIndentation": false,
+  "editor.insertSpaces": false,
 }

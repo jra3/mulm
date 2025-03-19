@@ -1,20 +1,20 @@
 doctype html
 
 html
-  head
-    title= title
-    script(src='https://unpkg.com/htmx.org@2.0.4')
-    link(rel='stylesheet', href='/index.css')
+	head
+		title= title
+		script(src='https://unpkg.com/htmx.org@2.0.4')
+		link(rel='stylesheet', href='/index.css')
 
-  body.flex.justify-center.items-center
-    .flex-col.bg-white.p-6.rounded-lg.shadow-lg
-      h2.text-2xl.p-2.pb-4= title
+	body.flex.justify-center.items-center
+		.flex-col.bg-white.p-6.rounded-lg.shadow-lg
+			h2.text-2xl.p-2.pb-4= title
 
-      each member, index in standings
-        .flex.justify-between.w-full.max-w-2xl.mx-auto
-          .text-right.w-8
-            p= index+1
-          .text-right.w-40
-            p= member[0]
-          .text-left.w-8
-            p= member[1]
+			each member, index in standings
+				.flex.justify-between.w-full.max-w-2xl.mx-auto
+					.text-right.w-8
+						p= index+1
+					.text-right.w-40
+						p= member[0]
+					.text-left.w-8
+						p= member[1]

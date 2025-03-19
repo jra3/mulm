@@ -1,22 +1,22 @@
 doctype html
 html
-  head
-    title= title
-    script(src='https://unpkg.com/htmx.org@2.0.4')
-    link(rel='stylesheet', href='/index.css')
+	head
+		title= title
+		script(src='https://unpkg.com/htmx.org@2.0.4')
+		link(rel='stylesheet', href='/index.css')
 
 
-  body.flex.justify-center.items-center
-    .flex-col.justify-center.text-center.items-center.bg-white.p-6.rounded-lg.shadow-lg
-      h2.text-2xl.p-2= title
-      each levelName in levelsOrder
+	body.flex.justify-center.items-center
+		.flex-col.justify-center.text-center.items-center.bg-white.p-6.rounded-lg.shadow-lg
+			h2.text-2xl.p-2= title
+			each levelName in levelsOrder
 
-        p.w-full.pt-4.font-bold= levelName
-        each member in levels.get(levelName)
-          .flex.justify-between.w-full.max-w-2xl.mx-auto
-            .text-right.w-100
-              p= member.memberName
-            .text-left.w-100.pl-4
-              p= member.totalPoints
+				p.w-full.pt-4.font-bold= levelName
+				each member in levels.get(levelName)
+					.flex.justify-between.w-full.max-w-2xl.mx-auto
+						.text-right.w-100
+							p= member.memberName
+						.text-left.w-100.pl-4
+							p= member.totalPoints
 
 
