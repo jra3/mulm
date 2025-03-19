@@ -67,3 +67,10 @@ BEGIN
 		WHERE table_name = 'members')
 	WHERE   ROWID = new.ROWID;
 END;
+
+CREATE TABLE awards (
+	member_id INTEGER NOT NULL,
+	award_name TEXT NOT NULL,
+	date_awarded DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (member_id, award_name)
+);

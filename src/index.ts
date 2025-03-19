@@ -7,6 +7,7 @@ import bodyParser from 'koa-bodyparser';
 import { getMembersList, MemberDetails } from "./data";
 import { addSubmission, approveSubmission, deleteSubmission, getApprovedSubmissionsInDateRange, getOutstandingSubmissions, getSubmissionById } from "./db/submissions";
 import { bapSchema, foodTypes, getClassOptions, isLivestock, spawnLocations, waterTypes, speciesTypes } from "./submissionSchema";
+import { getOrCreateMember } from "./db/members";
 
 const app = new Koa();
 app.use(bodyParser());
@@ -81,6 +82,7 @@ router.get('/lifetime/:program', async (ctx) => {
 		ctx.body = "Invalid program";
 		return;
 	}
+
 
 
 	const levels = new Map<string, MemberDetails[]>();
@@ -198,7 +200,8 @@ router.post('/sub', async (ctx) => {
 		return;
 	}
 
-	addSubmission(parsed.data!, true);
+	const member = getOrCreateMember(parsed.data.memberName);
+	addSubmission(member.id, parsed.data, true);
 	ctx.body = "Submitted";
 });
 

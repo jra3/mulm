@@ -7,7 +7,9 @@ export type Submission = {
 	created_on: Date;
 	updated_on: Date;
 
+	member_id: number;
 	member_name: string;
+
 	species_type: string;
 	species_class: string;
 	species_common_name: string;
@@ -34,13 +36,13 @@ export type Submission = {
 	points?: number;
 };
 
-export function addSubmission(form: FormValues, submit: boolean) {
+export function addSubmission(memberId: number, form: FormValues, submit: boolean) {
 	try {
 		const conn = getWriteDBConnecton();
 		const stmt = conn.prepare(`
 			INSERT INTO submissions
 			(
-				member_name,
+				member_id,
 				species_type,
 				species_class,
 				species_common_name,
@@ -67,7 +69,7 @@ export function addSubmission(form: FormValues, submit: boolean) {
 		);
 
 		stmt.run(
-			form.memberName,
+			memberId,
 			form.speciesType,
 			form.speciesClass,
 			form.speciesCommonName,
@@ -96,12 +98,22 @@ export function addSubmission(form: FormValues, submit: boolean) {
 	}
 }
 
-export function getSubmissionsByMember(memberName: string) {
-	return query<Submission>("SELECT * FROM submissions WHERE member_name = ?", [memberName]);
+export function getSubmissionsByMember(memberId: number) {
+	return query<Submission>(`
+		SELECT submissions.*, members.name as member_name
+		FROM submissions LEFT JOIN members
+		ON submissions.member_id == members.id
+		WHERE submissions.member_id = ?`,
+		[memberId]);
 }
 
 export function getSubmissionById(id: number) {
-	const result = query<Submission>(`SELECT * FROM submissions	WHERE id = ?`, [id]);
+	const result = query<Submission>(`
+		SELECT submissions.*, members.name as member_name
+		FROM submissions LEFT JOIN members
+		ON submissions.member_id == members.id
+		WHERE submissions.id = ?`,
+		[id]);
 	return result.pop();
 }
 
