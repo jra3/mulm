@@ -5,9 +5,9 @@ import serve from 'koa-static';
 import path from 'path';
 import bodyParser from 'koa-bodyparser';
 import { getMembersList, MemberDetails } from "./data";
-import { addSubmission, approveSubmission, deleteSubmission, getApprovedSubmissionsInDateRange, getOutstandingSubmissions, getSubmissionById } from "./db/submissions";
+import { addSubmission, approveSubmission, deleteSubmission, getApprovedSubmissionsInDateRange, getOutstandingSubmissions, getSubmissionById, getSubmissionsByMember } from "./db/submissions";
 import { bapSchema, foodTypes, getClassOptions, isLivestock, spawnLocations, waterTypes, speciesTypes } from "./submissionSchema";
-import { getOrCreateMember } from "./db/members";
+import { getMemberData, getOrCreateMember } from "./db/members";
 
 const app = new Koa();
 app.use(bodyParser());
@@ -143,6 +143,32 @@ router.post('/admin/approve', async (ctx) => {
 		return;
 	}
 	approveSubmission(id, points, approvedBy);
+});
+
+// Members /////////////////////////////////////////////////////////
+
+router.get('/member/:memberId', async (ctx) => {
+	const memberId = parseInt(ctx.params.memberId);
+
+	if (!memberId) {
+		ctx.status = 400;
+		ctx.body = "Invalid member id";
+		return;
+	}
+
+	const member = getMemberData(memberId);
+
+	if (!member) {
+		ctx.status = 404;
+		ctx.body = "Member not found";
+		return;
+	};
+
+	const submissions = getSubmissionsByMember(memberId);
+	await ctx.render('member', {
+		member,
+		submissions,
+	});
 });
 
 // Submissions /////////////////////////////////////////////////////
