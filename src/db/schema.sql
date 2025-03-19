@@ -2,13 +2,16 @@
 -- > cd ~/mulm
 -- > sqlite3 database.db < src/schema.sql
 
+CREATE TABLE auto_increment (value INT, table_name TEXT);
+INSERT INTO auto_increment VALUES (0, 'members');
+
 CREATE TABLE submissions (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 
 	created_on DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	updated_on DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-	member_name TEXT NOT NULL,
+	member_id TEXT NOT NULL,
 	species_type TEXT NOT NULL,
 	species_class TEXT NOT NULL,
 	species_common_name TEXT NOT NULL,
@@ -34,5 +37,33 @@ CREATE TABLE submissions (
 	points INTEGER DEFAULT NULL
 );
 
-CREATE INDEX idx_member_name ON submissions (member_name);
+CREATE INDEX idx_member_id ON submissions (member_id);
 CREATE INDEX idx_date_approved ON submissions (approved_on);
+
+/*
+	Members table
+	 - name is unique
+	 - id is unique and managed automatically by trigger
+*/
+
+CREATE TABLE members (
+	name TEXT PRIMARY KEY,
+	id INTEGER UNIQUE,
+	fish_level TEXT DEFAULT NULL,
+	plant_level TEXT DEFAULT NULL,
+	coral_level	TEXT DEFAULT NULL
+);
+
+CREATE TRIGGER members_id_sequence AFTER INSERT ON members
+BEGIN
+	UPDATE auto_increment
+	SET value = value + 1
+	WHERE table_name = 'members';
+
+	UPDATE members
+	SET	id = (
+		SELECT value
+		FROM auto_increment
+		WHERE table_name = 'members')
+	WHERE   ROWID = new.ROWID;
+END;

@@ -41,7 +41,7 @@ router.get('/submit', async (ctx) => {
 	});
 });
 
-// Entrypoint for BAP/HAP submission
+// Add a line to the fertilizer list
 router.get('/submit/addSupplement', async (ctx) => {
 	await ctx.render('bapForm/supplementSingleLine');
 });
@@ -73,7 +73,16 @@ router.get('/standings/:year', async (ctx) => {
 	});
 });
 
-router.get('/lifetime', async (ctx) => {
+const lifetimePrograms = ['fish', 'plant', 'coral'];
+router.get('/lifetime/:program', async (ctx) => {
+	const program = String(ctx.params.program);
+	if (lifetimePrograms.indexOf(program) === -1) {
+		ctx.status = 404;
+		ctx.body = "Invalid program";
+		return;
+	}
+
+
 	const levels = new Map<string, MemberDetails[]>();
 	for (const member of getMembersList()) {
 		const level = member.level ?? "Participant";
@@ -217,7 +226,6 @@ router.delete('/sub/:subId', async (ctx) => {
 		ctx.body = "Invalid submission id";
 		return;
 	}
-
 	deleteSubmission(subId);
 })
 
