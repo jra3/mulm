@@ -12,3 +12,31 @@ html
 
 			- const d = JSON.stringify(submission, null, 2);
 			pre= d
+
+			if isAdmin
+				form(hx-post="/admin/approve")
+					input(type="hidden" name="id" value=submission.id)
+					label.label-text Points
+						.flex.gap-2
+							label
+								input(type="radio" name="points" value=5)
+								| 5
+							label
+								input(type="radio" name="points" value=10)
+								| 10
+							label
+								input(type="radio" name="points" value=15)
+								| 15
+							label
+								input(type="radio" name="points" value=20)
+								| 20
+
+					label Approved By
+						input.text-input(type="text" name="approvedBy")
+					.flex.gap-2
+
+						button(type="submit") Approve
+						button(type="submit" name="reject" value="true") Reject
+						button(type="submit" name="delete" value="true") Delete
+
+

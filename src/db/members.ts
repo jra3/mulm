@@ -27,6 +27,11 @@ export function getOrCreateMember(name: string) {
 	}
 }
 
+export function getMembersList() {
+	return query<{ id: number, name: string }>(`SELECT id, name FROM members`);
+}
+
+
 export function getMemberData(memberId: number) {
 	const members = query<MemberRecord>(`SELECT * FROM members WHERE id = ?`, [memberId]);
 	const member = members.pop();

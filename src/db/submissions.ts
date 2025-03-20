@@ -131,10 +131,10 @@ export function deleteSubmission(id: number) {
 
 export function getApprovedSubmissionsInDateRange(startDate: Date, endDate: Date) {
 	return query<Submission>(`
-				SELECT * FROM submissions
-				WHERE submitted_on > ? AND submitted_on < ?
-				AND approved_on IS NOT NULL AND points IS NOT NULL
-		`, [
+		SELECT * FROM submissions
+		WHERE submitted_on > ? AND submitted_on < ?
+		AND approved_on IS NOT NULL AND points IS NOT NULL
+	`, [
 		startDate.toISOString(),
 		endDate.toISOString(),
 	]);
@@ -148,14 +148,24 @@ export function getOutstandingSubmissions() {
 	);
 }
 
+export function getApprovedSubmissions() {
+	return query<Submission & Required<Pick<Submission, "submitted_on" | "approved_on" | "points">>>(`
+		SELECT * FROM submissions
+		WHERE submitted_on IS NOT NULL
+		AND approved_on IS NOT NULL
+		AND points IS NOT NULL
+	`);
+}
+
 export function getAllSubmissions() {
 	return query<Submission>("SELECT * FROM submissions");
 }
 
 export function approveSubmission(id: number, points: number, approvedBy: string) {
+
 	try {
 		const conn = getWriteDBConnecton();
-		const stmt = conn.prepare(`UPDATE submissions SET points = ?, approved_by = ?, date_approved = ? WHERE id = ?`);
+		const stmt = conn.prepare(`UPDATE submissions SET points = ?, approved_by = ?, approved_on = ? WHERE id = ?`);
 		stmt.run(points, approvedBy, new Date().toISOString(), id);
 		conn.close();
 	} catch (err) {

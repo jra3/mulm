@@ -1,9 +1,8 @@
-include style.pug
 include supplementLine.pug
 
 mixin bapTextInput(labelText, name, placeholder, type="text")
 	div.grid.gap-2
-		label(class=labelClasses, for=name)= labelText
+		label.input-label(for=name)= labelText
 		input.text-input(
 			id=name
 			value=form[name]
@@ -16,14 +15,14 @@ mixin bapTextInput(labelText, name, placeholder, type="text")
 
 mixin bapSimpleSelectInput(labelText, name)
 	div.grid.gap-2
-		label(class=labelClasses)= labelText
+		label.input-label(for=name)= labelText
 		div.select-wrapper
 			select(value=form[name] name=name)
 				block
 
 mixin bapMultiSelectInput(labelText, name, id)
 	div.grid.gap-2
-		label(class=labelClasses)= labelText
+		label.input-label(for=name)= labelText
 		select.tom-select(
 			id=id
 			name=name
@@ -35,11 +34,10 @@ mixin bapMultiSelectInput(labelText, name, id)
 			div(class="text-red-400")= errors.get(name)
 
 
-form#bapForm(
+form.flex-col.bg-white.p-6.rounded-lg.shadow-lg#bapForm(
 	hx-target="#bapForm"
 	hx-swap="outerHTML"
-	hx-post="/sub",
-	class=formClasses)
+	hx-post="/sub")
 
 	+bapTextInput("Member Name", "memberName", "Jacques Cousteau")
 
@@ -54,7 +52,7 @@ form#bapForm(
 						option(value=water, selected=selected)= water
 
 				div.grid.gap-2
-					label(class=labelClasses) Species Type
+					label.input-label Species Type
 					div.select-wrapper
 						select(
 							value=form.speciesType
@@ -168,8 +166,7 @@ form#bapForm(
 					| No
 
 			if hasCO2
-				textarea.w-full(
-					class=textInput,
+				textarea.w-full.text-input(
 					name="CO2Description"
 					rows="4"
 					placeholder="Describe CO2 injection...")

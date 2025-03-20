@@ -8,7 +8,11 @@ select {
 }
 
 .card {
-	@apply bg-white p-6 rounded-lg shadow-lg
+	@apply bg-white p-6 rounded-lg shadow-lg;
+}
+
+.input-label {
+	@apply text-sm leading-none font-medium select-none;
 }
 
 .text-input {
