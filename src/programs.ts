@@ -74,6 +74,7 @@ export const levelRules: Record<string, LevelRules[]> = {
 	],
 	// • Extra points will be awarded for plants that flower, equal to the point value of plant.
 	plant: [
+		["Participant", 0],
 		["Beginner Aquatic Horticulturist", 25],
 		["Aquatic Horticulturist", 50, (tally) => {
 			// At least 20 points must be from the 10, 15 or 20 point category.

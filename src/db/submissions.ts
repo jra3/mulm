@@ -78,7 +78,7 @@ export function addSubmission(memberId: number, form: FormValues, submit: boolea
 				submitted_on
 			)
 			VALUES
-			(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+			(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 		);
 
 		stmt.run(
@@ -145,7 +145,9 @@ export function deleteSubmission(id: number) {
 
 export function getApprovedSubmissionsInDateRange(startDate: Date, endDate: Date, program: string) {
 	return query<Submission>(`
-		SELECT * FROM submissions
+		SELECT submissions.*, members.name as member_name
+		FROM submissions JOIN members
+		ON submissions.member_id == members.id
 		WHERE submitted_on > ? AND submitted_on < ?
 		AND approved_on IS NOT NULL AND points IS NOT NULL
 		AND program = ?
@@ -158,7 +160,9 @@ export function getApprovedSubmissionsInDateRange(startDate: Date, endDate: Date
 
 export function getOutstandingSubmissions(program: string) {
 	return query<Submission>(`
-		SELECT * FROM submissions
+		SELECT submissions.*, members.name as member_name
+		FROM submissions JOIN members
+		ON submissions.member_id == members.id
 		WHERE submitted_on IS NOT NULL
 		AND approved_on IS NULL
 		AND program = ?`,
@@ -168,7 +172,9 @@ export function getOutstandingSubmissions(program: string) {
 
 export function getApprovedSubmissions(program: string) {
 	return query<Submission & Required<Pick<Submission, "submitted_on" | "approved_on" | "points">>>(`
-		SELECT * FROM submissions
+		SELECT submissions.*, members.name as member_name
+		FROM submissions JOIN members
+		ON submissions.member_id == members.id
 		WHERE submitted_on IS NOT NULL
 		AND approved_on IS NOT NULL
 		AND points IS NOT NULL
@@ -178,7 +184,11 @@ export function getApprovedSubmissions(program: string) {
 }
 
 export function getAllSubmissions(program: string) {
-	return query<Submission>("SELECT * FROM submissions WHERE program = ?", [program]);
+	return query<Submission>(`
+		SELECT submissions.*, members.name as member_name
+		FROM submissions JOIN members
+		ON submissions.member_id == members.id
+		FROM submissions WHERE program = ? `, [program]);
 }
 
 export function approveSubmission(id: number, points: number, approvedBy: string) {

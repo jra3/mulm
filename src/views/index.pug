@@ -23,11 +23,12 @@ html
 				p.font-bold.text-center Annual Standings
 
 				.flex.gap-4.items-center.justify-center
+					a(href='/annual/2025') [2025]
 					a(href='/annual/2024') [2024]
-					a(href='/annual/2023') [2023]
 					.select-wrapper
 						select(hx-get="/annual" hx-trigger="change" name="year")
 							option(value="" disabled selected) Past years...
+							option(value="2022") 2023
 							option(value="2022") 2022
 							option(value="2021") 2021
 							option(value="2020") 2020

@@ -6,7 +6,7 @@ import path from 'path';
 import bodyParser from 'koa-bodyparser';
 import { addSubmission, approveSubmission, deleteSubmission, getApprovedSubmissions, getApprovedSubmissionsInDateRange, getOutstandingSubmissions, getSubmissionById, getSubmissionsByMember } from "./db/submissions";
 import { bapSchema, foodTypes, getClassOptions, isLivestock, spawnLocations, waterTypes, speciesTypes } from "./submissionSchema";
-import { getMemberData, getMembersList, getOrCreateMember } from "./db/members";
+import { getMemberData, getMembersList, getOrCreateMember, MemberRecord } from "./db/members";
 import { levelRules, minYear, programs } from "./programs";
 
 const app = new Koa();
@@ -109,209 +109,229 @@ router.get('/lifetime{/:program}', async (ctx) => {
 	}
 
 	// TODO add levels grouping back
-	const levelsOrder = levelRules[program].map(rule => rule[0])
+	const levelsOrder = levelRules[program].map(rule => rule[0]).reverse()
 
 	const allSubmissions = getApprovedSubmissions(program);
+	console.log(allSubmissions);
 
 	const totals = new Map<number, number>();
 	for (const record of allSubmissions) {
 		totals.set(
 			record.member_id,
 			(totals.get(record.member_id) || 0) + record.points);
-		}
-
-		const memberNameMap = Object.fromEntries(getMembersList().map(entry => [entry.id, entry.name]));
-
-		console.log(totals);
-
-		const levels = {
-			Participant: Object.entries(totals).sort((a, b) => a[1] - b[1]).map(entry => ({name: memberNameMap[entry[0]], totalPoints: entry[1]}))
-		}
-
-		console.log(levels);
-
-		/*
-		for (const [memberId, points] of totals) {
-		levels.get(level)!.push(member);
-		}
-
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		for (const [level, _] of levels) {
-		levels.get(level)!.sort((a, b) => b.totalPoints - a.totalPoints);
-		}
-		*/
-
-		await ctx.render('lifetime', {
-			title: 'Breeder Awards Lifetime Standings',
-			levels,
-			levelsOrder,
-		});
-	});
-
-	// Admin Views /////////////////////////////////////////////////////
-
-	router.get('/admin/queue{/:program}', async (ctx) => {
-		const program = String(ctx.params.program ?? "fish");
-		if (programs.indexOf(program) === -1) {
-			ctx.status = 404;
-			ctx.body = "Invalid program";
-			return;
-		}
-		const submissions = getOutstandingSubmissions(program);
-
-		// TODO check for auth
-		await ctx.render('admin/queue', {
-			title: 'Submission Queue',
-			submissions,
-			program,
-		});
-	})
-
-	// This is a specializatin on router.patch('/sub/:subId'), we could get by with
-	// one version
-	router.post('/admin/approve', async (ctx) => {
-		// TODO zod validation
-		// TODO auth
-		console.log(ctx.request.body);
-		const { id, points, approvedBy } = ctx.request.body as { id?: number, points?: number, approvedBy?: string };
-		if (!id || !points || !approvedBy) {
-			ctx.status = 400;
-			ctx.body = "Invalid input";
-			return;
-		}
-		approveSubmission(id, points, approvedBy);
-
-		ctx.set('HX-Redirect', '/admin/queue');
-	});
-
-	// Members /////////////////////////////////////////////////////////
-
-	router.get('/member/:memberId', async (ctx) => {
-		const memberId = parseInt(ctx.params.memberId);
-
-		if (!memberId) {
-			ctx.status = 400;
-			ctx.body = "Invalid member id";
-			return;
-		}
-
-		const member = getMemberData(memberId);
-
-		if (!member) {
-			ctx.status = 404;
-			ctx.body = "Member not found";
-			return;
-		};
-
-		const submissions = getSubmissionsByMember(memberId);
-		await ctx.render('member', {
-			member,
-			submissions,
-		});
-	});
-
-	// Submissions /////////////////////////////////////////////////////
-
-	async function viewSub(ctx: Koa.ParameterizedContext, isAdmin: boolean) {
-		const subId = parseInt(ctx.params.subId);
-
-		if (!subId) {
-			ctx.status = 400;
-			ctx.body = "Invalid submission id";
-			return;
-		}
-
-		const submission = getSubmissionById(subId);
-		if (!submission) {
-			ctx.status = 404;
-			ctx.body = "Submission not found";
-			return;
-		}
-
-		await ctx.render('submission/review', {
-			submission,
-			isAdmin,
-		});
 	}
 
-	router.get('/sub/:subId', async (ctx) => viewSub(ctx, false));
-	router.get('/admin/sub/:subId', async (ctx) => {
-		// TODO do auth check
-		return viewSub(ctx, true);
-	});
+	const members = getMembersList();
+	console.log(members);
 
-	// Save a new submission, potentially submitting it
-	router.post('/sub', async (ctx) => {
-		const parsed = bapSchema.safeParse(ctx.request.body);
-		if (!parsed.success) {
+	const levels = new Map<string, (MemberRecord & { points: number })[]>(
+		levelsOrder.map(level => [level, []])
+	);
 
-			const errors = new Map<string, string>();
-			parsed.error.issues.forEach((issue) => {
-				errors.set(String(issue.path[0]), issue.message);
-			});
+	for (const member of members) {
+		const memberLevel = (() => {
+			switch (program) {
+				default:
+				case "fish":
+					return member.fish_level
+				case "plant":
+					return member.plant_level
+				case "coral":
+					return member.coral_level
+			}
+		})() ?? "Participant";
 
-			const selectedType = String(ctx.query.speciesType ?? "Fish");
-			const title = (() => {
-				switch (selectedType) {
-					default:
-					case "Fish":
-					case "Invert":
-						return "Breeder Awards Submission";
-					case "Plant":
-						return "Horticultural Awards Submission";
-					case "Coral":
-						return "Coral Awards Submission";
-				}
-			})();
+		levels.get(memberLevel)!.push({...member, points: totals.get(member.id) ?? 0});
+	}
 
-			await ctx.render('bapForm/form', {
-				title,
-				form: ctx.request.body,
-				errors,
-				classOptions: getClassOptions(selectedType),
-				waterTypes,
-				speciesTypes,
-				foodTypes,
-				spawnLocations,
-				isLivestock: isLivestock(selectedType),
-			});
-			return;
+	const title = (() => {
+		switch (program) {
+			default:
+			case "fish":
+				return "Breeder Awards Lifetime Standings";
+			case "plant":
+				return "Horticultural Awards Lifetime Standings";
+			case "coral":
+				return "Coral Awards Lifetime Standings";
 		}
+	})();
 
-		const member = getOrCreateMember(parsed.data.memberName);
-		addSubmission(member.id, parsed.data, true);
-		ctx.body = "Submitted";
+	// TOD0 Remove members with 0 points
+	// TODO remove levels with no members
+
+	await ctx.render('lifetime', {
+		title,
+		levels,
+		levelsOrder,
 	});
+});
 
-	// Admin can always update
-	// User can update if not submitted
-	router.patch('/sub/:subId', async (ctx) => {
-		const subId = parseInt(ctx.params.subId);
+// Admin Views /////////////////////////////////////////////////////
 
-		if (!subId) {
-			ctx.status = 400;
-			ctx.body = "Invalid submission id";
-			return;
-		}
+router.get('/admin/queue{/:program}', async (ctx) => {
+	const program = String(ctx.params.program ?? "fish");
+	if (programs.indexOf(program) === -1) {
+		ctx.status = 404;
+		ctx.body = "Invalid program";
+		return;
+	}
+	const submissions = getOutstandingSubmissions(program);
 
-		console.log("Implement patch");
-	})
+	console.log(submissions);;
 
-	// Admin can always delete
-	// User can delete if not approved
-	router.delete('/sub/:subId', async (ctx) => {
-		const subId = parseInt(ctx.params.subId);
-
-		if (!subId) {
-			ctx.status = 400;
-			ctx.body = "Invalid submission id";
-			return;
-		}
-		deleteSubmission(subId);
-	})
-
-	app.use(router.routes()).use(router.allowedMethods());
-	const PORT = process.env.PORT || 4200;
-	app.listen(PORT, () => {
-		console.log(`Server running at http://localhost:${PORT}`);
+	// TODO check for auth
+	await ctx.render('admin/queue', {
+		title: 'Submission Queue',
+		submissions,
+		program,
 	});
+})
+
+// This is a specializatin on router.patch('/sub/:subId'), we could get by with
+// one version
+router.post('/admin/approve', async (ctx) => {
+	// TODO zod validation
+	// TODO auth
+	console.log(ctx.request.body);
+	const { id, points, approvedBy } = ctx.request.body as { id?: number, points?: number, approvedBy?: string };
+	if (!id || !points || !approvedBy) {
+		ctx.status = 400;
+		ctx.body = "Invalid input";
+		return;
+	}
+	approveSubmission(id, points, approvedBy);
+
+	ctx.set('HX-Redirect', '/admin/queue');
+});
+
+// Members /////////////////////////////////////////////////////////
+
+router.get('/member/:memberId', async (ctx) => {
+	const memberId = parseInt(ctx.params.memberId);
+
+	if (!memberId) {
+		ctx.status = 400;
+		ctx.body = "Invalid member id";
+		return;
+	}
+
+	const member = getMemberData(memberId);
+
+	if (!member) {
+		ctx.status = 404;
+		ctx.body = "Member not found";
+		return;
+	};
+
+	const submissions = getSubmissionsByMember(memberId);
+	await ctx.render('member', {
+		member,
+		submissions,
+	});
+});
+
+// Submissions /////////////////////////////////////////////////////
+
+async function viewSub(ctx: Koa.ParameterizedContext, isAdmin: boolean) {
+	const subId = parseInt(ctx.params.subId);
+
+	if (!subId) {
+		ctx.status = 400;
+		ctx.body = "Invalid submission id";
+		return;
+	}
+
+	const submission = getSubmissionById(subId);
+	if (!submission) {
+		ctx.status = 404;
+		ctx.body = "Submission not found";
+		return;
+	}
+
+	await ctx.render('submission/review', {
+		submission,
+		isAdmin,
+	});
+}
+
+router.get('/sub/:subId', async (ctx) => viewSub(ctx, false));
+router.get('/admin/sub/:subId', async (ctx) => {
+	// TODO do auth check
+	return viewSub(ctx, true);
+});
+
+// Save a new submission, potentially submitting it
+router.post('/sub', async (ctx) => {
+	const parsed = bapSchema.safeParse(ctx.request.body);
+	if (!parsed.success) {
+
+		const errors = new Map<string, string>();
+		parsed.error.issues.forEach((issue) => {
+			errors.set(String(issue.path[0]), issue.message);
+		});
+
+		const selectedType = String(ctx.query.speciesType ?? "Fish");
+		const title = (() => {
+			switch (selectedType) {
+				default:
+				case "Fish":
+				case "Invert":
+					return "Breeder Awards Submission";
+				case "Plant":
+					return "Horticultural Awards Submission";
+				case "Coral":
+					return "Coral Awards Submission";
+			}
+		})();
+
+		await ctx.render('bapForm/form', {
+			title,
+			form: ctx.request.body,
+			errors,
+			classOptions: getClassOptions(selectedType),
+			waterTypes,
+			speciesTypes,
+			foodTypes,
+			spawnLocations,
+			isLivestock: isLivestock(selectedType),
+		});
+		return;
+	}
+
+	const member = getOrCreateMember(parsed.data.memberName);
+	addSubmission(member.id, parsed.data, true);
+	ctx.body = "Submitted";
+});
+
+// Admin can always update
+// User can update if not submitted
+router.patch('/sub/:subId', async (ctx) => {
+	const subId = parseInt(ctx.params.subId);
+
+	if (!subId) {
+		ctx.status = 400;
+		ctx.body = "Invalid submission id";
+		return;
+	}
+
+	console.log("Implement patch");
+})
+
+// Admin can always delete
+// User can delete if not approved
+router.delete('/sub/:subId', async (ctx) => {
+	const subId = parseInt(ctx.params.subId);
+
+	if (!subId) {
+		ctx.status = 400;
+		ctx.body = "Invalid submission id";
+		return;
+	}
+	deleteSubmission(subId);
+})
+
+app.use(router.routes()).use(router.allowedMethods());
+const PORT = process.env.PORT || 4200;
+app.listen(PORT, () => {
+	console.log(`Server running at http://localhost:${PORT}`);
+});

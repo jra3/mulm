@@ -1,8 +1,11 @@
 import { getWriteDBConnecton, query } from "./conn";
 
-type MemberRecord = {
+export type MemberRecord = {
 	id: number;
 	name: string;
+	fish_level?: string;
+	plant_level?: string;
+	coral_level?: string;
 };
 
 type AwardRecord = {
@@ -27,8 +30,14 @@ export function getOrCreateMember(name: string) {
 	}
 }
 
-export function getMembersList() {
-	return query<{ id: number, name: string }>(`SELECT id, name FROM members`);
+export function getMembersList(): MemberRecord[] {
+	return query<{
+		id: number,
+		name: string
+		fish_level?: string,
+		plant_level?: string,
+		coral_level?: string,
+	}>(`SELECT id, name, fish_level, plant_level, coral_level FROM members`);
 }
 
 

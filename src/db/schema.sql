@@ -12,7 +12,7 @@ CREATE TABLE submissions (
 	created_on DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	updated_on DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-	member_id TEXT NOT NULL,
+	member_id INTEGER NOT NULL,
 	species_type TEXT NOT NULL,
 	species_class TEXT NOT NULL,
 	species_common_name TEXT NOT NULL,
