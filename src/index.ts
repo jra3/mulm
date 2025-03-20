@@ -4,7 +4,6 @@ import views from 'koa-views';
 import serve from 'koa-static';
 import path from 'path';
 import bodyParser from 'koa-bodyparser';
-import { MemberDetails } from "./data";
 import { addSubmission, approveSubmission, deleteSubmission, getApprovedSubmissions, getApprovedSubmissionsInDateRange, getOutstandingSubmissions, getSubmissionById, getSubmissionsByMember } from "./db/submissions";
 import { bapSchema, foodTypes, getClassOptions, isLivestock, spawnLocations, waterTypes, speciesTypes } from "./submissionSchema";
 import { getMemberData, getMembersList, getOrCreateMember } from "./db/members";
@@ -51,18 +50,27 @@ router.get('/submit/addSupplement', async (ctx) => {
 router.get('/annual', async (ctx) => {
 	ctx.set('HX-Redirect', `/annual/${ctx.query.year}`);
 })
-router.get('/annual/:year', async (ctx) => {
-	const year = parseInt(ctx.params.year);
+router.get('/annual/:year{/:program}', async (ctx) => {
+	const program = String(ctx.params.program ?? "fish");
 
+	console.log(program)
+	if (programs.indexOf(program) === -1) {
+		ctx.status = 404;
+		ctx.body = "Invalid program";
+		return;
+	}
+
+	const year = parseInt(ctx.params.year);
 	if (isNaN(year) || year < minYear) {
 		ctx.status = 422;
 		ctx.body = "Invalid year";
 		return;
 	}
+
 	const startDate = new Date(year - 1, 7, 1);
 	const endDate = new Date(year, 6, 31);
 
-	const submissions = getApprovedSubmissionsInDateRange(startDate, endDate);
+	const submissions = getApprovedSubmissionsInDateRange(startDate, endDate, program);
 
 	// Collate approved submissions into standings
 	const standings = new Map<string, number>();
@@ -78,7 +86,7 @@ router.get('/annual/:year', async (ctx) => {
 	});
 });
 
-router.get('/lifetime/:program', async (ctx) => {
+router.get('/lifetime{/:program}', async (ctx) => {
 	const program = String(ctx.params.program ?? "fish");
 	if (programs.indexOf(program) === -1) {
 		ctx.status = 404;
@@ -87,9 +95,9 @@ router.get('/lifetime/:program', async (ctx) => {
 	}
 
 	// TODO add levels grouping back
-	//const levelsOrder = levelRules[program].map(rule => rule[0])
+	const levelsOrder = levelRules[program].map(rule => rule[0])
 
-	const allSubmissions = getApprovedSubmissions();
+	const allSubmissions = getApprovedSubmissions(program);
 
 	const totals = new Map<number, number>();
 	for (const record of allSubmissions) {
@@ -122,17 +130,26 @@ router.get('/lifetime/:program', async (ctx) => {
 		await ctx.render('lifetime', {
 			title: 'Breeder Awards Lifetime Standings',
 			levels,
+			levelsOrder,
 		});
 	});
 
 	// Admin Views /////////////////////////////////////////////////////
 
-	router.get('/admin/queue', async (ctx) => {
-		const submissions = getOutstandingSubmissions();
+	router.get('/admin/queue{/:program}', async (ctx) => {
+		const program = String(ctx.params.program ?? "fish");
+		if (programs.indexOf(program) === -1) {
+			ctx.status = 404;
+			ctx.body = "Invalid program";
+			return;
+		}
+		const submissions = getOutstandingSubmissions(program);
+
 		// TODO check for auth
 		await ctx.render('admin/queue', {
 			title: 'Submission Queue',
 			submissions,
+			program,
 		});
 	})
 
