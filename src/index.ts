@@ -66,8 +66,6 @@ router.get('/annual', async (ctx) => {
 })
 router.get('/annual/:year{/:program}', async (ctx) => {
 	const program = String(ctx.params.program ?? "fish");
-
-	console.log(program)
 	if (programs.indexOf(program) === -1) {
 		ctx.status = 404;
 		ctx.body = "Invalid program";
@@ -94,9 +92,23 @@ router.get('/annual/:year{/:program}', async (ctx) => {
 	});
 
 	const sortedStandings = Array.from(standings.entries()).sort((a, b) => b[1] - a[1]);
+
+	const title = (() => {
+		switch (program) {
+			default:
+			case "fish":
+				return `Breeder Awards Standings for ${year}`;
+			case "plant":
+				return `Horticultural Awards Standings for ${year}`;
+			case "coral":
+				return `Coral Awards Standings for ${year}`;
+		}
+	})();
+
 	await ctx.render('standings', {
-		title: `Breeder Awards Standings for ${ctx.params.year}`,
+		title,
 		standings: sortedStandings,
+		year,
 	});
 });
 
