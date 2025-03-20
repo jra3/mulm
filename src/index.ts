@@ -29,8 +29,22 @@ router.get('/', async (ctx) => {
 // Entrypoint for BAP/HAP submission
 router.get('/submit', async (ctx) => {
 	const selectedType = String(ctx.query.speciesType ?? "Fish");
+
+	const title = (() => {
+		switch (selectedType) {
+			default:
+			case "Fish":
+			case "Invert":
+				return "Breeder Awards Submission";
+			case "Plant":
+				return "Horticultural Awards Submission";
+			case "Coral":
+				return "Coral Awards Submission";
+		}
+	})();
+
 	await ctx.render('submit', {
-		title: 'BAP Submission',
+		title,
 		form: ctx.query,
 		errors: new Map(),
 		classOptions: getClassOptions(selectedType),
@@ -237,8 +251,21 @@ router.get('/lifetime{/:program}', async (ctx) => {
 			});
 
 			const selectedType = String(ctx.query.speciesType ?? "Fish");
+			const title = (() => {
+				switch (selectedType) {
+					default:
+					case "Fish":
+					case "Invert":
+						return "Breeder Awards Submission";
+					case "Plant":
+						return "Horticultural Awards Submission";
+					case "Coral":
+						return "Coral Awards Submission";
+				}
+			})();
+
 			await ctx.render('bapForm/form', {
-				title: 'BAP Submission',
+				title,
 				form: ctx.request.body,
 				errors,
 				classOptions: getClassOptions(selectedType),
