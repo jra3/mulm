@@ -8,7 +8,7 @@ import { MemberDetails } from "./data";
 import { addSubmission, approveSubmission, deleteSubmission, getApprovedSubmissions, getApprovedSubmissionsInDateRange, getOutstandingSubmissions, getSubmissionById, getSubmissionsByMember } from "./db/submissions";
 import { bapSchema, foodTypes, getClassOptions, isLivestock, spawnLocations, waterTypes, speciesTypes } from "./submissionSchema";
 import { getMemberData, getMembersList, getOrCreateMember } from "./db/members";
-import { levelRules, programs } from "./programs";
+import { levelRules, minYear, programs } from "./programs";
 
 const app = new Koa();
 app.use(bodyParser());
@@ -48,10 +48,13 @@ router.get('/submit/addSupplement', async (ctx) => {
 	await ctx.render('bapForm/supplementSingleLine');
 });
 
-router.get('/standings/:year', async (ctx) => {
+router.get('/annual', async (ctx) => {
+	ctx.set('HX-Redirect', `/annual/${ctx.query.year}`);
+})
+router.get('/annual/:year', async (ctx) => {
 	const year = parseInt(ctx.params.year);
 
-	if (isNaN(year) || year < 2020) {
+	if (isNaN(year) || year < minYear) {
 		ctx.status = 422;
 		ctx.body = "Invalid year";
 		return;
@@ -76,7 +79,7 @@ router.get('/standings/:year', async (ctx) => {
 });
 
 router.get('/lifetime/:program', async (ctx) => {
-	const program = String(ctx.params.program);
+	const program = String(ctx.params.program ?? "fish");
 	if (programs.indexOf(program) === -1) {
 		ctx.status = 404;
 		ctx.body = "Invalid program";

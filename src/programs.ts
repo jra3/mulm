@@ -1,3 +1,5 @@
+export const minYear = 1978;
+
 export const programs = ['fish', 'plant', 'coral'];
 type LevelRules = [name: string, points: number, extraRules?: (tally: PointsTally) => boolean];
 type PointsTally = {

@@ -39,10 +39,23 @@ export type Submission = {
 export function addSubmission(memberId: number, form: FormValues, submit: boolean) {
 	try {
 		const conn = getWriteDBConnecton();
+		const program = (() => {
+			switch (form.speciesType) {
+				case "Fish":
+				case "Invert":
+					return "fish";
+				case "Plant":
+					return "plant";
+				case "Coral":
+					return "coral";
+			}
+		})();
+
 		const stmt = conn.prepare(`
 			INSERT INTO submissions
 			(
 				member_id,
+				program,
 				species_type,
 				species_class,
 				species_common_name,
@@ -70,6 +83,7 @@ export function addSubmission(memberId: number, form: FormValues, submit: boolea
 
 		stmt.run(
 			memberId,
+			program,
 			form.speciesType,
 			form.speciesClass,
 			form.speciesCommonName,
@@ -129,40 +143,45 @@ export function deleteSubmission(id: number) {
 	}
 }
 
-export function getApprovedSubmissionsInDateRange(startDate: Date, endDate: Date) {
+export function getApprovedSubmissionsInDateRange(startDate: Date, endDate: Date, program: string) {
 	return query<Submission>(`
 		SELECT * FROM submissions
 		WHERE submitted_on > ? AND submitted_on < ?
 		AND approved_on IS NOT NULL AND points IS NOT NULL
+		AND program = ?
 	`, [
 		startDate.toISOString(),
 		endDate.toISOString(),
+		program
 	]);
 }
 
-export function getOutstandingSubmissions() {
+export function getOutstandingSubmissions(program: string) {
 	return query<Submission>(`
 		SELECT * FROM submissions
 		WHERE submitted_on IS NOT NULL
-		AND approved_on IS NULL`
+		AND approved_on IS NULL
+		AND program = ?`,
+		[program]
 	);
 }
 
-export function getApprovedSubmissions() {
+export function getApprovedSubmissions(program: string) {
 	return query<Submission & Required<Pick<Submission, "submitted_on" | "approved_on" | "points">>>(`
 		SELECT * FROM submissions
 		WHERE submitted_on IS NOT NULL
 		AND approved_on IS NOT NULL
 		AND points IS NOT NULL
-	`);
+		AND program = ?`,
+		[program]
+	);
 }
 
-export function getAllSubmissions() {
-	return query<Submission>("SELECT * FROM submissions");
+export function getAllSubmissions(program: string) {
+	return query<Submission>("SELECT * FROM submissions WHERE program = ?", [program]);
 }
 
 export function approveSubmission(id: number, points: number, approvedBy: string) {
-
 	try {
 		const conn = getWriteDBConnecton();
 		const stmt = conn.prepare(`UPDATE submissions SET points = ?, approved_by = ?, approved_on = ? WHERE id = ?`);
