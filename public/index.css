@@ -8,7 +8,6 @@
       "Courier New", monospace;
     --color-red-400: oklch(0.704 0.191 22.216);
     --color-red-500: oklch(0.637 0.237 25.331);
-    --color-blue-500: oklch(0.623 0.214 259.815);
     --color-gray-100: oklch(0.967 0.003 264.542);
     --color-gray-200: oklch(0.928 0.006 264.531);
     --color-gray-300: oklch(0.872 0.01 258.338);
@@ -191,9 +190,6 @@
   .fixed {
     position: fixed;
   }
-  .top-0 {
-    top: calc(var(--spacing) * 0);
-  }
   .bottom-0 {
     bottom: calc(var(--spacing) * 0);
   }
@@ -357,9 +353,6 @@
     --tw-font-weight: var(--font-weight-semibold);
     font-weight: var(--font-weight-semibold);
   }
-  .text-blue-500 {
-    color: var(--color-blue-500);
-  }
   .text-red-400 {
     color: var(--color-red-400);
   }
@@ -373,13 +366,6 @@
   .shadow-md {
     --tw-shadow: 0 4px 6px -1px var(--tw-shadow-color, rgb(0 0 0 / 0.1)), 0 2px 4px -2px var(--tw-shadow-color, rgb(0 0 0 / 0.1));
     box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
-  }
-  .hover\:underline {
-    &:hover {
-      @media (hover: hover) {
-        text-decoration-line: underline;
-      }
-    }
   }
 }
 select {
