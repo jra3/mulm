@@ -5,6 +5,7 @@
     "module": "commonjs",
     "outDir": "./dist",
     "rootDir": "./src",
+		"resolveJsonModule": true,
     "esModuleInterop": true,
     "strict": true,
 

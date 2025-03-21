@@ -4,6 +4,7 @@ html
 		title= title
 		script(src='https://unpkg.com/htmx.org@2.0.4')
 		link(rel='stylesheet', href='/index.css')
+		script(src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js")
 
 	body.flex.justify-center.items-center
 		.flex.flex-col.items-center.space-y-4.bg-white.p-6.rounded-lg.shadow-lg
@@ -76,3 +77,4 @@ html
 							option(value="1978") 1978
 			hr
 			a(href='/admin/queue') Approval Queue
+			a(href=googleURL) Log In With Google

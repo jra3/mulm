@@ -8,6 +8,7 @@ import { addSubmission, approveSubmission, deleteSubmission, getApprovedSubmissi
 import { bapSchema, foodTypes, getClassOptions, isLivestock, spawnLocations, waterTypes, speciesTypes } from "./submissionSchema";
 import { getMemberData, getMembersList, getOrCreateMember, MemberRecord } from "./db/members";
 import { levelRules, minYear, programs } from "./programs";
+import { getGoogleOAuthURL, translateGoogleOAuthCode } from "./oauth";
 
 const app = new Koa();
 app.use(bodyParser());
@@ -23,7 +24,11 @@ const router = new Router();
 // Regular Views ///////////////////////////////////////////////////
 
 router.get('/', async (ctx) => {
-	await ctx.render('index', { title: 'BAS BAP/HAP Portal', message: 'Welcome to BAS!' });
+	await ctx.render('index', {
+		title: 'BAS BAP/HAP Portal',
+		message: 'Welcome to BAS!',
+		googleURL: getGoogleOAuthURL(),
+	});
 });
 
 // Entrypoint for BAP/HAP submission
@@ -341,6 +346,18 @@ router.delete('/sub/:subId', async (ctx) => {
 	}
 	deleteSubmission(subId);
 })
+
+// OAuth
+
+router.get("/oauth/google", async (ctx) => {
+	const qs = new URLSearchParams(ctx.request.querystring);
+	const code = qs.get("code");
+	console.log(code);
+
+	const resp = await translateGoogleOAuthCode(String(code));
+	const payload = await resp.json();
+	console.log(payload);
+});
 
 app.use(router.routes()).use(router.allowedMethods());
 const PORT = process.env.PORT || 4200;
