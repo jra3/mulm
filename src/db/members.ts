@@ -14,14 +14,14 @@ type AwardRecord = {
 	date_awarded: string;
 };
 
-export function getOrCreateMember(name: string) {
+export function getOrCreateMember(email: string, name: string) {
 	try {
 		const conn = getWriteDBConnecton()
 		const insertStmt = conn.prepare(`
-			INSERT INTO members (name) VALUES (?)
-			ON CONFLICT(name) DO NOTHING;
+			INSERT INTO members (email, name) VALUES (?, ?)
+			ON CONFLICT(email) DO NOTHING;
 		`);
-		insertStmt.run(name);
+		insertStmt.run(email, name);
 		const selectStmt = conn.prepare(`SELECT id, name FROM members WHERE name = ?`);
 		return selectStmt.get(name) as {name: string, id: number};
 	} catch (err) {

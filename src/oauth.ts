@@ -5,7 +5,7 @@ export function getGoogleOAuthURL(): string {
 	endpoint.searchParams.append("access_type", "offline");
 	endpoint.searchParams.append("client_id", config.googleClientId);
 	endpoint.searchParams.append("redirect_uri", `https://${config.domain}/oauth/google`);
-	endpoint.searchParams.append("scope", "openid");
+	endpoint.searchParams.append("scope", "email profile");
 	endpoint.searchParams.append("response_type", "code");
 	return String(endpoint);
 }
@@ -23,4 +23,20 @@ export async function translateGoogleOAuthCode(code: string) {
 		code,
 	});
 	return fetch(endpoint, { body, method: "POST" });
+}
+
+export async function getGoogleUser(accessToken: string): Promise<{name: string, email: string}> {
+	const resp = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${accessToken}`)
+	if (!resp.ok) {
+		throw new Error("Failed to fetch user from Google");
+	}
+	const respBody = await resp.json();
+	if (respBody.name == null || respBody.email == null) {
+		throw new Error("Failed to fetch user from Google");
+	}
+
+	return {
+		name: String(respBody.name),
+		email: String(respBody.email),
+	};
 }

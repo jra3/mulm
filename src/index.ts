@@ -8,9 +8,13 @@ import { addSubmission, approveSubmission, deleteSubmission, getApprovedSubmissi
 import { bapSchema, foodTypes, getClassOptions, isLivestock, spawnLocations, waterTypes, speciesTypes } from "./submissionSchema";
 import { getMemberData, getMembersList, getOrCreateMember, MemberRecord } from "./db/members";
 import { levelRules, minYear, programs } from "./programs";
-import { getGoogleOAuthURL, translateGoogleOAuthCode } from "./oauth";
+import { getGoogleOAuthURL, getGoogleUser, translateGoogleOAuthCode } from "./oauth";
+
+import config from './config.json';
+import { createUserSession, destroyUserSession, sessionMiddleware } from "./sessions";
 
 const app = new Koa();
+
 app.use(bodyParser());
 app.use(serve(path.join(__dirname, '..', 'public')));
 app.use(
@@ -19,17 +23,32 @@ app.use(
 	})
 );
 
+app.use(sessionMiddleware)
+
 const router = new Router();
 
 // Regular Views ///////////////////////////////////////////////////
 
 router.get('/', async (ctx) => {
+	const user = (ctx as any).loggedInUser;
+
+	const isLoggedIn = Boolean(user);
+	const isAdmin = user?.is_admin;
+
 	await ctx.render('index', {
 		title: 'BAS BAP/HAP Portal',
 		message: 'Welcome to BAS!',
 		googleURL: getGoogleOAuthURL(),
+		isLoggedIn,
+		isAdmin,
 	});
 });
+
+router.get('/logout', async (ctx) => {
+	destroyUserSession(ctx);
+	ctx.redirect("/");
+});
+
 
 // Entrypoint for BAP/HAP submission
 router.get('/submit', async (ctx) => {
@@ -129,8 +148,6 @@ router.get('/lifetime{/:program}', async (ctx) => {
 	const levelsOrder = levelRules[program].map(rule => rule[0]).reverse()
 
 	const allSubmissions = getApprovedSubmissions(program);
-	console.log(allSubmissions);
-
 	const totals = new Map<number, number>();
 	for (const record of allSubmissions) {
 		totals.set(
@@ -139,7 +156,6 @@ router.get('/lifetime{/:program}', async (ctx) => {
 	}
 
 	const members = getMembersList();
-	console.log(members);
 
 	const levels = new Map<string, (MemberRecord & { points: number })[]>(
 		levelsOrder.map(level => [level, []])
@@ -193,8 +209,6 @@ router.get('/admin/queue{/:program}', async (ctx) => {
 		return;
 	}
 	const submissions = getOutstandingSubmissions(program);
-
-	console.log(submissions);;
 
 	// TODO check for auth
 	await ctx.render('admin/queue', {
@@ -315,8 +329,10 @@ router.post('/sub', async (ctx) => {
 		return;
 	}
 
-	const member = getOrCreateMember(parsed.data.memberName);
-	addSubmission(member.id, parsed.data, true);
+
+//	const member = getOrCreateMember(parsed.data.parsed.data.memberName);
+// 	addSubmission(member.id, parsed.data, true);
+
 	ctx.body = "Submitted";
 });
 
@@ -352,15 +368,25 @@ router.delete('/sub/:subId', async (ctx) => {
 router.get("/oauth/google", async (ctx) => {
 	const qs = new URLSearchParams(ctx.request.querystring);
 	const code = qs.get("code");
-	console.log(code);
 
 	const resp = await translateGoogleOAuthCode(String(code));
 	const payload = await resp.json();
-	console.log(payload);
+	if (!("access_token" in payload)) {
+		ctx.body = "Login Failed!";
+		return;
+	}
+	const token = String(payload.access_token);
+	const googleUser = await getGoogleUser(token);
+	const member = getOrCreateMember(googleUser.email, googleUser.name);
+
+	createUserSession(ctx, member.id);
+
+	ctx.redirect("/");
 });
 
 app.use(router.routes()).use(router.allowedMethods());
 const PORT = process.env.PORT || 4200;
 app.listen(PORT, () => {
 	console.log(`Server running at http://localhost:${PORT}`);
+	console.log(`Server running at https://${config.domain}`);
 });

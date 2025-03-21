@@ -43,13 +43,17 @@ CREATE INDEX idx_date_approved ON submissions (approved_on);
 
 /*
 	Members table
-	 - name is unique
+	 - email is unique
 	 - id is unique and managed automatically by trigger
 */
 
 CREATE TABLE members (
-	name TEXT PRIMARY KEY,
+	email TEXT PRIMARY KEY,
+	name TEXT NOT NULL,
 	id INTEGER UNIQUE,
+
+	is_admin INTEGER DEFAULT 0,
+
 	fish_level TEXT DEFAULT NULL,
 	plant_level TEXT DEFAULT NULL,
 	coral_level	TEXT DEFAULT NULL
@@ -74,4 +78,10 @@ CREATE TABLE awards (
 	award_name TEXT NOT NULL,
 	date_awarded DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	PRIMARY KEY (member_id, award_name)
+);
+
+CREATE TABLE sessions (
+	session_id TEXT PRIMARY KEY,
+	member_id INTEGER,
+	expires_on DATETIME NOT NULL
 );

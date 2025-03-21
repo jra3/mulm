@@ -9,10 +9,6 @@ html
 	body.flex.justify-center.items-center
 		.flex.flex-col.items-center.space-y-4.bg-white.p-6.rounded-lg.shadow-lg
 			h2.text-2xl.p2= message
-
-			.card.w-full.flex.justify-center
-				a(href='/submit') New Species Submission
-
 			.card.w-full
 				p.font-bold.text-center Lifetime Standings
 				.flex.gap-4.items-center.justify-center
@@ -20,8 +16,7 @@ html
 					a(href='/lifetime/plant') Plants
 					a(href='/lifetime/coral') Coral
 
-			.card.w-full
-				p.font-bold.text-center Annual Standings
+				p.font-bold.text-center.mt-4 Annual Standings
 
 				.flex.gap-4.items-center.justify-center
 					a(href='/annual/2025') [2025]
@@ -75,6 +70,12 @@ html
 							option(value="1980") 1980
 							option(value="1979") 1979
 							option(value="1978") 1978
-			hr
-			a(href='/admin/queue') Approval Queue
-			a(href=googleURL) Log In With Google
+
+			.card.w-full.flex.flex-col.justify-center.items-center.gap-4
+				if isLoggedIn
+					a(href='/submit') New Species Submission
+				else
+					a(href=googleURL) Log In With Google
+				if isAdmin
+					a(href='/admin/queue') Approval Queue
+
