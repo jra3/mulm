@@ -391,7 +391,7 @@ select {
 .card {
   border-radius: var(--radius-lg);
   background-color: var(--color-white);
-  padding: calc(var(--spacing) * 6);
+  padding: calc(var(--spacing) * 2);
   --tw-shadow: 0 10px 15px -3px var(--tw-shadow-color, rgb(0 0 0 / 0.1)), 0 4px 6px -4px var(--tw-shadow-color, rgb(0 0 0 / 0.1));
   box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
 }

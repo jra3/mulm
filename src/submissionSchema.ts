@@ -13,6 +13,7 @@ const speciesTypeEnum = z.enum(["Fish", "Invert", "Plant", "Coral"]);
 
 export const bapSchema = z.object({
 	memberName: z.string().nonempty({ message: "Required" }),
+	memberEmail: z.string().email("Valid address required"),
 	waterType: waterTypeEnum,
 	speciesType: speciesTypeEnum,
 	date: z

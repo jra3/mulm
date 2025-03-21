@@ -31,17 +31,21 @@ mixin bapMultiSelectInput(labelText, name, id)
 			class=errors.has(name) ? "error" : "")
 			block
 		if errors.has(name)
-			div(class="text-red-400")= errors.get(name)
-
+			.text-red-400= errors.get(name)
 
 form.flex-col.bg-white.p-6.rounded-lg.shadow-lg#bapForm(
 	hx-target="#bapForm"
 	hx-swap="outerHTML"
 	hx-post="/sub")
 
-	+bapTextInput("Member Name", "memberName", "Jacques Cousteau")
+	.card
+		p.font-semibold.p-4 Member Details
+		div.grid.grid-cols-2.w-full.gap-2
+			+bapTextInput("Member Name", "memberName", "Jacques Cousteau")
+			+bapTextInput("Member Email", "memberEmail", "deep@bluesea.net")
+			+bapTextInput("BASNY Member Number", "memberCardId", "")
 
-	div.card
+	.card
 		p.font-semibold.p-4 Species Details
 
 		div.space-y-4
@@ -90,7 +94,7 @@ form.flex-col.bg-white.p-6.rounded-lg.shadow-lg#bapForm(
 			else
 				+bapTextInput("Propagation Method", "propagationMethod", "Cuttings, Runners, Seed...")
 
-	div.card
+	.card
 		p.font-semibold.p-4 Tank Details
 
 		div.space-y-4.grid.grid-cols-2.w-full.gap-2
@@ -111,17 +115,16 @@ form.flex-col.bg-white.p-6.rounded-lg.shadow-lg#bapForm(
 				+bapTextInput("Light Strength", "lightStrength", "200W, 5 PAR...")
 				+bapTextInput("Light Hours", "lightHours", "16...")
 
-		.flex.mt-4.gap-2.w-full.justify-center-center.text-center.items-center.hidden
+		div.flex.mt-4.gap-2.w-full.justify-center-center.text-center.items-center.hidden
 			button.p-2.rounded-md(class="bg-red-500 text-white") Clear
 			button.p-2.rounded-md(class="bg-black text-white") Save
 			button.p-2.rounded-md(class="bg-black text-white") Load
 
 	if !isLivestock
-		div.card
+		.card
 			p.font-semibold.p-4 Supplements
 
-			div
-			.flex-col.gap-2#supplements
+			div.flex-col.gap-2#supplements
 				if !!form.supplementType
 					each type, index in form.supplementType
 						+supplementLine(type, form.supplementType[index])
