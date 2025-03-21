@@ -1,9 +1,13 @@
-import { getOrCreateMember } from "../db/members";
+import { getOrCreateMember, updateMemberData } from "../db/members";
 import { addSubmission } from "../db/submissions";
 import { bapSchema, FormValues } from "../submissionSchema";
 
+const members = [
+	["John Allen", "theactualjohnallen@gmail.com"],
+	["David Manuel", "deefrombrooklyn@gmail.com"],
+	["Rusty Shackleford", "giddyup@lavabit.com"]
+];
 
-const members = ["John Allen", "David Manuel", "Rusty Shackleford"];
 const fish = ["Guppy", "Molly", "Swordtail", "Platy", "Endler", "Mosquito Fish", "Gambusia", "Halfbeak", "Goodeid", "Pupfish", "Livebearer", "Other"];
 
 function getRandomElement<T>(arr: T[]) {
@@ -18,8 +22,10 @@ function getSpawnDate() {
 }
 
 function generateSubmission() {
+	const member = getRandomElement(members);
 	const data: FormValues = {
-		memberName: getRandomElement(members),
+		memberName: member[0],
+		memberEmail: member[1],
 		waterType: "Fresh",
 		speciesType: "Fish",
 		date: getSpawnDate().toDateString(),
@@ -50,11 +56,13 @@ function generateSubmission() {
 	return data;
 }
 
-
 const parsed = bapSchema.safeParse(generateSubmission());
 if (!parsed.success) {
 	console.error(parsed.error.issues);
 	throw new Error("Invalid data");
 }
-const member = getOrCreateMember(parsed.data!.memberName);
+const member = getOrCreateMember(parsed.data.memberEmail, parsed.data.memberName);
 addSubmission(member.id, parsed.data, true);
+
+const john = getOrCreateMember("theactualjohnallen@gmail.com", "John Allen");
+updateMemberData(john.id, { is_admin: 1 });

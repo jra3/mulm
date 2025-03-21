@@ -3,6 +3,7 @@ import { getWriteDBConnecton, query } from "./conn";
 export type MemberRecord = {
 	id: number;
 	name: string;
+	is_admin: number;
 	fish_level?: string;
 	plant_level?: string;
 	coral_level?: string;
@@ -34,10 +35,11 @@ export function getMembersList(): MemberRecord[] {
 	return query<{
 		id: number,
 		name: string
+		is_admin: number,
 		fish_level?: string,
 		plant_level?: string,
 		coral_level?: string,
-	}>(`SELECT id, name, fish_level, plant_level, coral_level FROM members`);
+	}>(`SELECT id, name, is_admin, fish_level, plant_level, coral_level FROM members`);
 }
 
 
