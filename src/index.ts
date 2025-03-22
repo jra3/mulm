@@ -52,8 +52,6 @@ router.get('/', async (ctx: MulmContext) => {
 
 // Entrypoint for BAP/HAP submission
 router.get('/submit', async (ctx: MulmContext) => {
-	const selectedType = String(ctx.query.speciesType ?? "Fish");
-
 	const member = ctx.loggedInUser;
 	const form = {
 		// auto-fill member name and email if logged in
@@ -64,6 +62,7 @@ router.get('/submit', async (ctx: MulmContext) => {
 		...ctx.query,
 	}
 
+	const selectedType = String(ctx.query.speciesType ?? "Fish");
 	await ctx.render('submit', {
 		title: getBapFormTitle(selectedType),
 		form,
@@ -272,7 +271,10 @@ router.post('/sub', async (ctx) => {
 			errors.set(String(issue.path[0]), issue.message);
 		});
 
-		const selectedType = String(ctx.query.speciesType ?? "Fish");
+		const {
+			selectedType
+		} = ctx.request.body as {selectedType: string};
+
 		await ctx.render('bapForm/form', {
 			title: getBapFormTitle(selectedType),
 			form: ctx.request.body,

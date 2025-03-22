@@ -1,14 +1,16 @@
 mixin supplementLine(type, regimen)
-	div.flex.gap-2
+	div.flex.gap-2.pt-4
 		input.text-input(
 			value=type
 			name="supplementType"
 			type="text"
 			placeholder="Supplement")
+
 		input.text-input(
 			value=regimen
 			name="supplementRegimen"
 			type="text"
 			placeholder="Dosing Instructions")
+
 		button.rounded-md.text-sm.font-medium(
 			hx-on:click="this.closest('div').remove()") -

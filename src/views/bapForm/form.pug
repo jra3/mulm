@@ -43,7 +43,6 @@ form.flex-col.bg-white.p-6.rounded-lg.shadow-lg#bapForm(
 		div.grid.grid-cols-2.w-full.gap-2
 			+bapTextInput("Member Name", "memberName", "Jacques Cousteau")
 			+bapTextInput("Member Email", "memberEmail", "deep@bluesea.net")
-			+bapTextInput("BASNY Member Number", "memberCardId", "")
 
 	.card
 		p.font-semibold.p-4 Species Details
@@ -96,7 +95,6 @@ form.flex-col.bg-white.p-6.rounded-lg.shadow-lg#bapForm(
 
 	.card
 		p.font-semibold.p-4 Tank Details
-
 		div.space-y-4.grid.grid-cols-2.w-full.gap-2
 			+bapTextInput("Tank Size", "tankSize", "5g, 20 Long...")
 			+bapTextInput("Filter Type", "filterType", "Sponge, HOB...")
@@ -123,56 +121,39 @@ form.flex-col.bg-white.p-6.rounded-lg.shadow-lg#bapForm(
 	if !isLivestock
 		.card
 			p.font-semibold.p-4 Supplements
+			div.w-full.gap-2
+				- const hasCO2 = form.CO2 === "yes";
+				.grid.gap-2
+					label.input-label(for=name) CO2?
+					.select-wrapper
+						select(
+							value=form[name]
+							name=name
+							hx-trigger="change"
+							hx-on:change="document.getElementById('CO2Desc').classList.toggle('hidden', this.value === 'no')")
+							option(value="no", selected=!hasCO2) No
+							option(value="yes", selected=hasCO2) Yes
 
-			div.flex-col.gap-2#supplements
-				if !!form.supplementType
-					each type, index in form.supplementType
-						+supplementLine(type, form.supplementType[index])
-				else
-					+supplementLine("", "")
+				div#CO2Desc(class=`${hasCO2 ? "" : "hidden"}`)
+					textarea.text-input(
+						name="CO2Description"
+						rows="4"
+						placeholder="Describe CO2 injection...")
 
-			button(
-				hx-get="/submit/addSupplement"
-				hx-swap="beforeend"
-				hx-target="#supplements"
-			) Add +
+				div.pt-4.w-full.flex-col#supplements
+					label.input-label Others
+					if !!form.supplementType
+						each type, index in form.supplementType
+							+supplementLine(type, form.supplementRegimen[index])
+					else
+						+supplementLine("", "")
 
-			fieldset.flex
-				- const hasCO2 = form.CO2 === 'yes';
-				legend CO2?
-				label
-					input(
-						type="radio"
-						name="CO2"
-						value="yes"
-						checked=hasCO2
-						required
-						hx-get="/submit"
-						hx-include="closest form"
-						hx-swap="outerHTML"
-						hx-target="#bapForm"
-						hx-select="#bapForm"
-						hx-push-url="false")
-					| Yes
-				label
-					input(
-						type="radio"
-						name="CO2"
-						value="no"
-						checked=!hasCO2
-						hx-get="/submit"
-						hx-include="closest form"
-						hx-swap="outerHTML"
-						hx-target="#bapForm"
-						hx-select="#bapForm"
-						hx-push-url="false")
-					| No
+				button.w-full(
+					hx-get="/submit/addSupplement"
+					hx-swap="beforeend"
+					hx-target="#supplements"
+				) Add +
 
-			if hasCO2
-				textarea.w-full.text-input(
-					name="CO2Description"
-					rows="4"
-					placeholder="Describe CO2 injection...")
 
 	div.m-2
 		button(type="submit") Submit
