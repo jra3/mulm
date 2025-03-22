@@ -7,12 +7,19 @@ export function generateSessionCookie(length = 64) {
 	return bytes.toString('base64url');
 }
 
-export async function sessionMiddleware(ctx: Context, next: Next) {
-	const token = ctx.cookies.get('session_id');
+export type MulmContext = Context &{
+	loggedInUser?: {
+		member_id: number,
+		member_name: string,
+		member_email: string,
+		is_admin: boolean,
+	},
+}
 
+export async function sessionMiddleware(ctx: MulmContext, next: Next) {
+	const token = ctx.cookies.get('session_id');
 	if (token) {
-		const user = getLoggedInUser(token);
-		ctx["loggedInUser"] = user;
+		ctx.loggedInUser = getLoggedInUser(token);
 	}
 	await next();
 }

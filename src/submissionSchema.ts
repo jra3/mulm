@@ -90,6 +90,11 @@ export const bapSchema = z.object({
 	{ message: "Requied", path: ["CO2Description"], }
 )
 
+export const approvalSchema = z.object({
+	id: z.string(),
+	points: z.string(),
+});
+
 export const speciesTypes = speciesTypeEnum.options;
 export const waterTypes = waterTypeEnum.options;
 

@@ -1,6 +1,7 @@
 import { FormValues } from "../submissionSchema";
 import { getWriteDBConnecton, query } from "./conn";
 
+
 export type Submission = {
 	id: number;
 
@@ -35,6 +36,7 @@ export type Submission = {
 	approved_by?: string;
 	points?: number;
 };
+
 
 export function addSubmission(memberId: number, form: FormValues, submit: boolean) {
 	try {
@@ -112,6 +114,7 @@ export function addSubmission(memberId: number, form: FormValues, submit: boolea
 	}
 }
 
+
 export function getSubmissionsByMember(memberId: number) {
 	return query<Submission>(`
 		SELECT submissions.*, members.name as member_name
@@ -120,6 +123,7 @@ export function getSubmissionsByMember(memberId: number) {
 		WHERE submissions.member_id = ?`,
 		[memberId]);
 }
+
 
 export function getSubmissionById(id: number) {
 	const result = query<Submission>(`
@@ -130,6 +134,7 @@ export function getSubmissionById(id: number) {
 		[id]);
 	return result.pop();
 }
+
 
 export function deleteSubmission(id: number) {
 	try {
@@ -142,6 +147,7 @@ export function deleteSubmission(id: number) {
 		throw new Error("Failed to delete submission");
 	}
 }
+
 
 export function getApprovedSubmissionsInDateRange(startDate: Date, endDate: Date, program: string) {
 	return query<Submission>(`
@@ -158,6 +164,7 @@ export function getApprovedSubmissionsInDateRange(startDate: Date, endDate: Date
 	]);
 }
 
+
 export function getOutstandingSubmissions(program: string) {
 	return query<Submission>(`
 		SELECT submissions.*, members.name as member_name
@@ -169,6 +176,7 @@ export function getOutstandingSubmissions(program: string) {
 		[program]
 	);
 }
+
 
 export function getApprovedSubmissions(program: string) {
 	return query<Submission & Required<Pick<Submission, "submitted_on" | "approved_on" | "points">>>(`
@@ -183,6 +191,7 @@ export function getApprovedSubmissions(program: string) {
 	);
 }
 
+
 export function getAllSubmissions(program: string) {
 	return query<Submission>(`
 		SELECT submissions.*, members.name as member_name
@@ -191,7 +200,26 @@ export function getAllSubmissions(program: string) {
 		FROM submissions WHERE program = ? `, [program]);
 }
 
-export function approveSubmission(id: number, points: number, approvedBy: string) {
+
+export function updateSubmission(id: number, updates: Partial<Submission>) {
+	const fields = Object.keys(updates);
+	const values = Object.values(updates);
+	const setClause = fields.map(field => `${field} = ?`).join(', ');
+
+	try {
+		const conn = getWriteDBConnecton();
+		const stmt = conn.prepare(`UPDATE submissions SET ${setClause} WHERE id = ?`);
+		const result = stmt.run(...values, id);
+		conn.close();
+		return result.changes;
+	} catch (err) {
+		console.error(err);
+		throw new Error("Failed to update submission");
+	}
+}
+
+
+export function approveSubmission(id: number, points: number, approvedBy: number) {
 	try {
 		const conn = getWriteDBConnecton();
 		const stmt = conn.prepare(`UPDATE submissions SET points = ?, approved_by = ?, approved_on = ? WHERE id = ?`);
@@ -202,4 +230,3 @@ export function approveSubmission(id: number, points: number, approvedBy: string
 		throw new Error("Failed to update submission");
 	}
 }
-

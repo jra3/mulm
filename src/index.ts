@@ -4,14 +4,16 @@ import views from 'koa-views';
 import serve from 'koa-static';
 import path from 'path';
 import bodyParser from 'koa-bodyparser';
-import { addSubmission, approveSubmission, deleteSubmission, getApprovedSubmissions, getApprovedSubmissionsInDateRange, getOutstandingSubmissions, getSubmissionById, getSubmissionsByMember } from "./db/submissions";
+import { getApprovedSubmissions, getApprovedSubmissionsInDateRange, getOutstandingSubmissions, getSubmissionById, getSubmissionsByMember } from "./db/submissions";
 import { bapSchema, foodTypes, getClassOptions, isLivestock, spawnLocations, waterTypes, speciesTypes } from "./submissionSchema";
 import { getMemberData, getMembersList, getOrCreateMember, MemberRecord } from "./db/members";
 import { levelRules, minYear, programs } from "./programs";
 import { getGoogleOAuthURL, getGoogleUser, translateGoogleOAuthCode } from "./oauth";
 
 import config from './config.json';
-import { createUserSession, destroyUserSession, sessionMiddleware } from "./sessions";
+import { createUserSession, destroyUserSession, MulmContext, sessionMiddleware } from "./sessions";
+import { updateSubmission, viewSubmission, deleteSubmission, adminApproveSubmission } from "./routes/submissions";
+import { getBapFormTitle } from "./views/submission/utils";
 
 const app = new Koa();
 
@@ -27,11 +29,15 @@ app.use(sessionMiddleware)
 
 const router = new Router();
 
+router.get('/logout', async (ctx) => {
+	destroyUserSession(ctx);
+	ctx.redirect("/");
+});
+
 // Regular Views ///////////////////////////////////////////////////
 
-router.get('/', async (ctx) => {
-	const user = (ctx as any).loggedInUser;
-
+router.get('/', async (ctx: MulmContext) => {
+	const user = ctx.loggedInUser;
 	const isLoggedIn = Boolean(user);
 	const isAdmin = user?.is_admin;
 
@@ -44,31 +50,11 @@ router.get('/', async (ctx) => {
 	});
 });
 
-router.get('/logout', async (ctx) => {
-	destroyUserSession(ctx);
-	ctx.redirect("/");
-});
-
-
 // Entrypoint for BAP/HAP submission
-router.get('/submit', async (ctx) => {
+router.get('/submit', async (ctx: MulmContext) => {
 	const selectedType = String(ctx.query.speciesType ?? "Fish");
 
-	const title = (() => {
-		switch (selectedType) {
-			default:
-			case "Fish":
-			case "Invert":
-				return "Breeder Awards Submission";
-			case "Plant":
-				return "Horticultural Awards Submission";
-			case "Coral":
-				return "Coral Awards Submission";
-		}
-	})();
-
-	const member = (ctx as any).loggedInUser;
-
+	const member = ctx.loggedInUser;
 	const form = {
 		// auto-fill member name and email if logged in
 		memberName: member?.member_name,
@@ -79,7 +65,7 @@ router.get('/submit', async (ctx) => {
 	}
 
 	await ctx.render('submit', {
-		title,
+		title: getBapFormTitle(selectedType),
 		form,
 		errors: new Map(),
 		classOptions: getClassOptions(selectedType),
@@ -212,16 +198,21 @@ router.get('/lifetime{/:program}', async (ctx) => {
 
 // Admin Views /////////////////////////////////////////////////////
 
-router.get('/admin/queue{/:program}', async (ctx) => {
+router.get('/admin/queue{/:program}', async (ctx: MulmContext) => {
+	if (!ctx.loggedInUser?.is_admin) {
+		ctx.status = 403;
+		ctx.body = "Access denied";
+		return;
+	}
+
 	const program = String(ctx.params.program ?? "fish");
 	if (programs.indexOf(program) === -1) {
 		ctx.status = 404;
 		ctx.body = "Invalid program";
 		return;
 	}
-	const submissions = getOutstandingSubmissions(program);
 
-	// TODO check for auth
+	const submissions = getOutstandingSubmissions(program);
 	await ctx.render('admin/queue', {
 		title: 'Submission Queue',
 		submissions,
@@ -229,28 +220,12 @@ router.get('/admin/queue{/:program}', async (ctx) => {
 	});
 })
 
-// This is a specializatin on router.patch('/sub/:subId'), we could get by with
-// one version
-router.post('/admin/approve', async (ctx) => {
-	// TODO zod validation
-	// TODO auth
-	console.log(ctx.request.body);
-	const { id, points, approvedBy } = ctx.request.body as { id?: number, points?: number, approvedBy?: string };
-	if (!id || !points || !approvedBy) {
-		ctx.status = 400;
-		ctx.body = "Invalid input";
-		return;
-	}
-	approveSubmission(id, points, approvedBy);
-
-	ctx.set('HX-Redirect', '/admin/queue');
-});
+router.post('/admin/approve', adminApproveSubmission);
 
 // Members /////////////////////////////////////////////////////////
 
-router.get('/member/:memberId', async (ctx) => {
+router.get('/member/:memberId', async (ctx: MulmContext) => {
 	const memberId = parseInt(ctx.params.memberId);
-
 	if (!memberId) {
 		ctx.status = 400;
 		ctx.body = "Invalid member id";
@@ -258,7 +233,6 @@ router.get('/member/:memberId', async (ctx) => {
 	}
 
 	const member = getMemberData(memberId);
-
 	if (!member) {
 		ctx.status = 404;
 		ctx.body = "Member not found";
@@ -266,68 +240,35 @@ router.get('/member/:memberId', async (ctx) => {
 	};
 
 	const submissions = getSubmissionsByMember(memberId);
+
+	const viewer = ctx.loggedInUser;
 	await ctx.render('member', {
 		member,
 		submissions,
+		isSelf: viewer && viewer.member_id == member.id,
+		isAdmin: viewer && viewer.is_admin,
 	});
+
 });
 
 // Submissions /////////////////////////////////////////////////////
 
-async function viewSub(ctx: Koa.ParameterizedContext, isAdmin: boolean) {
-	const subId = parseInt(ctx.params.subId);
-
-	if (!subId) {
-		ctx.status = 400;
-		ctx.body = "Invalid submission id";
-		return;
-	}
-
-	const submission = getSubmissionById(subId);
-	if (!submission) {
-		ctx.status = 404;
-		ctx.body = "Submission not found";
-		return;
-	}
-
-	await ctx.render('submission/review', {
-		submission,
-		isAdmin,
-	});
-}
-
-router.get('/sub/:subId', async (ctx) => viewSub(ctx, false));
-router.get('/admin/sub/:subId', async (ctx) => {
-	// TODO do auth check
-	return viewSub(ctx, true);
-});
+router.get('/sub/:subId', viewSubmission);
+// TODO remove
+router.get('/admin/sub/:subId', viewSubmission);
 
 // Save a new submission, potentially submitting it
 router.post('/sub', async (ctx) => {
 	const parsed = bapSchema.safeParse(ctx.request.body);
 	if (!parsed.success) {
-
 		const errors = new Map<string, string>();
 		parsed.error.issues.forEach((issue) => {
 			errors.set(String(issue.path[0]), issue.message);
 		});
 
 		const selectedType = String(ctx.query.speciesType ?? "Fish");
-		const title = (() => {
-			switch (selectedType) {
-				default:
-				case "Fish":
-				case "Invert":
-					return "Breeder Awards Submission";
-				case "Plant":
-					return "Horticultural Awards Submission";
-				case "Coral":
-					return "Coral Awards Submission";
-			}
-		})();
-
 		await ctx.render('bapForm/form', {
-			title,
+			title: getBapFormTitle(selectedType),
 			form: ctx.request.body,
 			errors,
 			classOptions: getClassOptions(selectedType),
@@ -339,42 +280,13 @@ router.post('/sub', async (ctx) => {
 		});
 		return;
 	}
-
-
-//	const member = getOrCreateMember(parsed.data.parsed.data.memberName);
-// 	addSubmission(member.id, parsed.data, true);
-
 	ctx.body = "Submitted";
 });
 
-// Admin can always update
-// User can update if not submitted
-router.patch('/sub/:subId', async (ctx) => {
-	const subId = parseInt(ctx.params.subId);
+router.patch('/sub/:subId', updateSubmission);
+router.delete('/sub/:subId', deleteSubmission);
 
-	if (!subId) {
-		ctx.status = 400;
-		ctx.body = "Invalid submission id";
-		return;
-	}
-
-	console.log("Implement patch");
-})
-
-// Admin can always delete
-// User can delete if not approved
-router.delete('/sub/:subId', async (ctx) => {
-	const subId = parseInt(ctx.params.subId);
-
-	if (!subId) {
-		ctx.status = 400;
-		ctx.body = "Invalid submission id";
-		return;
-	}
-	deleteSubmission(subId);
-})
-
-// OAuth
+// OAuth ////////////////////////////////////////////////////
 
 router.get("/oauth/google", async (ctx) => {
 	const qs = new URLSearchParams(ctx.request.querystring);

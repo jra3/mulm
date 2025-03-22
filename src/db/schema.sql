@@ -34,7 +34,7 @@ CREATE TABLE submissions (
 
 	submitted_on DATETIME DEFAULT NULL,
 	approved_on DATETIME DEFAULT NULL,
-	approved_by TEXT DEFAULT NULL,
+	approved_by INTEGER DEFAULT NULL,
 	points INTEGER DEFAULT NULL
 );
 
