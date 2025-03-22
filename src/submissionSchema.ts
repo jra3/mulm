@@ -12,7 +12,7 @@ const multiSelect = z
   .union([z.string(), z.array(z.string())])
   .transform((val) => {
     const arr = typeof val === "string" ? [val] : val;
-		return JSON.stringify(arr);
+		return arr;
   });
 
 const waterTypeEnum = z.enum(["Fresh", "Brackish", "Salt"]);
@@ -23,7 +23,7 @@ export const bapSchema = z.object({
 	memberEmail: z.string().email("Valid address required"),
 	waterType: waterTypeEnum,
 	speciesType: speciesTypeEnum,
-	date: z
+	reproductionDate: z
 		.string()
 		.refine((date) => {
 			if (date === "") {
@@ -45,11 +45,11 @@ export const bapSchema = z.object({
 
 	tankSize: z.string().nonempty({ message: "Required" }),
 	filterType: z.string().nonempty({ message: "Required" }),
-	changeVolume: z.string().nonempty({ message: "Required" }),
-	changeFrequency: z.string().nonempty({ message: "Required" }),
+	waterChangeVolume: z.string().nonempty({ message: "Required" }),
+	waterChangeFrequency: z.string().nonempty({ message: "Required" }),
 	temperature: z.string().nonempty({ message: "Required" }),
-	pH: z.string().nonempty({ message: "Required" }),
-	GH: z.string().nonempty({ message: "Required" }),
+	ph: z.string().nonempty({ message: "Required" }),
+	gh: z.string().nonempty({ message: "Required" }),
 	specificGravity: z.string().optional(),
 	substrateType: z.string().nonempty({ message: "Required" }),
 	substrateDepth: z.string().nonempty({ message: "Required" }),
@@ -59,13 +59,14 @@ export const bapSchema = z.object({
 	lightStrength: z.string().optional(),
 	lightHours: z.string().optional(),
 
-	supplementType: z.string(),
-	supplementRegimen: z.string(),
+	supplementType: multiSelect.optional(),
+	supplementRegimen: multiSelect.optional(),
 
-	CO2: z.enum(["NO", "YES"]).optional(),
-	CO2Description: z.string().optional(),
+	co2: z.enum(["no", "yes"]).optional(),
+	co2Description: z.string().optional(),
 
 // Fields required only for fish / inverts VVV
+
 }).refine(
 	(data) => !isLivestock(data.speciesType) || Boolean(data.count),
 	{ message: "Requied", path: ["count"], }
@@ -75,7 +76,9 @@ export const bapSchema = z.object({
 ).refine(
 	(data) => !isLivestock(data.speciesType) || (data.spawnLocations ?? []).length > 0,
 	{ message: "Requied", path: ["spawnLocations"], }
+
 // Fields required only for plants / corals VVV
+
 ).refine(
 	(data) => isLivestock(data.speciesType) || Boolean(data.propagationMethod),
 	{ message: "Requied", path: ["propagationMethod"], }
@@ -89,8 +92,8 @@ export const bapSchema = z.object({
 	(data) => isLivestock(data.speciesType) || Boolean(data.lightHours),
 	{ message: "Requied", path: ["lightHours"], }
 ).refine(
-	(data) => isLivestock(data.speciesType) || data.CO2 !== "YES" || Boolean(data.CO2Description),
-	{ message: "Requied", path: ["CO2Description"], }
+	(data) => isLivestock(data.speciesType) || data.co2 !== "yes" || Boolean(data.co2Description),
+	{ message: "Requied", path: ["co2Description"], }
 )
 
 export const approvalSchema = z.object({
@@ -160,6 +163,5 @@ export const speciesTypesAndClasses: Record<string, string[]> = {
 		"Soft",
 	],
 }
-
 
 export type FormValues = z.infer<typeof bapSchema>;

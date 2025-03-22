@@ -74,7 +74,7 @@ form.flex-col.bg-white.p-6.rounded-lg.shadow-lg#bapForm(
 					each option in classOptions
 						option(value=option.value)= option.text
 				- const dateLabel = isLivestock ? "Date Spawned" : "Date Propagated";
-				+bapTextInput(dateLabel, "date", "", "date")
+				+bapTextInput(dateLabel, "reproductionDate", "", "date")
 
 			+bapTextInput("Species Common Name", "speciesCommonName", "Guppy")
 			+bapTextInput("Species Latin Name", "speciesLatinName", "Poecilia reticulata")
@@ -84,11 +84,13 @@ form.flex-col.bg-white.p-6.rounded-lg.shadow-lg#bapForm(
 
 				+bapMultiSelectInput("Foods", "foods", "foods")
 					each food in foodTypes
-						option(value=food)= food
+						- const selected = form.foods && form.foods.includes(food);
+						option(value=food selected=selected)= food
 
 				+bapMultiSelectInput("Spawn Locations", "spawnLocations", "spawns")
 					each loc in spawnLocations
-						option(value=loc)= loc
+						- const selected = form.spawnLocations && form.spawnLocations.includes(loc);
+						option(value=loc selected=selected)= loc
 
 			else
 				+bapTextInput("Propagation Method", "propagationMethod", "Cuttings, Runners, Seed...")
@@ -98,11 +100,11 @@ form.flex-col.bg-white.p-6.rounded-lg.shadow-lg#bapForm(
 		div.space-y-4.grid.grid-cols-2.w-full.gap-2
 			+bapTextInput("Tank Size", "tankSize", "5g, 20 Long...")
 			+bapTextInput("Filter Type", "filterType", "Sponge, HOB...")
-			+bapTextInput("Water Change Volume (%)", "changeVolume", "10%, 25%...")
-			+bapTextInput("Water Change Frequency", "changeFrequency", "Daily, Weekly, Never...")
+			+bapTextInput("Water Change Volume (%)", "waterChangeVolume", "10%, 25%...")
+			+bapTextInput("Water Change Frequency", "waterChangeFrequency", "Daily, Weekly, Never...")
 			+bapTextInput("Temperature", "temperature", "75F...")
-			+bapTextInput("pH", "pH", "6.8...")
-			+bapTextInput("Hardness (GH)", "GH", "200ppm, 10dH...")
+			+bapTextInput("pH", "ph", "6.8...")
+			+bapTextInput("Hardness (GH)", "gh", "200ppm, 10dH...")
 			+bapTextInput("Specific Gravity", "specificGravity", "1.025...")
 			+bapTextInput("Substrate Type", "substrateType", "Gravel, Sand, Bare...")
 			+bapTextInput("Substrate Depth", "substrateDepth", "2\"...")
@@ -122,13 +124,13 @@ form.flex-col.bg-white.p-6.rounded-lg.shadow-lg#bapForm(
 		.card
 			p.font-semibold.p-4 Supplements
 			div.w-full.gap-2
-				- const hasCO2 = form.CO2 === "yes";
+				- const hasCO2 = form.co2 === "yes";
 				.grid.gap-2
-					label.input-label(for=name) CO2?
+					label.input-label(for="co2") CO2?
 					.select-wrapper
 						select(
-							value=form[name]
-							name=name
+							value=form.co2
+							name="co2"
 							hx-trigger="change"
 							hx-on:change="document.getElementById('CO2Desc').classList.toggle('hidden', this.value === 'no')")
 							option(value="no", selected=!hasCO2) No
@@ -136,7 +138,7 @@ form.flex-col.bg-white.p-6.rounded-lg.shadow-lg#bapForm(
 
 				div#CO2Desc(class=`${hasCO2 ? "" : "hidden"}`)
 					textarea.text-input(
-						name="CO2Description"
+						name="co2Description"
 						rows="4"
 						placeholder="Describe CO2 injection...")
 

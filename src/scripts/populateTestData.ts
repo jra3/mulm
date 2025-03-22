@@ -1,5 +1,5 @@
 import { getOrCreateMember, updateMemberData } from "../db/members";
-import { addSubmission } from "../db/submissions";
+import { createSubmission } from "../db/submissions";
 import { bapSchema, FormValues } from "../submissionSchema";
 
 const members = [
@@ -87,7 +87,7 @@ function generateSubmission() {
 		memberEmail: member[1],
 		waterType: "Fresh",
 		speciesType,
-		date: getSpawnDate().toDateString(),
+		reproductionDate: getSpawnDate().toDateString(),
 		speciesClass: "Livebearers",
 		speciesLatinName: sp,
 		speciesCommonName: sp,
@@ -98,11 +98,11 @@ function generateSubmission() {
 
 		tankSize: "20 Long",
 		filterType: "Sponge",
-		changeVolume: "20%",
-		changeFrequency: "Daily",
+		waterChangeVolume: "20%",
+		waterChangeFrequency: "Daily",
 		temperature: "75-78F",
-		pH: "6.8",
-		GH: "200 ppm",
+		ph: "6.8",
+		gh: "200 ppm",
 		specificGravity: "",
 		substrateType: "Bare Bottom",
 		substrateDepth: "N/A",
@@ -121,7 +121,7 @@ if (!parsed.success) {
 	throw new Error("Invalid data");
 }
 const member = getOrCreateMember(parsed.data.memberEmail, parsed.data.memberName);
-addSubmission(member.id, parsed.data, true);
+createSubmission(member.id, parsed.data, true);
 
 const john = getOrCreateMember("theactualjohnallen@gmail.com", "John Allen");
-updateMemberData(john.id, { is_admin: 0 });
+updateMemberData(john.id, { is_admin: 1 });

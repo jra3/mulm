@@ -4,7 +4,7 @@ import views from 'koa-views';
 import serve from 'koa-static';
 import path from 'path';
 import bodyParser from 'koa-bodyparser';
-import { getApprovedSubmissions, getApprovedSubmissionsInDateRange, getOutstandingSubmissions, getSubmissionById, getSubmissionsByMember } from "./db/submissions";
+import { createSubmission, getApprovedSubmissions, getApprovedSubmissionsInDateRange, getOutstandingSubmissions, getSubmissionsByMember } from "./db/submissions";
 import { bapSchema, foodTypes, getClassOptions, isLivestock, spawnLocations, waterTypes, speciesTypes } from "./submissionSchema";
 import { getMemberData, getMembersList, getOrCreateMember, MemberRecord } from "./db/members";
 import { levelRules, minYear, programs } from "./programs";
@@ -263,7 +263,15 @@ router.get('/sub/:subId', viewSubmission);
 router.get('/admin/sub/:subId', viewSubmission);
 
 // Save a new submission, potentially submitting it
-router.post('/sub', async (ctx) => {
+router.post('/sub', async (ctx: MulmContext) => {
+
+	const user = ctx.loggedInUser;
+	if (!user) {
+		ctx.status = 403;
+		ctx.body = "You must be logged in to submit";
+		return;
+	}
+
 	const parsed = bapSchema.safeParse(ctx.request.body);
 	if (!parsed.success) {
 		const errors = new Map<string, string>();
@@ -272,8 +280,10 @@ router.post('/sub', async (ctx) => {
 		});
 
 		const {
-			selectedType
-		} = ctx.request.body as {selectedType: string};
+			speciesType: selectedType
+		} = ctx.request.body as {speciesType: string};
+
+		console.log(parsed.error.issues);
 
 		await ctx.render('bapForm/form', {
 			title: getBapFormTitle(selectedType),
@@ -288,6 +298,20 @@ router.post('/sub', async (ctx) => {
 		});
 		return;
 	}
+
+	const form = parsed.data;
+	if (form.memberEmail != user.member_email && !user.is_admin) {
+		ctx.status = 403;
+		ctx.body = "User cannot submit for this member";
+		return;
+	}
+
+	console.log('asdfasdf');
+	createSubmission(ctx.loggedInUser!.member_id, form, true);
+
+
+	console.log("fuck yeah");
+
 	ctx.body = "Submitted";
 });
 

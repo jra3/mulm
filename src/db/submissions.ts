@@ -41,7 +41,7 @@ export type Submission = {
 };
 
 
-export function addSubmission(memberId: number, form: FormValues, submit: boolean) {
+export function createSubmission(memberId: number, form: FormValues, submit: boolean) {
 	try {
 		const conn = getWriteDBConnecton();
 
@@ -58,9 +58,13 @@ export function addSubmission(memberId: number, form: FormValues, submit: boolea
 		})();
 
 		// Convert camelCase to snake_case for DB
+		// JSON encodes arrays
 		const formFields = Object.fromEntries(
 			Object.entries(form).map(([camelName, val]) => {
-				return [camelName.replace(/([A-Z])/g, "_$1").toLowerCase(), val];
+				return [
+					camelName.replace(/([A-Z])/g, "_$1").toLowerCase(),
+					Array.isArray(val) ? JSON.stringify(val) : val,
+				];
 			})
 		);
 
@@ -69,12 +73,17 @@ export function addSubmission(memberId: number, form: FormValues, submit: boolea
 			program,
 			...formFields,
 			submitted_on: submit ? new Date().toISOString() : null,
+			member_name: undefined,
+			member_email: undefined,
 		};
 
 		const fields = [];
 		const values = [];
 		const marks = [];
 		for (const [field, value] of Object.entries(entries)) {
+			if (value === undefined) {
+				continue;
+			}
 			fields.push(field);
 			values.push(value);
 			marks.push('?');
