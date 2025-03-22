@@ -1,3 +1,6 @@
+- const stringCell = []
+- const heading = ['font-bold', 'text-lg']
+
 doctype html
 html
 	head
@@ -9,17 +12,43 @@ html
 		.flex-col.justify-center.text-center.items-center.bg-white.p-6.rounded-lg.shadow-lg
 			h2.text-2xl.p-2= member.name
 
-			- const heading = ['font-bold', 'text-lg'];
-			.flex.w-full
-				p.min-w-40(class=heading) Member Name
-				p.min-w-80(class=heading) Species Name
-				p.min-w-40(class=heading) Submission Date
+			if fishSubs.length > 0
+				h2.text-l.p-2 Breeders Awards Submissions
 
-			- const stringCell = []
-			each sub in submissions
-				a(href=`/admin/sub/${sub.id}`)
-					.flex.justify-between
-						p.min-w-40(class=stringCell)= sub.member_name
-						p.min-w-80(class=stringCell)= sub.species_common_name
-						p.min-w-40(class=stringCell)= sub.submitted_on
+				.flex.w-full
+					p.min-w-80(class=heading) Species Name
+					p.min-w-40(class=heading) Submission Date
+
+				each sub in fishSubs
+					a(href=`/admin/sub/${sub.id}`)
+						.flex.justify-between
+							p.min-w-80(class=stringCell)= sub.species_common_name
+							p.min-w-40(class=stringCell)= sub.submitted_on
+
+
+			if plantSubs.length > 0
+				h2.text-l.p-2 Horticultural Awards Submissions
+
+				.flex.w-full
+					p.min-w-80(class=heading) Species Name
+					p.min-w-40(class=heading) Submission Date
+
+				each sub in plantSubs
+					a(href=`/admin/sub/${sub.id}`)
+						.flex.justify-between
+							p.min-w-80(class=stringCell)= sub.species_common_name
+							p.min-w-40(class=stringCell)= sub.submitted_on
+
+			if coralSubs.length > 0
+				h2.text-l.p-2 Coral Awards Submissions
+
+				.flex.w-full
+					p.min-w-80(class=heading) Species Name
+					p.min-w-40(class=heading) Submission Date
+
+				each sub in coralSubs
+					a(href=`/admin/sub/${sub.id}`)
+						.flex.justify-between
+							p.min-w-80(class=stringCell)= sub.species_common_name
+							p.min-w-40(class=stringCell)= sub.submitted_on
 
