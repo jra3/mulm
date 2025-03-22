@@ -1,40 +1,92 @@
+
+mixin reviewTextInput(labelText, name, type="text")
+	.grid.gap-2
+		label.input-label(for=name)= labelText
+		input.text-input(
+			disabled
+			id=name
+			value=submission[name]
+			name=name
+			type=type)
+
 doctype html
 html
 	head
 		title= title
 		script(src='https://unpkg.com/htmx.org@2.0.4')
-		link(rel='stylesheet', href='/index.css')
+		link(rel='stylesheet' href='/index.css')
 
 	body.flex.justify-center.items-center
 		.flex-col.justify-center.text-left.items-center.bg-white.p-6.rounded-lg.shadow-lg
+			.card
+				div.grid.w-full.gap-2
+					+reviewTextInput("Member Name", "member_name")
 
-			p TODO implement pretty view
+			.card
+				p.font-semibold.p-4 Species Details
+
+				div.grid.grid-cols-2.w-full.gap-2
+					+reviewTextInput("Common Name", "species_common_name")
+					+reviewTextInput("Latin Name", "species_latin_name")
+					+reviewTextInput("Spawn Date", "reproduction_date")
+					+reviewTextInput("# of Fry", "count")
+
+					+reviewTextInput("Species Type", "species_type")
+					+reviewTextInput("Water Type", "water_type")
+
+					+reviewTextInput("Foods", "foods")
+					+reviewTextInput("Spawn Locations", "spawn_locations")
+
+			.card
+				p.font-semibold.p-4 Tank Details
+
+				div.grid.grid-cols-2.w-full.gap-2
+					+reviewTextInput("Tank Size", "tankSize")
+					+reviewTextInput("Filter Type", "filterType")
+					+reviewTextInput("Water Change Volume (%)", "changeVolume")
+					+reviewTextInput("Water Change Frequency", "changeFrequency")
+					+reviewTextInput("Temperature", "temperature")
+					+reviewTextInput("pH", "pH")
+					+reviewTextInput("Hardness (GH)", "GH")
+					+reviewTextInput("Specific Gravity", "specificGravity")
+					+reviewTextInput("Substrate Type", "substrateType")
+					+reviewTextInput("Substrate Depth", "substrateDepth")
+					+reviewTextInput("Substrate Color", "substrateColor")
+
+			.card
+				p.font-semibold.p-4 Approval Details
+				div.grid.grid-cols-2.w-full.gap-2
+					+reviewTextInput("Submitted On", "submitted_on")
+					+reviewTextInput("Approved On", "approved_on")
+					+reviewTextInput("Approved By", "approved_by")
+					+reviewTextInput("Points", "points")
+
 
 			- const d = JSON.stringify(submission, null, 2);
 			pre= d
 
-			if isAdmin
-				form(hx-post="/admin/approve")
-					input(type="hidden" name="id" value=submission.id)
-					label.label-text Points
-						.flex.gap-2
-							label
-								input(type="radio" name="points" value=5)
-								| 5
-							label
-								input(type="radio" name="points" value=10)
-								| 10
-							label
-								input(type="radio" name="points" value=15)
-								| 15
-							label
-								input(type="radio" name="points" value=20)
-								| 20
-
+		if isAdmin
+			form(hx-post="/admin/approve")
+				input(type="hidden" name="id" value=submission.id)
+				label.label-text Points
 					.flex.gap-2
+						label
+							input(type="radio" name="points" value=5)
+							| 5
+						label
+							input(type="radio" name="points" value=10)
+							| 10
+						label
+							input(type="radio" name="points" value=15)
+							| 15
+						label
+							input(type="radio" name="points" value=20)
+							| 20
 
-						button(type="submit") Approve
-						button(type="submit" name="reject" value="true") Reject
-						button(type="submit" name="delete" value="true") Delete
+				.flex.gap-2
+
+					button(type="submit") Approve
+					button(type="submit" name="reject" value="true") Reject
+					button(type="submit" name="delete" value="true") Delete
 
 

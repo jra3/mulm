@@ -8,6 +8,13 @@ export function getClassOptions(speciesType: string) {
 	return options.map((option) => ({ value: option, text: option }));
 }
 
+const multiSelect = z
+  .union([z.string(), z.array(z.string())])
+  .transform((val) => {
+    const arr = typeof val === "string" ? [val] : val;
+		return JSON.stringify(arr);
+  });
+
 const waterTypeEnum = z.enum(["Fresh", "Brackish", "Salt"]);
 const speciesTypeEnum = z.enum(["Fish", "Invert", "Plant", "Coral"]);
 
@@ -32,8 +39,8 @@ export const bapSchema = z.object({
 	speciesLatinName: z.string().nonempty({ message: "Required" }),
 	speciesCommonName: z.string().nonempty({ message: "Required" }),
 	count: z.string().optional(),
-	foods: z.array(z.string()).optional(),
-	spawnLocations: z.array(z.string()).optional(),
+	foods: multiSelect.optional(),
+	spawnLocations: multiSelect.optional(),
 	propagationMethod: z.string().optional(),
 
 	tankSize: z.string().nonempty({ message: "Required" }),
@@ -52,12 +59,8 @@ export const bapSchema = z.object({
 	lightStrength: z.string().optional(),
 	lightHours: z.string().optional(),
 
-	ferts: z.array(
-		z.object({
-			substance: z.string(),
-			regimen: z.string(),
-		})
-	).optional(),
+	supplementType: z.string(),
+	supplementRegimen: z.string(),
 
 	CO2: z.enum(["NO", "YES"]).optional(),
 	CO2Description: z.string().optional(),

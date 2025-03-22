@@ -5,10 +5,66 @@ import { bapSchema, FormValues } from "../submissionSchema";
 const members = [
 	["John Allen", "theactualjohnallen@gmail.com"],
 	["David Manuel", "deefrombrooklyn@gmail.com"],
-	["Rusty Shackleford", "giddyup@lavabit.com"]
+	["Rusty Shackleford", "giddyup@lavabit.com"],
+	["Alice Morgan", "alice.morgan@example.com"],
+	["Ben Thompson", "ben.thompson@example.com"],
+	["Clara Nguyen", "clara.nguyen@example.com"],
+	["David Patel", "david.patel@example.com"],
+	["Elena Ruiz", "elena.ruiz@example.com"],
+	["Frank Zhao", "frank.zhao@example.com"],
+	["Grace Kim", "grace.kim@example.com"],
+	["Henry O’Connor", "henry.oconnor@example.com"],
+	["Isabel Rossi", "isabel.rossi@example.com"],
+	["Jack Mehta", "jack.mehta@example.com"]
 ];
 
-const fish = ["Guppy", "Molly", "Swordtail", "Platy", "Endler", "Mosquito Fish", "Gambusia", "Halfbeak", "Goodeid", "Pupfish", "Livebearer", "Other"];
+const fish = [
+	"Guppy",
+	"Molly",
+	"Swordtail",
+	"Platy",
+	"Endler",
+	"Mosquito Fish",
+	"Gambusia",
+	"Halfbeak",
+	"Goodeid",
+	"Pupfish",
+	"Livebearer",
+	"Other",
+];
+const plant = [
+  "Water Lily",
+  "Duckweed",
+  "Hornwort",
+  "Water Hyacinth",
+  "Amazon Frogbit",
+  "Java Moss",
+  "Anacharis",
+  "Cabomba",
+  "Water Wisteria",
+  "Hydrilla",
+];
+const coral = [
+  "Staghorn Coral",
+  "Elkhorn Coral",
+  "Brain Coral",
+  "Pillar Coral",
+  "Star Coral",
+  "Lettuce Coral",
+  "Fire Coral",
+  "Table Coral",
+  "Finger Coral",
+  "Mushroom Coral",
+];
+
+const species: {
+	speciesType: "Fish" | "Plant" | "Coral",
+	speciesList: string[];
+}[] = [
+	{ speciesType: "Fish", speciesList: fish },
+	{ speciesType: "Plant", speciesList: plant },
+	{ speciesType: "Coral", speciesList: coral },
+]
 
 function getRandomElement<T>(arr: T[]) {
 	return arr[Math.floor(Math.random() * arr.length)];
@@ -23,19 +79,22 @@ function getSpawnDate() {
 
 function generateSubmission() {
 	const member = getRandomElement(members);
+	const { speciesType, speciesList } = getRandomElement(species);
+	const sp = getRandomElement(speciesList);
+
 	const data: FormValues = {
 		memberName: member[0],
 		memberEmail: member[1],
 		waterType: "Fresh",
-		speciesType: "Fish",
+		speciesType,
 		date: getSpawnDate().toDateString(),
 		speciesClass: "Livebearers",
-		speciesLatinName: getRandomElement(fish),
-		speciesCommonName: getRandomElement(fish),
+		speciesLatinName: sp,
+		speciesCommonName: sp,
 		count: String(6 + Math.floor(100 * Math.random())),
 		foods: ["Live", "Frozen", "Flake"],
 		spawnLocations: ["Livebearer"],
-		propagationMethod: "",
+		propagationMethod: "Tacos",
 
 		tankSize: "20 Long",
 		filterType: "Sponge",
@@ -49,9 +108,9 @@ function generateSubmission() {
 		substrateDepth: "N/A",
 		substrateColor: "N/A",
 
-		lightType: "",
-		lightStrength: "",
-		lightHours: "",
+		lightType: "LED",
+		lightStrength: "Strong",
+		lightHours: "16",
 	};
 	return data;
 }
@@ -65,4 +124,4 @@ const member = getOrCreateMember(parsed.data.memberEmail, parsed.data.memberName
 addSubmission(member.id, parsed.data, true);
 
 const john = getOrCreateMember("theactualjohnallen@gmail.com", "John Allen");
-updateMemberData(john.id, { is_admin: 1 });
+updateMemberData(john.id, { is_admin: 0 });

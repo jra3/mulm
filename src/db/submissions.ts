@@ -1,9 +1,9 @@
 import { FormValues } from "../submissionSchema";
 import { getWriteDBConnecton, query } from "./conn";
 
-
 export type Submission = {
 	id: number;
+	program: string;
 
 	created_on: Date;
 	updated_on: Date;
@@ -17,7 +17,10 @@ export type Submission = {
 	species_latin_name: string;
 	water_type: string;
 	count: string;
-	submission_date: string;
+	reproduction_date: Date;
+
+	foods: string;
+	spawn_locations: string;
 
 	tank_size: string;
 	filter_type: string;
@@ -41,6 +44,7 @@ export type Submission = {
 export function addSubmission(memberId: number, form: FormValues, submit: boolean) {
 	try {
 		const conn = getWriteDBConnecton();
+
 		const program = (() => {
 			switch (form.speciesType) {
 				case "Fish":
@@ -53,60 +57,37 @@ export function addSubmission(memberId: number, form: FormValues, submit: boolea
 			}
 		})();
 
+		// Convert camelCase to snake_case for DB
+		const formFields = Object.fromEntries(
+			Object.entries(form).map(([camelName, val]) => {
+				return [camelName.replace(/([A-Z])/g, "_$1").toLowerCase(), val];
+			})
+		);
+
+		const entries = {
+			member_id: memberId,
+			program,
+			...formFields,
+			submitted_on: submit ? new Date().toISOString() : null,
+		};
+
+		const fields = [];
+		const values = [];
+		const marks = [];
+		for (const [field, value] of Object.entries(entries)) {
+			fields.push(field);
+			values.push(value);
+			marks.push('?');
+		}
+
 		const stmt = conn.prepare(`
 			INSERT INTO submissions
-			(
-				member_id,
-				program,
-				species_type,
-				species_class,
-				species_common_name,
-				species_latin_name,
-				water_type,
-				count,
-
-				tank_size,
-				filter_type,
-				water_change_volume,
-				water_change_frequency,
-				temperature,
-				pH,
-				GH,
-				specific_gravity,
-				substrate_type,
-				substrate_depth,
-				substrate_color,
-
-				submitted_on
-			)
+			(${fields.join(', ')})
 			VALUES
-			(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+			(${marks.join(', ')})`
 		);
 
-		stmt.run(
-			memberId,
-			program,
-			form.speciesType,
-			form.speciesClass,
-			form.speciesCommonName,
-			form.speciesLatinName,
-			form.waterType,
-			form.count,
-			form.tankSize,
-			form.filterType,
-
-			form.changeVolume,
-			form.changeFrequency,
-			form.temperature,
-			form.pH,
-			form.GH,
-			form.specificGravity,
-			form.substrateType,
-			form.substrateDepth,
-			form.substrateColor,
-
-			submit ? new Date().toISOString() : null,
-		);
+		stmt.run(values);
 		conn.close();
 	} catch (err) {
 		console.error(err);

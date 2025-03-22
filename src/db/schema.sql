@@ -7,8 +7,8 @@ INSERT INTO auto_increment VALUES (0, 'members');
 
 CREATE TABLE submissions (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
-
 	program TEXT NOT NULL,
+
 	created_on DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	updated_on DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -19,6 +19,10 @@ CREATE TABLE submissions (
 	species_latin_name TEXT NOT NULL,
 	water_type TEXT NOT NULL,
 	count TEXT NOT NULL,
+	reproduction_date DATETIME NOT NULL,
+
+	foods TEXT,
+	spawn_locations TEXT,
 
 	tank_size TEXT NOT NULL,
 	filter_type TEXT NOT NULL,
@@ -26,8 +30,8 @@ CREATE TABLE submissions (
 	water_change_frequency TEXT NOT NULL,
 	temperature TEXT NOT NULL,
 	pH TEXT NOT NULL,
-	GH TEXT NOT NULL,
-	specific_gravity TEXT NOT NULL,
+	GH TEXT,
+	specific_gravity TEXT,
 	substrate_type TEXT NOT NULL,
 	substrate_depth TEXT NOT NULL,
 	substrate_color TEXT NOT NULL,
