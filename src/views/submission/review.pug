@@ -41,17 +41,17 @@ html
 				p.font-semibold.p-4 Tank Details
 
 				div.grid.grid-cols-2.w-full.gap-2
-					+reviewTextInput("Tank Size", "tankSize")
-					+reviewTextInput("Filter Type", "filterType")
-					+reviewTextInput("Water Change Volume (%)", "changeVolume")
-					+reviewTextInput("Water Change Frequency", "changeFrequency")
+					+reviewTextInput("Tank Size", "tank_size")
+					+reviewTextInput("Filter Type", "filter_type")
+					+reviewTextInput("Water Change Volume (%)", "water_change_volume")
+					+reviewTextInput("Water Change Frequency", "water_change_frequency")
 					+reviewTextInput("Temperature", "temperature")
-					+reviewTextInput("pH", "pH")
-					+reviewTextInput("Hardness (GH)", "GH")
-					+reviewTextInput("Specific Gravity", "specificGravity")
-					+reviewTextInput("Substrate Type", "substrateType")
-					+reviewTextInput("Substrate Depth", "substrateDepth")
-					+reviewTextInput("Substrate Color", "substrateColor")
+					+reviewTextInput("pH", "ph")
+					+reviewTextInput("Hardness (GH)", "gh")
+					+reviewTextInput("Specific Gravity", "specific_gravity")
+					+reviewTextInput("Substrate Type", "substrate_type")
+					+reviewTextInput("Substrate Depth", "substrate_depth")
+					+reviewTextInput("Substrate Color", "substrate_color")
 
 			.card
 				p.font-semibold.p-4 Approval Details
@@ -62,31 +62,29 @@ html
 					+reviewTextInput("Points", "points")
 
 
-			- const d = JSON.stringify(submission, null, 2);
-			pre= d
+			if isAdmin
+				.card
+					form(hx-post="/admin/approve")
+						input(type="hidden" name="id" value=submission.id)
+						label.label-text Points
+							.flex.gap-2
+								label
+									input(type="radio" name="points" value=5)
+									| 5
+								label
+									input(type="radio" name="points" value=10)
+									| 10
+								label
+									input(type="radio" name="points" value=15)
+									| 15
+								label
+									input(type="radio" name="points" value=20)
+									| 20
 
-		if isAdmin
-			form(hx-post="/admin/approve")
-				input(type="hidden" name="id" value=submission.id)
-				label.label-text Points
-					.flex.gap-2
-						label
-							input(type="radio" name="points" value=5)
-							| 5
-						label
-							input(type="radio" name="points" value=10)
-							| 10
-						label
-							input(type="radio" name="points" value=15)
-							| 15
-						label
-							input(type="radio" name="points" value=20)
-							| 20
+						.flex.gap-2
 
-				.flex.gap-2
-
-					button(type="submit") Approve
-					button(type="submit" name="reject" value="true") Reject
-					button(type="submit" name="delete" value="true") Delete
+							button(type="submit") Approve
+							button(type="submit" name="reject" value="true") Reject
+							button(type="submit" name="delete" value="true") Delete
 
 

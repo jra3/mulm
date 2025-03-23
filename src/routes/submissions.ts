@@ -86,7 +86,16 @@ export async function adminApproveSubmission(ctx: MulmContext) {
 		return;
 	}
 
-	const { id, points } = parsed.data;
-	db.approveSubmission(parseInt(id), parseInt(points), viewer.member_id);
+	if (parsed.data.reject) {
+		console.log("rejected!");
+
+	} else if (parsed.data.delete) {
+		db.deleteSubmission(parseInt(parsed.data.id));
+		console.log("deleted!");
+	} else {
+		console.log("approved");
+		//db.approveSubmission(parseInt(id), parseInt(points), viewer.member_id);
+	}
+
 	ctx.set('HX-Redirect', '/admin/queue');
 }

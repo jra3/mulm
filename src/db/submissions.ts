@@ -1,4 +1,4 @@
-import { FormValues } from "../submissionSchema";
+import { FormValues, spawnLocations } from "../submissionSchema";
 import { getWriteDBConnecton, query } from "./conn";
 
 export type Submission = {
@@ -61,10 +61,7 @@ export function createSubmission(memberId: number, form: FormValues, submit: boo
 		// JSON encodes arrays
 		const formFields = Object.fromEntries(
 			Object.entries(form).map(([camelName, val]) => {
-				return [
-					camelName.replace(/([A-Z])/g, "_$1").toLowerCase(),
-					Array.isArray(val) ? JSON.stringify(val) : val,
-				];
+				return [camelName.replace(/([A-Z])/g, "_$1").toLowerCase(), val];
 			})
 		);
 
@@ -75,6 +72,8 @@ export function createSubmission(memberId: number, form: FormValues, submit: boo
 			submitted_on: submit ? new Date().toISOString() : null,
 			member_name: undefined,
 			member_email: undefined,
+			foods: Array.isArray(formFields.foods) ? formFields.foods.join(", ") : undefined,
+			spawn_locations: Array.isArray(formFields.spawnLocations) ? formFields.spawnLocations.join(", ") : undefined,
 		};
 
 		const fields = [];

@@ -97,8 +97,10 @@ export const bapSchema = z.object({
 )
 
 export const approvalSchema = z.object({
+	reject: z.string().optional(),
+	delete: z.string().optional(),
 	id: z.string(),
-	points: z.string(),
+	points: z.string().optional(),
 });
 
 export const speciesTypes = speciesTypeEnum.options;
