@@ -96,8 +96,9 @@ export function createSubmission(memberId: number, form: FormValues, submit: boo
 			(${marks.join(', ')})`
 		);
 
-		stmt.run(values);
+		const result = stmt.run(values);
 		conn.close();
+		return result.lastInsertRowid;
 	} catch (err) {
 		console.error(err);
 		throw new Error("Failed to add submission");

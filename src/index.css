@@ -19,6 +19,10 @@ select {
 	@apply border-2 bg-white flex h-9 w-full min-w-0 px-3 py-1 text-base shadow-xs border-gray-300 rounded-lg;
 }
 
+.text-input:disabled {
+	@apply bg-gray-300;
+}
+
 .select-wrapper {
 	position: relative;
 	display: inline-block;

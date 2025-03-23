@@ -52,11 +52,11 @@ router.get('/', async (ctx: MulmContext) => {
 
 // Entrypoint for BAP/HAP submission
 router.get('/submit', async (ctx: MulmContext) => {
-	const member = ctx.loggedInUser;
+	const viewer = ctx.loggedInUser;
 	const form = {
 		// auto-fill member name and email if logged in
-		memberName: member?.member_name,
-		memberEmail: member?.member_email,
+		memberName: viewer?.member_name,
+		memberEmail: viewer?.member_email,
 		// TODO members should only be able to submit for themselves
 		// TODO admins can submit for others
 		...ctx.query,
@@ -73,6 +73,7 @@ router.get('/submit', async (ctx: MulmContext) => {
 		foodTypes,
 		spawnLocations,
 		isLivestock: isLivestock(selectedType),
+		isAdmin: Boolean(viewer?.is_admin),
 	});
 });
 
@@ -259,14 +260,11 @@ router.get('/member/:memberId', async (ctx: MulmContext) => {
 // Submissions /////////////////////////////////////////////////////
 
 router.get('/sub/:subId', viewSubmission);
-// TODO remove
-router.get('/admin/sub/:subId', viewSubmission);
 
 // Save a new submission, potentially submitting it
 router.post('/sub', async (ctx: MulmContext) => {
-
-	const user = ctx.loggedInUser;
-	if (!user) {
+	const viewer = ctx.loggedInUser;
+	if (!viewer) {
 		ctx.status = 403;
 		ctx.body = "You must be logged in to submit";
 		return;
@@ -295,24 +293,29 @@ router.post('/sub', async (ctx: MulmContext) => {
 			foodTypes,
 			spawnLocations,
 			isLivestock: isLivestock(selectedType),
+			isAdmin: Boolean(viewer.is_admin),
 		});
 		return;
 	}
 
 	const form = parsed.data;
-	if (form.memberEmail != user.member_email && !user.is_admin) {
-		ctx.status = 403;
-		ctx.body = "User cannot submit for this member";
-		return;
+	if (form.memberEmail != viewer.member_email || form.memberName != viewer.member_name) {
+		if (!viewer.is_admin) {
+			ctx.status = 403;
+			ctx.body = "User cannot submit for this member";
+			return;
+		}
+		// Admins can supply any member
 	}
 
-	console.log('asdfasdf');
-	createSubmission(ctx.loggedInUser!.member_id, form, true);
+	const member = getOrCreateMember(form.memberEmail, form.memberName);
+	const subId = createSubmission(member.id, form, true);
 
-
-	console.log("fuck yeah");
-
-	ctx.body = "Submitted";
+	ctx.body = "Submitted " + String(subId);
+	await ctx.render('submission/success', {
+		member,
+		subId,
+	});
 });
 
 router.patch('/sub/:subId', updateSubmission);
