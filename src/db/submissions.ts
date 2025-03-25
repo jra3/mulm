@@ -1,4 +1,4 @@
-import { FormValues, spawnLocations } from "../submissionSchema";
+import { FormValues } from "../submissionSchema";
 import { getWriteDBConnecton, query } from "./conn";
 
 export type Submission = {
@@ -46,7 +46,7 @@ export function createSubmission(memberId: number, form: FormValues, submit: boo
 		const conn = getWriteDBConnecton();
 
 		const program = (() => {
-			switch (form.speciesType) {
+			switch (form.species_type) {
 				case "Fish":
 				case "Invert":
 					return "fish";
@@ -57,23 +57,15 @@ export function createSubmission(memberId: number, form: FormValues, submit: boo
 			}
 		})();
 
-		// Convert camelCase to snake_case for DB
-		// JSON encodes arrays
-		const formFields = Object.fromEntries(
-			Object.entries(form).map(([camelName, val]) => {
-				return [camelName.replace(/([A-Z])/g, "_$1").toLowerCase(), val];
-			})
-		);
-
 		const entries = {
 			member_id: memberId,
 			program,
-			...formFields,
+			...form,
 			submitted_on: submit ? new Date().toISOString() : null,
 			member_name: undefined,
 			member_email: undefined,
-			foods: Array.isArray(formFields.foods) ? formFields.foods.join(", ") : undefined,
-			spawn_locations: Array.isArray(formFields.spawnLocations) ? formFields.spawnLocations.join(", ") : undefined,
+			foods: Array.isArray(form.foods) ? form.foods.join(", ") : undefined,
+			spawn_locations: Array.isArray(form.spawn_locations) ? form.spawn_locations.join(", ") : undefined,
 		};
 
 		const fields = [];

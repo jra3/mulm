@@ -62,7 +62,7 @@ router.get('/submit', async (ctx: MulmContext) => {
 		...ctx.query,
 	}
 
-	const selectedType = String(ctx.query.speciesType ?? "Fish");
+	const selectedType = String(ctx.query.species_type ?? "Fish");
 	await ctx.render('submit', {
 		title: getBapFormTitle(selectedType),
 		form,
@@ -278,8 +278,8 @@ router.post('/sub', async (ctx: MulmContext) => {
 		});
 
 		const {
-			speciesType: selectedType
-		} = ctx.request.body as {speciesType: string};
+			species_type: selectedType
+		} = ctx.request.body as {species_type: string};
 
 		console.log(parsed.error.issues);
 
@@ -299,7 +299,7 @@ router.post('/sub', async (ctx: MulmContext) => {
 	}
 
 	const form = parsed.data;
-	if (form.memberEmail != viewer.member_email || form.memberName != viewer.member_name) {
+	if (form.member_email != viewer.member_email || form.member_name != viewer.member_name) {
 		if (!viewer.is_admin) {
 			ctx.status = 403;
 			ctx.body = "User cannot submit for this member";
@@ -308,7 +308,7 @@ router.post('/sub', async (ctx: MulmContext) => {
 		// Admins can supply any member
 	}
 
-	const member = getOrCreateMember(form.memberEmail, form.memberName);
+	const member = getOrCreateMember(form.member_email, form.member_name);
 	const subId = createSubmission(member.id, form, true);
 
 	ctx.body = "Submitted " + String(subId);

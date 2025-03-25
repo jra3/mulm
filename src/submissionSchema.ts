@@ -19,11 +19,11 @@ const waterTypeEnum = z.enum(["Fresh", "Brackish", "Salt"]);
 const speciesTypeEnum = z.enum(["Fish", "Invert", "Plant", "Coral"]);
 
 export const bapSchema = z.object({
-	memberName: z.string().nonempty({ message: "Required" }),
-	memberEmail: z.string().email("Valid address required"),
-	waterType: waterTypeEnum,
-	speciesType: speciesTypeEnum,
-	reproductionDate: z
+	member_name: z.string().nonempty({ message: "Required" }),
+	member_email: z.string().email("Valid address required"),
+	water_type: waterTypeEnum,
+	species_type: speciesTypeEnum,
+	reproduction_date: z
 		.string()
 		.refine((date) => {
 			if (date === "") {
@@ -35,65 +35,65 @@ export const bapSchema = z.object({
 			}
 			return true;
 		}, { message: "Required" }),
-	speciesClass: z.string().nonempty({ message: "Required" }),
-	speciesLatinName: z.string().nonempty({ message: "Required" }),
-	speciesCommonName: z.string().nonempty({ message: "Required" }),
+	species_class: z.string().nonempty({ message: "Required" }),
+	species_latin_name: z.string().nonempty({ message: "Required" }),
+	species_common_name: z.string().nonempty({ message: "Required" }),
 	count: z.string().optional(),
 	foods: multiSelect.optional(),
-	spawnLocations: multiSelect.optional(),
-	propagationMethod: z.string().optional(),
+	spawn_locations: multiSelect.optional(),
+	propagation_method: z.string().optional(),
 
-	tankSize: z.string().nonempty({ message: "Required" }),
-	filterType: z.string().nonempty({ message: "Required" }),
-	waterChangeVolume: z.string().nonempty({ message: "Required" }),
-	waterChangeFrequency: z.string().nonempty({ message: "Required" }),
+	tank_size: z.string().nonempty({ message: "Required" }),
+	filter_type: z.string().nonempty({ message: "Required" }),
+	water_change_volume: z.string().nonempty({ message: "Required" }),
+	water_change_frequency: z.string().nonempty({ message: "Required" }),
 	temperature: z.string().nonempty({ message: "Required" }),
 	ph: z.string().nonempty({ message: "Required" }),
 	gh: z.string().nonempty({ message: "Required" }),
-	specificGravity: z.string().optional(),
-	substrateType: z.string().nonempty({ message: "Required" }),
-	substrateDepth: z.string().nonempty({ message: "Required" }),
-	substrateColor: z.string().nonempty({ message: "Required" }),
+	specific_gravity: z.string().optional(),
+	substrate_type: z.string().nonempty({ message: "Required" }),
+	substrate_depth: z.string().nonempty({ message: "Required" }),
+	substrate_color: z.string().nonempty({ message: "Required" }),
 
-	lightType: z.string().optional(),
-	lightStrength: z.string().optional(),
-	lightHours: z.string().optional(),
+	light_type: z.string().optional(),
+	light_strength: z.string().optional(),
+	light_hours: z.string().optional(),
 
-	supplementType: multiSelect.optional(),
-	supplementRegimen: multiSelect.optional(),
+	supplement_type: multiSelect.optional(),
+	supplement_regimen: multiSelect.optional(),
 
 	co2: z.enum(["no", "yes"]).optional(),
-	co2Description: z.string().optional(),
+	co2_description: z.string().optional(),
 
 // Fields required only for fish / inverts VVV
 
 }).refine(
-	(data) => !isLivestock(data.speciesType) || Boolean(data.count),
+	(data) => !isLivestock(data.species_type) || Boolean(data.count),
 	{ message: "Requied", path: ["count"], }
 ).refine(
-	(data) => !isLivestock(data.speciesType) || (data.foods ?? []).length > 0,
+	(data) => !isLivestock(data.species_type) || (data.foods ?? []).length > 0,
 	{ message: "Requied", path: ["foods"], }
 ).refine(
-	(data) => !isLivestock(data.speciesType) || (data.spawnLocations ?? []).length > 0,
-	{ message: "Requied", path: ["spawnLocations"], }
+	(data) => !isLivestock(data.species_type) || (data.spawn_locations ?? []).length > 0,
+	{ message: "Requied", path: ["spawn_locations"], }
 
 // Fields required only for plants / corals VVV
 
 ).refine(
-	(data) => isLivestock(data.speciesType) || Boolean(data.propagationMethod),
-	{ message: "Requied", path: ["propagationMethod"], }
+	(data) => isLivestock(data.species_type) || Boolean(data.propagation_method),
+	{ message: "Requied", path: ["propagation_method"], }
 ).refine(
-	(data) => isLivestock(data.speciesType) || Boolean(data.lightType),
-	{ message: "Requied", path: ["lightType"], }
+	(data) => isLivestock(data.species_type) || Boolean(data.light_type),
+	{ message: "Requied", path: ["light_type"], }
 ).refine(
-	(data) => isLivestock(data.speciesType) || Boolean(data.lightStrength),
-	{ message: "Requied", path: ["lightStrength"], }
+	(data) => isLivestock(data.species_type) || Boolean(data.light_strength),
+	{ message: "Requied", path: ["light_strength"], }
 ).refine(
-	(data) => isLivestock(data.speciesType) || Boolean(data.lightHours),
-	{ message: "Requied", path: ["lightHours"], }
+	(data) => isLivestock(data.species_type) || Boolean(data.light_hours),
+	{ message: "Requied", path: ["light_hours"], }
 ).refine(
-	(data) => isLivestock(data.speciesType) || data.co2 !== "yes" || Boolean(data.co2Description),
-	{ message: "Requied", path: ["co2Description"], }
+	(data) => isLivestock(data.species_type) || data.co2 !== "yes" || Boolean(data.co2_description),
+	{ message: "Requied", path: ["co2_description"], }
 )
 
 export const approvalSchema = z.object({

@@ -42,15 +42,15 @@ form.flex-col.bg-white.p-6.rounded-lg.shadow-lg#bapForm(
 	.card
 		p.font-semibold.p-4 Member Details
 		div.grid.grid-cols-2.w-full.gap-2
-			+bapTextInput("Member Name", "memberName", "Jacques Cousteau")(disabled=!isAdmin)
-			+bapTextInput("Member Email", "memberEmail", "deep@bluesea.net")(disabled=!isAdmin)
+			+bapTextInput("Member Name", "member_name", "Jacques Cousteau")(disabled=!isAdmin)
+			+bapTextInput("Member Email", "member_email", "deep@bluesea.net")(disabled=!isAdmin)
 
 	.card
 		p.font-semibold.p-4 Species Details
 
 		div.space-y-4
 			div.grid.grid-cols-2.w-full.gap-2
-				+bapSimpleSelectInput("Water Type", "waterType")
+				+bapSimpleSelectInput("Water Type", "water_type")
 					for water in waterTypes
 						- const selected = water === form.waterType;
 						option(value=water, selected=selected)= water
@@ -60,7 +60,7 @@ form.flex-col.bg-white.p-6.rounded-lg.shadow-lg#bapForm(
 					.select-wrapper
 						select(
 							value=form.speciesType
-							name="speciesType"
+							name="species_type"
 							hx-get="/submit"
 							hx-include="closest form"
 							hx-swap="outerHTML"
@@ -71,14 +71,14 @@ form.flex-col.bg-white.p-6.rounded-lg.shadow-lg#bapForm(
 								- const selected = speciesType === form.speciesType;
 								option(value=speciesType, selected=selected)= speciesType
 
-				+bapSimpleSelectInput("Species Class", "speciesClass")
+				+bapSimpleSelectInput("Species Class", "species_class")
 					each option in classOptions
 						option(value=option.value)= option.text
 				- const dateLabel = isLivestock ? "Date Spawned" : "Date Propagated";
-				+bapTextInput(dateLabel, "reproductionDate", "", "date")
+				+bapTextInput(dateLabel, "reproduction_date", "", "date")
 
-			+bapTextInput("Species Common Name", "speciesCommonName", "Guppy")
-			+bapTextInput("Species Latin Name", "speciesLatinName", "Poecilia reticulata")
+			+bapTextInput("Species Common Name", "species_common_name", "Guppy")
+			+bapTextInput("Species Latin Name", "species_latin_name", "Poecilia reticulata")
 
 			if isLivestock
 				+bapTextInput("# of Fry", "count", "Zillions")
@@ -88,33 +88,33 @@ form.flex-col.bg-white.p-6.rounded-lg.shadow-lg#bapForm(
 						- const selected = form.foods && form.foods.includes(food);
 						option(value=food selected=selected)= food
 
-				+bapMultiSelectInput("Spawn Locations", "spawnLocations", "spawns")
+				+bapMultiSelectInput("Spawn Locations", "spawn_locations", "spawns")
 					each loc in spawnLocations
 						- const selected = form.spawnLocations && form.spawnLocations.includes(loc);
 						option(value=loc selected=selected)= loc
 
 			else
-				+bapTextInput("Propagation Method", "propagationMethod", "Cuttings, Runners, Seed...")
+				+bapTextInput("Propagation Method", "propagation_method", "Cuttings, Runners, Seed...")
 
 	.card
 		p.font-semibold.p-4 Tank Details
 		div.space-y-4.grid.grid-cols-2.w-full.gap-2
-			+bapTextInput("Tank Size", "tankSize", "5g, 20 Long...")
-			+bapTextInput("Filter Type", "filterType", "Sponge, HOB...")
-			+bapTextInput("Water Change Volume (%)", "waterChangeVolume", "10%, 25%...")
-			+bapTextInput("Water Change Frequency", "waterChangeFrequency", "Daily, Weekly, Never...")
+			+bapTextInput("Tank Size", "tank_size", "5g, 20 Long...")
+			+bapTextInput("Filter Type", "filter_type", "Sponge, HOB...")
+			+bapTextInput("Water Change Volume (%)", "water_change_volume", "10%, 25%...")
+			+bapTextInput("Water Change Frequency", "water_change_frequency", "Daily, Weekly, Never...")
 			+bapTextInput("Temperature", "temperature", "75F...")
 			+bapTextInput("pH", "ph", "6.8...")
 			+bapTextInput("Hardness (GH)", "gh", "200ppm, 10dH...")
-			+bapTextInput("Specific Gravity", "specificGravity", "1.025...")
-			+bapTextInput("Substrate Type", "substrateType", "Gravel, Sand, Bare...")
-			+bapTextInput("Substrate Depth", "substrateDepth", "2\"...")
-			+bapTextInput("Substrate Color", "substrateColor", "Brown, White, Hot Pink...")
+			+bapTextInput("Specific Gravity", "specific_gravity", "1.025...")
+			+bapTextInput("Substrate Type", "substrate_type", "Gravel, Sand, Bare...")
+			+bapTextInput("Substrate Depth", "substrate_depth", "2\"...")
+			+bapTextInput("Substrate Color", "substrate_color", "Brown, White, Hot Pink...")
 
 			if !isLivestock
-				+bapTextInput("Lighting Type", "lightType", "LED, Sunlight, Ambient...")
-				+bapTextInput("Light Strength", "lightStrength", "200W, 5 PAR...")
-				+bapTextInput("Light Hours", "lightHours", "16...")
+				+bapTextInput("Lighting Type", "light_type", "LED, Sunlight, Ambient...")
+				+bapTextInput("Light Strength", "light_strength", "200W, 5 PAR...")
+				+bapTextInput("Light Hours", "light_hours", "16...")
 
 		div.flex.mt-4.gap-2.w-full.justify-center-center.text-center.items-center.hidden
 			button.p-2.rounded-md(class="bg-red-500 text-white") Clear
@@ -139,7 +139,7 @@ form.flex-col.bg-white.p-6.rounded-lg.shadow-lg#bapForm(
 
 				div#CO2Desc(class=`${hasCO2 ? "" : "hidden"}`)
 					textarea.text-input(
-						name="co2Description"
+						name="co2_description"
 						rows="4"
 						placeholder="Describe CO2 injection...")
 
