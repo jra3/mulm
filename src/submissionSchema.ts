@@ -49,7 +49,7 @@ export const bapSchema = z.object({
 	water_change_frequency: z.string().nonempty({ message: "Required" }),
 	temperature: z.string().nonempty({ message: "Required" }),
 	ph: z.string().nonempty({ message: "Required" }),
-	gh: z.string().nonempty({ message: "Required" }),
+	gh: z.string().optional(),
 	specific_gravity: z.string().optional(),
 	substrate_type: z.string().nonempty({ message: "Required" }),
 	substrate_depth: z.string().nonempty({ message: "Required" }),
