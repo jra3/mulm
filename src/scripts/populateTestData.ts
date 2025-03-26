@@ -1,5 +1,5 @@
 import { getOrCreateMember, updateMemberData } from "../db/members";
-import { createSubmission } from "../db/submissions";
+import { approveSubmission, createSubmission } from "../db/submissions";
 import { bapSchema, FormValues } from "../submissionSchema";
 
 const members = [
@@ -111,6 +111,7 @@ function generateSubmission() {
 		light_type: "LED",
 		light_strength: "Strong",
 		light_hours: "16",
+
 	};
 	return data;
 }
@@ -121,7 +122,12 @@ if (!parsed.success) {
 	throw new Error("Invalid data");
 }
 const member = getOrCreateMember(parsed.data.member_email, parsed.data.member_name);
-createSubmission(member.id, parsed.data, true);
+const sub = createSubmission(member.id, parsed.data, true);
+
+if (Math.random() > 0.7) {
+	console.log("Approving submission");
+	approveSubmission(sub as number, Math.ceil(4 * Math.random()) * 5, 1);
+}
 
 const john = getOrCreateMember("theactualjohnallen@gmail.com", "John Allen");
 updateMemberData(john.id, { is_admin: 1 });
