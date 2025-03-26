@@ -55,8 +55,8 @@ router.get('/submit', async (ctx: MulmContext) => {
 	const viewer = ctx.loggedInUser;
 	const form = {
 		// auto-fill member name and email if logged in
-		memberName: viewer?.member_name,
-		memberEmail: viewer?.member_email,
+		member_name: viewer?.member_name,
+		member_email: viewer?.member_email,
 		// TODO members should only be able to submit for themselves
 		// TODO admins can submit for others
 		...ctx.query,

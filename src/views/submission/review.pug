@@ -61,13 +61,13 @@ html
 					+reviewTextInput("Approved By", "approved_by")
 					+reviewTextInput("Points", "points")
 
-
 			if isAdmin
 				.card
 					form(hx-post="/admin/approve")
-						input(type="hidden" name="id" value=submission.id)
-						label.label-text Points
-							.flex.gap-2
+						.flex-col
+							input(type="hidden" name="id" value=submission.id)
+							.flex.gap-2.p-4
+								legend.label-text Points
 								label
 									input(type="radio" name="points" value=5)
 									| 5
@@ -81,10 +81,12 @@ html
 									input(type="radio" name="points" value=20)
 									| 20
 
-						.flex.gap-2
-
-							button(type="submit") Approve
-							button(type="submit" name="reject" value="true") Reject
-							button(type="submit" name="delete" value="true") Delete
+							.flex.gap-4
+								- const button = ["rounded-xl", "text-sm", "font-medium", "h-9", "px-4", "py-2", "shadow-sm", "transition-colors", "focus:outline-none", "focus:ring-2", "focus:ring-offset-2", "disabled:opacity-50", "disabled:pointer-events-none"];
+								- const destructive = [...button, "bg-red-500", "text-white", "hover:bg-red-600", "focus:ring-red-500"];
+								- const approve = [...button, "bg-blue-500", "text-white", "hover:bg-blue-600", "focus:ring-blue-500"];
+								button.p-4(class=approve type="submit") Approve
+								button.p-4(class=destructive type="submit" name="reject" value="true") Reject
+								button.p-4(class=destructive type="submit" name="delete" value="true") Delete
 
 
