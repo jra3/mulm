@@ -141,8 +141,7 @@ router.get('/lifetime{/:program}', async (ctx) => {
 		return;
 	}
 
-	// TODO add levels grouping back
-	const levelsOrder = levelRules[program].map(rule => rule[0]).reverse()
+	const levels: Record<string, MemberRecord[]> = {};
 
 	const allSubmissions = getApprovedSubmissions(program);
 	const totals = new Map<number, number>();
@@ -153,11 +152,6 @@ router.get('/lifetime{/:program}', async (ctx) => {
 	}
 
 	const members = getMembersList();
-
-	const levels = new Map<string, (MemberRecord & { points: number })[]>(
-		levelsOrder.map(level => [level, []])
-	);
-
 	for (const member of members) {
 		const memberLevel = (() => {
 			switch (program) {
@@ -171,8 +165,22 @@ router.get('/lifetime{/:program}', async (ctx) => {
 			}
 		})() ?? "Participant";
 
-		levels.get(memberLevel)!.push({...member, points: totals.get(member.id) ?? 0});
+		if (!levels[memberLevel]) {
+			levels[memberLevel] = [];
+		}
+		levels[memberLevel]!.push({...member, points: totals.get(member.id) ?? 0});
 	}
+
+	const levelsOrder = levelRules[program].map(rule => rule[0]).reverse()
+	const sortMembers = (a: MemberRecord, b: MemberRecord) => {
+		const aPoints = a.points ?? 0;
+		const bPoints = b.points ?? 0;
+		return bPoints - aPoints;
+	}
+
+	const finalLevels = levelsOrder
+		.map(name => [name, (levels[name] ?? []).sort(sortMembers).filter(member => member.points! > 0)])
+		.filter(([, members]) => members.length > 0);
 
 	const title = (() => {
 		switch (program) {
@@ -186,13 +194,9 @@ router.get('/lifetime{/:program}', async (ctx) => {
 		}
 	})();
 
-	// TOD0 Remove members with 0 points
-	// TODO remove levels with no members
-
 	await ctx.render('lifetime', {
 		title,
-		levels,
-		levelsOrder,
+		levels: finalLevels,
 	});
 });
 

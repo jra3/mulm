@@ -7,6 +7,7 @@ export type MemberRecord = {
 	fish_level?: string;
 	plant_level?: string;
 	coral_level?: string;
+	points?: number;
 };
 
 type AwardRecord = {
