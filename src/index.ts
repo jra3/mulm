@@ -104,12 +104,13 @@ router.get('/annual/:year{/:program}', async (ctx) => {
 	const endDate = new Date(year, 6, 31);
 
 	const submissions = getApprovedSubmissionsInDateRange(startDate, endDate, program);
-
+	const names: Record<number, string> = {};
 	// Collate approved submissions into standings
-	const standings = new Map<string, number>();
+	const standings = new Map<number, number>();
 	submissions.forEach((submission) => {
-		const currentPoints = standings.get(submission.member_name) ?? 0;
-		standings.set(submission.member_name, currentPoints + submission.points!);
+		const currentPoints = standings.get(submission.member_id) ?? 0;
+		standings.set(submission.member_id, currentPoints + submission.points!);
+		names[submission.member_id] = submission.member_name;
 	});
 
 	const sortedStandings = Array.from(standings.entries()).sort((a, b) => b[1] - a[1]);
@@ -129,6 +130,7 @@ router.get('/annual/:year{/:program}', async (ctx) => {
 	await ctx.render('standings', {
 		title,
 		standings: sortedStandings,
+		names,
 		year,
 	});
 });

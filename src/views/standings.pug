@@ -14,7 +14,8 @@ html
 					.text-right.w-8
 						p= index+1
 					.text-right.w-40
-						p= member[0]
+						- const name = names[member[0]] ?? ""
+						a(href=`/member/${member[0]}`)= name
 					.text-left.w-8
 						p= member[1]
 
