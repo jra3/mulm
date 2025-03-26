@@ -130,4 +130,4 @@ if (Math.random() > 0.7) {
 }
 
 const john = getOrCreateMember("theactualjohnallen@gmail.com", "John Allen");
-updateMemberData(john.id, { is_admin: 1 });
+updateMemberData(john.id, { is_admin: 0 });

@@ -1,5 +1,26 @@
-- const stringCell = []
-- const heading = ['font-bold', 'text-lg']
+- const stringCell = ['p-2', 'overflow-hidden', 'text-ellipsis', 'whitespace-nowrap', 'text-right', 'bg-gray-100', 'border-gray-800'];
+- const heading = ['p-2', 'overflow-hidden', 'text-ellipsis', 'whitespace-nowrap', 'text-left', 'sticky', 'top-0', 'text-left', 'bg-gray-300', 'font-bold', 'text-lg'];
+
+mixin submissionTable(submissions)
+	table
+		thead
+			tr
+				th(class=heading) Submitted On
+				th(class=heading) Class
+				th(class=heading) Common Name
+				th(class=heading) Latin Name
+				th(class=heading) Points
+
+		tbody
+			each sub in submissions
+				tr
+					- const dateString = new Date(sub.submitted_on).toLocaleDateString();
+					td(class=stringCell)
+						a(href=`/sub/${sub.id}`)= dateString
+					td(class=stringCell)= sub.species_class
+					td(class=stringCell)= sub.species_common_name
+					td(class=stringCell)= sub.species_latin_name
+					td(class=stringCell)= sub.points
 
 doctype html
 html
@@ -14,41 +35,12 @@ html
 
 			if fishSubs.length > 0
 				h2.text-l.p-2 Breeders Awards Submissions
-
-				.flex.w-full
-					p.min-w-80(class=heading) Species Name
-					p.min-w-40(class=heading) Submission Date
-
-				each sub in fishSubs
-					a(href=`/sub/${sub.id}`)
-						.flex.justify-between
-							p.min-w-80(class=stringCell)= sub.species_common_name
-							p.min-w-40(class=stringCell)= sub.submitted_on
-
+				+submissionTable(fishSubs)
 
 			if plantSubs.length > 0
 				h2.text-l.p-2 Horticultural Awards Submissions
-
-				.flex.w-full
-					p.min-w-80(class=heading) Species Name
-					p.min-w-40(class=heading) Submission Date
-
-				each sub in plantSubs
-					a(href=`/sub/${sub.id}`)
-						.flex.justify-between
-							p.min-w-80(class=stringCell)= sub.species_common_name
-							p.min-w-40(class=stringCell)= sub.submitted_on
+				+submissionTable(plantSubs)
 
 			if coralSubs.length > 0
 				h2.text-l.p-2 Coral Awards Submissions
-
-				.flex.w-full
-					p.min-w-80(class=heading) Species Name
-					p.min-w-40(class=heading) Submission Date
-
-				each sub in coralSubs
-					a(href=`/sub/${sub.id}`)
-						.flex.justify-between
-							p.min-w-80(class=stringCell)= sub.species_common_name
-							p.min-w-40(class=stringCell)= sub.submitted_on
-
+				+submissionTable(coralSubs)

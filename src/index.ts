@@ -243,13 +243,16 @@ router.get('/member/:memberId', async (ctx: MulmContext) => {
 		return;
 	};
 
-	const submissions = getSubmissionsByMember(memberId);
+	const viewer = ctx.loggedInUser;
+
+	const isSelf = Boolean(viewer?.member_id == member.id);
+	const isAdmin = Boolean(viewer?.is_admin);
+	const submissions = getSubmissionsByMember(memberId, isSelf, isAdmin);
 
 	const fishSubs = submissions.filter(sub => sub.species_type === "Fish" || sub.species_type === "Invert");
 	const plantSubs = submissions.filter(sub => sub.species_type === "Plant");
 	const coralSubs = submissions.filter(sub => sub.species_type === "Coral");
 
-	const viewer = ctx.loggedInUser;
 	await ctx.render('member', {
 		member,
 		fishSubs,

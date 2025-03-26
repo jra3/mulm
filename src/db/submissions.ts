@@ -97,13 +97,22 @@ export function createSubmission(memberId: number, form: FormValues, submit: boo
 }
 
 
-export function getSubmissionsByMember(memberId: number) {
-	return query<Submission>(`
+export function getSubmissionsByMember(memberId: number, includeUnsubmitted: boolean, includeUnapproved: boolean) {
+	let expr = `
 		SELECT submissions.*, members.name as member_name
 		FROM submissions LEFT JOIN members
 		ON submissions.member_id == members.id
-		WHERE submissions.member_id = ?`,
-		[memberId]);
+		WHERE submissions.member_id = ?`;
+
+	if (!includeUnsubmitted) {
+		expr += ` AND submitted_on IS NOT NULL`;
+	}
+
+	if (!includeUnapproved) {
+		expr += ` AND approved_on IS NOT NULL`;
+	}
+
+	return query<Submission>(expr,	[memberId]);
 }
 
 
