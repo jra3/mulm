@@ -5,9 +5,11 @@
   "main": "index.js",
   "scripts": {
     "dev": "concurrently nodemon \"postcss src/**/*.css --base src --dir public --watch\"",
-    "postcss": "postcss src/**/*.css --base src --dir public",
-    "build": "tsc",
-    "start": "node dist/index.js",
+    "build": "tsc && npm run postcss && npm run copy-files",
+		"postcss": "postcss src/**/*.css --base src --dir public",
+		"copy-files": "cp -r ./public ./dist/ && cp -r ./src/views ./dist/",
+
+		"start": "node dist/index.js",
     "lint": "eslint 'src/**/*.ts'",
     "lint:fix": "eslint 'src/**/*.ts' --fix"
   },
@@ -30,6 +32,7 @@
     "koa-views": "^8.1.0",
     "papaparse": "^5.5.2",
     "pug": "^3.0.3",
+    "uuid": "^11.1.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {

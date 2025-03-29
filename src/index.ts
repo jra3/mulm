@@ -13,12 +13,12 @@ import { getGoogleOAuthURL, getGoogleUser, translateGoogleOAuthCode } from "./oa
 import config from './config.json';
 import { createUserSession, destroyUserSession, MulmContext, sessionMiddleware } from "./sessions";
 import { updateSubmission, viewSubmission, deleteSubmission, adminApproveSubmission } from "./routes/submissions";
-import { getBapFormTitle } from "./views/submission/utils";
+import { getBapFormTitle } from "./utils";
 
 const app = new Koa();
 
 app.use(bodyParser());
-app.use(serve(path.join(__dirname, '..', 'public')));
+app.use(serve(path.join(__dirname, '../public')));
 app.use(
 	views(path.join(__dirname, 'views'), {
 		extension: 'pug',
