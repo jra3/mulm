@@ -5,6 +5,7 @@ import fs from 'fs';
 import Papa from 'papaparse';
 import { getOrCreateMember, updateMemberData } from "../db/members";
 import { approveSubmission, createSubmission, Submission } from "../db/submissions";
+import { assureSpecies } from "../db/species";
 
 [
 	["John Allen", "theactualjohnallen@gmail.com"],
@@ -38,6 +39,7 @@ result.data.map(data => {
 		const sub = createSubmission(data.member_id, parsed, true);
 		if (data.points) {
 			approveSubmission(sub as number, data.points, 1);
+			assureSpecies(data.species_latin_name, data.species_common_name, sub as number);
 		}
 	} catch {
 		console.log('skip');

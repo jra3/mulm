@@ -4,6 +4,7 @@
 
 CREATE TABLE auto_increment (value INT, table_name TEXT);
 INSERT INTO auto_increment VALUES (0, 'members');
+INSERT INTO auto_increment VALUES (0, 'known_species');
 
 CREATE TABLE submissions (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -99,3 +100,38 @@ CREATE TABLE sessions (
 	member_id INTEGER,
 	expires_on DATETIME NOT NULL
 );
+
+CREATE TABLE known_species (
+	latin_name TEXT NOT NULL,
+	common_name TEXT NOT NULL,
+	id INTEGER NOT NULL,
+	first_submission INTEGER NOT NULL,
+	species_id INTEGER NOT NULL,
+	PRIMARY KEY (latin_name, common_name)
+);
+
+CREATE INDEX idx_species_id ON known_species (species_id);
+
+-- A link between 2 species names, grouping two entries that are the same fish
+-- by 2 different names
+CREATE TABLE known_species_assoc (
+	authoritative_id INTEGER NOT NULL,
+	alternate_id INTEGER NOT NULL,
+	PRIMARY KEY (alternate_id)
+);
+
+CREATE INDEX idx_known_species_assoc_auth ON known_species_assoc (authoritative_id);
+
+CREATE TRIGGER known_species_id_sequence AFTER INSERT ON known_species
+BEGIN
+	UPDATE auto_increment
+	SET value = value + 1
+	WHERE table_name = 'known_species';
+
+	UPDATE known_species
+	SET	id = (
+		SELECT value
+		FROM auto_increment
+		WHERE table_name = 'known_species')
+	WHERE   ROWID = new.ROWID;
+END;
