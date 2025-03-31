@@ -1,6 +1,6 @@
 import * as db from "../db/submissions";
 import { MulmContext } from "../sessions";
-import { approvalSchema } from "../submissionSchema";
+import { approvalSchema } from "../forms/approval";
 
 function validateSubmission(ctx: MulmContext) {
 	const subId = parseInt(ctx.params.subId);

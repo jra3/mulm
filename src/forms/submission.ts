@@ -1,19 +1,26 @@
 
 import * as z from "zod"
+import { multiSelect } from "./utils";
 
 export const isLivestock = (speciesType: string) => speciesType === "Fish" || speciesType === "Invert";
+
+export function getBapFormTitle(selectedType: string) {
+	switch (selectedType) {
+		default:
+		case "Fish":
+		case "Invert":
+			return "Breeder Awards Submission";
+		case "Plant":
+			return "Horticultural Awards Submission";
+		case "Coral":
+			return "Coral Awards Submission";
+	}
+}
 
 export function getClassOptions(speciesType: string) {
 	const options = speciesTypesAndClasses[speciesType] ?? [];
 	return options.map((option) => ({ value: option, text: option }));
 }
-
-const multiSelect = z
-  .union([z.string(), z.array(z.string())])
-  .transform((val) => {
-    const arr = typeof val === "string" ? [val] : val;
-		return arr;
-  });
 
 const waterTypeEnum = z.enum(["Fresh", "Brackish", "Salt"]);
 const speciesTypeEnum = z.enum(["Fish", "Invert", "Plant", "Coral"]);
@@ -96,16 +103,6 @@ export const bapSchema = z.object({
 	{ message: "Requied", path: ["co2_description"], }
 )
 
-export const approvalSchema = z.object({
-	reject: z.string().optional(),
-	delete: z.string().optional(),
-	id: z.string(),
-	points: z.string().optional(),
-});
-
-export const speciesTypes = speciesTypeEnum.options;
-export const waterTypes = waterTypeEnum.options;
-
 export const foodTypes = [
 	"Live",
 	"Frozen",
@@ -165,5 +162,8 @@ export const speciesTypesAndClasses: Record<string, string[]> = {
 		"Soft",
 	],
 }
+
+export const speciesTypes = speciesTypeEnum.options;
+export const waterTypes = waterTypeEnum.options;
 
 export type FormValues = z.infer<typeof bapSchema>;

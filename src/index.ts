@@ -5,9 +5,9 @@ import serve from 'koa-static';
 import path from 'path';
 import bodyParser from 'koa-bodyparser';
 import { createSubmission, getApprovedSubmissions, getApprovedSubmissionsInDateRange, getOutstandingSubmissions, getSubmissionsByMember } from "./db/submissions";
-import { bapSchema, foodTypes, getClassOptions, isLivestock, spawnLocations, waterTypes, speciesTypes } from "./submissionSchema";
+import { bapSchema, getBapFormTitle, foodTypes, getClassOptions, isLivestock, spawnLocations, waterTypes, speciesTypes } from "./forms/submission";
 import { createMember, getGoogleAccount, getMember, getMemberByEmail, getMemberData, getMembersList, Member } from "./db/members";
-import { getBapFormTitle, levelRules, minYear, programs } from "./programs";
+import { levelRules, minYear, programs } from "./programs";
 import { getGoogleOAuthURL, getGoogleUser, translateGoogleOAuthCode } from "./oauth";
 
 import config from './config.json';

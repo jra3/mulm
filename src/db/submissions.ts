@@ -1,4 +1,4 @@
-import { FormValues } from "../submissionSchema";
+import { FormValues } from "../forms/submission";
 import { getWriteDBConnecton, query } from "./conn";
 
 export type Submission = {
