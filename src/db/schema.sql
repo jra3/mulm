@@ -63,15 +63,23 @@ CREATE INDEX idx_date_approved ON submissions (approved_on);
 */
 
 CREATE TABLE members (
-	email TEXT PRIMARY KEY,
-	name TEXT NOT NULL,
-	id INTEGER UNIQUE,
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+	contact_email TEXT NOT NULL,
+	display_name TEXT NOT NULL,
 
 	is_admin INTEGER DEFAULT 0,
 
 	fish_level TEXT DEFAULT NULL,
 	plant_level TEXT DEFAULT NULL,
-	coral_level	TEXT DEFAULT NULL
+	coral_level	TEXT DEFAULT NULL,
+
+	UNIQUE(contact_email)
+);
+
+CREATE TABLE google_account (
+	google_sub TEXT PRIMARY KEY,
+	member_id INTEGER NOT NULL
 );
 
 CREATE TRIGGER members_id_sequence AFTER INSERT ON members

@@ -1,14 +1,18 @@
 import { getWriteDBConnecton, query } from "./conn";
 
+// type as represented in the database
 export type MemberRecord = {
 	id: number;
-	name: string;
-	is_admin: number;
+	display_name: string;
+	is_admin: number
 	fish_level?: string;
 	plant_level?: string;
 	coral_level?: string;
-	points?: number;
 };
+
+export type Member = MemberRecord & {
+	points?: number;
+}
 
 type AwardRecord = {
 	member_id: number;
@@ -16,33 +20,54 @@ type AwardRecord = {
 	date_awarded: string;
 };
 
-export function getOrCreateMember(email: string, name: string) {
+export function getGoogleAccount(sub: string) {
+	const members = query<{
+		member_id: number,
+	}>(`SELECT member_id FROM google_account WHERE google_sub = ?`, [sub]);
+	return members.pop();
+}
+
+export function createMember(
+	email: string,
+	name: string,
+	credentials: { google_sub?: string } = {}) {
 	try {
-		const conn = getWriteDBConnecton()
-		const insertStmt = conn.prepare(`
-			INSERT INTO members (email, name) VALUES (?, ?)
-			ON CONFLICT(email) DO NOTHING;
-		`);
-		insertStmt.run(email, name);
-		const selectStmt = conn.prepare(`SELECT id, name FROM members WHERE name = ?`);
-		return selectStmt.get(name) as {name: string, id: number};
+		const db = getWriteDBConnecton()
+		return db.transaction(() => {
+			const userStmt = db.prepare('INSERT INTO members (display_name, contact_email) VALUES (?, ?)');
+			const memberId = userStmt.run(name, email).lastInsertRowid;
+
+			if (credentials.google_sub) {
+				const googleStmt = db.prepare('INSERT INTO google_account (google_sub, member_id) VALUES (?, ?)');
+				googleStmt.run(credentials.google_sub, memberId);
+			}
+			return memberId as number;
+		})();
 	} catch (err) {
 		console.error(err);
-		throw new Error("Failed to get member");
+		throw new Error("Failed to create member");
 	}
 }
 
-export function getMembersList(): MemberRecord[] {
-	return query<{
-		id: number,
-		name: string
-		is_admin: number,
-		fish_level?: string,
-		plant_level?: string,
-		coral_level?: string,
-	}>(`SELECT id, name, is_admin, fish_level, plant_level, coral_level FROM members`);
+export function getMember(id: number) {
+	const members = query<MemberRecord>(
+		`SELECT * FROM members WHERE id = ?`,
+		[id],
+	);
+	return members.pop();
 }
 
+export function getMemberByEmail(email: string) {
+	const members = query<MemberRecord>(
+		`SELECT * FROM members WHERE contact_email = ?`,
+		[email],
+	);
+	return members.pop();
+}
+
+export function getMembersList(): MemberRecord[] {
+	return query(`SELECT id, display_name, fish_level, plant_level, coral_level FROM members`);
+}
 
 export function getMemberData(memberId: number) {
 	const members = query<MemberRecord>(`SELECT * FROM members WHERE id = ?`, [memberId]);

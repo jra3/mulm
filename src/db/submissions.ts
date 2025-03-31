@@ -99,7 +99,7 @@ export function createSubmission(memberId: number, form: FormValues, submit: boo
 
 export function getSubmissionsByMember(memberId: number, includeUnsubmitted: boolean, includeUnapproved: boolean) {
 	let expr = `
-		SELECT submissions.*, members.name as member_name
+		SELECT submissions.*, members.display_name as member_name
 		FROM submissions LEFT JOIN members
 		ON submissions.member_id == members.id
 		WHERE submissions.member_id = ?`;
@@ -118,7 +118,7 @@ export function getSubmissionsByMember(memberId: number, includeUnsubmitted: boo
 
 export function getSubmissionById(id: number) {
 	const result = query<Submission>(`
-		SELECT submissions.*, members.name as member_name
+		SELECT submissions.*, members.display_name as member_name
 		FROM submissions LEFT JOIN members
 		ON submissions.member_id == members.id
 		WHERE submissions.id = ?`,
@@ -142,7 +142,7 @@ export function deleteSubmission(id: number) {
 
 export function getApprovedSubmissionsInDateRange(startDate: Date, endDate: Date, program: string) {
 	return query<Submission>(`
-		SELECT submissions.*, members.name as member_name
+		SELECT submissions.*, members.display_name as member_name
 		FROM submissions JOIN members
 		ON submissions.member_id == members.id
 		WHERE submitted_on > ? AND submitted_on < ?
@@ -158,7 +158,7 @@ export function getApprovedSubmissionsInDateRange(startDate: Date, endDate: Date
 
 export function getOutstandingSubmissions(program: string) {
 	return query<Submission>(`
-		SELECT submissions.*, members.name as member_name
+		SELECT submissions.*, members.display_name as member_name
 		FROM submissions JOIN members
 		ON submissions.member_id == members.id
 		WHERE submitted_on IS NOT NULL
@@ -171,7 +171,7 @@ export function getOutstandingSubmissions(program: string) {
 
 export function getApprovedSubmissions(program: string) {
 	return query<Submission & Required<Pick<Submission, "submitted_on" | "approved_on" | "points">>>(`
-		SELECT submissions.*, members.name as member_name
+		SELECT submissions.*, members.display_name as member_name
 		FROM submissions JOIN members
 		ON submissions.member_id == members.id
 		WHERE submitted_on IS NOT NULL
@@ -185,7 +185,7 @@ export function getApprovedSubmissions(program: string) {
 
 export function getAllSubmissions(program: string) {
 	return query<Submission>(`
-		SELECT submissions.*, members.name as member_name
+		SELECT submissions.*, members.display_name as member_name
 		FROM submissions JOIN members
 		ON submissions.member_id == members.id
 		FROM submissions WHERE program = ? `, [program]);

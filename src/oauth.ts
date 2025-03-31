@@ -25,7 +25,7 @@ export async function translateGoogleOAuthCode(code: string) {
 	return fetch(endpoint, { body, method: "POST" });
 }
 
-export async function getGoogleUser(accessToken: string): Promise<{name: string, email: string}> {
+export async function getGoogleUser(accessToken: string): Promise<{sub: string, name: string, email: string}> {
 	const resp = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${accessToken}`)
 	if (!resp.ok) {
 		throw new Error("Failed to fetch user from Google");
@@ -36,6 +36,7 @@ export async function getGoogleUser(accessToken: string): Promise<{name: string,
 	}
 
 	return {
+		sub: String(respBody.sub),
 		name: String(respBody.name),
 		email: String(respBody.email),
 	};

@@ -6,7 +6,7 @@ import path from 'path';
 import bodyParser from 'koa-bodyparser';
 import { createSubmission, getApprovedSubmissions, getApprovedSubmissionsInDateRange, getOutstandingSubmissions, getSubmissionsByMember } from "./db/submissions";
 import { bapSchema, foodTypes, getClassOptions, isLivestock, spawnLocations, waterTypes, speciesTypes } from "./submissionSchema";
-import { getMemberData, getMembersList, getOrCreateMember, MemberRecord } from "./db/members";
+import { createMember, getGoogleAccount, getMember, getMemberByEmail, getMemberData, getMembersList, Member } from "./db/members";
 import { levelRules, minYear, programs } from "./programs";
 import { getGoogleOAuthURL, getGoogleUser, translateGoogleOAuthCode } from "./oauth";
 
@@ -143,7 +143,7 @@ router.get('/lifetime{/:program}', async (ctx) => {
 		return;
 	}
 
-	const levels: Record<string, MemberRecord[]> = {};
+	const levels: Record<string, Member[]> = {};
 
 	const allSubmissions = getApprovedSubmissions(program);
 	const totals = new Map<number, number>();
@@ -174,7 +174,7 @@ router.get('/lifetime{/:program}', async (ctx) => {
 	}
 
 	const levelsOrder = levelRules[program].map(rule => rule[0]).reverse()
-	const sortMembers = (a: MemberRecord, b: MemberRecord) => {
+	const sortMembers = (a: Member, b: Member) => {
 		const aPoints = a.points ?? 0;
 		const bPoints = b.points ?? 0;
 		return bPoints - aPoints;
@@ -288,7 +288,7 @@ router.post('/sub', async (ctx: MulmContext) => {
 
 		const {
 			species_type: selectedType
-		} = ctx.request.body as {species_type: string};
+		} = ctx.request.body as { species_type: string };
 
 		console.log(parsed.error.issues);
 
@@ -317,8 +317,24 @@ router.post('/sub', async (ctx: MulmContext) => {
 		// Admins can supply any member
 	}
 
-	const member = getOrCreateMember(form.member_email, form.member_name);
-	const subId = createSubmission(member.id, form, true);
+	const member = getMemberByEmail(form.member_email);
+	let memberId: number;
+
+	if (!member) {
+		if (viewer.is_admin) {
+			// create a placeholder member
+			memberId = createMember(form.member_email, form.member_name);
+		} else {
+			// should be impossible to get here
+			ctx.status = 403;
+			ctx.body = "User cannot submit for this member";
+			return;
+		}
+	} else {
+		memberId = member.id;
+	}
+
+	const subId = createSubmission(memberId, form, true);
 
 	ctx.body = "Submitted " + String(subId);
 	await ctx.render('submission/success', {
@@ -344,9 +360,20 @@ router.get("/oauth/google", async (ctx) => {
 	}
 	const token = String(payload.access_token);
 	const googleUser = await getGoogleUser(token);
-	const member = getOrCreateMember(googleUser.email, googleUser.name);
-
-	createUserSession(ctx, member.id);
+	const record = getGoogleAccount(googleUser.sub);
+	console.log(googleUser);
+	if (!record) {
+		const memberId = createMember(googleUser.email, googleUser.name);
+		createUserSession(ctx, memberId);
+	} else {
+		const member = getMember(record.member_id)
+		if (!member) {
+			ctx.body = "Problem with account!";
+			ctx.status = 500;
+			return;
+		}
+		createUserSession(ctx, member.id as number);
+	}
 
 	ctx.redirect("/");
 });

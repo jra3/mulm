@@ -32,7 +32,7 @@ function getLoggedInUser(token: string) {
 		member_email: string,
 		is_admin: boolean,
 	}>(`
-		SELECT members.id as member_id, members.name as member_name, members.email as member_email, members.is_admin as is_admin
+		SELECT members.id as member_id, members.display_name as member_name, members.contact_email as member_email, members.is_admin as is_admin
 		FROM sessions JOIN members ON sessions.member_id = members.id
 		WHERE session_id = ? AND expires_on > ?;
 	`, [token, now]).pop();

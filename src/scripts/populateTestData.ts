@@ -3,12 +3,12 @@
 import { bapSchema, FormValues } from "../submissionSchema";
 import fs from 'fs';
 import Papa from 'papaparse';
-import { getOrCreateMember, updateMemberData } from "../db/members";
+import { createMember, getMemberByEmail, updateMemberData } from "../db/members";
 import { approveSubmission, createSubmission, Submission } from "../db/submissions";
 import { assureSpecies } from "../db/species";
 
 [
-	["John Allen", "theactualjohnallen@gmail.com"],
+	["John Allen", "theactualjohnallen@gmail.com", "107296152269502436331"],
 	["David Manuel", "deefrombrooklyn@gmail.com"],
 	["Rusty Shackleford", "giddyup@lavabit.com"],
 	["Alice Morgan", "alice.morgan@example.com"],
@@ -21,9 +21,9 @@ import { assureSpecies } from "../db/species";
 	["Henry O’Connor", "henry.oconnor@example.com"],
 	["Isabel Rossi", "isabel.rossi@example.com"],
 	["Jack Mehta", "jack.mehta@example.com"]
-].map(([name, email]) => getOrCreateMember(email, name))
-const john = getOrCreateMember("theactualjohnallen@gmail.com", "John Allen");
-updateMemberData(john.id, { is_admin: 1 });
+].map(([name, email, google_sub]) => createMember(email, name, { google_sub }));
+const john = getMemberByEmail("theactualjohnallen@gmail.com");
+updateMemberData(john!.id, { is_admin: 1 });
 
 const csvFilePath = './fish_breeding_test_data_poisson.csv';
 
