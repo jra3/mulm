@@ -1,5 +1,18 @@
 export const minYear = 1978;
 
+export function getBapFormTitle(selectedType: string) {
+	switch (selectedType) {
+		default:
+		case "Fish":
+		case "Invert":
+			return "Breeder Awards Submission";
+		case "Plant":
+			return "Horticultural Awards Submission";
+		case "Coral":
+			return "Coral Awards Submission";
+	}
+}
+
 export const programs = ['fish', 'plant', 'coral'];
 type LevelRules = [name: string, points: number, extraRules?: (tally: PointsTally) => boolean];
 type PointsTally = {
