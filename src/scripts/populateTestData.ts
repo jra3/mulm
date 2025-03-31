@@ -3,7 +3,7 @@
 import { bapSchema, FormValues } from "../forms/submission";
 import fs from 'fs';
 import Papa from 'papaparse';
-import { createMember, getMemberByEmail, updateMemberData } from "../db/members";
+import { createMember, getMemberByEmail, updateMember } from "../db/members";
 import { approveSubmission, createSubmission, Submission } from "../db/submissions";
 import { assureSpecies } from "../db/species";
 
@@ -23,7 +23,7 @@ import { assureSpecies } from "../db/species";
 	["Jack Mehta", "jack.mehta@example.com"]
 ].map(([name, email, google_sub]) => createMember(email, name, { google_sub }));
 const john = getMemberByEmail("theactualjohnallen@gmail.com");
-updateMemberData(john!.id, { is_admin: 1 });
+updateMember(john!.id, { is_admin: 1 });
 
 const csvFilePath = './fish_breeding_test_data_poisson.csv';
 

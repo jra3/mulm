@@ -6,7 +6,7 @@ import path from 'path';
 import bodyParser from 'koa-bodyparser';
 import { createSubmission, getApprovedSubmissions, getApprovedSubmissionsInDateRange, getOutstandingSubmissions, getSubmissionsByMember } from "./db/submissions";
 import { bapSchema, getBapFormTitle, foodTypes, getClassOptions, isLivestock, spawnLocations, waterTypes, speciesTypes } from "./forms/submission";
-import { createMember, getGoogleAccount, getMember, getMemberByEmail, getMemberData, getMembersList, Member } from "./db/members";
+import { createMember, getGoogleAccount, getMember, getMemberByEmail, getMemberWithAwards, getMembersList, Member } from "./db/members";
 import { levelRules, minYear, programs } from "./programs";
 import { getGoogleOAuthURL, getGoogleUser, translateGoogleOAuthCode } from "./oauth";
 
@@ -237,7 +237,7 @@ router.get('/member/:memberId', async (ctx: MulmContext) => {
 		return;
 	}
 
-	const member = getMemberData(memberId);
+	const member = getMemberWithAwards(memberId);
 	if (!member) {
 		ctx.status = 404;
 		ctx.body = "Member not found";

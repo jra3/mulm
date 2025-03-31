@@ -57,26 +57,7 @@ export function getMember(id: number) {
 	return members.pop();
 }
 
-export function getMemberByEmail(email: string) {
-	const members = query<MemberRecord>(
-		`SELECT * FROM members WHERE contact_email = ?`,
-		[email],
-	);
-	return members.pop();
-}
-
-export function getMembersList(): MemberRecord[] {
-	return query(`SELECT id, display_name, fish_level, plant_level, coral_level FROM members`);
-}
-
-export function getMemberData(memberId: number) {
-	const members = query<MemberRecord>(`SELECT * FROM members WHERE id = ?`, [memberId]);
-	const member = members.pop();
-	const awards = query<AwardRecord>(`SELECT * FROM awards WHERE member_id = ?`, [memberId]);
-	return {...member, awards};
-}
-
-export function updateMemberData(memberId: number, updates: Partial<MemberRecord>) {
+export function updateMember(memberId: number, updates: Partial<MemberRecord>) {
 	const fields = Object.keys(updates);
 	const values = Object.values(updates);
 	const setClause = fields.map(field => `${field} = ?`).join(', ');
@@ -91,6 +72,25 @@ export function updateMemberData(memberId: number, updates: Partial<MemberRecord
 		console.error(err);
 		throw new Error("Failed to update member");
 	}
+}
+
+export function getMemberByEmail(email: string) {
+	const members = query<MemberRecord>(
+		`SELECT * FROM members WHERE contact_email = ?`,
+		[email],
+	);
+	return members.pop();
+}
+
+export function getMembersList(): MemberRecord[] {
+	return query(`SELECT id, display_name, fish_level, plant_level, coral_level FROM members`);
+}
+
+export function getMemberWithAwards(memberId: number) {
+	const members = query<MemberRecord>(`SELECT * FROM members WHERE id = ?`, [memberId]);
+	const member = members.pop();
+	const awards = query<AwardRecord>(`SELECT * FROM awards WHERE member_id = ?`, [memberId]);
+	return {...member, awards};
 }
 
 export function grantAward(memberId: number, awardName: string, dateAwarded: Date) {
