@@ -6,10 +6,10 @@
   "scripts": {
     "dev": "concurrently nodemon \"postcss src/**/*.css --base src --dir public --watch\"",
     "build": "tsc && npm run postcss && npm run copy-files",
-		"postcss": "postcss src/**/*.css --base src --dir public",
-		"copy-files": "cp -r ./public ./dist/ && cp -r ./src/views ./dist/",
-
-		"start": "node dist/index.js",
+    "postcss": "postcss src/**/*.css --base src --dir public",
+    "copy-files": "cp -r ./public ./dist/ && cp -r ./src/views ./dist/",
+    "test": "jest",
+    "start": "node dist/index.js",
     "lint": "eslint 'src/**/*.ts'",
     "lint:fix": "eslint 'src/**/*.ts' --fix"
   },
@@ -39,6 +39,7 @@
     "@eslint/js": "^9.22.0",
     "@tailwindcss/postcss": "^4.0.12",
     "@types/better-sqlite3": "^7.6.12",
+    "@types/jest": "^29.5.14",
     "@types/koa": "^2.15.0",
     "@types/koa-bodyparser": "^4.3.12",
     "@types/koa-router": "^7.4.8",
@@ -52,10 +53,12 @@
     "concurrently": "^9.1.2",
     "eslint": "^9.22.0",
     "globals": "^16.0.0",
+    "jest": "^29.7.0",
     "nodemon": "^2.0.22",
     "postcss": "^8.5.3",
     "postcss-cli": "^11.0.0",
     "tailwindcss": "^4.0.12",
+    "ts-jest": "^29.3.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.2",
     "typescript-eslint": "^8.26.0"

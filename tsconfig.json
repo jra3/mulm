@@ -1,16 +1,17 @@
 {
-  "compilerOptions": {
-    /* Visit https://aka.ms/tsconfig to read more about this file */
-    "target": "es2016",
-    "module": "commonjs",
-    "outDir": "./dist",
-    "rootDir": "./src",
+	"compilerOptions": {
+		/* Visit https://aka.ms/tsconfig to read more about this file */
+		"target": "es2016",
+		"module": "commonjs",
+		"outDir": "./dist",
+		"rootDir": "./src",
 		"resolveJsonModule": true,
-    "esModuleInterop": true,
-    "strict": true,
+		"esModuleInterop": true,
+		"strict": true,
 
-    "forceConsistentCasingInFileNames": true,
-    "noImplicitAny": true,
-    "skipLibCheck": true
-  }
+		"forceConsistentCasingInFileNames": true,
+		"noImplicitAny": true,
+		"skipLibCheck": true,
+		"types": ["jest", "node"]
+	}
 }
