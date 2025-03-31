@@ -1,6 +1,6 @@
 //import { getOrCreateMember, updateMemberData } from "../db/members";
 //import { approveSubmission, createSubmission } from "../db/submissions";
-import { bapSchema, FormValues } from "../submissionSchema";
+import { bapSchema, FormValues } from "../forms/submission";
 import fs from 'fs';
 import Papa from 'papaparse';
 import { createMember, getMemberByEmail, updateMemberData } from "../db/members";
