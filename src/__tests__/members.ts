@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
-import { createMember, getMembersList } from "../db/members";
+import { createMember, getGoogleAccount, getMember, getMemberByEmail, getMembersList } from "../db/members";
 import { setDBFactory } from "../db/conn";
 
 beforeAll(() => {
@@ -25,12 +25,44 @@ afterAll(() => {
 
 test('Members list append', () => {
 	expect(getMembersList().length).toEqual(0);
-	createMember("honk@dazzle.com", "Honk Dazzle", { google_sub: "123456789" });
+	createMember("honk@dazzle.com", "Honk Dazzle");
 	expect(getMembersList().length).toEqual(1);
 })
 
-/* test('Members list append', () => {
-	createMember("honk@dazzle2.com", "Honk Dazzle", { google_sub: "123456789" });
-	expect(getMembersList().length).toEqual(1);
+test('Create and fetch', () => {
+	const id = createMember("honk@dazzle.com", "Honk Dazzle");
+	expect(getMemberByEmail("honk@dazzle.com")?.id).toEqual(id);
+	expect(getMemberByEmail("honk@dazzle.com")?.id).toEqual(id);
+	expect(getMember(id)?.display_name).toEqual("Honk Dazzle");
 })
- */
+
+test('Create COLLISION', () => {
+	createMember("nop@nopsledteam.com", "hehehehe");
+	createMember("honk@dazzle.com", "Honk Dazzle");
+	try {
+		createMember("honk@dazzle.com", "Dude Perfect");
+		fail("Should have thrown");
+	} catch (e: any) {
+		expect(e.message).toEqual("Failed to create member");
+	}
+	expect(getMembersList().length).toEqual(2);
+})
+
+test('Create with google', () => {
+	const id = createMember("honk@dazzle.com", "Honk Dazzle", { google_sub: "123456789" });
+	const account = getGoogleAccount("123456789");
+	expect(account?.member_id).toEqual(id);
+	expect(getMember(account!.member_id)?.display_name).toEqual("Honk Dazzle");
+})
+
+test('Create with google COLLISION', () => {
+	createMember("nop@nopsledteam.com", "hehehehe",  { google_sub: "987654321" });
+	createMember("honk@dazzle.com", "Honk Dazzle", { google_sub: "123456789" });
+	try {
+		createMember("wummper@dazzle.com", "Dude Perfect", { google_sub: "123456789" });
+		fail("Should have thrown");
+	} catch (e: any) {
+		expect(e.message).toEqual("Failed to create member");
+	}
+	expect(getMembersList().length).toEqual(2);
+})
