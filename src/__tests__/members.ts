@@ -34,6 +34,7 @@ test('Create and fetch', () => {
 	expect(getMemberByEmail("honk@dazzle.com")?.id).toEqual(id);
 	expect(getMemberByEmail("honk@dazzle.com")?.id).toEqual(id);
 	expect(getMember(id)?.display_name).toEqual("Honk Dazzle");
+	expect(getMember(1234)).toBeUndefined();
 })
 
 test('Create COLLISION', () => {
