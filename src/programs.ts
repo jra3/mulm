@@ -1,18 +1,5 @@
 export const minYear = 1978;
 
-export function getBapFormTitle(selectedType: string) {
-	switch (selectedType) {
-		default:
-		case "Fish":
-		case "Invert":
-			return "Breeder Awards Submission";
-		case "Plant":
-			return "Horticultural Awards Submission";
-		case "Coral":
-			return "Coral Awards Submission";
-	}
-}
-
 export const programs = ['fish', 'plant', 'coral'];
 type LevelRules = [name: string, points: number, extraRules?: (tally: PointsTally) => boolean];
 type PointsTally = {
@@ -100,7 +87,10 @@ export const levelRules: Record<string, LevelRules[]> = {
 		["Expert Aquatic Horticulturist", 300, (tally) => {
 			// At least 30 points must be from each of the 5, 10, 15 point categories; a minimum of
 			// 40 points must be from a 20 point category. The remaining points can be from any category.
-			return classSum(tally, [10, 15, 20]) >= 20;
+			return tally[5] >= 30
+				&& tally[10]! >= 30
+				&& tally[15]! >= 30
+				&& tally[20]! >= 40;
 		}],
 		["Master Aquatic Horticulturist", 500],
 		["Grand Master Aquatic Horticulturist", 750, (tally) => {
@@ -108,7 +98,7 @@ export const levelRules: Record<string, LevelRules[]> = {
 			// must be from a 20 point category.
 			return classSum(tally, [5, 10, 15]) >= 60 && tally[20]! >= 80;
 		}],
-		["Senior Grand Master Aquatic Horticulturist ", 1000, (tally) => {
+		["Senior Grand Master Aquatic Horticulturist", 1000, (tally) => {
 			// 80 points must be from 5, 10, 15 point category and 100 points
 			// must be from a 20 point category.
 			return classSum(tally, [5, 10, 15]) >= 80 && tally[20]! >= 100;
