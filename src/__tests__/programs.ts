@@ -1,10 +1,8 @@
 import { calculateLevel, levelRules } from "../programs";
 
-
 const fishRules = levelRules["fish"];
 const plantRules = levelRules["plant"];
 const coralRules = levelRules["coral"];
-
 
 function subs(fives: number, tens: number, fifteens: number, twenties: number) {
 	const awards = [];

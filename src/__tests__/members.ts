@@ -43,6 +43,8 @@ test('Create COLLISION', () => {
 	try {
 		createMember("honk@dazzle.com", "Dude Perfect");
 		fail("Should have thrown");
+
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	} catch (e: any) {
 		expect(e.message).toEqual("Failed to create member");
 	}
@@ -62,8 +64,10 @@ test('Create with google COLLISION', () => {
 	try {
 		createMember("wummper@dazzle.com", "Dude Perfect", { google_sub: "123456789" });
 		fail("Should have thrown");
-	} catch (e: any) {
-		expect(e.message).toEqual("Failed to create member");
+
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	} catch (err: any) {
+		expect(err.message).toEqual("Failed to create member");
 	}
 	expect(getMembersList().length).toEqual(2);
 })
