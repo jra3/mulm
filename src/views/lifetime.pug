@@ -1,26 +1,40 @@
+include header.pug
+
 doctype html
 html
 	head
 		title= title
 		script(src='https://unpkg.com/htmx.org@2.0.4')
 		link(rel='stylesheet', href='/index.css')
+		meta(name="viewport" content="width=device-width, initial-scale=1.0")
 
-	body.flex.justify-center.items-center
-		.flex-col.justify-center.text-center.items-center.bg-white.p-6.rounded-lg.shadow-lg
-			h2.text-2xl.p-2= title
-			each level in levels
-				- const [levelName, members] = level;
-				p.w-full.pt-4.font-bold= levelName
-				each member in members
-					a(href=`/member/${member.id}`)
-						.flex.justify-between.w-full.max-w-2xl.mx-auto
-							.text-right.w-100
-								p= member.display_name
-							.text-left.w-100.pl-4
-								p= member.points
-
-		.fixed.bottom-0.left-0.w-full.bg-gray-100.p-4.shadow-md
+	body.bg-white.text-gray-800
+		+pageHeader("Lifetime Standings")
 			.container.mx-auto.flex.justify-center.space-x-4
 				a(href="/lifetime/fish") Breeders
 				a(href="/lifetime/plant") Horticultural
 				a(href="/lifetime/coral") Coral
+
+		section.bg-gray-100.py-6
+			div.max-w-4xl.mx-auto.text-center.px-4
+				h2(class="text-3xl sm:text-5xl font-extrabold mb-4")= title
+
+		each level in levels
+			- const [levelName, members] = level;
+
+			section.bg-gray-100.py-4
+				div.max-w-4xl.mx-auto.text-center.px-4
+					h2(class="text-xl sm:text-2xl font-bold mb-4")= levelName
+					each member in members
+						a(href=`/member/${member.id}`)
+							.flex.justify-between.w-full.max-w-2xl.mx-auto
+								.text-right.w-100
+									p= member.display_name
+								.text-left.w-100.pl-4
+									p= member.points
+
+		.fixed.bottom-0.left-0.w-full.bg-gray-100.p-4.shadow-md
+			.container.mx-auto.flex.justify-center.space-x-4
+				a(href="/lifetime/fish" class="text-gray-600 hover:text-gray-900 text-xl md:text-base") Breeder
+				a(href="/lifetime/plant" class="text-gray-600 hover:text-gray-900") Horticultural
+				a(href="/lifetime/coral" class="text-gray-600 hover:text-gray-900") Coral
