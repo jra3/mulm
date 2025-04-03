@@ -1,31 +1,31 @@
+include ../header.pug
+include queueButton.pug
+
+- const heading = ['font-bold', 'text-lg'];
+- const stringCell = []
+
 doctype html
 html
-	head
-		title= title
-		script(src='https://unpkg.com/htmx.org@2.0.4')
-		link(rel='stylesheet', href='/index.css')
+	+headTag(title)
 
-	body.flex.justify-center.items-center
-		.flex-col.justify-center.text-center.items-center.bg-white.p-6.rounded-lg.shadow-lg
-			h2.text-2xl.p-2= title
+	body.bg-white.text-gray-800
+		+pageHeader(title, subtitle)
+		.w-full.flex-col.max-w-400.justify-center.text-center.items-center.bg-white.p-6.rounded-lg.shadow-lg
 
-			- const heading = ['font-bold', 'text-lg'];
-			.flex.w-full
+			.flex.justify-between
 				p.min-w-40(class=heading) Member Name
-				p.min-w-80(class=heading) Species Name
+				p.min-w-120(class=heading) Species Name
 				p.min-w-40(class=heading) Submission Date
 
-			- const stringCell = []
 			each sub in submissions
 				a(href=`/sub/${sub.id}`)
 					.flex.justify-between
 						p.min-w-40(class=stringCell)= sub.member_name
 						p.min-w-80(class=stringCell)= sub.species_common_name
-						p.min-w-40(class=stringCell)= sub.submitted_on
+						p.min-w-40(class=stringCell)= new Date(sub.submitted_on).toDateString()
 
-		.fixed.bottom-0.left-0.w-full.bg-gray-100.p-4.shadow-md
+		.bottom-0.left-0.w-full.bg-gray-100.p-4.shadow-md
 			.container.mx-auto.flex.justify-center.space-x-4
-				a(href="/admin/queue/fish") Breeders
-				a(href="/admin/queue/plant") Horticultural
-				a(href="/admin/queue/coral") Coral
-
+				+queueButton("fish", "Breeder", programCounts.fish)
+				+queueButton("plants", "Horticultural", programCounts.plants)
+				+queueButton("coral", "Coral", programCounts.coral)

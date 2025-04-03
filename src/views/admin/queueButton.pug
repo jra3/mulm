@@ -1,0 +1,8 @@
+mixin queueButton(program, text, count)
+	if count > 0
+		a(href=`/admin/queue/${program}`)
+			button.primary= `${text} `
+				span.bg-red-500.px-1.py-1.rounded-xl= count
+
+	else
+		button.outline(disabled alt=`No outstanding reviews for ${program}`)= text

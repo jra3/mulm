@@ -168,6 +168,17 @@ export function getOutstandingSubmissions(program: string) {
 	);
 }
 
+export function getOutstandingSubmissionsCounts() {
+	const rows = query<{ count: number, program: string }>(`
+		SELECT COUNT(1) as count, program
+		FROM submissions JOIN members
+		ON submissions.member_id == members.id
+		WHERE submitted_on IS NOT NULL
+		AND approved_on IS NULL
+		GROUP BY program`,
+	);
+	return Object.fromEntries(rows.map(row => [ row.program, row.count ]))
+}
 
 export function getApprovedSubmissions(program: string) {
 	return query<Submission & Required<Pick<Submission, "submitted_on" | "approved_on" | "points">>>(`

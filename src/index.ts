@@ -4,7 +4,7 @@ import views from 'koa-views';
 import serve from 'koa-static';
 import path from 'path';
 import bodyParser from 'koa-bodyparser';
-import { createSubmission, getApprovedSubmissions, getApprovedSubmissionsInDateRange, getOutstandingSubmissions, getSubmissionsByMember } from "./db/submissions";
+import { createSubmission, getApprovedSubmissions, getApprovedSubmissionsInDateRange, getOutstandingSubmissions, getOutstandingSubmissionsCounts, getSubmissionsByMember } from "./db/submissions";
 import { bapSchema, getBapFormTitle, foodTypes, getClassOptions, isLivestock, spawnLocations, waterTypes, speciesTypes } from "./forms/submission";
 import { createMember, getGoogleAccount, getMember, getMemberByEmail, getMemberWithAwards, getMembersList, Member } from "./db/members";
 import { levelRules, minYear, programs } from "./programs";
@@ -28,25 +28,40 @@ app.use(sessionMiddleware)
 
 const router = new Router();
 
-router.get('/logout', async (ctx) => {
+router.get("/logout", async (ctx) => {
 	destroyUserSession(ctx);
 	ctx.redirect("/");
 });
 
 // Regular Views ///////////////////////////////////////////////////
 
-router.get('/', async (ctx: MulmContext) => {
+router.get("/", async (ctx: MulmContext) => {
 	const user = ctx.loggedInUser;
 	const isLoggedIn = Boolean(user);
 	const isAdmin = user?.is_admin;
 
-	await ctx.render('index', {
+	const args = {
 		title: 'BAS BAP/HAP Portal',
 		message: 'Welcome to BAS!',
 		googleURL: getGoogleOAuthURL(),
 		isLoggedIn,
 		isAdmin,
-	});
+	};
+
+	let approvalsProgram;
+	let approvalsCount = 0;
+	if (isAdmin) {
+		const counts = getOutstandingSubmissionsCounts();
+
+		Object.entries(counts).forEach(([program, count]) => {
+			if (count > 0) {
+				approvalsProgram = program;
+				approvalsCount += count;
+			}
+		});
+	}
+
+	await ctx.render('index', { ...args, approvalsProgram, approvalsCount });
 });
 
 // Entrypoint for BAP/HAP submission
@@ -219,10 +234,27 @@ router.get('/admin/queue{/:program}', async (ctx: MulmContext) => {
 	}
 
 	const submissions = getOutstandingSubmissions(program);
+	const programCounts = getOutstandingSubmissionsCounts();
+
+
+	const subtitle = (() => {
+		switch (program) {
+			default:
+			case "fish":
+				return `Breeder Awards Program`;
+			case "plant":
+				return `Horticultural Awards Program`;
+			case "coral":
+				return `Coral Awards Program`;
+		}
+	})();
+
 	await ctx.render('admin/queue', {
-		title: 'Submission Queue',
+		title: 'Approval Queue',
+		subtitle,
 		submissions,
 		program,
+		programCounts
 	});
 })
 
