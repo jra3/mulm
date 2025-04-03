@@ -17,7 +17,7 @@ html
 					a.link.font-extrabold(href='https://docs.google.com/spreadsheets/d/1zhYbhFHmpubmx9ATacA14YVte8YeUHjVEBgY0aFrKMs/edit?gid=1900172349#gid=1900172349') Species List
 
 		section.bg-gray-100.py-4
-			.flex.justify-center.space-x-4
+			.flex.justify-center.text-center.items-center(class="flex-col space-y-2 lg:flex-row lg:space-x-4")
 				if isAdmin
 					+queueButton(approvalsProgram, "Approval Queue", approvalsCount)
 				if isLoggedIn
