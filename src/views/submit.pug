@@ -1,14 +1,15 @@
+include header.pug
+
 doctype html
 html
-	head
-		title= title
-		script(src='https://unpkg.com/htmx.org@2.0.4')
+
+	+headTag(title)
 		script(src="https://cdn.jsdelivr.net/npm/tom-select@2.4.3/dist/js/tom-select.complete.min.js")
 		link(rel='stylesheet' href='/tom-select.css')
-		link(rel='stylesheet' href='/index.css')
 
-	body.flex.flex-col.justify-center.items-center
-		h2.text-2xl.p-2 New Species Submission
+	body.bg-white.text-gray-800
+		+pageHeader("New Species Submission")
+
 		include bapForm/form.pug
 
 		script.
@@ -42,5 +43,3 @@ html
 					}
 				})
 			});
-
-			htmx.logAll();

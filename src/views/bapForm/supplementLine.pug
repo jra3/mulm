@@ -12,5 +12,5 @@ mixin supplementLine(type, regimen)
 			type="text"
 			placeholder="Dosing Instructions")
 
-		button.rounded-md.text-sm.font-medium(
+		button.destructive(
 			hx-on:click="this.closest('div').remove()") -

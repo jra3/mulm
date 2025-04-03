@@ -1,8 +1,11 @@
 include supplementLine.pug
 
 mixin bapTextInput(labelText, name, placeholder, type="text")
-	.grid.gap-2
+	.flex.flex-col.gap-2
 		label.input-label(for=name)= labelText
+			if errors.has(name)
+				span(class="font-extrabold text-red-400")= ` ${errors.get(name)}`
+
 		input.text-input(
 			id=name
 			value=form[name]
@@ -11,19 +14,20 @@ mixin bapTextInput(labelText, name, placeholder, type="text")
 			placeholder=placeholder
 			class=errors.has(name) ? "error" : ""
 			disabled=attributes.disabled)
-		if errors.has(name)
-			div(class="text-red-400")= errors.get(name)
 
 mixin bapSimpleSelectInput(labelText, name)
-	.grid.gap-2
+	.flex.flex-col.gap-2
 		label.input-label(for=name)= labelText
 		.select-wrapper
 			select(value=form[name] name=name)
 				block
 
 mixin bapMultiSelectInput(labelText, name, id)
-	.grid.gap-2
+	.flex.flex-col.gap-2
 		label.input-label(for=name)= labelText
+			if errors.has(name)
+				span(class="font-extrabold text-red-400")= ` ${errors.get(name)}`
+
 		select.tom-select(
 			id=id
 			name=name
@@ -31,25 +35,24 @@ mixin bapMultiSelectInput(labelText, name, id)
 			value=form[name]
 			class=errors.has(name) ? "error" : "")
 			block
-		if errors.has(name)
-			.text-red-400= errors.get(name)
 
-form.flex-col.bg-white.p-6.rounded-lg.shadow-lg#bapForm(
+form#bapForm(
 	hx-target="#bapForm"
 	hx-swap="outerHTML"
 	hx-post="/sub")
 
-	.card
-		p.font-semibold.p-4 Member Details
-		div.grid.grid-cols-2.w-full.gap-2
-			+bapTextInput("Member Name", "member_name", "Jacques Cousteau")(disabled=!isAdmin)
-			+bapTextInput("Member Email", "member_email", "deep@bluesea.net")(disabled=!isAdmin)
+	section.bg-gray-100.py-4
+		div.max-w-4xl.mx-auto.text-left.px-4
+			h2(class="text-xl sm:text-2xl font-bold mb-4") Member Details
+			div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
+				+bapTextInput("Member Name", "member_name", "Jacques Cousteau")(disabled=!isAdmin)
+				+bapTextInput("Member Email", "member_email", "deep@bluesea.net")(disabled=!isAdmin)
 
-	.card
-		p.font-semibold.p-4 Species Details
+	section.bg-gray-100.py-4
+		div.max-w-4xl.mx-auto.text-left.px-4
+			h2(class="text-xl sm:text-2xl font-bold mb-4") Species Details
 
-		div.space-y-4
-			div.grid.grid-cols-2.w-full.gap-2
+			div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
 				+bapSimpleSelectInput("Water Type", "water_type")
 					for water in waterTypes
 						- const selected = water === form.waterType;
@@ -77,86 +80,89 @@ form.flex-col.bg-white.p-6.rounded-lg.shadow-lg#bapForm(
 				- const dateLabel = isLivestock ? "Date Spawned" : "Date Propagated";
 				+bapTextInput(dateLabel, "reproduction_date", "", "date")
 
-			+bapTextInput("Species Common Name", "species_common_name", "Guppy")
-			+bapTextInput("Species Latin Name", "species_latin_name", "Poecilia reticulata")
+				+bapTextInput("Species Common Name", "species_common_name", "Guppy")
+				+bapTextInput("Species Latin Name", "species_latin_name", "Poecilia reticulata")
 
-			if isLivestock
-				+bapTextInput("# of Fry", "count", "Zillions")
+				if isLivestock
+					+bapTextInput("# of Fry", "count", "Zillions")
 
-				+bapMultiSelectInput("Foods", "foods", "foods")
-					each food in foodTypes
-						- const selected = form.foods && form.foods.includes(food);
-						option(value=food selected=selected)= food
+					+bapMultiSelectInput("Foods", "foods", "foods")
+						each food in foodTypes
+							- const selected = form.foods && form.foods.includes(food);
+							option(value=food selected=selected)= food
 
-				+bapMultiSelectInput("Spawn Locations", "spawn_locations", "spawns")
-					each loc in spawnLocations
-						- const selected = form.spawnLocations && form.spawnLocations.includes(loc);
-						option(value=loc selected=selected)= loc
+					+bapMultiSelectInput("Spawn Locations", "spawn_locations", "spawns")
+						each loc in spawnLocations
+							- const selected = form.spawnLocations && form.spawnLocations.includes(loc);
+							option(value=loc selected=selected)= loc
 
-			else
-				+bapTextInput("Propagation Method", "propagation_method", "Cuttings, Runners, Seed...")
+				else
+					+bapTextInput("Propagation Method", "propagation_method", "Cuttings, Runners, Seed...")
 
-	.card
-		p.font-semibold.p-4 Tank Details
-		div.space-y-4.grid.grid-cols-2.w-full.gap-2
-			+bapTextInput("Tank Size", "tank_size", "5g, 20 Long...")
-			+bapTextInput("Filter Type", "filter_type", "Sponge, HOB...")
-			+bapTextInput("Water Change Volume (%)", "water_change_volume", "10%, 25%...")
-			+bapTextInput("Water Change Frequency", "water_change_frequency", "Daily, Weekly, Never...")
-			+bapTextInput("Temperature", "temperature", "75F...")
-			+bapTextInput("pH", "ph", "6.8...")
-			+bapTextInput("Hardness (GH)", "gh", "200ppm, 10dH...")
-			+bapTextInput("Specific Gravity", "specific_gravity", "1.025...")
-			+bapTextInput("Substrate Type", "substrate_type", "Gravel, Sand, Bare...")
-			+bapTextInput("Substrate Depth", "substrate_depth", "2\"...")
-			+bapTextInput("Substrate Color", "substrate_color", "Brown, White, Hot Pink...")
+	section.bg-gray-100.py-4
+		div.max-w-4xl.mx-auto.text-left.px-4
+			h2(class="text-xl sm:text-2xl font-bold mb-4") Tank Details
+			div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
+				+bapTextInput("Tank Size", "tank_size", "5g, 20 Long...")
+				+bapTextInput("Filter Type", "filter_type", "Sponge, HOB...")
+				+bapTextInput("Water Change Volume (%)", "water_change_volume", "10%, 25%...")
+				+bapTextInput("Water Change Frequency", "water_change_frequency", "Daily, Weekly, Never...")
+				+bapTextInput("Temperature", "temperature", "75F...")
+				+bapTextInput("pH", "ph", "6.8...")
+				+bapTextInput("Hardness (GH)", "gh", "200ppm, 10dH...")
+				+bapTextInput("Specific Gravity", "specific_gravity", "1.025...")
+				+bapTextInput("Substrate Type", "substrate_type", "Gravel, Sand, Bare...")
+				+bapTextInput("Substrate Depth", "substrate_depth", "2\"...")
+				+bapTextInput("Substrate Color", "substrate_color", "Brown, White, Hot Pink...")
+				if !isLivestock
+					+bapTextInput("Lighting Type", "light_type", "LED, Sunlight, Ambient...")
+					+bapTextInput("Light Strength", "light_strength", "200W, 5 PAR...")
+					+bapTextInput("Light Hours", "light_hours", "16...")
 
-			if !isLivestock
-				+bapTextInput("Lighting Type", "light_type", "LED, Sunlight, Ambient...")
-				+bapTextInput("Light Strength", "light_strength", "200W, 5 PAR...")
-				+bapTextInput("Light Hours", "light_hours", "16...")
-
-		div.flex.mt-4.gap-2.w-full.justify-center-center.text-center.items-center.hidden
-			button.p-2.rounded-md(class="bg-red-500 text-white") Clear
-			button.p-2.rounded-md(class="bg-black text-white") Save
-			button.p-2.rounded-md(class="bg-black text-white") Load
+			div.flex.mt-4.gap-2.w-full.justify-center-center.text-center.items-center.hidden
+				button.p-2.rounded-md(class="bg-red-500 text-white") Clear
+				button.p-2.rounded-md(class="bg-black text-white") Save
+				button.p-2.rounded-md(class="bg-black text-white") Load
 
 	if !isLivestock
-		.card
-			p.font-semibold.p-4 Supplements
-			div.w-full.gap-2
-				- const hasCO2 = form.co2 === "yes";
-				.grid.gap-2
-					label.input-label(for="co2") CO2?
-					.select-wrapper
-						select(
-							value=form.co2
-							name="co2"
-							hx-trigger="change"
-							hx-on:change="document.getElementById('CO2Desc').classList.toggle('hidden', this.value === 'no')")
-							option(value="no", selected=!hasCO2) No
-							option(value="yes", selected=hasCO2) Yes
+		section.bg-gray-100.py-4
+			div.max-w-4xl.mx-auto.text-left.px-4
 
-				div#CO2Desc(class=`${hasCO2 ? "" : "hidden"}`)
-					textarea.text-input(
-						name="co2_description"
-						rows="4"
-						placeholder="Describe CO2 injection...")
+				h2(class="text-xl sm:text-2xl font-bold mb-4") Supplements
 
-				div.pt-4.w-full.flex-col#supplements
-					label.input-label Others
-					if !!form.supplementType
-						each type, index in form.supplementType
-							+supplementLine(type, form.supplementRegimen[index])
-					else
-						+supplementLine("", "")
+				div.w-full.gap-2
+					- const hasCO2 = form.co2 === "yes";
+					.grid.gap-2
+						label.input-label(for="co2") CO2?
+						.select-wrapper
+							select(
+								value=form.co2
+								name="co2"
+								hx-trigger="change"
+								hx-on:change="document.getElementById('CO2Desc').classList.toggle('hidden', this.value === 'no')")
+								option(value="no", selected=!hasCO2) No
+								option(value="yes", selected=hasCO2) Yes
 
-				button.w-full(
-					hx-get="/submit/addSupplement"
-					hx-swap="beforeend"
-					hx-target="#supplements"
-				) Add +
+					div#CO2Desc(class=`${hasCO2 ? "" : "hidden"}`)
+						textarea.text-input(
+							name="co2_description"
+							rows="4"
+							placeholder="Describe CO2 injection...")
 
+					div.py-4.w-full.flex-col#supplements
+						label.input-label Others
+						if !!form.supplementType
+							each type, index in form.supplementType
+								+supplementLine(type, form.supplementRegimen[index])
+						else
+							+supplementLine("", "")
 
-	div.m-2
-		button(type="submit") Submit
+					button.outline(
+						hx-get="/submit/addSupplement"
+						hx-swap="beforeend"
+						hx-target="#supplements"
+					) Add +
+
+	section.bg-gray-100.py-4
+		div.max-w-4xl.mx-auto.text-center
+			button.primary(class="w-4/5 max-w-200" type="submit") Submit
