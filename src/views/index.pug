@@ -2,62 +2,58 @@ include header.pug
 
 doctype html
 html
-	head
-		title= title
-		script(src='https://unpkg.com/htmx.org@2.0.4')
-		link(rel='stylesheet', href='/index.css')
-		meta(name="viewport" content="width=device-width, initial-scale=1.0")
+	+headTag
 
 	body.bg-white.text-gray-800
 		+pageHeader(message)
 
-		section.bg-gray-100.py-12
+		section.bg-gray-100.py-6
 			div.max-w-4xl.mx-auto.text-center.px-4
 				h2(class="text-3xl sm:text-5xl font-extrabold mb-4") Breeder Awards Program
 				p(class="text-lg text-gray-600") Through the BAP, we measure our advancement as aquarists as we gain the necessary knowledge and skill to allow the species we keep to reproduce. Our purposes are to encourage more participation among the members of our club, to recognize outstanding achievements, and to share knowledge of breeding techniques.Insights, tutorials, and stories about tech, design, and life.
 
-		section.bg-gray-100.py-6
-			.grid(class="grid-cols-1 md:grid-cols-2 gap-4")
+		section.bg-gray-100
+			.flex.items-center.justify-center
+				.grid.grid-cols-1.gap-4.max-w-2xl.w-full(class="md:grid-cols-2")
+					div.max-w-l.mx-auto.text-center.p-4
+						h3(class="text-xl sm:text-3xl font-bold mb-4") Lifetime Standings
+						.flex.gap-4.items-center.justify-center.h-9
+							a.link(href='/lifetime/fish') Fish/Inverts
+							a.link(href='/lifetime/plant') Plants
+							a.link(href='/lifetime/coral') Coral
 
-				div.max-w-4xl.mx-auto.text-center.px-4
-					h3(class="text-xl sm:text-3xl font-bold mb-4") Lifetime Standings
-					.flex.gap-4.items-center.justify-center
-						a(href='/lifetime/fish') Fish/Inverts
-						a(href='/lifetime/plant') Plants
-						a(href='/lifetime/coral') Coral
-
-				div.max-w-4xl.mx-auto.text-center.px-4
-					h3(class="text-xl sm:text-3xl font-bold mb-4") Annual Standings
-					.flex.gap-4.items-center.justify-center
-						a(href='/annual/2025') [2025]
-						a(href='/annual/2024') [2024]
-						.select-wrapper.max-w-35
-							select(hx-get="/annual" hx-trigger="change" name="year")
-								option(value="" disabled selected) Past years...
-								option(value="2022") 2023
-								option(value="2022") 2022
-								option(value="2021") 2021
-								option(value="2020") 2020
-								option(value="2019") 2019
-								option(value="2018") 2018
-								option(value="2017") 2017
-								option(value="2016") 2016
-								option(value="2015") 2015
-								option(value="2014") 2014
-								option(value="2013") 2013
-								option(value="2012") 2012
-								option(value="2011") 2011
-								option(value="2010") 2010
-								option(value="2009") 2009
-								option(value="2008") 2008
-								option(value="2007") 2007
-								option(value="2006") 2006
-								option(value="2005") 2005
-								option(value="2004") 2004
-								option(value="2003") 2003
-								option(value="2002") 2002
-								option(value="2001") 2001
-								option(value="2000") 2000
+					div.max-w-l.mx-auto.text-center.p-4
+						h3(class="text-xl sm:text-3xl font-bold mb-4") Annual Standings
+						.flex.gap-4.items-center.justify-center.h-9
+							a.link(href='/annual/2025') 2025
+							a.link(href='/annual/2024') 2024
+							.select-wrapper.max-w-35.inline
+								select(hx-get="/annual" hx-trigger="change" name="year")
+									option(value="" disabled selected) Past years...
+									option(value="2022") 2023
+									option(value="2022") 2022
+									option(value="2021") 2021
+									option(value="2020") 2020
+									option(value="2019") 2019
+									option(value="2018") 2018
+									option(value="2017") 2017
+									option(value="2016") 2016
+									option(value="2015") 2015
+									option(value="2014") 2014
+									option(value="2013") 2013
+									option(value="2012") 2012
+									option(value="2011") 2011
+									option(value="2010") 2010
+									option(value="2009") 2009
+									option(value="2008") 2008
+									option(value="2007") 2007
+									option(value="2006") 2006
+									option(value="2005") 2005
+									option(value="2004") 2004
+									option(value="2003") 2003
+									option(value="2002") 2002
+									option(value="2001") 2001
+									option(value="2000") 2000
 
 			section.bg-gray-100.py-12
 				div.max-w-4xl.mx-auto.text-center.px-4.space-x-4

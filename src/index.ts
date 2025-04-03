@@ -118,11 +118,11 @@ router.get('/annual/:year{/:program}', async (ctx) => {
 		switch (program) {
 			default:
 			case "fish":
-				return `Breeder Awards Standings for ${year}`;
+				return `Breeder Awards Program`;
 			case "plant":
-				return `Horticultural Awards Standings for ${year}`;
+				return `Horticultural Awards Program`;
 			case "coral":
-				return `Coral Awards Standings for ${year}`;
+				return `Coral Awards Program`;
 		}
 	})();
 
@@ -179,7 +179,7 @@ router.get('/lifetime{/:program}', async (ctx) => {
 		return bPoints - aPoints;
 	}
 
-	const finalLevels = levelsOrder
+	let finalLevels = levelsOrder
 		.map(name => [name, (levels[name] ?? []).sort(sortMembers).filter(member => member.points! > 0)])
 		.filter(([, members]) => members.length > 0);
 
@@ -187,14 +187,15 @@ router.get('/lifetime{/:program}', async (ctx) => {
 		switch (program) {
 			default:
 			case "fish":
-				return "Breeder Awards Lifetime Standings";
+				return "Breeder Awards Program";
 			case "plant":
-				return "Horticultural Awards Lifetime Standings";
+				return "Horticultural Awards Program";
 			case "coral":
-				return "Coral Awards Lifetime Standings";
+				return "Coral Awards Program";
 		}
 	})();
 
+	finalLevels = [...finalLevels, ...finalLevels, ...finalLevels, ...finalLevels]
 	await ctx.render('lifetime', {
 		title,
 		levels: finalLevels,

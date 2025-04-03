@@ -1,5 +1,25 @@
 @import "tailwindcss";
 
+.link {
+	@apply hover:underline text-base text-gray-500 hover:text-black transition duration-300 ease-in-out;
+}
+
+button {
+	@apply block rounded-2xl text-sm font-medium h-9 px-4 py-2 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none;
+}
+
+button.primary {
+	@apply bg-blue-500 text-white hover:bg-blue-700 focus:ring-blue-500;
+}
+
+button.destructive {
+	@apply bg-red-500 text-white hover:bg-red-700 focus:ring-red-500;
+}
+
+button.outline {
+	@apply border-gray-500 hover:border-black focus:ring-gray-500;
+}
+
 select {
 	appearance: none; /* Removes default styles */
 	-webkit-appearance: none; /* Safari */

@@ -82,11 +82,8 @@ html
 									| 20
 
 							.flex.gap-4
-								- const button = ["rounded-xl", "text-sm", "font-medium", "h-9", "px-4", "py-2", "shadow-sm", "transition-colors", "focus:outline-none", "focus:ring-2", "focus:ring-offset-2", "disabled:opacity-50", "disabled:pointer-events-none"];
-								- const destructive = [...button, "bg-red-500", "text-white", "hover:bg-red-600", "focus:ring-red-500"];
-								- const approve = [...button, "bg-blue-500", "text-white", "hover:bg-blue-600", "focus:ring-blue-500"];
-								button.p-4(class=approve type="submit") Approve
-								button.p-4(class=destructive type="submit" name="reject" value="true") Reject
-								button.p-4(class=destructive type="submit" name="delete" value="true") Delete
+								button.primary.p-4(class=approve type="submit") Approve
+								button.destructive.p-4(class=destructive type="submit" name="reject" value="true") Reject
+								button.destructive.p-4(class=destructive type="submit" name="delete" value="true") Delete
 
 

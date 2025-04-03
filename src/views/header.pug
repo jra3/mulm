@@ -1,13 +1,21 @@
+mixin headTag(title)
+	head
+		title= title
+		script(src='https://unpkg.com/htmx.org@2.0.4')
+		link(rel='stylesheet', href='/index.css')
+		meta(name="viewport" content="width=device-width, initial-scale=1.0")
+		block
+
 mixin pageHeader(headerMessage)
 	header.bg-white.shadow
 		div.max-w-7xl.mx-auto.px-4.py-4.flex.justify-between.items-center
 			h1.text-2xl.font-bold.p2= headerMessage
 			.space-x-4
-				a(href="/" class="text-gray-600 hover:text-gray-900") Home
+				a.link(href="/") Home
 
 mixin footer()
 	footer.bg-gray-300.py-6.text-center.text-sm.text-gray-500
-		a(href="https://basny.org")
-			.flex.flex-col.text-center
+		.flex.flex-col.text-center
+			a.link(href="https://basny.org")
 				span(class="text-2xl") Brooklyn Aquarium Society
-				span(class="text-base") Educating Aquarists since 1911
+			span(class="text-base") Educating Aquarists since 1911
