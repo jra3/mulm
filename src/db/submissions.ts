@@ -57,6 +57,13 @@ export function createSubmission(memberId: number, form: FormValues, submit: boo
 			}
 		})();
 
+		const arrayToJSON = (formField: unknown) => {
+			if (Array.isArray(formField)) {
+				return JSON.stringify(formField.filter(v => v !== ""));
+			}
+			return undefined;
+		}
+
 		const entries = {
 			member_id: memberId,
 			program,
@@ -64,8 +71,10 @@ export function createSubmission(memberId: number, form: FormValues, submit: boo
 			submitted_on: submit ? new Date().toISOString() : null,
 			member_name: undefined,
 			member_email: undefined,
-			foods: Array.isArray(form.foods) ? form.foods.join(", ") : undefined,
-			spawn_locations: Array.isArray(form.spawn_locations) ? form.spawn_locations.join(", ") : undefined,
+			foods: arrayToJSON(form.foods),
+			spawn_locations: arrayToJSON(form.spawn_locations),
+			supplement_type: arrayToJSON(form.supplement_type),
+			supplement_regimen: arrayToJSON(form.supplement_regimen),
 		};
 
 		const fields = [];

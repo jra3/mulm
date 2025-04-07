@@ -68,7 +68,6 @@ form#bapForm(
 					label.input-label Species Type
 					.select-wrapper
 						select(
-							value=form.speciesType
 							name="species_type"
 							hx-get="/submit"
 							hx-include="closest form"
@@ -77,7 +76,7 @@ form#bapForm(
 							hx-select="#bapForm"
 							hx-push-url="false")
 							for speciesType in speciesTypes
-								- const selected = speciesType === form.speciesType;
+								- const selected = speciesType === form.species_type;
 								option(value=speciesType, selected=selected)= speciesType
 
 				+bapSimpleSelectInput("Species Class", "species_class")
