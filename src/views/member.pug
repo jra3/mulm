@@ -1,8 +1,11 @@
-- const stringCell = ['p-2', 'overflow-hidden', 'text-ellipsis', 'whitespace-nowrap', 'text-right', 'bg-gray-100', 'border-gray-800'];
-- const heading = ['p-2', 'overflow-hidden', 'text-ellipsis', 'whitespace-nowrap', 'text-left', 'sticky', 'top-0', 'text-left', 'bg-gray-300', 'font-bold', 'text-lg'];
+include header.pug
+
+- const stringCell = ['p-2', 'overflow-hidden', 'text-ellipsis', 'whitespace-nowrap', 'text-right', 'border-gray-800'];
+- const heading = ['p-2', 'overflow-hidden', 'text-ellipsis', 'whitespace-nowrap', 'text-left', 'sticky', 'top-0', 'text-left', 'font-bold', 'text-lg'];
 
 mixin submissionTable(submissions)
 	table
+
 		thead
 			tr
 				th(class=heading) Submitted On
@@ -16,31 +19,32 @@ mixin submissionTable(submissions)
 				tr
 					- const dateString = new Date(sub.submitted_on).toLocaleDateString();
 					td(class=stringCell)
-						a(href=`/sub/${sub.id}`)= dateString
+						a.link(href=`/sub/${sub.id}`)= dateString
 					td(class=stringCell)= sub.species_class
 					td(class=stringCell)= sub.species_common_name
 					td(class=stringCell)= sub.species_latin_name
-					td(class=stringCell)= sub.points
+					td(class=stringCell)= sub.points || "UAPPROVED"
 
 doctype html
 html
-	head
-		title= member.name
-		script(src='https://unpkg.com/htmx.org@2.0.4')
-		link(rel='stylesheet', href='/index.css')
+	+headTag(member.display_name)
 
-	body.flex.justify-center.items-center
-		.flex-col.justify-center.text-center.items-center.bg-white.p-6.rounded-lg.shadow-lg
-			h2.text-2xl.p-2= member.name
+	body.bg-white.text-gray-800
+		+pageHeader(member.display_name)
+		if fishSubs.length > 0
+			section.bg-gray-100
+				div.max-w-4xl.mx-auto.text-center.justify-center.px-4
+					h3(class="text-xl lg:text-4xl font-extrabold mb-4") Breeders Awards Submissions
+					+submissionTable(fishSubs)
 
-			if fishSubs.length > 0
-				h2.text-l.p-2 Breeders Awards Submissions
-				+submissionTable(fishSubs)
+		if plantSubs.length > 0
+			section.bg-gray-100
+				div.max-w-4xl.mx-auto.text-center.px-4
+					h3(class="text-xl lg:text-4xl font-extrabold mb-4") Horticultural Awards Submissions
+					+submissionTable(plantSubs)
 
-			if plantSubs.length > 0
-				h2.text-l.p-2 Horticultural Awards Submissions
-				+submissionTable(plantSubs)
-
-			if coralSubs.length > 0
-				h2.text-l.p-2 Coral Awards Submissions
-				+submissionTable(coralSubs)
+		if coralSubs.length > 0
+			section.bg-gray-100
+				div.max-w-4xl.mx-auto.text-center.px-4
+					h3(class="text-xl lg:text-4xl font-extrabold mb-4") Coral Awards Submissions
+					+submissionTable(coralSubs)
