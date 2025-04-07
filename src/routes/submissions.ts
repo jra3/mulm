@@ -78,6 +78,17 @@ export async function adminApproveSubmission(ctx: MulmContext) {
 		return;
 	}
 
+	const body = ctx.request.body as any;
+	if ("reject" in body) {
+		console.log("rejected!");
+		return;
+	}
+
+	if ("delete" in body) {
+		console.log("delete!");
+		return;
+	}
+
 	const parsed = approvalSchema.safeParse(ctx.request.body);
 	if (!parsed.success) {
 		ctx.status = 400;
@@ -87,22 +98,13 @@ export async function adminApproveSubmission(ctx: MulmContext) {
 	}
 
 	const { id, points } = parsed.data;
-
-	if (parsed.data.reject) {
-		console.log("rejected!");
-	} else if (parsed.data.delete) {
-		db.deleteSubmission(id);
-	} else {
-
-		if (!points) {
-			ctx.status = 400;
-			ctx.body = "Invalid input";
-			return;
-		}
-
-		db.approveSubmission(id, points, viewer.member_id);
+	if (!points) {
+		ctx.status = 400;
+		ctx.body = "Invalid input";
+		return;
 	}
 
+	db.approveSubmission(id, points, viewer.member_id);
 
 	ctx.set('HX-Redirect', '/admin/queue');
 }

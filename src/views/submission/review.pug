@@ -1,3 +1,4 @@
+include ../header.pug
 
 mixin reviewTextInput(labelText, name, type="text")
 	.grid.gap-2
@@ -11,21 +12,21 @@ mixin reviewTextInput(labelText, name, type="text")
 
 doctype html
 html
-	head
-		title= title
-		script(src='https://unpkg.com/htmx.org@2.0.4')
-		link(rel='stylesheet' href='/index.css')
+	+headTag
 
-	body.flex.justify-center.items-center
-		.flex-col.justify-center.text-left.items-center.bg-white.p-6.rounded-lg.shadow-lg
-			.card
-				div.grid.w-full.gap-2
+	body.bg-white.text-gray-800
+		+pageHeader(message)
+
+		section.bg-gray-100.py-4
+
+			div.max-w-4xl.mx-auto.text-left.pt-4.px-4
+				h2(class="text-l font-bold pt-2 mb-4") Member Details
+				div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
 					+reviewTextInput("Member Name", "member_name")
 
-			.card
-				p.font-semibold.p-4 Species Details
-
-				div.grid.grid-cols-2.w-full.gap-2
+			div.max-w-4xl.mx-auto.text-left.pt-4.px-4
+				h2(class="text-l font-bold mb-4") Species Details
+				div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
 					+reviewTextInput("Common Name", "species_common_name")
 					+reviewTextInput("Latin Name", "species_latin_name")
 					+reviewTextInput("Spawn Date", "reproduction_date")
@@ -37,10 +38,9 @@ html
 					+reviewTextInput("Foods", "foods")
 					+reviewTextInput("Spawn Locations", "spawn_locations")
 
-			.card
-				p.font-semibold.p-4 Tank Details
-
-				div.grid.grid-cols-2.w-full.gap-2
+			div.max-w-4xl.mx-auto.text-left.pt-4.px-4
+				h2(class="text-l font-bold pt-2 mb-4") Tank Details
+				div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
 					+reviewTextInput("Tank Size", "tank_size")
 					+reviewTextInput("Filter Type", "filter_type")
 					+reviewTextInput("Water Change Volume (%)", "water_change_volume")
@@ -53,35 +53,26 @@ html
 					+reviewTextInput("Substrate Depth", "substrate_depth")
 					+reviewTextInput("Substrate Color", "substrate_color")
 
-			.card
-				p.font-semibold.p-4 Approval Details
-				div.grid.grid-cols-2.w-full.gap-2
+			div.max-w-4xl.mx-auto.text-left.px-4
+				h2(class="text-l font-bold mb-4") Approval Details
+				div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
 					+reviewTextInput("Submitted On", "submitted_on")
 					+reviewTextInput("Approved On", "approved_on")
 					+reviewTextInput("Approved By", "approved_by")
 					+reviewTextInput("Points", "points")
 
 			if isAdmin
-				.card
-					form(hx-post="/admin/approve")
-						.flex-col
-							input(type="hidden" name="id" value=submission.id)
-							.flex.gap-2.p-4
-								legend.label-text Points
-								label
-									input(type="radio" name="points" value=5)
-									| 5
-								label
-									input(type="radio" name="points" value=10)
-									| 10
-								label
-									input(type="radio" name="points" value=15)
-									| 15
-								label
-									input(type="radio" name="points" value=20)
-									| 20
-
-							.flex.gap-4
+				.bottom-0.left-0.w-full.bg-gray-600.p-4.shadow-md
+					.container.mx-auto.flex.justify-center.space-x-4
+						form(hx-post="/admin/approve")
+							.flex.gap-4.justify-center.text-center
+								.select-wrapper
+									select(name="points" hx-get="/admin/approve" hx-include="closest form" hx-swap="outerHTML" hx-target="#bapForm" hx-select="#bapForm" hx-push-url="false")
+										option(value="" disabled selected) Points
+										option(value=5 selected=false) 5
+										option(value=10 selected=false) 10
+										option(value=15 selected=false) 15
+										option(value=20 selected=false) 20
 								button.primary.p-4(class=approve type="submit") Approve
 								button.destructive.p-4(class=destructive type="submit" name="reject" value="true") Reject
 								button.destructive.p-4(class=destructive type="submit" name="delete" value="true") Delete
