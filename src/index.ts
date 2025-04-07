@@ -6,7 +6,7 @@ import path from 'path';
 import bodyParser from 'koa-bodyparser';
 import { createSubmission, getApprovedSubmissions, getApprovedSubmissionsInDateRange, getOutstandingSubmissions, getOutstandingSubmissionsCounts, getSubmissionsByMember } from "./db/submissions";
 import { bapSchema, getBapFormTitle, foodTypes, getClassOptions, isLivestock, spawnLocations, waterTypes, speciesTypes } from "./forms/submission";
-import { createMember, getGoogleAccount, getMember, getMemberByEmail, getMemberWithAwards, getMembersList, Member } from "./db/members";
+import { createMember, getGoogleAccount, getMember, getMemberByEmail, getMemberWithAwards, getMembersList, Member, createGoogleAccount } from "./db/members";
 import { levelRules, minYear, programs } from "./programs";
 import { getGoogleOAuthURL, getGoogleUser, translateGoogleOAuthCode } from "./oauth";
 
@@ -262,6 +262,17 @@ router.post('/admin/approve', adminApproveSubmission);
 
 // Members /////////////////////////////////////////////////////////
 
+router.get('/me', async (ctx: MulmContext) => {
+	const viewer = ctx.loggedInUser;
+	if (!viewer) {
+		ctx.redirect('/');
+		return;
+	} else {
+		ctx.redirect(`/member/${viewer.member_id}`);
+		return;
+	}
+});
+
 router.get('/member/:memberId', async (ctx: MulmContext) => {
 	const memberId = parseInt(ctx.params.memberId);
 	if (!memberId) {
@@ -281,7 +292,7 @@ router.get('/member/:memberId', async (ctx: MulmContext) => {
 
 	const isSelf = Boolean(viewer?.member_id == member.id);
 	const isAdmin = Boolean(viewer?.is_admin);
-	const submissions = getSubmissionsByMember(memberId, isSelf, isAdmin);
+	const submissions = getSubmissionsByMember(memberId, isAdmin, isSelf);
 
 	const fishSubs = submissions.filter(sub => sub.species_type === "Fish" || sub.species_type === "Invert");
 	const plantSubs = submissions.filter(sub => sub.species_type === "Plant");
@@ -393,10 +404,16 @@ router.get("/oauth/google", async (ctx) => {
 	const token = String(payload.access_token);
 	const googleUser = await getGoogleUser(token);
 	const record = getGoogleAccount(googleUser.sub);
-	console.log(googleUser);
+
 	if (!record) {
-		const memberId = createMember(googleUser.email, googleUser.name);
-		createUserSession(ctx, memberId);
+		const member = getMemberByEmail(googleUser.email);
+		if (member) {
+			createGoogleAccount(member.id, googleUser.sub);
+			createUserSession(ctx, member.id);
+		} else {
+			const memberId = createMember(googleUser.email, googleUser.name);
+			createUserSession(ctx, memberId);
+		}
 	} else {
 		const member = getMember(record.member_id)
 		if (!member) {

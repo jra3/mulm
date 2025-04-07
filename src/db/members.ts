@@ -27,13 +27,27 @@ export function getGoogleAccount(sub: string) {
 	return members.pop();
 }
 
+export function createGoogleAccount(memberId: number, sub: string) {
+	const db = getWriteDBConnecton()
+	try {
+		const googleStmt = db.prepare('INSERT INTO google_account (google_sub, member_id) VALUES (?, ?)');
+		googleStmt.run(sub, memberId);
+	} catch (err) {
+		console.error(err);
+		throw new Error("Failed to create google account");
+	} finally {
+		db.close();
+	}
+}
+
 export function createMember(
 	email: string,
 	name: string,
 	credentials: { google_sub?: string } = {}) {
-	try {
-		const db = getWriteDBConnecton()
-		return db.transaction(() => {
+		try {
+			const db = getWriteDBConnecton()
+			return db.transaction(() => {
+			console.log(name, email);
 			const userStmt = db.prepare('INSERT INTO members (display_name, contact_email) VALUES (?, ?)');
 			const memberId = userStmt.run(name, email).lastInsertRowid;
 

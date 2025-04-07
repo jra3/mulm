@@ -14,6 +14,12 @@ mixin bapTextInput(labelText, name, placeholder, type="text")
 			placeholder=placeholder
 			class=errors.has(name) ? "error" : ""
 			disabled=attributes.disabled)
+		if attributes.disabled
+			input.text-input(
+				value=form[name]
+				name=name
+				type="hidden")
+
 
 mixin bapSimpleSelectInput(labelText, name)
 	.flex.flex-col.gap-2
