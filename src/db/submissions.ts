@@ -54,6 +54,9 @@ export function createSubmission(memberId: number, form: FormValues, submit: boo
 					return "plant";
 				case "Coral":
 					return "coral";
+				default:
+					console.log("Unknown species type: ", form.species_type);
+					throw new Error("Unknown species type");
 			}
 		})();
 
