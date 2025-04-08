@@ -157,7 +157,7 @@ export function getApprovedSubmissionsInDateRange(startDate: Date, endDate: Date
 		SELECT submissions.*, members.display_name as member_name
 		FROM submissions JOIN members
 		ON submissions.member_id == members.id
-		WHERE submitted_on > ? AND submitted_on < ?
+		WHERE reproduction_date > ? AND reproduction_date < ?
 		AND approved_on IS NOT NULL AND points IS NOT NULL
 		AND program = ?
 	`, [
