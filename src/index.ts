@@ -151,6 +151,9 @@ router.get('/annual/:year{/:program}', async (ctx: MulmContext) => {
 		title,
 		standings: sortedStandings,
 		names,
+		program,
+		maxYear: 2025,
+		minYear: 2015,
 		year,
 		isLoggedIn: Boolean(ctx.loggedInUser),
 	});

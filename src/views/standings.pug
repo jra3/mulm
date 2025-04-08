@@ -24,6 +24,10 @@ html
 
 		.w-full.bg-gray-300.p-4.shadow-md
 			.container.mx-auto.flex.justify-center.space-x-4
+				if year <= maxYear
+					a.link(href=`/annual/${year+1}/${program}`)= `<< ${year + 1}`
 				a.link(href=`/annual/${year}/fish`) Breeders
 				a.link(href=`/annual/${year}/plant`) Horticultural
 				a.link(href=`/annual/${year}/coral`) Coral
+				if year >= minYear
+					a.link(href=`/annual/${year-1}/${program}`)= `${year - 1} >>`
