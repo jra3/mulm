@@ -20,6 +20,8 @@ html
 			.flex.justify-center.text-center.items-center(class="flex-col space-y-2 lg:flex-row lg:space-x-4")
 				if isAdmin
 					+queueButton(approvalsProgram, "Approval Queue", approvalsCount)
+					a(href='/admin/members')
+						button.primary Manage Members
 				if isLoggedIn
 					a(href='/submit')
 						button.primary New Species Submission
@@ -29,7 +31,6 @@ html
 					a(href=googleURL alt='Sign in with Google')
 						button.outline.flex.items-center.justify-center
 							img(src='/google-button.svg')
-
 
 		section.bg-gray-100
 			.flex.items-center.justify-center

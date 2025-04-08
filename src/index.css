@@ -93,3 +93,27 @@ select {
 .ts-control input {
 	@apply text-base;
 }
+
+.data-table {
+	display: grid;
+	border-collapse: collapse;
+	min-width: 100%;
+}
+
+.cell {
+	padding: 15px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+#adminMembers {
+	grid-template-columns:
+		minmax(50px, 1.66fr)
+		minmax(80px, 0.33fr)
+		minmax(100px, 1.67fr)
+		minmax(150px, 1.67fr)
+		minmax(150px, 0.66fr)
+		minmax(150px, 0.66fr)
+		minmax(150px, 0.66fr);
+}

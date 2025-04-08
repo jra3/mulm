@@ -9,17 +9,17 @@ html
 		+pageHeader(title)
 
 		section.bg-gray-100
-			table
-				thead
-					tr
-						th.min-w-40(class=heading) ID
-						th.min-w-40(class=heading) Admin
-						th.min-w-80(class=heading) Name
-						th.min-w-120(class=heading) Email
-						th.min-w-40(class=heading) Fish
-						th.min-w-40(class=heading) Plant
-						th.min-w-40(class=heading) Coral
+			table.data-table#adminMembers
+				thead.contents
+					tr.contents
+						th.cell(class=heading) ID
+						th.cell(class=heading) Admin
+						th.cell(class=heading) Name
+						th.cell(class=heading) Email
+						th.cell(class=heading) Fish
+						th.cell(class=heading) Plant
+						th.cell(class=heading) Coral
 
-				tbody
+				tbody.contents
 					each member in members
 						+memberRow(member)
