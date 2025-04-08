@@ -194,7 +194,7 @@ router.get('/lifetime{/:program}', async (ctx) => {
 		return bPoints - aPoints;
 	}
 
-	let finalLevels = levelsOrder
+	const finalLevels = levelsOrder
 		.map(name => [name, (levels[name] ?? []).sort(sortMembers).filter(member => member.points! > 0)])
 		.filter(([, members]) => members.length > 0);
 
@@ -210,7 +210,6 @@ router.get('/lifetime{/:program}', async (ctx) => {
 		}
 	})();
 
-	finalLevels = [...finalLevels, ...finalLevels, ...finalLevels, ...finalLevels]
 	await ctx.render('lifetime', {
 		title,
 		levels: finalLevels,
