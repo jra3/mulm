@@ -6,7 +6,7 @@ mixin headTag(title)
 		meta(name="viewport" content="width=device-width, initial-scale=1.0")
 		block
 
-mixin pageHeader(title, subtitle)
+mixin pageHeader(loggedIn, title, subtitle)
 	header.bg-white.shadow
 		div.max-w-7xl.mx-auto.px-4.py-4.flex.justify-between.items-center
 			.flex.text-center.gap-2
@@ -14,7 +14,8 @@ mixin pageHeader(title, subtitle)
 				h3.text-2xl.p2(class="text-gray-500")= subtitle
 			.space-x-4
 				a.link(href="/") Home
-				a.link(href="/me") Me
+				if loggedIn
+					a.link(href="/me") Me
 
 mixin footer()
 	footer.bg-gray-300.py-6.text-center.text-sm.text-gray-500

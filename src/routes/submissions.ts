@@ -54,6 +54,7 @@ export async function viewSubmission(ctx: MulmContext) {
 			foods: JSON.parse(submission.foods)?.join(","),
 			spawn_locations: JSON.parse(submission.spawn_locations)?.join(","),
 		},
+		isLoggedIn: !!viewer,
 		isSelf: viewer && submission.member_id === viewer.member_id,
 		isAdmin: viewer && viewer.is_admin,
 	});

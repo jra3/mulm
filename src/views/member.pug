@@ -30,7 +30,7 @@ html
 	+headTag(member.display_name)
 
 	body.bg-white.text-gray-800
-		+pageHeader(member.display_name)
+		+pageHeader(isLoggedIn, member.display_name)
 		if fishSubs.length > 0
 			section.bg-gray-100
 				div.max-w-4xl.mx-auto.text-center.justify-center.px-4

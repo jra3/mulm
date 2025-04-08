@@ -37,9 +37,9 @@ router.get("/logout", async (ctx) => {
 // Regular Views ///////////////////////////////////////////////////
 
 router.get("/", async (ctx: MulmContext) => {
-	const user = ctx.loggedInUser;
-	const isLoggedIn = Boolean(user);
-	const isAdmin = user?.is_admin;
+	const viewer = ctx.loggedInUser;
+	const isLoggedIn = Boolean(viewer);
+	const isAdmin = viewer?.is_admin;
 
 	const args = {
 		title: 'BAS BAP/HAP Portal',
@@ -62,7 +62,12 @@ router.get("/", async (ctx: MulmContext) => {
 		});
 	}
 
-	await ctx.render('index', { ...args, approvalsProgram, approvalsCount });
+	await ctx.render('index', {
+		...args,
+		approvalsProgram,
+		approvalsCount,
+		isLoggedIn: Boolean(viewer),
+	});
 });
 
 // Entrypoint for BAP/HAP submission
@@ -100,7 +105,7 @@ router.get('/submit/addSupplement', async (ctx) => {
 router.get('/annual', async (ctx) => {
 	ctx.set('HX-Redirect', `/annual/${ctx.query.year}`);
 })
-router.get('/annual/:year{/:program}', async (ctx) => {
+router.get('/annual/:year{/:program}', async (ctx: MulmContext) => {
 	const program = String(ctx.params.program ?? "fish");
 	if (programs.indexOf(program) === -1) {
 		ctx.status = 404;
@@ -147,10 +152,11 @@ router.get('/annual/:year{/:program}', async (ctx) => {
 		standings: sortedStandings,
 		names,
 		year,
+		isLoggedIn: Boolean(ctx.loggedInUser),
 	});
 });
 
-router.get('/lifetime{/:program}', async (ctx) => {
+router.get('/lifetime{/:program}', async (ctx: MulmContext) => {
 	const program = String(ctx.params.program ?? "fish");
 	if (programs.indexOf(program) === -1) {
 		ctx.status = 404;
@@ -214,6 +220,7 @@ router.get('/lifetime{/:program}', async (ctx) => {
 	await ctx.render('lifetime', {
 		title,
 		levels: finalLevels,
+		isLoggedIn: Boolean(ctx.loggedInUser),
 	});
 });
 
@@ -372,6 +379,7 @@ router.get('/member/:memberId', async (ctx: MulmContext) => {
 		fishSubs,
 		plantSubs,
 		coralSubs,
+		isLoggedIn: Boolean(viewer),
 		isSelf: viewer && viewer.member_id == member.id,
 		isAdmin: viewer && viewer.is_admin,
 	});

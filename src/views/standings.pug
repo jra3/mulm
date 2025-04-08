@@ -5,7 +5,7 @@ html
 	+headTag(title)
 
 	body.bg-white.text-gray-800
-		+pageHeader(`Annual Standings for ${year}`)
+		+pageHeader(isLoggedIn, `Annual Standings for ${year}`)
 
 		section.bg-gray-100.py-4
 			div.max-w-4xl.mx-auto.text-center.px-4
@@ -22,8 +22,8 @@ html
 					.text-left.w-8
 						p= member[1]
 
-		.w-full.bg-gray-100.p-4.shadow-md
+		.w-full.bg-gray-300.p-4.shadow-md
 			.container.mx-auto.flex.justify-center.space-x-4
-				a(href=`/annual/${year}/fish`) Breeders
-				a(href=`/annual/${year}/plant`) Horticultural
-				a(href=`/annual/${year}/coral`) Coral
+				a.link(href=`/annual/${year}/fish`) Breeders
+				a.link(href=`/annual/${year}/plant`) Horticultural
+				a.link(href=`/annual/${year}/coral`) Coral

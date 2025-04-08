@@ -5,7 +5,7 @@ html
 	+headTag(title)
 
 	body.bg-white.text-gray-800
-		+pageHeader("Lifetime Standings")
+		+pageHeader(isLoggedIn, "Lifetime Standings")
 
 		section.bg-gray-100.py-4
 			div.max-w-4xl.mx-auto.text-center.px-4
@@ -25,7 +25,7 @@ html
 									.text-left.w-100.pl-4
 										p= member.points
 
-		.w-full.bg-gray-100.p-4.shadow-md
+		.w-full.bg-gray-300.p-4.shadow-md
 			.container.mx-auto.flex.justify-center.space-x-4
 				a.link(href="/lifetime/fish") Breeder
 				a.link(href="/lifetime/plant") Horticultural
