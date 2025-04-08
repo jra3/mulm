@@ -25,6 +25,7 @@
   "homepage": "https://github.com/jra3/mulm#readme",
   "dependencies": {
     "better-sqlite3": "^11.8.1",
+    "date-fns": "^4.1.0",
     "koa": "^2.16.0",
     "koa-bodyparser": "^4.4.1",
     "koa-router": "^13.0.1",

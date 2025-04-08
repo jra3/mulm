@@ -43,13 +43,15 @@ export function createGoogleAccount(memberId: number, sub: string) {
 export function createMember(
 	email: string,
 	name: string,
-	credentials: { google_sub?: string } = {}) {
-		try {
-			const db = getWriteDBConnecton()
-			return db.transaction(() => {
-			console.log(name, email);
-			const userStmt = db.prepare('INSERT INTO members (display_name, contact_email) VALUES (?, ?)');
-			const memberId = userStmt.run(name, email).lastInsertRowid;
+	credentials: { google_sub?: string } = {},
+	isAdmin: boolean = false,
+) {
+	console.log(email, name, isAdmin);
+	try {
+		const db = getWriteDBConnecton()
+		return db.transaction(() => {
+			const userStmt = db.prepare('INSERT INTO members (display_name, contact_email, is_admin) VALUES (?, ?, ?)');
+			const memberId = userStmt.run(name, email, isAdmin ? 1 : 0).lastInsertRowid;
 
 			if (credentials.google_sub) {
 				const googleStmt = db.prepare('INSERT INTO google_account (google_sub, member_id) VALUES (?, ?)');
