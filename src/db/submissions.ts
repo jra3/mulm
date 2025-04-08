@@ -17,7 +17,7 @@ export type Submission = {
 	species_latin_name: string;
 	water_type: string;
 	count: string;
-	reproduction_date: Date;
+	reproduction_date: string;
 
 	foods: string;
 	spawn_locations: string;
@@ -34,9 +34,9 @@ export type Submission = {
 	substrate_depth: string;
 	substrate_color: string;
 
-	submitted_on?: Date;
-	approved_on?: Date;
-	approved_by?: string;
+	submitted_on?: string;
+	approved_on?: string;
+	approved_by?: number;
 	points?: number;
 };
 

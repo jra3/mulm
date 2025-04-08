@@ -1,6 +1,7 @@
 import * as db from "../db/submissions";
 import { MulmContext } from "../sessions";
 import { approvalSchema } from "../forms/approval";
+import { getMember, MemberRecord } from "../db/members";
 
 function validateSubmission(ctx: MulmContext) {
 	const subId = parseInt(ctx.params.subId);
@@ -27,8 +28,32 @@ export async function viewSubmission(ctx: MulmContext) {
 		return;
 	}
 	const viewer = ctx.loggedInUser;
+
+	const local = (time?: string) => {
+		if (!time) {
+			return undefined;
+		}
+		const date = new Date(time);
+		return date.toLocaleDateString();
+	}
+
+	let approver: MemberRecord | undefined;
+	if (submission.approved_by != null) {
+		approver = getMember(submission.approved_by);
+	}
+
+
 	await ctx.render('submission/review', {
-		submission,
+		submission: {
+			...submission,
+			reproduction_date: local(submission.reproduction_date),
+			submitted_on: local(submission.submitted_on),
+			approved_on: local(submission.approved_on),
+			approved_by: approver?.display_name,
+
+			foods: JSON.parse(submission.foods)?.join(","),
+			spawn_locations: JSON.parse(submission.spawn_locations)?.join(","),
+		},
 		isSelf: viewer && submission.member_id === viewer.member_id,
 		isAdmin: viewer && viewer.is_admin,
 	});

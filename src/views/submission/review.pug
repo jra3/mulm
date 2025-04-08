@@ -15,7 +15,7 @@ html
 	+headTag
 
 	body.bg-white.text-gray-800
-		+pageHeader(message)
+		+pageHeader(submission.species_common_name, submission.member_name)
 
 		section.bg-gray-100.py-4
 
@@ -33,6 +33,7 @@ html
 					+reviewTextInput("# of Fry", "count")
 
 					+reviewTextInput("Species Type", "species_type")
+					+reviewTextInput("Species Class", "species_class")
 					+reviewTextInput("Water Type", "water_type")
 
 					+reviewTextInput("Foods", "foods")
@@ -53,7 +54,7 @@ html
 					+reviewTextInput("Substrate Depth", "substrate_depth")
 					+reviewTextInput("Substrate Color", "substrate_color")
 
-			div.max-w-4xl.mx-auto.text-left.px-4
+			div.max-w-4xl.mx-auto.text-left.px-4.pb-6
 				h2(class="text-l font-bold mb-4") Approval Details
 				div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
 					+reviewTextInput("Submitted On", "submitted_on")
@@ -62,9 +63,10 @@ html
 					+reviewTextInput("Points", "points")
 
 			if isAdmin
-				.bottom-0.left-0.w-full.bg-gray-600.p-4.shadow-md
+				.w-full.bg-gray-600.p-4.shadow-md.mt-6
 					.container.mx-auto.flex.justify-center.space-x-4
 						form(hx-post="/admin/approve")
+							input(type="hidden" name="id" value=submission.id)
 							.flex.gap-4.justify-center.text-center
 								.select-wrapper
 									select(name="points" hx-get="/admin/approve" hx-include="closest form" hx-swap="outerHTML" hx-target="#bapForm" hx-select="#bapForm" hx-push-url="false")

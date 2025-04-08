@@ -254,7 +254,7 @@ router.get('/admin/members/edit/:memberId', async (ctx: MulmContext) => {
 	const coralLevels = levelRules.coral.map(level => level[0]);
 
 	const member = getMember(memberId);
-	console.log(member);
+
 	await ctx.render('admin/editMember', {
 		member,
 		fishLevels,
@@ -401,8 +401,6 @@ router.post('/sub', async (ctx: MulmContext) => {
 		const {
 			species_type: selectedType
 		} = ctx.request.body as { species_type: string };
-
-		console.log(parsed.error.issues);
 
 		await ctx.render('bapForm/form', {
 			title: getBapFormTitle(selectedType),
