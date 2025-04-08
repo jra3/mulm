@@ -1,0 +1,25 @@
+include memberRow
+include ../header.pug
+
+doctype html
+html
+	+headTag
+
+	body.bg-white.text-gray-800
+		+pageHeader(title)
+
+		section.bg-gray-100
+			table
+				thead
+					tr
+						th.min-w-40(class=heading) ID
+						th.min-w-40(class=heading) Admin
+						th.min-w-80(class=heading) Name
+						th.min-w-120(class=heading) Email
+						th.min-w-40(class=heading) Fish
+						th.min-w-40(class=heading) Plant
+						th.min-w-40(class=heading) Coral
+
+				tbody
+					each member in members
+						+memberRow(member)

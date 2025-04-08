@@ -1,0 +1,42 @@
+tr
+	td
+		form(
+			hx-target="closest tr"
+			hx-swap="outerHTML"
+			hx-include="closest tr"
+			hx-patch=`/admin/members/edit/${member.id}`
+			hx-trigger="submit")
+			button.primary(type="submit") Save
+
+	td(class=stringCell)
+		input.text-input(
+			checked=member.is_admin
+			name="is_admin"
+			type="checkbox")
+
+	td(class=stringCell)
+		input.text-input(name="display_name" value=member.display_name)
+
+	td(class=stringCell)
+		input.text-input(name="contact_email" value=member.contact_email)
+
+	td(class=stringCell)= member.fish_level
+		.select-wrapper
+			select(name="fish_level")
+				for level in fishLevels
+					- const selected = level === member.fish_level;
+					option(value=level, selected=selected)= level
+
+	td(class=stringCell)= member.plant_level
+		.select-wrapper
+			select(name="plant_level")
+				for level in plantLevels
+					- const selected = level === member.plant_level;
+					option(value=level, selected=selected)= level
+
+	td(class=stringCell)= member.coral_level
+		.select-wrapper
+			select(name="coral_level")
+				for level in coralLevels
+					- const selected = level === member.coral_level;
+					option(value=level, selected=selected)= level

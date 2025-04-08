@@ -6,13 +6,14 @@ import path from 'path';
 import bodyParser from 'koa-bodyparser';
 import { createSubmission, getApprovedSubmissions, getApprovedSubmissionsInDateRange, getOutstandingSubmissions, getOutstandingSubmissionsCounts, getSubmissionsByMember } from "./db/submissions";
 import { bapSchema, getBapFormTitle, foodTypes, getClassOptions, isLivestock, spawnLocations, waterTypes, speciesTypes } from "./forms/submission";
-import { createMember, getGoogleAccount, getMember, getMemberByEmail, getMemberWithAwards, getMembersList, Member, createGoogleAccount } from "./db/members";
+import { createMember, getGoogleAccount, getMember, getMemberByEmail, getMemberWithAwards, getMembersList, Member, createGoogleAccount, getRoster, updateMember } from "./db/members";
 import { levelRules, minYear, programs } from "./programs";
 import { getGoogleOAuthURL, getGoogleUser, translateGoogleOAuthCode } from "./oauth";
 
 import config from './config.json';
 import { createUserSession, destroyUserSession, MulmContext, sessionMiddleware } from "./sessions";
 import { updateSubmission, viewSubmission, deleteSubmission, adminApproveSubmission } from "./routes/submissions";
+import { memberSchema } from "./forms/member";
 
 const app = new Koa();
 
@@ -218,6 +219,76 @@ router.get('/lifetime{/:program}', async (ctx) => {
 
 // Admin Views /////////////////////////////////////////////////////
 
+router.get('/admin/members', async (ctx: MulmContext) => {
+	if (!ctx.loggedInUser?.is_admin) {
+		ctx.status = 403;
+		ctx.body = "Access denied";
+		return;
+	}
+
+	const members = getRoster();
+
+	await ctx.render('admin/members', {
+		title: 'Member Roster',
+		members,
+	});
+});
+
+router.get('/admin/members/edit/:memberId', async (ctx: MulmContext) => {
+
+	if (!ctx.loggedInUser?.is_admin) {
+		ctx.status = 403;
+		ctx.body = "Access denied";
+		return;
+	}
+
+	const memberId = parseInt(ctx.params.memberId);
+	if (!memberId) {
+		ctx.status = 400;
+		ctx.body = "Invalid member id";
+		return;
+	}
+
+	const fishLevels = levelRules.fish.map(level => level[0]);
+	const plantLevels = levelRules.plant.map(level => level[0]);
+	const coralLevels = levelRules.coral.map(level => level[0]);
+
+	const member = getMember(memberId);
+	console.log(member);
+	await ctx.render('admin/editMember', {
+		member,
+		fishLevels,
+		plantLevels,
+		coralLevels,
+	});
+
+});
+
+router.patch('/admin/members/edit/:memberId', async (ctx: MulmContext) => {
+	if (!ctx.loggedInUser?.is_admin) {
+		ctx.status = 403;
+		ctx.body = "Access denied";
+		return;
+	}
+
+	const memberId = parseInt(ctx.params.memberId);
+	if (!memberId) {
+		ctx.status = 400;
+		ctx.body = "Invalid member id";
+		return;
+	}
+
+	const parsed = memberSchema.parse(ctx.request.body)
+
+	updateMember(memberId, {
+		...parsed,
+		is_admin: parsed.is_admin !== undefined ? 1 : 0,
+	});
+
+	const member = getMember(memberId);
+	await ctx.render('admin/singleMemberRow', { member });
+});
+
 router.get('/admin/queue{/:program}', async (ctx: MulmContext) => {
 	if (!ctx.loggedInUser?.is_admin) {
 		ctx.status = 403;
@@ -234,7 +305,6 @@ router.get('/admin/queue{/:program}', async (ctx: MulmContext) => {
 
 	const submissions = getOutstandingSubmissions(program);
 	const programCounts = getOutstandingSubmissionsCounts();
-
 
 	const subtitle = (() => {
 		switch (program) {

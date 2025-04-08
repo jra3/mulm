@@ -102,6 +102,10 @@ export function getMembersList(): MemberRecord[] {
 	return query(`SELECT id, display_name, fish_level, plant_level, coral_level FROM members`);
 }
 
+export function getRoster() {
+	return query<MemberRecord>(`SELECT * FROM members`);
+}
+
 export function getMemberWithAwards(memberId: number) {
 	const members = query<MemberRecord>(`SELECT * FROM members WHERE id = ?`, [memberId]);
 	const member = members.pop();
