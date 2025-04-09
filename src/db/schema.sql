@@ -51,6 +51,12 @@ CREATE TABLE submissions (
 	approved_on DATETIME DEFAULT NULL,
 	approved_by INTEGER DEFAULT NULL,
 	points INTEGER DEFAULT NULL
+
+	article_points INTEGER DEFAULT NULL,
+
+	first_time_spawn BOOLEAN DEFAULT NULL,
+	flowered BOOLEAN DEFAULT NULL,
+	sexual_reproduction BOOLEAN DEFAULT NULL,
 );
 
 CREATE INDEX idx_member_id ON submissions (member_id);

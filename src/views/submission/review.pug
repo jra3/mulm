@@ -63,20 +63,50 @@ html
 					+reviewTextInput("Points", "points")
 
 			if isAdmin
+				.hidden.fixed.inset-0.flex.items-center.justify-center.z-50(hx-on="document.getElementById('bonuses').classList.toggle('hidden', true)")#bonuses
+					.relative.bg-gray-600.rounded-lg.shadow-lg.p-6.w-full.max-w-md(hx-on="click: event.stopPropagation()")
+
+						a.link.light.button.absolute.top-2.right-2(
+							hx-on:click="document.getElementById('bonuses').classList.toggle('hidden', true)") &times;
+
+						.flex.flex-col.justify-left.space-y-2
+							h2.text-xl.text-gray-200.font-bold.mb-4 Additional Points
+
+							select(name="article")
+								option(value="" disabled selected) Article Points
+								option(value=0 selected=false) No Article
+								option(value=5 selected=false) 5
+								option(value=10 selected=false) 10
+
+							.flex.gap-2.items-center
+								label.text-gray-200(for="first") First Time Species
+								input(type="checkbox" id="first" name="first" checked=submission.first)
+
+							if submission.program == "plant"
+								.flex.gap-2.items-center
+									label.text-gray-200(for="flowered") Flowered
+									input(type="checkbox" id="flowered" name="flowered" checked=submission.flowered)
+
+								.flex.gap-2.items-center
+									label.text-gray-200(for="sexual") Sexual Rep.
+									input(type="checkbox" id="sexual" name="sexual" checked=submission.sexual)
+
 				.w-full.bg-gray-600.p-4.shadow-md.mt-6
 					.container.mx-auto.flex.justify-center.space-x-4
-						form(hx-post="/admin/approve")
+						form(hx-post="/admin/approve" hx-include="#bonuses")
 							input(type="hidden" name="id" value=submission.id)
-							.flex.gap-4.justify-center.text-center
+							.flex.gap-4.items-center
 								.select-wrapper
-									select(name="points" hx-get="/admin/approve" hx-include="closest form" hx-swap="outerHTML" hx-target="#bapForm" hx-select="#bapForm" hx-push-url="false")
-										option(value="" disabled selected) Points
+									select(name="points")
+										option(value="" disabled selected) Base Points
 										option(value=5 selected=false) 5
 										option(value=10 selected=false) 10
 										option(value=15 selected=false) 15
 										option(value=20 selected=false) 20
+
+								a.link.light(
+									hx-on:click="document.getElementById('bonuses').classList.toggle('hidden', false)") Bonuses
+
 								button.primary.p-4(class=approve type="submit") Approve
 								button.destructive.p-4(class=destructive type="submit" name="reject" value="true") Reject
 								button.destructive.p-4(class=destructive type="submit" name="delete" value="true") Delete
-
-
