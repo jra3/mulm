@@ -53,8 +53,7 @@ CREATE TABLE submissions (
 	points INTEGER DEFAULT NULL
 
 	article_points INTEGER DEFAULT NULL,
-
-	first_time_spawn BOOLEAN DEFAULT NULL,
+	first_time_species BOOLEAN DEFAULT NULL,
 	flowered BOOLEAN DEFAULT NULL,
 	sexual_reproduction BOOLEAN DEFAULT NULL,
 );
