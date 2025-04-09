@@ -39,6 +39,8 @@ export type Submission = {
 	approved_on?: string;
 	approved_by?: number;
 	points?: number;
+	total_points?: number;
+
 };
 
 
@@ -226,7 +228,7 @@ export function getOutstandingSubmissionsCounts() {
 }
 
 export function getApprovedSubmissions(program: string) {
-	return query<Submission & Required<Pick<Submission, "submitted_on" | "approved_on" | "points">>>(`
+	return query<Submission & Required<Pick<Submission, "submitted_on" | "approved_on" | "points" | "total_points">>>(`
 		SELECT
 			submissions.*,
 			submissions.points +

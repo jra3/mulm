@@ -129,7 +129,7 @@ router.get('/annual/:year{/:program}', async (ctx: MulmContext) => {
 	const standings = new Map<number, number>();
 	submissions.forEach((submission) => {
 		const currentPoints = standings.get(submission.member_id) ?? 0;
-		standings.set(submission.member_id, currentPoints + submission.points!);
+		standings.set(submission.member_id, currentPoints + submission.total_points!);
 		names[submission.member_id] = submission.member_name;
 	});
 
@@ -174,7 +174,7 @@ router.get('/lifetime{/:program}', async (ctx: MulmContext) => {
 	for (const record of allSubmissions) {
 		totals.set(
 			record.member_id,
-			(totals.get(record.member_id) || 0) + record.points);
+			(totals.get(record.member_id) || 0) + record.total_points);
 	}
 
 	const members = getMembersList();

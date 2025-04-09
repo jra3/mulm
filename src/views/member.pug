@@ -12,7 +12,8 @@ mixin submissionTable(submissions)
 				th(class=heading) Class
 				th(class=heading) Common Name
 				th(class=heading) Latin Name
-				th(class=heading) Points
+				th(class=heading) Species Points
+				th(class=heading) Total Points
 
 		tbody
 			each sub in submissions
@@ -24,6 +25,7 @@ mixin submissionTable(submissions)
 					td(class=stringCell)= sub.species_common_name
 					td(class=stringCell)= sub.species_latin_name
 					td(class=stringCell)= sub.points || "UAPPROVED"
+					td(class=stringCell)= sub.total_points || "UAPPROVED"
 
 doctype html
 html
