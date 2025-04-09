@@ -61,9 +61,10 @@ html
 					+reviewTextInput("Approved On", "approved_on")
 					+reviewTextInput("Approved By", "approved_by")
 					+reviewTextInput("Points", "points")
+					+reviewTextInput("Total Points", "total_points")
 
 			if isAdmin
-				.hidden.fixed.inset-0.flex.items-center.justify-center.z-50(hx-on="document.getElementById('bonuses').classList.toggle('hidden', true)")#bonuses
+				.hidden.fixed.inset-0.flex.items-center.justify-center.z-50(hx-on:click="document.getElementById('bonuses').classList.toggle('hidden', true)")#bonuses
 					.relative.bg-gray-600.rounded-lg.shadow-lg.p-6.w-full.max-w-md(hx-on="click: event.stopPropagation()")
 
 						a.link.light.button.absolute.top-2.right-2(
@@ -72,24 +73,36 @@ html
 						.flex.flex-col.justify-left.space-y-2
 							h2.text-xl.text-gray-200.font-bold.mb-4 Additional Points
 
-							select(name="article")
+							select(name="article_points")
 								option(value="" disabled selected) Article Points
-								option(value=0 selected=false) No Article
-								option(value=5 selected=false) 5
-								option(value=10 selected=false) 10
+								option(value=0 selected=submission.article_points == 0) No Article
+								option(value=5 selected=submission.article_points == 5) 5
+								option(value=10 selected=submission.article_points == 10) 10
 
 							.flex.gap-2.items-center
 								label.text-gray-200(for="first") First Time Species
-								input(type="checkbox" id="first" name="first" checked=submission.first)
+								input(
+									type="checkbox"
+									id="first"
+									name="first_time_species"
+									checked=submission.first_time_species == 1)
 
 							if submission.program == "plant"
 								.flex.gap-2.items-center
 									label.text-gray-200(for="flowered") Flowered
-									input(type="checkbox" id="flowered" name="flowered" checked=submission.flowered)
+									input(
+										type="checkbox"
+										id="flowered"
+										name="flowered"
+										checked=submission.flowered == 1)
 
 								.flex.gap-2.items-center
 									label.text-gray-200(for="sexual") Sexual Rep.
-									input(type="checkbox" id="sexual" name="sexual" checked=submission.sexual)
+									input(
+										type="checkbox"
+										id="sexual"
+										name="sexual_reproduction"
+										checked=submission.sexual_reproduction == 1)
 
 				.w-full.bg-gray-600.p-4.shadow-md.mt-6
 					.container.mx-auto.flex.justify-center.space-x-4
@@ -99,10 +112,10 @@ html
 								.select-wrapper
 									select(name="points")
 										option(value="" disabled selected) Base Points
-										option(value=5 selected=false) 5
-										option(value=10 selected=false) 10
-										option(value=15 selected=false) 15
-										option(value=20 selected=false) 20
+										option(value=5 selected=submission.points == 5) 5
+										option(value=10 selected=submission.points == 10) 10
+										option(value=15 selected=submission.points == 15) 15
+										option(value=20 selected=submission.points == 20) 20
 
 								a.link.light(
 									hx-on:click="document.getElementById('bonuses').classList.toggle('hidden', false)") Bonuses

@@ -123,14 +123,15 @@ export async function adminApproveSubmission(ctx: MulmContext) {
 		return;
 	}
 
-	const { id, points } = parsed.data;
+	const updates = parsed.data;
+	const { id, points } = updates;
+
 	if (!points) {
 		ctx.status = 400;
 		ctx.body = "Invalid input";
 		return;
 	}
 
-	db.approveSubmission(id, points, viewer.member_id);
-
+	db.approveSubmission(viewer.member_id, id, updates);
 	ctx.set('HX-Redirect', '/admin/queue');
 }

@@ -1,3 +1,4 @@
+import { ApprovalFormValues } from "../forms/approval";
 import { FormValues } from "../forms/submission";
 import { getWriteDBConnecton, query } from "./conn";
 
@@ -111,7 +112,15 @@ export function createSubmission(memberId: number, form: FormValues, submit: boo
 
 export function getSubmissionsByMember(memberId: number, includeUnsubmitted: boolean, includeUnapproved: boolean) {
 	let expr = `
-		SELECT submissions.*, members.display_name as member_name
+		SELECT
+			submissions.*,
+			submissions.points +
+			  IFNULL(submissions.article_points, 0) +
+				(IFNULL(submissions.first_time_species, 0) * 5) +
+				(IFNULL(submissions.flowered, 0) * submissions.points) +
+				(IFNULL(submissions.sexual_reproduction, 0) * submissions.points)
+				as total_points,
+			members.display_name as member_name
 		FROM submissions LEFT JOIN members
 		ON submissions.member_id == members.id
 		WHERE submissions.member_id = ?`;
@@ -130,7 +139,15 @@ export function getSubmissionsByMember(memberId: number, includeUnsubmitted: boo
 
 export function getSubmissionById(id: number) {
 	const result = query<Submission>(`
-		SELECT submissions.*, members.display_name as member_name
+		SELECT
+			submissions.*,
+			submissions.points +
+			  IFNULL(submissions.article_points, 0) +
+				(IFNULL(submissions.first_time_species, 0) * 5) +
+				(IFNULL(submissions.flowered, 0) * submissions.points) +
+				(IFNULL(submissions.sexual_reproduction, 0) * submissions.points)
+				as total_points,
+			members.display_name as member_name
 		FROM submissions LEFT JOIN members
 		ON submissions.member_id == members.id
 		WHERE submissions.id = ?`,
@@ -154,7 +171,15 @@ export function deleteSubmission(id: number) {
 
 export function getApprovedSubmissionsInDateRange(startDate: Date, endDate: Date, program: string) {
 	return query<Submission>(`
-		SELECT submissions.*, members.display_name as member_name
+		SELECT
+			submissions.*,
+			submissions.points +
+			  IFNULL(submissions.article_points, 0) +
+				(IFNULL(submissions.first_time_species, 0) * 5) +
+				(IFNULL(submissions.flowered, 0) * submissions.points) +
+				(IFNULL(submissions.sexual_reproduction, 0) * submissions.points)
+				as total_points,
+			members.display_name as member_name
 		FROM submissions JOIN members
 		ON submissions.member_id == members.id
 		WHERE reproduction_date > ? AND reproduction_date < ?
@@ -170,7 +195,15 @@ export function getApprovedSubmissionsInDateRange(startDate: Date, endDate: Date
 
 export function getOutstandingSubmissions(program: string) {
 	return query<Submission>(`
-		SELECT submissions.*, members.display_name as member_name
+		SELECT
+			submissions.*,
+			submissions.points +
+			  IFNULL(submissions.article_points, 0) +
+				(IFNULL(submissions.first_time_species, 0) * 5) +
+				(IFNULL(submissions.flowered, 0) * submissions.points) +
+				(IFNULL(submissions.sexual_reproduction, 0) * submissions.points)
+				as total_points,
+			members.display_name as member_name
 		FROM submissions JOIN members
 		ON submissions.member_id == members.id
 		WHERE submitted_on IS NOT NULL
@@ -194,7 +227,15 @@ export function getOutstandingSubmissionsCounts() {
 
 export function getApprovedSubmissions(program: string) {
 	return query<Submission & Required<Pick<Submission, "submitted_on" | "approved_on" | "points">>>(`
-		SELECT submissions.*, members.display_name as member_name
+		SELECT
+			submissions.*,
+			submissions.points +
+			  IFNULL(submissions.article_points, 0) +
+				(IFNULL(submissions.first_time_species, 0) * 5) +
+				(IFNULL(submissions.flowered, 0) * submissions.points) +
+				(IFNULL(submissions.sexual_reproduction, 0) * submissions.points)
+				as total_points,
+			members.display_name as member_name
 		FROM submissions JOIN members
 		ON submissions.member_id == members.id
 		WHERE submitted_on IS NOT NULL
@@ -208,7 +249,15 @@ export function getApprovedSubmissions(program: string) {
 
 export function getAllSubmissions(program: string) {
 	return query<Submission>(`
-		SELECT submissions.*, members.display_name as member_name
+		SELECT
+			submissions.*,
+			submissions.points +
+			  IFNULL(submissions.article_points, 0) +
+				(IFNULL(submissions.first_time_species, 0) * 5) +
+				(IFNULL(submissions.flowered, 0) * submissions.points) +
+				(IFNULL(submissions.sexual_reproduction, 0) * submissions.points)
+				as total_points,
+			members.display_name as member_name
 		FROM submissions JOIN members
 		ON submissions.member_id == members.id
 		FROM submissions WHERE program = ? `, [program]);
@@ -233,11 +282,29 @@ export function updateSubmission(id: number, updates: Partial<Submission>) {
 }
 
 
-export function approveSubmission(id: number, points: number, approvedBy: number) {
+export function approveSubmission(approvedBy: number, id: number, updates: ApprovalFormValues) {
 	try {
 		const conn = getWriteDBConnecton();
-		const stmt = conn.prepare(`UPDATE submissions SET points = ?, approved_by = ?, approved_on = ? WHERE id = ?`);
-		stmt.run(points, approvedBy, new Date().toISOString(), id);
+		const { points, article_points, first_time_species, flowered, sexual_reproduction } = updates;
+		const stmt = conn.prepare(`
+			UPDATE submissions SET
+				points = ?,
+				article_points = ?,
+				first_time_species = ?,
+				flowered = ?,
+				sexual_reproduction = ?,
+				approved_by = ?,
+				approved_on = ?
+			WHERE id = ?`);
+		stmt.run(
+			points,
+			article_points,
+			first_time_species ? 1 : 0,
+			flowered ? 1 : 0,
+			sexual_reproduction ? 1 : 0,
+			approvedBy,
+			new Date().toISOString(),
+			id);
 		conn.close();
 	} catch (err) {
 		console.error(err);
