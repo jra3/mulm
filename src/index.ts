@@ -34,6 +34,11 @@ router.get("/logout", async (ctx) => {
 	ctx.redirect("/");
 });
 
+router.post("/login", async (ctx) => {
+	console.log(ctx.request.body);
+	ctx.redirect("/");
+});
+
 // Regular Views ///////////////////////////////////////////////////
 
 router.get("/", async (ctx: MulmContext) => {

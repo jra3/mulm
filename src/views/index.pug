@@ -28,9 +28,7 @@ html
 					a(href='/logout')
 						button.outline Log Out
 				else
-					a(href=googleURL alt='Sign in with Google')
-						button.outline.flex.items-center.justify-center
-							img(src='/google-button.svg')
+					button.primary(hx-on:click="document.getElementById('login').classList.toggle('hidden', false)") Log In
 
 		section.bg-gray-100
 			.flex.items-center.justify-center
@@ -58,5 +56,26 @@ html
 									option(value="2018") 2018
 									option(value="2017") 2017
 									option(value="2016") 2016
+
+		.hidden.fixed.inset-0.flex.items-center.justify-center.z-50(hx-on:click="document.getElementById('login').classList.toggle('hidden', true)")#login
+			.w-lg.relative.bg-gray-200.rounded-lg.shadow-lg.p-6(hx-on:click="event.stopPropagation()")
+
+				a.link.absolute.top-2.right-2(hx-on:click="document.getElementById('login').classList.toggle('hidden', true)") &times;
+				.w-full.flex.flex-col.items-center.gap-2
+					h2.text-xl.font-extrabold.mb-4 Log In
+
+					form.contents(hx-post="/login" hx-trigger="submit")
+						.flex.flex-col.gap-2
+							label.input-label(for="email") Email
+							input.text-input(id="email" name="email")
+						.flex.flex-col.gap-2
+							label.input-label(for="password") Password
+							input.text-input(id="password" name="password" type="password")
+						.flex.gap-2
+							button.primary(type="submit") Log In
+
+					a(href=googleURL alt='Sign in with Google')
+						button.flex.items-center.justify-center
+							img(src='/google-button.svg')
 
 		+footer()
