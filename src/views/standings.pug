@@ -11,16 +11,22 @@ html
 			div.max-w-4xl.mx-auto.text-center.px-4
 				h2(class="text-xl lg:text-4xl font-extrabold mb-4")= title
 
-		section.bg-gray-100.py-4
-			each member, index in standings
-				.flex.justify-between.w-full.mx-auto(class="max-w-76")
-					.text-right.font-bold.w-8
-						p= index+1
-					.text-right.w-40
-						- const name = names[member[0]] ?? ""
-						a.link(href=`/member/${member[0]}`)= name
-					.text-left.w-8
-						p= member[1]
+		section.bg-gray-100.py-4.flex.flex-col.items-center
+			div.max-w-2xl
+				table.data-table#annualStandings
+					thead.contents
+						tr.contents
+							th Rank
+							th Member
+							th Points
+					tbody.contents
+						each member, index in standings
+							tr.text-center.max-w-lg.contents
+								td= index + 1
+								td
+									- const name = names[member[0]] ?? ""
+									a.link(href=`/member/${member[0]}`)= name
+								td(class=heading)= member[1]
 
 		.w-full.bg-gray-300.p-4.shadow-md
 			.container.mx-auto.flex.justify-center.space-x-4

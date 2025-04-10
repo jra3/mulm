@@ -65,7 +65,7 @@ html
 
 			if isAdmin
 				.hidden.fixed.inset-0.flex.items-center.justify-center.z-50(hx-on:click="document.getElementById('bonuses').classList.toggle('hidden', true)")#bonuses
-					.relative.bg-gray-600.rounded-lg.shadow-lg.p-6.w-full.max-w-md(hx-on="click: event.stopPropagation()")
+					.relative.bg-gray-600.rounded-lg.shadow-lg.p-6.w-full.max-w-md(hx-on:click="event.stopPropagation()")
 
 						a.link.light.button.absolute.top-2.right-2(
 							hx-on:click="document.getElementById('bonuses').classList.toggle('hidden', true)") &times;

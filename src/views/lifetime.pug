@@ -17,13 +17,13 @@ html
 					- const [levelName, members] = level;
 					div.p-4
 						h2(class="text-xl sm:text-2xl font-bold mb-4")= levelName
-						each member in members
-							a.link(href=`/member/${member.id}`)
-								.flex.justify-between.w-full.max-w-2xl.mx-auto
-									.text-right.w-100
-										p= member.display_name
-									.text-left.w-100.pl-4
-										p= member.points
+						table.data-table.lifetimeStandingsLevel
+							tbody.contents
+								each member in members
+									tr.max-w-lg.contents
+										td.text-left
+											a.link(href=`/member/${member.id}`)= member.display_name
+										td.text-right= member.points
 
 		.w-full.bg-gray-300.p-4.shadow-md
 			.container.mx-auto.flex.justify-center.space-x-4

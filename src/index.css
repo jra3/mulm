@@ -121,3 +121,16 @@ select {
 		minmax(150px, 0.66fr)
 		minmax(150px, 0.66fr);
 }
+
+#annualStandings {
+	grid-template-columns:
+		minmax(30px, 0.33fr)
+		minmax(120px, 1.66fr)
+		minmax(30px, 0.33fr)
+}
+
+.lifetimeStandingsLevel {
+	grid-template-columns:
+		minmax(120px, 1.66fr)
+		minmax(30px, 0.33fr)
+}
