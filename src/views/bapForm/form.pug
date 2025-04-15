@@ -42,11 +42,16 @@ mixin bapMultiSelectInput(labelText, name, id)
 			class=errors.has(name) ? "error" : "")
 			block
 
-form#bapForm(
-	hx-target="#bapForm"
-	hx-swap="outerHTML"
-	hx-post="/sub")
+mixin CRUDForm()
+	if form.id
+		form#bapForm(hx-target="#bapForm" hx-swap="outerHTML" hx-patch=`/sub/${form.id}`)
+			input(type="hidden" name="id" value=form.id)
+			block
+	else
+		form#bapForm(hx-target="#bapForm" hx-swap="outerHTML" hx-post="/sub")
+			block
 
++CRUDForm
 	section.bg-gray-100.py-4
 		div.max-w-4xl.mx-auto.text-left.px-4
 			h2(class="text-xl sm:text-2xl font-bold mb-4") Member Details
@@ -170,6 +175,9 @@ form#bapForm(
 
 	section.bg-gray-100.py-4
 		div.flex.justify-center.max-w-4xl.mx-auto.text-center.gap-4
-			button.primary(class="w-2/5 max-w-200" type="submit") Submit
-			button.outline(class="w-2/5 max-w-200" type="submit" name="draft" value="true") Save Draft
+			if form.submitted_on
+				button.primary(class="w-2/5 max-w-200" type="submit") Save Edits
+			else
+				button.primary(class="w-2/5 max-w-200" type="submit") Submit
+				button.outline(class="w-2/5 max-w-200" type="submit" name="draft" value="true") Save Draft
 

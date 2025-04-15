@@ -1,6 +1,6 @@
 section.bg-gray-100.py-4
 	div.flex.flex-col.max-w-4xl.mx-auto.text-center.px-4
-		h2.text-2xl.p-2 Submitted!
+		h2.text-2xl.p-2= title
 		a.link(href="/") Return Home
 		a.link(href=`/sub/${subId}`) View Submission
 		a.link(href=`/member/${member.id}`)= `Review ${member.display_name}'s Submissions`

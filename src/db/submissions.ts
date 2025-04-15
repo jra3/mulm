@@ -22,66 +22,69 @@ export type Submission = {
 
 	foods: string;
 	spawn_locations: string;
+	tank_size: string | null;
+	filter_type: string | null;
+	water_change_volume: string | null;
+	water_change_frequency: string | null;
+	temperature: string | null;
+	pH: string | null;
+	GH: string | null;
+	specific_gravity: string | null;
+	substrate_type: string | null;
+	substrate_depth: string | null;
+	substrate_color: string | null;
 
-	tank_size: string;
-	filter_type: string;
-	water_change_volume: string;
-	water_change_frequency: string;
-	temperature: string;
-	pH: string;
-	GH?: string;
-	specific_gravity?: string;
-	substrate_type: string;
-	substrate_depth: string;
-	substrate_color: string;
-
-	submitted_on?: string;
-	approved_on?: string;
-	approved_by?: number;
-	points?: number;
+	submitted_on: string | null;
+	approved_on: string | null;
+	approved_by: number | null;
+	points: number | null;
 	total_points?: number;
 
 };
 
+export function formToDB(memberId: number, form: FormValues, submit: boolean) {
+	const program = (() => {
+		switch (form.species_type) {
+			case "Fish":
+			case "Invert":
+				return "fish";
+			case "Plant":
+				return "plant";
+			case "Coral":
+				return "coral";
+			case undefined:
+				return undefined;
+			default:
+				console.log("Unknown species type: ", form.species_type);
+				throw new Error("Unknown species type");
+		}
+	})();
+
+	const arrayToJSON = (formField: unknown) => {
+		if (Array.isArray(formField)) {
+			return JSON.stringify(formField.filter(v => v !== ""));
+		}
+		return undefined;
+	}
+
+	return {
+		member_id: memberId,
+		program,
+		submitted_on: submit ? new Date().toISOString() : undefined,
+		...form,
+		member_name: undefined,
+		member_email: undefined,
+		foods: arrayToJSON(form.foods),
+		spawn_locations: arrayToJSON(form.spawn_locations),
+		supplement_type: arrayToJSON(form.supplement_type),
+		supplement_regimen: arrayToJSON(form.supplement_regimen),
+	};
+}
 
 export function createSubmission(memberId: number, form: FormValues, submit: boolean) {
 	try {
 		const conn = getWriteDBConnecton();
-
-		const program = (() => {
-			switch (form.species_type) {
-				case "Fish":
-				case "Invert":
-					return "fish";
-				case "Plant":
-					return "plant";
-				case "Coral":
-					return "coral";
-				default:
-					console.log("Unknown species type: ", form.species_type);
-					throw new Error("Unknown species type");
-			}
-		})();
-
-		const arrayToJSON = (formField: unknown) => {
-			if (Array.isArray(formField)) {
-				return JSON.stringify(formField.filter(v => v !== ""));
-			}
-			return undefined;
-		}
-
-		const entries = {
-			member_id: memberId,
-			program,
-			...form,
-			submitted_on: submit ? new Date().toISOString() : null,
-			member_name: undefined,
-			member_email: undefined,
-			foods: arrayToJSON(form.foods),
-			spawn_locations: arrayToJSON(form.spawn_locations),
-			supplement_type: arrayToJSON(form.supplement_type),
-			supplement_regimen: arrayToJSON(form.supplement_regimen),
-		};
+		const entries = formToDB(memberId, form, submit);
 
 		const fields = [];
 		const values = [];
@@ -265,10 +268,17 @@ export function getAllSubmissions(program: string) {
 		FROM submissions WHERE program = ? `, [program]);
 }
 
+type UpdateFor<T> = Partial<{
+  [K in keyof T]: T[K] | null | undefined;
+}>;
 
-export function updateSubmission(id: number, updates: Partial<Submission>) {
-	const fields = Object.keys(updates);
-	const values = Object.values(updates);
+export function updateSubmission(id: number, updates: UpdateFor<Submission>) {
+	const entries = Object.fromEntries(
+		Object.entries(updates).filter(
+			([, value]) => value !== undefined
+		));
+	const fields = Object.keys(entries);
+	const values = Object.values(entries);
 	const setClause = fields.map(field => `${field} = ?`).join(', ');
 
 	try {

@@ -54,6 +54,7 @@ html
 					+reviewTextInput("Substrate Depth", "substrate_depth")
 					+reviewTextInput("Substrate Color", "substrate_color")
 
+
 			div.max-w-4xl.mx-auto.text-left.px-4.pb-6
 				h2(class="text-l font-bold mb-4") Approval Details
 				div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
@@ -62,6 +63,11 @@ html
 					+reviewTextInput("Approved By", "approved_by")
 					+reviewTextInput("Points", "points")
 					+reviewTextInput("Total Points", "total_points")
+
+			if isSelf && !isApproved
+				div.flex.justify-center.max-w-4xl.mx-auto.text-center.gap-4
+					form(hx-patch=`/sub/${submission.id}`)
+						button.primary(name="unsubmit" type="submit") Edit Submission
 
 			if isAdmin
 				.hidden.fixed.inset-0.flex.items-center.justify-center.z-50(hx-on:click="document.getElementById('bonuses').classList.toggle('hidden', true)")#bonuses

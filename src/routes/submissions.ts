@@ -1,8 +1,10 @@
 import * as db from "../db/submissions";
 import { MulmContext } from "../sessions";
 import { approvalSchema } from "../forms/approval";
-import { getMember, MemberRecord } from "../db/members";
-import { onSubmissionApprove } from "../notifications";
+import { createMember, getMember, getMemberByEmail, MemberRecord } from "../db/members";
+import { onSubmissionApprove, onSubmissionSend } from "../notifications";
+import { bapDraftForm, bapFields, bapForm, foodTypes, FormValues, getBapFormTitle, getClassOptions, isLivestock, spawnLocations, speciesTypes, waterTypes } from "../forms/submission";
+import { extractValid } from "../forms/utils";
 
 function validateSubmission(ctx: MulmContext) {
 	const subId = parseInt(ctx.params.subId);
@@ -30,7 +32,7 @@ export async function viewSubmission(ctx: MulmContext) {
 	}
 	const viewer = ctx.loggedInUser;
 
-	const local = (time?: string) => {
+	const local = (time?: string | null) => {
 		if (!time) {
 			return undefined;
 		}
@@ -43,6 +45,34 @@ export async function viewSubmission(ctx: MulmContext) {
 		approver = getMember(submission.approved_by);
 	}
 
+	const aspect = {
+		isSubmitted: submission.submitted_on != null,
+		isApproved: submission.approved_on != null,
+		isLoggedIn: Boolean(viewer),
+		isSelf: viewer && submission.member_id === viewer.member_id,
+		isAdmin: viewer && viewer.is_admin,
+	};
+
+	if (viewer && aspect.isSelf && !aspect.isSubmitted) {
+		await ctx.render('submit', {
+			title: `Edit ${getBapFormTitle(submission.program)}`,
+			form: {
+				...submission,
+				member_name: viewer.member_name,
+				member_email: viewer.member_email,
+			},
+			errors: new Map(),
+			classOptions: getClassOptions(submission.species_type),
+			waterTypes,
+			speciesTypes,
+			foodTypes,
+			spawnLocations,
+			isLivestock: isLivestock(submission.species_type),
+			isAdmin: aspect.isAdmin,
+		});
+
+		return;
+	}
 
 	await ctx.render('submission/review', {
 		submission: {
@@ -55,9 +85,105 @@ export async function viewSubmission(ctx: MulmContext) {
 			foods: JSON.parse(submission.foods)?.join(","),
 			spawn_locations: JSON.parse(submission.spawn_locations)?.join(","),
 		},
-		isLoggedIn: !!viewer,
-		isSelf: viewer && submission.member_id === viewer.member_id,
-		isAdmin: viewer && viewer.is_admin,
+		...aspect,
+	});
+}
+
+async function parseAndValidateForm(ctx: MulmContext) {
+
+	let draft = false;
+	let form: FormValues;
+	let parsed;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	if ("draft" in (ctx.request.body as any)) {
+		parsed = bapDraftForm.safeParse(ctx.request.body);
+		form = extractValid(bapFields, ctx.request.body);
+		draft = true;
+	} else {
+		parsed = bapForm.safeParse(ctx.request.body);
+		form = parsed.data!;
+	}
+
+	if (!parsed.success) {
+		const errors = new Map<string, string>();
+		parsed.error.issues.forEach((issue) => {
+			errors.set(String(issue.path[0]), issue.message);
+		});
+
+		return { errors };
+	}
+
+	form = { ...form, ...parsed.data };
+	return { form, draft };
+}
+
+export async function createSubmission(ctx: MulmContext) {
+	const viewer = ctx.loggedInUser;
+	if (!viewer) {
+		ctx.status = 403;
+		ctx.body = "You must be logged in to submit";
+		return;
+	}
+
+	const { form, draft, errors } = await parseAndValidateForm(ctx);
+
+	if (errors) {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const selectedType = (ctx.request.body as any).species_type;
+		return ctx.render('bapForm/form', {
+			title: getBapFormTitle(selectedType),
+			form: ctx.request.body,
+			errors,
+			classOptions: getClassOptions(selectedType),
+			waterTypes,
+			speciesTypes,
+			foodTypes,
+			spawnLocations,
+			isLivestock: isLivestock(selectedType),
+			isAdmin: Boolean(viewer.is_admin),
+		});
+	}
+
+	if (form.member_email != viewer.member_email || form.member_name != viewer.member_name) {
+		if (!viewer.is_admin) {
+			ctx.status = 403;
+			ctx.body = "User cannot submit for this member";
+			return;
+		}
+		// Admins can supply any member
+	}
+
+	let member = getMemberByEmail(form.member_email!);
+	let memberId: number;
+
+	if (!member) {
+		if (viewer.is_admin) {
+			// create a placeholder member
+			memberId = createMember(form.member_email!, form.member_name!);
+			member = getMember(memberId)!;
+		} else {
+			ctx.status = 403;
+			ctx.body = "User cannot submit for this member";
+			return;
+		}
+	} else {
+		memberId = member.id;
+	}
+
+	const subId = db.createSubmission(memberId, form, !draft);
+	const sub = db.getSubmissionById(subId);
+
+	if (!sub) {
+		ctx.status = 500;
+		ctx.body = "Failed to create submission";
+		return;
+	}
+
+	onSubmissionSend(sub, member)
+	await ctx.render('submission/success', {
+		title: "Submission Complete",
+		member,
+		subId,
 	});
 }
 
@@ -70,13 +196,45 @@ export async function updateSubmission(ctx: MulmContext) {
 
 	// Admin can always update
 	// User can update if not submitted
-	if (!viewer || !(viewer.is_admin || (viewer.member_id === submission?.member_id))) {
+
+	if (!viewer || viewer?.member_id !== submission?.member_id && !viewer.is_admin) {
 		ctx.status = 403;
 		ctx.body = "Forbidden";
 		return;
 	}
 
-	console.log("Implement patch");
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	if ("unsubmit" in (ctx.request.body as any)) {
+		db.updateSubmission(submission.id, { submitted_on: null });
+		ctx.set('HX-Redirect', '/sub/' + submission.id);
+		return;
+	}
+
+	const { form, draft, errors } = await parseAndValidateForm(ctx);
+	if (errors) {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const selectedType = (ctx.request.body as any).species_type;
+		return ctx.render('bapForm/form', {
+			title: `Edit ${getBapFormTitle(selectedType)}`,
+			form: ctx.request.body,
+			errors,
+			classOptions: getClassOptions(selectedType),
+			waterTypes,
+			speciesTypes,
+			foodTypes,
+			spawnLocations,
+			isLivestock: isLivestock(selectedType),
+			isAdmin: Boolean(viewer.is_admin),
+		});
+	}
+
+	db.updateSubmission(submission.id, db.formToDB(submission.member_id, form, !draft));
+	const member = getMember(submission.member_id);
+	await ctx.render('submission/success', {
+		title: "Edits Saved",
+		member,
+		subId: submission.id,
+	});
 }
 
 export async function deleteSubmission(ctx: MulmContext) {
@@ -105,6 +263,7 @@ export async function adminApproveSubmission(ctx: MulmContext) {
 		return;
 	}
 
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const body = ctx.request.body as any;
 	if ("reject" in body) {
 		console.log("rejected!");

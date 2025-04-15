@@ -4,18 +4,16 @@ import views from 'koa-views';
 import serve from 'koa-static';
 import path from 'path';
 import bodyParser from 'koa-bodyparser';
-import { createSubmission, getApprovedSubmissions, getApprovedSubmissionsInDateRange, getOutstandingSubmissions, getOutstandingSubmissionsCounts, getSubmissionById, getSubmissionsByMember } from "./db/submissions";
-import { getBapFormTitle, foodTypes, getClassOptions, isLivestock, spawnLocations, waterTypes, speciesTypes, bapForm, bapFields, bapDraftForm, FormValues } from "./forms/submission";
+import { getApprovedSubmissions, getApprovedSubmissionsInDateRange, getOutstandingSubmissions, getOutstandingSubmissionsCounts, getSubmissionsByMember } from "./db/submissions";
+import { getBapFormTitle, foodTypes, getClassOptions, isLivestock, spawnLocations, waterTypes, speciesTypes } from "./forms/submission";
 import { createMember, getGoogleAccount, getMember, getMemberByEmail, getMemberWithAwards, getMembersList, Member, createGoogleAccount, getRoster, updateMember } from "./db/members";
 import { levelRules, minYear, programs } from "./programs";
 import { getGoogleOAuthURL, getGoogleUser, translateGoogleOAuthCode } from "./oauth";
 
 import config from './config.json';
 import { createUserSession, destroyUserSession, MulmContext, sessionMiddleware } from "./sessions";
-import { updateSubmission, viewSubmission, deleteSubmission, adminApproveSubmission } from "./routes/submissions";
+import { viewSubmission, deleteSubmission, adminApproveSubmission, createSubmission, updateSubmission } from "./routes/submissions";
 import { memberSchema } from "./forms/member";
-import { onSubmissionSend } from "./notifications";
-import { extractValid } from "./forms/utils";
 
 const app = new Koa();
 
@@ -397,103 +395,8 @@ router.get('/member/:memberId', async (ctx: MulmContext) => {
 
 });
 
-// Submissions /////////////////////////////////////////////////////
-
 router.get('/sub/:subId', viewSubmission);
-
-// Save a new submission, potentially submitting it
-router.post('/sub', async (ctx: MulmContext) => {
-	const viewer = ctx.loggedInUser;
-	if (!viewer) {
-		ctx.status = 403;
-		ctx.body = "You must be logged in to submit";
-		return;
-	}
-
-	let draft = false;
-	let form: FormValues;
-	let parsed;
-	if ("draft" in (ctx.request.body as any)) {
-		parsed = bapDraftForm.safeParse(ctx.request.body);
-		form = extractValid(bapFields, ctx.request.body);
-		draft = true;
-		console.log("DRAFT!!!");
-	} else {
-		parsed = bapForm.safeParse(ctx.request.body);
-		form = parsed.data!;
-	}
-
-	if (!parsed.success) {
-		const errors = new Map<string, string>();
-		parsed.error.issues.forEach((issue) => {
-			errors.set(String(issue.path[0]), issue.message);
-		});
-
-		const {
-			species_type: selectedType
-		} = ctx.request.body as { species_type: string };
-
-		await ctx.render('bapForm/form', {
-			title: getBapFormTitle(selectedType),
-			form: ctx.request.body,
-			errors,
-			classOptions: getClassOptions(selectedType),
-			waterTypes,
-			speciesTypes,
-			foodTypes,
-			spawnLocations,
-			isLivestock: isLivestock(selectedType),
-			isAdmin: Boolean(viewer.is_admin),
-		});
-		return;
-	}
-
-	form = { ...form, ...parsed.data };
-
-	if (form.member_email != viewer.member_email || form.member_name != viewer.member_name) {
-		if (!viewer.is_admin) {
-			ctx.status = 403;
-			ctx.body = "User cannot submit for this member";
-			return;
-		}
-		// Admins can supply any member
-	}
-
-	let member = getMemberByEmail(form.member_email!);
-	let memberId: number;
-
-	if (!member) {
-		if (viewer.is_admin) {
-			// create a placeholder member
-			memberId = createMember(form.member_email!, form.member_name!);
-			member = getMember(memberId)!;
-		} else {
-			ctx.status = 403;
-			ctx.body = "User cannot submit for this member";
-			return;
-		}
-	} else {
-		memberId = member.id;
-	}
-
-	const subId = createSubmission(memberId, form, !draft);
-	const sub = getSubmissionById(subId);
-
-	if (!sub) {
-		ctx.status = 500;
-		ctx.body = "Failed to create submission";
-		return;
-	}
-
-	onSubmissionSend(sub, member)
-
-	ctx.body = "Submitted " + String(subId);
-	await ctx.render('submission/success', {
-		member,
-		subId,
-	});
-});
-
+router.post('/sub', createSubmission);
 router.patch('/sub/:subId', updateSubmission);
 router.delete('/sub/:subId', deleteSubmission);
 

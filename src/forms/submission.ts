@@ -26,6 +26,7 @@ const waterTypeEnum = z.enum(["Fresh", "Brackish", "Salt"]);
 const speciesTypeEnum = z.enum(["Fish", "Invert", "Plant", "Coral"]);
 
 export const bapFields = z.object({
+	id: z.string().optional().transform((val) => (val ? parseInt(val) : undefined)),
 	member_name: z.string().nonempty({ message: "Required" }),
 	member_email: z.string().email("Valid address required"),
 	water_type: waterTypeEnum,
@@ -76,6 +77,7 @@ export const bapFields = z.object({
 })
 
 export const bapDraftForm = bapFields.pick({
+	id: true,
 	member_name: true,
 	member_email: true,
 	species_common_name: true,
