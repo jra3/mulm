@@ -4,6 +4,7 @@ node_modules/
 dist/
 
 src/config.json
+src/config.production.json
 database.sqlite
 public/index.css
 

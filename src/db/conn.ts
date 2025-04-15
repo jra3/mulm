@@ -15,7 +15,6 @@ export let writeConn: Database;
 	});
 	adminConn.close();
 
-
 	readOnlyConn = await open({
 		filename: './database.sqlite',
 		driver: sqlite3.Database,
@@ -27,10 +26,7 @@ export let writeConn: Database;
 		driver: sqlite3.Database,
 		mode: sqlite3.OPEN_READWRITE,
 	});
-
-
 })();
-
 
 /**
  * Used only in testing to create and use in-memory databases

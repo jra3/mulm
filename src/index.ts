@@ -149,7 +149,7 @@ router.get("/oauth/google", auth.googleOAuth);
 
 app.use(router);
 
-const PORT = process.env.PORT || 4200;
+const PORT = parseInt(process.env.PORT || "4200");
 app.listen(PORT, () => {
 	console.log(`Server running at http://localhost:${PORT}`);
 	console.log(`Server running at https://${config.domain}`);

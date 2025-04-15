@@ -63,11 +63,11 @@ mixin CRUDForm()
 		div.max-w-4xl.mx-auto.text-left.px-4
 			h2(class="text-xl sm:text-2xl font-bold mb-4") Species Details
 
+			- console.log(form.water_type)
 			div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
 				+bapSimpleSelectInput("Water Type", "water_type")
 					for water in waterTypes
-						- const selected = water === form.waterType;
-						option(value=water, selected=selected)= water
+						option(value=water, selected=water == form.water_type)= water
 
 				div.grid.gap-2
 					label.input-label Species Type
@@ -81,13 +81,11 @@ mixin CRUDForm()
 							hx-select="#bapForm"
 							hx-push-url="false")
 							for speciesType in speciesTypes
-								- const selected = speciesType === form.species_type;
-								option(value=speciesType, selected=selected)= speciesType
+								option(value=speciesType, selected=speciesType == form.species_type)= speciesType
 
 				+bapSimpleSelectInput("Species Class", "species_class")
 					each option in classOptions
-						- const selected = option.value == form.species_class;
-						option(value=option.value selected=selected)= option.text
+						option(value=option.value selected=form.species_class == option.value)= option.text
 				- const dateLabel = isLivestock ? "Date Spawned" : "Date Propagated";
 				+bapTextInput(dateLabel, "reproduction_date", "", "date")
 

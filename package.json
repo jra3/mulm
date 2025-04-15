@@ -27,6 +27,7 @@
 	},
 	"homepage": "https://github.com/jra3/mulm#readme",
 	"dependencies": {
+		"aws-cdk-lib": "^2.194.0",
 		"body-parser": "^2.2.0",
 		"cookie-parser": "^1.4.7",
 		"date-fns": "^4.1.0",
