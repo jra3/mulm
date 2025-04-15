@@ -5,7 +5,7 @@ import serve from 'koa-static';
 import path from 'path';
 import bodyParser from 'koa-bodyparser';
 import { createSubmission, getApprovedSubmissions, getApprovedSubmissionsInDateRange, getOutstandingSubmissions, getOutstandingSubmissionsCounts, getSubmissionById, getSubmissionsByMember } from "./db/submissions";
-import { bapSchema, getBapFormTitle, foodTypes, getClassOptions, isLivestock, spawnLocations, waterTypes, speciesTypes } from "./forms/submission";
+import { bapSchema, getBapFormTitle, foodTypes, getClassOptions, isLivestock, spawnLocations, waterTypes, speciesTypes, bapFormHeader } from "./forms/submission";
 import { createMember, getGoogleAccount, getMember, getMemberByEmail, getMemberWithAwards, getMembersList, Member, createGoogleAccount, getRoster, updateMember } from "./db/members";
 import { levelRules, minYear, programs } from "./programs";
 import { getGoogleOAuthURL, getGoogleUser, translateGoogleOAuthCode } from "./oauth";
@@ -15,6 +15,7 @@ import { createUserSession, destroyUserSession, MulmContext, sessionMiddleware }
 import { updateSubmission, viewSubmission, deleteSubmission, adminApproveSubmission } from "./routes/submissions";
 import { memberSchema } from "./forms/member";
 import { onSubmissionSend } from "./notifications";
+import { ZodIssue } from "zod";
 
 const app = new Koa();
 
@@ -402,16 +403,35 @@ router.get('/sub/:subId', viewSubmission);
 // Save a new submission, potentially submitting it
 router.post('/sub', async (ctx: MulmContext) => {
 	const viewer = ctx.loggedInUser;
+
 	if (!viewer) {
 		ctx.status = 403;
 		ctx.body = "You must be logged in to submit";
 		return;
 	}
 
-	const parsed = bapSchema.safeParse(ctx.request.body);
-	if (!parsed.success) {
+	const ensureMember = (email: string, name: string) => {
+		let member = getMemberByEmail(email);
+		let memberId: number;
+		if (!member) {
+			if (viewer.is_admin) {
+				// create a placeholder member
+				memberId = createMember(email, name);
+				member = getMember(memberId)!;
+			} else {
+				ctx.status = 403;
+				ctx.body = "User cannot submit for this member";
+				return;
+			}
+		} else {
+			memberId = member.id;
+		}
+		return memberId;
+	}
+
+	const returnFormErrors = async (issues: ZodIssue[]) => {
 		const errors = new Map<string, string>();
-		parsed.error.issues.forEach((issue) => {
+		issues.forEach((issue) => {
 			errors.set(String(issue.path[0]), issue.message);
 		});
 
@@ -431,26 +451,45 @@ router.post('/sub', async (ctx: MulmContext) => {
 			isLivestock: isLivestock(selectedType),
 			isAdmin: Boolean(viewer.is_admin),
 		});
+	}
+
+	const header = bapFormHeader.safeParse(ctx.request.body);
+	if (!header.success) {
+		await returnFormErrors(header.error.issues);
 		return;
 	}
 
-	const form = parsed.data;
-	if (form.member_email != viewer.member_email || form.member_name != viewer.member_name) {
+	if (header.data.member_email != viewer.member_email || header.data.member_name != viewer.member_name) {
 		if (!viewer.is_admin) {
 			ctx.status = 403;
 			ctx.body = "User cannot submit for this member";
 			return;
 		}
-		// Admins can supply any member
 	}
 
-	let member = getMemberByEmail(form.member_email);
-	let memberId: number;
+	if ("draft" in header.data) {
+		console.log("saving draft!");
+		const memberId = ensureMember(header.data.member_email, header.data.member_name);
+		if (!memberId) {
+			return;
+		}
+		createSubmission(memberId, ctx.request.body, false) {
 
+		return;
+	}
+
+	const form = bapSchema.safeParse(ctx.request.body);
+	if (!form.success) {
+		await returnFormErrors(form.error.issues);
+		return;
+	}
+
+	let member = getMemberByEmail(form.data.member_email);
+	let memberId: number;
 	if (!member) {
 		if (viewer.is_admin) {
 			// create a placeholder member
-			memberId = createMember(form.member_email, form.member_name);
+			memberId = createMember(form.data.member_email, form.data.member_name);
 			member = getMember(memberId)!;
 		} else {
 			// should be impossible to get here
@@ -462,9 +501,8 @@ router.post('/sub', async (ctx: MulmContext) => {
 		memberId = member.id;
 	}
 
-	const subId = createSubmission(memberId, form, true);
+	const subId = createSubmission(memberId, form.data, true);
 	const sub = getSubmissionById(subId);
-
 	if (!sub) {
 		ctx.status = 500;
 		ctx.body = "Failed to create submission";
@@ -472,7 +510,6 @@ router.post('/sub', async (ctx: MulmContext) => {
 	}
 
 	onSubmissionSend(sub, member)
-
 	ctx.body = "Submitted " + String(subId);
 	await ctx.render('submission/success', {
 		member,

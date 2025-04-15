@@ -25,7 +25,15 @@ export function getClassOptions(speciesType: string) {
 const waterTypeEnum = z.enum(["Fresh", "Brackish", "Salt"]);
 const speciesTypeEnum = z.enum(["Fish", "Invert", "Plant", "Coral"]);
 
-export const bapSchema = z.object({
+export const bapFormHeader = z.object({
+	member_name: z.string().nonempty({ message: "Required" }),
+	member_email: z.string().email("Valid address required"),
+	species_class: z.string().nonempty({ message: "Required" }),
+	species_latin_name: z.string().nonempty({ message: "Required" }),
+	draft: z.string().optional(),
+});
+
+export const bapSchema = bapFormHeader.merge(z.object({
 	member_name: z.string().nonempty({ message: "Required" }),
 	member_email: z.string().email("Valid address required"),
 	water_type: waterTypeEnum,
@@ -42,8 +50,6 @@ export const bapSchema = z.object({
 			}
 			return true;
 		}, { message: "Required" }),
-	species_class: z.string().nonempty({ message: "Required" }),
-	species_latin_name: z.string().nonempty({ message: "Required" }),
 	species_common_name: z.string().nonempty({ message: "Required" }),
 	count: z.string().optional(),
 	foods: multiSelect.optional(),
@@ -74,7 +80,7 @@ export const bapSchema = z.object({
 
 // Fields required only for fish / inverts VVV
 
-}).refine(
+})).refine(
 	(data) => !isLivestock(data.species_type) || Boolean(data.count),
 	{ message: "Requied", path: ["count"], }
 ).refine(
