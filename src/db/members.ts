@@ -47,7 +47,6 @@ export function createMember(
 	credentials: { google_sub?: string } = {},
 	isAdmin: boolean = false,
 ) {
-	console.log(email, name, isAdmin);
 	try {
 		const db = getWriteDBConnecton()
 		return db.transaction(() => {

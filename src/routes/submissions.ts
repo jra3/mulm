@@ -137,7 +137,6 @@ export async function adminApproveSubmission(ctx: MulmContext) {
 
 	const submission = db.getSubmissionById(id)!;
 	const member = getMember(submission.member_id)!;
-	console.log(member, submission);
 	if (member) {
 		// member should always exist...
 		onSubmissionApprove(submission, member);
