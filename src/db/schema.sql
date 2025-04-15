@@ -14,29 +14,29 @@ CREATE TABLE submissions (
 	updated_on DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
 	member_id INTEGER NOT NULL,
-	species_type TEXT NOT NULL,
-	species_class TEXT NOT NULL,
-	species_common_name TEXT NOT NULL,
-	species_latin_name TEXT NOT NULL,
-	water_type TEXT NOT NULL,
+	species_type TEXT,
+	species_class TEXT,
+	species_common_name TEXT,
+	species_latin_name TEXT,
+	water_type TEXT,
 	count TEXT,
-	reproduction_date DATETIME NOT NULL,
+	reproduction_date DATETIME,
 
 	foods TEXT,
 	spawn_locations TEXT,
 	propagation_method TEXT,
 
-	tank_size TEXT NOT NULL,
-	filter_type TEXT NOT NULL,
-	water_change_volume TEXT NOT NULL,
-	water_change_frequency TEXT NOT NULL,
-	temperature TEXT NOT NULL,
-	ph TEXT NOT NULL,
+	tank_size TEXT,
+	filter_type TEXT,
+	water_change_volume TEXT,
+	water_change_frequency TEXT,
+	temperature TEXT,
+	ph TEXT,
 	gh TEXT,
 	specific_gravity TEXT,
-	substrate_type TEXT NOT NULL,
-	substrate_depth TEXT NOT NULL,
-	substrate_color TEXT NOT NULL,
+	substrate_type TEXT,
+	substrate_depth TEXT,
+	substrate_color TEXT,
 
 	light_type TEXT,
 	light_strength TEXT,
@@ -50,12 +50,12 @@ CREATE TABLE submissions (
 	submitted_on DATETIME DEFAULT NULL,
 	approved_on DATETIME DEFAULT NULL,
 	approved_by INTEGER DEFAULT NULL,
-	points INTEGER DEFAULT NULL
+	points INTEGER DEFAULT NULL,
 
 	article_points INTEGER DEFAULT NULL,
 	first_time_species BOOLEAN DEFAULT NULL,
 	flowered BOOLEAN DEFAULT NULL,
-	sexual_reproduction BOOLEAN DEFAULT NULL,
+	sexual_reproduction BOOLEAN DEFAULT NULL
 );
 
 CREATE INDEX idx_member_id ON submissions (member_id);

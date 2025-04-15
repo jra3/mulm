@@ -25,15 +25,7 @@ export function getClassOptions(speciesType: string) {
 const waterTypeEnum = z.enum(["Fresh", "Brackish", "Salt"]);
 const speciesTypeEnum = z.enum(["Fish", "Invert", "Plant", "Coral"]);
 
-export const bapFormHeader = z.object({
-	member_name: z.string().nonempty({ message: "Required" }),
-	member_email: z.string().email("Valid address required"),
-	species_class: z.string().nonempty({ message: "Required" }),
-	species_latin_name: z.string().nonempty({ message: "Required" }),
-	draft: z.string().optional(),
-});
-
-export const bapSchema = bapFormHeader.merge(z.object({
+export const bapFields = z.object({
 	member_name: z.string().nonempty({ message: "Required" }),
 	member_email: z.string().email("Valid address required"),
 	water_type: waterTypeEnum,
@@ -50,7 +42,11 @@ export const bapSchema = bapFormHeader.merge(z.object({
 			}
 			return true;
 		}, { message: "Required" }),
+
+	species_class: z.string().nonempty({ message: "Required" }),
+	species_latin_name: z.string().nonempty({ message: "Required" }),
 	species_common_name: z.string().nonempty({ message: "Required" }),
+
 	count: z.string().optional(),
 	foods: multiSelect.optional(),
 	spawn_locations: multiSelect.optional(),
@@ -77,10 +73,15 @@ export const bapSchema = bapFormHeader.merge(z.object({
 
 	co2: z.enum(["no", "yes"]).optional(),
 	co2_description: z.string().optional(),
+})
 
-// Fields required only for fish / inverts VVV
+export const bapDraftForm = bapFields.pick({
+	member_name: true,
+	member_email: true,
+	species_common_name: true,
+})
 
-})).refine(
+export const bapForm = bapFields.refine(
 	(data) => !isLivestock(data.species_type) || Boolean(data.count),
 	{ message: "Requied", path: ["count"], }
 ).refine(
@@ -175,4 +176,4 @@ export const speciesTypesAndClasses: Record<string, string[]> = {
 export const speciesTypes = speciesTypeEnum.options;
 export const waterTypes = waterTypeEnum.options;
 
-export type FormValues = z.infer<typeof bapSchema>;
+export type FormValues = Partial<z.infer<typeof bapFields>>;

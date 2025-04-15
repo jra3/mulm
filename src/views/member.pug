@@ -8,24 +8,25 @@ mixin submissionTable(submissions)
 
 		thead
 			tr
-				th(class=heading) Submitted On
 				th(class=heading) Class
 				th(class=heading) Common Name
 				th(class=heading) Latin Name
+				th(class=heading) Submitted On
 				th(class=heading) Species Points
 				th(class=heading) Total Points
 
 		tbody
 			each sub in submissions
 				tr
-					- const dateString = new Date(sub.submitted_on).toLocaleDateString();
-					td(class=stringCell)
-						a.link(href=`/sub/${sub.id}`)= dateString
 					td(class=stringCell)= sub.species_class
-					td(class=stringCell)= sub.species_common_name
-					td(class=stringCell)= sub.species_latin_name
-					td(class=stringCell)= sub.points || "UAPPROVED"
-					td(class=stringCell)= sub.total_points || "UAPPROVED"
+					td(class=stringCell)
+						a.link(href=`/sub/${sub.id}`)= sub.species_common_name
+					td(class=stringCell)
+						a.link(href=`/sub/${sub.id}`)= sub.species_latin_name
+					- const dateString = sub.submitted_on && new Date(sub.submitted_on).toLocaleDateString();
+					td(class=stringCell)= dateString
+					td(class=stringCell)= sub.points || "Unapproved"
+					td(class=stringCell)= sub.total_points || "Unapproved"
 
 doctype html
 html
