@@ -145,12 +145,12 @@ export async function createSubmission(ctx: MulmContext) {
 	}
 
 	if (form.member_email != viewer.member_email || form.member_name != viewer.member_name) {
+		// Admins can supply any member
 		if (!viewer.is_admin) {
 			ctx.status = 403;
 			ctx.body = "User cannot submit for this member";
 			return;
 		}
-		// Admins can supply any member
 	}
 
 	let member = getMemberByEmail(form.member_email!);
@@ -179,7 +179,10 @@ export async function createSubmission(ctx: MulmContext) {
 		return;
 	}
 
-	onSubmissionSend(sub, member)
+	if (!draft) {
+		onSubmissionSend(sub, member);
+	}
+
 	await ctx.render('submission/success', {
 		title: "Submission Complete",
 		member,
@@ -228,8 +231,14 @@ export async function updateSubmission(ctx: MulmContext) {
 		});
 	}
 
+	// TODO fix silly serial queries at some point
 	db.updateSubmission(submission.id, db.formToDB(submission.member_id, form, !draft));
+	const sub = db.getSubmissionById(submission.id);
 	const member = getMember(submission.member_id);
+	if (!draft && sub && member) {
+		onSubmissionSend(sub, member);
+	}
+
 	await ctx.render('submission/success', {
 		title: "Edits Saved",
 		member,
