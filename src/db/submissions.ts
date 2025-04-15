@@ -104,7 +104,7 @@ export function createSubmission(memberId: number, form: FormValues, submit: boo
 
 		const result = stmt.run(values);
 		conn.close();
-		return result.lastInsertRowid;
+		return result.lastInsertRowid as number;
 	} catch (err) {
 		console.error(err);
 		throw new Error("Failed to add submission");

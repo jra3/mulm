@@ -2,6 +2,7 @@ import * as db from "../db/submissions";
 import { MulmContext } from "../sessions";
 import { approvalSchema } from "../forms/approval";
 import { getMember, MemberRecord } from "../db/members";
+import { onSubmissionApprove } from "../notifications";
 
 function validateSubmission(ctx: MulmContext) {
 	const subId = parseInt(ctx.params.subId);
@@ -133,5 +134,13 @@ export async function adminApproveSubmission(ctx: MulmContext) {
 	}
 
 	db.approveSubmission(viewer.member_id, id, updates);
+
+	const submission = db.getSubmissionById(id)!;
+	const member = getMember(submission.member_id)!;
+	console.log(member, submission);
+	if (member) {
+		// member should always exist...
+		onSubmissionApprove(submission, member);
+	}
 	ctx.set('HX-Redirect', '/admin/queue');
 }

@@ -1,0 +1,9 @@
+p= `Hi ${member.display_name}`
+p
+	| Thank you for&nbsp;
+	a(href=`https://${domain}/sub/${submission.id}`) your submission.
+	|  Please work with the BAP team to verify your submission. Typically this is done by bringing specimens to a meeting to have them witnessed`
+
+ul
+	li= `Common Name: ${submission.species_common_name}`
+	li= `Scientific Name: ${submission.species_latin_name}`

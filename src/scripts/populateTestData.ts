@@ -38,7 +38,7 @@ result.data.map(data => {
 		const parsed = bapSchema.parse({ ...data, member_name: "Test", member_email: "test@example.com" });
 		const sub = createSubmission(data.member_id, parsed, true);
 		if (data.points) {
-			approveSubmission(sub as number, data.points, 1);
+			//approveSubmission(sub as number, data.points, 1);
 			assureSpecies(data.species_latin_name, data.species_common_name, sub as number);
 		}
 	} catch {

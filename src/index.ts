@@ -4,7 +4,7 @@ import views from 'koa-views';
 import serve from 'koa-static';
 import path from 'path';
 import bodyParser from 'koa-bodyparser';
-import { createSubmission, getApprovedSubmissions, getApprovedSubmissionsInDateRange, getOutstandingSubmissions, getOutstandingSubmissionsCounts, getSubmissionsByMember } from "./db/submissions";
+import { createSubmission, getApprovedSubmissions, getApprovedSubmissionsInDateRange, getOutstandingSubmissions, getOutstandingSubmissionsCounts, getSubmissionById, getSubmissionsByMember } from "./db/submissions";
 import { bapSchema, getBapFormTitle, foodTypes, getClassOptions, isLivestock, spawnLocations, waterTypes, speciesTypes } from "./forms/submission";
 import { createMember, getGoogleAccount, getMember, getMemberByEmail, getMemberWithAwards, getMembersList, Member, createGoogleAccount, getRoster, updateMember } from "./db/members";
 import { levelRules, minYear, programs } from "./programs";
@@ -14,6 +14,7 @@ import config from './config.json';
 import { createUserSession, destroyUserSession, MulmContext, sessionMiddleware } from "./sessions";
 import { updateSubmission, viewSubmission, deleteSubmission, adminApproveSubmission } from "./routes/submissions";
 import { memberSchema } from "./forms/member";
+import { onSubmissionSend } from "./notifications";
 
 const app = new Koa();
 
@@ -443,13 +444,14 @@ router.post('/sub', async (ctx: MulmContext) => {
 		// Admins can supply any member
 	}
 
-	const member = getMemberByEmail(form.member_email);
+	let member = getMemberByEmail(form.member_email);
 	let memberId: number;
 
 	if (!member) {
 		if (viewer.is_admin) {
 			// create a placeholder member
 			memberId = createMember(form.member_email, form.member_name);
+			member = getMember(memberId)!;
 		} else {
 			// should be impossible to get here
 			ctx.status = 403;
@@ -461,6 +463,15 @@ router.post('/sub', async (ctx: MulmContext) => {
 	}
 
 	const subId = createSubmission(memberId, form, true);
+	const sub = getSubmissionById(subId);
+
+	if (!sub) {
+		ctx.status = 500;
+		ctx.body = "Failed to create submission";
+		return;
+	}
+
+	onSubmissionSend(sub, member)
 
 	ctx.body = "Submitted " + String(subId);
 	await ctx.render('submission/success', {

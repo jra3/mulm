@@ -115,6 +115,9 @@ export const foodTypes = [
 ];
 
 export const spawnLocations = [
+	"Brooder",
+	"Livebearer",
+	"Bubblenest",
 	"Rock",
 	"Log",
 	"Cave",

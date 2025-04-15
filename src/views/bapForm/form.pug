@@ -98,7 +98,7 @@ form#bapForm(
 
 					+bapMultiSelectInput("Spawn Locations", "spawn_locations", "spawns")
 						each loc in spawnLocations
-							- const selected = form.spawnLocations && form.spawnLocations.includes(loc);
+							- const selected = form.spawn_locations && form.spawn_locations.includes(loc);
 							option(value=loc selected=selected)= loc
 
 				else

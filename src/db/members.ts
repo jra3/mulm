@@ -4,6 +4,7 @@ import { getWriteDBConnecton, query } from "./conn";
 export type MemberRecord = {
 	id: number;
 	display_name: string;
+	contact_email: string;
 	is_admin: number
 	fish_level?: string;
 	plant_level?: string;
