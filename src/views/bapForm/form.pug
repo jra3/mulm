@@ -86,7 +86,8 @@ mixin CRUDForm()
 
 				+bapSimpleSelectInput("Species Class", "species_class")
 					each option in classOptions
-						option(value=option.value)= option.text
+						- const selected = option.value == form.species_class;
+						option(value=option.value selected=selected)= option.text
 				- const dateLabel = isLivestock ? "Date Spawned" : "Date Propagated";
 				+bapTextInput(dateLabel, "reproduction_date", "", "date")
 
