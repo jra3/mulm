@@ -25,7 +25,7 @@ import {
 } from "./forms/submission";
 
 import { levelRules, minYear, programs } from "./programs";
-import { createUserSession, MulmRequest, sessionMiddleware } from "./sessions";
+import { MulmRequest, sessionMiddleware } from "./sessions";
 
 import { memberSchema } from "./forms/member";
 import {
@@ -35,14 +35,10 @@ import {
 	getMember,
 	updateMember,
 	getMemberWithAwards,
-	getGoogleAccount,
-	createGoogleAccount,
-	createMember,
-	getMemberByEmail,
 	getMemberPassword,
 	createOrUpdatePassword,
 } from "./db/members";
-import { getGoogleOAuthURL, getGoogleUser, translateGoogleOAuthCode } from "./oauth";
+import { getGoogleOAuthURL } from "./oauth";
 import {
 	adminApproveSubmission,
 	createSubmission,
@@ -54,7 +50,6 @@ import {
 import {
 	updateSchema,
 } from "./forms/login";
-import { Response as ExResponse } from "express-serve-static-core";
 import { checkPassword, makePasswordEntry } from "./auth";
 
 const app = express();
@@ -72,12 +67,40 @@ app.use(sessionMiddleware);
 
 const router = express.Router();
 
+// Password Auth ///////////////////////////////////////////
 router.post("/signup", auth.signup);
 router.post("/login", auth.passwordLogin);
 router.get("/logout", auth.logout);
 router.get("/forgot-password", auth.validateForgotPassword);
 router.post("/forgot-password", auth.sendForgotPassword);
 router.post("/reset-password", auth.resetPassword);
+
+router.get("/dialog/signin", async (req, res) => {
+	res.render("account/signin", {
+		viewer: {},
+		errors: new Map(),
+		googleURL: await getGoogleOAuthURL(),
+	});
+});
+
+router.get("/dialog/signup", (req, res) => {
+	res.render("account/signup", {
+		viewer: {},
+		errors: new Map(),
+	});
+});
+
+router.get("/dialog/forgot-password", (req, res) => {
+	res.render("account/forgotPassword", {
+		errors: new Map(),
+	});
+});
+
+// OAuth ///////////////////////////////////////////////////
+
+router.get("/oauth/google", auth.googleOAuth);
+
+// App Stuff ///////////////////////////////////////////////
 
 router.patch("/account-settings", async (req: MulmRequest, res) => {
 	const { viewer } = req;
@@ -137,16 +160,6 @@ router.patch("/account-settings", async (req: MulmRequest, res) => {
 });
 
 // Regular Views ///////////////////////////////////////////////////
-
-export async function sendFetchResponse(
-	fetchResponse: Response,
-	res: ExResponse<never, Record<string, never>, number>,
-) {
-	fetchResponse.headers.forEach((value, name) => {
-		res.setHeader(name, value);
-	});
-	res.status(fetchResponse.status);
-}
 
 router.get("/", async (req: MulmRequest, res) => {
 	console.log(req.cookies);
@@ -217,14 +230,6 @@ router.get("/account", async (req: MulmRequest, res) => {
 		title: "Account Settings",
 		viewer,
 		googleURL: await getGoogleOAuthURL(),
-		errors: new Map(),
-	});
-});
-
-router.get("/reset-password", (req, res) => {
-	const { token } = req.query;
-	res.render("account/resetPassword", {
-		token,
 		errors: new Map(),
 	});
 });
@@ -376,28 +381,6 @@ router.get("/lifetime{/:program}", async (req: MulmRequest, res) => {
 	});
 });
 
-// Dialogs ////////////////////////////////////////////////////
-
-router.get("/dialog/signin", async (req, res) => {
-	res.render("account/signin", {
-		viewer: {},
-		errors: new Map(),
-		googleURL: await getGoogleOAuthURL(),
-	});
-});
-
-router.get("/dialog/signup", (req, res) => {
-	res.render("account/signup", {
-		viewer: {},
-		errors: new Map(),
-	});
-});
-
-router.get("/dialog/forgot-password", (req, res) => {
-	res.render("account/forgotPassword", {
-		errors: new Map(),
-	});
-});
 
 // Admin Views /////////////////////////////////////////////////////
 
@@ -560,39 +543,7 @@ router.post("/sub", createSubmission);
 router.patch("/sub/:subId", updateSubmission);
 router.delete("/sub/:subId", deleteSubmission);
 
-// OAuth ////////////////////////////////////////////////////
 
-router.get("/oauth/google", async (req, res) => {
-	const { code } = req.query;
-	const resp = await translateGoogleOAuthCode(String(code));
-	const payload = await resp.json();
-	if (!("access_token" in payload)) {
-		res.status(401).send("Login Failed!");
-		return;
-	}
-	const token = String(payload.access_token);
-	const googleUser = await getGoogleUser(token);
-	const record = getGoogleAccount(googleUser.sub);
-
-	if (!record) {
-		const member = getMemberByEmail(googleUser.email);
-		if (member) {
-			createGoogleAccount(member.id, googleUser.sub);
-			createUserSession(req, res, member.id);
-		} else {
-			const memberId = await createMember(googleUser.email, googleUser.name);
-			createUserSession(req, res, memberId);
-		}
-	} else {
-		const member = getMember(record.member_id)
-		if (!member) {
-			res.status(500).send("Problem with account!");
-			return;
-		}
-		createUserSession(req, res, member.id as number);
-	}
-	res.redirect("/");
-});
 app.use(router);
 
 const PORT = process.env.PORT || 4200;

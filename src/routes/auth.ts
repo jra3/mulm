@@ -1,9 +1,10 @@
 import { AuthCode, checkPassword, generateRandomCode, makePasswordEntry } from "@/auth";
 import { createAuthCode, getAuthCode } from "@/db/auth";
-import { createMember, createOrUpdatePassword, getMember, getMemberByEmail, getMemberPassword } from "@/db/members";
+import { createGoogleAccount, createMember, createOrUpdatePassword, getGoogleAccount, getMember, getMemberByEmail, getMemberPassword } from "@/db/members";
 import { forgotSchema, loginSchema, resetSchema, signupSchema } from "@/forms/login";
 import { validateFormResult } from "@/forms/utils";
 import { sendResetEmail } from "@/notifications";
+import { getGoogleUser, translateGoogleOAuthCode } from "@/oauth";
 import { createUserSession, destroyUserSession, MulmRequest } from "@/sessions";
 import { Response } from "express";
 
@@ -171,4 +172,54 @@ export const resetPassword = async (req: MulmRequest, res: Response) => {
 
 	renderPage();
 }
+
+// OAuth
+
+export const googleOAuth = async (req: MulmRequest, res: Response) => {
+	const { code } = req.query;
+	const resp = await translateGoogleOAuthCode(String(code));
+	const payload = await resp.json();
+	if (!("access_token" in payload)) {
+		res.status(401).send("Login Failed!");
+		return;
+	}
+	const token = String(payload.access_token);
+	const googleUser = await getGoogleUser(token);
+	const record = getGoogleAccount(googleUser.sub);
+
+	let memberId: number | undefined = undefined;
+
+	if (!record) {
+
+		// We've never seen this google sub before!
+		const { viewer } = req;
+		if (viewer) {
+			// if we are already logged in, we should link to the current member
+			memberId = viewer.id;
+		} else {
+			// We are not logged in, check if we can link to an existing member
+			const member = getMemberByEmail(googleUser.email);
+			if (member) {
+				// We found a member using the same email as this google account. link it.
+				memberId = member.id;
+			} else {
+				// We need to create a new member and a new google account
+				memberId = await createMember(googleUser.email, googleUser.name);
+			}
+		}
+
+		createGoogleAccount(memberId, googleUser.sub);
+	} else {
+		memberId = record.member_id;
+	}
+
+	if (memberId == undefined) {
+		res.status(401).send();
+		return;
+	}
+
+	createUserSession(req, res, memberId);
+	res.redirect("/");
+};
+
 
