@@ -1,6 +1,10 @@
+.env
+
 node_modules/
 dist/
 
 src/config.json
 database.sqlite
 public/index.css
+
+.\#*

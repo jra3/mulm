@@ -1,55 +1,374 @@
-import Koa from 'koa';
-import Router from 'koa-router';
-import views from 'koa-views';
-import serve from 'koa-static';
-import path from 'path';
-import bodyParser from 'koa-bodyparser';
-import { getApprovedSubmissions, getApprovedSubmissionsInDateRange, getOutstandingSubmissions, getOutstandingSubmissionsCounts, getSubmissionsByMember } from "./db/submissions";
-import { getBapFormTitle, foodTypes, getClassOptions, isLivestock, spawnLocations, waterTypes, speciesTypes } from "./forms/submission";
-import { createMember, getGoogleAccount, getMember, getMemberByEmail, getMemberWithAwards, getMembersList, Member, createGoogleAccount, getRoster, updateMember } from "./db/members";
+import moduleAlias from "module-alias";
+import path from "path";
+moduleAlias.addAlias("@", path.join(__dirname));
+
+import config from "@/config.json";
+import express from "express";
+import cookieParser from "cookie-parser";
+
+import {
+	getApprovedSubmissions,
+	getApprovedSubmissionsInDateRange,
+	getOutstandingSubmissions,
+	getOutstandingSubmissionsCounts,
+	getSubmissionsByMember,
+} from "./db/submissions";
+import {
+	foodTypes,
+	getBapFormTitle,
+	getClassOptions,
+	isLivestock,
+	spawnLocations,
+	speciesTypes,
+	waterTypes,
+} from "./forms/submission";
+
 import { levelRules, minYear, programs } from "./programs";
-import { getGoogleOAuthURL, getGoogleUser, translateGoogleOAuthCode } from "./oauth";
+import { createUserSession, MulmRequest, sessionMiddleware } from "./sessions";
 
-import config from './config.json';
-import { createUserSession, destroyUserSession, MulmContext, sessionMiddleware } from "./sessions";
-import { viewSubmission, deleteSubmission, adminApproveSubmission, createSubmission, updateSubmission } from "./routes/submissions";
 import { memberSchema } from "./forms/member";
+import {
+	Member,
+	getMembersList,
+	getRoster,
+	getMember,
+	updateMember,
+	getMemberWithAwards,
+	getGoogleAccount,
+	createGoogleAccount,
+	createMember,
+	getMemberByEmail,
+} from "./db/members";
+import { getGoogleOAuthURL, getGoogleUser, translateGoogleOAuthCode } from "./oauth";
+import {
+	adminApproveSubmission,
+	createSubmission,
+	deleteSubmission,
+	updateSubmission,
+	viewSubmission,
+} from "./routes/submissions";
 
-const app = new Koa();
+import {
+	forgotSchema,
+	loginSchema,
+	resetSchema,
+	signupSchema,
+	updateSchema,
+} from "./forms/login";
+import { Response as ExResponse } from "express-serve-static-core";
 
-app.use(bodyParser());
-app.use(serve(path.join(__dirname, '../public')));
-app.use(
-	views(path.join(__dirname, 'views'), {
-		extension: 'pug',
-	})
-);
+const app = express();
 
-app.use(sessionMiddleware)
+app.set("views", path.join(__dirname, "views"));
+app.set("view engine", "pug");
 
-const router = new Router();
+app.use(express.static(path.join(__dirname, "../public")));
 
-router.get("/logout", async (ctx) => {
-	destroyUserSession(ctx);
-	ctx.redirect("/");
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+
+app.use(cookieParser());
+app.use(sessionMiddleware);
+
+const router = express.Router();
+
+// Login
+
+router.post("/signup", async (req, res) => {
+	const parsed = signupSchema.safeParse(req.body);
+	const errors = new Map<string, string>();
+
+/* 	if (!parsed.success) {
+		parsed.error.issues.forEach((issue) => {
+			errors.set(String(issue.path[0]), issue.message);
+		});
+
+		res.render("account/signup", {
+			viewer: {
+				display_name: req.body.display_name,
+				contact_email: req.body.email,
+			},
+			errors,
+		});
+		return;
+	}
+	const body = parsed.data;
+
+	const apiResponse = await auth.api.signUpEmail({
+		asResponse: true,
+		headers: fromNodeHeaders(req.headers),
+		body: {
+			name: body.display_name,
+			email: body.email,
+			password: body.password,
+		},
+	});
+
+	apiResponse.headers.forEach((value, name) => {
+		res.setHeader(name, value);
+	});
+	const data = await apiResponse.json();
+
+	if (data.message != null) {
+		errors.set("form", data.message);
+		res.render("account/signup", {
+			viewer: {
+				display_name: req.body.display_name,
+				contact_email: req.body.email,
+			},
+			errors,
+		});
+		return;
+	}
+ */
+
+	res.set("HX-redirect", "/").send();
 });
 
-router.post("/login", async (ctx) => {
-	console.log(ctx.request.body);
-	ctx.redirect("/");
+router.post("/login", async (req, res) => {
+	const parsed = loginSchema.safeParse(req.body);
+	if (!parsed.success) {
+		res.status(422).send("Invalid login");
+		return;
+	}
+
+/* 	// This is the worst part about using better-auth. It doesn't easily let you
+	// manage the cookies yourself??
+	const apiResponse = await auth.api.signInEmail({
+		asResponse: true,
+		headers: fromNodeHeaders(req.headers),
+		body: parsed.data,
+	});
+
+	////////////////////////////
+	apiResponse.headers.forEach((value, name) => {
+		res.setHeader(name, value);
+	});
+	const data = await apiResponse.json();
+	////////////////////////////
+
+	const { code, message } = data;
+	if (code !== undefined) {
+		res.send(message);
+	} else {
+		const url = data.redirect ? data.url : "/";
+		res.set("HX-Redirect", url).send();
+	}
+ */
+
+});
+
+router.get("/logout", async (req, res) => {
+/* 	// This is the worst part about using better-auth. It doesn't easily let you
+	// manage the cookies yourself??
+	const apiResponse = await auth.api.signOut({
+		asResponse: true,
+		headers: fromNodeHeaders(req.headers),
+	});
+
+	apiResponse.headers.forEach((value, name) => {
+		res.setHeader(name, value);
+	});
+ */
+	res.redirect("/");
+});
+
+router.post("/forgot-password", async (req, res) => {
+	const errors = new Map<string, string>();
+	const parsed = forgotSchema.safeParse(req.body);
+/* 	if (!parsed.success) {
+		parsed.error.issues.forEach((issue) => {
+			errors.set(String(issue.path[0]), issue.message);
+		});
+
+		res.render("account/forgotPassword", {
+			...req.body,
+			errors,
+		});
+		return;
+	}
+
+	await auth.api.forgetPassword({
+		headers: fromNodeHeaders(req.headers),
+		body: {
+			email: req.body.email,
+			redirectTo: "/reset-password",
+		},
+	});
+ */
+	res.render("account/forgotPassword", {
+		...req.body,
+		errors: new Map([["form", "Check your email for a reset link."]]),
+	});
+});
+
+router.post("/reset-password", async (req, res) => {
+/* 	const errors = new Map<string, string>();
+	const parsed = resetSchema.safeParse(req.body);
+	if (!parsed.success) {
+		parsed.error.issues.forEach((issue) => {
+			errors.set(String(issue.path[0]), issue.message);
+		});
+
+		res.render("account/resetPassword", {
+			token: req.body.token,
+			errors,
+		});
+		return;
+	}
+
+	try {
+		await auth.api.resetPassword({
+			headers: fromNodeHeaders(req.headers),
+			body: {
+				token: parsed.data.token,
+				newPassword: parsed.data.password,
+			},
+		});
+	} catch (e: any) {
+		console.log("e", e);
+		if (e.body?.message) {
+			errors.set("form", e.body.message);
+		} else {
+			errors.set("form", "Failed to reset password");
+		}
+
+		console.log("errors", errors);
+		res.render("account/resetPassword", {
+			token: req.body.token,
+			errors,
+		});
+		return;
+	}
+
+ */
+	res.set("HX-Redirect", "/").send();
+});
+
+router.patch("/account-settings", async (req: MulmRequest, res) => {
+	const { viewer } = req;
+	if (!viewer) {
+		res.status(401).send();
+		return;
+	}
+/*
+	const headers = fromNodeHeaders(req.headers);
+
+	const errors = new Map<string, string>();
+	const parsed = updateSchema.safeParse(req.body);
+	if (!parsed.success) {
+		parsed.error.issues.forEach((issue) => {
+			errors.set(String(issue.path[0]), issue.message);
+		});
+
+		res.render("account/settings", {
+			viewer,
+			googleURL: await getGoogleLinkURL(req),
+			errors,
+		});
+		return;
+	}
+
+	const form = parsed.data;
+	const updateEmail = async () => {
+		if (form.email === viewer.contact_email) {
+			return;
+		}
+
+		try {
+			await auth.api.changeEmail({
+				asResponse: true,
+				headers,
+				body: {
+					newEmail: form.email,
+				},
+			});
+		} catch (e: any) {
+			errors.set("email", e.body?.message);
+		}
+	};
+
+	const updatePassword = async () => {
+		if (!form.password) {
+			return;
+		}
+
+		try {
+			if (form.current_password) {
+				await auth.api.changePassword({
+					headers,
+					body: {
+						currentPassword: form.password,
+						newPassword: form.password,
+						revokeOtherSessions: true,
+					},
+				});
+			} else {
+				await auth.api.setPassword({
+					headers,
+					body: {
+						newPassword: form.password,
+					},
+				});
+			}
+		} catch (e: any) {
+			errors.set("password", e.body?.message);
+		}
+	};
+
+	const updateDisplayName = async () => {
+		if (viewer.display_name === form.display_name) {
+			return;
+		}
+
+		try {
+			await auth.api.updateUser({
+				asResponse: true,
+				headers,
+				body: {
+					name: form.display_name,
+				},
+			});
+		} catch (e: any) {
+			errors.set("display_name", e.body?.message);
+		}
+	};
+
+	await Promise.all([updatePassword(), updateEmail(), updateDisplayName()]);
+
+	res.render("account/settings", {
+		viewer: {
+			display_name: form.display_name,
+			contact_email: form.email,
+			googleURL: await getGoogleLinkURL(req),
+		},
+		errors,
+	});
+ */
 });
 
 // Regular Views ///////////////////////////////////////////////////
 
-router.get("/", async (ctx: MulmContext) => {
-	const viewer = ctx.loggedInUser;
+export async function sendFetchResponse(
+	fetchResponse: Response,
+	res: ExResponse<never, Record<string, never>, number>,
+) {
+	fetchResponse.headers.forEach((value, name) => {
+		res.setHeader(name, value);
+	});
+	res.status(fetchResponse.status);
+}
+
+router.get("/", async (req: MulmRequest, res) => {
+	console.log(req.cookies);
+	const { viewer } = req;
 	const isLoggedIn = Boolean(viewer);
 	const isAdmin = viewer?.is_admin;
 
 	const args = {
-		title: 'BAS BAP/HAP Portal',
-		message: 'Welcome to BAS!',
-		googleURL: getGoogleOAuthURL(),
+		title: "BAS BAP/HAP Portal",
+		message: "Welcome to BAS!",
+		googleURL: await getGoogleOAuthURL(),
 		isLoggedIn,
 		isAdmin,
 	};
@@ -58,7 +377,6 @@ router.get("/", async (ctx: MulmContext) => {
 	let approvalsCount = 0;
 	if (isAdmin) {
 		const counts = getOutstandingSubmissionsCounts();
-
 		Object.entries(counts).forEach(([program, count]) => {
 			if (count > 0) {
 				approvalsProgram = program;
@@ -67,28 +385,25 @@ router.get("/", async (ctx: MulmContext) => {
 		});
 	}
 
-	await ctx.render('index', {
+	res.render("index", {
 		...args,
 		approvalsProgram,
 		approvalsCount,
-		isLoggedIn: Boolean(viewer),
 	});
 });
 
 // Entrypoint for BAP/HAP submission
-router.get('/submit', async (ctx: MulmContext) => {
-	const viewer = ctx.loggedInUser;
+router.get("/submit", (req: MulmRequest, res) => {
+	const { viewer } = req;
 	const form = {
 		// auto-fill member name and email if logged in
-		member_name: viewer?.member_name,
-		member_email: viewer?.member_email,
-		// TODO members should only be able to submit for themselves
-		// TODO admins can submit for others
-		...ctx.query,
-	}
+		member_name: viewer?.display_name,
+		member_email: viewer?.contact_email,
+		...req.query,
+	};
 
-	const selectedType = String(ctx.query.species_type ?? "Fish");
-	await ctx.render('submit', {
+	const selectedType = String(req.query.species_type ?? "Fish");
+	res.render("submit", {
 		title: getBapFormTitle(selectedType),
 		form,
 		errors: new Map(),
@@ -102,43 +417,75 @@ router.get('/submit', async (ctx: MulmContext) => {
 	});
 });
 
-// Add a line to the fertilizer list
-router.get('/submit/addSupplement', async (ctx) => {
-	await ctx.render('bapForm/supplementSingleLine');
-});
-
-router.get('/annual', async (ctx) => {
-	ctx.set('HX-Redirect', `/annual/${ctx.query.year}`);
-})
-router.get('/annual/:year{/:program}', async (ctx: MulmContext) => {
-	const program = String(ctx.params.program ?? "fish");
-	if (programs.indexOf(program) === -1) {
-		ctx.status = 404;
-		ctx.body = "Invalid program";
+router.get("/account", async (req: MulmRequest, res) => {
+	const { viewer } = req;
+	if (!viewer) {
+		res.status(401).send();
 		return;
 	}
 
-	const year = parseInt(ctx.params.year);
+	res.render("account/page", {
+		title: "Account Settings",
+		viewer,
+		googleURL: await getGoogleOAuthURL(),
+		errors: new Map(),
+	});
+});
+
+router.get("/reset-password", (req, res) => {
+	const { token } = req.query;
+	res.render("account/resetPassword", {
+		token,
+		errors: new Map(),
+	});
+});
+
+// Add a line to the fertilizer list
+router.get("/submit/addSupplement", (req, res) => {
+	res.render("bapForm/supplementSingleLine");
+});
+
+router.get("/annual", async (req, res) => {
+	const { year } = req.query;
+	res.set("HX-Redirect", `/annual/${String(year)}`).send();
+});
+
+router.get("/annual/:stringYear{/:program}", async (req: MulmRequest, res) => {
+	const { stringYear, program = "fish" } = req.params;
+	const year = parseInt(stringYear);
+	if (programs.indexOf(program) === -1) {
+		res.status(404).send("Invalid program");
+		return;
+	}
+
 	if (isNaN(year) || year < minYear) {
-		ctx.status = 422;
-		ctx.body = "Invalid year";
+		res.status(422).send("Invalid year");
 		return;
 	}
 
 	const startDate = new Date(year - 1, 7, 1);
 	const endDate = new Date(year, 6, 31);
 
-	const submissions = getApprovedSubmissionsInDateRange(startDate, endDate, program);
-	const names: Record<number, string> = {};
+	const submissions = getApprovedSubmissionsInDateRange(
+		startDate,
+		endDate,
+		program,
+	);
+	const names: Record<string, string> = {};
 	// Collate approved submissions into standings
 	const standings = new Map<number, number>();
 	submissions.forEach((submission) => {
 		const currentPoints = standings.get(submission.member_id) ?? 0;
-		standings.set(submission.member_id, currentPoints + submission.total_points!);
+		standings.set(
+			submission.member_id,
+			currentPoints + submission.total_points!,
+		);
 		names[submission.member_id] = submission.member_name;
 	});
 
-	const sortedStandings = Array.from(standings.entries()).sort((a, b) => b[1] - a[1]);
+	const sortedStandings = Array.from(standings.entries()).sort(
+		(a, b) => b[1] - a[1],
+	);
 
 	const title = (() => {
 		switch (program) {
@@ -152,7 +499,7 @@ router.get('/annual/:year{/:program}', async (ctx: MulmContext) => {
 		}
 	})();
 
-	await ctx.render('standings', {
+	res.render("standings", {
 		title,
 		standings: sortedStandings,
 		names,
@@ -160,57 +507,65 @@ router.get('/annual/:year{/:program}', async (ctx: MulmContext) => {
 		maxYear: 2025,
 		minYear: 2015,
 		year,
-		isLoggedIn: Boolean(ctx.loggedInUser),
+		isLoggedIn: Boolean(req.viewer),
 	});
 });
 
-router.get('/lifetime{/:program}', async (ctx: MulmContext) => {
-	const program = String(ctx.params.program ?? "fish");
+router.get("/lifetime{/:program}", async (req: MulmRequest, res) => {
+	const { program = "fish" } = req.params;
 	if (programs.indexOf(program) === -1) {
-		ctx.status = 404;
-		ctx.body = "Invalid program";
+		res.status(404).send("Invalid program");
 		return;
 	}
 
 	const levels: Record<string, Member[]> = {};
-
 	const allSubmissions = getApprovedSubmissions(program);
 	const totals = new Map<number, number>();
 	for (const record of allSubmissions) {
 		totals.set(
 			record.member_id,
-			(totals.get(record.member_id) || 0) + record.total_points);
+			(totals.get(record.member_id) || 0) + record.total_points,
+		);
 	}
 
 	const members = getMembersList();
 	for (const member of members) {
-		const memberLevel = (() => {
-			switch (program) {
-				default:
-				case "fish":
-					return member.fish_level
-				case "plant":
-					return member.plant_level
-				case "coral":
-					return member.coral_level
-			}
-		})() ?? "Participant";
+		const memberLevel =
+			(() => {
+				switch (program) {
+					default:
+					case "fish":
+						return member.fish_level;
+					case "plant":
+						return member.plant_level;
+					case "coral":
+						return member.coral_level;
+				}
+			})() ?? "Participant";
 
 		if (!levels[memberLevel]) {
 			levels[memberLevel] = [];
 		}
-		levels[memberLevel]!.push({...member, points: totals.get(member.id) ?? 0});
+		levels[memberLevel]!.push({
+			...member,
+			points: totals.get(member.id) ?? 0,
+		});
 	}
 
-	const levelsOrder = levelRules[program].map(rule => rule[0]).reverse()
+	const levelsOrder = levelRules[program].map((rule) => rule[0]).reverse();
 	const sortMembers = (a: Member, b: Member) => {
 		const aPoints = a.points ?? 0;
 		const bPoints = b.points ?? 0;
 		return bPoints - aPoints;
-	}
+	};
 
 	const finalLevels = levelsOrder
-		.map(name => [name, (levels[name] ?? []).sort(sortMembers).filter(member => member.points! > 0)])
+		.map((name) => [
+			name,
+			(levels[name] ?? [])
+				.sort(sortMembers)
+				.filter((member) => member.points! > 0),
+		])
 		.filter(([, members]) => members.length > 0);
 
 	const title = (() => {
@@ -225,96 +580,115 @@ router.get('/lifetime{/:program}', async (ctx: MulmContext) => {
 		}
 	})();
 
-	await ctx.render('lifetime', {
+	res.render("lifetime", {
 		title,
 		levels: finalLevels,
-		isLoggedIn: Boolean(ctx.loggedInUser),
+		isLoggedIn: Boolean(req.viewer),
+	});
+});
+
+// Dialogs ////////////////////////////////////////////////////
+
+router.get("/dialog/signin", async (req, res) => {
+	res.render("account/signin", {
+		viewer: {},
+		errors: new Map(),
+		googleURL: await getGoogleOAuthURL(),
+	});
+});
+
+router.get("/dialog/signup", (req, res) => {
+	res.render("account/signup", {
+		viewer: {},
+		errors: new Map(),
+	});
+});
+
+router.get("/dialog/forgot-password", (req, res) => {
+	res.render("account/forgotPassword", {
+		errors: new Map(),
 	});
 });
 
 // Admin Views /////////////////////////////////////////////////////
 
-router.get('/admin/members', async (ctx: MulmContext) => {
-	if (!ctx.loggedInUser?.is_admin) {
-		ctx.status = 403;
-		ctx.body = "Access denied";
+router.get("/admin/members", async (req: MulmRequest, res) => {
+	const { viewer } = req;
+	if (!viewer?.is_admin) {
+		res.status(403).send("Access denied");
 		return;
 	}
 
 	const members = getRoster();
 
-	await ctx.render('admin/members', {
-		title: 'Member Roster',
+	res.render("admin/members", {
+		title: "Member Roster",
 		members,
 	});
 });
 
-router.get('/admin/members/edit/:memberId', async (ctx: MulmContext) => {
-
-	if (!ctx.loggedInUser?.is_admin) {
-		ctx.status = 403;
-		ctx.body = "Access denied";
+router.get("/admin/members/edit/:memberId", async (req: MulmRequest, res) => {
+	const { viewer } = req;
+	if (!viewer?.is_admin) {
+		res.status(403).send("Access denied");
 		return;
 	}
 
-	const memberId = parseInt(ctx.params.memberId);
-	if (!memberId) {
-		ctx.status = 400;
-		ctx.body = "Invalid member id";
+	const fishLevels = levelRules.fish.map((level) => level[0]);
+	const plantLevels = levelRules.plant.map((level) => level[0]);
+	const coralLevels = levelRules.coral.map((level) => level[0]);
+
+	const { memberId } = req.params;
+	const id = parseInt(memberId);
+	if (isNaN(id)) {
+		res.status(422).send("Invalid member ID");
 		return;
 	}
+	const member = getMember(id);
 
-	const fishLevels = levelRules.fish.map(level => level[0]);
-	const plantLevels = levelRules.plant.map(level => level[0]);
-	const coralLevels = levelRules.coral.map(level => level[0]);
-
-	const member = getMember(memberId);
-
-	await ctx.render('admin/editMember', {
+	res.render("admin/editMember", {
 		member,
 		fishLevels,
 		plantLevels,
 		coralLevels,
 	});
-
 });
 
-router.patch('/admin/members/edit/:memberId', async (ctx: MulmContext) => {
-	if (!ctx.loggedInUser?.is_admin) {
-		ctx.status = 403;
-		ctx.body = "Access denied";
+router.patch("/admin/members/edit/:memberId", (req: MulmRequest, res) => {
+	const { viewer } = req;
+	if (!viewer?.is_admin) {
+		res.status(403).send("Access denied");
 		return;
 	}
 
-	const memberId = parseInt(ctx.params.memberId);
-	if (!memberId) {
-		ctx.status = 400;
-		ctx.body = "Invalid member id";
+	const { memberId } = req.params;
+	const id = parseInt(memberId);
+	if (isNaN(id)) {
+		res.status(422).send("Invalid member ID");
 		return;
 	}
 
-	const parsed = memberSchema.parse(ctx.request.body)
-
-	updateMember(memberId, {
+	// TODO do i have to use some better-auth call instead?
+	const parsed = memberSchema.parse(req.body);
+	updateMember(id, {
 		...parsed,
 		is_admin: parsed.is_admin !== undefined ? 1 : 0,
 	});
+	// TODO can we get the result after the update instead of querying?
+	const member = getMember(id);
 
-	const member = getMember(memberId);
-	await ctx.render('admin/singleMemberRow', { member });
+	res.render("admin/singleMemberRow", { member });
 });
 
-router.get('/admin/queue{/:program}', async (ctx: MulmContext) => {
-	if (!ctx.loggedInUser?.is_admin) {
-		ctx.status = 403;
-		ctx.body = "Access denied";
+router.get("/admin/queue{/:program}", async (req: MulmRequest, res) => {
+	const { viewer } = req;
+	if (!viewer?.is_admin) {
+		res.status(403).send("Access denied");
 		return;
 	}
-
-	const program = String(ctx.params.program ?? "fish");
+	const { program = "fish" } = req.params;
 	if (programs.indexOf(program) === -1) {
-		ctx.status = 404;
-		ctx.body = "Invalid program";
+		res.status(404).send("Invalid program");
 		return;
 	}
 
@@ -333,83 +707,78 @@ router.get('/admin/queue{/:program}', async (ctx: MulmContext) => {
 		}
 	})();
 
-	await ctx.render('admin/queue', {
-		title: 'Approval Queue',
+	res.render("admin/queue", {
+		title: "Approval Queue",
 		subtitle,
 		submissions,
 		program,
-		programCounts
+		programCounts,
 	});
-})
+});
 
-router.post('/admin/approve', adminApproveSubmission);
+router.post("/admin/approve", adminApproveSubmission);
 
 // Members /////////////////////////////////////////////////////////
 
-router.get('/me', async (ctx: MulmContext) => {
-	const viewer = ctx.loggedInUser;
+router.get("/me", async (req: MulmRequest, res) => {
+	const { viewer } = req;
 	if (!viewer) {
-		ctx.redirect('/');
+		res.redirect("/");
 		return;
 	} else {
-		ctx.redirect(`/member/${viewer.member_id}`);
+		res.redirect(`/member/${viewer.id}`);
 		return;
 	}
 });
 
-router.get('/member/:memberId', async (ctx: MulmContext) => {
-	const memberId = parseInt(ctx.params.memberId);
-	if (!memberId) {
-		ctx.status = 400;
-		ctx.body = "Invalid member id";
+router.get("/member/:memberId", async (req: MulmRequest, res) => {
+	const { viewer } = req;
+	const { memberId } = req.params;
+	const member = getMemberWithAwards(memberId);
+	if (!member) {
+		res.status(404).send("Member not found");
 		return;
 	}
 
-	const member = getMemberWithAwards(memberId);
-	if (!member) {
-		ctx.status = 404;
-		ctx.body = "Member not found";
-		return;
-	};
-
-	const viewer = ctx.loggedInUser;
-
-	const isSelf = Boolean(viewer?.member_id == member.id);
+	const isSelf = Boolean(viewer?.id == member.id);
 	const isAdmin = Boolean(viewer?.is_admin);
 
-	const submissions = getSubmissionsByMember(memberId, isSelf, isSelf || isAdmin);
+	const submissions = getSubmissionsByMember(
+		memberId,
+		isSelf,
+		isSelf || isAdmin,
+	);
 
-	const fishSubs = submissions.filter(sub => sub.species_type === "Fish" || sub.species_type === "Invert");
-	const plantSubs = submissions.filter(sub => sub.species_type === "Plant");
-	const coralSubs = submissions.filter(sub => sub.species_type === "Coral");
+	const fishSubs = submissions.filter(
+		(sub) => sub.species_type === "Fish" || sub.species_type === "Invert",
+	);
+	const plantSubs = submissions.filter((sub) => sub.species_type === "Plant");
+	const coralSubs = submissions.filter((sub) => sub.species_type === "Coral");
 
-	await ctx.render('member', {
+	res.render("member", {
 		member,
 		fishSubs,
 		plantSubs,
 		coralSubs,
 		isLoggedIn: Boolean(viewer),
-		isSelf: viewer && viewer.member_id == member.id,
+		isSelf: viewer && viewer.id == member.id,
 		isAdmin: viewer && viewer.is_admin,
 	});
-
 });
 
-router.get('/sub/:subId', viewSubmission);
-router.post('/sub', createSubmission);
-router.patch('/sub/:subId', updateSubmission);
-router.delete('/sub/:subId', deleteSubmission);
+router.get("/sub/:subId", viewSubmission);
+router.post("/sub", createSubmission);
+router.patch("/sub/:subId", updateSubmission);
+router.delete("/sub/:subId", deleteSubmission);
 
 // OAuth ////////////////////////////////////////////////////
 
-router.get("/oauth/google", async (ctx) => {
-	const qs = new URLSearchParams(ctx.request.querystring);
-	const code = qs.get("code");
-
+router.get("/oauth/google", async (req, res) => {
+	const { code } = req.query;
 	const resp = await translateGoogleOAuthCode(String(code));
 	const payload = await resp.json();
 	if (!("access_token" in payload)) {
-		ctx.body = "Login Failed!";
+		res.status(401).send("Login Failed!");
 		return;
 	}
 	const token = String(payload.access_token);
@@ -420,25 +789,23 @@ router.get("/oauth/google", async (ctx) => {
 		const member = getMemberByEmail(googleUser.email);
 		if (member) {
 			createGoogleAccount(member.id, googleUser.sub);
-			createUserSession(ctx, member.id);
+			createUserSession(req, res, member.id);
 		} else {
 			const memberId = createMember(googleUser.email, googleUser.name);
-			createUserSession(ctx, memberId);
+			createUserSession(req, res, memberId);
 		}
 	} else {
 		const member = getMember(record.member_id)
 		if (!member) {
-			ctx.body = "Problem with account!";
-			ctx.status = 500;
+			res.status(500).send("Problem with account!");
 			return;
 		}
-		createUserSession(ctx, member.id as number);
+		createUserSession(req, res, member.id as number);
 	}
-
-	ctx.redirect("/");
+	res.redirect("/");
 });
+app.use(router);
 
-app.use(router.routes()).use(router.allowedMethods());
 const PORT = process.env.PORT || 4200;
 app.listen(PORT, () => {
 	console.log(`Server running at http://localhost:${PORT}`);

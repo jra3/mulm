@@ -1,0 +1,11 @@
+include ./field.pug
+
+#signup.w-full.flex.flex-col.items-center.gap-2
+	h2(class="text-xl sm:text-2xl font-bold mb-4") Sign Up
+	form.contents(hx-post="/signup" hx-target="#signup" hx-swap="outerHTML")
+		+textInput("Member Name", "display_name", viewer.display_name)
+		+textInput("Email", "email", viewer.contact_email)
+		+passwordInput("Password", "password")
+		+passwordInput("Confirm Password", "password_confirm")
+		button.primary(type="submit") Sign Up
+	span#signupError(class="font-extrabold text-red-400")= errors.get("form")

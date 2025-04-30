@@ -1,5 +1,5 @@
-import { ApprovalFormValues } from "../forms/approval";
-import { FormValues } from "../forms/submission";
+import { ApprovalFormValues } from "@/forms/approval";
+import { FormValues } from "@/forms/submission";
 import { getWriteDBConnecton, query } from "./conn";
 
 export type Submission = {
@@ -39,7 +39,6 @@ export type Submission = {
 	approved_by: number | null;
 	points: number | null;
 	total_points?: number;
-
 };
 
 export function formToDB(memberId: number, form: FormValues, submit: boolean) {
@@ -62,10 +61,10 @@ export function formToDB(memberId: number, form: FormValues, submit: boolean) {
 
 	const arrayToJSON = (formField: unknown) => {
 		if (Array.isArray(formField)) {
-			return JSON.stringify(formField.filter(v => v !== ""));
+			return JSON.stringify(formField.filter((v) => v !== ""));
 		}
 		return undefined;
-	}
+	};
 
 	return {
 		member_id: memberId,
@@ -81,7 +80,11 @@ export function formToDB(memberId: number, form: FormValues, submit: boolean) {
 	};
 }
 
-export function createSubmission(memberId: number, form: FormValues, submit: boolean) {
+export function createSubmission(
+	memberId: number,
+	form: FormValues,
+	submit: boolean,
+) {
 	try {
 		const conn = getWriteDBConnecton();
 		const entries = formToDB(memberId, form, submit);
@@ -95,15 +98,14 @@ export function createSubmission(memberId: number, form: FormValues, submit: boo
 			}
 			fields.push(field);
 			values.push(value);
-			marks.push('?');
+			marks.push("?");
 		}
 
 		const stmt = conn.prepare(`
 			INSERT INTO submissions
-			(${fields.join(', ')})
+			(${fields.join(", ")})
 			VALUES
-			(${marks.join(', ')})`
-		);
+			(${marks.join(", ")})`);
 
 		const result = stmt.run(values);
 		conn.close();
@@ -114,13 +116,16 @@ export function createSubmission(memberId: number, form: FormValues, submit: boo
 	}
 }
 
-
-export function getSubmissionsByMember(memberId: number, includeUnsubmitted: boolean, includeUnapproved: boolean) {
+export function getSubmissionsByMember(
+	memberId: string,
+	includeUnsubmitted: boolean,
+	includeUnapproved: boolean,
+) {
 	let expr = `
 		SELECT
 			submissions.*,
 			submissions.points +
-			  IFNULL(submissions.article_points, 0) +
+				IFNULL(submissions.article_points, 0) +
 				(IFNULL(submissions.first_time_species, 0) * 5) +
 				(IFNULL(submissions.flowered, 0) * submissions.points) +
 				(IFNULL(submissions.sexual_reproduction, 0) * submissions.points)
@@ -138,16 +143,16 @@ export function getSubmissionsByMember(memberId: number, includeUnsubmitted: boo
 		expr += ` AND approved_on IS NOT NULL`;
 	}
 
-	return query<Submission>(expr,	[memberId]);
+	return query<Submission>(expr, [memberId]);
 }
 
-
 export function getSubmissionById(id: number) {
-	const result = query<Submission>(`
+	const result = query<Submission>(
+		`
 		SELECT
 			submissions.*,
 			submissions.points +
-			  IFNULL(submissions.article_points, 0) +
+				IFNULL(submissions.article_points, 0) +
 				(IFNULL(submissions.first_time_species, 0) * 5) +
 				(IFNULL(submissions.flowered, 0) * submissions.points) +
 				(IFNULL(submissions.sexual_reproduction, 0) * submissions.points)
@@ -156,15 +161,15 @@ export function getSubmissionById(id: number) {
 		FROM submissions LEFT JOIN members
 		ON submissions.member_id == members.id
 		WHERE submissions.id = ?`,
-		[id]);
+		[id],
+	);
 	return result.pop();
 }
 
-
 export function deleteSubmission(id: number) {
 	try {
-		const conn = getWriteDBConnecton()
-		const deleteRow = conn.prepare('DELETE FROM submissions WHERE id = ?');
+		const conn = getWriteDBConnecton();
+		const deleteRow = conn.prepare("DELETE FROM submissions WHERE id = ?");
 		const result = deleteRow.run(id);
 		return result;
 	} catch (err) {
@@ -173,13 +178,17 @@ export function deleteSubmission(id: number) {
 	}
 }
 
-
-export function getApprovedSubmissionsInDateRange(startDate: Date, endDate: Date, program: string) {
-	return query<Submission>(`
+export function getApprovedSubmissionsInDateRange(
+	startDate: Date,
+	endDate: Date,
+	program: string,
+) {
+	return query<Submission>(
+		`
 		SELECT
 			submissions.*,
 			submissions.points +
-			  IFNULL(submissions.article_points, 0) +
+				IFNULL(submissions.article_points, 0) +
 				(IFNULL(submissions.first_time_species, 0) * 5) +
 				(IFNULL(submissions.flowered, 0) * submissions.points) +
 				(IFNULL(submissions.sexual_reproduction, 0) * submissions.points)
@@ -190,20 +199,18 @@ export function getApprovedSubmissionsInDateRange(startDate: Date, endDate: Date
 		WHERE reproduction_date > ? AND reproduction_date < ?
 		AND approved_on IS NOT NULL AND points IS NOT NULL
 		AND program = ?
-	`, [
-		startDate.toISOString(),
-		endDate.toISOString(),
-		program
-	]);
+	`,
+		[startDate.toISOString(), endDate.toISOString(), program],
+	);
 }
 
-
 export function getOutstandingSubmissions(program: string) {
-	return query<Submission>(`
+	return query<Submission>(
+		`
 		SELECT
 			submissions.*,
 			submissions.points +
-			  IFNULL(submissions.article_points, 0) +
+				IFNULL(submissions.article_points, 0) +
 				(IFNULL(submissions.first_time_species, 0) * 5) +
 				(IFNULL(submissions.flowered, 0) * submissions.points) +
 				(IFNULL(submissions.sexual_reproduction, 0) * submissions.points)
@@ -214,28 +221,36 @@ export function getOutstandingSubmissions(program: string) {
 		WHERE submitted_on IS NOT NULL
 		AND approved_on IS NULL
 		AND program = ?`,
-		[program]
+		[program],
 	);
 }
 
 export function getOutstandingSubmissionsCounts() {
-	const rows = query<{ count: number, program: string }>(`
+	const rows = query<{ count: number; program: string }>(`
 		SELECT COUNT(1) as count, program
 		FROM submissions JOIN members
 		ON submissions.member_id == members.id
 		WHERE submitted_on IS NOT NULL
 		AND approved_on IS NULL
-		GROUP BY program`,
-	);
-	return Object.fromEntries(rows.map(row => [ row.program, row.count ]))
+		GROUP BY program`);
+	return Object.fromEntries(rows.map((row) => [row.program, row.count]));
 }
 
 export function getApprovedSubmissions(program: string) {
-	return query<Submission & Required<Pick<Submission, "submitted_on" | "approved_on" | "points" | "total_points">>>(`
+	return query<
+		Submission &
+			Required<
+				Pick<
+					Submission,
+					"submitted_on" | "approved_on" | "points" | "total_points"
+				>
+			>
+	>(
+		`
 		SELECT
 			submissions.*,
 			submissions.points +
-			  IFNULL(submissions.article_points, 0) +
+				IFNULL(submissions.article_points, 0) +
 				(IFNULL(submissions.first_time_species, 0) * 5) +
 				(IFNULL(submissions.flowered, 0) * submissions.points) +
 				(IFNULL(submissions.sexual_reproduction, 0) * submissions.points)
@@ -247,17 +262,17 @@ export function getApprovedSubmissions(program: string) {
 		AND approved_on IS NOT NULL
 		AND points IS NOT NULL
 		AND program = ?`,
-		[program]
+		[program],
 	);
 }
 
-
 export function getAllSubmissions(program: string) {
-	return query<Submission>(`
+	return query<Submission>(
+		`
 		SELECT
 			submissions.*,
 			submissions.points +
-			  IFNULL(submissions.article_points, 0) +
+				IFNULL(submissions.article_points, 0) +
 				(IFNULL(submissions.first_time_species, 0) * 5) +
 				(IFNULL(submissions.flowered, 0) * submissions.points) +
 				(IFNULL(submissions.sexual_reproduction, 0) * submissions.points)
@@ -265,25 +280,28 @@ export function getAllSubmissions(program: string) {
 			members.display_name as member_name
 		FROM submissions JOIN members
 		ON submissions.member_id == members.id
-		FROM submissions WHERE program = ? `, [program]);
+		FROM submissions WHERE program = ? `,
+		[program],
+	);
 }
 
 type UpdateFor<T> = Partial<{
-  [K in keyof T]: T[K] | null | undefined;
+	[K in keyof T]: T[K] | null | undefined;
 }>;
 
 export function updateSubmission(id: number, updates: UpdateFor<Submission>) {
 	const entries = Object.fromEntries(
-		Object.entries(updates).filter(
-			([, value]) => value !== undefined
-		));
+		Object.entries(updates).filter(([, value]) => value !== undefined),
+	);
 	const fields = Object.keys(entries);
 	const values = Object.values(entries);
-	const setClause = fields.map(field => `${field} = ?`).join(', ');
+	const setClause = fields.map((field) => `${field} = ?`).join(", ");
 
 	try {
 		const conn = getWriteDBConnecton();
-		const stmt = conn.prepare(`UPDATE submissions SET ${setClause} WHERE id = ?`);
+		const stmt = conn.prepare(
+			`UPDATE submissions SET ${setClause} WHERE id = ?`,
+		);
 		const result = stmt.run(...values, id);
 		conn.close();
 		return result.changes;
@@ -293,11 +311,20 @@ export function updateSubmission(id: number, updates: UpdateFor<Submission>) {
 	}
 }
 
-
-export function approveSubmission(approvedBy: number, id: number, updates: ApprovalFormValues) {
+export function approveSubmission(
+	approvedBy: number,
+	id: number,
+	updates: ApprovalFormValues,
+) {
 	try {
 		const conn = getWriteDBConnecton();
-		const { points, article_points, first_time_species, flowered, sexual_reproduction } = updates;
+		const {
+			points,
+			article_points,
+			first_time_species,
+			flowered,
+			sexual_reproduction,
+		} = updates;
 		const stmt = conn.prepare(`
 			UPDATE submissions SET
 				points = ?,
@@ -316,7 +343,8 @@ export function approveSubmission(approvedBy: number, id: number, updates: Appro
 			sexual_reproduction ? 1 : 0,
 			approvedBy,
 			new Date().toISOString(),
-			id);
+			id,
+		);
 		conn.close();
 	} catch (err) {
 		console.error(err);

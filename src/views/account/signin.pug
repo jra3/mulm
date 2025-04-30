@@ -1,0 +1,32 @@
+include ./field.pug
+
+#signin.w-full.flex.flex-col.items-center.gap-2
+	h2.text-xl.font-extrabold.mb-4 Log In
+	form.contents(
+		hx-post="/login"
+		hx-trigger="submit"
+		hx-target="#loginError"
+		hx-swap="innerHTML")
+		+textInput("Email", "email")
+		+passwordInput("Password", "password")
+		.flex.gap-2.items-center
+			button.primary(type="submit") Log In
+			a.link(
+				hx-get="/dialog/signup"
+				hx-swap="outerHTML"
+				hx-target="#signin"
+			) Sign Up
+
+		span#loginError(class="font-extrabold text-red-400")
+
+	.flex.items-center.my-4(class="w-full")
+		.flex-grow.h-px.bg-gray-800
+		span.text-xs.text-slate-11.font-normal.mx-4 OR
+		.flex-grow.h-px.bg-gray-800
+
+	a(href=googleURL alt='Sign in with Google')
+		img(src='/google-button.svg')
+
+	a.link(
+		hx-get="/dialog/forgot-password"
+		hx-target="#signin") Forgot password...

@@ -12,6 +12,11 @@
 		"forceConsistentCasingInFileNames": true,
 		"noImplicitAny": true,
 		"skipLibCheck": true,
-		"types": ["jest", "node"]
+		"types": ["jest", "node"],
+
+		"baseUrl": ".",
+		"paths": {
+			"@/*": [ "src/*" ]
+		}
 	}
 }

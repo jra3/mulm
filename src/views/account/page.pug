@@ -1,0 +1,11 @@
+include ../header.pug
+
+doctype html
+html
+	+headTag(title)
+
+	body.bg-white.text-gray-800
+		+pageHeader(viewer, title)
+		section.bg-gray-100.py-4
+			div.max-w-4xl.mx-auto.text-left.px-4
+				include settings.pug

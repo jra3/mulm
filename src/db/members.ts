@@ -5,7 +5,7 @@ export type MemberRecord = {
 	id: number;
 	display_name: string;
 	contact_email: string;
-	is_admin: number
+	is_admin: number;
 	fish_level?: string;
 	plant_level?: string;
 	coral_level?: string;
@@ -13,10 +13,10 @@ export type MemberRecord = {
 
 export type Member = MemberRecord & {
 	points?: number;
-}
+};
 
 type AwardRecord = {
-	member_id: number;
+	member_id: string;
 	award_name: string;
 	date_awarded: string;
 };
@@ -76,7 +76,7 @@ export function getMember(id: number) {
 export function updateMember(memberId: number, updates: Partial<MemberRecord>) {
 	const fields = Object.keys(updates);
 	const values = Object.values(updates);
-	const setClause = fields.map(field => `${field} = ?`).join(', ');
+	const setClause = fields.map((field) => `${field} = ?`).join(", ");
 
 	try {
 		const conn = getWriteDBConnecton();
@@ -99,24 +99,37 @@ export function getMemberByEmail(email: string) {
 }
 
 export function getMembersList(): MemberRecord[] {
-	return query(`SELECT id, display_name, fish_level, plant_level, coral_level FROM members`);
+	return query(
+		`SELECT id, display_name, fish_level, plant_level, coral_level FROM members`,
+	);
 }
 
 export function getRoster() {
 	return query<MemberRecord>(`SELECT * FROM members`);
 }
 
-export function getMemberWithAwards(memberId: number) {
-	const members = query<MemberRecord>(`SELECT * FROM members WHERE id = ?`, [memberId]);
+export function getMemberWithAwards(memberId: string) {
+	const members = query<MemberRecord>(`SELECT * FROM members WHERE id = ?`, [
+		memberId,
+	]);
 	const member = members.pop();
-	const awards = query<AwardRecord>(`SELECT * FROM awards WHERE member_id = ?`, [memberId]);
-	return {...member, awards};
+	const awards = query<AwardRecord>(
+		`SELECT * FROM awards WHERE member_id = ?`,
+		[memberId],
+	);
+	return { ...member, awards };
 }
 
-export function grantAward(memberId: number, awardName: string, dateAwarded: Date) {
+export function grantAward(
+	memberId: number,
+	awardName: string,
+	dateAwarded: Date,
+) {
 	try {
 		const conn = getWriteDBConnecton();
-		const stmt = conn.prepare(`INSERT INTO awards (member_id, award_name, date_awarded) VALUES (?, ?, ?)`);
+		const stmt = conn.prepare(
+			`INSERT INTO awards (member_id, award_name, date_awarded) VALUES (?, ?, ?)`,
+		);
 		stmt.run(memberId, awardName, dateAwarded.toISOString());
 		conn.close();
 	} catch (err) {

@@ -1,13 +1,13 @@
-import Database from 'better-sqlite3';
+import Database from "better-sqlite3";
 
 let dbFactory = (readonly: boolean) => {
-	return new Database('./database.sqlite', { readonly});
-}
+	return new Database("./database.sqlite", { readonly });
+};
 /**
  * Used only in testing to create and use in-memory databases
  */
 export function setDBFactory(factory: typeof dbFactory) {
-  dbFactory = factory;
+	dbFactory = factory;
 }
 
 export function getDBConnecton(readonly: boolean) {

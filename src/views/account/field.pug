@@ -1,0 +1,30 @@
+mixin inputLabel(labelText, name)
+	.flex.flex-col.gap-2
+		label.input-label(for=name)= labelText
+			if errors && errors.has(name)
+				span(class="font-extrabold text-red-400")= ` ${errors.get(name)}`
+		block
+
+mixin textInput(labelText, name, value)
+	+inputLabel(labelText, name)
+		input.text-input(
+			id=name
+			value=value
+			name=name
+			class=errors && errors.has(name) ? "error" : ""
+			disabled=attributes.disabled)
+		if attributes.disabled
+			input.text-input(
+				value=value
+				name=name
+				type="hidden")
+
+mixin passwordInput(labelText, name)
+	+inputLabel(labelText, name)
+		input.text-input(
+			type="password"
+			id=name
+			placeholder="************"
+			name=name
+			class=errors && errors.has(name) ? "error" : ""
+			disabled=attributes.disabled)

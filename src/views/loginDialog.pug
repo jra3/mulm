@@ -1,0 +1,15 @@
+
+mixin modal()
+	div#modal(_="on closeModal add .closing then wait for animationend then remove me")
+		.modal-underlay(_="on click trigger closeModal")
+		.modal-content
+			button#modal-dismiss(class="btn danger" _="on click trigger closeModal") Close
+			block
+
++modal
+	.flex-col.text-center.space-y-6
+		.h2.text-2xl.p2 Log In
+		form(hx-post="/login" hx-trigger="submit").space-y-4
+			input.text-input(name="email"	type="text" placeholder="Email Address")
+			input.text-input(name="password" type="password" placeholder="Password")
+			button.btn.primary(type="submit") Log In
