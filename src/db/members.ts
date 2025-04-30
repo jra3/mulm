@@ -1,3 +1,4 @@
+import { makePasswordEntry, ScryptPassword } from "@/auth";
 import { getWriteDBConnecton, query } from "./conn";
 
 // type as represented in the database
@@ -28,6 +29,33 @@ export function getGoogleAccount(sub: string) {
 	return members.pop();
 }
 
+export function getMemberPassword(memberId: number) {
+	const members = query<ScryptPassword>(`SELECT * FROM password_account WHERE member_id = ?`, [memberId]);
+	return members.pop();
+}
+
+export function createOrUpdatePassword(memberId: number, passwordEntry: ScryptPassword) {
+	const db = getWriteDBConnecton()
+	try {
+		const googleStmt = db.prepare(`
+			INSERT INTO password_account (member_id, N, r, p, salt, hash) VALUES (?, ?, ?, ?, ?, ?)
+			ON CONFLICT(member_id) DO UPDATE SET
+				N = excluded.N,
+				r = excluded.r,
+				p = excluded.p,
+				salt = excluded.salt,
+				hash = excluded.hash
+			`);
+		const { N, r, p, salt, hash } = passwordEntry;
+		googleStmt.run(memberId, N, r, p, salt, hash);
+	} catch (err) {
+		console.error(err);
+		throw new Error("Failed to set password");
+	} finally {
+		db.close();
+	}
+}
+
 export function createGoogleAccount(memberId: number, sub: string) {
 	const db = getWriteDBConnecton()
 	try {
@@ -44,12 +72,15 @@ export function createGoogleAccount(memberId: number, sub: string) {
 export function createMember(
 	email: string,
 	name: string,
-	credentials: { google_sub?: string } = {},
+	credentials: {
+		password?: string,
+		google_sub?: string
+	} = {},
 	isAdmin: boolean = false,
 ) {
 	try {
 		const db = getWriteDBConnecton()
-		return db.transaction(() => {
+		return db.transaction(async () => {
 			const userStmt = db.prepare('INSERT INTO members (display_name, contact_email, is_admin) VALUES (?, ?, ?)');
 			const memberId = userStmt.run(name, email, isAdmin ? 1 : 0).lastInsertRowid;
 
@@ -57,6 +88,13 @@ export function createMember(
 				const googleStmt = db.prepare('INSERT INTO google_account (google_sub, member_id) VALUES (?, ?)');
 				googleStmt.run(credentials.google_sub, memberId);
 			}
+
+			if (credentials.password) {
+				const { N, r, p, salt, hash	} = await makePasswordEntry(credentials.password);
+				const googleStmt = db.prepare('INSERT INTO password_account (member_id, N, r, p, salt, hash) VALUES (?, ?, ?, ?, ?, ?)');
+				googleStmt.run(memberId, N, r, p, salt, hash);
+			}
+
 			return memberId as number;
 		})();
 	} catch (err) {

@@ -82,6 +82,15 @@ CREATE TABLE members (
 	UNIQUE(contact_email)
 );
 
+CREATE TABLE password_account (
+	member_id INTEGER PRIMARY KEY,
+	N INTEGER NOT NULL,
+	r INTEGER NOT NULL,
+	p INTEGER NOT NULL,
+	salt TEXT NOT NULL,
+	hash TEXT NOT NULL
+);
+
 CREATE TABLE google_account (
 	google_sub TEXT PRIMARY KEY,
 	member_id INTEGER NOT NULL

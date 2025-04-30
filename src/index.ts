@@ -5,6 +5,7 @@ moduleAlias.addAlias("@", path.join(__dirname));
 import config from "@/config.json";
 import express from "express";
 import cookieParser from "cookie-parser";
+import * as auth from "@/routes/auth";
 
 import {
 	getApprovedSubmissions,
@@ -38,6 +39,8 @@ import {
 	createGoogleAccount,
 	createMember,
 	getMemberByEmail,
+	getMemberPassword,
+	createOrUpdatePassword,
 } from "./db/members";
 import { getGoogleOAuthURL, getGoogleUser, translateGoogleOAuthCode } from "./oauth";
 import {
@@ -49,13 +52,10 @@ import {
 } from "./routes/submissions";
 
 import {
-	forgotSchema,
-	loginSchema,
-	resetSchema,
-	signupSchema,
 	updateSchema,
 } from "./forms/login";
 import { Response as ExResponse } from "express-serve-static-core";
+import { checkPassword, makePasswordEntry } from "./auth";
 
 const app = express();
 
@@ -72,138 +72,13 @@ app.use(sessionMiddleware);
 
 const router = express.Router();
 
-// Login
+router.post("/signup", auth.signup);
+router.post("/login", auth.passwordLogin);
+router.get("/logout", auth.logout);
+router.post("/forgot-password", auth.forgotPassword);
 
-router.post("/signup", async (req, res) => {
-	const parsed = signupSchema.safeParse(req.body);
-	const errors = new Map<string, string>();
-
-/* 	if (!parsed.success) {
-		parsed.error.issues.forEach((issue) => {
-			errors.set(String(issue.path[0]), issue.message);
-		});
-
-		res.render("account/signup", {
-			viewer: {
-				display_name: req.body.display_name,
-				contact_email: req.body.email,
-			},
-			errors,
-		});
-		return;
-	}
-	const body = parsed.data;
-
-	const apiResponse = await auth.api.signUpEmail({
-		asResponse: true,
-		headers: fromNodeHeaders(req.headers),
-		body: {
-			name: body.display_name,
-			email: body.email,
-			password: body.password,
-		},
-	});
-
-	apiResponse.headers.forEach((value, name) => {
-		res.setHeader(name, value);
-	});
-	const data = await apiResponse.json();
-
-	if (data.message != null) {
-		errors.set("form", data.message);
-		res.render("account/signup", {
-			viewer: {
-				display_name: req.body.display_name,
-				contact_email: req.body.email,
-			},
-			errors,
-		});
-		return;
-	}
- */
-
-	res.set("HX-redirect", "/").send();
-});
-
-router.post("/login", async (req, res) => {
-	const parsed = loginSchema.safeParse(req.body);
-	if (!parsed.success) {
-		res.status(422).send("Invalid login");
-		return;
-	}
-
-/* 	// This is the worst part about using better-auth. It doesn't easily let you
-	// manage the cookies yourself??
-	const apiResponse = await auth.api.signInEmail({
-		asResponse: true,
-		headers: fromNodeHeaders(req.headers),
-		body: parsed.data,
-	});
-
-	////////////////////////////
-	apiResponse.headers.forEach((value, name) => {
-		res.setHeader(name, value);
-	});
-	const data = await apiResponse.json();
-	////////////////////////////
-
-	const { code, message } = data;
-	if (code !== undefined) {
-		res.send(message);
-	} else {
-		const url = data.redirect ? data.url : "/";
-		res.set("HX-Redirect", url).send();
-	}
- */
-
-});
-
-router.get("/logout", async (req, res) => {
-/* 	// This is the worst part about using better-auth. It doesn't easily let you
-	// manage the cookies yourself??
-	const apiResponse = await auth.api.signOut({
-		asResponse: true,
-		headers: fromNodeHeaders(req.headers),
-	});
-
-	apiResponse.headers.forEach((value, name) => {
-		res.setHeader(name, value);
-	});
- */
-	res.redirect("/");
-});
-
-router.post("/forgot-password", async (req, res) => {
-	const errors = new Map<string, string>();
-	const parsed = forgotSchema.safeParse(req.body);
-/* 	if (!parsed.success) {
-		parsed.error.issues.forEach((issue) => {
-			errors.set(String(issue.path[0]), issue.message);
-		});
-
-		res.render("account/forgotPassword", {
-			...req.body,
-			errors,
-		});
-		return;
-	}
-
-	await auth.api.forgetPassword({
-		headers: fromNodeHeaders(req.headers),
-		body: {
-			email: req.body.email,
-			redirectTo: "/reset-password",
-		},
-	});
- */
-	res.render("account/forgotPassword", {
-		...req.body,
-		errors: new Map([["form", "Check your email for a reset link."]]),
-	});
-});
-
-router.post("/reset-password", async (req, res) => {
-/* 	const errors = new Map<string, string>();
+//router.post("/reset-password", async (req, res) => {
+	/* 	const errors = new Map<string, string>();
 	const parsed = resetSchema.safeParse(req.body);
 	if (!parsed.success) {
 		parsed.error.issues.forEach((issue) => {
@@ -242,8 +117,8 @@ router.post("/reset-password", async (req, res) => {
 	}
 
  */
-	res.set("HX-Redirect", "/").send();
-});
+//	res.set("HX-Redirect", "/").send();
+//});
 
 router.patch("/account-settings", async (req: MulmRequest, res) => {
 	const { viewer } = req;
@@ -251,8 +126,6 @@ router.patch("/account-settings", async (req: MulmRequest, res) => {
 		res.status(401).send();
 		return;
 	}
-/*
-	const headers = fromNodeHeaders(req.headers);
 
 	const errors = new Map<string, string>();
 	const parsed = updateSchema.safeParse(req.body);
@@ -263,88 +136,45 @@ router.patch("/account-settings", async (req: MulmRequest, res) => {
 
 		res.render("account/settings", {
 			viewer,
-			googleURL: await getGoogleLinkURL(req),
+			//googleURL: await getGoogleLinkURL(req),
 			errors,
 		});
 		return;
 	}
 
 	const form = parsed.data;
-	const updateEmail = async () => {
-		if (form.email === viewer.contact_email) {
-			return;
-		}
 
-		try {
-			await auth.api.changeEmail({
-				asResponse: true,
-				headers,
-				body: {
-					newEmail: form.email,
-				},
-			});
-		} catch (e: any) {
-			errors.set("email", e.body?.message);
-		}
-	};
-
-	const updatePassword = async () => {
-		if (!form.password) {
-			return;
-		}
-
-		try {
-			if (form.current_password) {
-				await auth.api.changePassword({
-					headers,
-					body: {
-						currentPassword: form.password,
-						newPassword: form.password,
-						revokeOtherSessions: true,
-					},
-				});
+	try {
+		if (form.current_password && form.password) {
+			const currentPasswordEntry = getMemberPassword(viewer.id);
+			// Not set, or we have correct password
+			// Need better logic here...
+			if (!currentPasswordEntry || await checkPassword(currentPasswordEntry, form.current_password)) {
+				const passwordEntry = await makePasswordEntry(form.password)
+				createOrUpdatePassword(viewer.id, passwordEntry)
+				// Updated password!
 			} else {
-				await auth.api.setPassword({
-					headers,
-					body: {
-						newPassword: form.password,
-					},
-				});
+				errors.set("password", "Password incorrect");
 			}
-		} catch (e: any) {
-			errors.set("password", e.body?.message);
 		}
-	};
+	} catch (e: unknown) {
+		console.error(e);
+		errors.set("password", "Unknown error");
+	}
 
-	const updateDisplayName = async () => {
-		if (viewer.display_name === form.display_name) {
-			return;
-		}
-
-		try {
-			await auth.api.updateUser({
-				asResponse: true,
-				headers,
-				body: {
-					name: form.display_name,
-				},
-			});
-		} catch (e: any) {
-			errors.set("display_name", e.body?.message);
-		}
-	};
-
-	await Promise.all([updatePassword(), updateEmail(), updateDisplayName()]);
+	updateMember(viewer.id, {
+		display_name: form.display_name,
+		contact_email: form.email,
+	});
 
 	res.render("account/settings", {
 		viewer: {
 			display_name: form.display_name,
 			contact_email: form.email,
-			googleURL: await getGoogleLinkURL(req),
+			googleURL: await getGoogleOAuthURL(),
 		},
 		errors,
 	});
- */
 });
 
 // Regular Views ///////////////////////////////////////////////////
@@ -791,7 +621,7 @@ router.get("/oauth/google", async (req, res) => {
 			createGoogleAccount(member.id, googleUser.sub);
 			createUserSession(req, res, member.id);
 		} else {
-			const memberId = createMember(googleUser.email, googleUser.name);
+			const memberId = await createMember(googleUser.email, googleUser.name);
 			createUserSession(req, res, memberId);
 		}
 	} else {
