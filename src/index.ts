@@ -6,6 +6,7 @@ import config from "@/config.json";
 import express from "express";
 import cookieParser from "cookie-parser";
 import * as auth from "@/routes/auth";
+import * as submission from "@/routes/submission";
 
 import {
 	getApprovedSubmissions,
@@ -14,15 +15,6 @@ import {
 	getOutstandingSubmissionsCounts,
 	getSubmissionsByMember,
 } from "./db/submissions";
-import {
-	foodTypes,
-	getBapFormTitle,
-	getClassOptions,
-	isLivestock,
-	spawnLocations,
-	speciesTypes,
-	waterTypes,
-} from "./forms/submission";
 
 import { levelRules, minYear, programs } from "./programs";
 import { MulmRequest, sessionMiddleware } from "./sessions";
@@ -41,10 +33,6 @@ import {
 import { getGoogleOAuthURL } from "./oauth";
 import {
 	adminApproveSubmission,
-	createSubmission,
-	deleteSubmission,
-	updateSubmission,
-	viewSubmission,
 } from "./routes/submissions";
 
 import {
@@ -195,28 +183,9 @@ router.get("/", async (req: MulmRequest, res) => {
 });
 
 // Entrypoint for BAP/HAP submission
-router.get("/submit", (req: MulmRequest, res) => {
-	const { viewer } = req;
-	const form = {
-		// auto-fill member name and email if logged in
-		member_name: viewer?.display_name,
-		member_email: viewer?.contact_email,
-		...req.query,
-	};
-
-	const selectedType = String(req.query.species_type ?? "Fish");
-	res.render("submit", {
-		title: getBapFormTitle(selectedType),
-		form,
-		errors: new Map(),
-		classOptions: getClassOptions(selectedType),
-		waterTypes,
-		speciesTypes,
-		foodTypes,
-		spawnLocations,
-		isLivestock: isLivestock(selectedType),
-		isAdmin: Boolean(viewer?.is_admin),
-	});
+router.get("/submit", submission.renderSubmissionForm);
+router.get("/submit/addSupplement", (req, res) => {
+	res.render("bapForm/supplementSingleLine");
 });
 
 router.get("/account", async (req: MulmRequest, res) => {
@@ -234,10 +203,6 @@ router.get("/account", async (req: MulmRequest, res) => {
 	});
 });
 
-// Add a line to the fertilizer list
-router.get("/submit/addSupplement", (req, res) => {
-	res.render("bapForm/supplementSingleLine");
-});
 
 router.get("/annual", async (req, res) => {
 	const { year } = req.query;
@@ -538,11 +503,10 @@ router.get("/member/:memberId", async (req: MulmRequest, res) => {
 	});
 });
 
-router.get("/sub/:subId", viewSubmission);
-router.post("/sub", createSubmission);
-router.patch("/sub/:subId", updateSubmission);
-router.delete("/sub/:subId", deleteSubmission);
-
+router.get("/sub/:subId", submission.view);
+router.post("/sub", submission.create);
+router.patch("/sub/:subId", submission.update);
+router.delete("/sub/:subId", submission.remove);
 
 app.use(router);
 

@@ -29,8 +29,8 @@ test('Members list append', () => {
 	expect(getMembersList().length).toEqual(1);
 })
 
-test('Create and fetch', () => {
-	const id = createMember("honk@dazzle.com", "Honk Dazzle");
+test('Create and fetch', async () => {
+	const id = await createMember("honk@dazzle.com", "Honk Dazzle");
 	expect(getMemberByEmail("honk@dazzle.com")?.id).toEqual(id);
 	expect(getMemberByEmail("honk@dazzle.com")?.id).toEqual(id);
 	expect(getMember(id)?.display_name).toEqual("Honk Dazzle");
