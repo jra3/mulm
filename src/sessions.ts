@@ -22,13 +22,11 @@ export async function sessionMiddleware(
 	_res: Response,
 	next: NextFunction) {
 
-	console.log("Session middleware", req.cookies);
-
 	const token = req.cookies.session_id;
 	if (token) {
 		req.viewer = getLoggedInUser(token);
 	}
-	await next();
+	next();
 }
 
 function getLoggedInUser(token: string) {
