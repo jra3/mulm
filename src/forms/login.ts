@@ -38,7 +38,7 @@ export const forgotSchema = z.object({
 });
 
 export const resetSchema = z.object({
-	token: z.string(),
+	code: z.string(),
 	password: z.string(),
 	password_confirm: z.string(),
 }).refine(

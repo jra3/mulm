@@ -48,12 +48,17 @@ export async function sendVerificationEmail(email: string, url: string) {
 	});
 }
 
-export async function sendResetEmail(email: string, url: string) {
+const renderResetEmail = pug.compileFile("src/views/email/onForgotPassword.pug");
+export async function sendResetEmail(email: string, display_name: string, code: string) {
 	const resend = new Resend(config.resendApiKey);
 	return resend.emails.send({
 		from: config.fromEmail,
 		to: email,
 		subject: "Reset Password",
-		text: `Click the link to reset your password: ${url}`,
+		html: renderResetEmail({
+			domain: config.domain,
+			display_name,
+			code,
+		}),
 	});
 }

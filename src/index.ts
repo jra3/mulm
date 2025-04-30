@@ -75,50 +75,9 @@ const router = express.Router();
 router.post("/signup", auth.signup);
 router.post("/login", auth.passwordLogin);
 router.get("/logout", auth.logout);
-router.post("/forgot-password", auth.forgotPassword);
-
-//router.post("/reset-password", async (req, res) => {
-	/* 	const errors = new Map<string, string>();
-	const parsed = resetSchema.safeParse(req.body);
-	if (!parsed.success) {
-		parsed.error.issues.forEach((issue) => {
-			errors.set(String(issue.path[0]), issue.message);
-		});
-
-		res.render("account/resetPassword", {
-			token: req.body.token,
-			errors,
-		});
-		return;
-	}
-
-	try {
-		await auth.api.resetPassword({
-			headers: fromNodeHeaders(req.headers),
-			body: {
-				token: parsed.data.token,
-				newPassword: parsed.data.password,
-			},
-		});
-	} catch (e: any) {
-		console.log("e", e);
-		if (e.body?.message) {
-			errors.set("form", e.body.message);
-		} else {
-			errors.set("form", "Failed to reset password");
-		}
-
-		console.log("errors", errors);
-		res.render("account/resetPassword", {
-			token: req.body.token,
-			errors,
-		});
-		return;
-	}
-
- */
-//	res.set("HX-Redirect", "/").send();
-//});
+router.get("/forgot-password", auth.validateForgotPassword);
+router.post("/forgot-password", auth.sendForgotPassword);
+router.post("/reset-password", auth.resetPassword);
 
 router.patch("/account-settings", async (req: MulmRequest, res) => {
 	const { viewer } = req;

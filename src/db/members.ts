@@ -37,7 +37,7 @@ export function getMemberPassword(memberId: number) {
 export function createOrUpdatePassword(memberId: number, passwordEntry: ScryptPassword) {
 	const db = getWriteDBConnecton()
 	try {
-		const googleStmt = db.prepare(`
+		const stmt = db.prepare(`
 			INSERT INTO password_account (member_id, N, r, p, salt, hash) VALUES (?, ?, ?, ?, ?, ?)
 			ON CONFLICT(member_id) DO UPDATE SET
 				N = excluded.N,
@@ -47,7 +47,7 @@ export function createOrUpdatePassword(memberId: number, passwordEntry: ScryptPa
 				hash = excluded.hash
 			`);
 		const { N, r, p, salt, hash } = passwordEntry;
-		googleStmt.run(memberId, N, r, p, salt, hash);
+		stmt.run(memberId, N, r, p, salt, hash);
 	} catch (err) {
 		console.error(err);
 		throw new Error("Failed to set password");

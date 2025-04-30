@@ -2,6 +2,14 @@ import { randomBytes, scrypt } from "node:crypto";
 
 const kKeyLen = 32;
 
+type AuthCodePurpose = 'email_verification' | 'password_reset';
+export type AuthCode = {
+	code: string;
+	member_id: number;
+	purpose: AuthCodePurpose;
+	expires_on: Date;
+}
+
 export type ScryptPassword = {
 	N: number;
 	r: number;
@@ -61,4 +69,9 @@ export async function checkPassword(passwordEntry: ScryptPassword | undefined, c
 			p: passwordEntry.p,
 		}, callback));
 	return result.toString("base64") === passwordEntry.hash;
+}
+
+export function generateRandomCode(length = 64) {
+	const bytes = randomBytes(length);
+	return bytes.toString("base64url");
 }

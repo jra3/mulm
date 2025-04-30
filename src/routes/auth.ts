@@ -1,9 +1,12 @@
-import { checkPassword } from "@/auth";
-import { createMember, getMemberByEmail, getMemberPassword } from "@/db/members";
-import { forgotSchema, loginSchema, signupSchema } from "@/forms/login";
+import { AuthCode, checkPassword, generateRandomCode, makePasswordEntry } from "@/auth";
+import { createAuthCode, getAuthCode } from "@/db/auth";
+import { createMember, createOrUpdatePassword, getMember, getMemberByEmail, getMemberPassword } from "@/db/members";
+import { forgotSchema, loginSchema, resetSchema, signupSchema } from "@/forms/login";
 import { validateFormResult } from "@/forms/utils";
+import { sendResetEmail } from "@/notifications";
 import { createUserSession, destroyUserSession, MulmRequest } from "@/sessions";
 import { Response } from "express";
+
 
 export const signup = async (req: MulmRequest, res: Response) => {
 	const errors = new Map<string, string>();
@@ -57,9 +60,43 @@ export const logout = (req: MulmRequest, res: Response) => {
 	res.redirect("/");
 }
 
-export const forgotPassword = async (req: MulmRequest, res: Response) => {
+export const validateForgotPassword = async (req: MulmRequest, res: Response) => {
+	const code = req.query.code = req.query.code?.toString();
+	if (code == undefined) {
+		res.status(400).send("Missing code");
+		return;
+	}
+
+	const codeEntry = getAuthCode(code);
+	if (codeEntry == undefined || codeEntry.purpose != "password_reset") {
+		res.status(400).send("Invalid code");
+		return;
+	}
+
+	const now = new Date(Date.now());
+	if (codeEntry.expires_on < now) {
+		res.status(400).send("Code expired");
+		return;
+	}
+
+	const member = getMember(codeEntry.member_id);
+	if (member == undefined) {
+		res.status(400).send("Member not found");
+		return;
+	}
+
+	res.render("account/resetPassword", {
+		email: member.contact_email,
+		code: code,
+		errors: new Map<string, string>(),
+	})
+}
+
+export const sendForgotPassword = async (req: MulmRequest, res: Response) => {
+	console.log("asdfuasdf");
+
 	const errors = new Map<string, string>();
-	const onError = () => {
+	const renderDialog = () => {
 		res.render("account/forgotPassword", {
 			...req.body,
 			errors,
@@ -67,21 +104,71 @@ export const forgotPassword = async (req: MulmRequest, res: Response) => {
 	};
 
 	const parsed = forgotSchema.safeParse(req.body);
-	if (!validateFormResult(parsed, errors, onError)) {
+	if (!validateFormResult(parsed, errors, renderDialog)) {
 		return;
 	}
 
-	// create a code, put it in the db, send the user an email with the code
-	// the code should have an expiration time
+	const member = getMemberByEmail(parsed.data.email);
+	if (member == undefined) {
+		// should fake success to prevent email enumeration
+		errors.set("success", "Check your email for a reset link.");
+		renderDialog();
+		return;
+	}
 
-	//await auth.api.forgetPassword({
-	//	headers: fromNodeHeaders(req.headers),
-	//	body: {
-	//		email: req.body.email,
-	//		redirectTo: "/reset-password",
-	//	},
-	//});
-
-	errors.set("form", "Check your email for a reset link.");
-	onError();
+	const code: AuthCode = {
+		member_id: member.id,
+		code: generateRandomCode(24),
+		expires_on: new Date(Date.now() + 60 * 60 * 1000),
+		purpose: "password_reset",
+	}
+	console.log(1);
+	createAuthCode(code);
+	console.log(2);
+	await sendResetEmail(member.contact_email, member.display_name, code.code);
+	console.log(3);
+	errors.set("success", "Check your email for a reset link.");
+	renderDialog();
 }
+
+export const resetPassword = async (req: MulmRequest, res: Response) => {
+	const errors = new Map<string, string>();
+
+	const renderPage = () => {
+		res.render("account/resetPassword", {
+			errors,
+		});
+	};
+
+	const parsed = resetSchema.safeParse(req.body);
+	if (!validateFormResult(parsed, errors, renderPage)) {
+		return;
+	}
+
+	const now = new Date(Date.now());
+	const codeEntry = getAuthCode(parsed.data.code);
+	if (codeEntry == undefined || codeEntry.purpose != "password_reset") {
+		errors.set("form", "Invalid code");
+	} else if (codeEntry.expires_on < now) {
+		errors.set("form", "Code expired");
+	} else {
+		const member = getMember(codeEntry.member_id);
+		if (member == undefined) {
+			errors.set("form", "Member not found");
+		} else {
+			try {
+				const passwordEntry = await makePasswordEntry(parsed.data.password);
+				createOrUpdatePassword(member.id, passwordEntry);
+				createUserSession(req, res, member.id);
+				res.set("HX-redirect", "/").send();
+				return;
+			} catch (e: unknown) {
+				console.error(e);
+				errors.set("form", "Failed to reset password");
+			}
+		}
+	}
+
+	renderPage();
+}
+

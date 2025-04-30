@@ -1,11 +1,8 @@
-import crypto from "crypto";
 import { Request, Response, NextFunction } from "express";
 import { getWriteDBConnecton, query } from "./db/conn";
+import { generateRandomCode } from "./auth";
 
-export function generateSessionCookie(length = 64) {
-	const bytes = crypto.randomBytes(length);
-	return bytes.toString("base64url");
-}
+export const generateSessionCookie = () => generateRandomCode(64)
 
 type Viewer = {
 	id: number;
