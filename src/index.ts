@@ -14,16 +14,11 @@ import * as submission from "@/routes/submission";
 import * as standings from "@/routes/standings";
 
 import {
-	getOutstandingSubmissions,
 	getOutstandingSubmissionsCounts,
 } from "./db/submissions";
 
-import { programs } from "./programs";
 import { MulmRequest, sessionMiddleware } from "./sessions";
 import { getGoogleOAuthURL } from "./oauth";
-import {
-	adminApproveSubmission,
-} from "./routes/submissions";
 
 const app = express();
 
@@ -109,49 +104,12 @@ router.patch("/account-settings", account.updateAccountSettings)
 
 // Admin Views /////////////////////////////////////////////////////
 
+router.get("/admin/queue{/:program}", admin.requireAdmin, admin.showQueue);
+router.post("/admin/approve", admin.requireAdmin, admin.approveSubmission);
+
 router.get("/admin/members", admin.requireAdmin, admin.viewMembers);
 router.get("/admin/members/edit/:memberId", admin.requireAdmin, admin.viewMemberUpdate)
 router.patch("/admin/members/edit/:memberId", admin.requireAdmin, admin.updateMemberFields);
-
-router.get("/admin/queue{/:program}", async (req: MulmRequest, res) => {
-	const { viewer } = req;
-	if (!viewer?.is_admin) {
-		res.status(403).send("Access denied");
-		return;
-	}
-	const { program = "fish" } = req.params;
-	if (programs.indexOf(program) === -1) {
-		res.status(404).send("Invalid program");
-		return;
-	}
-
-	const submissions = getOutstandingSubmissions(program);
-	const programCounts = getOutstandingSubmissionsCounts();
-
-	const subtitle = (() => {
-		switch (program) {
-			default:
-			case "fish":
-				return `Breeder Awards Program`;
-			case "plant":
-				return `Horticultural Awards Program`;
-			case "coral":
-				return `Coral Awards Program`;
-		}
-	})();
-
-	res.render("admin/queue", {
-		title: "Approval Queue",
-		subtitle,
-		submissions,
-		program,
-		programCounts,
-	});
-});
-
-router.post("/admin/approve", adminApproveSubmission);
-
-// Members /////////////////////////////////////////////////////////
 
 // Password Auth ///////////////////////////////////////////
 

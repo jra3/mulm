@@ -1,8 +1,12 @@
 import { getMember, getRoster, updateMember } from "@/db/members";
+import { getOutstandingSubmissions, getOutstandingSubmissionsCounts, getSubmissionById } from "@/db/submissions";
+import { approvalSchema } from "@/forms/approval";
 import { memberSchema } from "@/forms/member";
-import { levelRules } from "@/programs";
+import { onSubmissionApprove } from "@/notifications";
+import { levelRules, programs } from "@/programs";
 import { MulmRequest } from "@/sessions";
 import { Response, NextFunction } from "express";
+import { approveSubmission as approve } from "@/db/submissions";
 
 export async function requireAdmin(
 	req: MulmRequest,
@@ -67,4 +71,86 @@ export const updateMemberFields = async (req: MulmRequest, res: Response) => {
 	const member = getMember(id);
 
 	res.render("admin/singleMemberRow", { member });
+}
+
+export const showQueue = async (req: MulmRequest, res: Response) => {
+	const { viewer } = req;
+	if (!viewer?.is_admin) {
+		res.status(403).send("Access denied");
+		return;
+	}
+	const { program = "fish" } = req.params;
+	if (programs.indexOf(program) === -1) {
+		res.status(404).send("Invalid program");
+		return;
+	}
+
+	const submissions = getOutstandingSubmissions(program);
+	const programCounts = getOutstandingSubmissionsCounts();
+
+	const subtitle = (() => {
+		switch (program) {
+			default:
+			case "fish":
+				return `Breeder Awards Program`;
+			case "plant":
+				return `Horticultural Awards Program`;
+			case "coral":
+				return `Coral Awards Program`;
+		}
+	})();
+
+	res.render("admin/queue", {
+		title: "Approval Queue",
+		subtitle,
+		submissions,
+		program,
+		programCounts,
+	});
+}
+
+export const approveSubmission = async (req: MulmRequest, res: Response) => {
+	const { viewer } = req;
+
+	/*
+
+	const body = req.body;
+
+	if ("reject" in body) {
+		console.log("rejected!");
+		return;
+	}
+
+	if ("delete" in body) {
+		console.log("delete!");
+		return;
+	}
+
+	*/
+
+	const parsed = approvalSchema.safeParse(req.body);
+	if (!parsed.success) {
+		console.error(parsed.error.issues);
+		res.status(400).send("Invalid input");
+		return;
+	}
+
+	const updates = parsed.data;
+	const { id, points } = updates;
+
+	if (!points) {
+		res.status(400).send("Invalid input");
+		return;
+	}
+
+	approve(viewer!.id, id, updates);
+
+	const submission = getSubmissionById(id)!;
+	const member = getMember(submission.member_id)!;
+	if (member) {
+		// member should always exist...
+		onSubmissionApprove(submission, member);
+	}
+
+	res.set('HX-Redirect', '/admin/queue').send();
 }
