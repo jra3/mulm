@@ -145,8 +145,8 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
 
 	approve(viewer!.id, id, updates);
 
-	const submission = getSubmissionById(id)!;
-	const member = getMember(submission.member_id)!;
+	const submission = (await getSubmissionById(id))!;
+	const member = await getMember(submission.member_id)!;
 	if (member) {
 		// member should always exist...
 		onSubmissionApprove(submission, member);

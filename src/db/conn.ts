@@ -1,28 +1,37 @@
-import Database from "better-sqlite3";
+import sqlite3 from 'sqlite3';
+import { open, Database } from 'sqlite';
 
-let dbFactory = (readonly: boolean) => {
-	return new Database("./database.sqlite", { readonly });
-};
+export let readOnlyConn: Database;
+export let writeConn: Database;
+
+(async () => {
+	readOnlyConn = await open({
+		filename: './database.sqlite',
+		driver: sqlite3.cached.Database,
+		mode: sqlite3.OPEN_READONLY,
+	});
+
+	writeConn = await open({
+		filename: './database.sqlite',
+		driver: sqlite3.cached.Database,
+		mode: sqlite3.OPEN_READWRITE,
+	});
+})();
+
+
 /**
  * Used only in testing to create and use in-memory databases
  */
-export function setDBFactory(factory: typeof dbFactory) {
-	dbFactory = factory;
+export function overrideConnection(conn: typeof readOnlyConn) {
+	readOnlyConn = conn;
+	writeConn = conn;
 }
 
-export function getDBConnecton(readonly: boolean) {
-	return dbFactory(readonly);
-}
-
-export const getReadDBConnecton = () => getDBConnecton(true);
-export const getWriteDBConnecton = () => getDBConnecton(false);
-
-export function query<T>(sql: string, params: unknown[] = []): T[] {
+export async function query<T>(sql: string, params: unknown[] = []): Promise<T[]> {
 	try {
-		const db = getReadDBConnecton();
-		const stmt = db.prepare(sql);
-		const rows: T[] = stmt.all(...params) as T[];
-		db.close();
+		const db = readOnlyConn;
+		const stmt = await db.prepare(sql);
+		const rows: T[] = await stmt.all(...params) as T[];
 		return rows;
 	} catch (error) {
 		throw new Error(`SQLite query failed: ${(error as Error).message}`);

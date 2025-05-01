@@ -32,7 +32,7 @@ const { viewer } = req;
 
 export const view = async (req: MulmRequest, res: Response) => {
 	// Everyone can view, but owners and admins have extra controls
-	const submission = validateSubmission(req, res);
+	const submission = await validateSubmission(req, res);
 	if (!submission) {
 		return;
 	}
@@ -48,7 +48,7 @@ export const view = async (req: MulmRequest, res: Response) => {
 
 	let approver: MemberRecord | undefined;
 	if (submission.approved_by != null) {
-		approver = getMember(submission.approved_by);
+		approver = await getMember(submission.approved_by);
 	}
 
 	const aspect = {
@@ -179,7 +179,7 @@ export const create = async (req: MulmRequest, res: Response) => {
 		}
 	}
 
-	const member = getMemberByEmail(form.member_email!);
+	const member = await getMemberByEmail(form.member_email!);
 	let memberId: number;
 
 	if (!member) {
@@ -203,8 +203,9 @@ export const create = async (req: MulmRequest, res: Response) => {
 		memberId = member.id;
 	}
 
-	const subId = db.createSubmission(memberId!, form, !draft);
-	const sub = db.getSubmissionById(subId);
+	// TODO figure out how to avoid read after write
+	const subId = await db.createSubmission(memberId!, form, !draft);
+	const sub = await db.getSubmissionById(subId);
 
 	if (!sub) {
 		res.status(500).send("Failed to create submission");
@@ -224,7 +225,7 @@ export const create = async (req: MulmRequest, res: Response) => {
 
 export const update = async (req: MulmRequest, res: Response) => {
 	const { viewer } = req;
-	const submission = validateSubmission(req, res);
+	const submission = await validateSubmission(req, res);
 	if (!submission) {
 		return;
 	}
@@ -254,8 +255,7 @@ export const update = async (req: MulmRequest, res: Response) => {
 
 	const { form, draft, errors } = await parseAndValidateForm(req);
 	if (errors) {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const selectedType = (req.body as any).species_type;
+		const selectedType = String(req.body.species_type);
 		res.render('bapForm/form', {
 			title: `Edit ${getBapFormTitle(selectedType)}`,
 			form: req.body,
@@ -273,8 +273,8 @@ export const update = async (req: MulmRequest, res: Response) => {
 
 	// TODO fix silly serial queries at some point
 	db.updateSubmission(submission.id, db.formToDB(submission.member_id, form, !draft));
-	const sub = db.getSubmissionById(submission.id);
-	const member = getMember(submission.member_id);
+	const sub = await db.getSubmissionById(submission.id);
+	const member = await getMember(submission.member_id);
 	if (!draft && sub && member) {
 		onSubmissionSend(sub, member);
 	}
@@ -287,7 +287,7 @@ export const update = async (req: MulmRequest, res: Response) => {
 }
 
 export const remove = async (req: MulmRequest, res: Response) => {
-	const submission = validateSubmission(req, res);
+	const submission = await validateSubmission(req, res);
 	if (!submission) {
 		return;
 	}

@@ -1,4 +1,4 @@
-import { getWriteDBConnecton } from "./conn";
+import { writeConn } from "./conn";
 import { v4 as uuidv4 } from "uuid";
 
 export type KnownSpecies = {
@@ -11,14 +11,14 @@ export type KnownSpecies = {
 /**
  * returns a non-zero value if a new species name was created.
  */
-export function assureSpecies(
+export async function assureSpecies(
 	latinName: string,
 	commonName: string,
 	submissionId: number,
 ) {
 	try {
-		const conn = getWriteDBConnecton()
-		const insertStmt = conn.prepare(`
+		const conn = writeConn;
+		const insertStmt = await conn.prepare(`
 			INSERT INTO known_species
 			(latin_name, common_name, first_submission, species_id)
 			VALUES (?, ?, ?, ?)
@@ -26,39 +26,39 @@ export function assureSpecies(
 		`);
 
 		const result = insertStmt.run(latinName, commonName, submissionId, uuidv4());
-		return result.lastInsertRowid;
+		return (await result).lastID as number;
 	} catch (err) {
 		console.error(err);
 		throw new Error("Failed to record known species");
 	}
 }
 
-export function mergeSpecies(authoritativeId: number, alternateId: number) {
+export async function mergeSpecies(authoritativeId: number, alternateId: number) {
 	try {
-		const conn = getWriteDBConnecton()
-		const insertStmt = conn.prepare(`
+		const conn = writeConn;
+		const insertStmt = await conn.prepare(`
 			INSERT INTO known_species_assoc
 			(authoritative_id, alternate_id)
 			VALUES (?, ?);
 		`);
 
-		const result = insertStmt.run(authoritativeId, alternateId);
-		return result.lastInsertRowid;
+		const result = await insertStmt.run(authoritativeId, alternateId);
+		return result.lastID as number;
 	} catch (err) {
 		console.error(err);
 		throw new Error("Failed to merge species");
 	}
 }
 
-export function updateAuthoritativeSpecies(currentId: number, newId: number) {
+export async function updateAuthoritativeSpecies(currentId: number, newId: number) {
 	try {
-		const conn = getWriteDBConnecton()
-		const updateStmt = conn.prepare(`
+		const conn = writeConn;
+		const updateStmt = await conn.prepare(`
 			UPDATE known_specied_assoc
 			SET authoritative_id = ?
 			WHERE authoritative_id = ?;
 		`);
-		updateStmt.run(newId, currentId);
+		await updateStmt.run(newId, currentId);
 	} catch (err) {
 		console.error(err);
 		throw new Error("Failed to update authoritative speies");

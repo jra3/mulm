@@ -1,4 +1,4 @@
-import { checkPassword, makePasswordEntry } from "@/auth";
+import { checkPassword, makePasswordEntry } from "../auth.js";
 
 test('hashy hash', async () => {
 	const salty = await makePasswordEntry("hashy");

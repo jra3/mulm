@@ -1,16 +1,16 @@
 import { AuthCode } from "@/auth";
-import { getWriteDBConnecton, query } from "./conn";
+import { writeConn, query } from "./conn";
 
-export function createAuthCode(codeEntry: AuthCode) {
-	const db = getWriteDBConnecton()
+export async function createAuthCode(codeEntry: AuthCode) {
+	const db = writeConn;
 	try {
-		const stmt = db.prepare(`
+		const stmt = await db.prepare(`
 			INSERT INTO auth_codes
 			(code, member_id, purpose, expires_on)
 			VALUES (?, ?, ?, ?)
 		`);
 		const { code, member_id, purpose, expires_on } = codeEntry;
-		stmt.run(code, member_id, purpose, expires_on.toISOString());
+		await stmt.run(code, member_id, purpose, expires_on.toISOString());
 	} catch (err) {
 		console.error(err);
 		throw new Error("Failed to insert code");
@@ -19,29 +19,27 @@ export function createAuthCode(codeEntry: AuthCode) {
 	}
 }
 
-export function getAuthCode(code: string) {
-	const codes = query<AuthCode>(`SELECT * FROM auth_codes WHERE code = ?`, [code]);
+export async function getAuthCode(code: string) {
+	const codes = await query<AuthCode>(`SELECT * FROM auth_codes WHERE code = ?`, [code]);
 	return codes.pop();
 }
 
-export function deleteAuthCode(code: string) {
+export async function deleteAuthCode(code: string) {
 	try {
-		const conn = getWriteDBConnecton();
-		const deleteRow = conn.prepare("DELETE FROM auth_codes WHERE code = ?");
-		const result = deleteRow.run(code);
-		return result;
+		const conn = writeConn;
+		const deleteRow = await conn.prepare("DELETE FROM auth_codes WHERE code = ?");
+		return deleteRow.run(code);
 	} catch (err) {
 		console.error(err);
 		throw new Error("Failed to delete auth code");
 	}
 }
 
-export function deleteExpiredAuthCodes(cutoff: Date) {
+export async function deleteExpiredAuthCodes(cutoff: Date) {
 	try {
-		const conn = getWriteDBConnecton();
-		const deleteRow = conn.prepare("DELETE FROM auth_codes WHERE expires_on < ?");
-		const result = deleteRow.run(cutoff);
-		return result;
+		const conn = writeConn;
+		const deleteRow = await conn.prepare("DELETE FROM auth_codes WHERE expires_on < ?");
+		return deleteRow.run(cutoff);
 	} catch (err) {
 		console.error(err);
 		throw new Error("Failed to delete auth codes");

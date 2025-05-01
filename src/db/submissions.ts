@@ -1,6 +1,6 @@
 import { ApprovalFormValues } from "@/forms/approval";
 import { FormValues } from "@/forms/submission";
-import { getWriteDBConnecton, query } from "./conn";
+import { writeConn, query } from "./conn";
 
 export type Submission = {
 	id: number;
@@ -80,13 +80,13 @@ export function formToDB(memberId: number, form: FormValues, submit: boolean) {
 	};
 }
 
-export function createSubmission(
+export async function createSubmission(
 	memberId: number,
 	form: FormValues,
 	submit: boolean,
 ) {
 	try {
-		const conn = getWriteDBConnecton();
+		const conn = writeConn;
 		const entries = formToDB(memberId, form, submit);
 
 		const fields = [];
@@ -101,15 +101,14 @@ export function createSubmission(
 			marks.push("?");
 		}
 
-		const stmt = conn.prepare(`
+		const stmt = await conn.prepare(`
 			INSERT INTO submissions
 			(${fields.join(", ")})
 			VALUES
 			(${marks.join(", ")})`);
 
-		const result = stmt.run(values);
-		conn.close();
-		return result.lastInsertRowid as number;
+		const result = await stmt.run(values);
+		return result.lastID as number;
 	} catch (err) {
 		console.error(err);
 		throw new Error("Failed to add submission");
@@ -146,8 +145,8 @@ export function getSubmissionsByMember(
 	return query<Submission>(expr, [memberId]);
 }
 
-export function getSubmissionById(id: number) {
-	const result = query<Submission>(
+export async function getSubmissionById(id: number) {
+	const result = await query<Submission>(
 		`
 		SELECT
 			submissions.*,
@@ -166,12 +165,11 @@ export function getSubmissionById(id: number) {
 	return result.pop();
 }
 
-export function deleteSubmission(id: number) {
+export async function deleteSubmission(id: number) {
 	try {
-		const conn = getWriteDBConnecton();
-		const deleteRow = conn.prepare("DELETE FROM submissions WHERE id = ?");
-		const result = deleteRow.run(id);
-		return result;
+		const conn = writeConn;
+		const deleteRow = await conn.prepare("DELETE FROM submissions WHERE id = ?");
+		return deleteRow.run(id);
 	} catch (err) {
 		console.error(err);
 		throw new Error("Failed to delete submission");
@@ -225,8 +223,8 @@ export function getOutstandingSubmissions(program: string) {
 	);
 }
 
-export function getOutstandingSubmissionsCounts() {
-	const rows = query<{ count: number; program: string }>(`
+export async function getOutstandingSubmissionsCounts() {
+	const rows = await query<{ count: number; program: string }>(`
 		SELECT COUNT(1) as count, program
 		FROM submissions JOIN members
 		ON submissions.member_id == members.id
@@ -289,7 +287,7 @@ type UpdateFor<T> = Partial<{
 	[K in keyof T]: T[K] | null | undefined;
 }>;
 
-export function updateSubmission(id: number, updates: UpdateFor<Submission>) {
+export async function updateSubmission(id: number, updates: UpdateFor<Submission>) {
 	const entries = Object.fromEntries(
 		Object.entries(updates).filter(([, value]) => value !== undefined),
 	);
@@ -298,12 +296,11 @@ export function updateSubmission(id: number, updates: UpdateFor<Submission>) {
 	const setClause = fields.map((field) => `${field} = ?`).join(", ");
 
 	try {
-		const conn = getWriteDBConnecton();
-		const stmt = conn.prepare(
+		const conn = writeConn;
+		const stmt = await conn.prepare(
 			`UPDATE submissions SET ${setClause} WHERE id = ?`,
 		);
-		const result = stmt.run(...values, id);
-		conn.close();
+		const result = await stmt.run(...values, id);
 		return result.changes;
 	} catch (err) {
 		console.error(err);
@@ -311,13 +308,13 @@ export function updateSubmission(id: number, updates: UpdateFor<Submission>) {
 	}
 }
 
-export function approveSubmission(
+export async function approveSubmission(
 	approvedBy: number,
 	id: number,
 	updates: ApprovalFormValues,
 ) {
 	try {
-		const conn = getWriteDBConnecton();
+		const conn = writeConn;
 		const {
 			points,
 			article_points,
@@ -325,7 +322,7 @@ export function approveSubmission(
 			flowered,
 			sexual_reproduction,
 		} = updates;
-		const stmt = conn.prepare(`
+		const stmt = await conn.prepare(`
 			UPDATE submissions SET
 				points = ?,
 				article_points = ?,
@@ -335,7 +332,7 @@ export function approveSubmission(
 				approved_by = ?,
 				approved_on = ?
 			WHERE id = ?`);
-		stmt.run(
+		await stmt.run(
 			points,
 			article_points,
 			first_time_species ? 1 : 0,
@@ -345,7 +342,6 @@ export function approveSubmission(
 			new Date().toISOString(),
 			id,
 		);
-		conn.close();
 	} catch (err) {
 		console.error(err);
 		throw new Error("Failed to update submission");

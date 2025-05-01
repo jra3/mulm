@@ -36,7 +36,7 @@ export const updateAccountSettings = async (req: MulmRequest, res: Response) => 
 
 		res.render("account/settings", {
 			viewer,
-			//googleURL: await getGoogleLinkURL(req),
+			googleURL: await getGoogleOAuthURL(),
 			errors,
 		});
 		return;
@@ -46,7 +46,7 @@ export const updateAccountSettings = async (req: MulmRequest, res: Response) => 
 
 	try {
 		if (form.current_password && form.password) {
-			const currentPasswordEntry = getMemberPassword(viewer.id);
+			const currentPasswordEntry = await getMemberPassword(viewer.id);
 			// Not set, or we have correct password
 			// Need better logic here...
 			if (!currentPasswordEntry || await checkPassword(currentPasswordEntry, form.current_password)) {

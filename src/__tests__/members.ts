@@ -1,43 +1,47 @@
-import Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
 import { createMember, getGoogleAccount, getMember, getMemberByEmail, getMembersList } from "../db/members";
-import { setDBFactory } from "../db/conn";
+import sqlite3 from 'sqlite3';
+import { open } from 'sqlite';
+import { overrideConnection } from "../db/conn";
 
 beforeAll(() => {
 	fs.mkdirSync("/tmp/mulm");
 });
 
 let instance = 1;
-beforeEach(() => {
-	const dbUri = `/tmp/mulm/database-${instance++}.sqlite`;
-	const memoryDb = new Database(dbUri);
+beforeEach(async () => {
+	const tmpConn = await open({
+		filename: `/tmp/mulm/database-${instance++}.sqlite`,
+		driver: sqlite3.cached.Database,
+		mode: sqlite3.OPEN_READONLY,
+	});
+
 	const schema = fs.readFileSync(path.join(__dirname, "../db/schema.sql"), 'utf-8')
-	memoryDb.exec(schema);
-	setDBFactory((readonly) => new Database(dbUri, { readonly }));
-	memoryDb.close();
-	// Seed data
+	tmpConn.exec(schema);
+	overrideConnection(tmpConn);
+
 });
 
 afterAll(() => {
 	fs.rmdirSync("/tmp/mulm", { recursive: true });
 });
 
-test('Members list append', () => {
-	expect(getMembersList().length).toEqual(0);
+test('Members list append', async () => {
+	expect((await getMembersList()).length).toEqual(0);
 	createMember("honk@dazzle.com", "Honk Dazzle");
-	expect(getMembersList().length).toEqual(1);
+	expect((await getMembersList()).length).toEqual(1);
 })
 
 test('Create and fetch', async () => {
 	const id = await createMember("honk@dazzle.com", "Honk Dazzle");
-	expect(getMemberByEmail("honk@dazzle.com")?.id).toEqual(id);
-	expect(getMemberByEmail("honk@dazzle.com")?.id).toEqual(id);
-	expect(getMember(id)?.display_name).toEqual("Honk Dazzle");
-	expect(getMember(1234)).toBeUndefined();
+	expect((await getMemberByEmail("honk@dazzle.com"))?.id).toEqual(id);
+	expect((await getMemberByEmail("honk@dazzle.com"))?.id).toEqual(id);
+	expect((await getMember(id))?.display_name).toEqual("Honk Dazzle");
+	expect((await getMember(1234))).toBeUndefined();
 })
 
-test('Create COLLISION', () => {
+test('Create COLLISION', async () => {
 	createMember("nop@nopsledteam.com", "hehehehe");
 	createMember("honk@dazzle.com", "Honk Dazzle");
 	try {
@@ -48,17 +52,17 @@ test('Create COLLISION', () => {
 	} catch (e: any) {
 		expect(e.message).toEqual("Failed to create member");
 	}
-	expect(getMembersList().length).toEqual(2);
+	expect((await getMembersList()).length).toEqual(2);
 })
 
-test('Create with google', () => {
+test('Create with google', async () => {
 	const id = createMember("honk@dazzle.com", "Honk Dazzle", { google_sub: "123456789" });
-	const account = getGoogleAccount("123456789");
-	expect(account?.member_id).toEqual(id);
-	expect(getMember(account!.member_id)?.display_name).toEqual("Honk Dazzle");
+	const member_id = await getGoogleAccount("123456789");
+	expect(member_id).toEqual(id);
+	expect((await getMember(member_id!))?.display_name).toEqual("Honk Dazzle");
 })
 
-test('Create with google COLLISION', () => {
+test('Create with google COLLISION', async () => {
 	createMember("nop@nopsledteam.com", "hehehehe",  { google_sub: "987654321" });
 	createMember("honk@dazzle.com", "Honk Dazzle", { google_sub: "123456789" });
 	try {
@@ -69,5 +73,5 @@ test('Create with google COLLISION', () => {
 	} catch (err: any) {
 		expect(err.message).toEqual("Failed to create member");
 	}
-	expect(getMembersList().length).toEqual(2);
+	expect((await getMembersList()).length).toEqual(2);
 })

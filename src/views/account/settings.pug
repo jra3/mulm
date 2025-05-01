@@ -9,9 +9,4 @@ include ./field.pug
 			+passwordInput("Current Password", "current_password")
 			+passwordInput("New Password", "password")
 			+passwordInput("Confirm New Password", "password_confirm")
-			if google
-				+passwordInput("Google Account", "google")(disabled=true)
-			else
-				a(href=googleURL alt='Continue with Google')
-					img(src='/google-button.svg')
 		button.mt-4.primary(type="submit") Update

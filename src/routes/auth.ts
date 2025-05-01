@@ -44,9 +44,9 @@ export const signup = async (req: MulmRequest, res: Response) => {
 
 export const passwordLogin = async (req: MulmRequest, res: Response) => {
 	const data = loginSchema.parse(req.body);
-	const member = getMemberByEmail(data.email);
+	const member = await getMemberByEmail(data.email);
 	if (member != undefined) {
-		const pass = getMemberPassword(member.id);
+		const pass = await getMemberPassword(member.id);
 		if (await checkPassword(pass, data.password)) {
 			createUserSession(req, res, member.id);
 			res.set("HX-Redirect", "/").send();
@@ -68,7 +68,7 @@ export const validateForgotPassword = async (req: MulmRequest, res: Response) =>
 		return;
 	}
 
-	const codeEntry = getAuthCode(code);
+	const codeEntry = await getAuthCode(code);
 	if (codeEntry == undefined || codeEntry.purpose != "password_reset") {
 		res.status(400).send("Invalid code");
 		return;
@@ -80,7 +80,7 @@ export const validateForgotPassword = async (req: MulmRequest, res: Response) =>
 		return;
 	}
 
-	const member = getMember(codeEntry.member_id);
+	const member = await getMember(codeEntry.member_id);
 	if (member == undefined) {
 		res.status(400).send("Member not found");
 		return;
@@ -109,7 +109,7 @@ export const sendForgotPassword = async (req: MulmRequest, res: Response) => {
 		return;
 	}
 
-	const member = getMemberByEmail(parsed.data.email);
+	const member = await getMemberByEmail(parsed.data.email);
 	if (member == undefined) {
 		// should fake success to prevent email enumeration
 		errors.set("success", "Check your email for a reset link.");
@@ -147,13 +147,13 @@ export const resetPassword = async (req: MulmRequest, res: Response) => {
 	}
 
 	const now = new Date(Date.now());
-	const codeEntry = getAuthCode(parsed.data.code);
+	const codeEntry = await getAuthCode(parsed.data.code);
 	if (codeEntry == undefined || codeEntry.purpose != "password_reset") {
 		errors.set("form", "Invalid code");
 	} else if (codeEntry.expires_on < now) {
 		errors.set("form", "Code expired");
 	} else {
-		const member = getMember(codeEntry.member_id);
+		const member = await getMember(codeEntry.member_id);
 		if (member == undefined) {
 			errors.set("form", "Member not found");
 		} else {
@@ -185,7 +185,7 @@ export const googleOAuth = async (req: MulmRequest, res: Response) => {
 	}
 	const token = String(payload.access_token);
 	const googleUser = await getGoogleUser(token);
-	const record = getGoogleAccount(googleUser.sub);
+	const record = await getGoogleAccount(googleUser.sub);
 
 	let memberId: number | undefined = undefined;
 
@@ -198,7 +198,7 @@ export const googleOAuth = async (req: MulmRequest, res: Response) => {
 			memberId = viewer.id;
 		} else {
 			// We are not logged in, check if we can link to an existing member
-			const member = getMemberByEmail(googleUser.email);
+			const member = await getMemberByEmail(googleUser.email);
 			if (member) {
 				// We found a member using the same email as this google account. link it.
 				memberId = member.id;
@@ -210,7 +210,7 @@ export const googleOAuth = async (req: MulmRequest, res: Response) => {
 
 		createGoogleAccount(memberId, googleUser.sub);
 	} else {
-		memberId = record.member_id;
+		memberId = record;
 	}
 
 	if (memberId == undefined) {

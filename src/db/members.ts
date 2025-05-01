@@ -1,5 +1,5 @@
 import { makePasswordEntry, ScryptPassword } from "@/auth";
-import { getWriteDBConnecton, query } from "./conn";
+import { writeConn, query } from "./conn";
 
 // type as represented in the database
 export type MemberRecord = {
@@ -22,22 +22,22 @@ type AwardRecord = {
 	date_awarded: string;
 };
 
-export function getGoogleAccount(sub: string) {
-	const members = query<{
+export async function getGoogleAccount(sub: string): Promise<number | undefined> {
+	const members = await query<{
 		member_id: number,
 	}>(`SELECT member_id FROM google_account WHERE google_sub = ?`, [sub]);
+	return members.pop()?.member_id;
+}
+
+export async function getMemberPassword(memberId: number) {
+	const members = await query<ScryptPassword>(`SELECT * FROM password_account WHERE member_id = ?`, [memberId]);
 	return members.pop();
 }
 
-export function getMemberPassword(memberId: number) {
-	const members = query<ScryptPassword>(`SELECT * FROM password_account WHERE member_id = ?`, [memberId]);
-	return members.pop();
-}
-
-export function createOrUpdatePassword(memberId: number, passwordEntry: ScryptPassword) {
-	const db = getWriteDBConnecton()
+export async function createOrUpdatePassword(memberId: number, passwordEntry: ScryptPassword) {
+	const db = writeConn;
 	try {
-		const stmt = db.prepare(`
+		const stmt = await db.prepare(`
 			INSERT INTO password_account (member_id, N, r, p, salt, hash) VALUES (?, ?, ?, ?, ?, ?)
 			ON CONFLICT(member_id) DO UPDATE SET
 				N = excluded.N,
@@ -51,25 +51,21 @@ export function createOrUpdatePassword(memberId: number, passwordEntry: ScryptPa
 	} catch (err) {
 		console.error(err);
 		throw new Error("Failed to set password");
-	} finally {
-		db.close();
 	}
 }
 
-export function createGoogleAccount(memberId: number, sub: string) {
-	const db = getWriteDBConnecton()
+export async function createGoogleAccount(memberId: number, sub: string) {
+	const db = writeConn;
 	try {
-		const googleStmt = db.prepare('INSERT INTO google_account (google_sub, member_id) VALUES (?, ?)');
-		googleStmt.run(sub, memberId);
+		const googleStmt = await db.prepare('INSERT INTO google_account (google_sub, member_id) VALUES (?, ?)');
+		await googleStmt.run(sub, memberId);
 	} catch (err) {
 		console.error(err);
 		throw new Error("Failed to create google account");
-	} finally {
-		db.close();
 	}
 }
 
-export function createMember(
+export async function createMember(
 	email: string,
 	name: string,
 	credentials: {
@@ -78,49 +74,47 @@ export function createMember(
 	} = {},
 	isAdmin: boolean = false,
 ) {
+	const db = writeConn;
+	await db.exec('BEGIN TRANSACTION;');
+
 	try {
-		const db = getWriteDBConnecton()
-		return db.transaction(async () => {
-			const userStmt = db.prepare('INSERT INTO members (display_name, contact_email, is_admin) VALUES (?, ?, ?)');
-			const memberId = userStmt.run(name, email, isAdmin ? 1 : 0).lastInsertRowid;
+		const userStmt = await db.prepare('INSERT INTO members (display_name, contact_email, is_admin) VALUES (?, ?, ?)');
+		const memberId = (await userStmt.run(name, email, isAdmin ? 1 : 0)).lastID;
 
-			if (credentials.google_sub) {
-				const googleStmt = db.prepare('INSERT INTO google_account (google_sub, member_id) VALUES (?, ?)');
-				googleStmt.run(credentials.google_sub, memberId);
-			}
+		if (credentials.google_sub) {
+			const googleStmt = await db.prepare('INSERT INTO google_account (google_sub, member_id) VALUES (?, ?)');
+			await googleStmt.run(credentials.google_sub, memberId);
+		}
 
-			if (credentials.password) {
-				const { N, r, p, salt, hash	} = await makePasswordEntry(credentials.password);
-				const googleStmt = db.prepare('INSERT INTO password_account (member_id, N, r, p, salt, hash) VALUES (?, ?, ?, ?, ?, ?)');
-				googleStmt.run(memberId, N, r, p, salt, hash);
-			}
+		if (credentials.password) {
+			const { N, r, p, salt, hash	} = await makePasswordEntry(credentials.password);
+			const googleStmt = await db.prepare('INSERT INTO password_account (member_id, N, r, p, salt, hash) VALUES (?, ?, ?, ?, ?, ?)');
+			await googleStmt.run(memberId, N, r, p, salt, hash);
+		}
 
-			return memberId as number;
-		})();
+		await db.exec('COMMIT;');
+		return memberId as number;
+
 	} catch (err) {
+		await db.exec('ROLLBACK;');
 		console.error(err);
 		throw new Error("Failed to create member");
 	}
 }
 
-export function getMember(id: number) {
-	const members = query<MemberRecord>(
-		`SELECT * FROM members WHERE id = ?`,
-		[id],
-	);
+export async function getMember(id: number) {
+	const members = await query<MemberRecord>("SELECT * FROM members WHERE id = ?",	[id]);
 	return members.pop();
 }
 
-export function updateMember(memberId: number, updates: Partial<MemberRecord>) {
+export async function updateMember(memberId: number, updates: Partial<MemberRecord>) {
 	const fields = Object.keys(updates);
 	const values = Object.values(updates);
 	const setClause = fields.map((field) => `${field} = ?`).join(", ");
-
+	const conn = writeConn;
 	try {
-		const conn = getWriteDBConnecton();
-		const stmt = conn.prepare(`UPDATE members SET ${setClause} WHERE id = ?`);
-		const result = stmt.run(...values, memberId);
-		conn.close();
+		const stmt = await conn.prepare(`UPDATE members SET ${setClause} WHERE id = ?`);
+		const result = await stmt.run(...values, memberId);
 		return result.changes;
 	} catch (err) {
 		console.error(err);
@@ -128,48 +122,33 @@ export function updateMember(memberId: number, updates: Partial<MemberRecord>) {
 	}
 }
 
-export function getMemberByEmail(email: string) {
-	const members = query<MemberRecord>(
-		`SELECT * FROM members WHERE contact_email = ?`,
-		[email],
-	);
+export async function getMemberByEmail(email: string) {
+	const members = await query<MemberRecord>("SELECT * FROM members WHERE contact_email = ?", [email]);
 	return members.pop();
 }
 
-export function getMembersList(): MemberRecord[] {
-	return query(
-		`SELECT id, display_name, fish_level, plant_level, coral_level FROM members`,
-	);
+export async function getMembersList(): Promise<MemberRecord[]> {
+	return query<MemberRecord>("SELECT id, display_name, fish_level, plant_level, coral_level FROM members");
 }
 
-export function getRoster() {
+export async function getRoster() {
 	return query<MemberRecord>(`SELECT * FROM members`);
 }
 
-export function getMemberWithAwards(memberId: string) {
-	const members = query<MemberRecord>(`SELECT * FROM members WHERE id = ?`, [
-		memberId,
+export async function getMemberWithAwards(memberId: string) {
+	const [members, awards] = await Promise.all([
+		query<MemberRecord>("SELECT * FROM members WHERE id = ?", [memberId]),
+		query<AwardRecord>("SELECT * FROM awards WHERE member_id = ?", [memberId]),
 	]);
 	const member = members.pop();
-	const awards = query<AwardRecord>(
-		`SELECT * FROM awards WHERE member_id = ?`,
-		[memberId],
-	);
 	return { ...member, awards };
 }
 
-export function grantAward(
-	memberId: number,
-	awardName: string,
-	dateAwarded: Date,
-) {
+export async function grantAward(memberId: number, awardName: string, dateAwarded: Date) {
 	try {
-		const conn = getWriteDBConnecton();
-		const stmt = conn.prepare(
-			`INSERT INTO awards (member_id, award_name, date_awarded) VALUES (?, ?, ?)`,
-		);
-		stmt.run(memberId, awardName, dateAwarded.toISOString());
-		conn.close();
+		const conn = writeConn;
+		const stmt = await conn.prepare("INSERT INTO awards (member_id, award_name, date_awarded) VALUES (?, ?, ?)");
+		await stmt.run(memberId, awardName, dateAwarded.toISOString());
 	} catch (err) {
 		console.error(err);
 		throw new Error("Failed to grant award");

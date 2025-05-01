@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { getWriteDBConnecton, query } from "./db/conn";
+import { writeConn, query } from "./db/conn";
 import { generateRandomCode } from "./auth";
 
 export const generateSessionCookie = () => generateRandomCode(64)
@@ -24,14 +24,14 @@ export async function sessionMiddleware(
 
 	const token = req.cookies.session_id;
 	if (token) {
-		req.viewer = getLoggedInUser(token);
+		req.viewer = await getLoggedInUser(token);
 	}
 	next();
 }
 
-function getLoggedInUser(token: string) {
+async function getLoggedInUser(token: string) {
 			const now = new Date().toISOString();
-			return query<Viewer>(`
+			return (await query<Viewer>(`
 				SELECT
 					members.id as id,
 					members.display_name as display_name,
@@ -42,18 +42,18 @@ function getLoggedInUser(token: string) {
 					members.coral_level as coral_level
 				FROM sessions JOIN members ON sessions.member_id = members.id
 				WHERE session_id = ? AND expires_on > ?;
-			`, [token, now]).pop();
+			`, [token, now])).pop();
 		}
 
-export function createUserSession(req: Request, res: Response, memberId: number) {
+export async function createUserSession(req: Request, res: Response, memberId: number) {
 	const cookieValue = generateSessionCookie();
 	try {
-		const conn = getWriteDBConnecton()
+		const conn = writeConn;
 		const expiry = new Date(Date.now() + (180 * 86400 * 1000));
-		const insertStmt = conn.prepare(`
+		const insertStmt = await conn.prepare(`
 			INSERT INTO sessions (session_id, member_id, expires_on) VALUES (?, ?, ?);
 		`);
-		insertStmt.run(cookieValue, memberId, expiry.toISOString());
+		await insertStmt.run(cookieValue, memberId, expiry.toISOString());
 	} catch (err) {
 		console.error(err);
 		throw new Error("Failed to get member");
@@ -65,13 +65,13 @@ export function createUserSession(req: Request, res: Response, memberId: number)
 	});
 }
 
-export function destroyUserSession(req: MulmRequest, res: Response) {
+export async function destroyUserSession(req: MulmRequest, res: Response) {
 	const token = req.cookies.session_id;
 	if (token !== undefined) {
 		try {
-			const conn = getWriteDBConnecton()
-			const deleteRow = conn.prepare('DELETE FROM sessions WHERE session_id = ?');
-			deleteRow.run(token);
+			const conn = writeConn;
+			const deleteRow = await conn.prepare('DELETE FROM sessions WHERE session_id = ?');
+			await deleteRow.run(token);
 		} catch (err) {
 			console.error(err);
 			throw new Error("Failed to delete submission");

@@ -20,7 +20,7 @@ export const annual = async (req: MulmRequest, res: Response) => {
 	const startDate = new Date(year - 1, 7, 1);
 	const endDate = new Date(year, 6, 31);
 
-	const submissions = getApprovedSubmissionsInDateRange(
+	const submissions = await getApprovedSubmissionsInDateRange(
 		startDate,
 		endDate,
 		program,
@@ -73,7 +73,7 @@ export const lifetime = async (req: MulmRequest, res: Response) => {
 	}
 
 	const levels: Record<string, Member[]> = {};
-	const allSubmissions = getApprovedSubmissions(program);
+	const allSubmissions = await getApprovedSubmissions(program);
 	const totals = new Map<number, number>();
 	for (const record of allSubmissions) {
 		totals.set(
@@ -82,7 +82,7 @@ export const lifetime = async (req: MulmRequest, res: Response) => {
 		);
 	}
 
-	const members = getMembersList();
+	const members = await getMembersList();
 	for (const member of members) {
 		const memberLevel =
 			(() => {

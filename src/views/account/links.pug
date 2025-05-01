@@ -1,0 +1,7 @@
+#accountLinks
+	h2.text-xl.font-bold.mb-4(class="sm:text-2xl") Linked Accounts
+	if google
+		+passwordInput("Google Account", "google")(disabled=true)
+	else
+		a(href=googleURL alt='Continue with Google')
+			img(src='/google-continue-button.svg')

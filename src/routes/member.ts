@@ -5,7 +5,7 @@ import { Response } from "express";
 
 export const view = async (req: MulmRequest, res: Response) => {
 	const { memberId } = req.params;
-	const member = getMemberWithAwards(memberId);
+	const member = await getMemberWithAwards(memberId);
 	if (!member) {
 		res.status(404).send("Member not found");
 		return;
@@ -16,7 +16,7 @@ export const view = async (req: MulmRequest, res: Response) => {
 	const isSelf = Boolean(viewer?.id == member.id);
 	const isAdmin = Boolean(viewer?.is_admin);
 
-	const submissions = getSubmissionsByMember(
+	const submissions = await getSubmissionsByMember(
 		memberId,
 		isSelf,
 		isSelf || isAdmin,
