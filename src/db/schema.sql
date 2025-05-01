@@ -127,7 +127,7 @@ CREATE TABLE auth_codes (
 	code TEXT PRIMARY KEY,
 	member_id INTEGER NOT NULL,
 	purpose TEXT NOT NULL,
-	expires_on DATETIME NOT NULL,
+	expires_on DATETIME NOT NULL
 );
 
 CREATE TABLE known_species (

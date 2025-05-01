@@ -43,7 +43,6 @@ router.get("/annual/:stringYear{/:program}", standings.annual);
 router.get("/lifetime{/:program}", standings.lifetime);
 
 router.get("/", async (req: MulmRequest, res) => {
-	console.log(req.cookies);
 	const { viewer } = req;
 	const isLoggedIn = Boolean(viewer);
 	const isAdmin = viewer?.is_admin;
