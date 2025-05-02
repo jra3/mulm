@@ -22,11 +22,33 @@ type AwardRecord = {
 	date_awarded: string;
 };
 
-export async function getGoogleAccount(sub: string): Promise<number | undefined> {
+export async function getGoogleAccount(sub: string) {
 	const members = await query<{
+		google_sub: string,
 		member_id: number,
-	}>(`SELECT member_id FROM google_account WHERE google_sub = ?`, [sub]);
-	return members.pop()?.member_id;
+		google_email: string,
+	}>(`SELECT google_sub, member_id, google_email FROM google_account WHERE google_sub = ?`, [sub]);
+	return members.pop();
+}
+
+export async function getGoogleAccountByMemberId(member_id: number) {
+	const members = await query<{
+		google_sub: string,
+		member_id: number,
+		google_email: string,
+	}>(`SELECT google_sub, member_id, google_email FROM google_account WHERE member_id = ?`, [member_id]);
+	return members.pop()
+}
+
+export async function deleteGoogleAccount(sub: string, memberId: number) {
+	try {
+		const conn = writeConn;
+		const deleteRow = await conn.prepare("DELETE FROM google_account WHERE google_sub = ? AND member_id = ?");
+		return deleteRow.run(sub, memberId);
+	} catch (err) {
+		console.error(err);
+		throw new Error("Failed to delete google account");
+	}
 }
 
 export async function getMemberPassword(memberId: number) {
@@ -54,11 +76,11 @@ export async function createOrUpdatePassword(memberId: number, passwordEntry: Sc
 	}
 }
 
-export async function createGoogleAccount(memberId: number, sub: string) {
+export async function createGoogleAccount(memberId: number, sub: string, email: string) {
 	const db = writeConn;
 	try {
-		const googleStmt = await db.prepare('INSERT INTO google_account (google_sub, member_id) VALUES (?, ?)');
-		await googleStmt.run(sub, memberId);
+		const googleStmt = await db.prepare('INSERT INTO google_account (google_sub, member_id, google_email) VALUES (?, ?, ?)');
+		await googleStmt.run(sub, memberId, email);
 	} catch (err) {
 		console.error(err);
 		throw new Error("Failed to create google account");

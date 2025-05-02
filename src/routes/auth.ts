@@ -33,7 +33,7 @@ export const signup = async (req: MulmRequest, res: Response) => {
 			body.display_name,
 			{ password: body.password },
 		);
-		createUserSession(req, res, memberId);
+		await createUserSession(req, res, memberId);
 		res.set("HX-redirect", "/").send();
 	} catch (e: unknown) {
 		console.error(e);
@@ -48,7 +48,7 @@ export const passwordLogin = async (req: MulmRequest, res: Response) => {
 	if (member != undefined) {
 		const pass = await getMemberPassword(member.id);
 		if (await checkPassword(pass, data.password)) {
-			createUserSession(req, res, member.id);
+			await createUserSession(req, res, member.id);
 			res.set("HX-Redirect", "/").send();
 		}
 	}
@@ -56,19 +56,19 @@ export const passwordLogin = async (req: MulmRequest, res: Response) => {
 }
 
 // Clears the session cookies and deletes the session from the db
-export const logout = (req: MulmRequest, res: Response) => {
-	destroyUserSession(req, res);
+export const logout = async (req: MulmRequest, res: Response) => {
+	await destroyUserSession(req, res);
 	res.redirect("/");
 }
 
 export const validateForgotPassword = async (req: MulmRequest, res: Response) => {
-	const code = req.query.code = req.query.code?.toString();
+	const code = req.query.code;
 	if (code == undefined) {
 		res.status(400).send("Missing code");
 		return;
 	}
 
-	const codeEntry = await getAuthCode(code);
+	const codeEntry = await getAuthCode(String(code));
 	if (codeEntry == undefined || codeEntry.purpose != "password_reset") {
 		res.status(400).send("Invalid code");
 		return;
@@ -94,8 +94,6 @@ export const validateForgotPassword = async (req: MulmRequest, res: Response) =>
 }
 
 export const sendForgotPassword = async (req: MulmRequest, res: Response) => {
-	console.log("asdfuasdf");
-
 	const errors = new Map<string, string>();
 	const renderDialog = () => {
 		res.render("account/forgotPassword", {
@@ -123,11 +121,8 @@ export const sendForgotPassword = async (req: MulmRequest, res: Response) => {
 		expires_on: new Date(Date.now() + 60 * 60 * 1000),
 		purpose: "password_reset",
 	}
-	console.log(1);
-	createAuthCode(code);
-	console.log(2);
+	await createAuthCode(code);
 	await sendResetEmail(member.contact_email, member.display_name, code.code);
-	console.log(3);
 	errors.set("success", "Check your email for a reset link.");
 	renderDialog();
 }
@@ -159,8 +154,8 @@ export const resetPassword = async (req: MulmRequest, res: Response) => {
 		} else {
 			try {
 				const passwordEntry = await makePasswordEntry(parsed.data.password);
-				createOrUpdatePassword(member.id, passwordEntry);
-				createUserSession(req, res, member.id);
+				await createOrUpdatePassword(member.id, passwordEntry);
+				await createUserSession(req, res, member.id);
 				res.set("HX-redirect", "/").send();
 				return;
 			} catch (e: unknown) {
@@ -208,9 +203,9 @@ export const googleOAuth = async (req: MulmRequest, res: Response) => {
 			}
 		}
 
-		createGoogleAccount(memberId, googleUser.sub);
+		await createGoogleAccount(memberId, googleUser.sub, googleUser.email);
 	} else {
-		memberId = record;
+		memberId = record.member_id;
 	}
 
 	if (memberId == undefined) {
@@ -218,7 +213,7 @@ export const googleOAuth = async (req: MulmRequest, res: Response) => {
 		return;
 	}
 
-	createUserSession(req, res, memberId);
+	await createUserSession(req, res, memberId);
 	res.redirect("/");
 };
 

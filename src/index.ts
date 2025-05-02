@@ -100,6 +100,7 @@ router.get("/me", async (req: MulmRequest, res) => {
 
 router.get("/account", account.viewAccountSettings);
 router.patch("/account-settings", account.updateAccountSettings)
+router.delete("/account/google/:sub", account.unlinkGoogleAccount);
 
 // Admin Views /////////////////////////////////////////////////////
 

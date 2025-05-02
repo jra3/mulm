@@ -1,5 +1,5 @@
 import { checkPassword, makePasswordEntry } from "@/auth";
-import { getMemberPassword, createOrUpdatePassword, updateMember } from "@/db/members";
+import { getMemberPassword, createOrUpdatePassword, updateMember, getGoogleAccountByMemberId, deleteGoogleAccount } from "@/db/members";
 import { updateSchema } from "@/forms/login";
 import { getGoogleOAuthURL } from "@/oauth";
 import { MulmRequest } from "@/sessions";
@@ -12,10 +12,19 @@ export const viewAccountSettings = async (req: MulmRequest, res: Response) => {
 		return;
 	}
 
+	const [
+		googleURL,
+		googleAccount
+	] = await Promise.all([
+		getGoogleOAuthURL(),
+		getGoogleAccountByMemberId(viewer.id),
+	]);
+
 	res.render("account/page", {
 		title: "Account Settings",
 		viewer,
-		googleURL: await getGoogleOAuthURL(),
+		googleURL,
+		googleAccount,
 		errors: new Map(),
 	});
 };
@@ -75,5 +84,16 @@ export const updateAccountSettings = async (req: MulmRequest, res: Response) => 
 		},
 		errors,
 	});
-
 }
+
+export const unlinkGoogleAccount = async (req: MulmRequest, res: Response) => {
+	const { viewer } = req;
+	if (!viewer) {
+		res.status(401).send();
+		return;
+	}
+
+	await deleteGoogleAccount(String(req.params.sub), viewer.id);
+	res.send("Unlinked Google account");
+}
+

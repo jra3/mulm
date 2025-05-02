@@ -93,8 +93,13 @@ CREATE TABLE password_account (
 
 CREATE TABLE google_account (
 	google_sub TEXT PRIMARY KEY,
-	member_id INTEGER NOT NULL
+	google_email TEXT,
+	member_id INTEGER NOT NULL,
+	UNIQUE(member_id)
 );
+
+
+CREATE INDEX idx_google_member_id ON google_account (member_id);
 
 CREATE TRIGGER members_id_sequence AFTER INSERT ON members
 BEGIN

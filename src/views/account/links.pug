@@ -1,7 +1,14 @@
 #accountLinks
 	h2.text-xl.font-bold.mb-4(class="sm:text-2xl") Linked Accounts
-	if google
-		+passwordInput("Google Account", "google")(disabled=true)
-	else
-		a(href=googleURL alt='Continue with Google')
-			img(src='/google-continue-button.svg')
+	.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
+		if googleAccount
+			.flex.gap-4.items-center#googleAccount
+				span.font-bold Google
+				span.font-base= googleAccount.google_email
+				button.destructive(
+					hx-target="#googleAccount"
+					hx-delete=`/account/google/${googleAccount.google_sub}`
+				) Unlink
+		else
+			a(href=googleURL alt='Continue with Google')
+				img(src='/google-continue-button.svg')

@@ -7,13 +7,13 @@ export let writeConn: Database;
 (async () => {
 	readOnlyConn = await open({
 		filename: './database.sqlite',
-		driver: sqlite3.cached.Database,
+		driver: sqlite3.Database,
 		mode: sqlite3.OPEN_READONLY,
 	});
 
 	writeConn = await open({
 		filename: './database.sqlite',
-		driver: sqlite3.cached.Database,
+		driver: sqlite3.Database,
 		mode: sqlite3.OPEN_READWRITE,
 	});
 })();
