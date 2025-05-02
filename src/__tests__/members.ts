@@ -59,7 +59,7 @@ test('Create with google', async () => {
 	const id = createMember("honk@dazzle.com", "Honk Dazzle", { google_sub: "123456789" });
 	const member_id = await getGoogleAccount("123456789");
 	expect(member_id).toEqual(id);
-	expect((await getMember(member_id!))?.display_name).toEqual("Honk Dazzle");
+	expect((await getMember(member_id!.member_id))?.display_name).toEqual("Honk Dazzle");
 })
 
 test('Create with google COLLISION', async () => {

@@ -5,6 +5,17 @@ export let readOnlyConn: Database;
 export let writeConn: Database;
 
 (async () => {
+	const adminConn = await open({
+		filename: './database.sqlite',
+		driver: sqlite3.Database,
+		mode: sqlite3.OPEN_CREATE | sqlite3.OPEN_READWRITE,
+	});
+	await adminConn.migrate({
+    migrationsPath: './db/migrations',
+	});
+	adminConn.close();
+
+
 	readOnlyConn = await open({
 		filename: './database.sqlite',
 		driver: sqlite3.Database,
@@ -16,6 +27,8 @@ export let writeConn: Database;
 		driver: sqlite3.Database,
 		mode: sqlite3.OPEN_READWRITE,
 	});
+
+
 })();
 
 
