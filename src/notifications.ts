@@ -1,13 +1,25 @@
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 import config from "./config.json";
 import { type Submission } from "./db/submissions";
 import { MemberRecord } from "./db/members";
 import * as pug from "pug";
 
+const transporter = nodemailer.createTransport({
+  host: config.smtpHost,
+  port: config.smtpPort,
+  secure: config.smtpSecure,
+  auth: {
+    user: config.fromEmail,
+    pass: config.smtpPassword,
+  },
+});
+
 const renderOnSubmission = pug.compileFile("src/views/email/onSubmission.pug");
-export async function onSubmissionSend(sub: Submission, member: MemberRecord) {
-	const resend = new Resend(config.resendApiKey);
-	return resend.emails.send({
+export async function onSubmissionSend(
+	sub: Submission,
+	member: MemberRecord,
+) {
+	return transporter.sendMail({
 		from: config.fromEmail,
 		to: member.contact_email,
 		bcc: config.adminsEmail,
@@ -25,8 +37,7 @@ export async function onSubmissionApprove(
 	sub: Submission,
 	member: MemberRecord,
 ) {
-	const resend = new Resend(config.resendApiKey);
-	return resend.emails.send({
+	return transporter.sendMail({
 		from: config.fromEmail,
 		to: member.contact_email,
 		subject: `Submission Approved! - ${sub.species_common_name}`,
@@ -39,8 +50,7 @@ export async function onSubmissionApprove(
 }
 
 export async function sendVerificationEmail(email: string, url: string) {
-	const resend = new Resend(config.resendApiKey);
-	return resend.emails.send({
+	return transporter.sendMail({
 		from: config.fromEmail,
 		to: email,
 		subject: "Verify your email",
@@ -50,8 +60,7 @@ export async function sendVerificationEmail(email: string, url: string) {
 
 const renderResetEmail = pug.compileFile("src/views/email/onForgotPassword.pug");
 export async function sendResetEmail(email: string, display_name: string, code: string) {
-	const resend = new Resend(config.resendApiKey);
-	return resend.emails.send({
+	return transporter.sendMail({
 		from: config.fromEmail,
 		to: email,
 		subject: "Reset Password",
