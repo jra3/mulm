@@ -6,6 +6,7 @@ import * as ecr_assets from 'aws-cdk-lib/aws-ecr-assets';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import * as autoscaling from 'aws-cdk-lib/aws-autoscaling';
 
 export class InfrastructureStack extends cdk.Stack {
 	constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -17,22 +18,32 @@ export class InfrastructureStack extends cdk.Stack {
 		});
 
 		const cluster = new ecs.Cluster(this, 'Cluster', { vpc });
-		cluster.addCapacity('ASGroup', {
+
+		const asg = cluster.addCapacity('ASGroup', {
 			instanceType: new ec2.InstanceType('t3.micro'),
 			desiredCapacity: 1,
 			machineImage: ecs.EcsOptimizedImage.amazonLinux2(),
 			vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
+			blockDevices: [
+				{
+					volume: autoscaling.BlockDeviceVolume.ebs(8),
+					deviceName: '/dev/xvdf',
+				},
+			],
 		});
-
+		asg.addUserData(
+			'mkdir -p /mnt/basny-data',
+			'mount /dev/xvdf /mnt/basny-data',
+			'echo "/dev/xvdf /mnt/basny-data ext4 defaults,nofail 0 2" >> /etc/fstab'
+		);
 		// Define the service/tasks that run in the single cluster instance
 
 		const taskDef = new ecs.Ec2TaskDefinition(this, 'TaskDef', {
 			networkMode: ecs.NetworkMode.HOST,
 		});
-
 		taskDef.addVolume({
-			name: 'basny-data-volume',
-			host: { sourcePath: '/mnt/data' },
+			name: 'ebs-vol',
+			host: { sourcePath: '/mnt/basny-data' },
 		});
 
 		const app = taskDef.addContainer('AppContainer', {
@@ -47,9 +58,10 @@ export class InfrastructureStack extends cdk.Stack {
 			logging: new ecs.AwsLogDriver({ streamPrefix: 'ecs-ebs' }),
 			essential: true,
 		});
+
 		app.addMountPoints({
 			containerPath: '/mnt/data',
-			sourceVolume: 'basny-data-volume',
+			sourceVolume: 'ebs-vol',
 			readOnly: false,
 		})
 		app.addPortMappings({

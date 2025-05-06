@@ -1,12 +1,13 @@
 import sqlite3 from 'sqlite3';
 import { open, Database } from 'sqlite';
+import config from '../config.json';
 
 export let readOnlyConn: Database;
 export let writeConn: Database;
 
 (async () => {
 	const adminConn = await open({
-		filename: './database.sqlite',
+		filename: config.databaseFile,
 		driver: sqlite3.Database,
 		mode: sqlite3.OPEN_CREATE | sqlite3.OPEN_READWRITE,
 	});
@@ -16,13 +17,13 @@ export let writeConn: Database;
 	adminConn.close();
 
 	readOnlyConn = await open({
-		filename: './database.sqlite',
+		filename: config.databaseFile,
 		driver: sqlite3.Database,
 		mode: sqlite3.OPEN_READONLY,
 	});
 
 	writeConn = await open({
-		filename: './database.sqlite',
+		filename: config.databaseFile,
 		driver: sqlite3.Database,
 		mode: sqlite3.OPEN_READWRITE,
 	});
