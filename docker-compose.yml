@@ -1,0 +1,46 @@
+version: '3.8'
+
+# docker compose file for hosting on our own server
+
+services:
+
+  # ──────────────────────────────────────────────────────────────────────────────
+  # Your web application
+  # ──────────────────────────────────────────────────────────────────────────────
+  webapp:
+    build: .
+    image: basny:latest
+    container_name: basny
+    restart: unless-stopped
+    ports:
+      - "4200:4200"
+    networks:
+      - proxy
+    volumes:
+      - /opt/basny:/mnt/data
+
+  # ──────────────────────────────────────────────────────────────────────────────
+  # Cloudflare Tunnel service
+  # ──────────────────────────────────────────────────────────────────────────────
+  cloudflare-tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflare-tunnel
+    restart: unless-stopped
+    depends_on:
+      - webapp
+    networks:
+      - proxy
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    volumes:
+      - ./config:/etc/cloudflared
+      - /etc/localtime:/etc/localtime:ro
+    healthcheck:
+      test: ["CMD", "cloudflared", "--version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  proxy:
+    driver: bridge

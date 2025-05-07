@@ -1,14 +1,13 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
-COPY package*.json ./
+COPY package*.json .
 RUN npm install
 
-COPY ./../tsconfig.json .
-COPY ./../postcss.config.mjs .
-COPY ./../src src
-COPY ./../public public
-# installing specific binary for this build in the container
-RUN npm i @tailwindcss/oxide-linux-x64-musl lightningcss
+COPY tsconfig.json .
+COPY postcss.config.mjs .
+COPY src src
+COPY public public
+
 RUN npm run build
 
 FROM node:20-alpine AS runner
@@ -20,8 +19,8 @@ COPY ./../start.sh ./
 COPY --from=builder /app/dist/src ./src
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/dist/views ./src/views
-COPY ./../src/config.production.json ./src/config.json
-COPY ./../db ./db
+COPY src/config.production.json ./src/config.json
+COPY db db
 
 RUN apk --no-cache add curl
 

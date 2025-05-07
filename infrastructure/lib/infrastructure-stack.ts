@@ -49,7 +49,7 @@ export class InfrastructureStack extends cdk.Stack {
 		const app = taskDef.addContainer('AppContainer', {
 			image: ecs.ContainerImage.fromAsset('..', {
 				platform: ecr_assets.Platform.LINUX_AMD64,
-				exclude: ["node_modules", "Dockerfile", "infrastructure", "cdk.out"],
+				exclude: ["node_modules", "docker","infrastructure", "cdk.out"],
 			}),
 			memoryLimitMiB: 256,
 			environment: {
