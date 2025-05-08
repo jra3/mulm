@@ -8,3 +8,8 @@ export const memberSchema = z.object({
 	plant_level: z.string().optional(),
 	coral_level: z.string().optional(),
 });
+
+export const inviteSchema = z.object({
+	contact_email: z.string().email("Valid address required"),
+	display_name: z.string().optional(),
+});

@@ -111,12 +111,15 @@ router.get("/admin/members", admin.requireAdmin, admin.viewMembers);
 router.get("/admin/members/edit/:memberId", admin.requireAdmin, admin.viewMemberUpdate)
 router.patch("/admin/members/edit/:memberId", admin.requireAdmin, admin.updateMemberFields);
 
+router.post("/admin/invite", admin.requireAdmin, admin.inviteMember);
+
 // Password Auth ///////////////////////////////////////////
 
 router.post("/signup", auth.signup);
 router.post("/login", auth.passwordLogin);
 router.get("/logout", auth.logout);
 router.get("/forgot-password", auth.validateForgotPassword);
+router.get("/set-password", auth.validateForgotPassword);
 router.post("/forgot-password", auth.sendForgotPassword);
 router.post("/reset-password", auth.resetPassword);
 

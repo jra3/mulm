@@ -101,6 +101,7 @@ export async function createMember(
 
 	try {
 		const userStmt = await db.prepare('INSERT INTO members (display_name, contact_email, is_admin) VALUES (?, ?, ?)');
+		// is this a bug... we should return the data, not the lastID
 		const memberId = (await userStmt.run(name, email, isAdmin ? 1 : 0)).lastID;
 
 		if (credentials.google_sub) {

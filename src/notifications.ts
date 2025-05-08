@@ -71,3 +71,17 @@ export async function sendResetEmail(email: string, display_name: string, code: 
 		}),
 	});
 }
+
+const renderInviteEmail = pug.compileFile("src/views/email/invite.pug");
+export async function sendInviteEmail(email: string, display_name: string, code: string) {
+	return transporter.sendMail({
+		from: config.fromEmail,
+		to: email,
+		subject: "Welcome to the BASNY Breeders Awards Program!",
+		html: renderInviteEmail({
+			domain: config.domain,
+			display_name,
+			code,
+		}),
+	});
+}

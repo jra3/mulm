@@ -1,12 +1,15 @@
-import { getMember, getRoster, updateMember } from "@/db/members";
+import { createMember, getMember, getMemberByEmail, getRoster, updateMember } from "@/db/members";
 import { getOutstandingSubmissions, getOutstandingSubmissionsCounts, getSubmissionById } from "@/db/submissions";
 import { approvalSchema } from "@/forms/approval";
-import { memberSchema } from "@/forms/member";
-import { onSubmissionApprove } from "@/notifications";
+import { inviteSchema, memberSchema } from "@/forms/member";
+import { onSubmissionApprove, sendInviteEmail } from "@/notifications";
 import { levelRules, programs } from "@/programs";
 import { MulmRequest } from "@/sessions";
 import { Response, NextFunction } from "express";
 import { approveSubmission as approve } from "@/db/submissions";
+import { createAuthCode } from "@/db/auth";
+import { AuthCode, generateRandomCode } from "@/auth";
+import { validateFormResult } from "@/forms/utils";
 
 export async function requireAdmin(
 	req: MulmRequest,
@@ -50,7 +53,6 @@ export const viewMemberUpdate = async (req: MulmRequest, res: Response) => {
 		plantLevels,
 		coralLevels,
 	});
-
 }
 
 export const updateMemberFields = async (req: MulmRequest, res: Response) => {
@@ -74,11 +76,6 @@ export const updateMemberFields = async (req: MulmRequest, res: Response) => {
 }
 
 export const showQueue = async (req: MulmRequest, res: Response) => {
-	const { viewer } = req;
-	if (!viewer?.is_admin) {
-		res.status(403).send("Access denied");
-		return;
-	}
 	const { program = "fish" } = req.params;
 	if (programs.indexOf(program) === -1) {
 		res.status(404).send("Invalid program");
@@ -107,6 +104,47 @@ export const showQueue = async (req: MulmRequest, res: Response) => {
 		program,
 		programCounts,
 	});
+}
+
+export const inviteMember = async (req: MulmRequest, res: Response) => {
+	const errors = new Map<string, string>();
+	const renderDialog = () => {
+		res.render("admin/inviteUser", {
+			...req.body,
+			errors,
+		});
+	}
+
+	const parsed = inviteSchema.safeParse(req.body);
+	if (!validateFormResult(parsed, errors, renderDialog)) {
+		return;
+	}
+	const { contact_email, display_name } = parsed.data;
+	let member = await getMemberByEmail(contact_email);
+	if (member == undefined) {
+		const name = String(display_name);
+		if (name.length > 2) {
+			const member_id = await createMember(parsed.data.contact_email, name);
+			member = await getMember(member_id);
+		}
+
+		if (!member) {
+			res.send("Failed to create member");
+			return;
+		}
+	}
+
+	const codeEntry: AuthCode = {
+		member_id: member.id,
+		code: generateRandomCode(24),
+		// 1 week expiration
+		expires_on: new Date(Date.now() + 60 * 60 * 1000 * 24 * 7),
+		purpose: "password_reset",
+	};
+
+	await createAuthCode(codeEntry);
+	await sendInviteEmail(contact_email, member.display_name, codeEntry.code);
+	res.send("Invite sent");
 }
 
 export const approveSubmission = async (req: MulmRequest, res: Response) => {
@@ -154,3 +192,5 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
 
 	res.set('HX-Redirect', '/admin/queue').send();
 }
+
+
