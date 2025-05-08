@@ -17,7 +17,7 @@ services:
     networks:
       - proxy
     volumes:
-      - /opt/basny:/mnt/data
+      - /var/basny:/mnt/data
 
   # ──────────────────────────────────────────────────────────────────────────────
   # Cloudflare Tunnel service
