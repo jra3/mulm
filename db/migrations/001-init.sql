@@ -1,7 +1,4 @@
--- # Create your table with this file
--- > cd ~/mulm
--- > sqlite3 database.db < src/schema.sql
-
+-- up
 CREATE TABLE auto_increment (value INT, table_name TEXT);
 INSERT INTO auto_increment VALUES (0, 'members');
 INSERT INTO auto_increment VALUES (0, 'known_species');

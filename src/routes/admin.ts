@@ -26,7 +26,7 @@ export async function requireAdmin(
 }
 
 export const viewMembers = async (req: MulmRequest, res: Response) => {
-	const members = getRoster();
+	const members = await getRoster();
 	res.render("admin/members", {
 		title: "Member Roster",
 		members,
@@ -44,7 +44,7 @@ export const viewMemberUpdate = async (req: MulmRequest, res: Response) => {
 		res.status(422).send("Invalid member ID");
 		return;
 	}
-	const member = getMember(id);
+	const member = await getMember(id);
 
 	// Render one table row for editing
 	res.render("admin/editMember", {

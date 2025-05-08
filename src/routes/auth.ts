@@ -1,5 +1,5 @@
 import { AuthCode, checkPassword, generateRandomCode, makePasswordEntry } from "@/auth";
-import { createAuthCode, getAuthCode } from "@/db/auth";
+import { createAuthCode, deleteAuthCode, getAuthCode } from "@/db/auth";
 import { createGoogleAccount, createMember, createOrUpdatePassword, getGoogleAccount, getMember, getMemberByEmail, getMemberPassword } from "@/db/members";
 import { forgotSchema, loginSchema, resetSchema, signupSchema } from "@/forms/login";
 import { validateFormResult } from "@/forms/utils";
@@ -64,33 +64,32 @@ export const logout = async (req: MulmRequest, res: Response) => {
 export const validateForgotPassword = async (req: MulmRequest, res: Response) => {
 	const code = req.query.code;
 	if (code == undefined) {
-		res.status(400).send("Missing code");
-		return;
-	}
-
-	const codeEntry = await getAuthCode(String(code));
-	if (codeEntry == undefined || codeEntry.purpose != "password_reset") {
-		res.status(400).send("Invalid code");
+		res.redirect("/");
 		return;
 	}
 
 	const now = new Date(Date.now());
-	if (codeEntry.expires_on < now) {
-		res.status(400).send("Code expired");
-		return;
-	}
+	const codeEntry = await getAuthCode(String(code));
+	const invalidCode = (
+		codeEntry == undefined ||
+		codeEntry.purpose != "password_reset" ||
+		codeEntry.expires_on < now
+	);
+	const member = codeEntry && await getMember(codeEntry.member_id);
 
-	const member = await getMember(codeEntry.member_id);
-	if (member == undefined) {
-		res.status(400).send("Member not found");
-		return;
-	}
+	if (invalidCode || !member) {
+		res.render("account/resetPasswordError", {
 
-	res.render("account/resetPassword", {
-		email: member.contact_email,
-		code: code,
-		errors: new Map<string, string>(),
-	})
+			errors: new Map<string, string>(),
+		});
+	} else {
+		res.render("account/resetPassword", {
+			invalidCode,
+			email: member.contact_email,
+			code: code,
+			errors: new Map<string, string>(),
+		})
+	}
 }
 
 export const sendForgotPassword = async (req: MulmRequest, res: Response) => {
@@ -154,7 +153,10 @@ export const resetPassword = async (req: MulmRequest, res: Response) => {
 		} else {
 			try {
 				const passwordEntry = await makePasswordEntry(parsed.data.password);
-				await createOrUpdatePassword(member.id, passwordEntry);
+				await Promise.all([
+					deleteAuthCode(codeEntry.code),
+					createOrUpdatePassword(member.id, passwordEntry),
+				]);
 				await createUserSession(req, res, member.id);
 				res.set("HX-redirect", "/").send();
 				return;

@@ -14,8 +14,6 @@ export async function createAuthCode(codeEntry: AuthCode) {
 	} catch (err) {
 		console.error(err);
 		throw new Error("Failed to insert code");
-	} finally {
-		db.close();
 	}
 }
 

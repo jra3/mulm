@@ -1,7 +1,7 @@
 tr.contents
 
 	td.cell.text-center
-		.flex.gap-2.justify-center
+		.flex.gap-2.items-center
 			form(
 				hx-target="closest tr"
 				hx-swap="outerHTML"
@@ -12,6 +12,8 @@ tr.contents
 			.div.hidden
 				button.outline(type="submit") Cancel
 				button.destructive(type="submit") Delete
+			form(hx-swap="outerHTML" hx-include="closest tr" hx-post=`/admin/invite`)
+				button.outline(type="submit") Reinvite
 
 	td.cell.text-center
 		input(
