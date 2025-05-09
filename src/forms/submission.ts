@@ -1,5 +1,5 @@
 
-import * as z from "zod"
+import * as z from "zod";
 import { multiSelect } from "./utils";
 
 export const isLivestock = (speciesType: string) => speciesType === "Fish" || speciesType === "Invert";
