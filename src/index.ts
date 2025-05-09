@@ -85,6 +85,11 @@ router.post("/sub", submission.create);
 router.patch("/sub/:subId", submission.update);
 router.delete("/sub/:subId", submission.remove);
 
+//router.get("/tank/:name", tank.view);
+//router.post("/tank", tank.create);
+//router.patch("/tank/:name", tank.update);
+//router.delete("/tank/:tank", tank.remove);
+
 router.get("/member/:memberId", member.view);
 
 router.get("/me", async (req: MulmRequest, res) => {
