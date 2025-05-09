@@ -1,5 +1,5 @@
 import { makePasswordEntry, ScryptPassword } from "@/auth";
-import { writeConn, query } from "./conn";
+import { writeConn, query, deleteOne, insertOne, updateOne } from "./conn";
 
 // type as represented in the database
 export type MemberRecord = {
@@ -22,12 +22,14 @@ type AwardRecord = {
 	date_awarded: string;
 };
 
+const googleAccountTableName = "google_account";
+
 export async function getGoogleAccount(sub: string) {
 	const members = await query<{
 		google_sub: string,
 		member_id: number,
 		google_email: string,
-	}>(`SELECT google_sub, member_id, google_email FROM google_account WHERE google_sub = ?`, [sub]);
+	}>(`SELECT google_sub, member_id, google_email FROM ${googleAccountTableName} WHERE google_sub = ?`, [sub]);
 	return members.pop();
 }
 
@@ -40,20 +42,16 @@ export async function getGoogleAccountByMemberId(member_id: number) {
 	return members.pop()
 }
 
-export async function deleteGoogleAccount(sub: string, memberId: number) {
-	try {
-		const conn = writeConn;
-		const deleteRow = await conn.prepare("DELETE FROM google_account WHERE google_sub = ? AND member_id = ?");
-		return deleteRow.run(sub, memberId);
-	} catch (err) {
-		console.error(err);
-		throw new Error("Failed to delete google account");
-	}
+export async function createGoogleAccount(memberId: number, sub: string, email: string) {
+	return insertOne(googleAccountTableName, {
+		member_id: memberId,
+		google_sub: sub,
+		google_email: email,
+	})
 }
 
-export async function getMemberPassword(memberId: number) {
-	const members = await query<ScryptPassword>(`SELECT * FROM password_account WHERE member_id = ?`, [memberId]);
-	return members.pop();
+export async function deleteGoogleAccount(sub: string, memberId: number) {
+	return deleteOne(googleAccountTableName, { google_sub: sub, member_id: memberId });
 }
 
 export async function createOrUpdatePassword(memberId: number, passwordEntry: ScryptPassword) {
@@ -76,15 +74,9 @@ export async function createOrUpdatePassword(memberId: number, passwordEntry: Sc
 	}
 }
 
-export async function createGoogleAccount(memberId: number, sub: string, email: string) {
-	const db = writeConn;
-	try {
-		const googleStmt = await db.prepare('INSERT INTO google_account (google_sub, member_id, google_email) VALUES (?, ?, ?)');
-		await googleStmt.run(sub, memberId, email);
-	} catch (err) {
-		console.error(err);
-		throw new Error("Failed to create google account");
-	}
+export async function getMemberPassword(memberId: number) {
+	const members = await query<ScryptPassword>(`SELECT * FROM password_account WHERE member_id = ?`, [memberId]);
+	return members.pop();
 }
 
 export async function createMember(
@@ -105,8 +97,8 @@ export async function createMember(
 		const memberId = (await userStmt.run(name, email, isAdmin ? 1 : 0)).lastID;
 
 		if (credentials.google_sub) {
-			const googleStmt = await db.prepare('INSERT INTO google_account (google_sub, member_id) VALUES (?, ?)');
-			await googleStmt.run(credentials.google_sub, memberId);
+			const googleStmt = await db.prepare('INSERT INTO google_account (google_sub, member_id, google_email) VALUES (?, ?, ?)');
+			await googleStmt.run(credentials.google_sub, memberId, email);
 		}
 
 		if (credentials.password) {
@@ -131,18 +123,7 @@ export async function getMember(id: number) {
 }
 
 export async function updateMember(memberId: number, updates: Partial<MemberRecord>) {
-	const fields = Object.keys(updates);
-	const values = Object.values(updates);
-	const setClause = fields.map((field) => `${field} = ?`).join(", ");
-	const conn = writeConn;
-	try {
-		const stmt = await conn.prepare(`UPDATE members SET ${setClause} WHERE id = ?`);
-		const result = await stmt.run(...values, memberId);
-		return result.changes;
-	} catch (err) {
-		console.error(err);
-		throw new Error("Failed to update member");
-	}
+	return updateOne("members", { id: memberId }, updates);
 }
 
 export async function getMemberByEmail(email: string) {
