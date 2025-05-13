@@ -59,7 +59,7 @@ router.get("/", async (req: MulmRequest, res) => {
 	let approvalsProgram;
 	let approvalsCount = 0;
 	if (isAdmin) {
-		const counts = getOutstandingSubmissionsCounts();
+		const counts = await getOutstandingSubmissionsCounts();
 		Object.entries(counts).forEach(([program, count]) => {
 			if (count > 0) {
 				approvalsProgram = program;
