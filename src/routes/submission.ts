@@ -94,7 +94,7 @@ export const view = async (req: MulmRequest, res: Response) => {
 	});
 }
 
-function validateSubmission(req: MulmRequest, res: Response) {
+export function validateSubmission(req: MulmRequest, res: Response) {
 	const subId = parseInt(req.params.subId);
 	if (!subId) {
 		res.status(400).send("Invalid submission id");

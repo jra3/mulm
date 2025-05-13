@@ -116,6 +116,8 @@ router.delete("/account/google/:sub", account.unlinkGoogleAccount);
 router.get("/admin/queue{/:program}", admin.requireAdmin, admin.showQueue);
 router.post("/admin/approve", admin.requireAdmin, admin.approveSubmission);
 
+router.get("/admin/edit{/:subId}", admin.requireAdmin, admin.viewEditSubmission);
+
 router.get("/admin/members", admin.requireAdmin, admin.viewMembers);
 router.get("/admin/members/edit/:memberId", admin.requireAdmin, admin.viewMemberUpdate)
 router.patch("/admin/members/edit/:memberId", admin.requireAdmin, admin.updateMemberFields);

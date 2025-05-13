@@ -64,7 +64,11 @@ html
 					+reviewTextInput("Points", "points")
 					+reviewTextInput("Total Points", "total_points")
 
-			if isSelf && !isApproved
+			if isAdmin && false
+				div.flex.justify-center.max-w-4xl.mx-auto.text-center.gap-4
+					a(href=`/admin/edit/${submission.id}`)
+						button.primary(type="button") Edit Submission as Admin
+			else if isSelf && !isApproved
 				div.flex.justify-center.max-w-4xl.mx-auto.text-center.gap-4
 					form(hx-patch=`/sub/${submission.id}`)
 						button.primary(name="unsubmit" type="submit") Edit Submission

@@ -1,4 +1,4 @@
-import { createMember, getMember, getMemberByEmail, getRoster, updateMember } from "@/db/members";
+import { createMember, getMember, getMemberByEmail, getRoster, MemberRecord, updateMember } from "@/db/members";
 import { getOutstandingSubmissions, getOutstandingSubmissionsCounts, getSubmissionById } from "@/db/submissions";
 import { approvalSchema } from "@/forms/approval";
 import { inviteSchema, memberSchema } from "@/forms/member";
@@ -9,7 +9,9 @@ import { Response, NextFunction } from "express";
 import { approveSubmission as approve } from "@/db/submissions";
 import { createAuthCode } from "@/db/auth";
 import { AuthCode, generateRandomCode } from "@/auth";
-import { validateFormResult } from "@/forms/utils";
+import { isLivestock, validateFormResult } from "@/forms/utils";
+import { validateSubmission } from "./submission";
+import { foodTypes, getClassOptions, spawnLocations, speciesTypes, waterTypes } from "@/forms/submission";
 
 export async function requireAdmin(
 	req: MulmRequest,
@@ -31,6 +33,35 @@ export const viewMembers = async (req: MulmRequest, res: Response) => {
 		title: "Member Roster",
 		members,
 	});
+}
+
+export const viewEditSubmission = async (req: MulmRequest, res: Response) => {
+	const submission = await validateSubmission(req, res);
+	if (!submission) {
+		return;
+	}
+	const submissionMember = await getMember(submission.member_id);
+
+	res.render('submit', {
+		title: `Edit Submission`,
+		subtitle: "Editing as admin",
+		submissionId: submission.id,
+		form: {
+			...submission,
+			member_name: submissionMember?.display_name,
+			member_email: submissionMember?.contact_email,
+		},
+		errors: new Map(),
+		classOptions: getClassOptions(submission.species_type),
+		waterTypes,
+		speciesTypes,
+		foodTypes,
+		spawnLocations,
+		isLivestock: isLivestock(submission.species_type),
+		isAdmin: true,
+		editing: true,
+	});
+	return;
 }
 
 export const viewMemberUpdate = async (req: MulmRequest, res: Response) => {
@@ -82,8 +113,10 @@ export const showQueue = async (req: MulmRequest, res: Response) => {
 		return;
 	}
 
-	const submissions = getOutstandingSubmissions(program);
-	const programCounts = getOutstandingSubmissionsCounts();
+	const [submissions, programCounts] = await Promise.all([
+		getOutstandingSubmissions(program),
+		getOutstandingSubmissionsCounts(),
+	]);
 
 	const subtitle = (() => {
 		switch (program) {
