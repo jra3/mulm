@@ -1,24 +1,17 @@
 import { Response } from 'express';
 import { validateFormResult } from "@/forms/utils";
 import { MulmRequest } from "@/sessions";
-import { createTankPreset, deleteTankPreset, getTankPreset, updateTankPreset } from "@/db/tank";
+import { createTankPreset, deleteTankPreset, queryTankPresets, updateTankPreset } from "@/db/tank";
 import { tankSettingsSchema } from "@/forms/tank";
 
 
 export const view = async (req: MulmRequest, res: Response) => {
-	const { viewer } = req;
-	if (!viewer) {
-		res.status(401).send();
-		return;
-	}
-
-	const memberId = viewer.id;
-	const name = req.params.name;
-
-	const tank = await getTankPreset(memberId, name);
-
-	return res.render("bapForm/tank", { tank });
+	return res.render("bapForm/tank", {
+		form: req.query,
+		errors: new Map<string, string>(),
+	});
 }
+
 
 export const create = async (req: MulmRequest, res: Response) => {
 	const { viewer } = req;
@@ -28,7 +21,6 @@ export const create = async (req: MulmRequest, res: Response) => {
 	}
 
 	const memberId = viewer.id;
-	const name = req.params.name;
 
 	const errors = new Map<string, string>();
 	const parsed = tankSettingsSchema.safeParse(req.body);
@@ -41,11 +33,11 @@ export const create = async (req: MulmRequest, res: Response) => {
 	await createTankPreset({
 		...parsed.data,
 		member_id: memberId,
-		preset_name: name,
 	});
 
 	res.send("Saved!");
 }
+
 
 export const update = async (req: MulmRequest, res: Response) => {
 	const { viewer } = req;
@@ -55,7 +47,6 @@ export const update = async (req: MulmRequest, res: Response) => {
 	}
 
 	const memberId = viewer.id;
-	const name = req.params.name;
 
 	const errors = new Map<string, string>();
 	const parsed = tankSettingsSchema.safeParse(req.body);
@@ -66,11 +57,11 @@ export const update = async (req: MulmRequest, res: Response) => {
 	await updateTankPreset({
 		...parsed.data,
 		member_id: memberId,
-		preset_name: name,
 	});
 
 	res.send("Saved!");
 }
+
 
 export const remove = async (req: MulmRequest, res: Response) => {
 	const { viewer } = req;
@@ -82,6 +73,36 @@ export const remove = async (req: MulmRequest, res: Response) => {
 	const memberId = viewer.id;
 	const name = req.params.name;
 	await deleteTankPreset(memberId, name);
-	// TODO What do i sent back
 	res.send();
 }
+
+
+export async function saveTankForm(req: MulmRequest, res: Response) {
+	res.render("bapForm/saveTankForm", {
+		errors: new Map<string, string>(),
+		form: {},
+	});
+}
+
+
+export async function loadTankList(req: MulmRequest, res: Response) {
+	const { viewer } = req;
+	if (!viewer) {
+		res.status(401).send();
+		return;
+	}
+	const memberId = viewer.id;
+	const presets = await queryTankPresets(memberId);
+
+
+	const filtered = presets.map(
+		preset => Object.fromEntries(
+			Object.entries(preset)
+				.filter(([, v]) => v !== null))
+	);
+
+	res.render("bapForm/loadTankList", {
+		presets: filtered,
+	});
+}
+

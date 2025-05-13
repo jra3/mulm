@@ -7,11 +7,12 @@ import express from "express";
 import cookieParser from "cookie-parser";
 
 import * as account from "@/routes/account";
+import * as admin from "@/routes/admin";
 import * as auth from "@/routes/auth";
 import * as member from "@/routes/member";
-import * as admin from "@/routes/admin";
 import * as submission from "@/routes/submission";
 import * as standings from "@/routes/standings";
+import * as tank from "@/routes/tank";
 
 import {
 	getOutstandingSubmissionsCounts,
@@ -85,10 +86,13 @@ router.post("/sub", submission.create);
 router.patch("/sub/:subId", submission.update);
 router.delete("/sub/:subId", submission.remove);
 
-router.get("/tank/:name", tank.view);
+router.get("/tank", tank.view);
 router.post("/tank", tank.create);
-router.patch("/tank/:name", tank.update);
-router.delete("/tank/:tank", tank.remove);
+router.patch("/tank", tank.update);
+router.delete("/tank/:name", tank.remove);
+
+router.get("/sidebar/saveTank", tank.saveTankForm);
+router.get("/sidebar/loadTank", tank.loadTankList);
 
 router.get("/member/:memberId", member.view);
 

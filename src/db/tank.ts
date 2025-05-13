@@ -24,7 +24,7 @@ export async function createTankPreset(tank: Omit<Tank, "created_on" | "updated_
 	return insertOne(tableName, tank);
 }
 
-export async function updateTankPreset(tank: Partial<Tank> & { member_id: number; preset_name: string }) {
+export async function updateTankPreset(tank: Partial<Tank> & { member_id: number, preset_name: string }) {
 	return updateOne(
 		tableName,
 		{ member_id: tank.member_id, preset_name: tank.preset_name },

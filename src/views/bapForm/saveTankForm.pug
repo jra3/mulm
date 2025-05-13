@@ -1,0 +1,11 @@
+include inputs.pug
+include ../header.pug
+
++sidebar()
+	h2(class="text-xl sm:text-2xl font-bold mb-4") Save Tank Parameters
+	form(
+		hx-post="/tank"
+		hx-include="#tankDetails")
+		.flex.flex-col.gap-2
+			+bapTextInput("Tank Name", "preset_name", "20g Guppy Tank")
+			button.primary Save

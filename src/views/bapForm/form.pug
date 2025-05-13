@@ -1,46 +1,5 @@
 include supplementLine.pug
-
-mixin bapTextInput(labelText, name, placeholder, type="text")
-	.flex.flex-col.gap-2
-		label.input-label(for=name)= labelText
-			if errors.has(name)
-				span(class="font-extrabold text-red-400")= ` ${errors.get(name)}`
-
-		input.text-input(
-			id=name
-			value=form[name]
-			name=name
-			type=type
-			placeholder=placeholder
-			class=errors.has(name) ? "error" : ""
-			disabled=attributes.disabled)
-		if attributes.disabled
-			input.text-input(
-				value=form[name]
-				name=name
-				type="hidden")
-
-
-mixin bapSimpleSelectInput(labelText, name)
-	.flex.flex-col.gap-2
-		label.input-label(for=name)= labelText
-		.select-wrapper
-			select(name=name)
-				block
-
-mixin bapMultiSelectInput(labelText, name, id)
-	.flex.flex-col.gap-2
-		label.input-label(for=name)= labelText
-			if errors.has(name)
-				span(class="font-extrabold text-red-400")= ` ${errors.get(name)}`
-
-		select.tom-select(
-			id=id
-			name=name
-			multiple
-			value=form[name]
-			class=errors.has(name) ? "error" : "")
-			block
+include inputs.pug
 
 mixin CRUDForm()
 	if form.id
@@ -63,7 +22,6 @@ mixin CRUDForm()
 		div.max-w-4xl.mx-auto.text-left.px-4
 			h2(class="text-xl sm:text-2xl font-bold mb-4") Species Details
 
-			- console.log(form.water_type)
 			div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
 				+bapSimpleSelectInput("Water Type", "water_type")
 					for water in waterTypes
@@ -110,19 +68,21 @@ mixin CRUDForm()
 
 	section.bg-gray-100.py-4
 		div.max-w-4xl.mx-auto.text-left.px-4
-			h2(class="text-xl sm:text-2xl font-bold mb-4") Tank Details
-			div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
-				+bapTextInput("Tank Size", "tank_size", "5g, 20 Long...")
-				+bapTextInput("Filter Type", "filter_type", "Sponge, HOB...")
-				+bapTextInput("Water Change Volume (%)", "water_change_volume", "10%, 25%...")
-				+bapTextInput("Water Change Frequency", "water_change_frequency", "Daily, Weekly, Never...")
-				+bapTextInput("Temperature", "temperature", "75F...")
-				+bapTextInput("pH", "ph", "6.8...")
-				+bapTextInput("Hardness (GH)", "gh", "200ppm, 10dH...")
-				+bapTextInput("Specific Gravity", "specific_gravity", "1.025...")
-				+bapTextInput("Substrate Type", "substrate_type", "Gravel, Sand, Bare...")
-				+bapTextInput("Substrate Depth", "substrate_depth", "2\"...")
-				+bapTextInput("Substrate Color", "substrate_color", "Brown, White, Hot Pink...")
+			.flex.gap-2
+				h2(class="text-xl sm:text-2xl font-bold mb-4") Tank Details
+				button.primary(
+					type="button"
+					hx-target="closest body"
+					hx-swap="beforeend"
+					hx-get="/sidebar/saveTank") Save
+				button.outline(
+					type="button"
+					hx-target="closest body"
+					hx-swap="beforeend"
+					hx-get="/sidebar/loadTank") Load
+
+			div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")#tankSettings
+				include tank.pug
 				if !isLivestock
 					+bapTextInput("Lighting Type", "light_type", "LED, Sunlight, Ambient...")
 					+bapTextInput("Light Strength", "light_strength", "200W, 5 PAR...")

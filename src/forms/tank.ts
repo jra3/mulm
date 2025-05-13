@@ -1,6 +1,7 @@
 import * as z from "zod";
 
 export const tankSettingsSchema = z.object({
+	preset_name: z.string().nonempty({ message: "Required" }),
 	tank_size: z.string().nullable().default(null),
 	filter_type: z.string().nullable().default(null),
 	water_change_volume: z.string().nullable().default(null),

@@ -1,0 +1,42 @@
+mixin bapTextInput(labelText, name, placeholder, type="text")
+	.flex.flex-col.gap-2
+		label.input-label(for=name)= labelText
+			if errors.has(name)
+				span(class="font-extrabold text-red-400")= ` ${errors.get(name)}`
+
+		input.text-input(
+			id=name
+			value=form[name] || ""
+			name=name
+			type=type
+			placeholder=placeholder
+			class=errors.has(name) ? "error" : ""
+			disabled=attributes.disabled)
+		if attributes.disabled
+			input.text-input(
+				value=form[name]
+				name=name
+				type="hidden")
+
+
+mixin bapSimpleSelectInput(labelText, name)
+	.flex.flex-col.gap-2
+		label.input-label(for=name)= labelText
+		.select-wrapper
+			select(name=name)
+				block
+
+
+mixin bapMultiSelectInput(labelText, name, id)
+	.flex.flex-col.gap-2
+		label.input-label(for=name)= labelText
+			if errors.has(name)
+				span(class="font-extrabold text-red-400")= ` ${errors.get(name)}`
+
+		select.tom-select(
+			id=id
+			name=name
+			multiple
+			value=form[name]
+			class=errors.has(name) ? "error" : "")
+			block

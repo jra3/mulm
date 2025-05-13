@@ -29,9 +29,9 @@ html
 						button.outline Log Out
 				else
 					button.primary(
-						hx-on:click="document.getElementById('dialog').classList.toggle('hidden', false)"
 						hx-get="/dialog/signin"
-						hx-target="#dialogContent") Log In
+						hx-target="closest body"
+						hx-swap="beforeend") Log In
 
 		section.bg-gray-100
 			.flex.items-center.justify-center
@@ -51,20 +51,8 @@ html
 							.select-wrapper.max-w-35.inline
 								select(hx-get="/annual" hx-trigger="change" name="year")
 									option(value="" disabled selected) Past years...
-									option(value="2022") 2023
+									option(value="2023") 2023
 									option(value="2022") 2022
 									option(value="2021") 2021
 									option(value="2020") 2020
-									option(value="2019") 2019
-									option(value="2018") 2018
-									option(value="2017") 2017
-									option(value="2016") 2016
-
-		.hidden.fixed.inset-0.flex.items-center.justify-center.z-50(hx-on:click="document.getElementById('dialog').classList.toggle('hidden', true)")#dialog
-			// The modal box
-			.w-lg.relative.bg-gray-300.rounded-lg.shadow-lg.p-6(hx-on:click="event.stopPropagation()")
-				// Close button absolutely positioned inside the modal
-				a.link.absolute.top-2.right-2(hx-on:click="document.getElementById('dialog').classList.toggle('hidden', true)") &times;
-				.w-full.flex.flex-col.items-center.gap-2
-					#dialogContent
 		+footer()

@@ -1,0 +1,17 @@
+include ../header.pug
+
++sidebar()
+	.flex.flex-col.gap-2
+		h2(class="text-xl sm:text-2xl font-bold mb-4") Load Tank Parameters
+		if presets.length === 0
+			span No saved tanks found.
+		else
+			each preset in presets
+				.flex.justify-between.items-center
+					a.link(
+						hx-get="/tank"
+						hx-target="#tankDetails"
+						hx-vals=preset)= preset.preset_name
+					button.destructive(
+						hx-target="closest div"
+						hx-delete=`/tank/${preset.preset_name}`) X
