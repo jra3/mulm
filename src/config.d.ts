@@ -3,7 +3,6 @@ export interface Secrets {
 	domain: string;
 	googleClientId: string;
 	googleClientSecret: string;
-	adminsEmail: string;
 
 	fromEmail: string;
 	smtpPassword: string;
