@@ -100,7 +100,7 @@ export const lifetime = async (req: MulmRequest, res: Response) => {
 		if (!levels[memberLevel]) {
 			levels[memberLevel] = [];
 		}
-		levels[memberLevel]!.push({
+		levels[memberLevel].push({
 			...member,
 			points: totals.get(member.id) ?? 0,
 		});

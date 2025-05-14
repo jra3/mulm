@@ -36,7 +36,7 @@ app.use(sessionMiddleware);
 
 const router = express.Router();
 
-router.get("/annual", async (req, res) => {
+router.get("/annual", (req, res) => {
 	const { year } = req.query;
 	res.set("HX-Redirect", `/annual/${String(year)}`).send();
 });
@@ -51,7 +51,7 @@ router.get("/", async (req: MulmRequest, res) => {
 	const args = {
 		title: "BAS BAP/HAP Portal",
 		message: "Welcome to BAS!",
-		googleURL: await getGoogleOAuthURL(),
+		googleURL: getGoogleOAuthURL(),
 		isLoggedIn,
 		isAdmin,
 	};
@@ -96,7 +96,7 @@ router.get("/sidebar/loadTank", tank.loadTankList);
 
 router.get("/member/:memberId", member.view);
 
-router.get("/me", async (req: MulmRequest, res) => {
+router.get("/me", (req: MulmRequest, res) => {
 	const { viewer } = req;
 	if (!viewer) {
 		res.redirect("/");
@@ -134,11 +134,11 @@ router.get("/set-password", auth.validateForgotPassword);
 router.post("/forgot-password", auth.sendForgotPassword);
 router.post("/reset-password", auth.resetPassword);
 
-router.get("/dialog/signin", async (req, res) => {
+router.get("/dialog/signin", (req, res) => {
 	res.render("account/signin", {
 		viewer: {},
 		errors: new Map(),
-		googleURL: await getGoogleOAuthURL(),
+		googleURL: getGoogleOAuthURL(),
 	});
 });
 

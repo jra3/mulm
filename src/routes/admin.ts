@@ -1,4 +1,4 @@
-import { createMember, getMember, getMemberByEmail, getRoster, MemberRecord, updateMember } from "@/db/members";
+import { createMember, getMember, getMemberByEmail, getRoster, updateMember } from "@/db/members";
 import { getOutstandingSubmissions, getOutstandingSubmissionsCounts, getSubmissionById } from "@/db/submissions";
 import { approvalSchema } from "@/forms/approval";
 import { inviteSchema, memberSchema } from "@/forms/member";
@@ -13,7 +13,7 @@ import { isLivestock, validateFormResult } from "@/forms/utils";
 import { validateSubmission } from "./submission";
 import { foodTypes, getClassOptions, spawnLocations, speciesTypes, waterTypes } from "@/forms/submission";
 
-export async function requireAdmin(
+export function requireAdmin(
 	req: MulmRequest,
 	res: Response,
 	next: NextFunction) {
@@ -96,7 +96,7 @@ export const updateMemberFields = async (req: MulmRequest, res: Response) => {
 
 	// TODO do i have to use some better-auth call instead?
 	const parsed = memberSchema.parse(req.body);
-	updateMember(id, {
+	await updateMember(id, {
 		...parsed,
 		is_admin: parsed.is_admin !== undefined ? 1 : 0,
 	});
@@ -214,13 +214,13 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
 		return;
 	}
 
-	approve(viewer!.id, id, updates);
+	await approve(viewer!.id, id, updates);
 
 	const submission = (await getSubmissionById(id))!;
-	const member = await getMember(submission.member_id)!;
+	const member = await getMember(submission.member_id);
 	if (member) {
 		// member should always exist...
-		onSubmissionApprove(submission, member);
+		await onSubmissionApprove(submission, member);
 	}
 
 	res.set('HX-Redirect', '/admin/queue').send();

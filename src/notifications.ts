@@ -1,7 +1,7 @@
 import nodemailer from "nodemailer";
 import config from "./config.json";
 import { type Submission } from "./db/submissions";
-import { MemberRecord } from "./db/members";
+import { getAdminEmails, MemberRecord } from "./db/members";
 import * as pug from "pug";
 
 const transporter = nodemailer.createTransport({
@@ -19,10 +19,11 @@ export async function onSubmissionSend(
 	sub: Submission,
 	member: MemberRecord,
 ) {
+	const admins = await getAdminEmails();	
 	return transporter.sendMail({
 		from: config.fromEmail,
 		to: member.contact_email,
-		bcc: config.adminsEmail,
+		bcc: admins,
 		subject: `Submission Confirmation - ${sub.species_common_name}`,
 		html: renderOnSubmission({
 			domain: config.domain,

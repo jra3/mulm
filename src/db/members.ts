@@ -67,7 +67,7 @@ export async function createOrUpdatePassword(memberId: number, passwordEntry: Sc
 				hash = excluded.hash
 			`);
 		const { N, r, p, salt, hash } = passwordEntry;
-		stmt.run(memberId, N, r, p, salt, hash);
+		await stmt.run(memberId, N, r, p, salt, hash);
 	} catch (err) {
 		console.error(err);
 		throw new Error("Failed to set password");
@@ -157,4 +157,10 @@ export async function grantAward(memberId: number, awardName: string, dateAwarde
 		console.error(err);
 		throw new Error("Failed to grant award");
 	}
+}
+
+// Currently this is a full table scan. Oh well.
+export async function getAdminEmails(): Promise<string[]> {
+	const rows = await query<{ contact_email: string }>(`SELECT contact_email FROM members where is_admin = 1`);
+	return rows.map((row) => row.contact_email);
 }

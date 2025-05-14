@@ -70,7 +70,7 @@ export async function query<T>(sql: string, params: unknown[] = []): Promise<T[]
 	try {
 		const db = readOnlyConn;
 		const stmt = await db.prepare(sql);
-		const rows: T[] = await stmt.all(...params) as T[];
+		const rows: T[] = await stmt.all(...params);
 		return rows;
 	} catch (error) {
 		throw new Error(`SQLite query failed: ${(error as Error).message}`);

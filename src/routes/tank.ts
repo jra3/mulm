@@ -5,7 +5,7 @@ import { createTankPreset, deleteTankPreset, queryTankPresets, updateTankPreset 
 import { tankSettingsSchema } from "@/forms/tank";
 
 
-export const view = async (req: MulmRequest, res: Response) => {
+export const view = (req: MulmRequest, res: Response) => {
 	return res.render("bapForm/tank", {
 		form: req.query,
 		errors: new Map<string, string>(),
@@ -77,7 +77,7 @@ export const remove = async (req: MulmRequest, res: Response) => {
 }
 
 
-export async function saveTankForm(req: MulmRequest, res: Response) {
+export function saveTankForm(req: MulmRequest, res: Response) {
 	res.render("bapForm/saveTankForm", {
 		errors: new Map<string, string>(),
 		form: {},

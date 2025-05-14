@@ -94,14 +94,14 @@ export const view = async (req: MulmRequest, res: Response) => {
 	});
 }
 
-export function validateSubmission(req: MulmRequest, res: Response) {
+export async function validateSubmission(req: MulmRequest, res: Response) {
 	const subId = parseInt(req.params.subId);
 	if (!subId) {
 		res.status(400).send("Invalid submission id");
 		return;
 	}
 
-	const submission = db.getSubmissionById(subId);
+	const submission = await db.getSubmissionById(subId);
 	if (!submission) {
 		res.status(404).send("Submission not found");
 		return;
@@ -110,7 +110,7 @@ export function validateSubmission(req: MulmRequest, res: Response) {
 	return submission;
 }
 
-async function parseAndValidateForm(req: MulmRequest): Promise<{
+function parseAndValidateForm(req: MulmRequest): {
 	form?: never;
 	draft?: never;
 	errors: Map<string, string>,
@@ -118,7 +118,7 @@ async function parseAndValidateForm(req: MulmRequest): Promise<{
 	form: FormValues,
 	draft: boolean
 	errors?: never;
-}> {
+} {
 	let draft = false;
 	let form: FormValues;
 	let parsed;
@@ -213,7 +213,7 @@ export const create = async (req: MulmRequest, res: Response) => {
 	}
 
 	if (!draft) {
-		onSubmissionSend(sub, member!);
+		await onSubmissionSend(sub, member!);
 	}
 
 	res.render('submission/success', {
@@ -248,7 +248,7 @@ export const update = async (req: MulmRequest, res: Response) => {
 	}
 
 	if ("unsubmit" in req.body) {
-		db.updateSubmission(submission.id, { submitted_on: null });
+		await db.updateSubmission(submission.id, { submitted_on: null });
 		res.set('HX-Redirect', '/sub/' + submission.id).send();
 		return;
 	}
@@ -272,11 +272,11 @@ export const update = async (req: MulmRequest, res: Response) => {
 	}
 
 	// TODO fix silly serial queries at some point
-	db.updateSubmission(submission.id, db.formToDB(submission.member_id, form, !draft));
+	await db.updateSubmission(submission.id, db.formToDB(submission.member_id, form, !draft));
 	const sub = await db.getSubmissionById(submission.id);
 	const member = await getMember(submission.member_id);
 	if (!draft && sub && member) {
-		onSubmissionSend(sub, member);
+		await onSubmissionSend(sub, member);
 	}
 
 	res.render('submission/success', {
@@ -307,5 +307,5 @@ export const remove = async (req: MulmRequest, res: Response) => {
 		}
 	}
 
-	db.deleteSubmission(submission.id);
+	await db.deleteSubmission(submission.id);
 }
