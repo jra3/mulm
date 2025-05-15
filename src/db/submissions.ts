@@ -16,6 +16,7 @@ export type Submission = {
 	species_class: string;
 	species_common_name: string;
 	species_latin_name: string;
+	species_name_id: number | null;
 	water_type: string;
 	count: string;
 	reproduction_date: string;
@@ -146,8 +147,7 @@ export function getSubmissionsByMember(
 }
 
 export async function getSubmissionById(id: number) {
-	const result = await query<Submission>(
-		`
+	const result = await query<Submission>(`
 		SELECT
 			submissions.*,
 			submissions.points +
@@ -311,6 +311,7 @@ export async function updateSubmission(id: number, updates: UpdateFor<Submission
 export async function approveSubmission(
 	approvedBy: number,
 	id: number,
+	speciesNameId: number,
 	updates: ApprovalFormValues,
 ) {
 	try {
@@ -324,6 +325,7 @@ export async function approveSubmission(
 		} = updates;
 		const stmt = await conn.prepare(`
 			UPDATE submissions SET
+			  species_name_id = ?,
 				points = ?,
 				article_points = ?,
 				first_time_species = ?,
@@ -333,6 +335,7 @@ export async function approveSubmission(
 				approved_on = ?
 			WHERE id = ?`);
 		await stmt.run(
+			speciesNameId,
 			points,
 			article_points,
 			first_time_species ? 1 : 0,

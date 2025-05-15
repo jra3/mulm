@@ -7,6 +7,9 @@ export const approvalSchema = z.object({
 	first_time_species: z.string().optional().transform(val => Boolean(val)),
 	flowered: z.string().optional().transform(val => Boolean(val)),
 	sexual_reproduction: z.string().optional().transform(val => Boolean(val)),
-})
+
+	canonical_genus: z.string(),
+	canonical_species_name: z.string(),
+});
 
 export type ApprovalFormValues = z.infer<typeof approvalSchema>;

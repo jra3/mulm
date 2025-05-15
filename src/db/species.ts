@@ -1,4 +1,4 @@
-import { writeConn, query, init } from "./conn";
+import { writeConn, query } from "./conn";
 
 type NameSynonym = {
 	/** Not a phylogenetic class. The species class for the BAP program */
@@ -55,6 +55,7 @@ export async function recordName(data: NameSynonym) {
 		nameStmt.finalize();
 
 		await db.exec('COMMIT;');
+		return group_id as number;
 	} catch (err) {
 		await db.exec('ROLLBACK;');
 		console.error(err);
@@ -89,31 +90,34 @@ export async function mergeSpecies(canonicalGroupId: number, defunctGroupId: num
 
 }
 
-/* test code
+export async function getCanonicalSpeciesName(speciesNameId: number) {
+	const rows = await query<{
+		program_class: string;
+		canonical_genus: string;
+		canonical_species_name: string;
+	}>(`
+		SELECT species_name_group.*
+		FROM species_name JOIN species_name_group
+		ON species_name.group_id = species_name_group.group_id
+		WHERE species_name.name_id = ?`,
+		[speciesNameId]
+	);
+	return rows.pop();
+}
+
+/*
+
 (async () => {
 	await init();
 
 	const entry: NameSynonym = {
-		program_class: "TEST",
+		program_class: "Catfish & Loaches",
 		canonical_genus: "Corydoras",
-		canonical_species_name: "aeneus",
-		common_name: "Bronze Corydoras",
-		latin_name: "Corydoras aeneus",
+		canonical_species_name: "CW010",
+		common_name: "Gold Lazer Corys",
+		latin_name: "Corydoras CW 10",
 	};
 	await recordName(entry);
-	await recordName(entry);
-
-	const entry2: NameSynonym = {
-		program_class: "TEST",
-		canonical_genus: "Corydoras",
-		canonical_species_name: "boeneus",
-		common_name: "Bronzer Corydoras",
-		latin_name: "Corydoras aeneus",
-	};
-	await recordName(entry2);
-
-	console.log(await querySpeciesNames());
-	await mergeSpecies(1, 3);
 	console.log(await querySpeciesNames());
 })();
 

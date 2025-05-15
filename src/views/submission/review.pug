@@ -15,7 +15,7 @@ html
 	+headTag
 
 	body.bg-white.text-gray-800
-		+pageHeader(isLoggedIn, submission.species_common_name, submission.member_name)
+		+pageHeader(isLoggedIn, canonicalName, submission.member_name)
 
 		section.bg-gray-100.py-4
 
@@ -118,18 +118,21 @@ html
 					.container.mx-auto.flex.justify-center.space-x-4
 						form(hx-post="/admin/approve" hx-include="#bonuses")
 							input(type="hidden" name="id" value=submission.id)
-							.flex.gap-4.items-center
-								.select-wrapper
-									select(name="points")
-										option(value="" disabled selected) Base Points
-										option(value=5 selected=submission.points == 5) 5
-										option(value=10 selected=submission.points == 10) 10
-										option(value=15 selected=submission.points == 15) 15
-										option(value=20 selected=submission.points == 20) 20
+							.flex.flex-col.gap-2
+								.flex.gap-4.items-center
+									.select-wrapper
+										select(name="points")
+											option(value="" disabled selected) Base Points
+											option(value=5 selected=submission.points == 5) 5
+											option(value=10 selected=submission.points == 10) 10
+											option(value=15 selected=submission.points == 15) 15
+											option(value=20 selected=submission.points == 20) 20
 
-								a.link.light(
-									hx-on:click="document.getElementById('bonuses').classList.toggle('hidden', false)") Bonuses
+									a.link.light(
+										hx-on:click="document.getElementById('bonuses').classList.toggle('hidden', false)") Bonuses
 
-								button.primary.p-4(class=approve type="submit") Approve
-								button.destructive.p-4(class=destructive type="submit" name="reject" value="true") Reject
-								button.destructive.p-4(class=destructive type="submit" name="delete" value="true") Delete
+									button.primary.p-4(class=approve type="submit") Approve
+								.flex.gap-4.items-center
+									input.text-input(name="class" type="text" value=submission.species_class disabled)
+									input.text-input(name="canonical_genus" type="text" placeholder="Genus")
+									input.text-input(name="canonical_species_name" type="text" placeholder="Species")

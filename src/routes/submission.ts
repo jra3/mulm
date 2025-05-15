@@ -5,6 +5,7 @@ import { MulmRequest } from "@/sessions";
 import { MemberRecord, getMember, getMemberByEmail } from "@/db/members";
 import { onSubmissionSend } from "@/notifications";
 import * as db from "@/db/submissions";
+import { getCanonicalSpeciesName } from "@/db/species";
 
 export const renderSubmissionForm = (req: MulmRequest, res: Response) => {
 const { viewer } = req;
@@ -79,6 +80,14 @@ export const view = async (req: MulmRequest, res: Response) => {
 		return;
 	}
 
+	let canonicalName = submission.species_latin_name;
+	if (submission.species_name_id) {
+		const nameGroup = await getCanonicalSpeciesName(submission.species_name_id);
+		if (nameGroup) {
+			canonicalName = `${nameGroup.canonical_genus} ${nameGroup.canonical_species_name}`;
+		}
+	}
+
 	res.render('submission/review', {
 		submission: {
 			...submission,
@@ -90,6 +99,7 @@ export const view = async (req: MulmRequest, res: Response) => {
 			foods: JSON.parse(submission.foods)?.join(","),
 			spawn_locations: JSON.parse(submission.spawn_locations)?.join(","),
 		},
+		canonicalName,
 		...aspect,
 	});
 }

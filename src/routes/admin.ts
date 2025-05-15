@@ -12,6 +12,7 @@ import { AuthCode, generateRandomCode } from "@/auth";
 import { isLivestock, validateFormResult } from "@/forms/utils";
 import { validateSubmission } from "./submission";
 import { foodTypes, getClassOptions, spawnLocations, speciesTypes, waterTypes } from "@/forms/submission";
+import { recordName } from "@/db/species";
 
 export function requireAdmin(
 	req: MulmRequest,
@@ -214,9 +215,16 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
 		return;
 	}
 
-	await approve(viewer!.id, id, updates);
-
 	const submission = (await getSubmissionById(id))!;
+	const speciesGroupId = await recordName({
+		program_class: submission.species_class,
+		common_name: submission.species_common_name,
+		latin_name: submission.species_latin_name,
+		canonical_genus: parsed.data.canonical_genus,
+		canonical_species_name: parsed.data.canonical_species_name,
+	});
+
+	await approve(viewer!.id, id, speciesGroupId, updates);
 	const member = await getMember(submission.member_id);
 	if (member) {
 		// member should always exist...
