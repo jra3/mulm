@@ -185,7 +185,6 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
 	const { viewer } = req;
 
 	/*
-
 	const body = req.body;
 
 	if ("reject" in body) {
@@ -197,25 +196,34 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
 		console.log("delete!");
 		return;
 	}
-
 	*/
 
+	const errors = new Map<string, string>();
+	const onError = async () => {
+		const submission = (await getSubmissionById(req.body.id))!;
+		res.render("admin/approvalPanel", {
+			submission: {
+				id: submission.id,
+				points: submission.points,
+				species_class: submission.species_class,
+			},
+			errors,
+			name: {
+				canonical_genus: req.body.canonical_genus,
+				canonical_species_name: req.body.canonical_species_name
+			}
+		});
+	};
+
 	const parsed = approvalSchema.safeParse(req.body);
-	if (!parsed.success) {
-		console.error(parsed.error.issues);
-		res.status(400).send("Invalid input");
+	if (!validateFormResult(parsed, errors, onError)) {
 		return;
 	}
 
 	const updates = parsed.data;
-	const { id, points } = updates;
-
-	if (!points) {
-		res.status(400).send("Invalid input");
-		return;
-	}
-
+	const { id } = updates;
 	const submission = (await getSubmissionById(id))!;
+
 	const speciesGroupId = await recordName({
 		program_class: submission.species_class,
 		common_name: submission.species_common_name,

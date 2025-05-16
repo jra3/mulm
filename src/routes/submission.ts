@@ -80,13 +80,21 @@ export const view = async (req: MulmRequest, res: Response) => {
 		return;
 	}
 
-	let canonicalName = submission.species_latin_name;
-	if (submission.species_name_id) {
-		const nameGroup = await getCanonicalSpeciesName(submission.species_name_id);
-		if (nameGroup) {
-			canonicalName = `${nameGroup.canonical_genus} ${nameGroup.canonical_species_name}`;
+	const nameGroup = await (async () => {
+		if (submission.species_name_id) {
+			const name = await getCanonicalSpeciesName(submission.species_name_id);
+			if (name) {
+				return name;
+			}
 		}
-	}
+		const [genus, ...parts] = submission.species_latin_name.split(" ");
+		return {
+			canonical_genus: genus,
+			canonical_species_name: parts.join(" "),
+		};
+	})();
+
+	const canonicalName = `${nameGroup.canonical_genus} ${nameGroup.canonical_species_name}`;
 
 	res.render('submission/review', {
 		submission: {
@@ -100,6 +108,7 @@ export const view = async (req: MulmRequest, res: Response) => {
 			spawn_locations: JSON.parse(submission.spawn_locations)?.join(","),
 		},
 		canonicalName,
+		name: nameGroup,
 		...aspect,
 	});
 }

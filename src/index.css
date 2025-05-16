@@ -47,6 +47,10 @@ select {
 	@apply bg-gray-300;
 }
 
+.text-input.error {
+	@apply border-red-500;
+}
+
 .select-wrapper {
 	position: relative;
 	display: inline-block;
@@ -56,6 +60,10 @@ select {
 .select-wrapper select {
 	width: 100%;
 	padding-right: 2rem; /* Make space for custom arrow */
+}
+
+.select-wrapper select.error {
+	@apply border-red-500;
 }
 
 .select-wrapper::after {
