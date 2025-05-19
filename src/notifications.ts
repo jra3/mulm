@@ -40,6 +40,23 @@ export async function onSubmissionSend(
 }
 
 
+export async function sendChangesRequest(
+	sub: Submission,
+	contact_email: string,
+	content: string,
+) {
+	const admins = await getAdminEmails();
+
+	return transporter.sendMail({
+		from: fromEmail,
+		to: contact_email,
+		cc: admins,
+		bcc: DEBUG_EMAIL,
+		subject: `Chages Requested - ${sub.species_common_name}`,
+		text: content,
+	});
+}
+
 const renderOnApprove = pug.compileFile("src/views/email/onApproval.pug");
 export async function onSubmissionApprove(
 	sub: Submission,

@@ -28,8 +28,8 @@ export type Submission = {
 	water_change_volume: string | null;
 	water_change_frequency: string | null;
 	temperature: string | null;
-	pH: string | null;
-	GH: string | null;
+	ph: string | null;
+	gh: string | null;
 	specific_gravity: string | null;
 	substrate_type: string | null;
 	substrate_depth: string | null;

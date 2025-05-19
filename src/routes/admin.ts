@@ -1,8 +1,8 @@
 import { createMember, getMember, getMemberByEmail, getRoster, updateMember } from "@/db/members";
-import { getOutstandingSubmissions, getOutstandingSubmissionsCounts, getSubmissionById } from "@/db/submissions";
+import { getOutstandingSubmissions, getOutstandingSubmissionsCounts, getSubmissionById, updateSubmission } from "@/db/submissions";
 import { approvalSchema } from "@/forms/approval";
 import { inviteSchema, memberSchema } from "@/forms/member";
-import { onSubmissionApprove, sendInviteEmail } from "@/notifications";
+import { onSubmissionApprove, sendChangesRequest, sendInviteEmail } from "@/notifications";
 import { levelRules, programs } from "@/programs";
 import { MulmRequest } from "@/sessions";
 import { Response, NextFunction } from "express";
@@ -140,6 +140,71 @@ export const showQueue = async (req: MulmRequest, res: Response) => {
 	});
 }
 
+export const sendRequestChanges = async (req: MulmRequest, res: Response) => {
+	const submission = await validateSubmission(req, res);
+	if (!submission) {
+		res.send("Submission not found");
+		return;
+	}
+
+	const member = await getMember(submission.member_id);
+	if (!member) {
+		res.send("Member not found");
+		return;
+	}
+
+	await Promise.all([
+		updateSubmission(submission.id, { submitted_on: null }),
+		sendChangesRequest(
+			submission,
+			member?.contact_email,
+			String(req.body.content)),
+	]);
+
+	res.set('HX-Redirect', `/sub/${submission.id}`).send();
+}
+
+export const requestChangesForm = async (req: MulmRequest, res: Response) => {
+	const submission = await validateSubmission(req, res);
+	if (!submission) {
+		res.send("Error: submission not found");
+		return;
+	}
+
+	const contents = `
+Changes are requested form your BAP submission. Please review the notes below, make appropriate changes, and resubmit.
+
+-----------------
+
+Water Type: ${submission.water_type}
+Species Class: ${submission.species_class}
+Common Name: ${submission.species_common_name}
+Latin Name: ${submission.species_latin_name}
+
+Date: ${submission.reproduction_date}
+Spawn Locations: ${JSON.parse(submission.spawn_locations).join(", ")}
+Foods: ${JSON.parse(submission.foods).join(", ")}
+
+Tank Size: ${submission.tank_size}
+Filter Type: ${submission.filter_type}
+Water Change:
+	- Volume: ${submission.water_change_volume}
+	- Frequency: ${submission.water_change_frequency}
+Temperature: ${submission.temperature}
+pH: ${submission.ph}
+Hardness: ${submission.gh}
+Specific Gravity: ${submission.specific_gravity}
+Substrate:
+	- Type: ${submission.substrate_type}
+	- Depth: ${submission.substrate_depth}
+	- Color: ${submission.substrate_color}
+`
+	res.render("admin/requestChanges", {
+		submission,
+		contents,
+	});
+}
+
 export const inviteMember = async (req: MulmRequest, res: Response) => {
 	const errors = new Map<string, string>();
 	const renderDialog = () => {
@@ -184,20 +249,6 @@ export const inviteMember = async (req: MulmRequest, res: Response) => {
 export const approveSubmission = async (req: MulmRequest, res: Response) => {
 	const { viewer } = req;
 
-	/*
-	const body = req.body;
-
-	if ("reject" in body) {
-		console.log("rejected!");
-		return;
-	}
-
-	if ("delete" in body) {
-		console.log("delete!");
-		return;
-	}
-	*/
-
 	const errors = new Map<string, string>();
 	const onError = async () => {
 		const submission = (await getSubmissionById(req.body.id))!;
@@ -211,7 +262,7 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
 			name: {
 				canonical_genus: req.body.canonical_genus,
 				canonical_species_name: req.body.canonical_species_name
-			}
+			},
 		});
 	};
 

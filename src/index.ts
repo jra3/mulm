@@ -124,6 +124,9 @@ router.patch("/admin/members/edit/:memberId", admin.requireAdmin, admin.updateMe
 
 router.post("/admin/invite", admin.requireAdmin, admin.inviteMember);
 
+router.get("/dialog/request-changes/:subId", admin.requireAdmin, admin.requestChangesForm);
+router.post("/admin/request-changes/:subId", admin.requireAdmin, admin.sendRequestChanges);
+
 // Password Auth ///////////////////////////////////////////
 
 router.post("/signup", auth.signup);

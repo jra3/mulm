@@ -1,0 +1,13 @@
+include ../header.pug
+
++dialog()
+	h2.text-xl.font-extrabold.mb-4 Submission Feedback
+	form.contents#feedbackForm(
+		hx-post=`/admin/request-changes/${submission.id}`
+		hx-trigger="submit"
+		hx-target="#requestChangesError"
+		hx-swap="innerHTML"
+	)
+		span#requestChangesError(class="font-extrabold text-red-400")
+		textarea.w-full.h-96.bg-white(name="content" id="requestChangesText")= contents
+		button.primary Send

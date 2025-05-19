@@ -31,15 +31,13 @@ mixin dialog()
 		.w-lg.relative.inset-4.shadow-lg.bg-gray-200.rounded-lg(hx-on:click="event.stopPropagation()")
 			// Close button absolutely positioned inside the modal
 			a.link.absolute.top-2.right-4.font-bold(hx-on:click="document.getElementById('dialog').remove()") &times;
-			.w-full.flex.flex-col.items-center.gap-2.p-6
-				#dialogContent
-					block
+			.w-full.flex.flex-col.items-center.gap-2.p-6#dialogContent
+				block
 
 mixin sidebar()
 	.fixed.top-0.right-0.w-80.h-screen.shadow-lg.bg-gray-200.overflow-y-auto#sidebar.p-2
 		// Close button absolutely positioned inside the sidebar
 		.w-full.relative
 			a.link.absolute.top-0.right-0.font-bold(hx-on:click="document.getElementById('sidebar').remove()") &times;
-			.w-full.flex.flex-col.items-center.gap-2.p-2
-				#sidebarContent
-					block
+			.w-full.flex.flex-col.items-center.gap-2.p-2#sidebarContent
+				block
