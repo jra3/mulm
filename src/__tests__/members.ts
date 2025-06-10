@@ -1,5 +1,4 @@
 import fs from 'fs';
-import path from 'path';
 import { createMember, getGoogleAccount, getMember, getMemberByEmail, getMembersList } from "../db/members";
 import { getErrorMessage } from '../utils/error';
 import sqlite3 from 'sqlite3';
@@ -41,7 +40,7 @@ test('Members list append', async () => {
 	expect((await getMembersList()).length).toEqual(1);
 })
 
-/* test('Create and fetch', async () => {
+test('Create and fetch', async () => {
 	const id = await createMember("honk@dazzle.com", "Honk Dazzle");
 	expect((await getMemberByEmail("honk@dazzle.com"))?.id).toEqual(id);
 	expect((await getMemberByEmail("honk@dazzle.com"))?.id).toEqual(id);
@@ -64,10 +63,10 @@ test('Create COLLISION', async () => {
 })
 
 test('Create with google', async () => {
-	const id = createMember("honk@dazzle.com", "Honk Dazzle", { google_sub: "123456789" });
-	const member_id = await getGoogleAccount("123456789");
-	expect(member_id).toEqual(id);
-	expect((await getMember(member_id!.member_id))?.display_name).toEqual("Honk Dazzle");
+	const id = await createMember("honk@dazzle.com", "Honk Dazzle", { google_sub: "123456789" });
+	const acct = await getGoogleAccount("123456789");
+	expect(acct?.member_id).toEqual(id);
+	expect((await getMember(acct!.member_id))?.display_name).toEqual("Honk Dazzle");
 })
 
 test('Create with google COLLISION', async () => {
@@ -76,10 +75,8 @@ test('Create with google COLLISION', async () => {
 	try {
 		await createMember("wummper@dazzle.com", "Dude Perfect", { google_sub: "123456789" });
 		fail("Should have thrown");
-
 	} catch (err: unknown) {
 		expect(getErrorMessage(err)).toEqual("Failed to create member");
 	}
 	expect((await getMembersList()).length).toEqual(2);
 })
- */
