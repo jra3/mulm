@@ -1,5 +1,5 @@
-import { makePasswordEntry, ScryptPassword } from "@/auth";
-import { writeConn, query, deleteOne, insertOne, updateOne } from "./conn";
+import { makePasswordEntry, ScryptPassword } from "../auth";
+import { db, query, deleteOne, insertOne, updateOne } from "./conn";
 
 // type as represented in the database
 export type MemberRecord = {
@@ -55,9 +55,9 @@ export async function deleteGoogleAccount(sub: string, memberId: number) {
 }
 
 export async function createOrUpdatePassword(memberId: number, passwordEntry: ScryptPassword) {
-	const db = writeConn;
+	const conn = db(true);
 	try {
-		const stmt = await db.prepare(`
+		const stmt = await conn.prepare(`
 			INSERT INTO password_account (member_id, N, r, p, salt, hash) VALUES (?, ?, ?, ?, ?, ?)
 			ON CONFLICT(member_id) DO UPDATE SET
 				N = excluded.N,
@@ -88,31 +88,31 @@ export async function createMember(
 	} = {},
 	isAdmin: boolean = false,
 ) {
-	const db = writeConn;
-	await db.exec('BEGIN TRANSACTION;');
+	const conn = db(true); 
+	await conn.exec('BEGIN TRANSACTION;');
 
 	try {
-		const userStmt = await db.prepare('INSERT INTO members (display_name, contact_email, is_admin) VALUES (?, ?, ?)');
+		const userStmt = await conn.prepare('INSERT INTO members (display_name, contact_email, is_admin) VALUES (?, ?, ?)');
 		// is this a bug... we should return the data, not the lastID
 		const memberId = (await userStmt.run(name, email, isAdmin ? 1 : 0)).lastID;
 
 		if (credentials.google_sub) {
-			const googleStmt = await db.prepare('INSERT INTO google_account (google_sub, member_id, google_email) VALUES (?, ?, ?)');
+			const googleStmt = await conn.prepare('INSERT INTO google_account (google_sub, member_id, google_email) VALUES (?, ?, ?)');
 			await googleStmt.run(credentials.google_sub, memberId, email);
 		}
 
 		if (credentials.password) {
 			const { N, r, p, salt, hash	} = await makePasswordEntry(credentials.password);
-			const googleStmt = await db.prepare('INSERT INTO password_account (member_id, N, r, p, salt, hash) VALUES (?, ?, ?, ?, ?, ?)');
+			const googleStmt = await conn.prepare('INSERT INTO password_account (member_id, N, r, p, salt, hash) VALUES (?, ?, ?, ?, ?, ?)');
 			await googleStmt.run(memberId, N, r, p, salt, hash);
 		}
 
-		await db.exec('COMMIT;');
+		await conn.exec('COMMIT;');
 		return memberId as number;
 
 	} catch (err) {
-		await db.exec('ROLLBACK;');
 		console.error(err);
+		await conn.exec('ROLLBACK;');
 		throw new Error("Failed to create member");
 	}
 }
@@ -150,7 +150,7 @@ export async function getMemberWithAwards(memberId: string) {
 
 export async function grantAward(memberId: number, awardName: string, dateAwarded: Date) {
 	try {
-		const conn = writeConn;
+		const conn = db(true);
 		const stmt = await conn.prepare("INSERT INTO awards (member_id, award_name, date_awarded) VALUES (?, ?, ?)");
 		await stmt.run(memberId, awardName, dateAwarded.toISOString());
 	} catch (err) {

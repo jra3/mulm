@@ -5,6 +5,14 @@ import config from '../config.json';
 export let readOnlyConn: Database;
 export let writeConn: Database;
 
+export function db(write = false) {
+	if (write) {
+		return writeConn;
+	} else {
+		return readOnlyConn;
+	}
+}
+
 export async function init() {
 	readOnlyConn = await open({
 		filename: config.databaseFile,

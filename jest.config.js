@@ -5,4 +5,10 @@ module.exports = {
     // eslint-disable-next-line no-useless-escape
     "^.+\.tsx?$": ["ts-jest",{}],
   },
+  testPathIgnorePatterns: [
+    "/node_modules/",
+    "/dist/",
+    "/infrastructure/cdk.out/",
+    "/scripts/"
+  ]
 };
