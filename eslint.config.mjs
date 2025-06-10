@@ -9,7 +9,18 @@ export default [
 	{languageOptions: { globals: {...globals.browser, ...globals.node} }},
 	pluginJs.configs.recommended,
 	...tseslint.configs.recommended,
+	...tseslint.configs.recommendedTypeChecked,
+	{
+		languageOptions: {
+			parserOptions: {
+				projectService: true,
+				tsconfigRootDir: import.meta.dirname,
+			},
+		},
+	},
 	{rules: {
-		"@typescript-eslint/no-explicit-any": "warn"
+		"@typescript-eslint/no-explicit-any": "warn",
+		"@typescript-eslint/no-floating-promises": "error",
+		"@typescript-eslint/no-misused-promises": "error"
 	}}
 ];

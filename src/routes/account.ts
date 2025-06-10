@@ -45,7 +45,7 @@ export const updateAccountSettings = async (req: MulmRequest, res: Response) => 
 
 		res.render("account/settings", {
 			viewer,
-			googleURL: await getGoogleOAuthURL(),
+			googleURL: getGoogleOAuthURL(),
 			errors,
 		});
 		return;
@@ -60,7 +60,7 @@ export const updateAccountSettings = async (req: MulmRequest, res: Response) => 
 			// Need better logic here...
 			if (!currentPasswordEntry || await checkPassword(currentPasswordEntry, form.current_password)) {
 				const passwordEntry = await makePasswordEntry(form.password)
-				createOrUpdatePassword(viewer.id, passwordEntry)
+				await createOrUpdatePassword(viewer.id, passwordEntry)
 				// Updated password!
 			} else {
 				errors.set("password", "Password incorrect");
@@ -71,7 +71,7 @@ export const updateAccountSettings = async (req: MulmRequest, res: Response) => 
 		errors.set("password", "Unknown error");
 	}
 
-	updateMember(viewer.id, {
+	await updateMember(viewer.id, {
 		display_name: form.display_name,
 		contact_email: form.email,
 	});
@@ -80,7 +80,7 @@ export const updateAccountSettings = async (req: MulmRequest, res: Response) => 
 		viewer: {
 			display_name: form.display_name,
 			contact_email: form.email,
-			googleURL: await getGoogleOAuthURL(),
+			googleURL: getGoogleOAuthURL(),
 		},
 		errors,
 	});

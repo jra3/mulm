@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { getBapFormTitle, getClassOptions, waterTypes, speciesTypes, foodTypes, spawnLocations, bapDraftForm, bapFields, bapForm, FormValues } from "@/forms/submission";
 import { extractValid, isLivestock } from "@/forms/utils";
+import { getBodyString, getQueryString } from "@/utils/request";
 import { MulmRequest } from "@/sessions";
 import { MemberRecord, getMember, getMemberByEmail } from "@/db/members";
 import { onSubmissionSend } from "@/notifications";
@@ -16,7 +17,7 @@ const { viewer } = req;
 		...req.query,
 	};
 
-	const selectedType = String(req.query.species_type ?? "Fish");
+	const selectedType = getQueryString(req, 'species_type', 'Fish');
 	res.render("submit", {
 		title: getBapFormTitle(selectedType),
 		form,
@@ -104,8 +105,8 @@ export const view = async (req: MulmRequest, res: Response) => {
 			approved_on: local(submission.approved_on),
 			approved_by: approver?.display_name,
 
-			foods: JSON.parse(submission.foods)?.join(","),
-			spawn_locations: JSON.parse(submission.spawn_locations)?.join(","),
+			foods: (JSON.parse(submission.foods) as string[] ?? []).join(","),
+			spawn_locations: (JSON.parse(submission.spawn_locations) as string[] ?? []).join(","),
 		},
 		canonicalName,
 		name: nameGroup,
@@ -171,13 +172,13 @@ export const create = async (req: MulmRequest, res: Response) => {
 		return;
 	}
 
-	const { errors, form, draft} = await parseAndValidateForm(req);
+	const { errors, form, draft} = parseAndValidateForm(req);
 
 	if (errors) {
-		const selectedType = req.body.species_type;
+		const selectedType = getBodyString(req, 'species_type', 'Fish');
 		res.render('bapForm/form', {
 			title: getBapFormTitle(selectedType),
-			form: req.body,
+			form: req.body as unknown,
 			errors,
 			classOptions: getClassOptions(selectedType),
 			waterTypes,
@@ -272,12 +273,12 @@ export const update = async (req: MulmRequest, res: Response) => {
 		return;
 	}
 
-	const { form, draft, errors } = await parseAndValidateForm(req);
+	const { form, draft, errors } = parseAndValidateForm(req);
 	if (errors) {
-		const selectedType = String(req.body.species_type);
+		const selectedType = getBodyString(req, "species_type", "Fish");
 		res.render('bapForm/form', {
 			title: `Edit ${getBapFormTitle(selectedType)}`,
-			form: req.body,
+			form: req.body as unknown,
 			errors,
 			classOptions: getClassOptions(selectedType),
 			waterTypes,

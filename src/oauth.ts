@@ -30,14 +30,27 @@ export async function getGoogleUser(accessToken: string): Promise<{sub: string, 
 	if (!resp.ok) {
 		throw new Error("Failed to fetch user from Google");
 	}
-	const respBody = await resp.json();
-	if (respBody.name == null || respBody.email == null) {
+	const respBody: unknown = await resp.json();
+	
+	if (
+		typeof respBody !== 'object' || 
+		respBody === null ||
+		!('name' in respBody) ||
+		!('email' in respBody) ||
+		!('sub' in respBody)
+	) {
+		throw new Error("Failed to fetch user from Google");
+	}
+
+	const googleUser = respBody as { sub: string, name: string, email: string };
+	
+	if (googleUser.name == null || googleUser.email == null) {
 		throw new Error("Failed to fetch user from Google");
 	}
 
 	return {
-		sub: String(respBody.sub),
-		name: String(respBody.name),
-		email: String(respBody.email),
+		sub: String(googleUser.sub),
+		name: String(googleUser.name),
+		email: String(googleUser.email),
 	};
 }

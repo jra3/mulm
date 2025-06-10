@@ -27,7 +27,7 @@ export async function querySpeciesNames() {
 export async function recordName(data: NameSynonym) {
 	const db = writeConn;
 	try {
-		db.exec('BEGIN TRANSACTION;');
+		await db.exec('BEGIN TRANSACTION;');
 		const groupStmt = await db.prepare(`
 			INSERT INTO species_name_group(
 				program_class,
@@ -38,8 +38,17 @@ export async function recordName(data: NameSynonym) {
 			DO UPDATE SET group_id = group_id
 			RETURNING group_id;
 		`);
-		const { group_id } = await groupStmt.get(data.program_class, data.canonical_genus, data.canonical_species_name);
-		groupStmt.finalize();
+
+		const result = await groupStmt.get<{ group_id: number }>(
+			data.program_class,
+			data.canonical_genus,
+			data.canonical_species_name
+		);
+		await groupStmt.finalize();
+		if (!result || !result.group_id) {
+			throw new Error("Failed to insert or update species name group");
+		}
+		const group_id = result.group_id;
 
 		const nameStmt = await db.prepare(`
 			INSERT INTO species_name(
@@ -52,10 +61,10 @@ export async function recordName(data: NameSynonym) {
 			DO UPDATE SET group_id = group_id;
 		`);
 		await nameStmt.run(group_id, data.common_name, data.latin_name);
-		nameStmt.finalize();
+		await nameStmt.finalize();
 
 		await db.exec('COMMIT;');
-		return group_id as number;
+		return group_id;
 	} catch (err) {
 		await db.exec('ROLLBACK;');
 		console.error(err);

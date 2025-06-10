@@ -69,9 +69,9 @@ export const levelRules: Record<string, LevelRules[]> = {
 				// The remaining points could be obtained from any category.
 				return (
 					tally[5] >= 30 &&
-					tally[10]! >= 30 &&
-					tally[15]! >= 30 &&
-					tally[20]! >= 40
+					tally[10] >= 30 &&
+					tally[15] >= 30 &&
+					tally[20] >= 40
 				);
 			},
 		],
@@ -82,7 +82,7 @@ export const levelRules: Record<string, LevelRules[]> = {
 			(tally) => {
 				// 60 points must be from 5, 10, 15 point category and 80 points
 				// must be from a 20 point category.
-				return classSum(tally, [5, 10, 15]) >= 60 && tally[20]! >= 80;
+				return classSum(tally, [5, 10, 15]) >= 60 && tally[20] >= 80;
 			},
 		],
 		[
@@ -91,7 +91,7 @@ export const levelRules: Record<string, LevelRules[]> = {
 			(tally) => {
 				// 80 points must be from 5, 10, 15 point category and 100 points
 				// must be from a 20 point category.
-				return classSum(tally, [5, 10, 15]) >= 80 && tally[20]! >= 100;
+				return classSum(tally, [5, 10, 15]) >= 80 && tally[20] >= 100;
 			},
 		],
 		["Premier Breeder", 1500],
@@ -126,9 +126,9 @@ export const levelRules: Record<string, LevelRules[]> = {
 				// 40 points must be from a 20 point category. The remaining points can be from any category.
 				return (
 					tally[5] >= 30 &&
-					tally[10]! >= 30 &&
-					tally[15]! >= 30 &&
-					tally[20]! >= 40
+					tally[10] >= 30 &&
+					tally[15] >= 30 &&
+					tally[20] >= 40
 				);
 			},
 		],
@@ -139,7 +139,7 @@ export const levelRules: Record<string, LevelRules[]> = {
 			(tally) => {
 				// 60 points must be from 5, 10, 15 point category and 80 points
 				// must be from a 20 point category.
-				return classSum(tally, [5, 10, 15]) >= 60 && tally[20]! >= 80;
+				return classSum(tally, [5, 10, 15]) >= 60 && tally[20] >= 80;
 			},
 		],
 		[
@@ -148,7 +148,7 @@ export const levelRules: Record<string, LevelRules[]> = {
 			(tally) => {
 				// 80 points must be from 5, 10, 15 point category and 100 points
 				// must be from a 20 point category.
-				return classSum(tally, [5, 10, 15]) >= 80 && tally[20]! >= 100;
+				return classSum(tally, [5, 10, 15]) >= 80 && tally[20] >= 100;
 			},
 		],
 		["Premier Aquatic Horticulturist", 1500],

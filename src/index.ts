@@ -20,6 +20,7 @@ import {
 
 import { MulmRequest, sessionMiddleware } from "./sessions";
 import { getGoogleOAuthURL } from "./oauth";
+import { getQueryString } from "./utils/request";
 
 const app = express();
 
@@ -37,8 +38,8 @@ app.use(sessionMiddleware);
 const router = express.Router();
 
 router.get("/annual", (req, res) => {
-	const { year } = req.query;
-	res.set("HX-Redirect", `/annual/${String(year)}`).send();
+	const year = getQueryString(req, 'year');
+	res.set("HX-Redirect", `/annual/${year}`).send();
 });
 router.get("/annual/:stringYear{/:program}", standings.annual);
 router.get("/lifetime{/:program}", standings.lifetime);

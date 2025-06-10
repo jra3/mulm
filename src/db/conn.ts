@@ -26,12 +26,14 @@ export async function init() {
 		mode: sqlite3.OPEN_CREATE | sqlite3.OPEN_READWRITE,
 	});
 	await adminConn.migrate({
-    migrationsPath: './db/migrations',
+		migrationsPath: './db/migrations',
 	});
-	adminConn.close();
+	await adminConn.close();
 	await init();
-})();
-
+})().catch((error) => {
+	console.error('Failed to initialize database:', error);
+});
+	
 /**
  * Used only in testing to create and use in-memory databases
  */

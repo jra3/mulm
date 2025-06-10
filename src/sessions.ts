@@ -22,7 +22,7 @@ export async function sessionMiddleware(
 	_res: Response,
 	next: NextFunction) {
 
-	const token = req.cookies.session_id;
+	const token = String(req.cookies.session_id);
 	if (token) {
 		req.viewer = await getLoggedInUser(token);
 	}
@@ -67,7 +67,7 @@ export async function createUserSession(req: Request, res: Response, memberId: n
 
 export async function destroyUserSession(req: MulmRequest, res: Response) {
 	res.cookie('session_id', null);
-	const token = req.cookies.session_id;
+	const token = String(req.cookies.session_id);
 	if (token !== undefined) {
 		try {
 			const conn = writeConn;

@@ -3,6 +3,7 @@ import { createAuthCode, deleteAuthCode, getAuthCode } from "@/db/auth";
 import { createGoogleAccount, createMember, createOrUpdatePassword, getGoogleAccount, getMember, getMemberByEmail, getMemberPassword } from "@/db/members";
 import { forgotSchema, loginSchema, resetSchema, signupSchema } from "@/forms/login";
 import { validateFormResult } from "@/forms/utils";
+import { getBodyParam } from "@/utils/request";
 import { sendResetEmail } from "@/notifications";
 import { getGoogleUser, translateGoogleOAuthCode } from "@/oauth";
 import { createUserSession, destroyUserSession, MulmRequest } from "@/sessions";
@@ -14,15 +15,15 @@ export const signup = async (req: MulmRequest, res: Response) => {
 	const onError = () => {
 		res.render("account/signup", {
 			viewer: {
-				display_name: req.body.display_name,
-				contact_email: req.body.email,
+				display_name: getBodyParam(req, 'display_name'),
+				contact_email: getBodyParam(req, 'email'),
 			},
 			errors,
 		});
 	};
 
 	const parsed = signupSchema.safeParse(req.body);
-	if (!validateFormResult(parsed, errors, onError)) {
+	if (!(validateFormResult(parsed, errors, onError))) {
 		return;
 	}
 
@@ -69,7 +70,7 @@ export const validateForgotPassword = async (req: MulmRequest, res: Response) =>
 	}
 
 	const now = new Date(Date.now());
-	const codeEntry = await getAuthCode(String(code));
+	const codeEntry = await getAuthCode(code as string);
 	const invalidCode = (
 		codeEntry == undefined ||
 		codeEntry.purpose != "password_reset" ||
@@ -96,7 +97,7 @@ export const sendForgotPassword = async (req: MulmRequest, res: Response) => {
 	const errors = new Map<string, string>();
 	const renderDialog = () => {
 		res.render("account/forgotPassword", {
-			...req.body,
+			...req.body as object,
 			errors,
 		});
 	};
@@ -174,13 +175,21 @@ export const resetPassword = async (req: MulmRequest, res: Response) => {
 
 export const googleOAuth = async (req: MulmRequest, res: Response) => {
 	const { code } = req.query;
-	const resp = await translateGoogleOAuthCode(String(code));
-	const payload = await resp.json();
-	if (!("access_token" in payload)) {
+	const resp = await translateGoogleOAuthCode(code as string);
+	const payload: unknown = await resp.json();
+	
+	// Type narrowing with runtime checks
+	if (
+		typeof payload !== 'object' || 
+		payload === null ||
+		!('access_token' in payload)
+	) {
 		res.status(401).send("Login Failed!");
 		return;
 	}
-	const token = String(payload.access_token);
+	
+	const tokenPayload = payload as { access_token: unknown };
+	const token = String(tokenPayload.access_token);
 	const googleUser = await getGoogleUser(token);
 	const record = await getGoogleAccount(googleUser.sub);
 

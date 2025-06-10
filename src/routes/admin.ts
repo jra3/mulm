@@ -13,6 +13,7 @@ import { isLivestock, validateFormResult } from "@/forms/utils";
 import { validateSubmission } from "./submission";
 import { foodTypes, getClassOptions, spawnLocations, speciesTypes, waterTypes } from "@/forms/submission";
 import { recordName } from "@/db/species";
+import { getBodyParam, getBodyString } from "@/utils/request";
 
 export function requireAdmin(
 	req: MulmRequest,
@@ -158,7 +159,8 @@ export const sendRequestChanges = async (req: MulmRequest, res: Response) => {
 		sendChangesRequest(
 			submission,
 			member?.contact_email,
-			String(req.body.content)),
+			getBodyString(req, "content"),
+		)
 	]);
 
 	res.set('HX-Redirect', `/sub/${submission.id}`).send();
@@ -182,8 +184,8 @@ Common Name: ${submission.species_common_name}
 Latin Name: ${submission.species_latin_name}
 
 Date: ${submission.reproduction_date}
-Spawn Locations: ${JSON.parse(submission.spawn_locations).join(", ")}
-Foods: ${JSON.parse(submission.foods).join(", ")}
+Spawn Locations: ${(JSON.parse(submission.spawn_locations) as string[]).join(", ")}
+Foods: ${(JSON.parse(submission.foods) as string[]).join(", ")}
 
 Tank Size: ${submission.tank_size}
 Filter Type: ${submission.filter_type}
@@ -209,7 +211,7 @@ export const inviteMember = async (req: MulmRequest, res: Response) => {
 	const errors = new Map<string, string>();
 	const renderDialog = () => {
 		res.render("admin/inviteUser", {
-			...req.body,
+			...req.body as object,
 			errors,
 		});
 	}
@@ -248,10 +250,12 @@ export const inviteMember = async (req: MulmRequest, res: Response) => {
 
 export const approveSubmission = async (req: MulmRequest, res: Response) => {
 	const { viewer } = req;
+	
+	const id = getBodyParam(req, 'id') as number;
+	const submission = (await getSubmissionById(id))!;
 
 	const errors = new Map<string, string>();
-	const onError = async () => {
-		const submission = (await getSubmissionById(req.body.id))!;
+	const onError = () => {
 		res.render("admin/approvalPanel", {
 			submission: {
 				id: submission.id,
@@ -260,8 +264,8 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
 			},
 			errors,
 			name: {
-				canonical_genus: req.body.canonical_genus,
-				canonical_species_name: req.body.canonical_species_name
+				canonical_genus: getBodyString(req, 'canonical_genus'),
+				canonical_species_name: getBodyString(req, 'canonical_species_name'),
 			},
 		});
 	};
@@ -272,8 +276,6 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
 	}
 
 	const updates = parsed.data;
-	const { id } = updates;
-	const submission = (await getSubmissionById(id))!;
 
 	const speciesGroupId = await recordName({
 		program_class: submission.species_class,

@@ -2,11 +2,11 @@ import * as z from "zod"
 
 export const isLivestock = (speciesType: string) => speciesType === "Fish" || speciesType === "Invert";
 
-export function validateFormResult (
-	parsed: z.SafeParseReturnType<unknown, unknown>,
+export function validateFormResult<T> (
+	parsed: z.SafeParseReturnType<unknown, T>,
 	errors: Map<string, string>,
 	onError?: () => void,
-): parsed is z.SafeParseSuccess<unknown> {
+): parsed is z.SafeParseSuccess<T> {
 	if (parsed.success) {
 		return true;
 	}
@@ -25,14 +25,15 @@ export function extractValid<T extends z.ZodRawShape>(
 
   for (const key in schema.shape) {
 		const subSchema = schema.shape[key];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const value = (data as any)[key];
+    const value = data && typeof data === 'object' && key in data 
+      ? (data as Record<string, unknown>)[key] 
+      : undefined;
     const parsed = subSchema.safeParse(value);
     if (parsed.success) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       result[key] = parsed.data;
     }
 	}
-
   return result;
 }
 
