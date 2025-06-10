@@ -14,7 +14,8 @@
 		"test": "jest",
 		"start": "node dist/src/index.js",
 		"lint": "eslint 'src/**/*.ts'",
-		"lint:fix": "eslint 'src/**/*.ts' --fix"
+		"lint:fix": "eslint 'src/**/*.ts' --fix",
+		"script": "tsx"
 	},
 	"repository": {
 		"type": "git",
@@ -72,6 +73,7 @@
 		"tailwindcss": "^4.0.12",
 		"ts-jest": "^29.3.0",
 		"ts-node": "^10.9.2",
+		"tsx": "^4.19.4",
 		"typescript": "^5.8.2",
 		"typescript-eslint": "^8.26.0"
 	},

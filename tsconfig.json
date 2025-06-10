@@ -6,6 +6,8 @@
 		"rootDir": ".",
 		"resolveJsonModule": true,
 		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true,
+		"moduleResolution": "node",
 		"strict": true,
 
 		"forceConsistentCasingInFileNames": true,
@@ -18,5 +20,5 @@
 			"@/*": [ "src/*" ]
 		}
 	},
-	"exclude": ["infrastructure/cdk.out", "node_modules", "dist"]
+	"exclude": ["infrastructure/cdk.out", "node_modules", "dist", "scripts"]
 }
