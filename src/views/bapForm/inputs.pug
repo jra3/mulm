@@ -40,3 +40,25 @@ mixin bapMultiSelectInput(labelText, name, id)
 			value=form[name]
 			class=errors.has(name) ? "error" : "")
 			block
+
+mixin bapTypeaheadInput(labelText, name, placeholder, apiUrl, linkedField)
+	.flex.flex-col.gap-2
+		label.input-label(for=name)= labelText
+			if errors.has(name)
+				span(class="font-extrabold text-red-400")= ` ${errors.get(name)}`
+
+		select.tom-select-typeahead(
+			id=name
+			name=name
+			data-api-url=apiUrl
+			data-linked-field=linkedField
+			autocomplete="off"
+			class=errors.has(name) ? "error" : ""
+			disabled=attributes.disabled)
+			if form[name]
+				option(value=form[name] selected)= form[name]
+		if attributes.disabled
+			input.text-input(
+				value=form[name]
+				name=name
+				type="hidden")

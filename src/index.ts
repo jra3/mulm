@@ -13,6 +13,7 @@ import * as member from "@/routes/member";
 import * as submission from "@/routes/submission";
 import * as standings from "@/routes/standings";
 import * as tank from "@/routes/tank";
+import * as api from "@/routes/api";
 
 import {
 	getOutstandingSubmissionsCounts,
@@ -162,6 +163,10 @@ router.get("/dialog/forgot-password", (req, res) => {
 // OAuth ///////////////////////////////////////////////////
 
 router.get("/oauth/google", auth.googleOAuth);
+
+// API ///////////////////////////////////////////////////
+
+router.get("/api/members/search", api.searchMembers);
 
 ////////////////////////////////////////////////////////////
 

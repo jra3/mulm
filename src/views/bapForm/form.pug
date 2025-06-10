@@ -15,8 +15,11 @@ mixin CRUDForm()
 		div.max-w-4xl.mx-auto.text-left.px-4
 			h2(class="text-xl sm:text-2xl font-bold mb-4") Member Details
 			div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
-				+bapTextInput("Member Name", "member_name", "Jacques Cousteau")(disabled=!isAdmin)
-				+bapTextInput("Member Email", "member_email", "deep@bluesea.net")(disabled=!isAdmin)
+				if isAdmin
+					+bapTypeaheadInput("Member Name", "member_name", "Jacques Cousteau", "/api/members/search", "member_email")(disabled=!isAdmin)
+				else
+					+bapTextInput("Member Name", "member_name", "Jacques Cousteau")(disabled=true)
+				+bapTextInput("Member Email", "member_email", "deep@bluesea.net")(disabled=true)
 
 	section.bg-gray-100.py-4
 		div.max-w-4xl.mx-auto.text-left.px-4
