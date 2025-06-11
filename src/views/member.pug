@@ -3,7 +3,7 @@ include header.pug
 - const stringCell = ['p-2', 'overflow-hidden', 'text-ellipsis', 'whitespace-nowrap', 'text-right', 'border-gray-800'];
 - const heading = ['p-2', 'overflow-hidden', 'text-ellipsis', 'whitespace-nowrap', 'text-left', 'sticky', 'top-0', 'text-left', 'font-bold', 'text-lg'];
 
-mixin submissionTable(submissions)
+mixin submissionTable(submissions, totalPoints)
 	table
 
 		thead
@@ -27,6 +27,14 @@ mixin submissionTable(submissions)
 					td(class=stringCell)= dateString
 					td(class=stringCell)= sub.points || "Unapproved"
 					td(class=stringCell)= sub.total_points || "Unapproved"
+			if totalPoints > 0
+				tr.border-t-2.border-gray-800.font-bold
+					td(class=stringCell) Total:
+					td(class=stringCell)  
+					td(class=stringCell)  
+					td(class=stringCell)  
+					td(class=stringCell)  
+					td(class=stringCell)= totalPoints
 
 doctype html
 html
@@ -38,16 +46,16 @@ html
 			section.bg-gray-100
 				div.max-w-4xl.mx-auto.text-center.justify-center.px-4
 					h3(class="text-xl lg:text-4xl font-extrabold mb-4") Breeders Awards Submissions
-					+submissionTable(fishSubs)
+					+submissionTable(fishSubs, fishTotalPoints)
 
 		if plantSubs.length > 0
 			section.bg-gray-100
 				div.max-w-4xl.mx-auto.text-center.px-4
 					h3(class="text-xl lg:text-4xl font-extrabold mb-4") Horticultural Awards Submissions
-					+submissionTable(plantSubs)
+					+submissionTable(plantSubs, plantTotalPoints)
 
 		if coralSubs.length > 0
 			section.bg-gray-100
 				div.max-w-4xl.mx-auto.text-center.px-4
 					h3(class="text-xl lg:text-4xl font-extrabold mb-4") Coral Awards Submissions
-					+submissionTable(coralSubs)
+					+submissionTable(coralSubs, coralTotalPoints)

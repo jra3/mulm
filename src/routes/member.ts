@@ -28,11 +28,26 @@ export const view = async (req: MulmRequest, res: Response) => {
 	const plantSubs = submissions.filter((sub) => sub.species_type === "Plant");
 	const coralSubs = submissions.filter((sub) => sub.species_type === "Coral");
 
+	const calculateTotalPoints = (subs: typeof submissions) => {
+		let total = 0;
+		for (const sub of subs) {
+			total += sub.total_points || 0;
+		}
+		return total;
+	};
+
+	const fishTotalPoints = calculateTotalPoints(fishSubs);
+	const plantTotalPoints = calculateTotalPoints(plantSubs);
+	const coralTotalPoints = calculateTotalPoints(coralSubs);
+
 	res.render("member", {
 		member,
 		fishSubs,
 		plantSubs,
 		coralSubs,
+		fishTotalPoints,
+		plantTotalPoints,
+		coralTotalPoints,
 		isLoggedIn: Boolean(viewer),
 		isSelf: viewer && viewer.id == member.id,
 		isAdmin: viewer && viewer.is_admin,
