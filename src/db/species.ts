@@ -114,20 +114,184 @@ export async function getCanonicalSpeciesName(speciesNameId: number) {
 	return rows.pop();
 }
 
-/*
+export type SpeciesFilters = {
+	species_type?: string;
+	species_class?: string;
+	search?: string;
+	sort?: 'name' | 'reports' | 'breeders';
+};
 
-(async () => {
-	await init();
+export type SpeciesExplorerItem = {
+	group_id: number;
+	program_class: string;
+	canonical_genus: string;
+	canonical_species_name: string;
+	total_breeds: number;
+	total_breeders: number;
+	common_names: string;
+	scientific_names: string;
+	latest_breed_date: string | null;
+};
 
-	const entry: NameSynonym = {
-		program_class: "Catfish & Loaches",
-		canonical_genus: "Corydoras",
-		canonical_species_name: "CW010",
-		common_name: "Gold Lazer Corys",
-		latin_name: "Corydoras CW 10",
+export async function getSpeciesForExplorer(filters: SpeciesFilters = {}) {
+	const { species_type, species_class, search, sort = 'reports' } = filters;
+
+	let orderBy = 'total_breeds DESC, total_breeders DESC';
+	if (sort === 'name') {
+		orderBy = 'sng.canonical_genus, sng.canonical_species_name';
+	} else if (sort === 'breeders') {
+		orderBy = 'total_breeders DESC, total_breeds DESC';
+	} else if (sort === 'reports') {
+		orderBy = 'total_breeds DESC, total_breeders DESC';
+	}
+
+	const searchPattern = search ? `%${search}%` : null;
+
+	return query<SpeciesExplorerItem>(`
+		SELECT
+			sng.group_id,
+			sng.program_class,
+			sng.canonical_genus,
+			sng.canonical_species_name,
+			COALESCE(COUNT(DISTINCT s.id), 0) as total_breeds,
+			COALESCE(COUNT(DISTINCT s.member_id), 0) as total_breeders,
+			COALESCE(GROUP_CONCAT(DISTINCT sn.common_name), '') as common_names,
+			COALESCE(GROUP_CONCAT(DISTINCT sn.scientific_name), '') as scientific_names,
+			MAX(s.approved_on) as latest_breed_date
+		FROM species_name_group sng
+		LEFT JOIN species_name sn ON sng.group_id = sn.group_id
+		LEFT JOIN submissions s ON s.species_name_id = sn.name_id AND s.approved_on IS NOT NULL
+		WHERE 1=1
+			${species_type ? 'AND s.species_type = ?' : ''}
+			${species_class ? 'AND s.species_class = ?' : ''}
+			${search ? `AND (
+				sng.canonical_genus LIKE ? OR
+				sng.canonical_species_name LIKE ? OR
+				sn.common_name LIKE ? OR
+				sn.scientific_name LIKE ?
+			)` : ''}
+		GROUP BY sng.group_id, sng.program_class, sng.canonical_genus, sng.canonical_species_name
+		HAVING total_breeds > 0
+		ORDER BY ${orderBy}
+	`, [
+		...(species_type ? [species_type] : []),
+		...(species_class ? [species_class] : []),
+		...(search ? [searchPattern, searchPattern, searchPattern, searchPattern] : [])
+	]);
+}
+
+export type SpeciesDetail = {
+	group_id: number;
+	program_class: string;
+	canonical_genus: string;
+	canonical_species_name: string;
+	synonyms: Array<{
+		name_id: number;
+		common_name: string;
+		scientific_name: string;
+	}>;
+};
+
+export async function getSpeciesDetail(groupId: number) {
+	const groupRows = await query<{
+		group_id: number;
+		program_class: string;
+		canonical_genus: string;
+		canonical_species_name: string;
+	}>(`
+		SELECT group_id, program_class, canonical_genus, canonical_species_name
+		FROM species_name_group
+		WHERE group_id = ?
+	`, [groupId]);
+
+	if (groupRows.length === 0) {
+		return null;
+	}
+
+	const synonymRows = await query<{
+		name_id: number;
+		common_name: string;
+		scientific_name: string;
+	}>(`
+		SELECT name_id, common_name, scientific_name
+		FROM species_name
+		WHERE group_id = ?
+		ORDER BY common_name, scientific_name
+	`, [groupId]);
+
+	const detail: SpeciesDetail = {
+		...groupRows[0],
+		synonyms: synonymRows
 	};
-	await recordName(entry);
-	console.log(await querySpeciesNames());
-})();
 
-*/
+	return detail;
+}
+
+export type SpeciesBreeder = {
+	member_id: number;
+	member_name: string;
+	breed_count: number;
+	first_breed_date: string;
+	latest_breed_date: string;
+	submissions_concat?: string;
+	submissions: Array<{
+		id: number;
+		species_common_name: string;
+		species_latin_name: string;
+		approved_on: string;
+		points: number;
+	}>;
+};
+
+export async function getBreedersForSpecies(groupId: number) {
+	return query<SpeciesBreeder>(`
+		SELECT
+			m.id as member_id,
+			m.display_name as member_name,
+			COUNT(s.id) as breed_count,
+			MIN(s.approved_on) as first_breed_date,
+			MAX(s.approved_on) as latest_breed_date,
+			GROUP_CONCAT(
+				s.id || '|' ||
+				s.species_common_name || '|' ||
+				s.species_latin_name || '|' ||
+				s.approved_on || '|' ||
+				COALESCE(s.points, 0)
+			) as submissions_concat
+		FROM members m
+		JOIN submissions s ON m.id = s.member_id
+		JOIN species_name sn ON s.species_name_id = sn.name_id
+		WHERE sn.group_id = ? AND s.approved_on IS NOT NULL
+		GROUP BY m.id, m.display_name
+		ORDER BY breed_count DESC, latest_breed_date DESC
+	`, [groupId]).then(rows => {
+		return rows.map(row => ({
+			...row,
+			submissions: row.submissions_concat ? row.submissions_concat.split(',').map((sub: string) => {
+				const [id, common_name, latin_name, approved_on, points] = sub.split('|');
+				return {
+					id: parseInt(id),
+					species_common_name: common_name,
+					species_latin_name: latin_name,
+					approved_on,
+					points: parseInt(points)
+				};
+			}) : []
+		}));
+	});
+}
+
+
+
+export async function getFilterOptions() {
+	const speciesTypes = await query<{ species_type: string }>(`
+		SELECT DISTINCT species_type
+		FROM submissions
+		WHERE approved_on IS NOT NULL
+		ORDER BY species_type
+	`);
+
+	return {
+		species_types: speciesTypes.map(s => s.species_type)
+	};
+}

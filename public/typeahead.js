@@ -1,79 +1,107 @@
-// Initialize tom-select for typeahead inputs
-document.addEventListener('DOMContentLoaded', function() {
-    initializeTypeaheads();
-});
+function getTypeaheadConfig(element) {
+	return {
+		apiUrl: element.dataset.apiUrl,
+		linkedField: element.dataset.linkedField,
+		valueField: element.dataset.valueField || 'value',
+		labelField: element.dataset.labelField || 'text',
+		searchFields: element.dataset.searchFields ? element.dataset.searchFields.split(',') : ['text'],
+		minQueryLength: parseInt(element.dataset.minQueryLength) || 2,
+		maxItems: parseInt(element.dataset.maxItems) || 1,
+		allowCreate: element.dataset.allowCreate !== 'false',
+		placeholder: element.dataset.placeholder || element.placeholder,
+		loadingClass: element.dataset.loadingClass || 'loading',
+		debounceMs: parseInt(element.dataset.debounceMs) || 300
+	};
+}
 
-// Also initialize after HTMX content swaps
-document.body.addEventListener('htmx:afterSwap', function() {
-    initializeTypeaheads();
-});
+function buildTomSelectOptions(element, config) {
+	return {
+		valueField: config.valueField,
+		labelField: config.labelField,
+		searchField: config.searchFields,
+		create: config.allowCreate,
+		maxItems: config.maxItems,
+		placeholder: config.placeholder,
 
-function initializeTypeaheads() {
-    const typeaheadElements = document.querySelectorAll('.tom-select-typeahead:not(.tomselected)');
-    
-    typeaheadElements.forEach(function(element) {
-        const apiUrl = element.dataset.apiUrl;
-        const linkedFieldName = element.dataset.linkedField;
-        
-        if (!apiUrl) return;
-        
-        const tomSelect = new TomSelect(element, {
-            valueField: 'value',
-            labelField: 'text',
-            searchField: ['text', 'email'],
-            create: true, // Allow creating new entries
-            maxItems: 1,
-            load: function(query, callback) {
-                if (query.length < 2) {
-                    callback();
-                    return;
-                }
-                
-                fetch(apiUrl + '?q=' + encodeURIComponent(query))
-                    .then(response => response.json())
-                    .then(data => {
-                        callback(data);
-                    })
-                    .catch(() => {
-                        callback();
-                    });
-            },
-            render: {
-                option: function(item, escape) {
-                    return '<div>' +
-                        '<span class="font-medium">' + escape(item.text) + '</span>' +
-                        (item.email ? '<br><span class="text-sm text-gray-500">' + escape(item.email) + '</span>' : '') +
-                        '</div>';
-                }
-            },
-            onChange: function(value) {
-                // When a selection is made, update the linked field
-                if (linkedFieldName && value) {
-                    const selectedOption = this.options[value];
-                    
-                    if (selectedOption && selectedOption.email) {
-                        const linkedElement = document.getElementById(linkedFieldName);
-                        
-                        if (linkedElement) {
-                            // For member_name field, set the email in the linked field
-                            if (linkedElement.tomselect) {
-                                // It's a tom-select field
-                                linkedElement.tomselect.clear();
-                                linkedElement.tomselect.addOption({
-                                    value: selectedOption.email,
-                                    text: selectedOption.email,
-                                    email: selectedOption.email,
-                                    name: selectedOption.name || selectedOption.text
-                                });
-                                linkedElement.tomselect.setValue(selectedOption.email);
-                            } else {
-                                // It's a regular input field (like our email field)
-                                linkedElement.value = selectedOption.email;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    });
+		load: function (query, callback) {
+			if (query.length < config.minQueryLength) {
+				callback();
+				return;
+			}
+
+			element.classList.add(config.loadingClass);
+			performFetchSearch(element, config, query, callback);
+		},
+
+		render: {
+			option: function(item, escape) {
+				return renderOption(item, escape, element);
+			},
+			loading: function(data, escape) {
+				return '<div class="loading-indicator">Searching...</div>';
+			}
+		},
+
+		onChange: function (value) {
+			const selectedOption = tomSelectInstance.options[value];
+			element.dispatchEvent(new CustomEvent('typeahead:change', {
+				detail: { value, selectedOption },
+				bubbles: true
+			}));
+		},
+
+		onLoad: function() {
+			element.classList.remove(config.loadingClass);
+		}
+	};
+}
+
+function performFetchSearch(element, config, query, callback) {
+	const url = new URL(config.apiUrl, window.location.origin);
+	url.searchParams.set('q', query);
+
+	// Add any additional parameters from data attributes
+	Object.keys(element.dataset).forEach(key => {
+		if (key.startsWith('param')) {
+			const paramName = key.replace('param', '').toLowerCase();
+			url.searchParams.set(paramName, element.dataset[key]);
+		}
+	});
+
+	fetch(url)
+		.then(response => response.json())
+		.then(data => {
+			element.classList.remove(config.loadingClass);
+			callback(data);
+		})
+		.catch(error => {
+			console.error('Typeahead search error:', error);
+			element.classList.remove(config.loadingClass);
+			callback();
+		});
+}
+
+function renderOption(item, escape, element) {
+	const template = element.dataset.optionTemplate;
+
+	if (template) {
+		// Use custom template if provided
+		return template
+			.replace(/\{\{(\w+)\}\}/g, (match, field) => {
+				return escape(item[field] || '');
+			});
+	}
+
+	// Default rendering
+	let html = '<div>';
+	html += '<span class="font-medium">' + escape(item[element.dataset.labelField || 'text']) + '</span>';
+
+	// Add secondary text if available
+	const secondaryField = element.dataset.secondaryField;
+	if (secondaryField && item[secondaryField]) {
+		html += '<br><span class="text-sm text-gray-500">' + escape(item[secondaryField]) + '</span>';
+	}
+
+	html += '</div>';
+	return html;
 }
