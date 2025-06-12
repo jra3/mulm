@@ -135,7 +135,7 @@ export type SpeciesExplorerItem = {
 
 export async function getSpeciesForExplorer(filters: SpeciesFilters = {}) {
 	const { species_type, species_class, search, sort = 'reports' } = filters;
-	
+
 	let orderBy = 'total_breeds DESC, total_breeders DESC';
 	if (sort === 'name') {
 		orderBy = 'sng.canonical_genus, sng.canonical_species_name';
@@ -146,9 +146,9 @@ export async function getSpeciesForExplorer(filters: SpeciesFilters = {}) {
 	}
 
 	const searchPattern = search ? `%${search}%` : null;
-	
+
 	return query<SpeciesExplorerItem>(`
-		SELECT 
+		SELECT
 			sng.group_id,
 			sng.program_class,
 			sng.canonical_genus,
@@ -165,9 +165,9 @@ export async function getSpeciesForExplorer(filters: SpeciesFilters = {}) {
 			${species_type ? 'AND s.species_type = ?' : ''}
 			${species_class ? 'AND s.species_class = ?' : ''}
 			${search ? `AND (
-				sng.canonical_genus LIKE ? OR 
+				sng.canonical_genus LIKE ? OR
 				sng.canonical_species_name LIKE ? OR
-				sn.common_name LIKE ? OR 
+				sn.common_name LIKE ? OR
 				sn.scientific_name LIKE ?
 			)` : ''}
 		GROUP BY sng.group_id, sng.program_class, sng.canonical_genus, sng.canonical_species_name
@@ -245,17 +245,17 @@ export type SpeciesBreeder = {
 
 export async function getBreedersForSpecies(groupId: number) {
 	return query<SpeciesBreeder>(`
-		SELECT 
+		SELECT
 			m.id as member_id,
 			m.display_name as member_name,
 			COUNT(s.id) as breed_count,
 			MIN(s.approved_on) as first_breed_date,
 			MAX(s.approved_on) as latest_breed_date,
 			GROUP_CONCAT(
-				s.id || '|' || 
-				s.species_common_name || '|' || 
-				s.species_latin_name || '|' || 
-				s.approved_on || '|' || 
+				s.id || '|' ||
+				s.species_common_name || '|' ||
+				s.species_latin_name || '|' ||
+				s.approved_on || '|' ||
 				COALESCE(s.points, 0)
 			) as submissions_concat
 		FROM members m
@@ -281,53 +281,13 @@ export async function getBreedersForSpecies(groupId: number) {
 	});
 }
 
-// Import the species types and classes from the forms
-const speciesTypesAndClasses: Record<string, string[]> = {
-	"Fish": [
-		"Anabantoids",
-		"Brackish Water",
-		"Catfish & Loaches",
-		"Characins",
-		"Cichlids",
-		"Cyprinids",
-		"Killifish",
-		"Livebearers",
-		"Miscellaneous",
-		"Marine",
-		"Native",
-	],
-	"Invert": [
-		"Snail",
-		"Shrimp",
-		"Other",
-	],
-	"Plant": [
-		"Apongetons & Criniums",
-		"Anubias & Lagenandra",
-		"Cryptocoryne",
-		"Floating Plants",
-		"Primative Plants",
-		"Rosette Plants",
-		"Stem Plants",
-		"Sword Plants",
-		"Water Lilles",
-	],
-	"Coral": [
-		"Hard",
-		"Soft",
-	],
-};
 
-export function getClassOptions(speciesType: string) {
-	const options = speciesTypesAndClasses[speciesType] ?? [];
-	return options.map((option) => ({ value: option, text: option }));
-}
 
 export async function getFilterOptions() {
 	const speciesTypes = await query<{ species_type: string }>(`
-		SELECT DISTINCT species_type 
-		FROM submissions 
-		WHERE approved_on IS NOT NULL 
+		SELECT DISTINCT species_type
+		FROM submissions
+		WHERE approved_on IS NOT NULL
 		ORDER BY species_type
 	`);
 
@@ -335,21 +295,3 @@ export async function getFilterOptions() {
 		species_types: speciesTypes.map(s => s.species_type)
 	};
 }
-
-/*
-
-(async () => {
-	await init();
-
-	const entry: NameSynonym = {
-		program_class: "Catfish & Loaches",
-		canonical_genus: "Corydoras",
-		canonical_species_name: "CW010",
-		common_name: "Gold Lazer Corys",
-		latin_name: "Corydoras CW 10",
-	};
-	await recordName(entry);
-	console.log(await querySpeciesNames());
-})();
-
-*/

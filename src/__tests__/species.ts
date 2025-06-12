@@ -1,6 +1,6 @@
 import fs from 'fs';
 import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
+import { open, Database } from 'sqlite';
 import { overrideConnection } from "../db/conn";
 import { getSpeciesForExplorer, recordName, getSpeciesDetail, SpeciesFilters } from "../db/species";
 import { createMember } from "../db/members";
@@ -10,7 +10,7 @@ beforeAll(() => {
 });
 
 let instance = 1;
-let testDb: any;
+let testDb: Database;
 
 beforeEach(async () => {
 	const filename = `/tmp/mulm/database-species-${instance++}.sqlite`;
@@ -18,7 +18,7 @@ beforeEach(async () => {
 		filename,
 		driver: sqlite3.Database,
 		mode: sqlite3.OPEN_CREATE | sqlite3.OPEN_READWRITE,
-	});	
+	});
 	await tmpConn.migrate({
     	migrationsPath: './db/migrations',
 	});
@@ -32,7 +32,6 @@ beforeEach(async () => {
 	testDb = writeConn;
 	overrideConnection(writeConn);
 
-	// Set up test data
 	await setupTestData();
 });
 
@@ -41,11 +40,9 @@ afterAll(() => {
 });
 
 async function setupTestData() {
-	// Create test members
 	const member1 = await createMember("breeder1@test.com", "Test Breeder 1");
 	const member2 = await createMember("breeder2@test.com", "Test Breeder 2");
 
-	// Add species names
 	const species1Id = await recordName({
 		program_class: "Cichlids",
 		canonical_genus: "Apistogramma",
@@ -55,7 +52,7 @@ async function setupTestData() {
 	});
 
 	const species2Id = await recordName({
-		program_class: "Characins", 
+		program_class: "Characins",
 		canonical_genus: "Neon",
 		canonical_species_name: "tetra",
 		common_name: "Neon Tetra",
@@ -70,17 +67,23 @@ async function setupTestData() {
 		latin_name: "Poecilia reticulata"
 	});
 
-	// Get species name IDs
-	const speciesNames = await testDb.all(`
-		SELECT name_id, group_id FROM species_name 
+	const speciesNames = await testDb.all<Array<{ name_id: number; group_id: number }>>(`
+		SELECT name_id, group_id FROM species_name
 		WHERE group_id IN (?, ?, ?)
 	`, [species1Id, species2Id, species3Id]);
 
-	// Add approved submissions for testing
+	const findSpeciesNameId = (groupId: number): number => {
+		const species = speciesNames.find(s => s.group_id === groupId);
+		if (!species) {
+			throw new Error(`Species with group_id ${groupId} not found`);
+		}
+		return species.name_id;
+	};
+
 	const submissions = [
 		{
 			member_id: member1,
-			species_name_id: speciesNames.find((s: any) => s.group_id === species1Id)?.name_id,
+			species_name_id: findSpeciesNameId(species1Id),
 			program: "fish",
 			species_type: "Fish",
 			species_class: "Cichlids",
@@ -91,9 +94,9 @@ async function setupTestData() {
 		},
 		{
 			member_id: member1,
-			species_name_id: speciesNames.find((s: any) => s.group_id === species2Id)?.name_id,
+			species_name_id: findSpeciesNameId(species2Id),
 			program: "fish",
-			species_type: "Fish", 
+			species_type: "Fish",
 			species_class: "Characins",
 			species_common_name: "Neon Tetra",
 			species_latin_name: "Paracheirodon innesi",
@@ -102,10 +105,10 @@ async function setupTestData() {
 		},
 		{
 			member_id: member2,
-			species_name_id: speciesNames.find((s: any) => s.group_id === species1Id)?.name_id,
+			species_name_id: findSpeciesNameId(species1Id),
 			program: "fish",
 			species_type: "Fish",
-			species_class: "Cichlids", 
+			species_class: "Cichlids",
 			species_common_name: "Cockatoo Dwarf Cichlid",
 			species_latin_name: "Apistogramma cacatuoides",
 			approved_on: "2024-02-01",
@@ -113,11 +116,11 @@ async function setupTestData() {
 		},
 		{
 			member_id: member2,
-			species_name_id: speciesNames.find((s: any) => s.group_id === species3Id)?.name_id,
+			species_name_id: findSpeciesNameId(species3Id),
 			program: "fish",
 			species_type: "Fish",
 			species_class: "Livebearers",
-			species_common_name: "Fancy Guppy", 
+			species_common_name: "Fancy Guppy",
 			species_latin_name: "Poecilia reticulata",
 			approved_on: "2024-02-15",
 			points: 5
@@ -125,20 +128,22 @@ async function setupTestData() {
 	];
 
 	for (const submission of submissions) {
-		await testDb.run(`
-			INSERT INTO submissions (
+		await testDb.run(
+			`INSERT INTO submissions (
 				member_id, species_name_id, program, species_type, species_class,
 				species_common_name, species_latin_name, approved_on, points
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-		`, [
-			submission.member_id, submission.species_name_id, submission.program, submission.species_type,
-			submission.species_class, submission.species_common_name, submission.species_latin_name,
-			submission.approved_on, submission.points
-		]);
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			[
+				submission.member_id, submission.species_name_id, submission.program, submission.species_type,
+				submission.species_class, submission.species_common_name, submission.species_latin_name,
+				submission.approved_on, submission.points
+			]
+		);
 	}
 }
 
 describe('Species Explorer Search Functionality', () => {
+
 	test('Returns all species with no filters', async () => {
 		const species = await getSpeciesForExplorer();
 		expect(species.length).toBe(3);
@@ -148,7 +153,7 @@ describe('Species Explorer Search Functionality', () => {
 		const filters: SpeciesFilters = { species_type: "Fish" };
 		const species = await getSpeciesForExplorer(filters);
 		expect(species.length).toBe(3);
-		
+
 		const filters2: SpeciesFilters = { species_type: "Plant" };
 		const species2 = await getSpeciesForExplorer(filters2);
 		expect(species2.length).toBe(0);
@@ -224,8 +229,8 @@ describe('Species Explorer Search Functionality', () => {
 	});
 
 	test('Combined filters work correctly', async () => {
-		const filters: SpeciesFilters = { 
-			species_type: "Fish", 
+		const filters: SpeciesFilters = {
+			species_type: "Fish",
 			species_class: "Cichlids",
 			search: "Apisto"
 		};
@@ -257,13 +262,12 @@ describe('Species Explorer Search Functionality', () => {
 
 describe('Species Detail Functionality', () => {
 	test('Returns species detail correctly', async () => {
-		// First get a species from explorer to get the group_id
 		const species = await getSpeciesForExplorer();
 		const apisto = species.find(s => s.canonical_genus === "Apistogramma");
-		
+
 		expect(apisto).toBeDefined();
 		const detail = await getSpeciesDetail(apisto!.group_id);
-		
+
 		expect(detail).toBeDefined();
 		expect(detail!.canonical_genus).toBe("Apistogramma");
 		expect(detail!.canonical_species_name).toBe("cacatuoides");

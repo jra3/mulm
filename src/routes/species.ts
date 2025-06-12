@@ -5,9 +5,9 @@ import {
 	getSpeciesDetail, 
 	getBreedersForSpecies, 
 	getFilterOptions,
-	getClassOptions,
 	SpeciesFilters 
 } from "@/db/species";
+import { getClassOptions } from "@/forms/submission";
 import { getQueryString } from "@/utils/request";
 
 export async function explorer(req: MulmRequest, res: Response) {
