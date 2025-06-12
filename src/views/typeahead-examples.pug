@@ -1,0 +1,159 @@
+include header.pug
+include bapForm/inputs.pug
+
+doctype html
+html
+	+headTag("Typeahead Examples")
+
+	body.bg-white.text-gray-800
+		+pageHeader(false, "Typeahead Component Examples")
+
+		section.bg-gray-100.py-6
+			div.max-w-4xl.mx-auto.px-4
+				.space-y-8
+
+					// Basic typeahead with fetch API
+					.bg-white.rounded-lg.shadow-md.p-6
+						h3.text-xl.font-bold.mb-4 Basic Typeahead
+						+htmxTypeahead({
+							name: 'basic_search',
+							label: 'Search Users',
+							apiUrl: '/api/members/search',
+							placeholder: 'Type to search users...'
+						})
+
+					// Advanced typeahead with custom fields and linking
+					.bg-white.rounded-lg.shadow-md.p-6
+						h3.text-xl.font-bold.mb-4 Advanced Typeahead with Linked Fields
+						.grid.grid-cols-1.gap-4(class="md:grid-cols-2")
+							+htmxTypeahead({
+								name: 'user_search',
+								label: 'Select User',
+								apiUrl: '/api/members/search',
+								placeholder: 'Search by name or email...',
+								searchFields: 'name,email',
+								secondaryField: 'email',
+								linkedField: 'user_email',
+								linkField: 'email',
+								minQueryLength: 1
+							})
+
+							.flex.flex-col.gap-2
+								label.input-label User Email
+								input.text-input(
+									id="user_email"
+									name="user_email"
+									placeholder="Will be filled automatically"
+									readonly
+								)
+
+					// Multiple selection typeahead
+					.bg-white.rounded-lg.shadow-md.p-6
+						h3.text-xl.font-bold.mb-4 Multi-Select Typeahead
+						+htmxTypeahead({
+							name: 'species_multi',
+							label: 'Select Multiple Species',
+							apiUrl: '/api/species/search',
+							placeholder: 'Add species...',
+							maxItems: 5,
+							allowCreate: false,
+							valueField: 'value',
+							labelField: 'text'
+						})
+
+					// HTMX-integrated typeahead
+					.bg-white.rounded-lg.shadow-md.p-6
+						h3.text-xl.font-bold.mb-4 HTMX-Integrated Typeahead
+						.grid.grid-cols-1.gap-4(class="md:grid-cols-2")
+							+htmxTypeahead({
+								name: 'species_search',
+								label: 'Select Species',
+								apiUrl: '/api/species/search',
+								placeholder: 'Search species...',
+								htmxTarget: '#species-details',
+								htmxTrigger: '/api/species/details',
+								secondaryField: 'scientific_name',
+								optionTemplate: '<div><strong>{{common_name}}</strong><br><em>{{scientific_name}}</em></div>'
+							})
+
+							#species-details.bg-gray-50.p-4.rounded
+								p.text-gray-500 Select a species to see details
+
+					// Custom styling example
+					.bg-white.rounded-lg.shadow-md.p-6
+						h3.text-xl.font-bold.mb-4 Custom Styled Typeahead
+						+htmxTypeahead({
+							name: 'custom_search',
+							label: 'Custom Search',
+							apiUrl: '/api/members/search',
+							placeholder: 'Search with custom styling...',
+							className: 'custom-typeahead',
+							loadingClass: 'custom-loading'
+						})
+
+				// Usage Examples
+				.bg-white.rounded-lg.shadow-md.p-6.mt-8
+					h3.text-xl.font-bold.mb-4 Usage Examples
+
+					h4.text-lg.font-semibold.mb-2 Basic Usage
+					pre.bg-gray-100.p-4.rounded.text-sm.overflow-x-auto
+						code.
+							+htmxTypeahead({
+								name: 'search',
+								label: 'Search',
+								apiUrl: '/api/search',
+								placeholder: 'Type to search...'
+							})
+
+					h4.text-lg.font-semibold.mb-2.mt-4 Advanced Configuration
+					pre.bg-gray-100.p-4.rounded.text-sm.overflow-x-auto
+						code.
+							+htmxTypeahead({
+								name: 'user_search',
+								label: 'Select User',
+								apiUrl: '/api/users/search',
+								placeholder: 'Search users...',
+								valueField: 'id',
+								labelField: 'name',
+								searchFields: 'name,email',
+								secondaryField: 'email',
+								linkedField: 'selected_user_id',
+								linkField: 'id',
+								minQueryLength: 2,
+								maxItems: 1,
+								allowCreate: false,
+								htmxTarget: '#user-details',
+								htmxTrigger: '/api/users/details',
+								optionTemplate: '<div><strong>{{name}}</strong><br>{{email}}</div>',
+								extraParams: {
+									active: 'true',
+									role: 'member'
+								}
+							})
+
+					h4.text-lg.font-semibold.mb-2.mt-4 Available Options
+					.grid.grid-cols-1.gap-2(class="md:grid-cols-2")
+						.space-y-1
+							p.text-sm <strong>name</strong> - Input name/id (required)
+							p.text-sm <strong>label</strong> - Field label text
+							p.text-sm <strong>apiUrl</strong> - Search endpoint (required)
+							p.text-sm <strong>placeholder</strong> - Input placeholder
+							p.text-sm <strong>valueField</strong> - Value field name (default: 'value')
+							p.text-sm <strong>labelField</strong> - Display field name (default: 'text')
+							p.text-sm <strong>searchFields</strong> - Comma-separated search fields
+							p.text-sm <strong>minQueryLength</strong> - Min chars to search (default: 2)
+							p.text-sm <strong>maxItems</strong> - Max selections (default: 1)
+							p.text-sm <strong>allowCreate</strong> - Allow new entries (default: true)
+						.space-y-1
+							p.text-sm <strong>linkedField</strong> - ID of field to update on selection
+							p.text-sm <strong>linkField</strong> - Field to copy to linked field
+							p.text-sm <strong>secondaryField</strong> - Show secondary info in options
+							p.text-sm <strong>optionTemplate</strong> - Custom HTML template for options
+							p.text-sm <strong>htmxTarget</strong> - HTMX target selector for updates
+							p.text-sm <strong>htmxTrigger</strong> - HTMX endpoint to call on selection
+							p.text-sm <strong>htmxSwap</strong> - HTMX swap method (default: 'innerHTML')
+							p.text-sm <strong>loadingClass</strong> - CSS class during loading
+							p.text-sm <strong>extraParams</strong> - Additional API parameters
+							p.text-sm <strong>className</strong> - Additional CSS classes
+
+		+footer()

@@ -16,7 +16,16 @@ mixin CRUDForm()
 			h2(class="text-xl sm:text-2xl font-bold mb-4") Member Details
 			div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
 				if isAdmin
-					+bapTypeaheadInput("Member Name", "member_name", "Jacques Cousteau", "/api/members/search", "member_email")(disabled=!isAdmin)
+					+htmxTypeahead({
+						name: "member_name",
+						label: "Member Name",
+						apiUrl: '/api/members/search',
+						placeholder: "Jacques Cousteau...",
+						linkedField: "member_email",
+						searchFields: "name,email",
+						linkField: "email",
+					})
+					//+bapTypeaheadInput("Member Name", "member_name", "Jacques Cousteau", "/api/members/search", "member_email")(disabled=!isAdmin)
 				else
 					+bapTextInput("Member Name", "member_name", "Jacques Cousteau")(disabled=true)
 				+bapTextInput("Member Email", "member_email", "deep@bluesea.net")(disabled=true)

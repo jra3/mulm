@@ -4,8 +4,6 @@ doctype html
 html
 
 	+headTag(title)
-		script(src="https://cdn.jsdelivr.net/npm/tom-select@2.4.3/dist/js/tom-select.complete.min.js")
-		link(rel='stylesheet' href='/tom-select.css')
 
 	body.bg-white.text-gray-800
 		+pageHeader(true, title, subtitle)
@@ -13,12 +11,11 @@ html
 		include bapForm/form.pug
 
 		script.
-			function initTomSelects() {
-				document.querySelectorAll("select.tom-select").forEach((select) => {
+			function initStaticMultiSelects() {
+				document.querySelectorAll("select.tom-select-multi").forEach((select) => {
 					if (select.tomselect) {
 						select.tomselect.destroy();
 					}
-
 					new TomSelect(select, {
 						hideSelected: true,
 						create: true,
@@ -26,12 +23,30 @@ html
 				});
 			}
 
+			function initializeTypeaheads() {
+				const typeaheadElements = document.querySelectorAll('.tom-select-typeahead:not(.tomselected)');
+				typeaheadElements.forEach(function(element) {
+					const config = getTypeaheadConfig(element);
+					const tomSelectOptions = buildTomSelectOptions(element, config);
+					const tomSelect = new TomSelect(element, tomSelectOptions);
+					// Store reference for potential cleanup
+					element.tomSelectInstance = tomSelect;
+				});
+			}
+
 			document.addEventListener("htmx:load", function () {
-				initTomSelects();
+				initStaticMultiSelects();
+				initializeTypeaheads();
+			});
+
+			// Debugging the onChange events
+			document.addEventListener("typeahead:change", function (e) {
+				console.log(e);
 			});
 
 			document.addEventListener("DOMContentLoaded", function () {
 				initTomSelects();
+				initializeTypeaheads();
 
 				document.querySelectorAll("input, textarea, select").forEach((el) => {
 					if (el.name && sessionStorage.getItem(el.name) != undefined) {

@@ -33,7 +33,7 @@ mixin bapMultiSelectInput(labelText, name, id)
 			if errors.has(name)
 				span(class="font-extrabold text-red-400")= ` ${errors.get(name)}`
 
-		select.tom-select(
+		select.tom-select-multi(
 			id=id
 			name=name
 			multiple
@@ -62,3 +62,63 @@ mixin bapTypeaheadInput(labelText, name, placeholder, apiUrl, linkedField)
 				value=form[name]
 				name=name
 				type="hidden")
+
+mixin htmxTypeahead(options = {})
+	- const name = options.name
+	- const label = options.label
+	- const apiUrl = options.apiUrl
+	- const placeholder = options.placeholder || ''
+	- const valueField = options.valueField || 'value'
+	- const labelField = options.labelField || 'text'
+	- const searchFields = options.searchFields || 'text'
+	- const minQueryLength = options.minQueryLength || 2
+	- const maxItems = options.maxItems || 1
+	- const allowCreate = options.allowCreate !== false
+	- const linkedField = options.linkedField
+	- const linkField = options.linkField || 'value'
+	- const secondaryField = options.secondaryField
+	- const optionTemplate = options.optionTemplate
+	- const htmxTarget = options.htmxTarget
+	- const htmxTrigger = options.htmxTrigger
+	- const htmxSwap = options.htmxSwap || 'innerHTML'
+	- const loadingClass = options.loadingClass || 'loading'
+	- const debounceMs = options.debounceMs || 300
+	- const extraParams = options.extraParams || {}
+	- const required = options.required || false
+	- const disabled = options.disabled || false
+	- const className = options.className || ''
+	- const value = options.value || ''
+
+	- const errorClass = (errors && errors.has && errors.has(name)) ? 'error' : '';
+	- const finalClass = `tom-select-typeahead ${className} ${errorClass}`.trim();
+	- const finalValue = (form && form[name]) || value;
+
+	.flex.flex-col.gap-2
+		if label
+			label.input-label(for=name)= label
+				if errors && errors.has && errors.has(name)
+					span(class="font-extrabold text-red-400")= ` ${errors.get(name)}`
+
+		select(
+			id=name
+			name=name
+			class=finalClass
+			data-api-url=apiUrl
+			data-value-field=valueField
+			data-label-field=labelField
+			data-search-fields=searchFields
+			data-min-query-length=minQueryLength
+			data-max-items=maxItems
+			data-allow-create=allowCreate
+			data-placeholder=placeholder
+			data-loading-class=loadingClass
+			data-debounce-ms=debounceMs
+			autocomplete="off"
+			required=required
+			disabled=disabled
+		)
+			if finalValue
+				option(value=finalValue selected)= finalValue
+
+		if disabled && finalValue
+			input(type="hidden" name=name value=finalValue)
