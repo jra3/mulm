@@ -1,4 +1,4 @@
-export const minYear = 1978;
+export const minYear = 2015;
 
 export const programs = ["fish", "plant", "coral"];
 type LevelRules = [

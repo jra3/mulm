@@ -29,14 +29,17 @@ html
 								td(class=heading)= member[1]
 
 		.w-full.bg-gray-300.p-4.shadow-md
-			.container.mx-auto.flex.justify-center.space-x-4
+			.container.mx-auto.flex.justify-center.items-center.space-x-4
 
 				if year > minYear
-					a.link(href=`/annual/${year-1}/${program}`)= `<< ${year - 1}`
+					a.link(href=`/annual/${year-1}/${program}`)= `← ${year - 1}`
 
-				a.link(href=`/annual/${year}/fish`) Breeders
-				a.link(href=`/annual/${year}/plant`) Horticultural
-				a.link(href=`/annual/${year}/coral`) Coral
+				a(href=`/annual/${year}/fish`)
+					button.outline Breeder
+				a(href=`/annual/${year}/plant`)
+					button.outline Horticultural
+				a(href=`/annual/${year}/coral`)
+					button.outline Coral
 
 				if year < maxYear
-					a.link(href=`/annual/${year+1}/${program}`)= `${year + 1} >>`
+					a.link(href=`/annual/${year+1}/${program}`)= `${year + 1} →`
