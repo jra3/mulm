@@ -61,6 +61,8 @@ export async function createUserSession(req: Request, res: Response, memberId: n
 
 	res.cookie('session_id', cookieValue, {
 		httpOnly: true,
+		secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+		sameSite: 'lax', // CSRF protection while allowing normal navigation from external sites
 		maxAge: 180 * 86400 * 1000, // 180 days
 	});
 }
