@@ -5,6 +5,7 @@ import {
 	getSpeciesDetail, 
 	getBreedersForSpecies, 
 	getFilterOptions,
+	getClassOptions,
 	SpeciesFilters 
 } from "@/db/species";
 import { getQueryString } from "@/utils/request";
@@ -14,11 +15,10 @@ export async function explorer(req: MulmRequest, res: Response) {
 	const isLoggedIn = Boolean(viewer);
 
 	const filters: SpeciesFilters = {
-		program: getQueryString(req, 'program') || undefined,
 		species_type: getQueryString(req, 'species_type') || undefined,
 		species_class: getQueryString(req, 'species_class') || undefined,
 		search: getQueryString(req, 'search') || undefined,
-		sort: (getQueryString(req, 'sort') as 'name' | 'breeds' | 'breeders') || 'breeds'
+		sort: (getQueryString(req, 'sort') as 'name' | 'reports' | 'breeders') || 'reports'
 	};
 
 	try {
@@ -27,12 +27,15 @@ export async function explorer(req: MulmRequest, res: Response) {
 			getFilterOptions()
 		]);
 
+		const classOptions = filters.species_type ? getClassOptions(filters.species_type) : [];
+
 		res.render("species/explorer", {
 			title: "Species Explorer - BAS BAP/HAP Portal",
 			isLoggedIn,
 			species,
 			filters,
 			filterOptions,
+			classOptions,
 			totalSpecies: species.length
 		});
 	} catch (error) {
@@ -97,11 +100,10 @@ export async function detail(req: MulmRequest, res: Response) {
 
 export async function searchApi(req: MulmRequest, res: Response) {
 	const filters: SpeciesFilters = {
-		program: getQueryString(req, 'program') || undefined,
 		species_type: getQueryString(req, 'species_type') || undefined,
 		species_class: getQueryString(req, 'species_class') || undefined,
 		search: getQueryString(req, 'search') || undefined,
-		sort: (getQueryString(req, 'sort') as 'name' | 'breeds' | 'breeders') || 'breeds'
+		sort: (getQueryString(req, 'sort') as 'name' | 'reports' | 'breeders') || 'reports'
 	};
 
 	try {

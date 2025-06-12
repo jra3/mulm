@@ -115,11 +115,10 @@ export async function getCanonicalSpeciesName(speciesNameId: number) {
 }
 
 export type SpeciesFilters = {
-	program?: string;
 	species_type?: string;
 	species_class?: string;
 	search?: string;
-	sort?: 'name' | 'breeds' | 'breeders';
+	sort?: 'name' | 'reports' | 'breeders';
 };
 
 export type SpeciesExplorerItem = {
@@ -135,13 +134,15 @@ export type SpeciesExplorerItem = {
 };
 
 export async function getSpeciesForExplorer(filters: SpeciesFilters = {}) {
-	const { program, species_type, species_class, search, sort = 'breeds' } = filters;
+	const { species_type, species_class, search, sort = 'reports' } = filters;
 	
 	let orderBy = 'total_breeds DESC, total_breeders DESC';
 	if (sort === 'name') {
 		orderBy = 'sng.canonical_genus, sng.canonical_species_name';
 	} else if (sort === 'breeders') {
 		orderBy = 'total_breeders DESC, total_breeds DESC';
+	} else if (sort === 'reports') {
+		orderBy = 'total_breeds DESC, total_breeders DESC';
 	}
 
 	const searchPattern = search ? `%${search}%` : null;
@@ -161,7 +162,6 @@ export async function getSpeciesForExplorer(filters: SpeciesFilters = {}) {
 		LEFT JOIN species_name sn ON sng.group_id = sn.group_id
 		LEFT JOIN submissions s ON s.species_name_id = sn.name_id AND s.approved_on IS NOT NULL
 		WHERE 1=1
-			${program ? 'AND sng.program_class = ?' : ''}
 			${species_type ? 'AND s.species_type = ?' : ''}
 			${species_class ? 'AND s.species_class = ?' : ''}
 			${search ? `AND (
@@ -174,7 +174,6 @@ export async function getSpeciesForExplorer(filters: SpeciesFilters = {}) {
 		HAVING total_breeds > 0
 		ORDER BY ${orderBy}
 	`, [
-		...(program ? [program] : []),
 		...(species_type ? [species_type] : []),
 		...(species_class ? [species_class] : []),
 		...(search ? [searchPattern, searchPattern, searchPattern, searchPattern] : [])
@@ -282,13 +281,49 @@ export async function getBreedersForSpecies(groupId: number) {
 	});
 }
 
-export async function getFilterOptions() {
-	const programs = await query<{ program_class: string }>(`
-		SELECT DISTINCT program_class 
-		FROM species_name_group 
-		ORDER BY program_class
-	`);
+// Import the species types and classes from the forms
+const speciesTypesAndClasses: Record<string, string[]> = {
+	"Fish": [
+		"Anabantoids",
+		"Brackish Water",
+		"Catfish & Loaches",
+		"Characins",
+		"Cichlids",
+		"Cyprinids",
+		"Killifish",
+		"Livebearers",
+		"Miscellaneous",
+		"Marine",
+		"Native",
+	],
+	"Invert": [
+		"Snail",
+		"Shrimp",
+		"Other",
+	],
+	"Plant": [
+		"Apongetons & Criniums",
+		"Anubias & Lagenandra",
+		"Cryptocoryne",
+		"Floating Plants",
+		"Primative Plants",
+		"Rosette Plants",
+		"Stem Plants",
+		"Sword Plants",
+		"Water Lilles",
+	],
+	"Coral": [
+		"Hard",
+		"Soft",
+	],
+};
 
+export function getClassOptions(speciesType: string) {
+	const options = speciesTypesAndClasses[speciesType] ?? [];
+	return options.map((option) => ({ value: option, text: option }));
+}
+
+export async function getFilterOptions() {
 	const speciesTypes = await query<{ species_type: string }>(`
 		SELECT DISTINCT species_type 
 		FROM submissions 
@@ -296,17 +331,8 @@ export async function getFilterOptions() {
 		ORDER BY species_type
 	`);
 
-	const speciesClasses = await query<{ species_class: string }>(`
-		SELECT DISTINCT species_class 
-		FROM submissions 
-		WHERE approved_on IS NOT NULL 
-		ORDER BY species_class
-	`);
-
 	return {
-		programs: programs.map(p => p.program_class),
-		species_types: speciesTypes.map(s => s.species_type),
-		species_classes: speciesClasses.map(s => s.species_class)
+		species_types: speciesTypes.map(s => s.species_type)
 	};
 }
 
