@@ -1,0 +1,102 @@
+include ../header.pug
+
+- const stringCell = ['p-3', 'overflow-hidden', 'text-ellipsis', 'whitespace-nowrap', 'border-gray-300'];
+- const heading = ['p-3', 'text-left', 'font-semibold', 'text-gray-700', 'bg-gray-50', 'border-gray-300'];
+
+doctype html
+html
+	+headTag(title)
+
+	body.bg-white.text-gray-800
+		+pageHeader(isLoggedIn, displayName)
+
+		section.bg-gray-100.py-6
+			div.max-w-6xl.mx-auto.px-4
+				
+				// Breadcrumb
+				.mb-6
+					nav.flex(aria-label="Breadcrumb")
+						ol.inline-flex.items-center.space-x-1(class="md:space-x-3")
+							li.inline-flex.items-center
+								a(class="inline-flex items-center text-sm font-medium text-gray-700 hover:text-blue-600" href="/species")
+									| Species Explorer
+							li
+								.flex.items-center
+									svg.w-6.h-6.text-gray-400(fill="currentColor" viewBox="0 0 20 20")
+										path(fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd")
+									span.ml-1.text-sm.font-medium.text-gray-500(class="md:ml-2")= displayName
+
+				// Species Header
+				.bg-white.rounded-lg.shadow-md.p-6.mb-6
+					.flex.flex-col.items-start.justify-between(class="lg:flex-row lg:items-center")
+						div
+							h1.text-3xl.font-bold.text-gray-900.mb-2= displayName
+							p.text-lg.text-gray-600
+								span.inline-block.px-3.py-1.text-sm.font-medium.bg-blue-100.text-blue-800.rounded-full
+									= species.program_class
+						div.mt-4(class="lg:mt-0")
+							.flex.flex-col.space-y-2.text-sm.text-gray-600
+								div
+									strong Total Breeds: 
+									span.text-green-600.font-semibold= totalBreeds
+								div
+									strong Expert Breeders: 
+									span.text-purple-600.font-semibold= totalBreeders
+
+				// Name Variations
+				if species.synonyms && species.synonyms.length > 0
+					.bg-white.rounded-lg.shadow-md.p-6.mb-6
+						h2.text-xl.font-bold.text-gray-900.mb-4 Known Names & Synonyms
+						.grid.grid-cols-1.gap-4(class="md:grid-cols-2")
+							each synonym in species.synonyms
+								.border.border-gray-200.rounded-lg.p-4
+									if synonym.common_name
+										.font-medium.text-gray-900= synonym.common_name
+									if synonym.scientific_name
+										.text-sm.text-gray-600.italic= synonym.scientific_name
+
+				// Expert Breeders
+				if breeders.length > 0
+					.bg-white.rounded-lg.shadow-md.p-6
+						h2.text-xl.font-bold.text-gray-900.mb-4 Expert Breeders
+						
+						.grid.grid-cols-1.gap-6(class="lg:grid-cols-2")
+							each breeder in breeders
+								.border.border-gray-200.rounded-lg.p-4
+									.flex.justify-between.items-start.mb-3
+										div
+											a(class="text-lg font-semibold text-blue-600 hover:text-blue-800" href=`/member/${breeder.member_id}`)= breeder.member_name
+											.text-sm.text-gray-600
+												= breeder.breed_count
+												= breeder.breed_count === 1 ? ' successful breed' : ' successful breeds'
+										div.text-right.text-sm.text-gray-600
+											div
+												strong First: 
+												= new Date(breeder.first_breed_date).toLocaleDateString()
+											if breeder.first_breed_date !== breeder.latest_breed_date
+												div
+													strong Latest: 
+													= new Date(breeder.latest_breed_date).toLocaleDateString()
+
+									// Breeding Reports
+									if breeder.submissions && breeder.submissions.length > 0
+										.space-y-2
+											h4.font-medium.text-gray-900 Breeding Reports:
+											each submission in breeder.submissions
+												.flex.justify-between.items-center.text-sm.bg-gray-50.rounded.p-2
+													div
+														a(class="text-blue-600 hover:text-blue-800" href=`/sub/${submission.id}`)
+															if submission.species_common_name
+																= submission.species_common_name
+															else
+																= submission.species_latin_name
+													div.text-right
+														.text-green-600.font-medium= submission.points + ' pts'
+														.text-gray-500= new Date(submission.approved_on).toLocaleDateString()
+
+				else
+					.bg-white.rounded-lg.shadow-md.p-8.text-center
+						p.text-gray-500.text-lg No breeding records found for this species.
+						p.text-gray-400.text-sm This species may be in our database but hasn't been successfully bred yet.
+
+		+footer()

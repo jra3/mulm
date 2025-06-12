@@ -1,0 +1,146 @@
+include ../header.pug
+
+- const stringCell = ['p-3', 'overflow-hidden', 'text-ellipsis', 'whitespace-nowrap', 'border-gray-300'];
+- const heading = ['p-3', 'text-left', 'font-semibold', 'text-gray-700', 'bg-gray-50', 'border-gray-300'];
+
+doctype html
+html
+	+headTag(title)
+
+	body.bg-white.text-gray-800
+		+pageHeader(isLoggedIn, "Species Explorer")
+
+		section.bg-gray-100.py-6
+			div.max-w-6xl.mx-auto.px-4
+				h2(class="text-3xl sm:text-4xl font-extrabold mb-6 text-center") Explore Club Species
+				p(class="text-lg text-gray-600 text-center mb-8") Discover the species successfully bred by our members and find expert breeders
+
+				// Filters Section
+				.bg-white.rounded-lg.shadow-md.p-6.mb-6
+					form(method="GET" action="/species")
+						.grid.grid-cols-1.gap-4(class="md:grid-cols-2 lg:grid-cols-5")
+							
+							// Program Filter
+							.space-y-2
+								label.block.text-sm.font-medium.text-gray-700(for="program") Program
+								.select-wrapper
+									select#program(name="program" onchange="this.form.submit()")
+										option(value="" selected=!filters.program) All Programs
+										each program in filterOptions.programs
+											option(value=program selected=(filters.program === program))= program
+
+							// Species Type Filter  
+							.space-y-2
+								label.block.text-sm.font-medium.text-gray-700(for="species_type") Type
+								.select-wrapper
+									select#species_type(name="species_type" onchange="this.form.submit()")
+										option(value="" selected=!filters.species_type) All Types
+										each type in filterOptions.species_types
+											option(value=type selected=(filters.species_type === type))= type
+
+							// Species Class Filter
+							.space-y-2
+								label.block.text-sm.font-medium.text-gray-700(for="species_class") Class
+								.select-wrapper
+									select#species_class(name="species_class" onchange="this.form.submit()")
+										option(value="" selected=!filters.species_class) All Classes
+										each cls in filterOptions.species_classes
+											option(value=cls selected=(filters.species_class === cls))= cls
+
+							// Search Input
+							.space-y-2
+								label.block.text-sm.font-medium.text-gray-700(for="search") Search Names
+								input(
+									class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+									type="text" 
+									id="search"
+									name="search" 
+									placeholder="Common or scientific name..."
+									value=(filters.search || ""))
+
+							// Sort Options
+							.space-y-2
+								label.block.text-sm.font-medium.text-gray-700(for="sort") Sort By
+								.select-wrapper
+									select#sort(name="sort" onchange="this.form.submit()")
+										option(value="breeds" selected=(filters.sort === 'breeds')) Most Bred
+										option(value="breeders" selected=(filters.sort === 'breeders')) Most Breeders
+										option(value="name" selected=(filters.sort === 'name')) Name A-Z
+
+						.flex.justify-between.items-center.mt-4
+							button.primary(type="submit") Apply Filters
+							if filters.program || filters.species_type || filters.species_class || filters.search
+								a.link(href="/species") Clear All Filters
+
+				// Results Summary
+				.mb-4
+					p.text-gray-600
+						strong= totalSpecies
+						|  species found
+						if filters.program || filters.species_type || filters.species_class || filters.search
+							|  with current filters
+
+				// Species Table
+				if species.length > 0
+					.bg-white.rounded-lg.shadow-md.overflow-hidden
+						.overflow-x-auto
+							table.min-w-full.divide-y.divide-gray-200
+								thead.bg-gray-50
+									tr
+										th(class=heading + ['border-r']) Species Name
+										th(class=heading + ['border-r']) Program Class
+										th(class=heading + ['border-r']) Common Names
+										th(class=heading + ['border-r']) Scientific Names
+										th(class=heading + ['border-r', 'text-center']) Breeds
+										th(class=heading + ['border-r', 'text-center']) Breeders
+										th(class=heading + ['text-center']) Latest Breed
+
+								tbody.bg-white.divide-y.divide-gray-200
+									each item in species
+										tr(class="hover:bg-gray-50")
+											td(class=stringCell + ['border-r'])
+												a.link.font-semibold(href=`/species/${item.group_id}`)
+													= `${item.canonical_genus} ${item.canonical_species_name}`
+											
+											td(class=stringCell + ['border-r'])
+												span.inline-block.px-2.py-1.text-xs.font-medium.bg-blue-100.text-blue-800.rounded-full
+													= item.program_class
+											
+											td(class=stringCell + ['border-r'])
+												if item.common_names
+													= item.common_names.split(',').slice(0, 2).join(', ')
+													if item.common_names.split(',').length > 2
+														span.text-gray-500  +#{item.common_names.split(',').length - 2} more
+												else
+													span.text-gray-400.italic No common names
+
+											td(class=stringCell + ['border-r'])
+												if item.scientific_names
+													= item.scientific_names.split(',').slice(0, 2).join(', ')
+													if item.scientific_names.split(',').length > 2
+														span.text-gray-500  +#{item.scientific_names.split(',').length - 2} more
+												else
+													span.text-gray-400.italic No scientific names
+
+											td(class=stringCell + ['border-r', 'text-center'])
+												span.inline-block.px-2.py-1.text-sm.font-medium.bg-green-100.text-green-800.rounded-full
+													= item.total_breeds
+
+											td(class=stringCell + ['border-r', 'text-center'])  
+												span.inline-block.px-2.py-1.text-sm.font-medium.bg-purple-100.text-purple-800.rounded-full
+													= item.total_breeders
+
+											td(class=stringCell + ['text-center'])
+												if item.latest_breed_date
+													- const dateString = new Date(item.latest_breed_date).toLocaleDateString();
+													= dateString
+												else
+													span.text-gray-400 -
+
+				else
+					.bg-white.rounded-lg.shadow-md.p-8.text-center
+						p.text-gray-500.text-lg No species found matching your criteria.
+						if filters.program || filters.species_type || filters.species_class || filters.search
+							a.link.mt-2(href="/species") Try clearing your filters
+
+		+footer()

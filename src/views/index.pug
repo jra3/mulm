@@ -35,7 +35,7 @@ html
 
 		section.bg-gray-100
 			.flex.items-center.justify-center
-				.grid.grid-cols-1.gap-4.max-w-2xl.w-full(class="md:grid-cols-2")
+				.grid.grid-cols-1.gap-4.max-w-4xl.w-full(class="md:grid-cols-3")
 					div.max-w-l.mx-auto.text-center.p-4
 						h3(class="text-3xl font-bold mb-4") Lifetime Standings
 						.flex.gap-4.items-center.justify-center.h-9
@@ -55,4 +55,10 @@ html
 									option(value="2022") 2022
 									option(value="2021") 2021
 									option(value="2020") 2020
+
+					div.max-w-l.mx-auto.text-center.p-4
+						h3(class="text-3xl font-bold mb-4") Species Explorer
+						.flex.gap-4.items-center.justify-center.h-9
+							a.link(href='/species') Browse Species
+							a.link(href='/species?sort=breeders') Expert Breeders
 		+footer()

@@ -14,6 +14,7 @@ import * as submission from "@/routes/submission";
 import * as standings from "@/routes/standings";
 import * as tank from "@/routes/tank";
 import * as api from "@/routes/api";
+import * as species from "@/routes/species";
 
 import {
 	getOutstandingSubmissionsCounts,
@@ -109,6 +110,9 @@ router.get("/me", (req: MulmRequest, res) => {
 	}
 });
 
+router.get("/species", species.explorer);
+router.get("/species/:groupId", species.detail);
+
 router.get("/account", account.viewAccountSettings);
 router.patch("/account-settings", account.updateAccountSettings)
 router.delete("/account/google/:sub", account.unlinkGoogleAccount);
@@ -167,6 +171,7 @@ router.get("/oauth/google", auth.googleOAuth);
 // API ///////////////////////////////////////////////////
 
 router.get("/api/members/search", api.searchMembers);
+router.get("/api/species/search", species.searchApi);
 
 ////////////////////////////////////////////////////////////
 
