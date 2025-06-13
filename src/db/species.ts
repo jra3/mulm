@@ -1,4 +1,5 @@
 import { writeConn, query } from "./conn";
+import { Database } from "sqlite";
 
 type NameSynonym = {
 	/** Not a phylogenetic class. The species class for the BAP program */
@@ -24,79 +25,104 @@ export async function querySpeciesNames() {
 	`);
 }
 
-export async function recordName(data: NameSynonym) {
+/**
+ * Execute a function within a database transaction.
+ * Automatically handles BEGIN, COMMIT, and ROLLBACK.
+ * 
+ * Note: The try/catch around ROLLBACK is the standard pattern for sqlite3
+ * as the API doesn't expose transaction state checking.
+ */
+async function withTransaction<T>(fn: (db: Database) => Promise<T>): Promise<T> {
 	const db = writeConn;
+	await db.exec('BEGIN TRANSACTION;');
 	try {
-		await db.exec('BEGIN TRANSACTION;');
-		const groupStmt = await db.prepare(`
-			INSERT INTO species_name_group(
-				program_class,
-				canonical_genus,
-				canonical_species_name
-			) VALUES (?, ?, ?)
-			ON CONFLICT(canonical_genus, canonical_species_name)
-			DO UPDATE SET group_id = group_id
-			RETURNING group_id;
-		`);
-
-		const result = await groupStmt.get<{ group_id: number }>(
-			data.program_class,
-			data.canonical_genus,
-			data.canonical_species_name
-		);
-		await groupStmt.finalize();
-		if (!result || !result.group_id) {
-			throw new Error("Failed to insert or update species name group");
-		}
-		const group_id = result.group_id;
-
-		const nameStmt = await db.prepare(`
-			INSERT INTO species_name(
-				group_id,
-				common_name,
-				scientific_name
-			)
-			VALUES (?, ?, ?)
-			ON CONFLICT(common_name, scientific_name)
-			DO UPDATE SET group_id = group_id;
-		`);
-		await nameStmt.run(group_id, data.common_name, data.latin_name);
-		await nameStmt.finalize();
-
+		const result = await fn(db);
 		await db.exec('COMMIT;');
-		return group_id;
+		return result;
 	} catch (err) {
-		await db.exec('ROLLBACK;');
+		try {
+			await db.exec('ROLLBACK;');
+		} catch (rollbackErr) {
+			// Ignore rollback errors - transaction may not be active
+			// This is the standard pattern for sqlite3 package
+		}
+		throw err;
+	}
+}
+
+export async function recordName(data: NameSynonym): Promise<number> {
+	try {
+		return await withTransaction(async (db) => {
+			// Insert or update the species name group
+			const groupStmt = await db.prepare(`
+				INSERT INTO species_name_group(
+					program_class,
+					canonical_genus,
+					canonical_species_name
+				) VALUES (?, ?, ?)
+				ON CONFLICT(canonical_genus, canonical_species_name)
+				DO UPDATE SET group_id = group_id
+				RETURNING group_id;
+			`);
+
+			const result = await groupStmt.get<{ group_id: number }>(
+				data.program_class,
+				data.canonical_genus,
+				data.canonical_species_name
+			);
+			await groupStmt.finalize();
+			
+			if (!result || !result.group_id) {
+				throw new Error("Failed to insert or update species name group");
+			}
+			const group_id = result.group_id;
+
+			// Insert or update the species name synonym
+			const nameStmt = await db.prepare(`
+				INSERT INTO species_name(
+					group_id,
+					common_name,
+					scientific_name
+				)
+				VALUES (?, ?, ?)
+				ON CONFLICT(common_name, scientific_name)
+				DO UPDATE SET group_id = group_id;
+			`);
+			await nameStmt.run(group_id, data.common_name, data.latin_name);
+			await nameStmt.finalize();
+
+			return group_id;
+		});
+	} catch (err) {
 		console.error(err);
 		throw new Error("Failed to record species name");
 	}
 }
 
-export async function mergeSpecies(canonicalGroupId: number, defunctGroupId: number) {
-	const db = writeConn;
+export async function mergeSpecies(canonicalGroupId: number, defunctGroupId: number): Promise<void> {
 	try {
-		await db.exec('BEGIN TRANSACTION;');
+		await withTransaction(async (db) => {
+			// Update all species names to point to the canonical group
+			const updateStmt = await db.prepare(`
+				UPDATE species_name
+				SET group_id = ?
+				WHERE group_id = ?
+			`);
+			await updateStmt.run(canonicalGroupId, defunctGroupId);
+			await updateStmt.finalize();
 
-		const updateStmt = await db.prepare(`
-			UPDATE species_name
-			SET group_id = ?
-			WHERE group_id = ?
-		`);
-		await updateStmt.run(canonicalGroupId, defunctGroupId);
-
-		const deleteStmt = await db.prepare(`
-			DELETE FROM species_name_group
-			WHERE group_id = ?
-		`);
-		await deleteStmt.run(defunctGroupId);
-
-		await db.exec('COMMIT;');
+			// Delete the defunct species group
+			const deleteStmt = await db.prepare(`
+				DELETE FROM species_name_group
+				WHERE group_id = ?
+			`);
+			await deleteStmt.run(defunctGroupId);
+			await deleteStmt.finalize();
+		});
 	} catch (err) {
-		await db.exec('ROLLBACK;');
 		console.error(err);
 		throw new Error("Failed to merge species groups");
 	}
-
 }
 
 export async function getCanonicalSpeciesName(speciesNameId: number) {
