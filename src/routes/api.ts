@@ -1,31 +1,23 @@
 import { Response } from 'express';
 import { MulmRequest } from '@/sessions';
-import { getRoster } from '@/db/members';
+import { searchMembers as searchMembersDb } from '@/db/members';
 import { getQueryString } from '@/utils/request';
 import { MemberTypeaheadItem, ApiErrorResponse } from '@/types/api-responses';
 
 export const searchMembers = async (req: MulmRequest, res: Response<MemberTypeaheadItem[] | ApiErrorResponse>) => {
     try {
-        const query = getQueryString(req, 'q', '').toLowerCase().trim();
-        if (query.length < 2) {
-            res.json([]);
-            return;
-        }
+        const query = getQueryString(req, 'q', '');
         
-        const members = await getRoster();
+        // The database function handles the minimum length check and returns empty array if needed
+        const members = await searchMembersDb(query);
         
-        const filteredMembers: MemberTypeaheadItem[] = members
-            .filter(member => 
-                (member.display_name || "").toLowerCase().includes(query) ||
-                (member.contact_email || "").toLowerCase().includes(query))
-            .slice(0, 10) // Limit to 10 results
-            .map(member => ({
-                value: member.display_name,  // Using display name as value to match form field
-                text: member.display_name,
-                email: member.contact_email
-            }));
+        const formattedMembers: MemberTypeaheadItem[] = members.map(member => ({
+            value: member.display_name,  // Using display name as value to match form field
+            text: member.display_name,
+            email: member.contact_email
+        }));
         
-        res.json(filteredMembers);
+        res.json(formattedMembers);
     } catch (error) {
         console.error("Error in member search API:", error);
         const errorResponse: ApiErrorResponse = {
