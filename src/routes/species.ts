@@ -8,13 +8,8 @@ import {
 	SpeciesFilters 
 } from "@/db/species";
 import { getClassOptions } from "@/forms/submission";
-import { getQueryString } from "@/utils/request";
 import { speciesExplorerQuerySchema } from "@/forms/species-explorer";
 import { validateQueryWithFallback } from "@/forms/utils";
-import { 
-	SpeciesExplorerResponse, 
-	ApiErrorResponse 
-} from "@/types/api-responses";
 
 export async function explorer(req: MulmRequest, res: Response) {
 	const { viewer } = req;
@@ -111,41 +106,3 @@ export async function detail(req: MulmRequest, res: Response) {
 	}
 }
 
-export async function searchApi(req: MulmRequest, res: Response<SpeciesExplorerResponse | ApiErrorResponse>) {
-	const query = getQueryString(req, 'search') || '';
-	
-	const queryObject = {
-		...req.query,
-		search: query
-	};
-	
-	const validation = validateQueryWithFallback(
-		speciesExplorerQuerySchema, 
-		queryObject, 
-		'Species explorer search'
-	);
-
-	try {
-		// Full species explorer search with sorting
-		const filters: SpeciesFilters = {
-			species_type: validation.data.species_type,
-			species_class: validation.data.species_class,
-			search: validation.data.search,
-			sort: validation.data.sort
-		};
-		
-		const species = await getSpeciesForExplorer(filters);
-		const response: SpeciesExplorerResponse = {
-			species,
-			totalSpecies: species.length
-		};
-		res.json(response);
-	} catch (error) {
-		console.error("Error in species explorer search:", error);
-		const errorResponse: ApiErrorResponse = { 
-			error: "Unable to search species",
-			code: "SPECIES_SEARCH_ERROR"
-		};
-		res.status(500).json(errorResponse);
-	}
-}
