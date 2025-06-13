@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import config from "./config.json";
+import config from "@/config.json";
 import { type Submission } from "./db/submissions";
 import { getAdminEmails, MemberRecord } from "./db/members";
 import * as pug from "pug";

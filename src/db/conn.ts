@@ -1,6 +1,6 @@
 import sqlite3 from 'sqlite3';
 import { open, Database } from 'sqlite';
-import config from '../config.json';
+import config from '@/config.json';
 
 export let readOnlyConn: Database;
 export let writeConn: Database;
@@ -41,7 +41,7 @@ export async function init() {
 })().catch((error) => {
 	console.error('Failed to initialize database:', error);
 });
-	
+
 /**
  * Used only in testing to create and use in-memory databases
  */
