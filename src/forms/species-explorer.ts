@@ -1,5 +1,5 @@
 import * as z from "zod";
-import { trimmedString, validateQueryWithFallback } from "./utils";
+import { trimmedString } from "./utils";
 
 // Define allowed sort fields as enum
 const sortFieldEnum = z.enum(["name", "reports", "breeders"]);

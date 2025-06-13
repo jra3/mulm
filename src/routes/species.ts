@@ -10,7 +10,7 @@ import {
 } from "@/db/species";
 import { getClassOptions } from "@/forms/submission";
 import { getQueryString } from "@/utils/request";
-import { speciesExplorerQuerySchema, SpeciesExplorerQuery } from "@/forms/species-explorer";
+import { speciesExplorerQuerySchema } from "@/forms/species-explorer";
 import { validateQueryWithFallback } from "@/forms/utils";
 import { 
 	SpeciesTypeaheadItem, 
