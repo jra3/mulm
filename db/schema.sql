@@ -166,3 +166,7 @@ CREATE TABLE species_name (
 	UNIQUE (common_name, scientific_name)
 );
 CREATE INDEX idx_member_contact_email ON members (contact_email);
+CREATE INDEX idx_member_display_name ON members (display_name);
+CREATE INDEX idx_species_name_common ON species_name (common_name);
+CREATE INDEX idx_species_name_scientific ON species_name (scientific_name);
+CREATE INDEX idx_species_name_group_id ON species_name (group_id);

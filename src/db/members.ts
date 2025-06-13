@@ -139,6 +139,28 @@ export async function getRoster() {
 	return query<MemberRecord>(`SELECT * FROM members`);
 }
 
+/**
+ * Search for members by name or email with database-level filtering
+ * @param searchQuery - The search term to match against display_name and contact_email
+ * @param limit - Maximum number of results to return (default: 10)
+ * @returns Array of matching member records
+ */
+export async function searchMembers(searchQuery: string, limit: number = 10): Promise<MemberRecord[]> {
+	if (!searchQuery || searchQuery.trim().length < 2) {
+		return [];
+	}
+	
+	const searchPattern = `%${searchQuery.trim().toLowerCase()}%`;
+	
+	return query<MemberRecord>(`
+		SELECT * FROM members 
+		WHERE LOWER(display_name) LIKE ? 
+		   OR LOWER(contact_email) LIKE ?
+		ORDER BY display_name
+		LIMIT ?
+	`, [searchPattern, searchPattern, limit]);
+}
+
 export async function getMemberWithAwards(memberId: string) {
 	const [members, awards] = await Promise.all([
 		query<MemberRecord>("SELECT * FROM members WHERE id = ?", [memberId]),
