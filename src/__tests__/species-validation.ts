@@ -1,10 +1,8 @@
-import { 
-  validateSpeciesExplorerQuery, 
-  extractValidSpeciesQuery
-} from "../forms/species-explorer";
+import { speciesExplorerQuerySchema } from "../forms/species-explorer";
+import { validateQueryWithFallback } from "../forms/utils";
 
 describe('Species Explorer Validation', () => {
-  describe('validateSpeciesExplorerQuery', () => {
+  describe('validateQueryWithFallback', () => {
     it('should validate valid query parameters', () => {
       const validQuery = {
         species_type: 'Fish',
@@ -14,86 +12,96 @@ describe('Species Explorer Validation', () => {
         sortDirection: 'asc'
       };
 
-      const result = validateSpeciesExplorerQuery(validQuery);
+      const result = validateQueryWithFallback(speciesExplorerQuerySchema, validQuery);
       
       expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.species_type).toBe('Fish');
-        expect(result.data.species_class).toBe('Cichlidae');
-        expect(result.data.search).toBe('Apistogramma');
-        expect(result.data.sort).toBe('name');
-        expect(result.data.sortDirection).toBe('asc');
-      }
+      expect(result.data.species_type).toBe('Fish');
+      expect(result.data.species_class).toBe('Cichlidae');
+      expect(result.data.search).toBe('Apistogramma');
+      expect(result.data.sort).toBe('name');
+      expect(result.data.sortDirection).toBe('asc');
+      expect(result.errors).toEqual([]);
+      expect(result.isPartial).toBe(false);
     });
 
     it('should use default values for missing parameters', () => {
       const minimalQuery = {};
 
-      const result = validateSpeciesExplorerQuery(minimalQuery);
+      const result = validateQueryWithFallback(speciesExplorerQuerySchema, minimalQuery);
       
       expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.species_type).toBeUndefined();
-        expect(result.data.species_class).toBeUndefined();
-        expect(result.data.search).toBeUndefined();
-        expect(result.data.sort).toBe('reports');
-        expect(result.data.sortDirection).toBe('desc');
-      }
+      expect(result.data.species_type).toBeUndefined();
+      expect(result.data.species_class).toBeUndefined();
+      expect(result.data.search).toBeUndefined();
+      expect(result.data.sort).toBe('reports');
+      expect(result.data.sortDirection).toBe('desc');
+      expect(result.errors).toEqual([]);
+      expect(result.isPartial).toBe(false);
     });
 
-    it('should reject invalid sort field', () => {
+    it('should handle invalid sort field with fallback', () => {
       const invalidQuery = {
         sort: 'invalid_sort_field'
       };
 
-      const result = validateSpeciesExplorerQuery(invalidQuery);
+      const result = validateQueryWithFallback(speciesExplorerQuerySchema, invalidQuery);
       
       expect(result.success).toBe(false);
-      expect(result.error?.issues[0].message).toContain('Invalid enum value');
+      expect(result.isPartial).toBe(true);
+      expect(result.data.sort).toBe('reports'); // Default fallback
+      expect(result.errors.length).toBeGreaterThan(0);
     });
 
-    it('should reject invalid sort direction', () => {
+    it('should handle invalid sort direction with fallback', () => {
       const invalidQuery = {
         sortDirection: 'invalid_direction'
       };
 
-      const result = validateSpeciesExplorerQuery(invalidQuery);
+      const result = validateQueryWithFallback(speciesExplorerQuerySchema, invalidQuery);
       
       expect(result.success).toBe(false);
-      expect(result.error?.issues[0].message).toContain('Invalid enum value');
+      expect(result.isPartial).toBe(true);
+      expect(result.data.sortDirection).toBe('desc'); // Default fallback
+      expect(result.errors.length).toBeGreaterThan(0);
     });
 
-    it('should reject search query that is too long', () => {
+    it('should handle search query that is too long', () => {
       const longQuery = {
         search: 'a'.repeat(101) // 101 characters, exceeds max of 100
       };
 
-      const result = validateSpeciesExplorerQuery(longQuery);
+      const result = validateQueryWithFallback(speciesExplorerQuerySchema, longQuery);
       
       expect(result.success).toBe(false);
-      expect(result.error?.issues[0].message).toContain('Search query too long');
+      expect(result.isPartial).toBe(true);
+      expect(result.data.search).toBeUndefined(); // Invalid value ignored
+      expect(result.errors.some(error => error.includes('Search query too long'))).toBe(true);
     });
 
-    it('should reject species_type that is too long', () => {
+    it('should handle species_type that is too long', () => {
       const longQuery = {
         species_type: 'a'.repeat(51) // 51 characters, exceeds max of 50
       };
 
-      const result = validateSpeciesExplorerQuery(longQuery);
+      const result = validateQueryWithFallback(speciesExplorerQuerySchema, longQuery);
       
       expect(result.success).toBe(false);
-      expect(result.error?.issues[0].message).toContain('Species type too long');
+      expect(result.isPartial).toBe(true);
+      expect(result.data.species_type).toBeUndefined(); // Invalid value ignored
+      expect(result.errors.some(error => error.includes('Species type too long'))).toBe(true);
     });
 
-    it('should reject species_class that is too long', () => {
+    it('should handle species_class that is too long', () => {
       const longQuery = {
         species_class: 'a'.repeat(51) // 51 characters, exceeds max of 50
       };
 
-      const result = validateSpeciesExplorerQuery(longQuery);
+      const result = validateQueryWithFallback(speciesExplorerQuerySchema, longQuery);
       
       expect(result.success).toBe(false);
-      expect(result.error?.issues[0].message).toContain('Species class too long');
+      expect(result.isPartial).toBe(true);
+      expect(result.data.species_class).toBeUndefined(); // Invalid value ignored
+      expect(result.errors.some(error => error.includes('Species class too long'))).toBe(true);
     });
 
     it('should trim whitespace from string fields', () => {
@@ -103,14 +111,12 @@ describe('Species Explorer Validation', () => {
         search: '  Apistogramma  '
       };
 
-      const result = validateSpeciesExplorerQuery(queryWithWhitespace);
+      const result = validateQueryWithFallback(speciesExplorerQuerySchema, queryWithWhitespace);
       
       expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.species_type).toBe('Fish');
-        expect(result.data.species_class).toBe('Cichlidae');
-        expect(result.data.search).toBe('Apistogramma');
-      }
+      expect(result.data.species_type).toBe('Fish');
+      expect(result.data.species_class).toBe('Cichlidae');
+      expect(result.data.search).toBe('Apistogramma');
     });
 
     it('should convert empty strings to undefined', () => {
@@ -120,19 +126,17 @@ describe('Species Explorer Validation', () => {
         search: ''
       };
 
-      const result = validateSpeciesExplorerQuery(queryWithEmptyStrings);
+      const result = validateQueryWithFallback(speciesExplorerQuerySchema, queryWithEmptyStrings);
       
       expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.species_type).toBeUndefined();
-        expect(result.data.species_class).toBeUndefined();
-        expect(result.data.search).toBeUndefined();
-      }
+      expect(result.data.species_type).toBeUndefined();
+      expect(result.data.species_class).toBeUndefined();
+      expect(result.data.search).toBeUndefined();
     });
   });
 
-  describe('extractValidSpeciesQuery', () => {
-    it('should extract only valid parameters', () => {
+  describe('error handling and fallback behavior', () => {
+    it('should ignore invalid fields and use only valid ones', () => {
       const mixedQuery = {
         species_type: 'Fish',
         species_class: 'Cichlidae',
@@ -142,40 +146,45 @@ describe('Species Explorer Validation', () => {
         invalid_field: 'should_be_ignored'
       };
 
-      const result = extractValidSpeciesQuery(mixedQuery);
+      const result = validateQueryWithFallback(speciesExplorerQuerySchema, mixedQuery);
       
-      expect(result.species_type).toBe('Fish');
-      expect(result.species_class).toBe('Cichlidae');
-      expect(result.search).toBe('Apistogramma');
-      expect(result.sort).toBe('name');
-      expect(result.sortDirection).toBe('asc');
-      expect('invalid_field' in result).toBe(false);
+      expect(result.success).toBe(true);
+      expect(result.data.species_type).toBe('Fish');
+      expect(result.data.species_class).toBe('Cichlidae');
+      expect(result.data.search).toBe('Apistogramma');
+      expect(result.data.sort).toBe('name');
+      expect(result.data.sortDirection).toBe('asc');
+      expect('invalid_field' in result.data).toBe(false);
     });
 
-    it('should use defaults for invalid values', () => {
+    it('should use defaults for invalid values and report errors', () => {
       const invalidQuery = {
         species_type: 'a'.repeat(51), // Too long
         sort: 'invalid_sort',
         sortDirection: 'invalid_direction'
       };
 
-      const result = extractValidSpeciesQuery(invalidQuery);
+      const result = validateQueryWithFallback(speciesExplorerQuerySchema, invalidQuery);
       
-      expect(result.species_type).toBeUndefined(); // Invalid value ignored
-      expect(result.sort).toBe('reports'); // Default value
-      expect(result.sortDirection).toBe('desc'); // Default value
+      expect(result.success).toBe(false);
+      expect(result.isPartial).toBe(true);
+      expect(result.data.species_type).toBeUndefined(); // Invalid value ignored
+      expect(result.data.sort).toBe('reports'); // Default value
+      expect(result.data.sortDirection).toBe('desc'); // Default value
+      expect(result.errors.length).toBeGreaterThan(0);
     });
 
     it('should handle missing parameters gracefully', () => {
       const emptyQuery = {};
 
-      const result = extractValidSpeciesQuery(emptyQuery);
+      const result = validateQueryWithFallback(speciesExplorerQuerySchema, emptyQuery);
       
-      expect(result.species_type).toBeUndefined();
-      expect(result.species_class).toBeUndefined();
-      expect(result.search).toBeUndefined();
-      expect(result.sort).toBe('reports');
-      expect(result.sortDirection).toBe('desc');
+      expect(result.success).toBe(true);
+      expect(result.data.species_type).toBeUndefined();
+      expect(result.data.species_class).toBeUndefined();
+      expect(result.data.search).toBeUndefined();
+      expect(result.data.sort).toBe('reports');
+      expect(result.data.sortDirection).toBe('desc');
     });
   });
 
@@ -187,15 +196,12 @@ describe('Species Explorer Validation', () => {
         search: null
       };
 
-      const result = validateSpeciesExplorerQuery(queryWithNulls);
+      const result = validateQueryWithFallback(speciesExplorerQuerySchema, queryWithNulls);
       
-      // Our updated schema now handles null/undefined values gracefully
       expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.species_type).toBeUndefined();
-        expect(result.data.species_class).toBeUndefined();
-        expect(result.data.search).toBeUndefined();
-      }
+      expect(result.data.species_type).toBeUndefined();
+      expect(result.data.species_class).toBeUndefined();
+      expect(result.data.search).toBeUndefined();
     });
 
     it('should handle non-string values by converting them', () => {
@@ -205,15 +211,12 @@ describe('Species Explorer Validation', () => {
         search: 456
       };
 
-      const result = validateSpeciesExplorerQuery(queryWithNumbers);
+      const result = validateQueryWithFallback(speciesExplorerQuerySchema, queryWithNumbers);
       
-      // Zod schema will convert these to strings and validate them
       expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.species_type).toBe('123');
-        expect(result.data.species_class).toBe('true');
-        expect(result.data.search).toBe('456');
-      }
+      expect(result.data.species_type).toBe('123');
+      expect(result.data.species_class).toBe('true');
+      expect(result.data.search).toBe('456');
     });
 
     it('should validate all allowed sort fields', () => {
@@ -221,12 +224,10 @@ describe('Species Explorer Validation', () => {
       
       sortFields.forEach(sortField => {
         const query = { sort: sortField };
-        const result = validateSpeciesExplorerQuery(query);
+        const result = validateQueryWithFallback(speciesExplorerQuerySchema, query);
         
         expect(result.success).toBe(true);
-        if (result.success) {
-          expect(result.data.sort).toBe(sortField);
-        }
+        expect(result.data.sort).toBe(sortField);
       });
     });
 
@@ -235,12 +236,10 @@ describe('Species Explorer Validation', () => {
       
       sortDirections.forEach(sortDirection => {
         const query = { sortDirection };
-        const result = validateSpeciesExplorerQuery(query);
+        const result = validateQueryWithFallback(speciesExplorerQuerySchema, query);
         
         expect(result.success).toBe(true);
-        if (result.success) {
-          expect(result.data.sortDirection).toBe(sortDirection);
-        }
+        expect(result.data.sortDirection).toBe(sortDirection);
       });
     });
   });
