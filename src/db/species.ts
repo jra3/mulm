@@ -134,6 +134,76 @@ export type SpeciesExplorerItem = {
 };
 
 /**
+ * Unified species search function with flexible options
+ * Handles both typeahead and explorer use cases
+ */
+function buildSpeciesSearchQuery(
+	search?: string,
+	species_type?: string,
+	species_class?: string,
+	sort: 'name' | 'reports' | 'breeders' = 'reports',
+	limit?: number
+): { sql: string; params: unknown[] } {
+	// Build ORDER BY clause
+	let orderBy = 'total_breeds DESC, total_breeders DESC';
+	if (sort === 'name') {
+		orderBy = 'sng.canonical_genus, sng.canonical_species_name';
+	} else if (sort === 'breeders') {
+		orderBy = 'total_breeders DESC, total_breeds DESC';
+	}
+
+	// Build WHERE conditions and parameters
+	const conditions: string[] = ['1=1'];
+	const params: unknown[] = [];
+
+	if (species_type) {
+		conditions.push('AND s.species_type = ?');
+		params.push(species_type);
+	}
+
+	if (species_class) {
+		conditions.push('AND s.species_class = ?');
+		params.push(species_class);
+	}
+
+	if (search && search.trim().length >= 2) {
+		const searchPattern = `%${search.trim().toLowerCase()}%`;
+		conditions.push(`AND (
+			LOWER(sn.common_name) LIKE ? OR
+			LOWER(sn.scientific_name) LIKE ?
+		)`);
+		params.push(searchPattern, searchPattern);
+	}
+
+	const sql = `
+		SELECT
+			sng.group_id,
+			sng.program_class,
+			sng.canonical_genus,
+			sng.canonical_species_name,
+			COALESCE(COUNT(DISTINCT s.id), 0) as total_breeds,
+			COALESCE(COUNT(DISTINCT s.member_id), 0) as total_breeders,
+			COALESCE(GROUP_CONCAT(DISTINCT sn.common_name), '') as common_names,
+			COALESCE(GROUP_CONCAT(DISTINCT sn.scientific_name), '') as scientific_names,
+			MAX(s.approved_on) as latest_breed_date
+		FROM species_name_group sng
+		LEFT JOIN species_name sn ON sng.group_id = sn.group_id
+		LEFT JOIN submissions s ON s.species_name_id = sn.name_id AND s.approved_on IS NOT NULL
+		WHERE ${conditions.join(' ')}
+		GROUP BY sng.group_id, sng.program_class, sng.canonical_genus, sng.canonical_species_name
+		HAVING total_breeds > 0
+		ORDER BY ${orderBy}
+		${limit ? 'LIMIT ?' : ''}
+	`;
+
+	if (limit) {
+		params.push(limit);
+	}
+
+	return { sql, params };
+}
+
+/**
  * Search species for typeahead/autocomplete with database-level limiting
  * Optimized for fast response times with minimal data transfer
  */
@@ -146,85 +216,29 @@ export async function searchSpeciesTypeahead(
 		return [];
 	}
 
-	const { species_type, species_class } = filters;
-	const searchPattern = `%${searchQuery.trim().toLowerCase()}%`;
-
-	return query<SpeciesExplorerItem>(`
-		SELECT
-			sng.group_id,
-			sng.program_class,
-			sng.canonical_genus,
-			sng.canonical_species_name,
-			COALESCE(COUNT(DISTINCT s.id), 0) as total_breeds,
-			COALESCE(COUNT(DISTINCT s.member_id), 0) as total_breeders,
-			COALESCE(GROUP_CONCAT(DISTINCT sn.common_name), '') as common_names,
-			COALESCE(GROUP_CONCAT(DISTINCT sn.scientific_name), '') as scientific_names,
-			MAX(s.approved_on) as latest_breed_date
-		FROM species_name_group sng
-		LEFT JOIN species_name sn ON sng.group_id = sn.group_id
-		LEFT JOIN submissions s ON s.species_name_id = sn.name_id AND s.approved_on IS NOT NULL
-		WHERE 1=1
-			${species_type ? 'AND s.species_type = ?' : ''}
-			${species_class ? 'AND s.species_class = ?' : ''}
-			AND (
-				LOWER(sn.common_name) LIKE ? OR
-				LOWER(sn.scientific_name) LIKE ?
-			)
-		GROUP BY sng.group_id, sng.program_class, sng.canonical_genus, sng.canonical_species_name
-		HAVING total_breeds > 0
-		ORDER BY total_breeds DESC, total_breeders DESC
-		LIMIT ?
-	`, [
-		...(species_type ? [species_type] : []),
-		...(species_class ? [species_class] : []),
-		searchPattern, searchPattern,
+	const { sql, params } = buildSpeciesSearchQuery(
+		searchQuery,
+		filters.species_type,
+		filters.species_class,
+		'reports', // Default sort for typeahead
 		limit
-	]);
+	);
+
+	return query<SpeciesExplorerItem>(sql, params);
 }
 
-export async function getSpeciesForExplorer(filters: SpeciesFilters = {}) {
+export async function getSpeciesForExplorer(filters: SpeciesFilters = {}): Promise<SpeciesExplorerItem[]> {
 	const { species_type, species_class, search, sort = 'reports' } = filters;
 
-	let orderBy = 'total_breeds DESC, total_breeders DESC';
-	if (sort === 'name') {
-		orderBy = 'sng.canonical_genus, sng.canonical_species_name';
-	} else if (sort === 'breeders') {
-		orderBy = 'total_breeders DESC, total_breeds DESC';
-	} else if (sort === 'reports') {
-		orderBy = 'total_breeds DESC, total_breeders DESC';
-	}
+	const { sql, params } = buildSpeciesSearchQuery(
+		search,
+		species_type,
+		species_class,
+		sort
+		// No limit for explorer - return all results
+	);
 
-	const searchPattern = search ? `%${search}%` : null;
-
-	return query<SpeciesExplorerItem>(`
-		SELECT
-			sng.group_id,
-			sng.program_class,
-			sng.canonical_genus,
-			sng.canonical_species_name,
-			COALESCE(COUNT(DISTINCT s.id), 0) as total_breeds,
-			COALESCE(COUNT(DISTINCT s.member_id), 0) as total_breeders,
-			COALESCE(GROUP_CONCAT(DISTINCT sn.common_name), '') as common_names,
-			COALESCE(GROUP_CONCAT(DISTINCT sn.scientific_name), '') as scientific_names,
-			MAX(s.approved_on) as latest_breed_date
-		FROM species_name_group sng
-		LEFT JOIN species_name sn ON sng.group_id = sn.group_id
-		LEFT JOIN submissions s ON s.species_name_id = sn.name_id AND s.approved_on IS NOT NULL
-		WHERE 1=1
-			${species_type ? 'AND s.species_type = ?' : ''}
-			${species_class ? 'AND s.species_class = ?' : ''}
-			${search ? `AND (
-				sn.common_name LIKE ? OR
-				sn.scientific_name LIKE ?
-			)` : ''}
-		GROUP BY sng.group_id, sng.program_class, sng.canonical_genus, sng.canonical_species_name
-		HAVING total_breeds > 0
-		ORDER BY ${orderBy}
-	`, [
-		...(species_type ? [species_type] : []),
-		...(species_class ? [species_class] : []),
-		...(search ? [searchPattern, searchPattern] : [])
-	]);
+	return query<SpeciesExplorerItem>(sql, params);
 }
 
 export type SpeciesDetail = {
