@@ -1,5 +1,6 @@
 import { makePasswordEntry, ScryptPassword } from "../auth";
 import { db, query, deleteOne, insertOne, updateOne } from "./conn";
+import { logger } from "@/utils/logger";
 
 // type as represented in the database
 export type MemberRecord = {
@@ -69,7 +70,7 @@ export async function createOrUpdatePassword(memberId: number, passwordEntry: Sc
 		const { N, r, p, salt, hash } = passwordEntry;
 		await stmt.run(memberId, N, r, p, salt, hash);
 	} catch (err) {
-		console.error(err);
+		logger.error('Failed to set password', err);
 		throw new Error("Failed to set password");
 	}
 }
@@ -111,7 +112,7 @@ export async function createMember(
 		return memberId as number;
 
 	} catch (err) {
-		console.error(err);
+		logger.error('Failed to create member', err);
 		await conn.exec('ROLLBACK;');
 		throw new Error("Failed to create member");
 	}
@@ -176,7 +177,7 @@ export async function grantAward(memberId: number, awardName: string, dateAwarde
 		const stmt = await conn.prepare("INSERT INTO awards (member_id, award_name, date_awarded) VALUES (?, ?, ?)");
 		await stmt.run(memberId, awardName, dateAwarded.toISOString());
 	} catch (err) {
-		console.error(err);
+		logger.error('Failed to grant award', err);
 		throw new Error("Failed to grant award");
 	}
 }

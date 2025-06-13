@@ -10,5 +10,9 @@ module.exports = {
     "/dist/",
     "/infrastructure/cdk.out/",
     "/scripts/"
-  ]
+  ],
+  setupFiles: ["<rootDir>/jest.setup.js"],
+  moduleNameMapper: {
+    "^@/(.*)$": "<rootDir>/src/$1"
+  }
 };

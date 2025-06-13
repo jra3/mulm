@@ -1,4 +1,5 @@
 import { writeConn, query } from "./conn";
+import { logger } from "@/utils/logger";
 import { Database } from "sqlite";
 
 type NameSynonym = {
@@ -28,7 +29,7 @@ export async function querySpeciesNames() {
 /**
  * Execute a function within a database transaction.
  * Automatically handles BEGIN, COMMIT, and ROLLBACK.
- * 
+ *
  * Note: The try/catch around ROLLBACK is the standard pattern for sqlite3
  * as the API doesn't expose transaction state checking.
  */
@@ -42,7 +43,7 @@ async function withTransaction<T>(fn: (db: Database) => Promise<T>): Promise<T> 
 	} catch (err) {
 		try {
 			await db.exec('ROLLBACK;');
-		} catch (rollbackErr) {
+		} catch {
 			// Ignore rollback errors - transaction may not be active
 			// This is the standard pattern for sqlite3 package
 		}
@@ -53,7 +54,6 @@ async function withTransaction<T>(fn: (db: Database) => Promise<T>): Promise<T> 
 export async function recordName(data: NameSynonym): Promise<number> {
 	try {
 		return await withTransaction(async (db) => {
-			// Insert or update the species name group
 			const groupStmt = await db.prepare(`
 				INSERT INTO species_name_group(
 					program_class,
@@ -71,7 +71,7 @@ export async function recordName(data: NameSynonym): Promise<number> {
 				data.canonical_species_name
 			);
 			await groupStmt.finalize();
-			
+
 			if (!result || !result.group_id) {
 				throw new Error("Failed to insert or update species name group");
 			}
@@ -94,7 +94,7 @@ export async function recordName(data: NameSynonym): Promise<number> {
 			return group_id;
 		});
 	} catch (err) {
-		console.error(err);
+		logger.error('Failed to record species name', err);
 		throw new Error("Failed to record species name");
 	}
 }
@@ -120,7 +120,8 @@ export async function mergeSpecies(canonicalGroupId: number, defunctGroupId: num
 			await deleteStmt.finalize();
 		});
 	} catch (err) {
-		console.error(err);
+		logger.error('Failed to record species name', err);
+		logger.error('Failed to merge species groups', err);
 		throw new Error("Failed to merge species groups");
 	}
 }
@@ -234,7 +235,7 @@ function buildSpeciesSearchQuery(
  * Optimized for fast response times with minimal data transfer
  */
 export async function searchSpeciesTypeahead(
-	searchQuery: string, 
+	searchQuery: string,
 	filters: Omit<SpeciesFilters, 'search' | 'sort'> = {},
 	limit: number = 10
 ): Promise<SpeciesExplorerItem[]> {

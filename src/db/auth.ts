@@ -1,5 +1,6 @@
 import { AuthCode } from "@/auth";
 import { writeConn, query, insertOne, deleteOne } from "./conn";
+import { logger } from "@/utils/logger";
 
 const tableName = "auth_codes";
 
@@ -25,7 +26,7 @@ export async function deleteExpiredAuthCodes(cutoff: Date) {
 		const deleteRow = await conn.prepare("DELETE FROM auth_codes WHERE expires_on < ?");
 		return deleteRow.run(cutoff);
 	} catch (err) {
-		console.error(err);
+		logger.error('Failed to delete auth codes', err);
 		throw new Error("Failed to delete auth codes");
 	}
 }

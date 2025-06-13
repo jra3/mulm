@@ -1,6 +1,7 @@
 import { ApprovalFormValues } from "@/forms/approval";
 import { FormValues } from "@/forms/submission";
 import { writeConn, query } from "./conn";
+import { logger } from "@/utils/logger";
 
 export type Submission = {
 	id: number;
@@ -55,7 +56,7 @@ export function formToDB(memberId: number, form: FormValues, submit: boolean) {
 			case undefined:
 				return undefined;
 			default:
-				console.log("Unknown species type: ", form.species_type);
+				logger.warn('Unknown species type', form.species_type);
 				throw new Error("Unknown species type");
 		}
 	})();
@@ -111,7 +112,7 @@ export async function createSubmission(
 		const result = await stmt.run(values);
 		return result.lastID as number;
 	} catch (err) {
-		console.error(err);
+		logger.error('Failed to add submission', err);
 		throw new Error("Failed to add submission");
 	}
 }
@@ -171,7 +172,7 @@ export async function deleteSubmission(id: number) {
 		const deleteRow = await conn.prepare("DELETE FROM submissions WHERE id = ?");
 		return deleteRow.run(id);
 	} catch (err) {
-		console.error(err);
+		logger.error('Failed to delete submission', err);
 		throw new Error("Failed to delete submission");
 	}
 }
@@ -303,7 +304,7 @@ export async function updateSubmission(id: number, updates: UpdateFor<Submission
 		const result = await stmt.run(...values, id);
 		return result.changes;
 	} catch (err) {
-		console.error(err);
+		logger.error('Failed to update submission', err);
 		throw new Error("Failed to update submission");
 	}
 }
@@ -346,7 +347,7 @@ export async function approveSubmission(
 			id,
 		);
 	} catch (err) {
-		console.error(err);
+		logger.error('Failed to update submission', err);
 		throw new Error("Failed to update submission");
 	}
 }
