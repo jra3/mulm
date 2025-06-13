@@ -9,17 +9,38 @@ import {
 } from "@/db/species";
 import { getClassOptions } from "@/forms/submission";
 import { getQueryString } from "@/utils/request";
+import { extractValidSpeciesQuery, validateSpeciesExplorerQuery } from "@/forms/species-explorer";
 
 export async function explorer(req: MulmRequest, res: Response) {
 	const { viewer } = req;
 	const isLoggedIn = Boolean(viewer);
 
-	const filters: SpeciesFilters = {
-		species_type: getQueryString(req, 'species_type') || undefined,
-		species_class: getQueryString(req, 'species_class') || undefined,
-		search: getQueryString(req, 'search') || undefined,
-		sort: (getQueryString(req, 'sort') as 'name' | 'reports' | 'breeders') || 'reports'
-	};
+	const queryValidation = validateSpeciesExplorerQuery(req.query);
+	
+	let filters: SpeciesFilters;
+	let validationErrors: string[] = [];
+	
+	if (!queryValidation.success) {
+		console.warn('Species explorer query validation errors:', queryValidation.error.issues);
+		
+		validationErrors = queryValidation.error.issues.map(issue => issue.message);
+		
+		const validQuery = extractValidSpeciesQuery(req.query);
+		filters = {
+			species_type: validQuery.species_type,
+			species_class: validQuery.species_class,
+			search: validQuery.search,
+			sort: validQuery.sort || 'reports'
+		};
+	} else {
+		const validatedQuery = queryValidation.data;
+		filters = {
+			species_type: validatedQuery.species_type,
+			species_class: validatedQuery.species_class,
+			search: validatedQuery.search,
+			sort: validatedQuery.sort
+		};
+	}
 
 	try {
 		const [species, filterOptions] = await Promise.all([
@@ -36,7 +57,8 @@ export async function explorer(req: MulmRequest, res: Response) {
 			filters,
 			filterOptions,
 			classOptions,
-			totalSpecies: species.length
+			totalSpecies: species.length,
+			validationErrors
 		});
 	} catch (error) {
 		console.error("Error loading species explorer:", error);
@@ -99,15 +121,36 @@ export async function detail(req: MulmRequest, res: Response) {
 }
 
 export async function searchApi(req: MulmRequest, res: Response) {
-	// Support both 'q' (for typeahead) and 'search' (for explorer) parameters
 	const query = getQueryString(req, 'q') || getQueryString(req, 'search') || '';
 	
-	const filters: SpeciesFilters = {
-		species_type: getQueryString(req, 'species_type') || undefined,
-		species_class: getQueryString(req, 'species_class') || undefined,
-		search: query,
-		sort: (getQueryString(req, 'sort') as 'name' | 'reports' | 'breeders') || 'reports'
+	const queryObject = {
+		...req.query,
+		search: query
 	};
+	
+	const queryValidation = validateSpeciesExplorerQuery(queryObject);
+	
+	let filters: SpeciesFilters;
+	
+	if (!queryValidation.success) {
+		console.warn('Species search API query validation errors:', queryValidation.error.issues);
+		
+		const validQuery = extractValidSpeciesQuery(queryObject);
+		filters = {
+			species_type: validQuery.species_type,
+			species_class: validQuery.species_class,
+			search: validQuery.search,
+			sort: validQuery.sort || 'reports'
+		};
+	} else {
+		const validatedQuery = queryValidation.data;
+		filters = {
+			species_type: validatedQuery.species_type,
+			species_class: validatedQuery.species_class,
+			search: validatedQuery.search,
+			sort: validatedQuery.sort
+		};
+	}
 
 	try {
 		const species = await getSpeciesForExplorer(filters);
