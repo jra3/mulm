@@ -5,7 +5,8 @@ import {
 	getSpeciesDetail, 
 	getBreedersForSpecies, 
 	getFilterOptions,
-	SpeciesFilters 
+	SpeciesFilters,
+	searchSpeciesTypeahead 
 } from "@/db/species";
 import { getClassOptions } from "@/forms/submission";
 import { getQueryString } from "@/utils/request";
@@ -125,20 +126,21 @@ export async function searchApi(req: MulmRequest, res: Response<SpeciesTypeahead
 		queryObject, 
 		'Species search API query'
 	);
-	
-	const filters: SpeciesFilters = {
-		species_type: validation.data.species_type,
-		species_class: validation.data.species_class,
-		search: validation.data.search,
-		sort: validation.data.sort
-	};
 
 	try {
-		const species = await getSpeciesForExplorer(filters);
-		
-		// For typeahead compatibility, if 'q' parameter is used, return formatted array
+		// For typeahead compatibility, if 'q' parameter is used, use optimized typeahead search
 		if (getQueryString(req, 'q')) {
-			const formattedSpecies: SpeciesTypeaheadItem[] = species.slice(0, 10).map(s => ({
+			// Use the optimized typeahead function that limits at database level
+			const species = await searchSpeciesTypeahead(
+				query,
+				{
+					species_type: validation.data.species_type,
+					species_class: validation.data.species_class
+				},
+				10 // Limit results for typeahead
+			);
+			
+			const formattedSpecies: SpeciesTypeaheadItem[] = species.map(s => ({
 				value: s.group_id.toString(),
 				text: `${s.canonical_genus} ${s.canonical_species_name}`,
 				common_name: s.common_names?.split(',')[0] || '',
@@ -148,7 +150,15 @@ export async function searchApi(req: MulmRequest, res: Response<SpeciesTypeahead
 			}));
 			res.json(formattedSpecies);
 		} else {
-			// For explorer compatibility, return full format
+			// For explorer compatibility, use full search with sorting
+			const filters: SpeciesFilters = {
+				species_type: validation.data.species_type,
+				species_class: validation.data.species_class,
+				search: validation.data.search,
+				sort: validation.data.sort
+			};
+			
+			const species = await getSpeciesForExplorer(filters);
 			const response: SpeciesExplorerResponse = {
 				species,
 				totalSpecies: species.length
