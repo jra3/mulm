@@ -9,16 +9,29 @@ import {
 } from "@/db/species";
 import { getClassOptions } from "@/forms/submission";
 import { getQueryString } from "@/utils/request";
+import { speciesExplorerQuerySchema, SpeciesExplorerQuery } from "@/forms/species-explorer";
+import { validateQueryWithFallback } from "@/forms/utils";
+import { 
+	SpeciesTypeaheadItem, 
+	SpeciesExplorerResponse, 
+	ApiErrorResponse 
+} from "@/types/api-responses";
 
 export async function explorer(req: MulmRequest, res: Response) {
 	const { viewer } = req;
 	const isLoggedIn = Boolean(viewer);
 
+	const validation = validateQueryWithFallback(
+		speciesExplorerQuerySchema, 
+		req.query, 
+		'Species explorer query'
+	);
+	
 	const filters: SpeciesFilters = {
-		species_type: getQueryString(req, 'species_type') || undefined,
-		species_class: getQueryString(req, 'species_class') || undefined,
-		search: getQueryString(req, 'search') || undefined,
-		sort: (getQueryString(req, 'sort') as 'name' | 'reports' | 'breeders') || 'reports'
+		species_type: validation.data.species_type,
+		species_class: validation.data.species_class,
+		search: validation.data.search,
+		sort: validation.data.sort
 	};
 
 	try {
@@ -36,7 +49,8 @@ export async function explorer(req: MulmRequest, res: Response) {
 			filters,
 			filterOptions,
 			classOptions,
-			totalSpecies: species.length
+			totalSpecies: species.length,
+			validationErrors: validation.errors
 		});
 	} catch (error) {
 		console.error("Error loading species explorer:", error);
@@ -98,15 +112,25 @@ export async function detail(req: MulmRequest, res: Response) {
 	}
 }
 
-export async function searchApi(req: MulmRequest, res: Response) {
-	// Support both 'q' (for typeahead) and 'search' (for explorer) parameters
+export async function searchApi(req: MulmRequest, res: Response<SpeciesTypeaheadItem[] | SpeciesExplorerResponse | ApiErrorResponse>) {
 	const query = getQueryString(req, 'q') || getQueryString(req, 'search') || '';
 	
+	const queryObject = {
+		...req.query,
+		search: query
+	};
+	
+	const validation = validateQueryWithFallback(
+		speciesExplorerQuerySchema, 
+		queryObject, 
+		'Species search API query'
+	);
+	
 	const filters: SpeciesFilters = {
-		species_type: getQueryString(req, 'species_type') || undefined,
-		species_class: getQueryString(req, 'species_class') || undefined,
-		search: query,
-		sort: (getQueryString(req, 'sort') as 'name' | 'reports' | 'breeders') || 'reports'
+		species_type: validation.data.species_type,
+		species_class: validation.data.species_class,
+		search: validation.data.search,
+		sort: validation.data.sort
 	};
 
 	try {
@@ -114,7 +138,7 @@ export async function searchApi(req: MulmRequest, res: Response) {
 		
 		// For typeahead compatibility, if 'q' parameter is used, return formatted array
 		if (getQueryString(req, 'q')) {
-			const formattedSpecies = species.slice(0, 10).map(s => ({
+			const formattedSpecies: SpeciesTypeaheadItem[] = species.slice(0, 10).map(s => ({
 				value: s.group_id.toString(),
 				text: `${s.canonical_genus} ${s.canonical_species_name}`,
 				common_name: s.common_names?.split(',')[0] || '',
@@ -125,13 +149,18 @@ export async function searchApi(req: MulmRequest, res: Response) {
 			res.json(formattedSpecies);
 		} else {
 			// For explorer compatibility, return full format
-			res.json({
+			const response: SpeciesExplorerResponse = {
 				species,
 				totalSpecies: species.length
-			});
+			};
+			res.json(response);
 		}
 	} catch (error) {
 		console.error("Error in species search API:", error);
-		res.status(500).json({ error: "Unable to search species" });
+		const errorResponse: ApiErrorResponse = { 
+			error: "Unable to search species",
+			code: "SPECIES_SEARCH_ERROR"
+		};
+		res.status(500).json(errorResponse);
 	}
 }

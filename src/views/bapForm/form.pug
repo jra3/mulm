@@ -16,16 +16,13 @@ mixin CRUDForm()
 			h2(class="text-xl sm:text-2xl font-bold mb-4") Member Details
 			div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
 				if isAdmin
-					+htmxTypeahead({
-						name: "member_name",
+					+bapTypeaheadInput({
 						label: "Member Name",
-						apiUrl: '/api/members/search',
+						name: "member_name",
 						placeholder: "Jacques Cousteau...",
-						linkedField: "member_email",
+						apiUrl: "/api/members/search",
 						searchFields: "name,email",
-						linkField: "email",
 					})
-					//+bapTypeaheadInput("Member Name", "member_name", "Jacques Cousteau", "/api/members/search", "member_email")(disabled=!isAdmin)
 				else
 					+bapTextInput("Member Name", "member_name", "Jacques Cousteau")(disabled=true)
 				+bapTextInput("Member Email", "member_email", "deep@bluesea.net")(disabled=true)
@@ -59,8 +56,30 @@ mixin CRUDForm()
 				- const dateLabel = isLivestock ? "Date Spawned" : "Date Propagated";
 				+bapTextInput(dateLabel, "reproduction_date", "", "date")
 
-				+bapTextInput("Species Common Name", "species_common_name", "Guppy")
-				+bapTextInput("Species Latin Name", "species_latin_name", "Poecilia reticulata")
+				+bapTypeaheadInput({
+					label: "Species Common Name",
+					name: "species_common_name",
+					placeholder: "Guppy",
+					apiUrl: "/api/species/search",
+					searchFields: "common_name",
+					valueField: "common_name",
+					labelField: "common_name",
+					secondaryField: "scientific_name",
+					allowCreate: true,
+					createOnBlur: true,
+				})
+				+bapTypeaheadInput({
+					label: "Species Latin Name",
+					name: "species_latin_name",
+					placeholder: "Poecilia reticulata",
+					apiUrl: "/api/species/search",
+					searchFields: "scientific_name",
+					valueField: "scientific_name",
+					labelField: "scientific_name",
+					secondaryField: "common_name",
+					allowCreate: true,
+					createOnBlur: true,
+				})
 
 				if isLivestock
 					+bapTextInput("# of Fry", "count", "Zillions")

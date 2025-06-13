@@ -41,29 +41,7 @@ mixin bapMultiSelectInput(labelText, name, id)
 			class=errors.has(name) ? "error" : "")
 			block
 
-mixin bapTypeaheadInput(labelText, name, placeholder, apiUrl, linkedField)
-	.flex.flex-col.gap-2
-		label.input-label(for=name)= labelText
-			if errors.has(name)
-				span(class="font-extrabold text-red-400")= ` ${errors.get(name)}`
-
-		select.tom-select-typeahead(
-			id=name
-			name=name
-			data-api-url=apiUrl
-			data-linked-field=linkedField
-			autocomplete="off"
-			class=errors.has(name) ? "error" : ""
-			disabled=attributes.disabled)
-			if form[name]
-				option(value=form[name] selected)= form[name]
-		if attributes.disabled
-			input.text-input(
-				value=form[name]
-				name=name
-				type="hidden")
-
-mixin htmxTypeahead(options = {})
+mixin bapTypeaheadInput(options = {})
 	- const name = options.name
 	- const label = options.label
 	- const apiUrl = options.apiUrl
@@ -74,13 +52,9 @@ mixin htmxTypeahead(options = {})
 	- const minQueryLength = options.minQueryLength || 2
 	- const maxItems = options.maxItems || 1
 	- const allowCreate = options.allowCreate !== false
-	- const linkedField = options.linkedField
-	- const linkField = options.linkField || 'value'
+	- const createOnBlur = options.createOnBlur !== false
 	- const secondaryField = options.secondaryField
 	- const optionTemplate = options.optionTemplate
-	- const htmxTarget = options.htmxTarget
-	- const htmxTrigger = options.htmxTrigger
-	- const htmxSwap = options.htmxSwap || 'innerHTML'
 	- const loadingClass = options.loadingClass || 'loading'
 	- const debounceMs = options.debounceMs || 300
 	- const extraParams = options.extraParams || {}
@@ -94,12 +68,11 @@ mixin htmxTypeahead(options = {})
 	- const finalValue = (form && form[name]) || value;
 
 	.flex.flex-col.gap-2
-		if label
-			label.input-label(for=name)= label
-				if errors && errors.has && errors.has(name)
-					span(class="font-extrabold text-red-400")= ` ${errors.get(name)}`
+		label.input-label(for=name)= label
+			if errors.has(name)
+				span(class="font-extrabold text-red-400")= ` ${errors.get(name)}`
 
-		select(
+		select.tom-select-typeahead(
 			id=name
 			name=name
 			class=finalClass
@@ -109,16 +82,18 @@ mixin htmxTypeahead(options = {})
 			data-search-fields=searchFields
 			data-min-query-length=minQueryLength
 			data-max-items=maxItems
-			data-allow-create=allowCreate
+			data-allow-create=allowCreate ? 'true' : 'false'
 			data-placeholder=placeholder
 			data-loading-class=loadingClass
 			data-debounce-ms=debounceMs
+			data-create-on-blur=createOnBlur ? 'true' : 'false'
 			autocomplete="off"
 			required=required
-			disabled=disabled
-		)
-			if finalValue
-				option(value=finalValue selected)= finalValue
-
-		if disabled && finalValue
-			input(type="hidden" name=name value=finalValue)
+			disabled=disabled)
+			if form[name]
+				option(value=form[name] selected)= form[name]
+		if disabled
+			input.text-input(
+				value=form[name]
+				name=name
+				type="hidden")
