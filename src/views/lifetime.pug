@@ -12,18 +12,17 @@ html
 				h2(class="text-xl lg:text-4xl font-extrabold mb-4")= title
 
 		section.bg-gray-100
-			div.max-w-4xl.mx-auto.text-center.px-4(class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3")
+			div.max-w-5xl.mx-auto.text-center.px-4(class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3")
 				each level in levels
 					- const [levelName, members] = level;
 					div.p-4
 						h2(class="text-xl sm:text-2xl font-bold mb-4")= levelName
-						table.data-table.lifetimeStandingsLevel
-							tbody.contents
-								each member in members
-									tr.max-w-lg.contents
-										td.text-left
-											a.link(href=`/member/${member.id}`)= member.display_name
-										td.text-right= member.points
+						div(class="max-w-sm mx-auto")
+							each member in members
+								div(class="flex justify-between items-center px-3 border-b border-gray-200 last:border-b-0")
+									a.contents.link(href=`/member/${member.id}`)
+										div(class="text-left")= member.display_name
+										div(class="text-right font-semibold ml-4")= member.points
 
 		.w-full.bg-gray-300.p-4.shadow-md
 			.container.mx-auto.flex.justify-center.space-x-4
