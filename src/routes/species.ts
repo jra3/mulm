@@ -11,6 +11,11 @@ import { getClassOptions } from "@/forms/submission";
 import { getQueryString } from "@/utils/request";
 import { speciesExplorerQuerySchema, SpeciesExplorerQuery } from "@/forms/species-explorer";
 import { validateQueryWithFallback } from "@/forms/utils";
+import { 
+	SpeciesTypeaheadItem, 
+	SpeciesExplorerResponse, 
+	ApiErrorResponse 
+} from "@/types/api-responses";
 
 export async function explorer(req: MulmRequest, res: Response) {
 	const { viewer } = req;
@@ -107,7 +112,7 @@ export async function detail(req: MulmRequest, res: Response) {
 	}
 }
 
-export async function searchApi(req: MulmRequest, res: Response) {
+export async function searchApi(req: MulmRequest, res: Response<SpeciesTypeaheadItem[] | SpeciesExplorerResponse | ApiErrorResponse>) {
 	const query = getQueryString(req, 'q') || getQueryString(req, 'search') || '';
 	
 	const queryObject = {
@@ -133,7 +138,7 @@ export async function searchApi(req: MulmRequest, res: Response) {
 		
 		// For typeahead compatibility, if 'q' parameter is used, return formatted array
 		if (getQueryString(req, 'q')) {
-			const formattedSpecies = species.slice(0, 10).map(s => ({
+			const formattedSpecies: SpeciesTypeaheadItem[] = species.slice(0, 10).map(s => ({
 				value: s.group_id.toString(),
 				text: `${s.canonical_genus} ${s.canonical_species_name}`,
 				common_name: s.common_names?.split(',')[0] || '',
@@ -144,13 +149,18 @@ export async function searchApi(req: MulmRequest, res: Response) {
 			res.json(formattedSpecies);
 		} else {
 			// For explorer compatibility, return full format
-			res.json({
+			const response: SpeciesExplorerResponse = {
 				species,
 				totalSpecies: species.length
-			});
+			};
+			res.json(response);
 		}
 	} catch (error) {
 		console.error("Error in species search API:", error);
-		res.status(500).json({ error: "Unable to search species" });
+		const errorResponse: ApiErrorResponse = { 
+			error: "Unable to search species",
+			code: "SPECIES_SEARCH_ERROR"
+		};
+		res.status(500).json(errorResponse);
 	}
 }
