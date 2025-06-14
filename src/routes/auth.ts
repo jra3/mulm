@@ -51,6 +51,7 @@ export const passwordLogin = async (req: MulmRequest, res: Response) => {
 		if (await checkPassword(pass, data.password)) {
 			await createUserSession(req, res, member.id);
 			res.set("HX-Redirect", "/").send();
+			return;
 		}
 	}
 	res.send("Incorrect email or password");
@@ -177,17 +178,17 @@ export const googleOAuth = async (req: MulmRequest, res: Response) => {
 	const { code } = req.query;
 	const resp = await translateGoogleOAuthCode(code as string);
 	const payload: unknown = await resp.json();
-	
+
 	// Type narrowing with runtime checks
 	if (
-		typeof payload !== 'object' || 
+		typeof payload !== 'object' ||
 		payload === null ||
 		!('access_token' in payload)
 	) {
 		res.status(401).send("Login Failed!");
 		return;
 	}
-	
+
 	const tokenPayload = payload as { access_token: unknown };
 	const token = String(tokenPayload.access_token);
 	const googleUser = await getGoogleUser(token);
