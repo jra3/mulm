@@ -289,7 +289,11 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
 	const member = await getMember(submission.member_id);
 	if (member) {
 		// member should always exist...
-		await onSubmissionApprove(submission, member);
+		// Get the updated submission with points included
+		const updatedSubmission = await getSubmissionById(id);
+		if (updatedSubmission) {
+			await onSubmissionApprove(updatedSubmission, member);
+		}
 	}
 
 	res.set('HX-Redirect', '/admin/queue').send();

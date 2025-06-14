@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import config from '@/config.json';
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '@/utils/logger';
@@ -58,6 +58,6 @@ export async function deletePhoto(key: string): Promise<void> {
 	}
 }
 
-export async function getPhotoUrl(key: string): Promise<string> {
+export function getPhotoUrl(key: string): string {
 	return `${config.s3Url}/${BUCKET_NAME}/${key}`;
 }

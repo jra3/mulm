@@ -7,4 +7,14 @@ p
 ul
 	li= `Common Name: ${submission.species_common_name}`
 	li= `Scientific Name: ${submission.species_latin_name}`
-	li= `Points Awarded: ${submission.total_points}`
+	li= `Base Points Awarded: ${submission.points}`
+	if submission.article_points && submission.article_points > 0
+		li= `Article Points: ${submission.article_points}`
+	if submission.first_time_species
+		li= `First Time Species Bonus: 5 points`
+	if submission.flowered
+		li= `Flowering Bonus: ${submission.points} points`
+	if submission.sexual_reproduction
+		li= `Sexual Reproduction Bonus: ${submission.points} points`
+	if submission.total_points && submission.total_points !== submission.points
+		li= `Total Points: ${submission.total_points}`
