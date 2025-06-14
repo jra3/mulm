@@ -34,7 +34,17 @@ app.use(express.static(path.join(__dirname, "../public")));
 
 const upload = multer({ 
 	storage: multer.memoryStorage(),
-	limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+	limits: { 
+		fileSize: 10 * 1024 * 1024, // 10MB per file
+		files: 3 // max 3 files
+	},
+	fileFilter: (req, file, cb) => {
+		if (file.mimetype.startsWith('image/')) {
+			cb(null, true);
+		} else {
+			cb(new Error('Only image files are allowed'));
+		}
+	}
 });
 
 app.use(express.json());
@@ -91,8 +101,8 @@ router.get("/submit/addSupplement", (req, res) => {
 });
 
 router.get("/sub/:subId", submission.view);
-router.post("/sub", submission.create);
-router.patch("/sub/:subId", submission.update);
+router.post("/sub", upload.array('photos', 3), submission.create);
+router.patch("/sub/:subId", upload.array('photos', 3), submission.update);
 router.delete("/sub/:subId", submission.remove);
 
 router.get("/tank", tank.view);

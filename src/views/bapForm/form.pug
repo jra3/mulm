@@ -10,7 +10,16 @@ mixin CRUDForm()
 		form#bapForm(hx-target="#bapForm" hx-swap="outerHTML" hx-post="/sub")
 			block
 
-+CRUDForm
+mixin CRUDFormWithFiles()
+	if form.id
+		form#bapForm(hx-target="#bapForm" hx-swap="outerHTML" hx-patch=`/sub/${form.id}` enctype="multipart/form-data")
+			input(type="hidden" name="id" value=form.id)
+			block
+	else
+		form#bapForm(hx-target="#bapForm" hx-swap="outerHTML" hx-post="/sub" enctype="multipart/form-data")
+			block
+
++CRUDFormWithFiles
 	section.bg-gray-100.py-4
 		div.max-w-4xl.mx-auto.text-left.px-4
 			h2(class="text-xl sm:text-2xl font-bold mb-4") Member Details
@@ -163,6 +172,44 @@ mixin CRUDForm()
 						hx-swap="beforeend"
 						hx-target="#supplements"
 					) Add +
+
+	section.bg-gray-100.py-4
+		div.max-w-4xl.mx-auto.text-left.px-4
+			h2(class="text-xl sm:text-2xl font-bold mb-4") Attachments
+			
+			div.grid.grid-cols-1.w-full.gap-4(class="md:grid-cols-2")
+				div.grid.gap-2
+					label.input-label Photos
+					div.text-sm.text-gray-600.mb-2 Upload up to 3 photos of your breeding setup or results (max 10MB each)
+					input.text-input(
+						type="file"
+						name="photos"
+						accept="image/*"
+						multiple
+						style="height: auto; padding: 8px;"
+					)
+				
+				div.grid.gap-2
+					label.input-label Related Links
+					div.text-sm.text-gray-600.mb-2 Add up to 3 related links (articles, videos, etc.)
+					input.text-input(
+						type="url"
+						name="link1"
+						placeholder="https://example.com/article"
+						value=form.link1 || ""
+					)
+					input.text-input(
+						type="url"
+						name="link2"
+						placeholder="https://example.com/video"
+						value=form.link2 || ""
+					)
+					input.text-input(
+						type="url"
+						name="link3"
+						placeholder="https://example.com/forum-post"
+						value=form.link3 || ""
+					)
 
 	section.bg-gray-100.py-4
 		div.flex.justify-center.max-w-4xl.mx-auto.text-center.gap-4

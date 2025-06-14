@@ -54,6 +54,35 @@ html
 					+reviewTextInput("Substrate Depth", "substrate_depth")
 					+reviewTextInput("Substrate Color", "substrate_color")
 
+			if photos && photos.length > 0 || links && links.length > 0
+				div.max-w-4xl.mx-auto.text-left.pt-4.px-4
+					h2(class="text-l font-bold mb-4") Attachments
+					
+					if photos && photos.length > 0
+						div.mb-6
+							h3(class="text-md font-semibold mb-3") Photos
+							div.grid.grid-cols-1.gap-4(class="md:grid-cols-2 lg:grid-cols-3")
+								each photo in photos
+									div.bg-white.rounded-lg.shadow-sm.overflow-hidden
+										a(href=photo.originalUrl target="_blank")
+											img.w-full.h-48.object-cover(
+												src=photo.displayUrl
+												alt="Submission photo"
+												loading="lazy"
+											)
+					
+					if links && links.length > 0
+						div.mb-6
+							h3(class="text-md font-semibold mb-3") Related Links
+							div.space-y-2
+								each link in links
+									div.bg-white.p-3.rounded.shadow-sm
+										a(
+											class="text-blue-600 hover:text-blue-800 break-all"
+											href=link.handle
+											target="_blank"
+											rel="noopener noreferrer"
+										)= link.handle
 
 			div.max-w-4xl.mx-auto.text-left.px-4.pb-6
 				h2(class="text-l font-bold mb-4") Approval Details

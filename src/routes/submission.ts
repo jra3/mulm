@@ -7,6 +7,8 @@ import { MemberRecord, getMember, getMemberByEmail } from "@/db/members";
 import { onSubmissionSend } from "@/notifications";
 import * as db from "@/db/submissions";
 import { getCanonicalSpeciesName } from "@/db/species";
+import { uploadProcessedPhoto, deleteProcessedPhoto, getPhotoUrl } from "@/services/storage";
+import { logger } from "@/utils/logger";
 
 export const renderSubmissionForm = (req: MulmRequest, res: Response) => {
 const { viewer } = req;
@@ -62,12 +64,18 @@ export const view = async (req: MulmRequest, res: Response) => {
 	};
 
 	if (viewer && aspect.isSelf && !aspect.isSubmitted) {
+		const editAttachments = await db.getSubmissionAttachments(submission.id);
+		const editLinks = editAttachments.filter(a => a.type === 'link');
+		
 		res.render('submit', {
 			title: `Edit ${getBapFormTitle(submission.program)}`,
 			form: {
 				...submission,
 				member_name: viewer.display_name,
 				member_email: viewer.contact_email,
+				link1: editLinks[0]?.handle || '',
+				link2: editLinks[1]?.handle || '',
+				link3: editLinks[2]?.handle || '',
 			},
 			errors: new Map(),
 			classOptions: getClassOptions(submission.species_type),
@@ -77,6 +85,7 @@ export const view = async (req: MulmRequest, res: Response) => {
 			spawnLocations,
 			isLivestock: isLivestock(submission.species_type),
 			isAdmin: aspect.isAdmin,
+			editing: true,
 		});
 		return;
 	}
@@ -96,6 +105,15 @@ export const view = async (req: MulmRequest, res: Response) => {
 	})();
 
 	const canonicalName = `${nameGroup.canonical_genus} ${nameGroup.canonical_species_name}`;
+	
+	const attachments = await db.getSubmissionAttachments(submission.id);
+	const photos = attachments.filter(a => a.type === 'photo').map(photo => ({
+		...photo,
+		displayUrl: getPhotoUrl(`${photo.handle}_display.jpg`),
+		thumbnailUrl: getPhotoUrl(`${photo.handle}_thumb.jpg`),
+		originalUrl: getPhotoUrl(`${photo.handle}_original.jpg`)
+	}));
+	const links = attachments.filter(a => a.type === 'link');
 
 	res.render('submission/review', {
 		submission: {
@@ -110,6 +128,8 @@ export const view = async (req: MulmRequest, res: Response) => {
 		},
 		canonicalName,
 		name: nameGroup,
+		photos,
+		links,
 		...aspect,
 	});
 }
@@ -143,12 +163,18 @@ function parseAndValidateForm(req: MulmRequest): {
 	let form: FormValues;
 	let parsed;
 
+	// Extract link fields before validation since they're not part of the main form schema
+	const bodyWithoutLinks = { ...req.body } as Record<string, unknown>;
+	delete bodyWithoutLinks.link1;
+	delete bodyWithoutLinks.link2;
+	delete bodyWithoutLinks.link3;
+
 	if ("draft" in req.body) {
-		parsed = bapDraftForm.safeParse(req.body);
-		form = extractValid(bapFields, req.body);
+		parsed = bapDraftForm.safeParse(bodyWithoutLinks);
+		form = extractValid(bapFields, bodyWithoutLinks);
 		draft = true;
 	} else {
-		parsed = bapForm.safeParse(req.body);
+		parsed = bapForm.safeParse(bodyWithoutLinks);
 		form = parsed.data!;
 	}
 
@@ -165,6 +191,61 @@ function parseAndValidateForm(req: MulmRequest): {
 	return { form, draft };
 }
 
+function extractAndValidateLinks(body: { link1?: string; link2?: string; link3?: string; }): { links: string[]; errors: Map<string, string> } {
+	const links: string[] = [];
+	const errors = new Map<string, string>();
+	
+	const linkFields = [
+		{ field: 'link1', value: body.link1 },
+		{ field: 'link2', value: body.link2 },
+		{ field: 'link3', value: body.link3 }
+	];
+	
+	for (const { field, value } of linkFields) {
+		if (value && typeof value === 'string' && value.trim()) {
+			try {
+				new URL(value.trim()); // This will throw if invalid URL
+				links.push(value.trim());
+			} catch {
+				errors.set(field, 'Please enter a valid URL');
+			}
+		}
+	}
+	
+	return { links, errors };
+}
+
+async function processAttachments(submissionId: number, files: Express.Multer.File[], links: string[]) {
+	const attachmentPromises: Promise<number>[] = [];
+
+	if (files && files.length > 0) {
+		for (const file of files) {
+			try {
+				const uploadedImages = await uploadProcessedPhoto(file.buffer, file.originalname, submissionId);
+				const photoKey = uploadedImages.original.key.replace('_original.jpg', '');
+				attachmentPromises.push(
+					db.createSubmissionAttachment(submissionId, 'photo', photoKey)
+				);
+				logger.info(`Photo attachment created for submission ${submissionId}: ${photoKey}`);
+			} catch (error) {
+				logger.error(`Failed to upload photo for submission ${submissionId}:`, error);
+				throw new Error('Failed to upload photo');
+			}
+		}
+	}
+
+	for (const link of links) {
+		if (link && link.trim()) {
+			attachmentPromises.push(
+				db.createSubmissionAttachment(submissionId, 'link', link.trim())
+			);
+			logger.info(`Link attachment created for submission ${submissionId}: ${link}`);
+		}
+	}
+
+	await Promise.all(attachmentPromises);
+}
+
 export const create = async (req: MulmRequest, res: Response) => {
 	const { viewer } = req;
 	if (!viewer) {
@@ -172,14 +253,37 @@ export const create = async (req: MulmRequest, res: Response) => {
 		return;
 	}
 
-	const { errors, form, draft} = parseAndValidateForm(req);
-
-	if (errors) {
+	const parseResult = parseAndValidateForm(req);
+	const { links, errors: linkErrors } = extractAndValidateLinks(req.body as { link1?: string; link2?: string; link3?: string; });
+	
+	if (parseResult.errors) {
+		// Combine form and link validation errors
+		const allErrors = new Map([...parseResult.errors, ...linkErrors]);
+		
 		const selectedType = getBodyString(req, 'species_type', 'Fish');
 		res.render('bapForm/form', {
 			title: getBapFormTitle(selectedType),
 			form: req.body as unknown,
-			errors,
+			errors: allErrors,
+			classOptions: getClassOptions(selectedType),
+			waterTypes,
+			speciesTypes,
+			foodTypes,
+			spawnLocations,
+			isLivestock: isLivestock(selectedType),
+			isAdmin: Boolean(viewer.is_admin),
+		});
+		return;
+	}
+	
+	const { form, draft } = parseResult;
+	
+	if (linkErrors.size > 0) {
+		const selectedType = getBodyString(req, 'species_type', 'Fish');
+		res.render('bapForm/form', {
+			title: getBapFormTitle(selectedType),
+			form: req.body as unknown,
+			errors: linkErrors,
 			classOptions: getClassOptions(selectedType),
 			waterTypes,
 			speciesTypes,
@@ -236,6 +340,16 @@ export const create = async (req: MulmRequest, res: Response) => {
 		await onSubmissionSend(sub, member!);
 	}
 
+	const files = req.files as Express.Multer.File[];
+	
+	try {
+		if (files?.length > 0 || links.length > 0) {
+			await processAttachments(subId, files || [], links);
+		}
+	} catch (error) {
+		logger.error(`Failed to process attachments for submission ${subId}:`, error);
+	}
+
 	res.render('submission/success', {
 		title: "Submission Complete",
 		member,
@@ -273,13 +387,37 @@ export const update = async (req: MulmRequest, res: Response) => {
 		return;
 	}
 
-	const { form, draft, errors } = parseAndValidateForm(req);
-	if (errors) {
+	const parseResult = parseAndValidateForm(req);
+	const { links, errors: linkErrors } = extractAndValidateLinks(req.body as { link1?: string; link2?: string; link3?: string; });
+	
+	if (parseResult.errors) {
+		// Combine form and link validation errors
+		const allErrors = new Map([...parseResult.errors, ...linkErrors]);
+		
 		const selectedType = getBodyString(req, "species_type", "Fish");
 		res.render('bapForm/form', {
 			title: `Edit ${getBapFormTitle(selectedType)}`,
 			form: req.body as unknown,
-			errors,
+			errors: allErrors,
+			classOptions: getClassOptions(selectedType),
+			waterTypes,
+			speciesTypes,
+			foodTypes,
+			spawnLocations,
+			isLivestock: isLivestock(selectedType),
+			isAdmin: Boolean(viewer.is_admin),
+		});
+		return;
+	}
+	
+	const { form, draft } = parseResult;
+	
+	if (linkErrors.size > 0) {
+		const selectedType = getBodyString(req, "species_type", "Fish");
+		res.render('bapForm/form', {
+			title: `Edit ${getBapFormTitle(selectedType)}`,
+			form: req.body as unknown,
+			errors: linkErrors,
 			classOptions: getClassOptions(selectedType),
 			waterTypes,
 			speciesTypes,
@@ -297,6 +435,16 @@ export const update = async (req: MulmRequest, res: Response) => {
 	const member = await getMember(submission.member_id);
 	if (!draft && sub && member) {
 		await onSubmissionSend(sub, member);
+	}
+
+	const files = req.files as Express.Multer.File[];
+	
+	try {
+		if (files?.length > 0 || links.length > 0) {
+			await processAttachments(submission.id, files || [], links);
+		}
+	} catch (error) {
+		logger.error(`Failed to process attachments for submission ${submission.id}:`, error);
 	}
 
 	res.render('submission/success', {
@@ -325,6 +473,22 @@ export const remove = async (req: MulmRequest, res: Response) => {
 			res.status(403).send();
 			return;
 		}
+	}
+
+	try {
+		const attachments = await db.deleteAllSubmissionAttachments(submission.id);
+		
+		for (const attachment of attachments) {
+			if (attachment.type === 'photo') {
+				try {
+					await deleteProcessedPhoto(attachment.handle);
+				} catch (error) {
+					logger.error(`Failed to delete photo ${attachment.handle}:`, error);
+				}
+			}
+		}
+	} catch (error) {
+		logger.error(`Failed to cleanup attachments for submission ${submission.id}:`, error);
 	}
 
 	await db.deleteSubmission(submission.id);

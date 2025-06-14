@@ -12,7 +12,9 @@ export interface Config {
   smtpSecure: boolean;
   s3AccessKeyId: string;
   s3Secret: string;
-  s3Url: string;
+	s3Url: string;
+	s3Bucket: string;
+	r2PublicUrl: string;
 }
 
 declare module "@/config.json" {

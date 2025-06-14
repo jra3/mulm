@@ -351,3 +351,61 @@ export async function approveSubmission(
 		throw new Error("Failed to update submission");
 	}
 }
+
+export type SubmissionAttachment = {
+	id: number;
+	submission_id: number;
+	type: 'photo' | 'link';
+	handle: string;
+	created_on: string;
+};
+
+export async function getSubmissionAttachments(submissionId: number): Promise<SubmissionAttachment[]> {
+	return query<SubmissionAttachment>(
+		'SELECT * FROM submission_attachments WHERE submission_id = ? ORDER BY created_on',
+		[submissionId]
+	);
+}
+
+export async function createSubmissionAttachment(
+	submissionId: number,
+	type: 'photo' | 'link',
+	handle: string
+): Promise<number> {
+	try {
+		const conn = writeConn;
+		const stmt = await conn.prepare(`
+			INSERT INTO submission_attachments (submission_id, type, handle)
+			VALUES (?, ?, ?)
+		`);
+		const result = await stmt.run(submissionId, type, handle);
+		return result.lastID as number;
+	} catch (err) {
+		logger.error('Failed to create submission attachment', err);
+		throw new Error('Failed to create submission attachment');
+	}
+}
+
+export async function deleteSubmissionAttachment(attachmentId: number): Promise<void> {
+	try {
+		const conn = writeConn;
+		const stmt = await conn.prepare('DELETE FROM submission_attachments WHERE id = ?');
+		await stmt.run(attachmentId);
+	} catch (err) {
+		logger.error('Failed to delete submission attachment', err);
+		throw new Error('Failed to delete submission attachment');
+	}
+}
+
+export async function deleteAllSubmissionAttachments(submissionId: number): Promise<SubmissionAttachment[]> {
+	try {
+		const attachments = await getSubmissionAttachments(submissionId);
+		const conn = writeConn;
+		const stmt = await conn.prepare('DELETE FROM submission_attachments WHERE submission_id = ?');
+		await stmt.run(submissionId);
+		return attachments;
+	} catch (err) {
+		logger.error('Failed to delete submission attachments', err);
+		throw new Error('Failed to delete submission attachments');
+	}
+}
