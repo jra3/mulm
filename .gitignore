@@ -6,7 +6,7 @@ dist/
 
 src/config.json
 src/config.production.json
-database.sqlite
+database.sqlite*
 public/index.css
 
 .\#*
