@@ -5,6 +5,7 @@ moduleAlias.addAlias("@", path.join(__dirname));
 import config from "@/config.json";
 import express from "express";
 import cookieParser from "cookie-parser";
+import multer from "multer";
 
 import * as account from "@/routes/account";
 import * as admin from "@/routes/admin";
@@ -30,6 +31,11 @@ app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "pug");
 
 app.use(express.static(path.join(__dirname, "../public")));
+
+const upload = multer({ 
+	storage: multer.memoryStorage(),
+	limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+});
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
