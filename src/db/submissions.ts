@@ -144,6 +144,8 @@ export function getSubmissionsByMember(
 		expr += ` AND approved_on IS NOT NULL`;
 	}
 
+	expr += ` ORDER BY submitted_on DESC`;
+
 	return query<Submission>(expr, [memberId]);
 }
 

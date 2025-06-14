@@ -1,61 +1,100 @@
 include header.pug
 
 - const stringCell = ['p-2', 'overflow-hidden', 'text-ellipsis', 'whitespace-nowrap', 'text-right', 'border-gray-800'];
-- const heading = ['p-2', 'overflow-hidden', 'text-ellipsis', 'whitespace-nowrap', 'text-left', 'sticky', 'top-0', 'text-left', 'font-bold', 'text-lg'];
+- const heading = ['p-2', 'overflow-hidden', 'text-ellipsis', 'whitespace-nowrap', 'text-center', 'sticky', 'top-0', 'font-bold', 'text-lg', 'cursor-pointer', 'select-none', 'hover:bg-gray-50'];
 
 mixin submissionTable(submissions, totalPoints)
-	table
+	.overflow-x-auto.flex.justify-center.w-full
+		table(data-sortable class="w-full")
 
-		thead
-			tr
-				th(class=heading) Class
-				th(class=heading) Common Name
-				th(class=heading) Latin Name
-				th(class=heading) Submitted On
-				th(class=heading) Species Points
-				th(class=heading) Total Points
-
-		tbody
-			each sub in submissions
+			thead
 				tr
-					td(class=stringCell)= sub.species_class
-					td(class=stringCell)
-						a.link(href=`/sub/${sub.id}`)= sub.species_common_name
-					td(class=stringCell)
-						a.link(href=`/sub/${sub.id}`)= sub.species_latin_name
-					- const dateString = sub.submitted_on && new Date(sub.submitted_on).toLocaleDateString();
-					td(class=stringCell)= dateString
-					td(class=stringCell)= sub.points || "Unapproved"
-					td(class=stringCell)= sub.total_points || "Unapproved"
+					th(class=heading) Class
+					th(class=heading) Common Name
+					th(class=heading) Latin Name
+					th(class=heading data-sort-method="date" data-sort-default) Submitted On
+					th(class=heading data-sort-method="number") Species Points
+					th(class=heading data-sort-method="number") Total Points
+
+			tbody
+				each sub in submissions
+					tr
+						td(class=stringCell)= sub.species_class
+						td(class=stringCell)
+							a.link(href=`/sub/${sub.id}`)= sub.species_common_name
+						td(class=stringCell)
+							a.link(href=`/sub/${sub.id}`)= sub.species_latin_name
+						- const dateString = sub.submitted_on && new Date(sub.submitted_on).toLocaleDateString();
+						td(class=stringCell)= dateString
+						td(class=stringCell)= sub.points || "Unapproved"
+						td(class=stringCell)= sub.total_points || "Unapproved"
+
 			if totalPoints > 0
-				tr.border-t-2.border-gray-800.font-bold
-					td(class=stringCell) Total:
-					td(class=stringCell)  
-					td(class=stringCell)  
-					td(class=stringCell)  
-					td(class=stringCell)  
-					td(class=stringCell)= totalPoints
+				tfoot
+					tr.border-t-2.border-gray-800.font-bold
+						td(class=stringCell) Total:
+						td(class=stringCell)  
+						td(class=stringCell)  
+						td(class=stringCell)  
+						td(class=stringCell)  
+						td(class=stringCell)= totalPoints
 
 doctype html
 html
 	+headTag(member.display_name)
+		style.
+			/* Tablesort styling */
+			th[role="columnheader"]:not(.no-sort) {
+				cursor: pointer;
+				user-select: none;
+			}
+			th[role="columnheader"]:not(.no-sort):hover {
+				background-color: rgba(0, 0, 0, 0.05);
+			}
+			th[role="columnheader"][aria-sort="ascending"]:after {
+				content: " ↑";
+				color: #3b82f6;
+				font-weight: bold;
+			}
+			th[role="columnheader"][aria-sort="descending"]:after {
+				content: " ↓";
+				color: #3b82f6;
+				font-weight: bold;
+			}
+			th[role="columnheader"]:not([aria-sort]):after {
+				content: " ↕";
+				color: #9ca3af;
+				opacity: 0.7;
+			}
+		script(src='/tablesort.min.js')
+		script(src='/tablesort.number.min.js')
+		script(src='/tablesort.date.min.js')
+		script.
+			document.addEventListener('DOMContentLoaded', function() {
+				const tables = document.querySelectorAll('table[data-sortable]');
+				tables.forEach(table => {
+					new Tablesort(table, {
+						descending: true // Default to descending for date (most recent first)
+					});
+				});
+			});
 
 	body.bg-white.text-gray-800
 		+pageHeader(isLoggedIn, member.display_name)
 		if fishSubs.length > 0
 			section.bg-gray-100
-				div.max-w-4xl.mx-auto.text-center.justify-center.px-4
+				div.w-full.text-center.px-4
 					h3(class="text-xl lg:text-4xl font-extrabold mb-4") Breeders Awards Submissions
 					+submissionTable(fishSubs, fishTotalPoints)
 
 		if plantSubs.length > 0
 			section.bg-gray-100
-				div.max-w-4xl.mx-auto.text-center.px-4
+				div.w-full.text-center.px-4
 					h3(class="text-xl lg:text-4xl font-extrabold mb-4") Horticultural Awards Submissions
 					+submissionTable(plantSubs, plantTotalPoints)
 
 		if coralSubs.length > 0
 			section.bg-gray-100
-				div.max-w-4xl.mx-auto.text-center.px-4
+				div.w-full.text-center.px-4
 					h3(class="text-xl lg:text-4xl font-extrabold mb-4") Coral Awards Submissions
 					+submissionTable(coralSubs, coralTotalPoints)
