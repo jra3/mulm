@@ -4,13 +4,18 @@ mixin supplementLine(type, regimen)
 			value=type
 			name="supplement_type"
 			type="text"
-			placeholder="Supplement")
+			placeholder="Supplement"
+			aria-label="Supplement name")
 
 		input.text-input(
 			value=regimen
 			name="supplement_regimen"
 			type="text"
-			placeholder="Dosing Instructions")
+			placeholder="Dosing Instructions"
+			aria-label="Dosing instructions")
 
 		button.destructive(
-			hx-on:click="this.closest('div').remove()") -
+			type="button"
+			hx-on:click="this.closest('div').remove()"
+			aria-label="Remove this supplement"
+			title="Remove this supplement from the list") -

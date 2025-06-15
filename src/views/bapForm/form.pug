@@ -112,13 +112,15 @@ mixin CRUDForm()
 					hx-target="closest body"
 					hx-swap="beforeend"
 					hx-get="/sidebar/saveTank"
-					aria-label="Save tank settings for reuse") Save
+					aria-label="Save tank settings for reuse"
+					title="Save your current tank settings to reuse in future submissions") Save
 				button.outline(
 					type="button"
 					hx-target="closest body"
 					hx-swap="beforeend"
 					hx-get="/sidebar/loadTank"
-					aria-label="Load previously saved tank settings") Load
+					aria-label="Load previously saved tank settings"
+					title="Load tank settings from your saved configurations") Load
 
 			div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")#tankSettings
 				include tank.pug
@@ -175,12 +177,13 @@ mixin CRUDForm()
 						hx-swap="beforeend"
 						hx-target="#supplements"
 						aria-label="Add another supplement"
+						title="Add another supplement to your regimen"
 					) Add +
 
 	section.bg-gray-100.py-4
 		div.flex.justify-center.max-w-4xl.mx-auto.text-center.gap-4
 			if form.submitted_on || editing
-				button.primary(class="w-2/5 max-w-200" type="submit") Save Edits
+				button.primary(class="w-2/5 max-w-200" type="submit" title="Save changes to your submission") Save Edits
 			else
-				button.primary(class="w-2/5 max-w-200" type="submit") Submit
-				button.outline(class="w-2/5 max-w-200" type="submit" name="draft" value="true") Save Draft
+				button.primary(class="w-2/5 max-w-200" type="submit" title="Submit your entry for review and approval") Submit
+				button.outline(class="w-2/5 max-w-200" type="submit" name="draft" value="true" title="Save your progress without submitting for review") Save Draft
