@@ -168,9 +168,9 @@ mixin CRUDForm()
 
 					div.py-4.w-full.flex-col#supplements
 						label.input-label Others
-						if !!form.supplementType
-							each type, index in form.supplementType
-								+supplementLine(type, form.supplementRegimen[index])
+						if !!form.supplement_type
+							each type, index in form.supplement_type
+								+supplementLine(type, form.supplement_regimen[index])
 						else
 							+supplementLine("", "")
 

@@ -139,13 +139,9 @@ export async function validateSubmission(req: MulmRequest, res: Response) {
 }
 
 function parseAndValidateForm(req: MulmRequest): {
-	form?: never;
-	draft?: never;
-	errors: Map<string, string>,
-} | {
 	form: FormValues,
-	draft: boolean
-	errors?: never;
+	draft: boolean,
+	errors?: Map<string, string>,
 } {
 	let draft = false;
 	let form: FormValues;
@@ -157,7 +153,7 @@ function parseAndValidateForm(req: MulmRequest): {
 		draft = true;
 	} else {
 		parsed = bapForm.safeParse(req.body);
-		form = parsed.data!;
+		form = extractValid(bapFields, req.body);
 	}
 
 	if (!parsed.success) {
@@ -166,7 +162,7 @@ function parseAndValidateForm(req: MulmRequest): {
 			errors.set(String(issue.path[0]), issue.message);
 		});
 
-		return { errors };
+		return { form, draft, errors };
 	}
 
 	form = { ...form, ...parsed.data };
@@ -180,13 +176,13 @@ export const create = async (req: MulmRequest, res: Response) => {
 		return;
 	}
 
-	const { errors, form, draft} = parseAndValidateForm(req);
+	const { form, draft, errors } = parseAndValidateForm(req);
 
 	if (errors) {
-		const selectedType = getBodyString(req, 'species_type', 'Fish');
+		const selectedType = form.species_type || 'Fish';
 		res.render('bapForm/form', {
 			title: getBapFormTitle(selectedType),
-			form: req.body as unknown,
+			form,
 			errors,
 			classOptions: getClassOptions(selectedType),
 			waterTypes,
@@ -287,10 +283,10 @@ export const update = async (req: MulmRequest, res: Response) => {
 
 	const { form, draft, errors } = parseAndValidateForm(req);
 	if (errors) {
-		const selectedType = getBodyString(req, "species_type", "Fish");
+		const selectedType = form.species_type || 'Fish';
 		res.render('bapForm/form', {
 			title: `Edit ${getBapFormTitle(selectedType)}`,
-			form: req.body as unknown,
+			form,
 			errors,
 			classOptions: getClassOptions(selectedType),
 			waterTypes,
