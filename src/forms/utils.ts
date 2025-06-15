@@ -1,7 +1,5 @@
 import * as z from "zod"
 
-export const isLivestock = (speciesType: string) => speciesType === "Fish" || speciesType === "Invert";
-
 export function validateFormResult<T> (
 	parsed: z.SafeParseReturnType<unknown, T>,
 	errors: Map<string, string>,

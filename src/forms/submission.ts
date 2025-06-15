@@ -4,6 +4,14 @@ import { multiSelect } from "./utils";
 
 export const isLivestock = (speciesType: string) => speciesType === "Fish" || speciesType === "Invert";
 
+export const hasFoods = (speciesType: string) => speciesType === "Fish" || speciesType === "Invert" || speciesType === "Coral";
+
+export const hasSpawnLocations = (speciesType: string) => speciesType === "Fish" || speciesType === "Invert";
+
+export const hasLighting = (speciesType: string) => speciesType === "Plant" || speciesType === "Coral";
+
+export const hasSupplements = (speciesType: string) => speciesType === "Plant" || speciesType === "Coral";
+
 export function getBapFormTitle(selectedType: string) {
 	switch (selectedType) {
 		default:
@@ -87,28 +95,28 @@ export const bapForm = bapFields.refine(
 	(data) => !isLivestock(data.species_type) || Boolean(data.count),
 	{ message: "Required", path: ["count"], }
 ).refine(
-	(data) => !isLivestock(data.species_type) || (data.foods ?? []).length > 0,
+	(data) => !hasFoods(data.species_type) || (data.foods ?? []).length > 0,
 	{ message: "Required", path: ["foods"], }
 ).refine(
-	(data) => !isLivestock(data.species_type) || (data.spawn_locations ?? []).length > 0,
+	(data) => !hasSpawnLocations(data.species_type) || (data.spawn_locations ?? []).length > 0,
 	{ message: "Required", path: ["spawn_locations"], }
 
 // Fields required only for plants / corals VVV
 
 ).refine(
-	(data) => isLivestock(data.species_type) || Boolean(data.propagation_method),
+	(data) => data.species_type === "Coral" || isLivestock(data.species_type) || Boolean(data.propagation_method),
 	{ message: "Required", path: ["propagation_method"], }
 ).refine(
-	(data) => isLivestock(data.species_type) || Boolean(data.light_type),
+	(data) => !hasLighting(data.species_type) || Boolean(data.light_type),
 	{ message: "Required", path: ["light_type"], }
 ).refine(
-	(data) => isLivestock(data.species_type) || Boolean(data.light_strength),
+	(data) => !hasLighting(data.species_type) || Boolean(data.light_strength),
 	{ message: "Required", path: ["light_strength"], }
 ).refine(
-	(data) => isLivestock(data.species_type) || Boolean(data.light_hours),
+	(data) => !hasLighting(data.species_type) || Boolean(data.light_hours),
 	{ message: "Required", path: ["light_hours"], }
 ).refine(
-	(data) => isLivestock(data.species_type) || data.co2 !== "yes" || Boolean(data.co2_description),
+	(data) => !hasSupplements(data.species_type) || data.co2 !== "yes" || Boolean(data.co2_description),
 	{ message: "Required", path: ["co2_description"], }
 )
 
@@ -121,6 +129,11 @@ export const foodTypes = [
 	"Vegetable",
 	"Gel",
 	"Insect",
+	"Phytoplankton",
+	"Zooplankton",
+	"Reef Roids",
+	"Coral Food",
+	"Amino Acids",
 ];
 
 export const spawnLocations = [

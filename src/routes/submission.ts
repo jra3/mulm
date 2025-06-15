@@ -1,6 +1,6 @@
 import { Response } from 'express';
-import { getBapFormTitle, getClassOptions, waterTypes, speciesTypes, foodTypes, spawnLocations, bapDraftForm, bapFields, bapForm, FormValues } from "@/forms/submission";
-import { extractValid, isLivestock } from "@/forms/utils";
+import { getBapFormTitle, getClassOptions, waterTypes, speciesTypes, foodTypes, spawnLocations, bapDraftForm, bapFields, bapForm, FormValues, hasFoods, hasSpawnLocations, hasLighting, hasSupplements, isLivestock } from "@/forms/submission";
+import { extractValid } from "@/forms/utils";
 import { getBodyString, getQueryString } from "@/utils/request";
 import { MulmRequest } from "@/sessions";
 import { MemberRecord, getMember, getMemberByEmail } from "@/db/members";
@@ -28,6 +28,10 @@ const { viewer } = req;
 		foodTypes,
 		spawnLocations,
 		isLivestock: isLivestock(selectedType),
+		hasFoods: hasFoods(selectedType),
+		hasSpawnLocations: hasSpawnLocations(selectedType),
+		hasLighting: hasLighting(selectedType),
+		hasSupplements: hasSupplements(selectedType),
 		isAdmin: Boolean(viewer?.is_admin),
 	});
 };
@@ -76,6 +80,10 @@ export const view = async (req: MulmRequest, res: Response) => {
 			foodTypes,
 			spawnLocations,
 			isLivestock: isLivestock(submission.species_type),
+			hasFoods: hasFoods(submission.species_type),
+			hasSpawnLocations: hasSpawnLocations(submission.species_type),
+			hasLighting: hasLighting(submission.species_type),
+			hasSupplements: hasSupplements(submission.species_type),
 			isAdmin: aspect.isAdmin,
 		});
 		return;
@@ -186,6 +194,10 @@ export const create = async (req: MulmRequest, res: Response) => {
 			foodTypes,
 			spawnLocations,
 			isLivestock: isLivestock(selectedType),
+			hasFoods: hasFoods(selectedType),
+			hasSpawnLocations: hasSpawnLocations(selectedType),
+			hasLighting: hasLighting(selectedType),
+			hasSupplements: hasSupplements(selectedType),
 			isAdmin: Boolean(viewer.is_admin),
 		});
 		return;
@@ -286,6 +298,10 @@ export const update = async (req: MulmRequest, res: Response) => {
 			foodTypes,
 			spawnLocations,
 			isLivestock: isLivestock(selectedType),
+			hasFoods: hasFoods(selectedType),
+			hasSpawnLocations: hasSpawnLocations(selectedType),
+			hasLighting: hasLighting(selectedType),
+			hasSupplements: hasSupplements(selectedType),
 			isAdmin: Boolean(viewer.is_admin),
 		});
 		return;

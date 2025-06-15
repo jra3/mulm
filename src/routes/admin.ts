@@ -9,9 +9,9 @@ import { Response, NextFunction } from "express";
 import { approveSubmission as approve } from "@/db/submissions";
 import { createAuthCode } from "@/db/auth";
 import { AuthCode, generateRandomCode } from "@/auth";
-import { isLivestock, validateFormResult } from "@/forms/utils";
+import { validateFormResult } from "@/forms/utils";
 import { validateSubmission } from "./submission";
-import { foodTypes, getClassOptions, spawnLocations, speciesTypes, waterTypes } from "@/forms/submission";
+import { isLivestock, foodTypes, getClassOptions, spawnLocations, speciesTypes, waterTypes } from "@/forms/submission";
 import { recordName } from "@/db/species";
 import { getBodyParam, getBodyString } from "@/utils/request";
 
@@ -250,7 +250,7 @@ export const inviteMember = async (req: MulmRequest, res: Response) => {
 
 export const approveSubmission = async (req: MulmRequest, res: Response) => {
 	const { viewer } = req;
-	
+
 	const id = getBodyParam(req, 'id') as number;
 	const submission = (await getSubmissionById(id))!;
 

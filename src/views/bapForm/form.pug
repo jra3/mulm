@@ -90,17 +90,19 @@ mixin CRUDForm()
 				if isLivestock
 					+bapTextInput("# of Fry", "count", "Zillions")
 
+				if hasFoods
 					+bapMultiSelectInput("Foods", "foods", "foods")
 						each food in foodTypes
 							- const selected = form.foods && form.foods.includes(food);
 							option(value=food selected=selected)= food
 
+				if hasSpawnLocations
 					+bapMultiSelectInput("Spawn Locations", "spawn_locations", "spawns")
 						each loc in spawnLocations
 							- const selected = form.spawn_locations && form.spawn_locations.includes(loc);
 							option(value=loc selected=selected)= loc
 
-				else
+				if !isLivestock
 					+bapTextInput("Propagation Method", "propagation_method", "Cuttings, Runners, Seed...")
 
 	section.bg-gray-100.py-4(aria-labelledby="tank-section")
@@ -125,7 +127,7 @@ mixin CRUDForm()
 
 			div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")#tankSettings
 				include tank.pug
-				if !isLivestock
+				if hasLighting
 					+bapTextInput("Lighting Type", "light_type", "LED, Sunlight, Ambient...")
 					+bapTextInput("Light Strength", "light_strength", "200W, 5 PAR...")
 					+bapTextInput("Light Hours", "light_hours", "16...")
@@ -135,7 +137,7 @@ mixin CRUDForm()
 				button.p-2.rounded-md(class="bg-black text-white") Save
 				button.p-2.rounded-md(class="bg-black text-white") Load
 
-	if !isLivestock
+	if hasSupplements
 		section.bg-gray-100.py-4(aria-labelledby="supplements-section")
 			div.max-w-4xl.mx-auto.text-left.px-4
 
