@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { getBapFormTitle, getClassOptions, waterTypes, speciesTypes, foodTypes, spawnLocations, bapDraftForm, bapFields, bapForm, FormValues, hasFoods, hasSpawnLocations, hasLighting, hasSupplements, isLivestock } from "@/forms/submission";
 import { extractValid } from "@/forms/utils";
-import { getBodyString, getQueryString } from "@/utils/request";
+import { getQueryString } from "@/utils/request";
 import { MulmRequest } from "@/sessions";
 import { MemberRecord, getMember, getMemberByEmail } from "@/db/members";
 import { onSubmissionSend } from "@/notifications";
@@ -50,6 +50,18 @@ export const view = async (req: MulmRequest, res: Response) => {
 		}
 		const date = new Date(time);
 		return date.toLocaleDateString();
+	}
+
+	const parseStringArray = (jsonString: string): string[] => {
+		try {
+			const parsed: unknown = JSON.parse(jsonString);
+			if (Array.isArray(parsed) && parsed.every(item => typeof item === 'string')) {
+				return parsed;
+			}
+		} catch {
+			// JSON parse failed, return empty array
+		}
+		return [];
 	}
 
 	let approver: MemberRecord | undefined;
@@ -113,8 +125,8 @@ export const view = async (req: MulmRequest, res: Response) => {
 			approved_on: local(submission.approved_on),
 			approved_by: approver?.display_name,
 
-			foods: (JSON.parse(submission.foods) as string[] ?? []).join(","),
-			spawn_locations: (JSON.parse(submission.spawn_locations) as string[] ?? []).join(","),
+			foods: parseStringArray(submission.foods).join(","),
+			spawn_locations: parseStringArray(submission.spawn_locations).join(","),
 		},
 		canonicalName,
 		name: nameGroup,
@@ -208,31 +220,17 @@ export const create = async (req: MulmRequest, res: Response) => {
 	}
 
 	const member = await getMemberByEmail(form.member_email!);
-	let memberId: number;
 
 	if (!member) {
-
-		/*
-
-		TODO implement me after better-auth
-
-		if (viewer.is_admin) {
-			// create a placeholder member
-			memberId = createMember(form.contact_email!, form.member_name!);
-			member = getMember(memberId)!;
-		} else {
-			res.status(403).send("User cannot submit for this member");
-			return;
-		}
-
-		*/
-
-	} else {
-		memberId = member.id;
+		res.status(400).send("No member found");
+		return;
 	}
 
+	const memberId = member.id;
+
+
 	// TODO figure out how to avoid read after write
-	const subId = await db.createSubmission(memberId!, form, !draft);
+	const subId = await db.createSubmission(memberId, form, !draft);
 	const sub = await db.getSubmissionById(subId);
 
 	if (!sub) {
@@ -241,7 +239,7 @@ export const create = async (req: MulmRequest, res: Response) => {
 	}
 
 	if (!draft) {
-		await onSubmissionSend(sub, member!);
+		await onSubmissionSend(sub, member);
 	}
 
 	res.render('submission/success', {
