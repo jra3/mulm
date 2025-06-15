@@ -3,7 +3,7 @@ mixin bapTextInput(labelText, name, placeholder, type="text")
 		label.input-label(for=name)
 			span= labelText
 			if errors.has(name)
-				span(class="font-extrabold text-red-400" role="alert")= ` ${errors.get(name)}`
+				span.text-red-600.font-extrabold(role="alert" id=`${name}-error`)= ` ${errors.get(name)}`
 
 		input.text-input(
 			id=name
@@ -16,8 +16,6 @@ mixin bapTextInput(labelText, name, placeholder, type="text")
 			aria-describedby=errors.has(name) ? `${name}-error` : undefined
 			aria-required=attributes.required !== false ? "true" : "false"
 			disabled=attributes.disabled)
-		if errors.has(name)
-			span.text-sm.text-red-600.mt-1(id=`${name}-error` role="alert")= errors.get(name)
 		if attributes.disabled
 			input.text-input(
 				value=form[name]
@@ -39,7 +37,7 @@ mixin bapMultiSelectInput(labelText, name, id)
 		label.input-label(for=name)
 			span= labelText
 			if errors.has(name)
-				span(class="font-extrabold text-red-400" role="alert")= ` ${errors.get(name)}`
+				span.text-red-600.font-extrabold(role="alert" id=`${name}-error`)= ` ${errors.get(name)}`
 
 		select.tom-select-multi(
 			id=id
@@ -51,8 +49,6 @@ mixin bapMultiSelectInput(labelText, name, id)
 			aria-describedby=errors.has(name) ? `${name}-error` : undefined
 			aria-required=attributes.required !== false ? "true" : "false")
 			block
-		if errors.has(name)
-			span.text-sm.text-red-600.mt-1(id=`${name}-error` role="alert")= errors.get(name)
 
 mixin bapTypeaheadInput(options = {})
 	- const name = options.name
@@ -84,7 +80,7 @@ mixin bapTypeaheadInput(options = {})
 		label.input-label(for=name)
 			span= label
 			if errors.has(name)
-				span(class="font-extrabold text-red-400" role="alert")= ` ${errors.get(name)}`
+				span.text-red-600.font-extrabold(role="alert" id=`${name}-error`)= ` ${errors.get(name)}`
 
 		select.tom-select-typeahead(
 			id=name
@@ -109,8 +105,6 @@ mixin bapTypeaheadInput(options = {})
 			aria-required=required !== false ? "true" : "false")
 			if form[name]
 				option(value=form[name] selected)= form[name]
-		if errors.has(name)
-			span.text-sm.text-red-600.mt-1(id=`${name}-error` role="alert")= errors.get(name)
 		if disabled
 			input.text-input(
 				value=form[name]
