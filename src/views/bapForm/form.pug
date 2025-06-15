@@ -11,9 +11,12 @@ mixin CRUDForm()
 			block
 
 +CRUDForm
-	section.bg-gray-100.py-4
+	.sr-only
+		h1 Breeding Award Submission Form
+		p Complete all required fields marked with a red asterisk. You can save your progress as a draft using the Save Draft button at the bottom of the form.
+	section.bg-gray-100.py-4(aria-labelledby="member-section")
 		div.max-w-4xl.mx-auto.text-left.px-4
-			h2(class="text-xl sm:text-2xl font-bold mb-4") Member Details
+			h2#member-section(class="text-xl sm:text-2xl font-bold mb-4") Member Details
 			div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
 				if isAdmin
 					+bapTypeaheadInput({
@@ -27,9 +30,9 @@ mixin CRUDForm()
 					+bapTextInput("Member Name", "member_name", "Jacques Cousteau")(disabled=true)
 				+bapTextInput("Member Email", "member_email", "deep@bluesea.net")(disabled=true)
 
-	section.bg-gray-100.py-4
+	section.bg-gray-100.py-4(aria-labelledby="species-section")
 		div.max-w-4xl.mx-auto.text-left.px-4
-			h2(class="text-xl sm:text-2xl font-bold mb-4") Species Details
+			h2#species-section(class="text-xl sm:text-2xl font-bold mb-4") Species Details
 
 			div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
 				+bapSimpleSelectInput("Water Type", "water_type")
@@ -37,18 +40,21 @@ mixin CRUDForm()
 						option(value=water, selected=water == form.water_type)= water
 
 				div.grid.gap-2
-					label.input-label Species Type
+					label.input-label(for="species_type") Species Type
 					.select-wrapper
-						select(
+						select#species_type(
 							name="species_type"
 							hx-get="/submit"
 							hx-include="closest form"
 							hx-swap="outerHTML"
 							hx-target="#bapForm"
 							hx-select="#bapForm"
-							hx-push-url="false")
+							hx-push-url="false"
+							aria-required="true"
+							aria-describedby="species-type-hint")
 							for speciesType in speciesTypes
 								option(value=speciesType, selected=speciesType == form.species_type)= speciesType
+					span#species-type-hint.sr-only Changing this will update the available fields
 
 				+bapSimpleSelectInput("Species Class", "species_class")
 					each option in classOptions
@@ -97,21 +103,22 @@ mixin CRUDForm()
 				else
 					+bapTextInput("Propagation Method", "propagation_method", "Cuttings, Runners, Seed...")
 
-	section.bg-gray-100.py-4
+	section.bg-gray-100.py-4(aria-labelledby="tank-section")
 		div.max-w-4xl.mx-auto.text-left.px-4
 			.flex.gap-2
-				h2(class="text-xl sm:text-2xl font-bold mb-4") Tank Details
-				if isSelf
-					button.primary(
-						type="button"
-						hx-target="closest body"
-						hx-swap="beforeend"
-						hx-get="/sidebar/saveTank") Save
-					button.outline(
-						type="button"
-						hx-target="closest body"
-						hx-swap="beforeend"
-						hx-get="/sidebar/loadTank") Load
+				h2#tank-section(class="text-xl sm:text-2xl font-bold mb-4") Tank Details
+				button.primary(
+					type="button"
+					hx-target="closest body"
+					hx-swap="beforeend"
+					hx-get="/sidebar/saveTank"
+					aria-label="Save tank settings for reuse") Save
+				button.outline(
+					type="button"
+					hx-target="closest body"
+					hx-swap="beforeend"
+					hx-get="/sidebar/loadTank"
+					aria-label="Load previously saved tank settings") Load
 
 			div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")#tankSettings
 				include tank.pug
@@ -126,10 +133,10 @@ mixin CRUDForm()
 				button.p-2.rounded-md(class="bg-black text-white") Load
 
 	if !isLivestock
-		section.bg-gray-100.py-4
+		section.bg-gray-100.py-4(aria-labelledby="supplements-section")
 			div.max-w-4xl.mx-auto.text-left.px-4
 
-				h2(class="text-xl sm:text-2xl font-bold mb-4") Supplements
+				h2#supplements-section(class="text-xl sm:text-2xl font-bold mb-4") Supplements
 
 				div.w-full.gap-2
 					- const hasCO2 = form.co2 === "yes";
@@ -137,18 +144,22 @@ mixin CRUDForm()
 						label.input-label(for="co2") CO2?
 						.select-wrapper
 							select(
+								id="co2"
 								value=form.co2
 								name="co2"
 								hx-trigger="change"
-								hx-on:change="document.getElementById('CO2Desc').classList.toggle('hidden', this.value === 'no')")
+								hx-on:change="document.getElementById('CO2Desc').classList.toggle('hidden', this.value === 'no')"
+								aria-controls="CO2Desc")
 								option(value="no", selected=!hasCO2) No
 								option(value="yes", selected=hasCO2) Yes
 
 					div#CO2Desc(class=`${hasCO2 ? "" : "hidden"}`)
 						textarea.text-input(
+							id="co2_description"
 							name="co2_description"
 							rows="4"
-							placeholder="Describe CO2 injection...")
+							placeholder="Describe CO2 injection..."
+							aria-label="CO2 injection description")
 
 					div.py-4.w-full.flex-col#supplements
 						label.input-label Others
@@ -159,9 +170,11 @@ mixin CRUDForm()
 							+supplementLine("", "")
 
 					button.outline(
+						type="button"
 						hx-get="/submit/addSupplement"
 						hx-swap="beforeend"
 						hx-target="#supplements"
+						aria-label="Add another supplement"
 					) Add +
 
 	section.bg-gray-100.py-4
