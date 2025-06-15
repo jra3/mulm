@@ -105,22 +105,23 @@ mixin CRUDForm()
 
 	section.bg-gray-100.py-4(aria-labelledby="tank-section")
 		div.max-w-4xl.mx-auto.text-left.px-4
-			.flex.gap-2
-				h2#tank-section(class="text-xl sm:text-2xl font-bold mb-4") Tank Details
-				button.primary(
-					type="button"
-					hx-target="closest body"
-					hx-swap="beforeend"
-					hx-get="/sidebar/saveTank"
-					aria-label="Save tank settings for reuse"
-					title="Save your current tank settings to reuse in future submissions") Save
-				button.outline(
-					type="button"
-					hx-target="closest body"
-					hx-swap="beforeend"
-					hx-get="/sidebar/loadTank"
-					aria-label="Load previously saved tank settings"
-					title="Load tank settings from your saved configurations") Load
+			.flex.justify-between.items-center.mb-4
+				h2#tank-section(class="text-xl sm:text-2xl font-bold") Tank Details
+				.flex.gap-2
+					button.primary(
+						type="button"
+						hx-target="closest body"
+						hx-swap="beforeend"
+						hx-get="/sidebar/saveTank"
+						aria-label="Save tank settings for reuse"
+						title="Save your current tank settings to reuse in future submissions") Save
+					button.outline(
+						type="button"
+						hx-target="closest body"
+						hx-swap="beforeend"
+						hx-get="/sidebar/loadTank"
+						aria-label="Load previously saved tank settings"
+						title="Load tank settings from your saved configurations") Load
 
 			div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")#tankSettings
 				include tank.pug
