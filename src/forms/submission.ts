@@ -85,31 +85,31 @@ export const bapDraftForm = bapFields.pick({
 
 export const bapForm = bapFields.refine(
 	(data) => !isLivestock(data.species_type) || Boolean(data.count),
-	{ message: "Requied", path: ["count"], }
+	{ message: "Required", path: ["count"], }
 ).refine(
 	(data) => !isLivestock(data.species_type) || (data.foods ?? []).length > 0,
-	{ message: "Requied", path: ["foods"], }
+	{ message: "Required", path: ["foods"], }
 ).refine(
 	(data) => !isLivestock(data.species_type) || (data.spawn_locations ?? []).length > 0,
-	{ message: "Requied", path: ["spawn_locations"], }
+	{ message: "Required", path: ["spawn_locations"], }
 
 // Fields required only for plants / corals VVV
 
 ).refine(
 	(data) => isLivestock(data.species_type) || Boolean(data.propagation_method),
-	{ message: "Requied", path: ["propagation_method"], }
+	{ message: "Required", path: ["propagation_method"], }
 ).refine(
 	(data) => isLivestock(data.species_type) || Boolean(data.light_type),
-	{ message: "Requied", path: ["light_type"], }
+	{ message: "Required", path: ["light_type"], }
 ).refine(
 	(data) => isLivestock(data.species_type) || Boolean(data.light_strength),
-	{ message: "Requied", path: ["light_strength"], }
+	{ message: "Required", path: ["light_strength"], }
 ).refine(
 	(data) => isLivestock(data.species_type) || Boolean(data.light_hours),
-	{ message: "Requied", path: ["light_hours"], }
+	{ message: "Required", path: ["light_hours"], }
 ).refine(
 	(data) => isLivestock(data.species_type) || data.co2 !== "yes" || Boolean(data.co2_description),
-	{ message: "Requied", path: ["co2_description"], }
+	{ message: "Required", path: ["co2_description"], }
 )
 
 export const foodTypes = [

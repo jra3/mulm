@@ -1,8 +1,9 @@
 mixin bapTextInput(labelText, name, placeholder, type="text")
 	.flex.flex-col.gap-2
-		label.input-label(for=name)= labelText
+		label.input-label(for=name)
+			span= labelText
 			if errors.has(name)
-				span(class="font-extrabold text-red-400")= ` ${errors.get(name)}`
+				span(class="font-extrabold text-red-400" role="alert")= ` ${errors.get(name)}`
 
 		input.text-input(
 			id=name
@@ -11,7 +12,12 @@ mixin bapTextInput(labelText, name, placeholder, type="text")
 			type=type
 			placeholder=placeholder
 			class=errors.has(name) ? "error" : ""
+			aria-invalid=errors.has(name) ? "true" : "false"
+			aria-describedby=errors.has(name) ? `${name}-error` : undefined
+			aria-required=attributes.required !== false ? "true" : "false"
 			disabled=attributes.disabled)
+		if errors.has(name)
+			span.text-sm.text-red-600.mt-1(id=`${name}-error` role="alert")= errors.get(name)
 		if attributes.disabled
 			input.text-input(
 				value=form[name]
@@ -21,25 +27,32 @@ mixin bapTextInput(labelText, name, placeholder, type="text")
 
 mixin bapSimpleSelectInput(labelText, name)
 	.flex.flex-col.gap-2
-		label.input-label(for=name)= labelText
+		label.input-label(for=name)
+			span= labelText
 		.select-wrapper
-			select(name=name)
+			select(name=name id=name aria-required=attributes.required !== false ? "true" : "false")
 				block
 
 
 mixin bapMultiSelectInput(labelText, name, id)
 	.flex.flex-col.gap-2
-		label.input-label(for=name)= labelText
+		label.input-label(for=name)
+			span= labelText
 			if errors.has(name)
-				span(class="font-extrabold text-red-400")= ` ${errors.get(name)}`
+				span(class="font-extrabold text-red-400" role="alert")= ` ${errors.get(name)}`
 
 		select.tom-select-multi(
 			id=id
 			name=name
 			multiple
 			value=form[name]
-			class=errors.has(name) ? "error" : "")
+			class=errors.has(name) ? "error" : ""
+			aria-invalid=errors.has(name) ? "true" : "false"
+			aria-describedby=errors.has(name) ? `${name}-error` : undefined
+			aria-required=attributes.required !== false ? "true" : "false")
 			block
+		if errors.has(name)
+			span.text-sm.text-red-600.mt-1(id=`${name}-error` role="alert")= errors.get(name)
 
 mixin bapTypeaheadInput(options = {})
 	- const name = options.name
@@ -68,9 +81,10 @@ mixin bapTypeaheadInput(options = {})
 	- const finalValue = (form && form[name]) || value;
 
 	.flex.flex-col.gap-2
-		label.input-label(for=name)= label
+		label.input-label(for=name)
+			span= label
 			if errors.has(name)
-				span(class="font-extrabold text-red-400")= ` ${errors.get(name)}`
+				span(class="font-extrabold text-red-400" role="alert")= ` ${errors.get(name)}`
 
 		select.tom-select-typeahead(
 			id=name
@@ -89,9 +103,14 @@ mixin bapTypeaheadInput(options = {})
 			data-create-on-blur=createOnBlur ? 'true' : 'false'
 			autocomplete="off"
 			required=required
-			disabled=disabled)
+			disabled=disabled
+			aria-invalid=errors.has(name) ? "true" : "false"
+			aria-describedby=errors.has(name) ? `${name}-error` : undefined
+			aria-required=required !== false ? "true" : "false")
 			if form[name]
 				option(value=form[name] selected)= form[name]
+		if errors.has(name)
+			span.text-sm.text-red-600.mt-1(id=`${name}-error` role="alert")= errors.get(name)
 		if disabled
 			input.text-input(
 				value=form[name]
