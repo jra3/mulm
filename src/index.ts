@@ -33,7 +33,7 @@ app.set("view engine", "pug");
 app.use(express.static(path.join(__dirname, "../public")));
 
 // Multer configuration for file uploads (used in feature branch)
-// const upload = multer({ 
+// const upload = multer({
 // 	storage: multer.memoryStorage(),
 // 	limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 // });
@@ -70,7 +70,9 @@ router.get("/", async (req: MulmRequest, res) => {
 	let approvalsCount = 0;
 	if (isAdmin) {
 		const counts = await getOutstandingSubmissionsCounts();
-		Object.entries(counts).forEach(([program, count]) => {
+		["coral", "plant", "fish"].forEach((program) => {
+			console.log(`Program: ${program}, Count: ${counts[program]}`);
+			const count = counts[program];
 			if (count > 0) {
 				approvalsProgram = program;
 				approvalsCount += count;
