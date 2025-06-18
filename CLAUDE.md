@@ -28,11 +28,12 @@ We use a `withTransaction` wrapper pattern for database operations. The try/catc
 
 ## Development Commands
 ```bash
-npm run dev         # Start development server with hot reload
-npm run build       # Build TypeScript and assets
+npm run dev        # Start development server with hot reload
+npm run build      # Build TypeScript and assets
 npm test           # Run Jest tests
 npm run lint       # Run ESLint
 npm run lint:fix   # Fix ESLint issues
+num run script     # runs something with ts-node
 ```
 
 ## Common Patterns
