@@ -190,3 +190,45 @@ select {
 .tom-select-typeahead.custom-typeahead .ts-dropdown {
 	@apply border-purple-300 shadow-lg;
 }
+
+/* Tablesort styling */
+table[data-sortable] th:not(.no-sort),
+th[role="columnheader"]:not(.no-sort) {
+	cursor: pointer;
+	user-select: none;
+}
+
+table[data-sortable] th:not(.no-sort):hover,
+th[role="columnheader"]:not(.no-sort):hover {
+	background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Ensure non-sortable columns don't show sort indicators or cursor */
+table[data-sortable] th[data-sort-method="none"] {
+	cursor: default !important;
+}
+
+table[data-sortable] th[data-sort-method="none"]:after {
+	display: none !important;
+}
+
+table[data-sortable] th[aria-sort="ascending"]:after,
+th[role="columnheader"][aria-sort="ascending"]:after {
+	content: " ↑";
+	color: #3b82f6;
+	font-weight: bold;
+}
+
+table[data-sortable] th[aria-sort="descending"]:after,
+th[role="columnheader"][aria-sort="descending"]:after {
+	content: " ↓";
+	color: #3b82f6;
+	font-weight: bold;
+}
+
+table[data-sortable] th:not([aria-sort]):not(.no-sort):after,
+th[role="columnheader"]:not([aria-sort]):after {
+	content: " ↕";
+	color: #9ca3af;
+	opacity: 0.7;
+}
