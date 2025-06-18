@@ -15,6 +15,7 @@ import { isLivestock, foodTypes, getClassOptions, spawnLocations, speciesTypes, 
 import { recordName } from "@/db/species";
 import { getBodyParam, getBodyString } from "@/utils/request";
 import { checkAndUpdateMemberLevel, checkAllMemberLevels, Program } from "@/levelManager";
+import { checkAndGrantSpecialtyAwards, checkAllSpecialtyAwards } from "@/specialtyAwardManager";
 
 export function requireAdmin(
 	req: MulmRequest,
@@ -302,9 +303,12 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
 						member.id, 
 						updatedSubmission.program as Program
 					);
+					
+					// Check for specialty awards after approval
+					await checkAndGrantSpecialtyAwards(member.id);
 				} catch (error) {
 					// Log error but don't fail the approval process
-					console.error('Error checking level upgrade:', error);
+					console.error('Error checking level upgrade and specialty awards:', error);
 				}
 			}
 		}
@@ -346,4 +350,30 @@ export const checkMemberLevels = async (req: MulmRequest, res: Response) => {
 	}
 }
 
+export const checkMemberSpecialtyAwards = async (req: MulmRequest, res: Response) => {
+	const memberId = parseInt(req.params.memberId);
+	if (!memberId) {
+		res.status(400).json({ error: 'Invalid member ID' });
+		return;
+	}
+
+	try {
+		const newAwards = await checkAllSpecialtyAwards(memberId);
+		
+		res.json({
+			success: true,
+			memberId,
+			newAwards,
+			totalNewAwards: newAwards.length,
+			message: newAwards.length > 0 
+				? `Granted ${newAwards.length} new specialty award(s) for member ${memberId}: ${newAwards.join(', ')}`
+				: `No new specialty awards for member ${memberId}`
+		});
+	} catch (error) {
+		res.status(500).json({ 
+			error: 'Failed to check member specialty awards',
+			details: error instanceof Error ? error.message : 'Unknown error'
+		});
+	}
+}
 

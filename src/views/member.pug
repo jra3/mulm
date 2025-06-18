@@ -58,6 +58,30 @@ html
 
 	body.bg-white.text-gray-800
 		+pageHeader(isLoggedIn, member.display_name)
+		
+		if member.awards && member.awards.length > 0
+			section.bg-blue-50.py-8
+				div(class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8")
+					h3(class="text-xl lg:text-3xl font-extrabold text-center mb-6 text-blue-900") Specialty Awards
+					div(class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4")
+						each award in member.awards
+							- const isHighLevelAward = award.award_name.includes('Specialist Award');
+							if isHighLevelAward
+								div(class="bg-gradient-to-r from-yellow-50 to-amber-50 rounded-lg shadow-lg p-6 border-l-4 border-amber-500")
+									div(class="flex items-center justify-between")
+										div
+											h4(class="font-bold text-amber-900 text-lg")= award.award_name
+											div(class="text-sm text-amber-700 mt-1") Achieved through expertise across multiple species groups
+										div(class="text-sm text-amber-600")
+											- const awardDate = new Date(award.date_awarded).toLocaleDateString();
+											= awardDate
+							else
+								div(class="bg-white rounded-lg shadow-md p-4 border-l-4 border-blue-500")
+									div(class="flex items-center justify-between")
+										h4(class="font-semibold text-gray-800")= award.award_name
+										div(class="text-sm text-gray-500")
+											- const awardDate = new Date(award.date_awarded).toLocaleDateString();
+											= awardDate
 		if fishSubs.length > 0
 			section.bg-gray-100
 				div.w-full.text-center.px-4
