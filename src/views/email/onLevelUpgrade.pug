@@ -1,0 +1,39 @@
+p= `Hi ${member.display_name}`
+p
+	| Congratulations! You've achieved a new level in the&nbsp;
+	if program === 'fish'
+		| Breeder Awards Program (BAP)
+	else if program === 'plant'
+		| Horticultural Awards Program (HAP)  
+	else if program === 'coral'
+		| Coral Awards Program (CAP)
+	else
+		= program + ' Program'
+	| !
+
+p
+	| You are now a&nbsp;
+	strong= newLevel
+	| ! This achievement recognizes your dedication and success in&nbsp;
+	if program === 'fish' || program === 'invert'
+		| breeding aquatic species
+	else if program === 'plant'
+		| aquatic horticulture
+	else if program === 'coral'
+		| coral propagation
+	else
+		= program + ' activities'
+	| .
+
+if totalPoints
+	p Your current point total: #{totalPoints} points
+
+p
+	| Keep up the excellent work! You can view your&nbsp;
+	a(href=`https://${domain}/me`) submission history and achievements
+	|  in your member dashboard.
+
+p
+	| Congratulations again on this milestone!
+	br
+	| – The BASNY BAP Team

@@ -115,3 +115,33 @@ export async function sendInviteEmail(email: string, display_name: string, code:
 		}),
 	});
 }
+
+const renderLevelUpgrade = pug.compileFile("src/views/email/onLevelUpgrade.pug");
+import type { Program } from "./levelManager";
+
+export async function onLevelUpgrade(
+	member: MemberRecord,
+	program: Program,
+	newLevel: string,
+	totalPoints?: number,
+) {
+	const programNames = {
+		fish: 'Breeder Awards Program (BAP)',
+		plant: 'Horticultural Awards Program (HAP)', 
+		coral: 'Coral Awards Program (CAP)',
+	};
+
+	return transporter.sendMail({
+		from: fromEmail,
+		to: member.contact_email,
+		bcc: DEBUG_EMAIL,
+		subject: `Congratulations! New ${programNames[program]} Level: ${newLevel}`,
+		html: renderLevelUpgrade({
+			domain: config.domain,
+			member,
+			program,
+			newLevel,
+			totalPoints,
+		}),
+	});
+}

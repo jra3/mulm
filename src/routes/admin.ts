@@ -14,6 +14,7 @@ import { validateSubmission } from "./submission";
 import { isLivestock, foodTypes, getClassOptions, spawnLocations, speciesTypes, waterTypes } from "@/forms/submission";
 import { recordName } from "@/db/species";
 import { getBodyParam, getBodyString } from "@/utils/request";
+import { checkAndUpdateMemberLevel, checkAllMemberLevels, Program } from "@/levelManager";
 
 export function requireAdmin(
 	req: MulmRequest,
@@ -293,10 +294,56 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
 		const updatedSubmission = await getSubmissionById(id);
 		if (updatedSubmission) {
 			await onSubmissionApprove(updatedSubmission, member);
+			
+			// Check for level upgrades after approval
+			if (updatedSubmission.program) {
+				try {
+					await checkAndUpdateMemberLevel(
+						member.id, 
+						updatedSubmission.program as Program
+					);
+				} catch (error) {
+					// Log error but don't fail the approval process
+					console.error('Error checking level upgrade:', error);
+				}
+			}
 		}
 	}
 
 	res.set('HX-Redirect', '/admin/queue').send();
+}
+
+export const checkMemberLevels = async (req: MulmRequest, res: Response) => {
+	const memberId = parseInt(req.params.memberId);
+	if (!memberId) {
+		res.status(400).json({ error: 'Invalid member ID' });
+		return;
+	}
+
+	try {
+		const results = await checkAllMemberLevels(memberId);
+		const levelChanges = Object.entries(results)
+			.filter(([, result]) => result.levelChanged)
+			.map(([program, result]) => ({
+				program,
+				oldLevel: result.oldLevel,
+				newLevel: result.newLevel
+			}));
+
+		res.json({
+			success: true,
+			memberId,
+			levelChanges,
+			message: levelChanges.length > 0 
+				? `Updated ${levelChanges.length} level(s) for member ${memberId}`
+				: `No level changes needed for member ${memberId}`
+		});
+	} catch (error) {
+		res.status(500).json({ 
+			error: 'Failed to check member levels',
+			details: error instanceof Error ? error.message : 'Unknown error'
+		});
+	}
 }
 
 
