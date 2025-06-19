@@ -135,6 +135,7 @@ router.get("/admin/edit{/:subId}", admin.requireAdmin, admin.viewEditSubmission)
 
 router.get("/admin/members", admin.requireAdmin, admin.viewMembers);
 router.get("/admin/members/edit/:memberId", admin.requireAdmin, admin.viewMemberUpdate)
+router.get("/admin/members/:memberId/row", admin.requireAdmin, admin.viewMemberRow);
 router.patch("/admin/members/edit/:memberId", admin.requireAdmin, admin.updateMemberFields);
 router.post("/admin/members/:memberId/check-levels", admin.requireAdmin, admin.checkMemberLevels);
 router.post("/admin/members/:memberId/check-specialty-awards", admin.requireAdmin, admin.checkMemberSpecialtyAwards);

@@ -1,49 +1,53 @@
-tr.contents
+tr(class="bg-blue-50")
+	- const stringCell = ['p-3', 'text-left', 'border-b', 'border-gray-200'];
+	- const numberCell = ['p-3', 'text-right', 'border-b', 'border-gray-200'];
+	- const centerCell = ['p-3', 'text-center', 'border-b', 'border-gray-200'];
 
-	td.cell.text-center
-		.flex.gap-2.items-center
+	td(class=numberCell)
+		.flex.gap-2.items-center.justify-end
 			form(
 				hx-target="closest tr"
 				hx-swap="outerHTML"
 				hx-include="closest tr"
 				hx-patch=`/admin/members/edit/${member.id}`
 				hx-trigger="submit")
-				button.primary(type="submit") Save
-			.div.hidden
-				button.outline(type="submit") Cancel
-				button.destructive(type="submit") Delete
-			form(hx-swap="outerHTML" hx-include="closest tr" hx-post=`/admin/invite`)
-				button.outline(type="submit") Reinvite
+				button(type="submit" class="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700") Save
+			button(
+				hx-target="closest tr"
+				hx-swap="outerHTML"
+				hx-get=`/admin/members/${member.id}/row`
+				class="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600") Cancel
 
-	td.cell.text-center
+	td(class=centerCell)
 		input(
 			checked=member.is_admin == 1
 			name="is_admin"
-			type="checkbox")
+			type="checkbox"
+			class="w-4 h-4")
 
-	td.cell
-		input.text-input(name="display_name" value=member.display_name)
+	td(class=stringCell)
+		input(name="display_name" value=member.display_name class="w-full px-2 py-1 border rounded")
 
-	td.cell
-		input.text-input(name="contact_email" value=member.contact_email)
+	td(class=stringCell)
+		input(name="contact_email" value=member.contact_email class="w-full px-2 py-1 border rounded")
 
-	td.cell
-		.select-wrapper
-			select.max-w-80(name="fish_level")
-				for level in fishLevels
-					- const selected = level === member.fish_level;
-					option(value=level, selected=selected)= level
+	td(class=stringCell)
+		select(name="fish_level" class="w-full px-2 py-1 border rounded")
+			option(value="") (none)
+			for level in fishLevels
+				- const selected = level === member.fish_level;
+				option(value=level, selected=selected)= level
 
-	td.cell
-		.select-wrapper
-			select.max-w-80(name="plant_level")
-				for level in plantLevels
-					- const selected = level === member.plant_level;
-					option(value=level, selected=selected)= level
+	td(class=stringCell)
+		select(name="plant_level" class="w-full px-2 py-1 border rounded")
+			option(value="") (none)
+			for level in plantLevels
+				- const selected = level === member.plant_level;
+				option(value=level, selected=selected)= level
 
-	td.cell
-		.select-wrapper
-			select.max-w-80(name="coral_level")
-				for level in coralLevels
-					- const selected = level === member.coral_level;
-					option(value=level, selected=selected)= level
+	td(class=stringCell)
+		select(name="coral_level" class="w-full px-2 py-1 border rounded")
+			option(value="") (none)
+			for level in coralLevels
+				- const selected = level === member.coral_level;
+				option(value=level, selected=selected)= level

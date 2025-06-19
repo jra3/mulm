@@ -1,16 +1,19 @@
 mixin memberRow(member)
-	tr.contents(
+	- const stringCell = ['p-3', 'text-left', 'border-b', 'border-gray-200'];
+	- const numberCell = ['p-3', 'text-right', 'border-b', 'border-gray-200'];
+	- const centerCell = ['p-3', 'text-center', 'border-b', 'border-gray-200'];
+	tr(class="hover:bg-gray-50 cursor-pointer"
 		hx-target="closest tr"
 		hx-swap="outerHTML"
 		hx-get=`/admin/members/edit/${member.id}`)
 
-		td.cell.text-center(class=stringCell)= member.id
-		td.cell.text-center(class=stringCell)
+		td(class=numberCell)= member.id
+		td(class=centerCell)
 			input(disabled checked=member.is_admin == 1 type="checkbox")
 
-		td.cell(class=stringCell)
+		td(class=stringCell)
 			a.link(href=`/member/${member.id}`)= member.display_name
-		td.cell(class=stringCell)= member.contact_email
-		td.cell(class=stringCell)= member.fish_level
-		td.cell(class=stringCell)= member.plant_level
-		td.cell(class=stringCell)= member.coral_level
+		td(class=stringCell)= member.contact_email
+		td(class=stringCell)= member.fish_level || ''
+		td(class=stringCell)= member.plant_level || ''
+		td(class=stringCell)= member.coral_level || ''

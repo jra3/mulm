@@ -1,25 +1,43 @@
 include memberRow
 include ../header.pug
 
+- const stringCell = ['p-3', 'text-left', 'border-b', 'border-gray-200'];
+- const heading = ['p-3', 'text-left', 'font-bold', 'text-gray-900', 'border-b-2', 'border-gray-300', 'bg-gray-50', 'cursor-pointer', 'select-none', 'hover:bg-gray-100'];
+- const numberHeading = ['p-3', 'text-right', 'font-bold', 'text-gray-900', 'border-b-2', 'border-gray-300', 'bg-gray-50', 'cursor-pointer', 'select-none', 'hover:bg-gray-100'];
+
+mixin membersTable(members)
+	.overflow-x-auto.w-full
+		table#adminMembers(data-sortable class="w-full bg-white shadow-sm rounded-lg")
+			thead
+				tr
+					th(class=numberHeading data-sort-method="number") ID
+					th(class=heading) Admin
+					th(class=heading) Name
+					th(class=heading) Email
+					th(class=heading) Fish
+					th(class=heading) Plant
+					th(class=heading) Coral
+
+			tbody
+				each member in members
+					+memberRow(member)
+
 doctype html
 html
-	+headTag
+	+headTag(title)
+		script(src='/tablesort.min.js')
+		script(src='/tablesort.number.min.js')
+		script.
+			document.addEventListener('DOMContentLoaded', function() {
+				const tables = document.querySelectorAll('table[data-sortable]');
+				tables.forEach(table => {
+					new Tablesort(table);
+				});
+			});
 
 	body.bg-white.text-gray-800
 		+pageHeader(true, title)
 
-		section.bg-gray-100
-			table.data-table#adminMembers
-				thead.contents
-					tr.contents
-						th.cell(class=heading) ID
-						th.cell(class=heading) Admin
-						th.cell(class=heading) Name
-						th.cell(class=heading) Email
-						th.cell(class=heading) Fish
-						th.cell(class=heading) Plant
-						th.cell(class=heading) Coral
-
-				tbody.contents
-					each member in members
-						+memberRow(member)
+		section.bg-gray-100.py-8
+			div(class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8")
+				+membersTable(members)

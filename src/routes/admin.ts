@@ -90,6 +90,18 @@ export const viewMemberUpdate = async (req: MulmRequest, res: Response) => {
 	});
 }
 
+export const viewMemberRow = async (req: MulmRequest, res: Response) => {
+	const { memberId } = req.params;
+	const id = parseInt(memberId);
+	if (isNaN(id)) {
+		res.status(422).send("Invalid member ID");
+		return;
+	}
+	const member = await getMember(id);
+	
+	res.render("admin/singleMemberRow", { member });
+}
+
 export const updateMemberFields = async (req: MulmRequest, res: Response) => {
 	const { memberId } = req.params;
 	const id = parseInt(memberId);
