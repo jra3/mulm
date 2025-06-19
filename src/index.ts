@@ -71,7 +71,6 @@ router.get("/", async (req: MulmRequest, res) => {
 	if (isAdmin) {
 		const counts = await getOutstandingSubmissionsCounts();
 		["coral", "plant", "fish"].forEach((program) => {
-			console.log(`Program: ${program}, Count: ${counts[program]}`);
 			const count = counts[program];
 			if (count > 0) {
 				approvalsProgram = program;
