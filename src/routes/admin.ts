@@ -105,7 +105,7 @@ export const updateMemberFields = async (req: MulmRequest, res: Response) => {
 		is_admin: parsed.is_admin !== undefined ? 1 : 0,
 	});
 	// TODO can we get the result after the update instead of querying?
-	const member = getMember(id);
+	const member = await getMember(id);
 
 	res.render("admin/singleMemberRow", { member });
 }
