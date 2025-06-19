@@ -31,23 +31,11 @@ tr(class="bg-blue-50")
 	td(class=stringCell)
 		input(name="contact_email" value=member.contact_email class="w-full px-2 py-1 border rounded")
 
-	td(class=stringCell)
-		select(name="fish_level" class="w-full px-2 py-1 border rounded")
-			option(value="") (none)
-			for level in fishLevels
-				- const selected = level === member.fish_level;
-				option(value=level, selected=selected)= level
+	td(class=numberCell)
+		span(class="text-gray-600" title=`Level: ${member.fish_level || 'None'}`)= member.fishTotalPoints || 0
 
-	td(class=stringCell)
-		select(name="plant_level" class="w-full px-2 py-1 border rounded")
-			option(value="") (none)
-			for level in plantLevels
-				- const selected = level === member.plant_level;
-				option(value=level, selected=selected)= level
+	td(class=numberCell)
+		span(class="text-gray-600" title=`Level: ${member.plant_level || 'None'}`)= member.plantTotalPoints || 0
 
-	td(class=stringCell)
-		select(name="coral_level" class="w-full px-2 py-1 border rounded")
-			option(value="") (none)
-			for level in coralLevels
-				- const selected = level === member.coral_level;
-				option(value=level, selected=selected)= level
+	td(class=numberCell)
+		span(class="text-gray-600" title=`Level: ${member.coral_level || 'None'}`)= member.coralTotalPoints || 0

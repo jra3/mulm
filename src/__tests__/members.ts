@@ -1,12 +1,15 @@
 import fs from 'fs';
-import { createMember, getGoogleAccount, getMember, getMemberByEmail, getMembersList } from "../db/members";
+import { createMember, getGoogleAccount, getMember, getMemberByEmail, getMembersList, getRosterWithPoints } from "../db/members";
+import { createSubmission, approveSubmission } from "../db/submissions";
 import { getErrorMessage } from '../utils/error';
 import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
 import { overrideConnection } from "../db/conn";
 
 beforeAll(() => {
-	fs.mkdirSync("/tmp/mulm");
+	if (!fs.existsSync("/tmp/mulm")) {
+		fs.mkdirSync("/tmp/mulm");
+	}
 });
 
 let instance = 1;
@@ -79,4 +82,315 @@ test('Create with google COLLISION', async () => {
 		expect(getErrorMessage(err)).toEqual("Failed to create member");
 	}
 	expect((await getMembersList()).length).toEqual(2);
+})
+
+describe('getRosterWithPoints', () => {
+	test('returns empty roster when no members exist', async () => {
+		const roster = await getRosterWithPoints();
+		expect(roster).toEqual([]);
+	});
+
+	test('returns members with zero points when no submissions exist', async () => {
+		const member1Id = await createMember("fish@test.com", "Fish Keeper");
+		const member2Id = await createMember("plant@test.com", "Plant Grower");
+		
+		const roster = await getRosterWithPoints();
+		expect(roster).toHaveLength(2);
+		
+		const member1 = roster.find(m => m.id === member1Id);
+		const member2 = roster.find(m => m.id === member2Id);
+		
+		expect(member1).toMatchObject({
+			display_name: "Fish Keeper",
+			contact_email: "fish@test.com",
+			fishTotalPoints: 0,
+			plantTotalPoints: 0,
+			coralTotalPoints: 0
+		});
+		
+		expect(member2).toMatchObject({
+			display_name: "Plant Grower", 
+			contact_email: "plant@test.com",
+			fishTotalPoints: 0,
+			plantTotalPoints: 0,
+			coralTotalPoints: 0
+		});
+	});
+
+	test('calculates fish program points correctly', async () => {
+		const adminId = await createMember("admin@test.com", "Admin", {}, true);
+		const memberId = await createMember("member@test.com", "Member");
+		
+		// Create and approve a fish submission
+		const submissionId = await createSubmission(memberId, {
+			species_type: "Fish",
+			species_class: "Freshwater",
+			species_common_name: "Guppy",
+			species_latin_name: "Poecilia reticulata",
+			water_type: "Fresh",
+			count: "5",
+			reproduction_date: "2024-01-01",
+			foods: ["flakes"],
+			spawn_locations: ["plants"],
+			tank_size: "10",
+			filter_type: "sponge",
+			water_change_volume: "50%",
+			water_change_frequency: "weekly",
+			temperature: "75F",
+			ph: "7.0"
+		}, true);
+		
+		await approveSubmission(adminId, submissionId, 1, {
+			id: submissionId,
+			points: 10,
+			article_points: 3,
+			first_time_species: true,
+			flowered: false,
+			sexual_reproduction: false,
+			canonical_genus: "Poecilia",
+			canonical_species_name: "reticulata"
+		});
+		
+		const roster = await getRosterWithPoints();
+		const member = roster.find(m => m.id === memberId);
+		
+		expect(member?.fishTotalPoints).toBe(18); // 10 + 3 + 5 (first time bonus)
+		expect(member?.plantTotalPoints).toBe(0);
+		expect(member?.coralTotalPoints).toBe(0);
+	});
+
+	test('calculates plant program points with bonuses correctly', async () => {
+		const adminId = await createMember("admin@test.com", "Admin", {}, true);
+		const memberId = await createMember("member@test.com", "Member");
+		
+		// Create and approve a plant submission with flowered and sexual reproduction bonuses
+		const submissionId = await createSubmission(memberId, {
+			species_type: "Plant",
+			species_class: "Stem",
+			species_common_name: "Java Fern",
+			species_latin_name: "Microsorum pteropus",
+			water_type: "Fresh",
+			count: "3",
+			reproduction_date: "2024-01-01",
+			foods: [],
+			spawn_locations: [],
+			tank_size: "20",
+			filter_type: "canister",
+			water_change_volume: "30%",
+			water_change_frequency: "weekly",
+			temperature: "72F",
+			ph: "6.8",
+			light_type: "LED",
+			light_strength: "Medium",
+			light_hours: "8"
+		}, true);
+		
+		await approveSubmission(adminId, submissionId, 1, {
+			id: submissionId,
+			points: 8,
+			article_points: 2,
+			first_time_species: true,
+			flowered: true,
+			sexual_reproduction: true,
+			canonical_genus: "Microsorum",
+			canonical_species_name: "pteropus"
+		});
+		
+		const roster = await getRosterWithPoints();
+		const member = roster.find(m => m.id === memberId);
+		
+		// 8 (base) + 2 (article) + 5 (first time) + 8 (flowered bonus) + 8 (sexual repro bonus) = 31
+		expect(member?.plantTotalPoints).toBe(31);
+		expect(member?.fishTotalPoints).toBe(0);
+		expect(member?.coralTotalPoints).toBe(0);
+	});
+
+	test('calculates coral program points correctly', async () => {
+		const adminId = await createMember("admin@test.com", "Admin", {}, true);
+		const memberId = await createMember("member@test.com", "Member");
+		
+		// Create and approve a coral submission  
+		const submissionId = await createSubmission(memberId, {
+			species_type: "Coral",
+			species_class: "SPS",
+			species_common_name: "Acropora",
+			species_latin_name: "Acropora millepora",
+			water_type: "Salt",
+			count: "2",
+			reproduction_date: "2024-01-01",
+			foods: ["zooplankton"],
+			spawn_locations: ["rock"],
+			tank_size: "50",
+			filter_type: "protein skimmer",
+			water_change_volume: "20%",
+			water_change_frequency: "bi-weekly",
+			temperature: "78F",
+			ph: "8.2",
+			specific_gravity: "1.025"
+		}, true);
+		
+		await approveSubmission(adminId, submissionId, 1, {
+			id: submissionId,
+			points: 15,
+			article_points: 5,
+			first_time_species: true,
+			flowered: false, // Not applicable for coral
+			sexual_reproduction: false, // Not applicable for coral
+			canonical_genus: "Acropora",
+			canonical_species_name: "millepora"
+		});
+		
+		const roster = await getRosterWithPoints();
+		const member = roster.find(m => m.id === memberId);
+		
+		expect(member?.coralTotalPoints).toBe(25); // 15 + 5 + 5 (first time bonus)
+		expect(member?.fishTotalPoints).toBe(0);
+		expect(member?.plantTotalPoints).toBe(0);
+	});
+
+	test('handles multiple submissions across different programs', async () => {
+		const adminId = await createMember("admin@test.com", "Admin", {}, true);
+		const memberId = await createMember("member@test.com", "Multi-Program Member");
+		
+		// Fish submission
+		const fishSubmissionId = await createSubmission(memberId, {
+			species_type: "Fish",
+			species_class: "Freshwater",
+			species_common_name: "Neon Tetra",
+			species_latin_name: "Paracheirodon innesi",
+			water_type: "Fresh",
+			count: "20",
+			reproduction_date: "2024-01-01",
+			foods: ["micro pellets"],
+			spawn_locations: ["moss"],
+			tank_size: "20",
+			filter_type: "sponge"
+		}, true);
+		
+		await approveSubmission(adminId, fishSubmissionId, 1, {
+			id: fishSubmissionId,
+			points: 5,
+			article_points: 0,
+			first_time_species: false,
+			flowered: false,
+			sexual_reproduction: false,
+			canonical_genus: "Paracheirodon",
+			canonical_species_name: "innesi"
+		});
+		
+		// Plant submission
+		const plantSubmissionId = await createSubmission(memberId, {
+			species_type: "Plant",
+			species_class: "Rosette",
+			species_common_name: "Amazon Sword",
+			species_latin_name: "Echinodorus grisebachii",
+			water_type: "Fresh",
+			count: "1",
+			reproduction_date: "2024-02-01",
+			foods: [],
+			spawn_locations: [],
+			tank_size: "40",
+			light_type: "LED"
+		}, true);
+		
+		await approveSubmission(adminId, plantSubmissionId, 2, {
+			id: plantSubmissionId,
+			points: 6,
+			article_points: 1,
+			first_time_species: true,
+			flowered: false,
+			sexual_reproduction: true,
+			canonical_genus: "Echinodorus",
+			canonical_species_name: "grisebachii"
+		});
+		
+		const roster = await getRosterWithPoints();
+		const member = roster.find(m => m.id === memberId);
+		
+		expect(member?.fishTotalPoints).toBe(5); // 5 + 0 + 0
+		expect(member?.plantTotalPoints).toBe(18); // 6 + 1 + 5 + 0 + 6 (sexual repro bonus)
+		expect(member?.coralTotalPoints).toBe(0);
+	});
+
+	test('only includes approved submissions', async () => {
+		const adminId = await createMember("admin@test.com", "Admin", {}, true);
+		const memberId = await createMember("member@test.com", "Member");
+		
+		// Create submitted but not approved
+		await createSubmission(memberId, {
+			species_type: "Fish",
+			species_class: "Freshwater",
+			species_common_name: "Guppy",
+			species_latin_name: "Poecilia reticulata",
+			water_type: "Fresh",
+			count: "5",
+			reproduction_date: "2024-01-01",
+			foods: ["flakes"],
+			spawn_locations: ["plants"]
+		}, true);
+		
+		// Create approved submission
+		const approvedSubmissionId = await createSubmission(memberId, {
+			species_type: "Fish", 
+			species_class: "Freshwater",
+			species_common_name: "Molly",
+			species_latin_name: "Poecilia sphenops",
+			water_type: "Fresh",
+			count: "3",
+			reproduction_date: "2024-01-02",
+			foods: ["flakes"],
+			spawn_locations: ["plants"]
+		}, true);
+		
+		await approveSubmission(adminId, approvedSubmissionId, 1, {
+			id: approvedSubmissionId,
+			points: 7,
+			article_points: 0,
+			first_time_species: false,
+			flowered: false,
+			sexual_reproduction: false,
+			canonical_genus: "Poecilia",
+			canonical_species_name: "sphenops"
+		});
+		
+		const roster = await getRosterWithPoints();
+		const member = roster.find(m => m.id === memberId);
+		
+		expect(member?.fishTotalPoints).toBe(7); // Only approved submission counted
+	});
+
+	test('handles invertebrates as fish program', async () => {
+		const adminId = await createMember("admin@test.com", "Admin", {}, true);
+		const memberId = await createMember("member@test.com", "Member");
+		
+		const submissionId = await createSubmission(memberId, {
+			species_type: "Invert",
+			species_class: "Freshwater",
+			species_common_name: "Cherry Shrimp",
+			species_latin_name: "Neocaridina davidi",
+			water_type: "Fresh",
+			count: "10",
+			reproduction_date: "2024-01-01",
+			foods: ["algae"],
+			spawn_locations: ["moss"]
+		}, true);
+		
+		await approveSubmission(adminId, submissionId, 1, {
+			id: submissionId,
+			points: 4,
+			article_points: 1,
+			first_time_species: true,
+			flowered: false,
+			sexual_reproduction: false,
+			canonical_genus: "Neocaridina",
+			canonical_species_name: "davidi"
+		});
+		
+		const roster = await getRosterWithPoints();
+		const member = roster.find(m => m.id === memberId);
+		
+		expect(member?.fishTotalPoints).toBe(10); // 4 + 1 + 5 (Invert counts as fish program)
+		expect(member?.plantTotalPoints).toBe(0);
+		expect(member?.coralTotalPoints).toBe(0);
+	});
 })

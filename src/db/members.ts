@@ -140,6 +140,62 @@ export async function getRoster() {
 	return query<MemberRecord>(`SELECT * FROM members`);
 }
 
+export async function getRosterWithPoints() {
+	return query<MemberRecord & { fishTotalPoints: number; plantTotalPoints: number; coralTotalPoints: number }>(`
+		SELECT 
+			m.*,
+			COALESCE(fish_points.total, 0) as fishTotalPoints,
+			COALESCE(plant_points.total, 0) as plantTotalPoints,
+			COALESCE(coral_points.total, 0) as coralTotalPoints
+		FROM members m
+		LEFT JOIN (
+			SELECT 
+				member_id,
+				SUM(
+					points +
+					IFNULL(article_points, 0) +
+					(IFNULL(first_time_species, 0) * 5)
+				) as total
+			FROM submissions 
+			WHERE approved_on IS NOT NULL 
+				AND submitted_on IS NOT NULL
+				AND (species_type = 'Fish' OR species_type = 'Invert')
+			GROUP BY member_id
+		) fish_points ON m.id = fish_points.member_id
+		LEFT JOIN (
+			SELECT 
+				member_id,
+				SUM(
+					points +
+					IFNULL(article_points, 0) +
+					(IFNULL(first_time_species, 0) * 5) +
+					(IFNULL(flowered, 0) * points) +
+					(IFNULL(sexual_reproduction, 0) * points)
+				) as total
+			FROM submissions 
+			WHERE approved_on IS NOT NULL 
+				AND submitted_on IS NOT NULL
+				AND species_type = 'Plant'
+			GROUP BY member_id
+		) plant_points ON m.id = plant_points.member_id
+		LEFT JOIN (
+			SELECT 
+				member_id,
+				SUM(
+					points +
+					IFNULL(article_points, 0) +
+					(IFNULL(first_time_species, 0) * 5)
+				) as total
+			FROM submissions 
+			WHERE approved_on IS NOT NULL 
+				AND submitted_on IS NOT NULL
+				AND species_type = 'Coral'
+			GROUP BY member_id
+		) coral_points ON m.id = coral_points.member_id
+		ORDER BY m.display_name
+	`);
+}
+
 /**
  * Search for members by name or email with database-level filtering
  * @param searchQuery - The search term to match against display_name and contact_email

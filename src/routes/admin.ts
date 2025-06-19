@@ -1,9 +1,9 @@
-import { createMember, getMember, getMemberByEmail, getRoster, updateMember } from "@/db/members";
-import { getOutstandingSubmissions, getOutstandingSubmissionsCounts, getSubmissionById, updateSubmission } from "@/db/submissions";
+import { createMember, getMember, getMemberByEmail, getRosterWithPoints, updateMember, type MemberRecord } from "@/db/members";
+import { getOutstandingSubmissions, getOutstandingSubmissionsCounts, getSubmissionById, updateSubmission, getSubmissionsByMember, type Submission } from "@/db/submissions";
 import { approvalSchema } from "@/forms/approval";
-import { inviteSchema, memberSchema } from "@/forms/member";
+import { inviteSchema } from "@/forms/member";
 import { onSubmissionApprove, sendChangesRequest, sendInviteEmail } from "@/notifications";
-import { levelRules, programs } from "@/programs";
+import { programs } from "@/programs";
 import { MulmRequest } from "@/sessions";
 import { Response, NextFunction } from "express";
 import { approveSubmission as approve } from "@/db/submissions";
@@ -16,6 +16,34 @@ import { recordName } from "@/db/species";
 import { getBodyParam, getBodyString } from "@/utils/request";
 import { checkAndUpdateMemberLevel, checkAllMemberLevels, Program } from "@/levelManager";
 import { checkAndGrantSpecialtyAwards, checkAllSpecialtyAwards } from "@/specialtyAwardManager";
+
+// Helper function to calculate total points for a member
+async function getMemberWithPoints(member: MemberRecord | null): Promise<MemberRecord & { fishTotalPoints: number; plantTotalPoints: number; coralTotalPoints: number } | null> {
+	if (!member) return null;
+	
+	const submissions: Submission[] = await getSubmissionsByMember(
+		member.id.toString(),
+		false, // don't include unsubmitted
+		false  // don't include unapproved
+	);
+	
+	const fishSubmissions = submissions.filter((sub: Submission) => 
+		sub.species_type === "Fish" || sub.species_type === "Invert"
+	);
+	const plantSubmissions = submissions.filter((sub: Submission) => sub.species_type === "Plant");
+	const coralSubmissions = submissions.filter((sub: Submission) => sub.species_type === "Coral");
+	
+	const fishTotalPoints = fishSubmissions.reduce((sum: number, sub: Submission) => sum + (sub.total_points || 0), 0);
+	const plantTotalPoints = plantSubmissions.reduce((sum: number, sub: Submission) => sum + (sub.total_points || 0), 0);
+	const coralTotalPoints = coralSubmissions.reduce((sum: number, sub: Submission) => sum + (sub.total_points || 0), 0);
+	
+	return {
+		...member,
+		fishTotalPoints,
+		plantTotalPoints,
+		coralTotalPoints
+	};
+}
 
 export function requireAdmin(
 	req: MulmRequest,
@@ -32,7 +60,8 @@ export function requireAdmin(
 }
 
 export const viewMembers = async (req: MulmRequest, res: Response) => {
-	const members = await getRoster();
+	const members = await getRosterWithPoints();
+	
 	res.render("admin/members", {
 		title: "Member Roster",
 		members,
@@ -69,10 +98,6 @@ export const viewEditSubmission = async (req: MulmRequest, res: Response) => {
 }
 
 export const viewMemberUpdate = async (req: MulmRequest, res: Response) => {
-	const fishLevels = levelRules.fish.map((level) => level[0]);
-	const plantLevels = levelRules.plant.map((level) => level[0]);
-	const coralLevels = levelRules.coral.map((level) => level[0]);
-
 	const { memberId } = req.params;
 	const id = parseInt(memberId);
 	if (isNaN(id)) {
@@ -80,13 +105,11 @@ export const viewMemberUpdate = async (req: MulmRequest, res: Response) => {
 		return;
 	}
 	const member = await getMember(id);
+	const memberWithPoints = await getMemberWithPoints(member || null);
 
 	// Render one table row for editing
 	res.render("admin/editMember", {
-		member,
-		fishLevels,
-		plantLevels,
-		coralLevels,
+		member: memberWithPoints
 	});
 }
 
@@ -98,8 +121,11 @@ export const viewMemberRow = async (req: MulmRequest, res: Response) => {
 		return;
 	}
 	const member = await getMember(id);
+	const memberWithPoints = await getMemberWithPoints(member || null);
 	
-	res.render("admin/singleMemberRow", { member });
+	res.render("admin/singleMemberRow", { 
+		member: memberWithPoints
+	});
 }
 
 export const updateMemberFields = async (req: MulmRequest, res: Response) => {
@@ -110,16 +136,21 @@ export const updateMemberFields = async (req: MulmRequest, res: Response) => {
 		return;
 	}
 
-	// TODO do i have to use some better-auth call instead?
-	const parsed = memberSchema.parse(req.body);
+	// Parse only the editable fields (name, email, admin status)
+	const { display_name, contact_email, is_admin } = req.body as { display_name: string; contact_email: string; is_admin?: string };
 	await updateMember(id, {
-		...parsed,
-		is_admin: parsed.is_admin !== undefined ? 1 : 0,
+		display_name,
+		contact_email,
+		is_admin: is_admin !== undefined ? 1 : 0,
 	});
-	// TODO can we get the result after the update instead of querying?
+	
+	// Get the updated member with total points
 	const member = await getMember(id);
+	const memberWithPoints = await getMemberWithPoints(member || null);
 
-	res.render("admin/singleMemberRow", { member });
+	res.render("admin/singleMemberRow", { 
+		member: memberWithPoints
+	});
 }
 
 export const showQueue = async (req: MulmRequest, res: Response) => {

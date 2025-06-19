@@ -14,9 +14,9 @@ mixin membersTable(members)
 					th(class=heading) Admin
 					th(class=heading) Name
 					th(class=heading) Email
-					th(class=heading) Fish
-					th(class=heading) Plant
-					th(class=heading) Coral
+					th(class=numberHeading data-sort-method="number") Fish Points
+					th(class=numberHeading data-sort-method="number") Plant Points
+					th(class=numberHeading data-sort-method="number") Coral Points
 
 			tbody
 				each member in members

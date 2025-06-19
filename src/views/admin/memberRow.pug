@@ -14,6 +14,6 @@ mixin memberRow(member)
 		td(class=stringCell)
 			a.link(href=`/member/${member.id}`)= member.display_name
 		td(class=stringCell)= member.contact_email
-		td(class=stringCell)= member.fish_level || ''
-		td(class=stringCell)= member.plant_level || ''
-		td(class=stringCell)= member.coral_level || ''
+		td(class=numberCell title=`Level: ${member.fish_level || 'None'}`)= member.fishTotalPoints || 0
+		td(class=numberCell title=`Level: ${member.plant_level || 'None'}`)= member.plantTotalPoints || 0
+		td(class=numberCell title=`Level: ${member.coral_level || 'None'}`)= member.coralTotalPoints || 0
