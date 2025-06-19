@@ -55,6 +55,11 @@ Routes are organized by domain in `src/routes/`:
 - Each test gets a fresh database with migrations
 - Use `overrideConnection()` to inject test database
 
+## Scripts
+These live alongside the src directory because they have incompatible tsconfig
+settings. All scripts meant to be run from the CLI should be put in scripts/ and
+tun with ts-node
+
 ## Important Files
 - `src/index.ts` - Main application entry point
 - `src/db/conn.ts` - Database connection management
