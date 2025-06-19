@@ -2,6 +2,8 @@ import sqlite3 from 'sqlite3';
 import { open, Database } from 'sqlite';
 import config from '../config.json';
 import { logger } from '@/utils/logger';
+// import { withDatabaseMonitoring, withPerformanceMonitoring } from './performance';
+// import { metricsCollector, normalizeQuery } from '@/utils/metrics';
 
 export let readOnlyConn: Database;
 export let writeConn: Database;
@@ -26,6 +28,13 @@ export async function init() {
 		driver: sqlite3.Database,
 		mode: sqlite3.OPEN_READWRITE,
 	});
+
+	// Add performance monitoring (when enabled)
+	// TODO: Re-enable when performance monitoring is stable
+	// if (config.monitoring.enabled) {
+	//	readOnlyConn = withDatabaseMonitoring(readOnlyConn, 'read');
+	//	writeConn = withDatabaseMonitoring(writeConn, 'write');
+	// }
 }
 
 (async () => {
