@@ -1,5 +1,14 @@
 include ../header.pug
 
+-
+	function buildSpeciesUrl(sortBy, filters) {
+		let url = `/species?sort=${sortBy}`;
+		if (filters.species_type) url += `&species_type=${filters.species_type}`;
+		if (filters.species_class) url += `&species_class=${filters.species_class}`;
+		if (filters.search) url += `&search=${encodeURIComponent(filters.search)}`;
+		return url;
+	}
+
 doctype html
 html
 	+headTag(title)
@@ -94,11 +103,7 @@ html
 								thead.bg-gray-50
 									tr
 										th.p-3.text-left.font-semibold.text-gray-700.bg-gray-50.border-r.border-gray-300
-											- let nameUrl = `/species?sort=name`;
-											- if (filters.species_type) nameUrl += `&species_type=${filters.species_type}`;
-											- if (filters.species_class) nameUrl += `&species_class=${filters.species_class}`;
-											- if (filters.search) nameUrl += `&search=${encodeURIComponent(filters.search)}`;
-											a(class="text-gray-700 hover:text-gray-900 no-underline" + (filters.sort === 'name' ? ' font-bold' : '') href=nameUrl)
+											a(class="text-gray-700 hover:text-gray-900 no-underline" + (filters.sort === 'name' ? ' font-bold' : '') href=buildSpeciesUrl('name', filters))
 												| Species Name
 												if filters.sort === 'name'
 													span.ml-1 ↑
@@ -106,20 +111,12 @@ html
 										th.p-3.text-left.font-semibold.text-gray-700.bg-gray-50.border-r.border-gray-300 Common Names
 										th.p-3.text-left.font-semibold.text-gray-700.bg-gray-50.border-r.border-gray-300 Scientific Names
 										th.p-3.text-center.font-semibold.text-gray-700.bg-gray-50.border-r.border-gray-300
-											- let reportsUrl = `/species?sort=reports`;
-											- if (filters.species_type) reportsUrl += `&species_type=${filters.species_type}`;
-											- if (filters.species_class) reportsUrl += `&species_class=${filters.species_class}`;
-											- if (filters.search) reportsUrl += `&search=${encodeURIComponent(filters.search)}`;
-											a(class="text-gray-700 hover:text-gray-900 no-underline" + (filters.sort === 'reports' ? ' font-bold' : '') href=reportsUrl)
+											a(class="text-gray-700 hover:text-gray-900 no-underline" + (filters.sort === 'reports' ? ' font-bold' : '') href=buildSpeciesUrl('reports', filters))
 												| Reports
 												if filters.sort === 'reports'
 													span.ml-1 ↓
 										th.p-3.text-center.font-semibold.text-gray-700.bg-gray-50.border-r.border-gray-300
-											- let breedersUrl = `/species?sort=breeders`;
-											- if (filters.species_type) breedersUrl += `&species_type=${filters.species_type}`;
-											- if (filters.species_class) breedersUrl += `&species_class=${filters.species_class}`;
-											- if (filters.search) breedersUrl += `&search=${encodeURIComponent(filters.search)}`;
-											a(class="text-gray-700 hover:text-gray-900 no-underline" + (filters.sort === 'breeders' ? ' font-bold' : '') href=breedersUrl)
+											a(class="text-gray-700 hover:text-gray-900 no-underline" + (filters.sort === 'breeders' ? ' font-bold' : '') href=buildSpeciesUrl('breeders', filters))
 												| Breeders
 												if filters.sort === 'breeders'
 													span.ml-1 ↓

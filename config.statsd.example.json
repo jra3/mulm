@@ -1,0 +1,19 @@
+{
+  "monitoring": {
+    "enabled": true,
+    "slowQueryThreshold": 100,
+    "logSlowQueries": true,
+    "exporter": {
+      "type": "both",
+      "logger": {
+        "enabled": true,
+        "includeQuery": false
+      },
+      "statsd": {
+        "host": "localhost",
+        "port": 8125,
+        "prefix": "mulm.prod"
+      }
+    }
+  }
+}
