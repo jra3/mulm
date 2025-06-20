@@ -2,8 +2,7 @@ import sqlite3 from 'sqlite3';
 import { open, Database } from 'sqlite';
 import config from '../config.json';
 import { logger } from '@/utils/logger';
-// import { withDatabaseMonitoring, withPerformanceMonitoring } from './performance';
-// import { metricsCollector, normalizeQuery } from '@/utils/metrics';
+import { queryMetrics, normalizeQuery } from '@/utils/query-metrics';
 
 export let readOnlyConn: Database;
 export let writeConn: Database;
@@ -63,46 +62,120 @@ export function overrideConnection(conn: typeof readOnlyConn) {
 type PartialRow = Record<string, string | number | boolean | null>;
 
 export async function insertOne(table: string, row: PartialRow) {
+	const sql = `INSERT INTO ${table} (${Object.keys(row).join(', ')}) VALUES (${Object.keys(row).map(() => '?').join(', ')})`;
+	const startTime = process.hrtime.bigint();
+	let error: string | undefined;
+
 	try {
-		const stmt = await writeConn.prepare(`
-			INSERT INTO ${table}
-			(${Object.keys(row).join(', ')})
-			VALUES
-			(${Object.keys(row).map(() => '?').join(', ')})`);
+		const stmt = await writeConn.prepare(sql);
 		await stmt.run(...Object.values(row));
-	} catch (error) {
-		throw new Error(`SQLite insert query failed: ${(error as Error).message}`);
+	} catch (err) {
+		error = err instanceof Error ? err.message : String(err);
+		throw new Error(`SQLite insert query failed: ${(err as Error).message}`);
+	} finally {
+		if (config.monitoring.enabled) {
+			const endTime = process.hrtime.bigint();
+			const executionTime = Number(endTime - startTime) / 1_000_000;
+
+			queryMetrics.recordQuery({
+				timestamp: Date.now(),
+				query: sql,
+				normalizedQuery: normalizeQuery(sql),
+				executionTime,
+				connectionType: 'write',
+				error
+			});
+		}
 	}
 }
 
 export async function updateOne(table: string, key: PartialRow, fields: PartialRow) {
+	const updates = Object.keys(fields).map(key => `${key} = ?`).join(', ');
+	const where = Object.keys(key).map(key => `${key} = ?`).join(' AND ');
+	const sql = `UPDATE ${table} SET ${updates} WHERE ${where}`;
+	const startTime = process.hrtime.bigint();
+	let error: string | undefined;
+
 	try {
-		const updates = Object.keys(fields).map(key => `${key} = ?`).join(', ');
-		const where = Object.keys(key).map(key => `${key} = ?`).join(' AND ');
-		const stmt = await writeConn.prepare(`UPDATE ${table} SET ${updates} WHERE ${where}`);
+		const stmt = await writeConn.prepare(sql);
 		await stmt.run(...Object.values(fields), ...Object.values(key));
-	} catch (error) {
-		throw new Error(`SQLite update query failed: ${(error as Error).message}`);
+	} catch (err) {
+		error = err instanceof Error ? err.message : String(err);
+		throw new Error(`SQLite update query failed: ${(err as Error).message}`);
+	} finally {
+		if (config.monitoring.enabled) {
+			const endTime = process.hrtime.bigint();
+			const executionTime = Number(endTime - startTime) / 1_000_000;
+
+			queryMetrics.recordQuery({
+				timestamp: Date.now(),
+				query: sql,
+				normalizedQuery: normalizeQuery(sql),
+				executionTime,
+				connectionType: 'write',
+				error
+			});
+		}
 	}
 }
 
 export async function query<T>(sql: string, params: unknown[] = []): Promise<T[]> {
+	const startTime = process.hrtime.bigint();
+	let result: T[] | undefined;
+	let error: string | undefined;
+
 	try {
 		const db = readOnlyConn;
 		const stmt = await db.prepare(sql);
-		const rows: T[] = await stmt.all(...params);
-		return rows;
-	} catch (error) {
-		throw new Error(`SQLite query failed: ${(error as Error).message}`);
+		result = await stmt.all(...params);
+		return result!;
+	} catch (err) {
+		error = err instanceof Error ? err.message : String(err);
+		throw new Error(`SQLite query failed: ${(err as Error).message}`);
+	} finally {
+		if (config.monitoring.enabled) {
+			const endTime = process.hrtime.bigint();
+			const executionTime = Number(endTime - startTime) / 1_000_000;
+
+			queryMetrics.recordQuery({
+				timestamp: Date.now(),
+				query: sql,
+				normalizedQuery: normalizeQuery(sql),
+				executionTime,
+				resultCount: result?.length,
+				connectionType: 'read',
+				error
+			});
+		}
 	}
 }
 
 export async function deleteOne(table: string, key: PartialRow) {
+	const where = Object.keys(key).map(key => `${key} = ?`).join(' AND ');
+	const sql = `DELETE FROM ${table} WHERE ${where}`;
+	const startTime = process.hrtime.bigint();
+	let error: string | undefined;
+
 	try {
-		const where = Object.keys(key).map(key => `${key} = ?`).join(' AND ');
-		const deleteRow = await writeConn.prepare(`DELETE FROM ${table} WHERE ${where}`);
-		return deleteRow.run(...Object.values(key));
-	} catch (error) {
-		throw new Error(`SQLite delete failed: ${(error as Error).message}`);
+		const deleteRow = await writeConn.prepare(sql);
+		const result = await deleteRow.run(...Object.values(key));
+		return result;
+	} catch (err) {
+		error = err instanceof Error ? err.message : String(err);
+		throw new Error(`SQLite delete failed: ${(err as Error).message}`);
+	} finally {
+		if (config.monitoring.enabled) {
+			const endTime = process.hrtime.bigint();
+			const executionTime = Number(endTime - startTime) / 1_000_000;
+
+			queryMetrics.recordQuery({
+				timestamp: Date.now(),
+				query: sql,
+				normalizedQuery: normalizeQuery(sql),
+				executionTime,
+				connectionType: 'write',
+				error
+			});
+		}
 	}
 }
