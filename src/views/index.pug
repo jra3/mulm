@@ -1,5 +1,6 @@
 include header.pug
 include admin/queueButton.pug
+include activity/activity-item.pug
 
 doctype html
 html
@@ -60,4 +61,16 @@ html
 						.flex.gap-4.items-center.justify-center.h-9
 							a.link(href='/species') Browse Reports
 							a.link(href='https://docs.google.com/spreadsheets/d/1zhYbhFHmpubmx9ATacA14YVte8YeUHjVEBgY0aFrKMs/edit?gid=1900172349#gid=1900172349') Points Guide
+
+		if recentActivity && recentActivity.length > 0
+			section.bg-white.py-8
+				.max-w-4xl.mx-auto.px-4
+					h2.text-2xl.font-bold.text-gray-900.mb-6.text-center Recent Activity
+					.space-y-4
+						each activity in recentActivity
+							+activityItem(activity)
+					if recentActivity.length >= 8
+						.text-center.mt-6
+							a.link(href='/activity') View More Activity
+
 		+footer()

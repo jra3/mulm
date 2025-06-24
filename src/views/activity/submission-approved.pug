@@ -1,0 +1,18 @@
+.text-sm
+    span.font-medium.text-gray-900= activity.member_name
+    span.text-gray-600  successfully bred 
+    span.font-medium.text-gray-900= data.species_common_name
+    if data.species_type
+        span.text-gray-500  (#{data.species_type})
+    
+    if data.points || data.first_time_species || data.article_points
+        .flex.items-center.space-x-2.mt-1
+            if data.points
+                div(class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800")
+                    | #{data.points} pts
+            if data.first_time_species
+                div(class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800")
+                    | First Time!
+            if data.article_points
+                div(class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800")
+                    | +#{data.article_points} article pts

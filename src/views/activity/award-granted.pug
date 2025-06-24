@@ -1,0 +1,13 @@
+.text-sm
+    span.font-medium.text-gray-900= activity.member_name
+    span.text-gray-600  earned the 
+    span.font-medium.text-gray-900= data.award_name
+    span.text-gray-600  award!
+    
+    .mt-1
+        if data.award_type === 'specialty'
+            div(class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800")
+                | Specialty Award
+        else if data.award_type === 'meta'
+            div(class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800")
+                | Meta Award

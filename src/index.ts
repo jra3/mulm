@@ -20,6 +20,7 @@ import * as typeahead from "@/routes/typeahead";
 import {
 	getOutstandingSubmissionsCounts,
 } from "./db/submissions";
+import { getRecentActivity } from "./db/activity";
 
 import { MulmRequest, sessionMiddleware } from "./sessions";
 import { getGoogleOAuthURL } from "./oauth";
@@ -79,10 +80,14 @@ router.get("/", async (req: MulmRequest, res) => {
 		});
 	}
 
+	// Get recent activity for the feed
+	const recentActivity = await getRecentActivity(8);
+
 	res.render("index", {
 		...args,
 		approvalsProgram,
 		approvalsCount,
+		recentActivity,
 	});
 });
 

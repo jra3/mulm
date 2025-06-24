@@ -41,6 +41,11 @@ export type Submission = {
 	approved_by: number | null;
 	points: number | null;
 	total_points?: number;
+	
+	article_points?: number | null;
+	first_time_species?: boolean | null;
+	flowered?: boolean | null;
+	sexual_reproduction?: boolean | null;
 };
 
 export function formToDB(memberId: number, form: FormValues, submit: boolean) {

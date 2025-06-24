@@ -16,6 +16,7 @@ import { recordName } from "@/db/species";
 import { getBodyParam, getBodyString } from "@/utils/request";
 import { checkAndUpdateMemberLevel, checkAllMemberLevels, Program } from "@/levelManager";
 import { checkAndGrantSpecialtyAwards, checkAllSpecialtyAwards } from "@/specialtyAwardManager";
+import { createActivity } from "@/db/activity";
 
 // Helper function to calculate total points for a member
 async function getMemberWithPoints(member: MemberRecord | null): Promise<MemberRecord & { fishTotalPoints: number; plantTotalPoints: number; coralTotalPoints: number } | null> {
@@ -338,6 +339,24 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
 		const updatedSubmission = await getSubmissionById(id);
 		if (updatedSubmission) {
 			await onSubmissionApprove(updatedSubmission, member);
+			
+			// Create activity feed entry for submission approval
+			try {
+				await createActivity(
+					'submission_approved',
+					member.id,
+					updatedSubmission.id.toString(),
+					{
+						species_common_name: updatedSubmission.species_common_name,
+						species_type: updatedSubmission.species_type,
+						points: updatedSubmission.points || 0,
+						first_time_species: Boolean(updatedSubmission.first_time_species),
+						article_points: updatedSubmission.article_points || undefined
+					}
+				);
+			} catch (error) {
+				console.error('Error creating activity feed entry:', error);
+			}
 			
 			// Check for level upgrades after approval
 			if (updatedSubmission.program) {
