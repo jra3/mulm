@@ -3,6 +3,7 @@
 
 node_modules/
 dist/
+tmp/
 
 src/config.json
 src/config.production.json

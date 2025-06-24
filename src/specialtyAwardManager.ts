@@ -71,7 +71,7 @@ export async function checkAndGrantSpecialtyAwards(
 		
 		for (const awardName of newSpecialtyAwards) {
 			try {
-				await grantAward(memberId, awardName, new Date());
+				await grantAward(memberId, awardName, new Date(), 'species');
 				grantedAwards.push(awardName);
 				logger.info(`Granted specialty award "${awardName}" to member ${memberId} (${member.display_name})`);
 			} catch (error) {
@@ -86,7 +86,7 @@ export async function checkAndGrantSpecialtyAwards(
 		// Grant new meta-awards
 		for (const awardName of earnedMetaAwards) {
 			try {
-				await grantAward(memberId, awardName, new Date());
+				await grantAward(memberId, awardName, new Date(), 'meta_species');
 				grantedAwards.push(awardName);
 				logger.info(`Granted meta-award "${awardName}" to member ${memberId} (${member.display_name}) - achieved through ${updatedExistingAwards.filter(a => !a.includes('Specialist Award')).length} specialty awards`);
 			} catch (error) {
