@@ -79,3 +79,27 @@ export function filterWaitingSubmissions(submissions: Submission[]): Submission[
 		submission.witness_verification_status === 'confirmed' && !isEligibleForApproval(submission)
 	);
 }
+
+export function getWaitingPeriodStatusBulk<T extends Submission>(submissions: T[]): Array<T & { waitingStatus: ReturnType<typeof getWaitingPeriodStatus> }> {
+	// Pre-calculate current date once
+	const now = new Date();
+	
+	return submissions.map(submission => {
+		const requiredDays = getRequiredWaitingDays(submission.species_type);
+		const reproDate = new Date(submission.reproduction_date);
+		const diffTime = now.getTime() - reproDate.getTime();
+		const elapsedDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+		const daysRemaining = Math.max(0, requiredDays - elapsedDays);
+		const eligible = daysRemaining === 0 && submission.witness_verification_status === 'confirmed';
+		
+		return {
+			...submission,
+			waitingStatus: {
+				eligible,
+				daysRemaining,
+				requiredDays,
+				elapsedDays
+			}
+		};
+	});
+}
