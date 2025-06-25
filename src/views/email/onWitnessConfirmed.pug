@@ -65,12 +65,12 @@ html
 				p <strong>Witnessed By:</strong> #{witness.display_name}
 				p <strong>Witnessed On:</strong> #{new Date(submission.witnessed_on).toLocaleDateString()}
 			
-			p Your submission is now in the waiting period. Based on your species type:
+			p Your submission is now in the waiting period. Based on your species:
 			
-			if submission.species_type === 'Plant'
-				p <strong>Waiting Period:</strong> 60 days from reproduction date (to ensure successful propagation)
-			else
+			if submission.species_type === 'Fish' && submission.species_class === 'Marine'
 				p <strong>Waiting Period:</strong> 30 days from reproduction date
+			else
+				p <strong>Waiting Period:</strong> 60 days from reproduction date
 			
 			p Once the waiting period is complete, your submission will be eligible for final admin approval and point assignment.
 			
