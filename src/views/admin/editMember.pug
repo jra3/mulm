@@ -9,7 +9,7 @@ tr(class="bg-blue-50")
 				hx-target="closest tr"
 				hx-swap="outerHTML"
 				hx-include="closest tr"
-				hx-patch=`/admin/members/edit/${member.id}`
+				hx-patch=`/admin/members/${member.id}`
 				hx-trigger="submit")
 				button(type="submit" class="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700") Save
 			button(
