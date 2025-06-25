@@ -1,7 +1,7 @@
 -- Up
 
 -- Add witness fields to submissions table
-ALTER TABLE submissions ADD COLUMN witnessed_by INTEGER REFERENCES members(id);
+ALTER TABLE submissions ADD COLUMN witnessed_by INTEGER REFERENCES members(id) ON DELETE SET NULL;
 ALTER TABLE submissions ADD COLUMN witnessed_on DATETIME;
 ALTER TABLE submissions ADD COLUMN witness_verification_status TEXT 
     CHECK (witness_verification_status IN ('pending', 'confirmed', 'declined')) 
