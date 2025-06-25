@@ -59,6 +59,23 @@ html
 				h2(class="text-l font-bold mb-4") Approval Details
 				div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
 					+reviewTextInput("Submitted On", "submitted_on")
+					
+					// Witness status information
+					if submission.submitted_on
+						- let witnessStatus = 'Pending Witness Verification'
+						- let witnessClass = 'text-yellow-600'
+						if submission.witness_verification_status === 'confirmed'
+							- witnessStatus = 'Witnessed - In Waiting Period'
+							- witnessClass = 'text-blue-600'
+						else if submission.witness_verification_status === 'declined'
+							- witnessStatus = 'Witness Declined'
+							- witnessClass = 'text-red-600'
+						
+						.grid.gap-2
+							label.input-label Witness Status
+							.text-input.disabled-input.flex.items-center(class=witnessClass)= witnessStatus
+					
+					+reviewTextInput("Witnessed On", "witnessed_on")
 					+reviewTextInput("Approved On", "approved_on")
 					+reviewTextInput("Approved By", "approved_by")
 					+reviewTextInput("Points", "points")
@@ -74,5 +91,24 @@ html
 						button.primary(name="unsubmit" type="submit") Edit Submission
 
 			if isAdmin
+				// Witness Actions Panel - only show for pending witness verification
+				if submission.witness_verification_status === 'pending'
+					.w-full.bg-gray-600.p-4.shadow-md.mt-6#witnessPanel
+						.container.mx-auto.max-w-4xl
+							h3.text-white.text-lg.font-semibold.mb-4 Witness Verification Required
+							p.text-white.mb-4 Review the submission details above, including any photos/videos (when available), then verify the spawn/propagation occurred as described.
+							div.flex.justify-center.max-w-4xl.mx-auto.text-center.gap-4
+								form(hx-post=`/admin/confirm-witness/${submission.id}`)
+									- const actionText = submission.species_type === 'Plant' ? 'Witness Propagation' : 'Witness Spawn'
+									button.primary(type="submit")= actionText
+								
+								button.destructive(
+									type="button"
+									hx-get=`/dialog/decline-witness/${submission.id}`
+									hx-target="closest body"
+									hx-swap="beforeend") Request More Proof
+				
+				// Approval Panel - only show for witnessed submissions past waiting period
+			else if submission.witness_verification_status === 'confirmed' && submission.approved_on === null
 				.w-full.bg-gray-600.p-4.shadow-md.mt-6#adminPanel
 					include ../admin/approvalPanel.pug
