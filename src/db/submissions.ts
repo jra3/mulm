@@ -46,6 +46,10 @@ export type Submission = {
 	first_time_species?: boolean | null;
 	flowered?: boolean | null;
 	sexual_reproduction?: boolean | null;
+	
+	witnessed_by: number | null;
+	witnessed_on: string | null;
+	witness_verification_status: 'pending' | 'confirmed' | 'declined';
 };
 
 export function formToDB(memberId: number, form: FormValues, submit: boolean) {
@@ -77,6 +81,7 @@ export function formToDB(memberId: number, form: FormValues, submit: boolean) {
 		member_id: memberId,
 		program,
 		submitted_on: submit ? new Date().toISOString() : undefined,
+		witness_verification_status: submit ? 'pending' as const : undefined,
 		...form,
 		member_name: undefined,
 		member_email: undefined,
@@ -218,8 +223,10 @@ export function getApprovedSubmissionsInDateRange(
 	);
 }
 
-export function getOutstandingSubmissions(program: string) {
-	return query<Submission>(
+export async function getOutstandingSubmissions(program: string) {
+	const { filterEligibleSubmissions } = await import("@/utils/waitingPeriod");
+	
+	const allWitnessed = await query<Submission>(
 		`
 		SELECT
 			submissions.*,
@@ -234,7 +241,45 @@ export function getOutstandingSubmissions(program: string) {
 		ON submissions.member_id == members.id
 		WHERE submitted_on IS NOT NULL
 		AND approved_on IS NULL
+		AND witness_verification_status = 'confirmed'
 		AND program = ?`,
+		[program],
+	);
+	
+	return filterEligibleSubmissions(allWitnessed);
+}
+
+export function getWitnessQueue(program: string) {
+	return query<Submission>(
+		`
+		SELECT
+			submissions.*,
+			members.display_name as member_name
+		FROM submissions JOIN members
+		ON submissions.member_id == members.id
+		WHERE submitted_on IS NOT NULL
+		AND witness_verification_status = 'pending'
+		AND program = ?
+		ORDER BY submitted_on ASC`,
+		[program],
+	);
+}
+
+export function getWaitingPeriodSubmissions(program: string) {
+	return query<Submission>(
+		`
+		SELECT
+			submissions.*,
+			members.display_name as member_name,
+			witnessed_members.display_name as witnessed_by_name
+		FROM submissions 
+		JOIN members ON submissions.member_id == members.id
+		LEFT JOIN members as witnessed_members ON submissions.witnessed_by == witnessed_members.id
+		WHERE submitted_on IS NOT NULL
+		AND witness_verification_status = 'confirmed'
+		AND approved_on IS NULL
+		AND program = ?
+		ORDER BY witnessed_on ASC`,
 		[program],
 	);
 }
@@ -246,8 +291,52 @@ export async function getOutstandingSubmissionsCounts() {
 		ON submissions.member_id == members.id
 		WHERE submitted_on IS NOT NULL
 		AND approved_on IS NULL
+		AND witness_verification_status = 'confirmed'
 		GROUP BY program`);
 	return Object.fromEntries(rows.map((row) => [row.program, row.count]));
+}
+
+export async function getWitnessQueueCounts() {
+	const rows = await query<{ count: number; program: string }>(`
+		SELECT COUNT(1) as count, program
+		FROM submissions JOIN members
+		ON submissions.member_id == members.id
+		WHERE submitted_on IS NOT NULL
+		AND witness_verification_status = 'pending'
+		GROUP BY program`);
+	return Object.fromEntries(rows.map((row) => [row.program, row.count]));
+}
+
+export async function confirmWitness(submissionId: number, witnessAdminId: number) {
+	try {
+		const conn = writeConn;
+		const stmt = await conn.prepare(`
+			UPDATE submissions SET
+				witnessed_by = ?,
+				witnessed_on = ?,
+				witness_verification_status = 'confirmed'
+			WHERE id = ?`);
+		await stmt.run(witnessAdminId, new Date().toISOString(), submissionId);
+	} catch (err) {
+		logger.error('Failed to confirm witness', err);
+		throw new Error("Failed to confirm witness");
+	}
+}
+
+export async function declineWitness(submissionId: number, witnessAdminId: number) {
+	try {
+		const conn = writeConn;
+		const stmt = await conn.prepare(`
+			UPDATE submissions SET
+				witnessed_by = ?,
+				witnessed_on = ?,
+				witness_verification_status = 'declined'
+			WHERE id = ?`);
+		await stmt.run(witnessAdminId, new Date().toISOString(), submissionId);
+	} catch (err) {
+		logger.error('Failed to decline witness', err);
+		throw new Error("Failed to decline witness");
+	}
 }
 
 export function getApprovedSubmissions(program: string) {
