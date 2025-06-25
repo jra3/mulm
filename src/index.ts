@@ -8,7 +8,7 @@ import cookieParser from "cookie-parser";
 // import multer from "multer"; // Used in feature branch
 
 import * as account from "@/routes/account";
-import * as admin from "@/routes/admin";
+import adminRouter from "@/routes/adminRouter";
 import * as auth from "@/routes/auth";
 import * as member from "@/routes/member";
 import * as submission from "@/routes/submission";
@@ -128,24 +128,7 @@ router.get("/account", account.viewAccountSettings);
 router.patch("/account", account.updateAccountSettings)
 router.delete("/account/google/:sub", account.unlinkGoogleAccount);
 
-// Admin Views /////////////////////////////////////////////////////
-
-router.get("/admin/queue{/:program}", admin.requireAdmin, admin.showQueue);
-router.post("/admin/submissions/:id/approve", admin.requireAdmin, admin.approveSubmission);
-
-router.get("/admin/edit{/:subId}", admin.requireAdmin, admin.viewEditSubmission);
-
-router.get("/admin/members", admin.requireAdmin, admin.viewMembers);
-router.get("/admin/members/:memberId/edit", admin.requireAdmin, admin.viewMemberUpdate)
-router.get("/admin/members/:memberId/row", admin.requireAdmin, admin.viewMemberRow);
-router.patch("/admin/members/:memberId", admin.requireAdmin, admin.updateMemberFields);
-router.post("/admin/members/:memberId/check-levels", admin.requireAdmin, admin.checkMemberLevels);
-router.post("/admin/members/:memberId/check-specialty-awards", admin.requireAdmin, admin.checkMemberSpecialtyAwards);
-
-router.post("/admin/invite", admin.requireAdmin, admin.inviteMember);
-
-router.get("/dialog/admin/request-changes/:subId", admin.requireAdmin, admin.requestChangesForm);
-router.post("/admin/submissions/:subId/request-changes", admin.requireAdmin, admin.sendRequestChanges);
+router.use("/admin", adminRouter);
 
 // Password Auth ///////////////////////////////////////////
 
