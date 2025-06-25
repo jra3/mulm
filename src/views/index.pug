@@ -19,6 +19,7 @@ html
 		section.bg-gray-100.py-4
 			.flex.flex-col.justify-center.text-center.items-center.gap-2(class="md:flex-row")
 				if isAdmin
+					+queueButton(witnessProgram, "Witness Queue", witnessCount, "witness")
 					+queueButton(approvalsProgram, "Approval Queue", approvalsCount)
 					a(href='/admin/members')
 						button.primary Manage Members

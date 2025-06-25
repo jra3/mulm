@@ -19,6 +19,7 @@ import * as typeahead from "@/routes/typeahead";
 
 import {
 	getOutstandingSubmissionsCounts,
+	getWitnessQueueCounts,
 } from "./db/submissions";
 import { getRecentActivity } from "./db/activity";
 
@@ -69,13 +70,23 @@ router.get("/", async (req: MulmRequest, res) => {
 
 	let approvalsProgram;
 	let approvalsCount = 0;
+	let witnessProgram;
+	let witnessCount = 0;
 	if (isAdmin) {
-		const counts = await getOutstandingSubmissionsCounts();
+		const [counts, witnessCounts] = await Promise.all([
+			getOutstandingSubmissionsCounts(),
+			getWitnessQueueCounts(),
+		]);
 		["coral", "plant", "fish"].forEach((program) => {
 			const count = counts[program];
 			if (count > 0) {
 				approvalsProgram = program;
 				approvalsCount += count;
+			}
+			const witnessCountForProgram = witnessCounts[program];
+			if (witnessCountForProgram > 0) {
+				witnessProgram = program;
+				witnessCount += witnessCountForProgram;
 			}
 		});
 	}
@@ -87,6 +98,8 @@ router.get("/", async (req: MulmRequest, res) => {
 		...args,
 		approvalsProgram,
 		approvalsCount,
+		witnessProgram,
+		witnessCount,
 		recentActivity,
 	});
 });
@@ -129,6 +142,13 @@ router.patch("/account", account.updateAccountSettings)
 router.delete("/account/google/:sub", account.unlinkGoogleAccount);
 
 router.use("/admin", adminRouter);
+
+router.get("/dialog/decline-witness/:subId", admin.requireAdmin, admin.declineWitnessForm);
+
+router.get("/admin/witness-queue{/:program}", admin.requireAdmin, admin.showWitnessQueue);
+router.get("/admin/waiting-period{/:program}", admin.requireAdmin, admin.showWaitingPeriod);
+router.post("/admin/confirm-witness/:subId", admin.requireAdmin, admin.confirmWitnessAction);
+router.post("/admin/decline-witness/:subId", admin.requireAdmin, admin.declineWitnessAction);
 
 // Password Auth ///////////////////////////////////////////
 
