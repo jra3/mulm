@@ -1,6 +1,6 @@
 import { ApprovalFormValues } from "@/forms/approval";
 import { FormValues } from "@/forms/submission";
-import { writeConn, query } from "./conn";
+import { writeConn, query, withTransaction } from "./conn";
 import { logger } from "@/utils/logger";
 
 export type Submission = {
@@ -309,14 +309,40 @@ export async function getWitnessQueueCounts() {
 
 export async function confirmWitness(submissionId: number, witnessAdminId: number) {
 	try {
-		const conn = writeConn;
-		const stmt = await conn.prepare(`
-			UPDATE submissions SET
-				witnessed_by = ?,
-				witnessed_on = ?,
-				witness_verification_status = 'confirmed'
-			WHERE id = ?`);
-		await stmt.run(witnessAdminId, new Date().toISOString(), submissionId);
+		return await withTransaction(async (db) => {
+			// Check current state and prevent self-witnessing
+			const current = await query<Submission>(`
+				SELECT id, member_id, witness_verification_status 
+				FROM submissions WHERE id = ?`, [submissionId]);
+			
+			if (!current[0]) {
+				throw new Error('Submission not found');
+			}
+			
+			if (current[0].member_id === witnessAdminId) {
+				throw new Error('Cannot witness your own submission');
+			}
+			
+			if (current[0].witness_verification_status !== 'pending') {
+				throw new Error('Submission not in pending witness state');
+			}
+
+			const stmt = await db.prepare(`
+				UPDATE submissions SET
+					witnessed_by = ?,
+					witnessed_on = ?,
+					witness_verification_status = 'confirmed'
+				WHERE id = ? AND witness_verification_status = 'pending'`);
+			
+			const result = await stmt.run(witnessAdminId, new Date().toISOString(), submissionId);
+			await stmt.finalize();
+			
+			if (result.changes === 0) {
+				throw new Error('Submission state changed during operation');
+			}
+			
+			logger.info(`Witness confirmed for submission ${submissionId} by admin ${witnessAdminId}`);
+		});
 	} catch (err) {
 		logger.error('Failed to confirm witness', err);
 		throw new Error("Failed to confirm witness");
@@ -325,14 +351,40 @@ export async function confirmWitness(submissionId: number, witnessAdminId: numbe
 
 export async function declineWitness(submissionId: number, witnessAdminId: number) {
 	try {
-		const conn = writeConn;
-		const stmt = await conn.prepare(`
-			UPDATE submissions SET
-				witnessed_by = ?,
-				witnessed_on = ?,
-				witness_verification_status = 'declined'
-			WHERE id = ?`);
-		await stmt.run(witnessAdminId, new Date().toISOString(), submissionId);
+		return await withTransaction(async (db) => {
+			// Check current state and prevent self-witnessing
+			const current = await query<Submission>(`
+				SELECT id, member_id, witness_verification_status 
+				FROM submissions WHERE id = ?`, [submissionId]);
+			
+			if (!current[0]) {
+				throw new Error('Submission not found');
+			}
+			
+			if (current[0].member_id === witnessAdminId) {
+				throw new Error('Cannot witness your own submission');
+			}
+			
+			if (current[0].witness_verification_status !== 'pending') {
+				throw new Error('Submission not in pending witness state');
+			}
+
+			const stmt = await db.prepare(`
+				UPDATE submissions SET
+					witnessed_by = ?,
+					witnessed_on = ?,
+					witness_verification_status = 'declined'
+				WHERE id = ? AND witness_verification_status = 'pending'`);
+			
+			const result = await stmt.run(witnessAdminId, new Date().toISOString(), submissionId);
+			await stmt.finalize();
+			
+			if (result.changes === 0) {
+				throw new Error('Submission state changed during operation');
+			}
+			
+			logger.info(`Witness declined for submission ${submissionId} by admin ${witnessAdminId}`);
+		});
 	} catch (err) {
 		logger.error('Failed to decline witness', err);
 		throw new Error("Failed to decline witness");
@@ -383,7 +435,7 @@ export function getAllSubmissions(program: string) {
 			members.display_name as member_name
 		FROM submissions JOIN members
 		ON submissions.member_id == members.id
-		FROM submissions WHERE program = ? `,
+		WHERE program = ? `,
 		[program],
 	);
 }
