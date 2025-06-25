@@ -302,10 +302,12 @@ export async function getWitnessQueueCounts() {
 export async function confirmWitness(submissionId: number, witnessAdminId: number) {
 	try {
 		return await withTransaction(async (db) => {
-			// Check current state and prevent self-witnessing
-			const current = await query<Submission>(`
+			// Check current state and prevent self-witnessing - use transaction db
+			const stmt = await db.prepare(`
 				SELECT id, member_id, witness_verification_status 
-				FROM submissions WHERE id = ?`, [submissionId]);
+				FROM submissions WHERE id = ?`);
+			const current: Submission[] = await stmt.all(submissionId);
+			await stmt.finalize();
 			
 			if (!current[0]) {
 				throw new Error('Submission not found');
@@ -319,15 +321,15 @@ export async function confirmWitness(submissionId: number, witnessAdminId: numbe
 				throw new Error('Submission not in pending witness state');
 			}
 
-			const stmt = await db.prepare(`
+			const updateStmt = await db.prepare(`
 				UPDATE submissions SET
 					witnessed_by = ?,
 					witnessed_on = ?,
 					witness_verification_status = 'confirmed'
 				WHERE id = ? AND witness_verification_status = 'pending'`);
 			
-			const result = await stmt.run(witnessAdminId, new Date().toISOString(), submissionId);
-			await stmt.finalize();
+			const result = await updateStmt.run(witnessAdminId, new Date().toISOString(), submissionId);
+			await updateStmt.finalize();
 			
 			if (result.changes === 0) {
 				throw new Error('Submission state changed during operation');
@@ -337,17 +339,19 @@ export async function confirmWitness(submissionId: number, witnessAdminId: numbe
 		});
 	} catch (err) {
 		logger.error('Failed to confirm witness', err);
-		throw new Error("Failed to confirm witness");
+		throw err;
 	}
 }
 
 export async function declineWitness(submissionId: number, witnessAdminId: number) {
 	try {
 		return await withTransaction(async (db) => {
-			// Check current state and prevent self-witnessing
-			const current = await query<Submission>(`
+			// Check current state and prevent self-witnessing - use transaction db
+			const stmt = await db.prepare(`
 				SELECT id, member_id, witness_verification_status 
-				FROM submissions WHERE id = ?`, [submissionId]);
+				FROM submissions WHERE id = ?`);
+			const current: Submission[] = await stmt.all(submissionId);
+			await stmt.finalize();
 			
 			if (!current[0]) {
 				throw new Error('Submission not found');
@@ -361,15 +365,15 @@ export async function declineWitness(submissionId: number, witnessAdminId: numbe
 				throw new Error('Submission not in pending witness state');
 			}
 
-			const stmt = await db.prepare(`
+			const updateStmt = await db.prepare(`
 				UPDATE submissions SET
 					witnessed_by = ?,
 					witnessed_on = ?,
 					witness_verification_status = 'declined'
 				WHERE id = ? AND witness_verification_status = 'pending'`);
 			
-			const result = await stmt.run(witnessAdminId, new Date().toISOString(), submissionId);
-			await stmt.finalize();
+			const result = await updateStmt.run(witnessAdminId, new Date().toISOString(), submissionId);
+			await updateStmt.finalize();
 			
 			if (result.changes === 0) {
 				throw new Error('Submission state changed during operation');
@@ -379,7 +383,7 @@ export async function declineWitness(submissionId: number, witnessAdminId: numbe
 		});
 	} catch (err) {
 		logger.error('Failed to decline witness', err);
-		throw new Error("Failed to decline witness");
+		throw err;
 	}
 }
 
