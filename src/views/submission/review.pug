@@ -59,25 +59,8 @@ html
 				h2(class="text-l font-bold mb-4") Approval Details
 				div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
 					+reviewTextInput("Submitted On", "submitted_on")
-					
-					// Witness status information
-					if submission.submitted_on
-						- let witnessStatus = 'Pending Witness Verification'
-						- let witnessClass = 'text-yellow-600'
-						if submission.witness_verification_status === 'confirmed'
-							- witnessStatus = 'Witnessed - In Waiting Period'
-							- witnessClass = 'text-blue-600'
-						else if submission.witness_verification_status === 'declined'
-							- witnessStatus = 'Witness Declined'
-							- witnessClass = 'text-red-600'
-						
-						.grid.gap-2
-							label.input-label Witness Status
-							.text-input.disabled-input.flex.items-center(class=witnessClass)= witnessStatus
-					
-					+reviewTextInput("Witnessed On", "witnessed_on")
-					+reviewTextInput("Approved On", "approved_on")
-					+reviewTextInput("Approved By", "approved_by")
+					+reviewTextInput("Witnessed", "witnessed")
+					+reviewTextInput("Approved", "approved")
 					+reviewTextInput("Points", "points")
 					+reviewTextInput("Total Points", "total_points")
 
