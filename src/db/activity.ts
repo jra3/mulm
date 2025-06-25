@@ -60,7 +60,7 @@ export async function getRecentActivity(limit: number = 10): Promise<ActivityFee
             m.display_name as member_name
         FROM activity_feed af
         JOIN members m ON af.member_id = m.id
-        ORDER BY af.created_at DESC
+        ORDER BY af.created_at DESC, af.id DESC
         LIMIT ?
     `, [limit]);
     
