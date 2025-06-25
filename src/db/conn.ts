@@ -53,7 +53,9 @@ export function overrideConnection(conn: typeof readOnlyConn) {
 
 type PartialRow = Record<string, string | number | boolean | null>;
 
-export async function insertOne(table: string, row: PartialRow) {
+type TableName = 'members' | 'submissions' | 'species' | 'activities' | 'tanks' | 'tank_sections' | 'attachments' | 'sessions' | 'auth_codes' | 'google_account' | 'tank_presets';
+
+export async function insertOne(table: TableName, row: PartialRow) {
 	try {
 		const stmt = await writeConn.prepare(`
 			INSERT INTO ${table}
@@ -66,7 +68,7 @@ export async function insertOne(table: string, row: PartialRow) {
 	}
 }
 
-export async function updateOne(table: string, key: PartialRow, fields: PartialRow) {
+export async function updateOne(table: TableName, key: PartialRow, fields: PartialRow) {
 	try {
 		const updates = Object.keys(fields).map(key => `${key} = ?`).join(', ');
 		const where = Object.keys(key).map(key => `${key} = ?`).join(' AND ');
@@ -88,7 +90,7 @@ export async function query<T>(sql: string, params: unknown[] = []): Promise<T[]
 	}
 }
 
-export async function deleteOne(table: string, key: PartialRow) {
+export async function deleteOne(table: TableName, key: PartialRow) {
 	try {
 		const where = Object.keys(key).map(key => `${key} = ?`).join(' AND ');
 		const deleteRow = await writeConn.prepare(`DELETE FROM ${table} WHERE ${where}`);
