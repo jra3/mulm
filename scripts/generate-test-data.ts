@@ -2,13 +2,14 @@ import moduleAlias from "module-alias";
 import path from "path";
 moduleAlias.addAlias("@", path.join(__dirname, "..", "src"));
 
-import { createMember, getMemberByEmail } from '@/db/members';
-import { createSubmission, approveSubmission } from '@/db/submissions';
+import { createMember, getMemberByEmail, updateMember } from '@/db/members';
+import { createSubmission, approveSubmission, confirmWitness, declineWitness, updateSubmission, getSubmissionById } from '@/db/submissions';
 import { FormValues } from '@/forms/submission';
 import { logger } from '@/utils/logger';
 import { init } from '@/db/conn';
 import { checkAndGrantSpecialtyAwards } from '@/specialtyAwardManager';
 import { recordName } from '@/db/species';
+import { createActivity } from '@/db/activity';
 
 // Plausible test data
 const fishNames = [
@@ -45,7 +46,7 @@ const anabantoidNames = [
     { common: 'Kissing Gourami', latin: 'Helostoma temminckii', class: 'Anabantoids' },
 ];
 
-// Livebearers species for specialty award  
+// Livebearers species for specialty award
 const livebearerNames = [
     { common: 'Guppy', latin: 'Poecilia reticulata', class: 'Livebearers' },
     { common: 'Platy', latin: 'Xiphophorus maculatus', class: 'Livebearers' },
@@ -116,10 +117,16 @@ function randomDate(daysAgo: number): Date {
     return date;
 }
 
+function dateFromDaysAgo(daysAgo: number): Date {
+    const date = new Date();
+    date.setDate(date.getDate() - daysAgo);
+    return date;
+}
+
 function generateFishSubmission(memberName: string, memberEmail: string): FormValues {
     const fish = randomChoice(fishNames);
     const waterType = randomChoice(['Fresh', 'Brackish'] as const);
-    
+
     return {
         member_name: memberName,
         member_email: memberEmail,
@@ -146,7 +153,7 @@ function generateFishSubmission(memberName: string, memberEmail: string): FormVa
 
 function generatePlantSubmission(memberName: string, memberEmail: string): FormValues {
     const plant = randomChoice(plantNames);
-    
+
     return {
         member_name: memberName,
         member_email: memberEmail,
@@ -174,7 +181,7 @@ function generatePlantSubmission(memberName: string, memberEmail: string): FormV
 
 function generateCoralSubmission(memberName: string, memberEmail: string): FormValues {
     const coral = randomChoice(coralNames);
-    
+
     return {
         member_name: memberName,
         member_email: memberEmail,
@@ -202,7 +209,7 @@ function generateCoralSubmission(memberName: string, memberEmail: string): FormV
 
 function generateInvertSubmission(memberName: string, memberEmail: string): FormValues {
     const invert = randomChoice(invertNames);
-    
+
     return {
         member_name: memberName,
         member_email: memberEmail,
@@ -277,23 +284,111 @@ function generateSpecialtyFishSubmission(memberName: string, memberEmail: string
     };
 }
 
+async function createWitnessTestSubmissions(users: Array<{ id: number; name: string; email: string }>, johnId: number) {
+    logger.info('Creating submissions in various witness states...');
+
+    const member1 = users.find(u => u.name === 'Sarah Johnson')!;
+    const member2 = users.find(u => u.name === 'Michael Chen')!;
+    const member3 = users.find(u => u.name === 'Emily Davis')!;
+    const member4 = users.find(u => u.name === 'Robert Wilson')!;
+
+    // 1. Draft submission (not submitted)
+    logger.info('Creating draft submission...');
+    const draftFormData = generateFishSubmission(member1.name, member1.email);
+    const draftId = await createSubmission(member1.id, draftFormData, false); // false = draft
+    logger.info(`Created draft submission ${draftId} for ${member1.name}`);
+
+    // 2. Submitted - Awaiting Witness (pending)
+    logger.info('Creating submission awaiting witness...');
+    const pendingFormData = generateFishSubmission(member2.name, member2.email);
+    pendingFormData.species_common_name = 'Angelfish';
+    pendingFormData.species_latin_name = 'Pterophyllum scalare';
+    pendingFormData.reproduction_date = dateFromDaysAgo(5).toISOString().split('T')[0]; // 5 days ago
+    const pendingId = await createSubmission(member2.id, pendingFormData, true); // true = submitted
+    logger.info(`Created pending witness submission ${pendingId} for ${member2.name}`);
+
+    // 3. Witnessed & Confirmed - Still in Waiting Period
+    logger.info('Creating witnessed submission in waiting period...');
+    const waitingFormData = generateFishSubmission(member3.name, member3.email);
+    waitingFormData.species_common_name = 'German Blue Ram';
+    waitingFormData.species_latin_name = 'Mikrogeophagus ramirezi';
+    waitingFormData.reproduction_date = dateFromDaysAgo(15).toISOString().split('T')[0]; // 15 days ago (still waiting)
+    const waitingId = await createSubmission(member3.id, waitingFormData, true);
+    await confirmWitness(waitingId, johnId); // John witnesses it
+    logger.info(`Created witnessed submission ${waitingId} for ${member3.name} (15 days old - still waiting)`);
+
+    // 4. Witnessed & Confirmed - Waiting Period Complete (Ready for Approval)
+    logger.info('Creating witnessed submission ready for approval...');
+    const readyFormData = generateFishSubmission(member4.name, member4.email);
+    readyFormData.species_common_name = 'Zebra Danio';
+    readyFormData.species_latin_name = 'Danio rerio';
+    readyFormData.reproduction_date = dateFromDaysAgo(35).toISOString().split('T')[0]; // 35 days ago (past waiting period)
+    const readyId = await createSubmission(member4.id, readyFormData, true);
+    await confirmWitness(readyId, johnId); // John witnesses it
+    logger.info(`Created witnessed submission ${readyId} for ${member4.name} (35 days old - ready for approval)`);
+
+    // 5. Witness Declined
+    logger.info('Creating declined witness submission...');
+    const declinedFormData = generateFishSubmission(member1.name, member1.email);
+    declinedFormData.species_common_name = 'Neon Tetra';
+    declinedFormData.species_latin_name = 'Paracheirodon innesi';
+    declinedFormData.reproduction_date = dateFromDaysAgo(10).toISOString().split('T')[0];
+    const declinedId = await createSubmission(member1.id, declinedFormData, true);
+    await declineWitness(declinedId, johnId); // John declines it
+    logger.info(`Created declined witness submission ${declinedId} for ${member1.name}`);
+
+    // 6. Plant submission with 60-day waiting period - Still Waiting
+    logger.info('Creating plant submission in 60-day waiting period...');
+    const plantWaitingFormData = generatePlantSubmission(member2.name, member2.email);
+    plantWaitingFormData.species_common_name = 'Java Fern';
+    plantWaitingFormData.species_latin_name = 'Microsorum pteropus';
+    plantWaitingFormData.reproduction_date = dateFromDaysAgo(45).toISOString().split('T')[0]; // 45 days ago (still needs 15 more)
+    const plantWaitingId = await createSubmission(member2.id, plantWaitingFormData, true);
+    await confirmWitness(plantWaitingId, johnId); // John witnesses it
+    logger.info(`Created plant submission ${plantWaitingId} for ${member2.name} (45 days old - still needs 15 more days)`);
+
+    // 7. Plant submission - 60-day waiting period complete
+    logger.info('Creating plant submission ready for approval...');
+    const plantReadyFormData = generatePlantSubmission(member3.name, member3.email);
+    plantReadyFormData.species_common_name = 'Amazon Sword';
+    plantReadyFormData.species_latin_name = 'Echinodorus amazonicus';
+    plantReadyFormData.reproduction_date = dateFromDaysAgo(70).toISOString().split('T')[0]; // 70 days ago (past 60-day waiting period)
+    const plantReadyId = await createSubmission(member3.id, plantReadyFormData, true);
+    await confirmWitness(plantReadyId, johnId); // John witnesses it
+    logger.info(`Created plant submission ${plantReadyId} for ${member3.name} (70 days old - ready for approval)`);
+
+    // 8. Coral submission in waiting period
+    logger.info('Creating coral submission in waiting period...');
+    const coralFormData = generateCoralSubmission(member4.name, member4.email);
+    coralFormData.species_common_name = 'Hammer Coral';
+    coralFormData.species_latin_name = 'Euphyllia ancora';
+    coralFormData.reproduction_date = dateFromDaysAgo(20).toISOString().split('T')[0]; // 20 days ago (needs 10 more)
+    const coralId = await createSubmission(member4.id, coralFormData, true);
+    await confirmWitness(coralId, johnId); // John witnesses it
+    logger.info(`Created coral submission ${coralId} for ${member4.name} (20 days old - needs 10 more days)`);
+
+    logger.info('Witness test submissions created successfully!');
+}
+
 async function generateTestData() {
     try {
         logger.info('Starting test data generation...');
-        
+
         // Change to parent directory so relative paths work correctly
         process.chdir(path.join(__dirname, '..'));
-        
+
         // Initialize database connections
         await init();
-        
+
         // Create or find John Allen (admin)
         logger.info('Creating/finding admin user John Allen...');
         let johnId: number;
         const existingJohn = await getMemberByEmail('baptest@porcnick.com');
         if (existingJohn) {
             johnId = existingJohn.id;
-            logger.info(`Found existing admin user John Allen with ID: ${johnId}`);
+            // Ensure John Allen is an admin
+            await updateMember(johnId, { is_admin: 1 });
+            logger.info(`Found existing user John Allen with ID: ${johnId}, ensured admin status`);
         } else {
             johnId = await createMember(
                 'baptest@porcnick.com',
@@ -303,17 +398,17 @@ async function generateTestData() {
             );
             logger.info(`Created admin user John Allen with ID: ${johnId}`);
         }
-        
+
         // Create or find other test users
         const users: Array<{ id: number; name: string; email: string }> = [
             { id: johnId, name: 'John Allen', email: 'baptest@porcnick.com' }
         ];
-        
+
         for (let i = 0; i < userNames.length; i++) {
             const name = userNames[i];
-            const email = name.toLowerCase().replace(' ', '.') + '@example.com';
+            const email = name.toLowerCase().replace(' ', '.') + '@porcnick.com';
             const password = 'testpass123';
-            
+
             logger.info(`Creating/finding user: ${name}`);
             const existingUser = await getMemberByEmail(email);
             let userId: number;
@@ -331,33 +426,33 @@ async function generateTestData() {
             }
             users.push({ id: userId, name, email });
         }
-        
+
         // Generate submissions for each user
         logger.info('Generating submissions...');
-        
+
         // Track submissions to approve
-        const submissionsToApprove: Array<{ 
-            id: number; 
-            userId: number; 
-            points: number; 
-            genus: string; 
+        const submissionsToApprove: Array<{
+            id: number;
+            userId: number;
+            points: number;
+            genus: string;
             species: string;
             commonName: string;
             latinName: string;
             speciesType: string;
             speciesClass: string;
         }> = [];
-        
+
         for (const user of users) {
             // John Allen gets specific catfish submissions for the specialty award
             if (user.name === 'John Allen') {
                 logger.info('Creating catfish submissions for John Allen to earn Catfish Specialist award...');
-                
+
                 // Create 5+ catfish submissions (including at least 1 non-Corydoras)
                 for (const catfish of catfishNames) {
                     const formData = generateCatfishSubmission(user.name, user.email, catfish);
                     const submissionId = await createSubmission(user.id, formData, true);
-                    
+
                     // Extract genus for canonical name
                     const [genus, species] = catfish.latin.split(' ');
                     submissionsToApprove.push({
@@ -371,15 +466,15 @@ async function generateTestData() {
                         speciesType: 'Fish',
                         speciesClass: catfish.class
                     });
-                    
+
                     logger.info(`Created catfish submission ${submissionId} for John Allen: ${catfish.common}`);
                 }
-                
+
                 // Add a few regular submissions too
                 for (let i = 0; i < 3; i++) {
                     const submissionType = randomChoice(['fish', 'plant', 'coral']);
                     let formData: FormValues;
-                    
+
                     switch (submissionType) {
                         case 'fish':
                             formData = generateFishSubmission(user.name, user.email);
@@ -393,7 +488,7 @@ async function generateTestData() {
                         default:
                             formData = generateFishSubmission(user.name, user.email);
                     }
-                    
+
                     const submissionId = await createSubmission(user.id, formData, true);
                     const [genus, species] = (formData.species_latin_name || 'Unknown species').split(' ');
                     submissionsToApprove.push({
@@ -411,11 +506,11 @@ async function generateTestData() {
             } else if (user.name === 'Sarah Johnson') {
                 // Sarah Johnson gets Anabantoids submissions for specialty award
                 logger.info('Creating Anabantoids submissions for Sarah Johnson to earn Anabantoids Specialist award...');
-                
+
                 for (const anabantoid of anabantoidNames) {
                     const formData = generateSpecialtyFishSubmission(user.name, user.email, anabantoid);
                     const submissionId = await createSubmission(user.id, formData, true);
-                    
+
                     const [genus, species] = anabantoid.latin.split(' ');
                     submissionsToApprove.push({
                         id: submissionId,
@@ -428,17 +523,17 @@ async function generateTestData() {
                         speciesType: 'Fish',
                         speciesClass: anabantoid.class
                     });
-                    
+
                     logger.info(`Created Anabantoids submission ${submissionId} for Sarah Johnson: ${anabantoid.common}`);
                 }
             } else if (user.name === 'Michael Chen') {
                 // Michael Chen gets Livebearers submissions for specialty award
                 logger.info('Creating Livebearers submissions for Michael Chen to earn Livebearers Specialist award...');
-                
+
                 for (const livebearer of livebearerNames) {
                     const formData = generateSpecialtyFishSubmission(user.name, user.email, livebearer);
                     const submissionId = await createSubmission(user.id, formData, true);
-                    
+
                     const [genus, species] = livebearer.latin.split(' ');
                     submissionsToApprove.push({
                         id: submissionId,
@@ -451,17 +546,17 @@ async function generateTestData() {
                         speciesType: 'Fish',
                         speciesClass: livebearer.class
                     });
-                    
+
                     logger.info(`Created Livebearers submission ${submissionId} for Michael Chen: ${livebearer.common}`);
                 }
             } else {
                 // Other users get regular random submissions
                 const numSubmissions = randomInt(2, 5);
-                
+
                 for (let i = 0; i < numSubmissions; i++) {
                     const submissionType = randomChoice(['fish', 'plant', 'coral', 'invert']);
                     let formData: FormValues;
-                    
+
                     switch (submissionType) {
                         case 'fish':
                             formData = generateFishSubmission(user.name, user.email);
@@ -478,12 +573,12 @@ async function generateTestData() {
                         default:
                             formData = generateFishSubmission(user.name, user.email);
                     }
-                    
+
                     // 70% chance of submission
                     const shouldSubmit = Math.random() > 0.3;
-                    
+
                     const submissionId = await createSubmission(user.id, formData, shouldSubmit);
-                    
+
                     if (shouldSubmit) {
                         const [genus, species] = (formData.species_latin_name || 'Unknown species').split(' ');
                         submissionsToApprove.push({
@@ -498,15 +593,18 @@ async function generateTestData() {
                             speciesClass: formData.species_class || 'Unknown'
                         });
                     }
-                    
+
                     logger.info(`Created ${submissionType} submission ${submissionId} for user ${user.name} (submitted: ${shouldSubmit})`);
                 }
             }
         }
-        
+
+        // Create witness test submissions to verify witness workflow
+        await createWitnessTestSubmissions(users, johnId);
+
         // Approve submissions
         logger.info('Approving submissions...');
-        
+
         for (const submission of submissionsToApprove) {
             // 85% chance of approval
             if (Math.random() > 0.15) {
@@ -519,9 +617,9 @@ async function generateTestData() {
                         common_name: submission.commonName,
                         latin_name: submission.latinName
                     });
-                    
+
                     logger.info(`Recorded species: ${submission.latinName} (${submission.commonName}) with ID: ${speciesNameId}`);
-                    
+
                     // Now approve the submission with the correct species_name_id
                     await approveSubmission(
                         johnId, // John Allen approves everything
@@ -538,26 +636,44 @@ async function generateTestData() {
                             canonical_species_name: submission.species
                         }
                     );
+                    
+                    // Create activity feed entry for submission approval (matching admin route behavior)
+                    const updatedSubmission = await getSubmissionById(submission.id);
+                    if (updatedSubmission) {
+                        await createActivity(
+                            'submission_approved',
+                            submission.userId,
+                            updatedSubmission.id.toString(),
+                            {
+                                species_common_name: updatedSubmission.species_common_name,
+                                species_type: updatedSubmission.species_type,
+                                points: updatedSubmission.points || 0,
+                                first_time_species: Boolean(updatedSubmission.first_time_species),
+                                article_points: updatedSubmission.article_points || undefined
+                            }
+                        );
+                    }
+                    
                     logger.info(`Approved submission ${submission.id} with species ID ${speciesNameId}`);
                 } catch (error) {
                     logger.error(`Failed to approve submission ${submission.id}:`, error);
                 }
             }
         }
-        
+
         // Check for specialty awards
         logger.info('Checking for specialty awards...');
-        
+
         for (const user of users) {
             const newAwards = await checkAndGrantSpecialtyAwards(user.id);
             if (newAwards.length > 0) {
                 logger.info(`🏆 Awarded ${user.name}: ${newAwards.join(', ')}`);
             }
         }
-        
+
         logger.info('Test data generation complete!');
         logger.info(`Created ${users.length} users and multiple submissions`);
-        
+
     } catch (error) {
         logger.error('Error generating test data:', error);
         process.exit(1);
