@@ -49,7 +49,7 @@ export const view = async (req: MulmRequest, res: Response) => {
 		plantTotalPoints,
 		coralTotalPoints,
 		isLoggedIn: Boolean(viewer),
-		isSelf: viewer && viewer.id == member.id,
-		isAdmin: viewer && viewer.is_admin,
+		isSelf,
+		isAdmin,
 	});
 }
