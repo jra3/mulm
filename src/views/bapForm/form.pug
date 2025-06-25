@@ -114,14 +114,14 @@ mixin CRUDForm()
 						type="button"
 						hx-target="closest body"
 						hx-swap="beforeend"
-						hx-get="/sidebar/saveTank"
+						hx-get="/tank/save"
 						aria-label="Save tank settings for reuse"
 						title="Save your current tank settings to reuse in future submissions") Save
 					button.outline(
 						type="button"
 						hx-target="closest body"
 						hx-swap="beforeend"
-						hx-get="/sidebar/loadTank"
+						hx-get="/tank/load"
 						aria-label="Load previously saved tank settings"
 						title="Load tank settings from your saved configurations") Load
 
