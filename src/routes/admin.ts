@@ -53,8 +53,10 @@ export function requireAdmin(
 
 	if (!req.viewer) {
 		res.status(401).send();
-	} if (!req.viewer?.is_admin) {
+		return;
+	} else if (!req.viewer?.is_admin) {
 		res.status(403).send();
+		return;
 	} else {
 		next();
 	}

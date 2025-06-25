@@ -52,7 +52,7 @@ export async function sendChangesRequest(
 		to: contact_email,
 		cc: admins,
 		bcc: DEBUG_EMAIL,
-		subject: `Chages Requested - ${sub.species_common_name}`,
+		subject: `Changes Requested - ${sub.species_common_name}`,
 		text: content,
 	});
 }

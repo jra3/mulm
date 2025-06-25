@@ -1,6 +1,5 @@
-import { writeConn, query } from "./conn";
+import { writeConn, query, withTransaction } from "./conn";
 import { logger } from "@/utils/logger";
-import { Database } from "sqlite";
 
 type NameSynonym = {
 	/** Not a phylogenetic class. The species class for the BAP program */
@@ -24,31 +23,6 @@ export async function querySpeciesNames() {
 		FROM species_name_group LEFT JOIN species_name
 		ON species_name_group.group_id = species_name.group_id
 	`);
-}
-
-/**
- * Execute a function within a database transaction.
- * Automatically handles BEGIN, COMMIT, and ROLLBACK.
- *
- * Note: The try/catch around ROLLBACK is the standard pattern for sqlite3
- * as the API doesn't expose transaction state checking.
- */
-async function withTransaction<T>(fn: (db: Database) => Promise<T>): Promise<T> {
-	const db = writeConn;
-	await db.exec('BEGIN TRANSACTION;');
-	try {
-		const result = await fn(db);
-		await db.exec('COMMIT;');
-		return result;
-	} catch (err) {
-		try {
-			await db.exec('ROLLBACK;');
-		} catch {
-			// Ignore rollback errors - transaction may not be active
-			// This is the standard pattern for sqlite3 package
-		}
-		throw err;
-	}
 }
 
 export async function recordName(data: NameSynonym): Promise<number> {

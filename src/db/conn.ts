@@ -97,3 +97,26 @@ export async function deleteOne(table: string, key: PartialRow) {
 		throw new Error(`SQLite delete failed: ${(error as Error).message}`);
 	}
 }
+
+/**
+ * Execute a function within a database transaction.
+ * The try/catch around ROLLBACK is intentional - it's the standard pattern
+ * for the sqlite3 package which doesn't expose transaction state checking.
+ */
+export async function withTransaction<T>(fn: (db: Database) => Promise<T>): Promise<T> {
+	const db = writeConn;
+	await db.exec('BEGIN TRANSACTION;');
+	try {
+		const result = await fn(db);
+		await db.exec('COMMIT;');
+		return result;
+	} catch (err) {
+		try {
+			await db.exec('ROLLBACK;');
+		} catch {
+			// Ignore rollback errors - transaction may not be active
+			// This is the standard pattern for sqlite3 package
+		}
+		throw err;
+	}
+}
