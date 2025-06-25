@@ -1,0 +1,93 @@
+doctype html
+html
+	head
+		meta(charset="utf-8")
+		title Witness Review Required
+		style.
+			body {
+				font-family: Arial, sans-serif;
+				line-height: 1.6;
+				color: #333;
+				max-width: 600px;
+				margin: 0 auto;
+				padding: 20px;
+			}
+			.header {
+				background-color: #dc2626;
+				color: white;
+				padding: 20px;
+				text-align: center;
+				border-radius: 8px 8px 0 0;
+			}
+			.content {
+				background-color: #f8fafc;
+				padding: 20px;
+				border: 1px solid #e2e8f0;
+			}
+			.submission-details {
+				background-color: white;
+				padding: 15px;
+				border-radius: 6px;
+				margin: 15px 0;
+				border-left: 4px solid #f59e0b;
+			}
+			.reason-box {
+				background-color: #fef3c7;
+				border: 1px solid #f59e0b;
+				padding: 15px;
+				border-radius: 6px;
+				margin: 15px 0;
+			}
+			.footer {
+				background-color: #64748b;
+				color: white;
+				padding: 15px;
+				text-align: center;
+				border-radius: 0 0 8px 8px;
+				font-size: 12px;
+			}
+			.button {
+				display: inline-block;
+				background-color: #2563eb;
+				color: white;
+				padding: 10px 20px;
+				text-decoration: none;
+				border-radius: 5px;
+				margin: 10px 0;
+			}
+	body
+		.header
+			h1 Witness Review Required
+		
+		.content
+			p Hello #{member.display_name},
+			
+			p Your BAP submission requires additional review before it can be witnessed and approved.
+			
+			.submission-details
+				h3 Submission Details:
+				p <strong>Species:</strong> #{submission.species_common_name} (#{submission.species_latin_name})
+				p <strong>Species Class:</strong> #{submission.species_class}
+				p <strong>Reproduction Date:</strong> #{new Date(submission.reproduction_date).toLocaleDateString()}
+				p <strong>Submitted On:</strong> #{new Date(submission.submitted_on).toLocaleDateString()}
+			
+			.reason-box
+				h3 Reason for Review:
+				p= reason
+			
+			p <strong>Next Steps:</strong>
+			ul
+				li Review the feedback provided above
+				li Make any necessary corrections to your submission
+				li Resubmit your entry for witness verification
+			
+			p You can edit and resubmit your submission here:
+			a.button(href=`${domain}/sub/${submission.id}`) Edit Submission
+			
+			p If you have questions about the feedback, please contact the program administrators or reach out to a club member for assistance.
+			
+			p Thank you for your understanding and participation in the Breeder Awards Program!
+		
+		.footer
+			p Brooklyn Aquarium Society - BAP/HAP Portal
+			p This is an automated message. Please do not reply to this email.

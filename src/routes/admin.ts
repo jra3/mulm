@@ -1,8 +1,8 @@
 import { createMember, getMember, getMemberByEmail, getRosterWithPoints, updateMember, type MemberRecord } from "@/db/members";
-import { getOutstandingSubmissions, getOutstandingSubmissionsCounts, getSubmissionById, updateSubmission, getSubmissionsByMember, type Submission } from "@/db/submissions";
+import { getOutstandingSubmissions, getOutstandingSubmissionsCounts, getSubmissionById, updateSubmission, getSubmissionsByMember, getWitnessQueue, getWitnessQueueCounts, getWaitingPeriodSubmissions, confirmWitness, declineWitness, type Submission } from "@/db/submissions";
 import { approvalSchema } from "@/forms/approval";
 import { inviteSchema } from "@/forms/member";
-import { onSubmissionApprove, sendChangesRequest, sendInviteEmail } from "@/notifications";
+import { onSubmissionApprove, sendChangesRequest, sendInviteEmail, onWitnessConfirmed, onWitnessDeclined } from "@/notifications";
 import { programs } from "@/programs";
 import { MulmRequest } from "@/sessions";
 import { Response, NextFunction } from "express";
@@ -163,9 +163,10 @@ export const showQueue = async (req: MulmRequest, res: Response) => {
 		return;
 	}
 
-	const [submissions, programCounts] = await Promise.all([
+	const [submissions, programCounts, witnessCounts] = await Promise.all([
 		getOutstandingSubmissions(program),
 		getOutstandingSubmissionsCounts(),
+		getWitnessQueueCounts(),
 	]);
 
 	const subtitle = (() => {
@@ -186,6 +187,84 @@ export const showQueue = async (req: MulmRequest, res: Response) => {
 		submissions,
 		program,
 		programCounts,
+		witnessCounts,
+	});
+}
+
+export const showWitnessQueue = async (req: MulmRequest, res: Response) => {
+	const { program = "fish" } = req.params;
+	if (programs.indexOf(program) === -1) {
+		res.status(404).send("Invalid program");
+		return;
+	}
+
+	const [submissions, programCounts] = await Promise.all([
+		getWitnessQueue(program),
+		getWitnessQueueCounts(),
+	]);
+
+	const subtitle = (() => {
+		switch (program) {
+			default:
+			case "fish":
+				return `Breeder Awards Program`;
+			case "plant":
+				return `Horticultural Awards Program`;
+			case "coral":
+				return `Coral Awards Program`;
+		}
+	})();
+
+	res.render("admin/witnessQueue", {
+		title: "Witness Review Queue",
+		subtitle,
+		submissions,
+		program,
+		programCounts,
+	});
+}
+
+export const showWaitingPeriod = async (req: MulmRequest, res: Response) => {
+	const { program = "fish" } = req.params;
+	if (programs.indexOf(program) === -1) {
+		res.status(404).send("Invalid program");
+		return;
+	}
+
+	const [submissions, programCounts, witnessCounts] = await Promise.all([
+		getWaitingPeriodSubmissions(program),
+		getOutstandingSubmissionsCounts(),
+		getWitnessQueueCounts(),
+	]);
+	
+	// Import the waiting period utility to calculate status for each submission
+	const { getWaitingPeriodStatus } = await import("@/utils/waitingPeriod");
+	
+	// Add waiting period status to each submission
+	const submissionsWithStatus = submissions.map(sub => ({
+		...sub,
+		waitingStatus: getWaitingPeriodStatus(sub)
+	}));
+
+	const subtitle = (() => {
+		switch (program) {
+			default:
+			case "fish":
+				return `Breeder Awards Program`;
+			case "plant":
+				return `Horticultural Awards Program`;
+			case "coral":
+				return `Coral Awards Program`;
+		}
+	})();
+
+	res.render("admin/waitingPeriod", {
+		title: "Waiting Period Monitor",
+		subtitle,
+		submissions: submissionsWithStatus,
+		program,
+		programCounts,
+		witnessCounts,
 	});
 }
 
@@ -253,6 +332,75 @@ Substrate:
 		submission,
 		contents,
 	});
+}
+
+export const confirmWitnessAction = async (req: MulmRequest, res: Response) => {
+	const submission = await validateSubmission(req, res);
+	if (!submission) {
+		res.send("Submission not found");
+		return;
+	}
+
+	if (!req.viewer?.is_admin) {
+		res.status(403).send("Admin access required");
+		return;
+	}
+
+	const [member, witness] = await Promise.all([
+		getMember(submission.member_id),
+		getMember(req.viewer.id),
+	]);
+	
+	if (!member || !witness) {
+		res.send("Member or witness not found");
+		return;
+	}
+
+	await Promise.all([
+		confirmWitness(submission.id, req.viewer.id),
+		onWitnessConfirmed(submission, member, witness),
+	]);
+
+	res.set('HX-Redirect', `/sub/${submission.id}`).send();
+}
+
+export const declineWitnessForm = async (req: MulmRequest, res: Response) => {
+	const submission = await validateSubmission(req, res);
+	if (!submission) {
+		res.send("Error: submission not found");
+		return;
+	}
+
+	res.render("admin/declineWitness", {
+		submission,
+	});
+};
+
+export const declineWitnessAction = async (req: MulmRequest, res: Response) => {
+	const submission = await validateSubmission(req, res);
+	if (!submission) {
+		res.send("Submission not found");
+		return;
+	}
+
+	if (!req.viewer?.is_admin) {
+		res.status(403).send("Admin access required");
+		return;
+	}
+
+	const member = await getMember(submission.member_id);
+	if (!member) {
+		res.send("Member not found");
+		return;
+	}
+
+	const reason = getBodyString(req, "reason") || "No reason provided";
+	await Promise.all([
+		declineWitness(submission.id, req.viewer.id),
+		onWitnessDeclined(submission, member, reason),
+	]);
+
+	res.set('HX-Redirect', `/sub/${submission.id}`).send('Request sent successfully');
 }
 
 export const inviteMember = async (req: MulmRequest, res: Response) => {

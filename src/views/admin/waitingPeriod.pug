@@ -1,0 +1,70 @@
+include ../header.pug
+include queueButton.pug
+include adminNav.pug
+
+- const stringCell = ['p-3', 'text-left', 'border-b', 'border-gray-200'];
+- const heading = ['p-3', 'text-left', 'font-bold', 'text-gray-900', 'border-b-2', 'border-gray-300', 'bg-gray-50', 'cursor-pointer', 'select-none', 'hover:bg-gray-100'];
+
+mixin waitingPeriodTable(submissions)
+	.overflow-x-auto.w-full
+		table(data-sortable class="w-full bg-white shadow-sm rounded-lg")
+			thead
+				tr
+					th(class=heading) Member Name
+					th(class=heading) Species Class
+					th(class=heading) Common Name
+					th(class=heading) Latin Name
+					th(class=heading) Reproduction Date
+					th(class=heading data-sort-method="date" data-sort-default) Witnessed On
+					th(class=heading) Witnessed By
+					th(class=heading data-sort-method="number") Days Remaining
+					th(class="p-3 text-left font-bold text-gray-900 border-b-2 border-gray-300 bg-gray-50" data-sort-method="none") Actions
+
+			tbody
+				each sub in submissions
+					tr(class="hover:bg-gray-50")
+						td(class=stringCell)= sub.member_name
+						td(class=stringCell)= sub.species_class
+						td(class=stringCell)= sub.species_common_name
+						td(class=stringCell)= sub.species_latin_name
+						- const reproDate = sub.reproduction_date && new Date(sub.reproduction_date).toLocaleDateString();
+						td(class=stringCell)= reproDate
+						- const witnessDate = sub.witnessed_on && new Date(sub.witnessed_on).toLocaleDateString();
+						td(class=stringCell)= witnessDate
+						td(class=stringCell)= sub.witnessed_by_name || 'Unknown'
+						td(class=stringCell)
+							if sub.waitingStatus.eligible
+								span(class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800") Ready
+							else
+								span(class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800")= `${sub.waitingStatus.daysRemaining} days`
+						td(class=stringCell)
+							a(class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors" href=`/sub/${sub.id}`) Review
+
+doctype html
+html
+	+headTag(title)
+		script(src='/tablesort.min.js')
+		script(src='/tablesort.number.min.js')
+		script(src='/tablesort.date.min.js')
+		script.
+			document.addEventListener('DOMContentLoaded', function() {
+				const tables = document.querySelectorAll('table[data-sortable]');
+				tables.forEach(table => {
+					new Tablesort(table, {
+						descending: false // Default to ascending for days remaining (lowest first)
+					});
+				});
+			});
+
+	body.bg-white.text-gray-800
+		+pageHeader(true, title, subtitle)
+
+		.container.mx-auto.px-4.py-6
+			if submissions && submissions.length > 0
+				+waitingPeriodTable(submissions)
+			else
+				.text-center.py-12
+					.text-gray-500.text-lg No submissions in waiting period for #{subtitle.toLowerCase()}.
+					p.text-sm.text-gray-400.mt-2 Check other programs using the navigation below.
+
+		+adminNav("waiting", programCounts, witnessCounts)
