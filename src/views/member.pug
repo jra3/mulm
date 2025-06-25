@@ -58,7 +58,7 @@ html
 
 	body.bg-white.text-gray-800
 		+pageHeader(isLoggedIn, member.display_name)
-		
+
 		if member.awards && member.awards.length > 0
 			section.bg-blue-50.py-8
 				div(class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8")
@@ -82,20 +82,30 @@ html
 										div(class="text-sm text-gray-500")
 											- const awardDate = new Date(award.date_awarded).toLocaleDateString();
 											= awardDate
-		if fishSubs.length > 0
-			section.bg-gray-100
-				div.w-full.text-center.px-4
-					h3(class="text-xl lg:text-4xl font-extrabold mb-4") Breeders Awards Submissions
-					+submissionTable(fishSubs, fishTotalPoints)
+		- const hasAnySubmissions = fishSubs.length > 0 || plantSubs.length > 0 || coralSubs.length > 0;
 
-		if plantSubs.length > 0
-			section.bg-gray-100
-				div.w-full.text-center.px-4
-					h3(class="text-xl lg:text-4xl font-extrabold mb-4") Horticultural Awards Submissions
-					+submissionTable(plantSubs, plantTotalPoints)
+		if hasAnySubmissions
+			if fishSubs.length > 0
+				section.bg-gray-100
+					div.w-full.text-center.px-4
+						h3(class="text-xl lg:text-4xl font-extrabold mb-4") Breeders Awards Submissions
+						+submissionTable(fishSubs, fishTotalPoints)
 
-		if coralSubs.length > 0
-			section.bg-gray-100
-				div.w-full.text-center.px-4
-					h3(class="text-xl lg:text-4xl font-extrabold mb-4") Coral Awards Submissions
-					+submissionTable(coralSubs, coralTotalPoints)
+			if plantSubs.length > 0
+				section.bg-gray-100
+					div.w-full.text-center.px-4
+						h3(class="text-xl lg:text-4xl font-extrabold mb-4") Horticultural Awards Submissions
+						+submissionTable(plantSubs, plantTotalPoints)
+
+			if coralSubs.length > 0
+				section.bg-gray-100
+					div.w-full.text-center.px-4
+						h3(class="text-xl lg:text-4xl font-extrabold mb-4") Coral Awards Submissions
+						+submissionTable(coralSubs, coralTotalPoints)
+		else
+			section.bg-gray-100.py-16
+				div(class="max-w-2xl mx-auto text-center px-4")
+					div(class="bg-white rounded-lg shadow-md p-8")
+						div(class="text-6xl mb-4") 🐠
+						h3(class="text-2xl font-bold text-gray-800 mb-2") No Submissions Yet
+						p(class="text-gray-600 mb-6") This member hasn't made any submissions to the program.
