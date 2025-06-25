@@ -69,6 +69,11 @@ export const view = async (req: MulmRequest, res: Response) => {
 		approver = await getMember(submission.approved_by);
 	}
 
+	let witness: MemberRecord | undefined;
+	if (submission.witnessed_by != null) {
+		witness = await getMember(submission.witnessed_by);
+	}
+
 	const aspect = {
 		isSubmitted: submission.submitted_on != null,
 		isApproved: submission.approved_on != null,
@@ -122,8 +127,11 @@ export const view = async (req: MulmRequest, res: Response) => {
 			...submission,
 			reproduction_date: local(submission.reproduction_date),
 			submitted_on: local(submission.submitted_on),
+			witnessed_on: local(submission.witnessed_on),
 			approved_on: local(submission.approved_on),
 			approved_by: approver?.display_name,
+			witnessed: witness && submission.witnessed_on ? `${witness.display_name} - ${local(submission.witnessed_on)}` : undefined,
+			approved: approver && submission.approved_on ? `${approver.display_name} - ${local(submission.approved_on)}` : undefined,
 
 			foods: parseStringArray(submission.foods).join(","),
 			spawn_locations: parseStringArray(submission.spawn_locations).join(","),
