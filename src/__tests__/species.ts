@@ -1,19 +1,24 @@
 import fs from 'fs';
+import { mkdtempSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 import sqlite3 from 'sqlite3';
 import { open, Database } from 'sqlite';
 import { overrideConnection } from "../db/conn";
 import { getSpeciesForExplorer, recordName, getSpeciesDetail, SpeciesFilters } from "../db/species";
 import { createMember } from "../db/members";
 
+let testDir: string;
+
 beforeAll(() => {
-	fs.mkdirSync("/tmp/mulm", { recursive: true });
+	testDir = mkdtempSync(join(tmpdir(), 'mulm-species-test-'));
 });
 
 let instance = 1;
 let testDb: Database;
 
 beforeEach(async () => {
-	const filename = `/tmp/mulm/database-species-${instance++}.sqlite`;
+	const filename = join(testDir, `database-species-${instance++}.sqlite`);
 	const tmpConn = await open({
 		filename,
 		driver: sqlite3.Database,
@@ -36,7 +41,7 @@ beforeEach(async () => {
 });
 
 afterAll(() => {
-	fs.rmSync("/tmp/mulm", { recursive: true, force: true });
+	fs.rmSync(testDir, { recursive: true, force: true });
 });
 
 async function setupTestData() {

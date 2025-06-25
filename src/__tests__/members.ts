@@ -1,4 +1,7 @@
 import fs from 'fs';
+import { mkdtempSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 import { createMember, getGoogleAccount, getMember, getMemberByEmail, getMembersList, getRosterWithPoints } from "../db/members";
 import { createSubmission, approveSubmission } from "../db/submissions";
 import { getErrorMessage } from '../utils/error';
@@ -6,15 +9,15 @@ import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
 import { overrideConnection } from "../db/conn";
 
+let testDir: string;
+
 beforeAll(() => {
-	if (!fs.existsSync("/tmp/mulm")) {
-		fs.mkdirSync("/tmp/mulm");
-	}
+	testDir = mkdtempSync(join(tmpdir(), 'mulm-members-test-'));
 });
 
 let instance = 1;
 beforeEach(async () => {
-	const filename = `/tmp/mulm/database-${instance++}.sqlite`;
+	const filename = join(testDir, `database-${instance++}.sqlite`);
 	const tmpConn = await open({
 		filename,
 		driver: sqlite3.Database,
@@ -34,7 +37,7 @@ beforeEach(async () => {
 });
 
 afterAll(() => {
-	fs.rmdirSync("/tmp/mulm", { recursive: true });
+	fs.rmSync(testDir, { recursive: true, force: true });
 });
 
 test('Members list append', async () => {
