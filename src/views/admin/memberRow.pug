@@ -5,7 +5,7 @@ mixin memberRow(member)
 	tr(class="hover:bg-gray-50 cursor-pointer"
 		hx-target="closest tr"
 		hx-swap="outerHTML"
-		hx-get=`/admin/members/edit/${member.id}`)
+		hx-get=`/admin/members/${member.id}/edit`)
 
 		td(class=numberCell)= member.id
 		td(class=centerCell)
