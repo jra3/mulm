@@ -1,6 +1,7 @@
-mixin queueButton(program, text, count)
+mixin queueButton(program, text, count, queueType = "queue")
+	- const baseUrl = queueType === "witness" ? `/admin/witness-queue/${program}` : queueType === "waiting" ? `/admin/waiting-period/${program}` : `/admin/queue/${program}`;
 	if count > 0
-		a(href=`/admin/queue/${program}`)
+		a(href=baseUrl)
 			button.primary= `${text} `
 				span.bg-red-500.px-1.py-1.rounded-xl= count
 

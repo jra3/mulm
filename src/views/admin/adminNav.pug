@@ -1,0 +1,39 @@
+mixin adminNav(currentQueue, programCounts, witnessCounts)
+	.fixed.bottom-0.left-0.w-full.bg-white.border-t.border-gray-200.p-4.shadow-lg
+		.container.mx-auto
+			// Queue type selector
+			.flex.justify-center.mb-3
+				.flex.gap-2.text-sm
+					if currentQueue === "witness"
+						span.font-bold.text-blue-600 Witness Queues
+					else
+						a.link(href="/admin/witness-queue/fish") Witness Queues
+					span.text-gray-400 |
+					if currentQueue === "waiting"
+						span.font-bold.text-blue-600 Waiting Period
+					else
+						a.link(href="/admin/waiting-period/fish") Waiting Period
+					span.text-gray-400 |
+					if currentQueue === "approval"
+						span.font-bold.text-blue-600 Approval Queues
+					else
+						a.link(href="/admin/queue/fish") Approval Queues
+			
+			// Program buttons for current queue type
+			.flex.justify-center.space-x-4
+				if currentQueue === "witness"
+					+queueButton("fish", "Fish/Inverts", witnessCounts.fish, "witness")
+					+queueButton("plant", "Plants", witnessCounts.plant, "witness")
+					+queueButton("coral", "Corals", witnessCounts.coral, "witness")
+				else if currentQueue === "waiting"
+					// Waiting period doesn't use counts, just navigation
+					a(href="/admin/waiting-period/fish")
+						button.outline Fish/Inverts
+					a(href="/admin/waiting-period/plant")
+						button.outline Plants
+					a(href="/admin/waiting-period/coral")
+						button.outline Corals
+				else
+					+queueButton("fish", "Fish/Inverts", programCounts.fish)
+					+queueButton("plant", "Plants", programCounts.plant)
+					+queueButton("coral", "Corals", programCounts.coral)
