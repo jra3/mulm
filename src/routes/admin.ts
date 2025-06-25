@@ -238,13 +238,10 @@ export const showWaitingPeriod = async (req: MulmRequest, res: Response) => {
 	]);
 	
 	// Import the waiting period utility to calculate status for each submission
-	const { getWaitingPeriodStatus } = await import("@/utils/waitingPeriod");
+	const { getWaitingPeriodStatusBulk } = await import("@/utils/waitingPeriod");
 	
-	// Add waiting period status to each submission
-	const submissionsWithStatus = submissions.map(sub => ({
-		...sub,
-		waitingStatus: getWaitingPeriodStatus(sub)
-	}));
+	// Add waiting period status to all submissions at once
+	const submissionsWithStatus = getWaitingPeriodStatusBulk(submissions);
 
 	const subtitle = (() => {
 		switch (program) {
