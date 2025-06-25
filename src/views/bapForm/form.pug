@@ -187,14 +187,21 @@ mixin CRUDForm()
 		section.bg-blue-50.py-4.border-l-4.border-blue-400(aria-labelledby="witness-info")
 			div.max-w-4xl.mx-auto.px-4
 				h3#witness-info.text-lg.font-semibold.text-blue-900.mb-2 📋 Witness Verification Required
-				p.text-blue-800.mb-2 After submitting, your spawn/propagation will need to be verified by a program admin before final approval.
+				if form.species_type === 'Plant' || form.species_type === 'Coral'
+					p.text-blue-800.mb-2 After submitting, your propagation will need to be verified by a program admin before final approval.
+				else
+					p.text-blue-800.mb-2 After submitting, your spawn will need to be verified by a program admin before final approval.
 				ul.text-sm.text-blue-700.list-disc.list-inside.space-y-1
 					li Any program admin can witness your submission
 					li You'll receive email notification when witnessed
-					if form.species_type === 'Plant'
-						li 60-day waiting period required after reproduction date
+					if form.species_type === 'Fish' && form.species_class === 'Marine'
+						li 30-day waiting period required after spawn date
+					else if form.species_type === 'Plant'
+						li 60-day waiting period required after propagation date
+					else if form.species_type === 'Coral'
+						li 60-day waiting period required after propagation date
 					else
-						li 30-day waiting period required after reproduction date
+						li 60-day waiting period required after spawn date
 					li Final approval and point assignment occurs after waiting period
 
 	section.bg-gray-100.py-4
