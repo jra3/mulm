@@ -19,6 +19,8 @@ const transporter = nodemailer.createTransport({
 
 
 const renderOnSubmission = pug.compileFile("src/views/email/onSubmission.pug");
+const renderOnWitnessConfirmed = pug.compileFile("src/views/email/onWitnessConfirmed.pug");
+const renderOnWitnessDeclined = pug.compileFile("src/views/email/onWitnessDeclined.pug");
 export async function onSubmissionSend(
 	sub: Submission,
 	member: MemberRecord,
@@ -142,6 +144,44 @@ export async function onLevelUpgrade(
 			program,
 			newLevel,
 			totalPoints,
+		}),
+	});
+}
+
+export async function onWitnessConfirmed(
+	submission: Submission,
+	member: MemberRecord,
+	witness: MemberRecord,
+) {
+	return transporter.sendMail({
+		from: fromEmail,
+		to: member.contact_email,
+		bcc: DEBUG_EMAIL,
+		subject: `Witness Confirmed - ${submission.species_common_name}`,
+		html: renderOnWitnessConfirmed({
+			domain: config.domain,
+			submission,
+			member,
+			witness,
+		}),
+	});
+}
+
+export async function onWitnessDeclined(
+	submission: Submission,
+	member: MemberRecord,
+	reason: string,
+) {
+	return transporter.sendMail({
+		from: fromEmail,
+		to: member.contact_email,
+		bcc: DEBUG_EMAIL,
+		subject: `Witness Review Required - ${submission.species_common_name}`,
+		html: renderOnWitnessDeclined({
+			domain: config.domain,
+			submission,
+			member,
+			reason,
 		}),
 	});
 }
