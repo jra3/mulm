@@ -53,7 +53,11 @@ export async function createUserSession(req: Request, res: Response, memberId: n
 		const insertStmt = await conn.prepare(`
 			INSERT INTO sessions (session_id, member_id, expires_on) VALUES (?, ?, ?);
 		`);
-		await insertStmt.run(cookieValue, memberId, expiry.toISOString());
+		try {
+			await insertStmt.run(cookieValue, memberId, expiry.toISOString());
+		} finally {
+			await insertStmt.finalize();
+		}
 	} catch (err) {
 		console.error(err);
 		throw new Error("Failed to get member");
@@ -74,7 +78,11 @@ export async function destroyUserSession(req: MulmRequest, res: Response) {
 		try {
 			const conn = writeConn;
 			const deleteRow = await conn.prepare('DELETE FROM sessions WHERE session_id = ?');
-			await deleteRow.run(token);
+			try {
+				await deleteRow.run(token);
+			} finally {
+				await deleteRow.finalize();
+			}
 		} catch (err) {
 			console.error(err);
 			throw new Error("Failed to delete session");

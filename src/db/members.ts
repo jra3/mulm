@@ -69,8 +69,12 @@ export async function createOrUpdatePassword(memberId: number, passwordEntry: Sc
 				salt = excluded.salt,
 				hash = excluded.hash
 			`);
-		const { N, r, p, salt, hash } = passwordEntry;
-		await stmt.run(memberId, N, r, p, salt, hash);
+		try {
+			const { N, r, p, salt, hash } = passwordEntry;
+			await stmt.run(memberId, N, r, p, salt, hash);
+		} finally {
+			await stmt.finalize();
+		}
 	} catch (err) {
 		logger.error('Failed to set password', err);
 		throw new Error("Failed to set password");
@@ -97,17 +101,30 @@ export async function createMember(
 	try {
 		const userStmt = await conn.prepare('INSERT INTO members (display_name, contact_email, is_admin) VALUES (?, ?, ?)');
 		// is this a bug... we should return the data, not the lastID
-		const memberId = (await userStmt.run(name, email, isAdmin ? 1 : 0)).lastID;
+		let memberId;
+		try {
+			memberId = (await userStmt.run(name, email, isAdmin ? 1 : 0)).lastID;
+		} finally {
+			await userStmt.finalize();
+		}
 
 		if (credentials.google_sub) {
 			const googleStmt = await conn.prepare('INSERT INTO google_account (google_sub, member_id, google_email) VALUES (?, ?, ?)');
-			await googleStmt.run(credentials.google_sub, memberId, email);
+			try {
+				await googleStmt.run(credentials.google_sub, memberId, email);
+			} finally {
+				await googleStmt.finalize();
+			}
 		}
 
 		if (credentials.password) {
 			const { N, r, p, salt, hash	} = await makePasswordEntry(credentials.password);
-			const googleStmt = await conn.prepare('INSERT INTO password_account (member_id, N, r, p, salt, hash) VALUES (?, ?, ?, ?, ?, ?)');
-			await googleStmt.run(memberId, N, r, p, salt, hash);
+			const passwordStmt = await conn.prepare('INSERT INTO password_account (member_id, N, r, p, salt, hash) VALUES (?, ?, ?, ?, ?, ?)');
+			try {
+				await passwordStmt.run(memberId, N, r, p, salt, hash);
+			} finally {
+				await passwordStmt.finalize();
+			}
 		}
 
 		await conn.exec('COMMIT;');
@@ -238,7 +255,11 @@ export async function grantAward(
 	try {
 		const conn = db(true);
 		const stmt = await conn.prepare("INSERT INTO awards (member_id, award_name, date_awarded, award_type) VALUES (?, ?, ?, ?)");
-		await stmt.run(memberId, awardName, dateAwarded.toISOString(), awardType);
+		try {
+			await stmt.run(memberId, awardName, dateAwarded.toISOString(), awardType);
+		} finally {
+			await stmt.finalize();
+		}
 
 		// Create activity feed entry for award grant
 		try {

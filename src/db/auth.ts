@@ -24,7 +24,11 @@ export async function deleteExpiredAuthCodes(cutoff: Date) {
 	try {
 		const conn = writeConn;
 		const deleteRow = await conn.prepare("DELETE FROM auth_codes WHERE expires_on < ?");
-		return deleteRow.run(cutoff);
+		try {
+			return await deleteRow.run(cutoff);
+		} finally {
+			await deleteRow.finalize();
+		}
 	} catch (err) {
 		logger.error('Failed to delete auth codes', err);
 		throw new Error("Failed to delete auth codes");

@@ -39,12 +39,16 @@ export async function createActivity(
             VALUES (?, ?, ?, ?)
         `);
         
-        await stmt.run(
-            activityType,
-            memberId,
-            relatedId,
-            JSON.stringify(activityData)
-        );
+        try {
+            await stmt.run(
+                activityType,
+                memberId,
+                relatedId,
+                JSON.stringify(activityData)
+            );
+        } finally {
+            await stmt.finalize();
+        }
         
         logger.info(`Created activity: ${activityType} for member ${memberId}`);
     } catch (error) {
