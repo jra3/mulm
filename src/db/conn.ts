@@ -20,12 +20,14 @@ export async function init() {
 		driver: sqlite3.Database,
 		mode: sqlite3.OPEN_READONLY,
 	});
+	await readOnlyConn.exec('PRAGMA foreign_keys = ON;');
 
 	writeConn = await open({
 		filename: config.databaseFile,
 		driver: sqlite3.Database,
 		mode: sqlite3.OPEN_READWRITE,
 	});
+	await writeConn.exec('PRAGMA foreign_keys = ON;');
 }
 
 (async () => {
@@ -34,6 +36,10 @@ export async function init() {
 		driver: sqlite3.Database,
 		mode: sqlite3.OPEN_CREATE | sqlite3.OPEN_READWRITE,
 	});
+	
+	// Enable foreign key constraints
+	await adminConn.exec('PRAGMA foreign_keys = ON;');
+	
 	await adminConn.migrate({
 		migrationsPath: './db/migrations',
 	});
