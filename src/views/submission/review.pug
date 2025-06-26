@@ -76,22 +76,32 @@ html
 			if isAdmin
 				// Witness Actions Panel - only show for pending witness verification
 				if submission.witness_verification_status === 'pending'
-					.w-full.bg-gray-600.p-4.shadow-md.mt-6#witnessPanel
-						.container.mx-auto.max-w-4xl
-							h3.text-white.text-lg.font-semibold.mb-4 Witness Verification Required
-							p.text-white.mb-4 Review the submission details above, including any photos/videos (when available), then verify the spawn/propagation occurred as described.
-							div.flex.justify-center.max-w-4xl.mx-auto.text-center.gap-4
-								form(hx-post=`/admin/confirm-witness/${submission.id}`)
-									- const actionText = submission.species_type === 'Plant' ? 'Witness Propagation' : 'Witness Spawn'
-									button.primary(type="submit")= actionText
-								
-								button.destructive(
-									type="button"
-									hx-get=`/dialog/decline-witness/${submission.id}`
-									hx-target="closest body"
-									hx-swap="beforeend") Request More Proof
-				
+					if isSelf
+						// Show message for self-witnessing case
+						.w-full.bg-yellow-50.border-l-4.border-yellow-400.p-4.shadow-md.mt-6
+							.container.mx-auto.max-w-4xl
+								h3.text-yellow-800.text-lg.font-semibold.mb-2 📋 Witness Verification Needed
+								- const speciesText = submission.species_type === 'Plant' || submission.species_type === 'Coral' ? 'propagation' : 'spawn'
+								p.text-yellow-700.mb-2= `Your ${speciesText} needs to be witnessed by a different program admin before it can proceed to the waiting period.`
+								p.text-yellow-600.text-sm You cannot witness your own submissions. Please contact another admin to verify this submission.
+					else
+						// Show witness action buttons for other admins
+						.w-full.bg-gray-600.p-4.shadow-md.mt-6#witnessPanel
+							.container.mx-auto.max-w-4xl
+								h3.text-white.text-lg.font-semibold.mb-4 Witness Verification Required
+								p.text-white.mb-4 Review the submission details above, including any photos/videos (when available), then verify the spawn/propagation occurred as described.
+								div.flex.justify-center.max-w-4xl.mx-auto.text-center.gap-4
+									form(hx-post=`/admin/confirm-witness/${submission.id}`)
+										- const actionText = submission.species_type === 'Plant' ? 'Witness Propagation' : 'Witness Spawn'
+										button.primary(type="submit")= actionText
+
+									button.destructive(
+										type="button"
+										hx-get=`/dialog/decline-witness/${submission.id}`
+										hx-target="closest body"
+										hx-swap="beforeend") Request More Proof
+
 				// Approval Panel - only show for witnessed submissions past waiting period
-			else if submission.witness_verification_status === 'confirmed' && submission.approved_on === null
-				.w-full.bg-gray-600.p-4.shadow-md.mt-6#adminPanel
-					include ../admin/approvalPanel.pug
+				if submission.witness_verification_status === 'confirmed' && submission.approved_on == null && waitingPeriodStatus.eligible
+					.w-full.bg-gray-600.p-4.shadow-md.mt-6#adminPanel
+						include ../admin/approvalPanel.pug

@@ -602,14 +602,18 @@ async function generateTestData() {
         // Create witness test submissions to verify witness workflow
         await createWitnessTestSubmissions(users, johnId);
 
-        // Approve submissions
-        logger.info('Approving submissions...');
+        // Witness and approve submissions following proper workflow
+        logger.info('Processing submissions through witness and approval workflow...');
 
         for (const submission of submissionsToApprove) {
-            // 85% chance of approval
-            if (Math.random() > 0.15) {
-                try {
-                    // First, record the species name to get a proper species_name_id
+            try {
+                // First witness the submission (required step)
+                await confirmWitness(submission.id, johnId);
+                logger.info(`Witnessed submission ${submission.id}`);
+
+                // 85% chance of approval after witnessing
+                if (Math.random() > 0.15) {
+                    // Record the species name to get a proper species_name_id
                     const speciesNameId = await recordName({
                         program_class: submission.speciesType,
                         canonical_genus: submission.genus,
@@ -655,9 +659,11 @@ async function generateTestData() {
                     }
                     
                     logger.info(`Approved submission ${submission.id} with species ID ${speciesNameId}`);
-                } catch (error) {
-                    logger.error(`Failed to approve submission ${submission.id}:`, error);
+                } else {
+                    logger.info(`Witnessed but not approved submission ${submission.id} (15% chance)`);
                 }
+            } catch (error) {
+                logger.error(`Failed to process submission ${submission.id}:`, error);
             }
         }
 
