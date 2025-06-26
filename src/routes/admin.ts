@@ -21,23 +21,23 @@ import { createActivity } from "@/db/activity";
 // Helper function to calculate total points for a member
 async function getMemberWithPoints(member: MemberRecord | null): Promise<MemberRecord & { fishTotalPoints: number; plantTotalPoints: number; coralTotalPoints: number } | null> {
 	if (!member) return null;
-	
+
 	const submissions: Submission[] = await getSubmissionsByMember(
 		member.id.toString(),
 		false, // don't include unsubmitted
 		false  // don't include unapproved
 	);
-	
-	const fishSubmissions = submissions.filter((sub: Submission) => 
+
+	const fishSubmissions = submissions.filter((sub: Submission) =>
 		sub.species_type === "Fish" || sub.species_type === "Invert"
 	);
 	const plantSubmissions = submissions.filter((sub: Submission) => sub.species_type === "Plant");
 	const coralSubmissions = submissions.filter((sub: Submission) => sub.species_type === "Coral");
-	
+
 	const fishTotalPoints = fishSubmissions.reduce((sum: number, sub: Submission) => sum + (sub.total_points || 0), 0);
 	const plantTotalPoints = plantSubmissions.reduce((sum: number, sub: Submission) => sum + (sub.total_points || 0), 0);
 	const coralTotalPoints = coralSubmissions.reduce((sum: number, sub: Submission) => sum + (sub.total_points || 0), 0);
-	
+
 	return {
 		...member,
 		fishTotalPoints,
@@ -64,7 +64,7 @@ export function requireAdmin(
 
 export const viewMembers = async (req: MulmRequest, res: Response) => {
 	const members = await getRosterWithPoints();
-	
+
 	res.render("admin/members", {
 		title: "Member Roster",
 		members,
@@ -125,8 +125,8 @@ export const viewMemberRow = async (req: MulmRequest, res: Response) => {
 	}
 	const member = await getMember(id);
 	const memberWithPoints = await getMemberWithPoints(member || null);
-	
-	res.render("admin/singleMemberRow", { 
+
+	res.render("admin/singleMemberRow", {
 		member: memberWithPoints
 	});
 }
@@ -146,12 +146,12 @@ export const updateMemberFields = async (req: MulmRequest, res: Response) => {
 		contact_email,
 		is_admin: is_admin !== undefined ? 1 : 0,
 	});
-	
+
 	// Get the updated member with total points
 	const member = await getMember(id);
 	const memberWithPoints = await getMemberWithPoints(member || null);
 
-	res.render("admin/singleMemberRow", { 
+	res.render("admin/singleMemberRow", {
 		member: memberWithPoints
 	});
 }
@@ -236,10 +236,10 @@ export const showWaitingPeriod = async (req: MulmRequest, res: Response) => {
 		getOutstandingSubmissionsCounts(),
 		getWitnessQueueCounts(),
 	]);
-	
+
 	// Import the waiting period utility to calculate status for each submission
 	const { getWaitingPeriodStatusBulk } = await import("@/utils/waitingPeriod");
-	
+
 	// Add waiting period status to all submissions at once
 	const submissionsWithStatus = getWaitingPeriodStatusBulk(submissions);
 
@@ -347,7 +347,7 @@ export const confirmWitnessAction = async (req: MulmRequest, res: Response) => {
 		getMember(submission.member_id),
 		getMember(req.viewer.id),
 	]);
-	
+
 	if (!member || !witness) {
 		res.send("Member or witness not found");
 		return;
@@ -368,8 +368,31 @@ export const declineWitnessForm = async (req: MulmRequest, res: Response) => {
 		return;
 	}
 
+	const reproductionTerm = submission.species_type === 'Plant' || submission.species_type === 'Coral' ? 'propagation' : 'spawn';
+	const offspringTerm = (() => {
+		switch (submission.species_type) {
+			case 'Fish':
+				return 'fry (and eggs if applicable)';
+			case 'Plant':
+				return 'plantlets';
+			case 'Coral':
+				return 'frags';
+			default:
+			case 'Invert':
+				return 'offspring';
+		}
+	})();
+
+	const contents = `
+Additional documentation is needed to verify this ${reproductionTerm}.
+
+• Please provide images or video links clearly showing the ${offspringTerm}.
+• Photos of the parents will also be helpful.
+`;
+
 	res.render("admin/declineWitness", {
 		submission,
+		contents,
 	});
 };
 
@@ -486,7 +509,7 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
 		const updatedSubmission = await getSubmissionById(id);
 		if (updatedSubmission) {
 			await onSubmissionApprove(updatedSubmission, member);
-			
+
 			// Create activity feed entry for submission approval
 			try {
 				await createActivity(
@@ -504,15 +527,15 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
 			} catch (error) {
 				console.error('Error creating activity feed entry:', error);
 			}
-			
+
 			// Check for level upgrades after approval
 			if (updatedSubmission.program) {
 				try {
 					await checkAndUpdateMemberLevel(
-						member.id, 
+						member.id,
 						updatedSubmission.program as Program
 					);
-					
+
 					// Check for specialty awards after approval
 					await checkAndGrantSpecialtyAwards(member.id);
 				} catch (error) {
@@ -547,12 +570,12 @@ export const checkMemberLevels = async (req: MulmRequest, res: Response) => {
 			success: true,
 			memberId,
 			levelChanges,
-			message: levelChanges.length > 0 
+			message: levelChanges.length > 0
 				? `Updated ${levelChanges.length} level(s) for member ${memberId}`
 				: `No level changes needed for member ${memberId}`
 		});
 	} catch (error) {
-		res.status(500).json({ 
+		res.status(500).json({
 			error: 'Failed to check member levels',
 			details: error instanceof Error ? error.message : 'Unknown error'
 		});
@@ -568,18 +591,18 @@ export const checkMemberSpecialtyAwards = async (req: MulmRequest, res: Response
 
 	try {
 		const newAwards = await checkAllSpecialtyAwards(memberId);
-		
+
 		res.json({
 			success: true,
 			memberId,
 			newAwards,
 			totalNewAwards: newAwards.length,
-			message: newAwards.length > 0 
+			message: newAwards.length > 0
 				? `Granted ${newAwards.length} new specialty award(s) for member ${memberId}: ${newAwards.join(', ')}`
 				: `No new specialty awards for member ${memberId}`
 		});
 	} catch (error) {
-		res.status(500).json({ 
+		res.status(500).json({
 			error: 'Failed to check member specialty awards',
 			details: error instanceof Error ? error.message : 'Unknown error'
 		});

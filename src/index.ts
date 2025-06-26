@@ -8,7 +8,6 @@ import cookieParser from "cookie-parser";
 // import multer from "multer"; // Used in feature branch
 
 import * as account from "@/routes/account";
-import * as admin from "@/routes/admin";
 import adminRouter from "@/routes/adminRouter";
 import * as auth from "@/routes/auth";
 import * as member from "@/routes/member";
@@ -143,13 +142,6 @@ router.patch("/account", account.updateAccountSettings)
 router.delete("/account/google/:sub", account.unlinkGoogleAccount);
 
 router.use("/admin", adminRouter);
-
-router.get("/dialog/decline-witness/:subId", admin.requireAdmin, admin.declineWitnessForm);
-
-router.get("/admin/witness-queue{/:program}", admin.requireAdmin, admin.showWitnessQueue);
-router.get("/admin/waiting-period{/:program}", admin.requireAdmin, admin.showWaitingPeriod);
-router.post("/admin/confirm-witness/:subId", admin.requireAdmin, admin.confirmWitnessAction);
-router.post("/admin/decline-witness/:subId", admin.requireAdmin, admin.declineWitnessAction);
 
 // Password Auth ///////////////////////////////////////////
 
