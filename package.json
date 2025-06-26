@@ -13,9 +13,8 @@
 		"copy-files": "cp -r ./public ./dist/ && cp -r ./src/views ./dist/",
 		"test": "jest",
 		"start": "node dist/src/index.js",
-		"lint": "eslint 'src/**/*.ts' && npm run lint:pug",
+		"lint": "eslint 'src/**/*.ts'",
 		"lint:fix": "eslint 'src/**/*.ts' --fix",
-		"lint:pug": "pug-lint src/views/",
 		"script": "ts-node"
 	},
 	"repository": {
@@ -78,7 +77,6 @@
 		"nodemon": "^3.1.9",
 		"postcss": "^8.5.3",
 		"postcss-cli": "^11.0.0",
-		"pug-lint": "^2.7.0",
 		"tailwindcss": "^4.0.12",
 		"ts-jest": "^29.3.0",
 		"ts-node": "^10.9.2",
