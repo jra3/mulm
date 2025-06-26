@@ -88,3 +88,36 @@ tun with ts-node
 4. Update this file with significant changes
 5. Use conventional commit messages
 6. Run linter and unit tests before committing
+
+## Pug Template Guidelines
+**CRITICAL**: Avoid Tailwind class chain errors in Pug templates
+
+### Common Pitfalls to Avoid:
+- ❌ **Mixed quotes**: `div(class="max-w-4xl" id='container')` 
+- ❌ **Long single lines**: Tailwind utility chains over 140 characters
+- ❌ **Single quotes**: Always use double quotes for attributes
+- ❌ **SVG viewBox**: `viewBox` must be lowercase `viewbox` in Pug
+- ❌ **Multiple blank lines**: Remove extra whitespace
+
+### Best Practices:
+- ✅ **Use double quotes**: `div(class="max-w-4xl mx-auto")`
+- ✅ **Break long class chains**:
+  ```pug
+  div(
+    class="bg-gradient-to-r from-yellow-50 to-amber-50" +
+          " rounded-lg shadow-lg p-6"
+  )
+  ```
+- ✅ **Create component classes** for repeated patterns:
+  ```css
+  .approval-panel {
+    @apply bg-gray-600 p-4 shadow-md mt-6;
+  }
+  ```
+- ✅ **Use Pug class chains** for simple utilities: `div.flex.gap-4.items-center`
+- ✅ **Use class attributes** for complex responsive utilities
+
+### Linting:
+- Run `npm run lint:pug` before committing
+- Fix all Pug linting errors before submitting code
+- Configure your editor with pug-lint integration

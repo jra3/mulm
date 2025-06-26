@@ -78,7 +78,7 @@ html
 				if submission.witness_verification_status === 'pending'
 					if isSelf
 						// Show message for self-witnessing case
-						.w-full.bg-yellow-50.border-l-4.border-yellow-400.p-4.shadow-md.mt-6
+						.status-panel.status-panel-warning
 							.container.mx-auto.max-w-4xl
 								h3.text-yellow-800.text-lg.font-semibold.mb-2 📋 Witness Verification Needed
 								- const speciesText = submission.species_type === 'Plant' || submission.species_type === 'Coral' ? 'propagation' : 'spawn'
@@ -86,7 +86,7 @@ html
 								p.text-yellow-600.text-sm You cannot witness your own submissions. Please contact another admin to verify this submission.
 					else
 						// Show witness action buttons for other admins
-						.w-full.bg-gray-600.p-4.shadow-md.mt-6#witnessPanel
+						.status-panel.status-panel-admin#witnessPanel
 							.container.mx-auto.max-w-4xl
 								h3.text-white.text-lg.font-semibold.mb-4 Witness Verification Required
 								p.text-white.mb-4 Review the submission details above, including any photos/videos (when available), then verify the spawn/propagation occurred as described.
@@ -101,7 +101,27 @@ html
 										hx-target="closest body"
 										hx-swap="beforeend") Request More Proof
 
-				// Approval Panel - only show for witnessed submissions past waiting period
-				if submission.witness_verification_status === 'confirmed' && submission.approved_on == null && waitingPeriodStatus.eligible
-					.w-full.bg-gray-600.p-4.shadow-md.mt-6#adminPanel
-						include ../admin/approvalPanel.pug
+				// Show waiting period status for witnessed submissions
+				if submission.witness_verification_status === 'confirmed' && submission.approved_on == null
+					if !waitingPeriodStatus.eligible
+						// Show waiting period countdown
+						.status-panel.status-panel-pending
+							.container.mx-auto.max-w-4xl
+								h3.text-blue-800.text-lg.font-semibold.mb-2 ⏳ Waiting Period in Progress
+								- const speciesText = submission.species_type === 'Plant' || submission.species_type === 'Coral' ? 'propagation' : 'spawn'
+								p.text-blue-700.mb-2= `This ${speciesText} has been witnessed and is in its ${waitingPeriodStatus.requiredDays}-day waiting period.`
+								.bg-blue-100.rounded.p-3.mt-2
+									p.text-blue-800.font-semibold Days remaining: #{waitingPeriodStatus.daysRemaining}
+									p.text-blue-600.text-sm.mt-1 Elapsed: #{waitingPeriodStatus.elapsedDays} of #{waitingPeriodStatus.requiredDays} days
+					else if isSelf
+						// Show message for self-approval prevention
+						.status-panel.status-panel-warning
+							.container.mx-auto.max-w-4xl
+								h3.text-yellow-800.text-lg.font-semibold.mb-2 ✅ Ready for Approval
+								- const speciesText = submission.species_type === 'Plant' || submission.species_type === 'Coral' ? 'propagation' : 'spawn'
+								p.text-yellow-700.mb-2= `Your ${speciesText} has completed its waiting period and is ready for final approval.`
+								p.text-yellow-600.text-sm You cannot approve your own submissions. Please contact another admin to complete the approval process.
+					else
+						// Show approval panel for other admins
+						.status-panel.status-panel-admin#adminPanel
+							include ../admin/approvalPanel.pug

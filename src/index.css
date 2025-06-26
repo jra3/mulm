@@ -1,5 +1,22 @@
 @import "tailwindcss";
 
+/* Common component classes to avoid long Tailwind chains in Pug templates */
+.status-panel {
+	@apply w-full p-4 shadow-md mt-6;
+}
+
+.status-panel-pending {
+	@apply bg-blue-50 border-l-4 border-blue-400;
+}
+
+.status-panel-warning {
+	@apply bg-yellow-50 border-l-4 border-yellow-400;
+}
+
+.status-panel-admin {
+	@apply bg-gray-600;
+}
+
 .link {
 	@apply hover:underline text-base text-gray-500 hover:text-black transition duration-300 ease-in-out;
 }
