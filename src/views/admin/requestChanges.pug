@@ -7,7 +7,12 @@ include ../header.pug
 		hx-trigger="submit"
 		hx-target="#requestChangesError"
 		hx-swap="innerHTML"
+		hx-indicator="#feedbackIndicator"
+		hx-disabled-elt="#feedbackSubmitBtn"
+		hx-on::response-error="this.querySelector('#requestChangesError').textContent = event.detail.xhr.responseText; document.getElementById('feedbackSubmitBtn').disabled = false;"
 	)
-		span#requestChangesError(class="font-extrabold text-red-400")
+		span#requestChangesError.font-semibold.text-red-600
 		textarea.w-full.h-96.bg-white(name="content" id="requestChangesText" required)= contents
-		button.primary Send
+		div.flex.items-center.gap-2
+			button#feedbackSubmitBtn.primary(type="submit") Send
+			+loadingSpinner("feedbackIndicator")
