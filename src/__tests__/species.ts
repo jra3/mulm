@@ -1,45 +1,15 @@
-import fs from 'fs';
-import sqlite3 from 'sqlite3';
-import { open, Database } from 'sqlite';
-import { overrideConnection } from "../db/conn";
 import { getSpeciesForExplorer, recordName, getSpeciesDetail, SpeciesFilters } from "../db/species";
 import { createMember } from "../db/members";
+import { useTestDatabase } from './testDbHelper.helper';
 
-beforeAll(() => {
-	fs.mkdirSync("/tmp/mulm", { recursive: true });
-});
-
-let instance = 1;
-let testDb: Database;
+const { getDb } = useTestDatabase();
 
 beforeEach(async () => {
-	const filename = `/tmp/mulm/database-species-${instance++}.sqlite`;
-	const tmpConn = await open({
-		filename,
-		driver: sqlite3.Database,
-		mode: sqlite3.OPEN_CREATE | sqlite3.OPEN_READWRITE,
-	});
-	await tmpConn.migrate({
-    	migrationsPath: './db/migrations',
-	});
-
-	const writeConn = await open({
-		filename,
-		driver: sqlite3.Database,
-		mode: sqlite3.OPEN_READWRITE,
-	});
-
-	testDb = writeConn;
-	overrideConnection(writeConn);
-
 	await setupTestData();
 });
 
-afterAll(() => {
-	fs.rmSync("/tmp/mulm", { recursive: true, force: true });
-});
-
 async function setupTestData() {
+	const testDb = getDb();
 	const member1 = await createMember("breeder1@test.com", "Test Breeder 1");
 	const member2 = await createMember("breeder2@test.com", "Test Breeder 2");
 

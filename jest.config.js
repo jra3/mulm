@@ -9,7 +9,8 @@ module.exports = {
     "/node_modules/",
     "/dist/",
     "/infrastructure/cdk.out/",
-    "/scripts/"
+    "/scripts/",
+    ".*\\.helper\\.(ts|js)$"
   ],
   setupFiles: ["<rootDir>/jest.setup.js"],
   moduleNameMapper: {

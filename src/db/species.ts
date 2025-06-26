@@ -1,4 +1,4 @@
-import { writeConn, query, withTransaction } from "./conn";
+import { query, withTransaction } from "./conn";
 import { logger } from "@/utils/logger";
 
 type NameSynonym = {

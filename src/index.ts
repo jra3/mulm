@@ -8,7 +8,7 @@ import cookieParser from "cookie-parser";
 // import multer from "multer"; // Used in feature branch
 
 import * as account from "@/routes/account";
-import * as admin from "@/routes/admin";
+import adminRouter from "@/routes/adminRouter";
 import * as auth from "@/routes/auth";
 import * as member from "@/routes/member";
 import * as submission from "@/routes/submission";
@@ -116,15 +116,13 @@ router.patch("/sub/:subId", submission.update);
 router.delete("/sub/:subId", submission.remove);
 
 router.get("/tank", tank.view);
+router.get("/tank/save", tank.saveTankForm);
+router.get("/tank/load", tank.loadTankList);
 router.post("/tank", tank.create);
-router.patch("/tank", tank.update);
+router.patch("/tank/:name", tank.update);
 router.delete("/tank/:name", tank.remove);
 
-router.get("/sidebar/saveTank", tank.saveTankForm);
-router.get("/sidebar/loadTank", tank.loadTankList);
-
 router.get("/member/:memberId", member.view);
-
 router.get("/me", (req: MulmRequest, res) => {
 	const { viewer } = req;
 	if (!viewer) {
@@ -140,27 +138,10 @@ router.get("/species", species.explorer);
 router.get("/species/:groupId", species.detail);
 
 router.get("/account", account.viewAccountSettings);
-router.patch("/account-settings", account.updateAccountSettings)
+router.patch("/account", account.updateAccountSettings)
 router.delete("/account/google/:sub", account.unlinkGoogleAccount);
 
-// Admin Views /////////////////////////////////////////////////////
-
-router.get("/admin/queue{/:program}", admin.requireAdmin, admin.showQueue);
-router.post("/admin/approve", admin.requireAdmin, admin.approveSubmission);
-
-router.get("/admin/edit{/:subId}", admin.requireAdmin, admin.viewEditSubmission);
-
-router.get("/admin/members", admin.requireAdmin, admin.viewMembers);
-router.get("/admin/members/edit/:memberId", admin.requireAdmin, admin.viewMemberUpdate)
-router.get("/admin/members/:memberId/row", admin.requireAdmin, admin.viewMemberRow);
-router.patch("/admin/members/edit/:memberId", admin.requireAdmin, admin.updateMemberFields);
-router.post("/admin/members/:memberId/check-levels", admin.requireAdmin, admin.checkMemberLevels);
-router.post("/admin/members/:memberId/check-specialty-awards", admin.requireAdmin, admin.checkMemberSpecialtyAwards);
-
-router.post("/admin/invite", admin.requireAdmin, admin.inviteMember);
-
-router.get("/dialog/request-changes/:subId", admin.requireAdmin, admin.requestChangesForm);
-router.post("/admin/request-changes/:subId", admin.requireAdmin, admin.sendRequestChanges);
+router.use("/admin", adminRouter);
 
 router.get("/dialog/decline-witness/:subId", admin.requireAdmin, admin.declineWitnessForm);
 
@@ -179,7 +160,7 @@ router.get("/set-password", auth.validateForgotPassword);
 router.post("/forgot-password", auth.sendForgotPassword);
 router.post("/reset-password", auth.resetPassword);
 
-router.get("/dialog/signin", (req, res) => {
+router.get("/dialog/auth/signin", (req, res) => {
 	res.render("account/signin", {
 		viewer: {},
 		errors: new Map(),
@@ -187,14 +168,14 @@ router.get("/dialog/signin", (req, res) => {
 	});
 });
 
-router.get("/dialog/signup", (req, res) => {
+router.get("/dialog/auth/signup", (req, res) => {
 	res.render("account/signup", {
 		viewer: {},
 		errors: new Map(),
 	});
 });
 
-router.get("/dialog/forgot-password", (req, res) => {
+router.get("/dialog/auth/forgot-password", (req, res) => {
 	res.render("account/forgotPassword", {
 		errors: new Map(),
 	});

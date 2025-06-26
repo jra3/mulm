@@ -14,7 +14,7 @@ include ../header.pug
 			.flex.gap-2.items-center
 				button.primary(type="submit") Log In
 				a.link(
-					hx-get="/dialog/signup"
+					hx-get="/dialog/auth/signup"
 					hx-swap="outerHTML"
 					hx-target="#signin"
 				) Sign Up
@@ -30,5 +30,5 @@ include ../header.pug
 			img(src='/google-signin-button.svg')
 
 		a.link(
-			hx-get="/dialog/forgot-password"
+			hx-get="/dialog/auth/forgot-password"
 			hx-target="#signin") Forgot password...

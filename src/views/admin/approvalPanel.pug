@@ -1,5 +1,5 @@
 .container.mx-auto.flex.justify-center.space-x-4
-	form(hx-post="/admin/approve")
+	form(hx-post=`/admin/submissions/${submission.id}/approve`)
 		input(type="hidden" name="id" value=submission.id)
 		.flex.flex-col.gap-2
 			.flex.gap-4
@@ -14,7 +14,7 @@
 				button.primary.p-4(type="submit") Approve
 				button.destructive(
 					type="button"
-					hx-get=`/dialog/request-changes/${submission.id}`
+					hx-get=`/admin/dialog/request-changes/${submission.id}`
 					hx-target="closest body"
 					hx-swap="beforeend") Feedback
 
