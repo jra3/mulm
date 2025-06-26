@@ -5,13 +5,18 @@ include ../header.pug
 	form.contents#witnessForm(
 		hx-post=`/admin/decline-witness/${submission.id}`
 		hx-trigger="submit"
-		hx-target="closest #dialog"
-		hx-swap="outerHTML"
+		hx-target="#witnessError"
+		hx-swap="innerHTML"
+		hx-indicator="#witnessIndicator"
+		hx-disabled-elt="#witnessSubmitBtn"
+		hx-on::response-error="this.querySelector('#witnessError').textContent = event.detail.xhr.responseText; document.getElementById('witnessSubmitBtn').disabled = false;"
 	)
-		span#witnessError(class="font-extrabold text-red-400")
+		span#witnessError.font-semibold.text-red-600
 		textarea.w-full.h-96.bg-white(
 			name="reason"
 			id="witnessReasonText"
 			required
 		)= contents
-		button.primary Send Request
+		div.flex.items-center.gap-2
+			button#witnessSubmitBtn.primary(type="submit") Send Request
+			+loadingSpinner("witnessIndicator")

@@ -17,6 +17,7 @@ import { getBodyParam, getBodyString } from "@/utils/request";
 import { checkAndUpdateMemberLevel, checkAllMemberLevels, Program } from "@/levelManager";
 import { checkAndGrantSpecialtyAwards, checkAllSpecialtyAwards } from "@/specialtyAwardManager";
 import { createActivity } from "@/db/activity";
+import { logger } from "@/utils/logger";
 
 // Helper function to calculate total points for a member
 async function getMemberWithPoints(member: MemberRecord | null): Promise<MemberRecord & { fishTotalPoints: number; plantTotalPoints: number; coralTotalPoints: number } | null> {
@@ -266,28 +267,40 @@ export const showWaitingPeriod = async (req: MulmRequest, res: Response) => {
 }
 
 export const sendRequestChanges = async (req: MulmRequest, res: Response) => {
-	const submission = await validateSubmission(req, res);
-	if (!submission) {
-		res.send("Submission not found");
-		return;
+	try {
+		const submission = await validateSubmission(req, res);
+		if (!submission) {
+			res.status(400).send('Submission not found');
+			return;
+		}
+
+		const member = await getMember(submission.member_id);
+		if (!member) {
+			res.status(400).send('Member not found');
+			return;
+		}
+
+		const content = getBodyString(req, "content");
+		if (!content || content.trim().length === 0) {
+			res.status(400).send('Please provide feedback message');
+			return;
+		}
+
+		await Promise.all([
+			updateSubmission(submission.id, { submitted_on: null }),
+			sendChangesRequest(
+				submission,
+				member?.contact_email,
+				content,
+			)
+		]);
+
+		// Redirect to approval queue for the submission's program
+		res.set('HX-Redirect', `/admin/queue/${submission.program}`).send();
+	} catch (error) {
+		logger.error('Error sending request changes:', error);
+		res.status(500).send('Failed to send feedback. Please try again.');
 	}
-
-	const member = await getMember(submission.member_id);
-	if (!member) {
-		res.send("Member not found");
-		return;
-	}
-
-	await Promise.all([
-		updateSubmission(submission.id, { submitted_on: null }),
-		sendChangesRequest(
-			submission,
-			member?.contact_email,
-			getBodyString(req, "content"),
-		)
-	]);
-
-	res.set('HX-Redirect', `/sub/${submission.id}`).send();
 }
 
 export const requestChangesForm = async (req: MulmRequest, res: Response) => {
@@ -338,14 +351,9 @@ export const confirmWitnessAction = async (req: MulmRequest, res: Response) => {
 		return;
 	}
 
-	if (!req.viewer?.is_admin) {
-		res.status(403).send("Admin access required");
-		return;
-	}
-
 	const [member, witness] = await Promise.all([
 		getMember(submission.member_id),
-		getMember(req.viewer.id),
+		getMember(req.viewer!.id),
 	]);
 
 	if (!member || !witness) {
@@ -354,7 +362,7 @@ export const confirmWitnessAction = async (req: MulmRequest, res: Response) => {
 	}
 
 	await Promise.all([
-		confirmWitness(submission.id, req.viewer.id),
+		confirmWitness(submission.id, req.viewer!.id),
 		onWitnessConfirmed(submission, member, witness),
 	]);
 
@@ -397,30 +405,36 @@ Additional documentation is needed to verify this ${reproductionTerm}.
 };
 
 export const declineWitnessAction = async (req: MulmRequest, res: Response) => {
-	const submission = await validateSubmission(req, res);
-	if (!submission) {
-		res.send("Submission not found");
-		return;
+	try {
+		const submission = await validateSubmission(req, res);
+		if (!submission) {
+			res.status(400).send('Submission not found');
+			return;
+		}
+
+		const member = await getMember(submission.member_id);
+		if (!member) {
+			res.status(400).send('Member not found');
+			return;
+		}
+
+		const reason = getBodyString(req, "reason");
+		if (!reason || reason.trim().length === 0) {
+			res.status(400).send('Please provide a reason for requesting more documentation');
+			return;
+		}
+
+		await Promise.all([
+			declineWitness(submission.id, req.viewer!.id),
+			onWitnessDeclined(submission, member, reason),
+		]);
+
+		// Redirect to witness queue for the submission's program
+		res.set('HX-Redirect', `/admin/witness-queue/${submission.program}`).send();
+	} catch (error) {
+		logger.error('Error declining witness:', error);
+		res.status(500).send('Failed to send request. Please try again.');
 	}
-
-	if (!req.viewer?.is_admin) {
-		res.status(403).send("Admin access required");
-		return;
-	}
-
-	const member = await getMember(submission.member_id);
-	if (!member) {
-		res.send("Member not found");
-		return;
-	}
-
-	const reason = getBodyString(req, "reason") || "No reason provided";
-	await Promise.all([
-		declineWitness(submission.id, req.viewer.id),
-		onWitnessDeclined(submission, member, reason),
-	]);
-
-	res.set('HX-Redirect', `/sub/${submission.id}`).send('Request sent successfully');
 }
 
 export const inviteMember = async (req: MulmRequest, res: Response) => {
