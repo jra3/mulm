@@ -7,6 +7,9 @@ const adminRouter = Router();
 adminRouter.use(requireAdmin);
 
 adminRouter.get("/queue{/:program}", admin.showQueue);
+adminRouter.get("/witness-queue{/:program}", admin.showWitnessQueue);
+adminRouter.get("/waiting-period{/:program}", admin.showWaitingPeriod);
+
 adminRouter.post("/submissions/:id/approve", admin.approveSubmission);
 
 adminRouter.get("/edit{/:subId}", admin.viewEditSubmission);
@@ -17,6 +20,11 @@ adminRouter.get("/members/:memberId/row", admin.viewMemberRow);
 adminRouter.patch("/members/:memberId", admin.updateMemberFields);
 adminRouter.post("/members/:memberId/check-levels", admin.checkMemberLevels);
 adminRouter.post("/members/:memberId/check-specialty-awards", admin.checkMemberSpecialtyAwards);
+
+adminRouter.post("/confirm-witness/:subId", admin.confirmWitnessAction);
+adminRouter.post("/decline-witness/:subId", admin.declineWitnessAction);
+
+adminRouter.get("/dialog/decline-witness/:subId", admin.declineWitnessForm);
 
 adminRouter.post("/invite", admin.inviteMember);
 

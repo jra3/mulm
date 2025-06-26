@@ -9,5 +9,5 @@ include ../header.pug
 		hx-swap="innerHTML"
 	)
 		span#requestChangesError(class="font-extrabold text-red-400")
-		textarea.w-full.h-96.bg-white(name="content" id="requestChangesText")= contents
+		textarea.w-full.h-96.bg-white(name="content" id="requestChangesText" required)= contents
 		button.primary Send
