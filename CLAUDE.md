@@ -117,7 +117,6 @@ tun with ts-node
 - ✅ **Use Pug class chains** for simple utilities: `div.flex.gap-4.items-center`
 - ✅ **Use class attributes** for complex responsive utilities
 
-### Linting:
-- Run `npm run lint:pug` before committing
-- Fix all Pug linting errors before submitting code
-- Configure your editor with pug-lint integration
+### Style Guidelines:
+- Follow the best practices outlined above for consistent template structure
+- Use double quotes for attributes and break long class chains for readability

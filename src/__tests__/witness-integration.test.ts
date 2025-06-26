@@ -57,11 +57,11 @@ describe('Witness Workflow Integration Tests', () => {
 
 	// Helper to get submission details
 	async function getSubmissionDetails(submissionId: number): Promise<TestSubmission> {
-		const result = await db.get(`
+		const result = await db.get<TestSubmission>(`
 			SELECT id, member_id, species_class, species_type, witness_verification_status
 			FROM submissions WHERE id = ?
 		`, submissionId);
-		return result;
+		return result as TestSubmission;
 	}
 
 	// Helper to create multiple submissions for testing
@@ -112,7 +112,7 @@ describe('Witness Workflow Integration Tests', () => {
 	afterEach(async () => {
 		try {
 			await db.close();
-		} catch (error) {
+		} catch {
 			// Ignore close errors in tests
 		}
 	});
@@ -360,15 +360,15 @@ describe('Witness Workflow Integration Tests', () => {
 			await confirmWitness(submissionId, admin1.id);
 			
 			// Verify the foreign key relationship
-			const result = await db.get(`
+			const result = await db.get<{ id: number; witnessed_by: number; display_name: string }>(`
 				SELECT s.id, s.witnessed_by, m.display_name 
 				FROM submissions s 
 				JOIN members m ON s.witnessed_by = m.id 
 				WHERE s.id = ?
 			`, submissionId);
 			
-			expect(result.witnessed_by).toBe(admin1.id);
-			expect(result.display_name).toBe(admin1.display_name);
+			expect(result?.witnessed_by).toBe(admin1.id);
+			expect(result?.display_name).toBe(admin1.display_name);
 		});
 
 		it('should handle member deletion with ON DELETE SET NULL', async () => {
@@ -388,7 +388,7 @@ describe('Witness Workflow Integration Tests', () => {
 			const submissionId = await createTestSubmission(testMember.id);
 			
 			// Mock a database error during the transaction
-			const originalPrepare = db.prepare;
+			const originalPrepare = db.prepare.bind(db);
 			let callCount = 0;
 			
 			db.prepare = jest.fn().mockImplementation((sql: string) => {
@@ -396,7 +396,7 @@ describe('Witness Workflow Integration Tests', () => {
 				if (callCount === 2 && sql.includes('UPDATE')) {
 					throw new Error('Simulated database error');
 				}
-				return originalPrepare.call(db, sql);
+				return originalPrepare(sql);
 			});
 			
 			await expect(confirmWitness(submissionId, admin1.id)).rejects.toThrow();

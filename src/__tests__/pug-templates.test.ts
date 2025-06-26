@@ -319,29 +319,29 @@ describe('Pug Template Rendering', () => {
       switch (relativePath) {
         case 'bapForm/form.pug':
         case 'submit.pug':
-          (templateData as Record<string, unknown>).formAction = '/submit';
+          (templateData).formAction = '/submit';
           break;
 
         case 'species/detail.pug':
-          (templateData as Record<string, unknown>).submissions = templateData.fishSubs;
-          (templateData as Record<string, unknown>).breeders = [
+          (templateData).submissions = templateData.fishSubs;
+          (templateData).breeders = [
             { id: 1, name: 'John Doe', count: 5 },
             { id: 2, name: 'Jane Smith', count: 3 }
           ];
           break;
 
         case 'species/explorer.pug':
-          (templateData as Record<string, unknown>).filters = {
+          (templateData).filters = {
             species_type: '',
             species_class: '',
             search: ''
           };
-          (templateData as Record<string, unknown>).filterOptions = {
+          (templateData).filterOptions = {
             species_types: ['Fish', 'Plant', 'Coral'], 
             species_classes: ['Cichlid', 'Catfish', 'Livebearers']
           };
-          (templateData as Record<string, unknown>).speciesList = templateData.fishSubs;
-          (templateData as Record<string, unknown>).pagination = {
+          (templateData).speciesList = templateData.fishSubs;
+          (templateData).pagination = {
             currentPage: 1,
             totalPages: 1,
             hasNext: false,
@@ -350,21 +350,21 @@ describe('Pug Template Rendering', () => {
           break;
 
         case 'submission/review.pug':
-          (templateData as Record<string, unknown>).photos = [];
-          (templateData as Record<string, unknown>).canWitness = true;
-          (templateData as Record<string, unknown>).canApprove = true;
+          (templateData).photos = [];
+          (templateData).canWitness = true;
+          (templateData).canApprove = true;
           break;
 
         case 'admin/approvalPanel.pug':
-          (templateData as Record<string, unknown>).formData = templateData.form;
-          (templateData as Record<string, unknown>).name = {
+          (templateData).formData = templateData.form;
+          (templateData).name = {
             canonical_genus: 'Apistogramma',
             canonical_species: 'cacatuoides'
           };
           break;
 
         case 'bapForm/loadTankList.pug':
-          (templateData as Record<string, unknown>).presets = [
+          (templateData).presets = [
             {
               preset_name: 'Community Tank',
               tank_size: '55 gallon',
@@ -379,7 +379,7 @@ describe('Pug Template Rendering', () => {
           break;
 
         case 'lifetime.pug':
-          (templateData as Record<string, unknown>).levels = [
+          (templateData).levels = [
             ['Novice Breeders', [
               { id: 1, display_name: 'John Doe', points: 25 },
               { id: 2, display_name: 'Jane Smith', points: 15 }
@@ -391,11 +391,11 @@ describe('Pug Template Rendering', () => {
           ];
           break;
 
-        case 'email/onWitnessConfirmed.pug':
-          (templateData as Record<string, unknown>).witness = {
+        case 'email/onWitnessConfirmed.pug': {
+          (templateData).witness = {
             display_name: faker.person.fullName()
           };
-          (templateData as Record<string, unknown>).domain = 'https://example.com';
+          (templateData).domain = 'https://example.com';
           // Update submission to have witness data
           const witnessSubmission = {
             ...(templateData.submission as Record<string, unknown>),
@@ -403,8 +403,9 @@ describe('Pug Template Rendering', () => {
             witnessed_on: new Date().toISOString(),
             species_class: 'Cichlid'
           };
-          (templateData as Record<string, unknown>).submission = witnessSubmission;
+          (templateData).submission = witnessSubmission;
           break;
+        }
 
         case 'index.pug':
           // Index already has comprehensive data

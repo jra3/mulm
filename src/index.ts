@@ -8,6 +8,7 @@ import cookieParser from "cookie-parser";
 // import multer from "multer"; // Used in feature branch
 
 import * as account from "@/routes/account";
+import * as admin from "@/routes/admin";
 import adminRouter from "@/routes/adminRouter";
 import * as auth from "@/routes/auth";
 import * as member from "@/routes/member";
