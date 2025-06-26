@@ -7,6 +7,7 @@ import { MemberRecord, getMember, getMemberByEmail } from "@/db/members";
 import { onSubmissionSend } from "@/notifications";
 import * as db from "@/db/submissions";
 import { getCanonicalSpeciesName } from "@/db/species";
+import { getWaitingPeriodStatus } from "@/utils/waitingPeriod";
 
 export const renderSubmissionForm = (req: MulmRequest, res: Response) => {
 const { viewer } = req;
@@ -122,6 +123,9 @@ export const view = async (req: MulmRequest, res: Response) => {
 
 	const canonicalName = `${nameGroup.canonical_genus} ${nameGroup.canonical_species_name}`;
 
+	// Calculate waiting period eligibility
+	const waitingPeriodStatus = getWaitingPeriodStatus(submission);
+
 	res.render('submission/review', {
 		submission: {
 			...submission,
@@ -138,6 +142,7 @@ export const view = async (req: MulmRequest, res: Response) => {
 		},
 		canonicalName,
 		name: nameGroup,
+		waitingPeriodStatus,
 		...aspect,
 	});
 }
