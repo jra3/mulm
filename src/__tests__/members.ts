@@ -1,44 +1,9 @@
-import fs from 'fs';
-import { mkdtempSync } from 'fs';
-import { tmpdir } from 'os';
-import { join } from 'path';
 import { createMember, getGoogleAccount, getMember, getMemberByEmail, getMembersList, getRosterWithPoints } from "../db/members";
 import { createSubmission, approveSubmission } from "../db/submissions";
 import { getErrorMessage } from '../utils/error';
-import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
-import { overrideConnection } from "../db/conn";
+import { useTestDatabase, createTestSpeciesName } from './testDbHelper.helper';
 
-let testDir: string;
-
-beforeAll(() => {
-	testDir = mkdtempSync(join(tmpdir(), 'mulm-members-test-'));
-});
-
-let instance = 1;
-beforeEach(async () => {
-	const filename = join(testDir, `database-${instance++}.sqlite`);
-	const tmpConn = await open({
-		filename,
-		driver: sqlite3.Database,
-		mode: sqlite3.OPEN_CREATE | sqlite3.OPEN_READWRITE,
-	});	
-	await tmpConn.migrate({
-    	migrationsPath: './db/migrations',
-	});
-
-	const writeConn = await open({
-		filename,
-		driver: sqlite3.Database,
-		mode: sqlite3.OPEN_READWRITE,
-	});
-
-	overrideConnection(writeConn);
-});
-
-afterAll(() => {
-	fs.rmSync(testDir, { recursive: true, force: true });
-});
+const { getDb } = useTestDatabase();
 
 test('Members list append', async () => {
 	expect((await getMembersList()).length).toEqual(0);
@@ -143,7 +108,8 @@ describe('getRosterWithPoints', () => {
 			ph: "7.0"
 		}, true);
 		
-		await approveSubmission(adminId, submissionId, 1, {
+		const speciesNameId = await createTestSpeciesName(getDb(), "Guppy", "Poecilia reticulata", "Poecilia", "reticulata", "Freshwater");
+		await approveSubmission(adminId, submissionId, speciesNameId, {
 			id: submissionId,
 			points: 10,
 			article_points: 3,
@@ -188,7 +154,8 @@ describe('getRosterWithPoints', () => {
 			light_hours: "8"
 		}, true);
 		
-		await approveSubmission(adminId, submissionId, 1, {
+		const plantSpeciesNameId = await createTestSpeciesName(getDb(), "Java Fern", "Microsorum pteropus", "Microsorum", "pteropus", "Stem");
+		await approveSubmission(adminId, submissionId, plantSpeciesNameId, {
 			id: submissionId,
 			points: 8,
 			article_points: 2,
@@ -232,7 +199,8 @@ describe('getRosterWithPoints', () => {
 			specific_gravity: "1.025"
 		}, true);
 		
-		await approveSubmission(adminId, submissionId, 1, {
+		const coralSpeciesNameId = await createTestSpeciesName(getDb(), "Acropora", "Acropora millepora", "Acropora", "millepora", "SPS");
+		await approveSubmission(adminId, submissionId, coralSpeciesNameId, {
 			id: submissionId,
 			points: 15,
 			article_points: 5,
@@ -270,7 +238,8 @@ describe('getRosterWithPoints', () => {
 			filter_type: "sponge"
 		}, true);
 		
-		await approveSubmission(adminId, fishSubmissionId, 1, {
+		const fishSpeciesNameId = await createTestSpeciesName(getDb(), "Neon Tetra", "Paracheirodon innesi", "Paracheirodon", "innesi", "Freshwater");
+		await approveSubmission(adminId, fishSubmissionId, fishSpeciesNameId, {
 			id: fishSubmissionId,
 			points: 5,
 			article_points: 0,
@@ -296,7 +265,8 @@ describe('getRosterWithPoints', () => {
 			light_type: "LED"
 		}, true);
 		
-		await approveSubmission(adminId, plantSubmissionId, 2, {
+		const plantSpeciesNameId2 = await createTestSpeciesName(getDb(), "Amazon Sword", "Echinodorus grisebachii", "Echinodorus", "grisebachii", "Rosette");
+		await approveSubmission(adminId, plantSubmissionId, plantSpeciesNameId2, {
 			id: plantSubmissionId,
 			points: 6,
 			article_points: 1,
@@ -345,7 +315,8 @@ describe('getRosterWithPoints', () => {
 			spawn_locations: ["plants"]
 		}, true);
 		
-		await approveSubmission(adminId, approvedSubmissionId, 1, {
+		const mollySpeciesNameId = await createTestSpeciesName(getDb(), "Molly", "Poecilia sphenops", "Poecilia", "sphenops", "Freshwater");
+		await approveSubmission(adminId, approvedSubmissionId, mollySpeciesNameId, {
 			id: approvedSubmissionId,
 			points: 7,
 			article_points: 0,
@@ -378,7 +349,8 @@ describe('getRosterWithPoints', () => {
 			spawn_locations: ["moss"]
 		}, true);
 		
-		await approveSubmission(adminId, submissionId, 1, {
+		const shrimpSpeciesNameId = await createTestSpeciesName(getDb(), "Cherry Shrimp", "Neocaridina davidi", "Neocaridina", "davidi", "Freshwater");
+		await approveSubmission(adminId, submissionId, shrimpSpeciesNameId, {
 			id: submissionId,
 			points: 4,
 			article_points: 1,

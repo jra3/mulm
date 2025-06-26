@@ -114,8 +114,12 @@ export async function createSubmission(
 			VALUES
 			(${marks.join(", ")})`);
 
-		const result = await stmt.run(values);
-		return result.lastID as number;
+		try {
+			const result = await stmt.run(values);
+			return result.lastID as number;
+		} finally {
+			await stmt.finalize();
+		}
 	} catch (err) {
 		logger.error('Failed to add submission', err);
 		throw new Error("Failed to add submission");
@@ -177,7 +181,11 @@ export async function deleteSubmission(id: number) {
 	try {
 		const conn = writeConn;
 		const deleteRow = await conn.prepare("DELETE FROM submissions WHERE id = ?");
-		return deleteRow.run(id);
+		try {
+			return deleteRow.run(id);
+		} finally {
+			await deleteRow.finalize();
+		}
 	} catch (err) {
 		logger.error('Failed to delete submission', err);
 		throw new Error("Failed to delete submission");
@@ -308,8 +316,12 @@ export async function updateSubmission(id: number, updates: UpdateFor<Submission
 		const stmt = await conn.prepare(
 			`UPDATE submissions SET ${setClause} WHERE id = ?`,
 		);
-		const result = await stmt.run(...values, id);
-		return result.changes;
+		try {
+			const result = await stmt.run(...values, id);
+			return result.changes;
+		} finally {
+			await stmt.finalize();
+		}
 	} catch (err) {
 		logger.error('Failed to update submission', err);
 		throw new Error("Failed to update submission");
@@ -342,17 +354,21 @@ export async function approveSubmission(
 				approved_by = ?,
 				approved_on = ?
 			WHERE id = ?`);
-		await stmt.run(
-			speciesNameId,
-			points,
-			article_points,
-			first_time_species ? 1 : 0,
-			flowered ? 1 : 0,
-			sexual_reproduction ? 1 : 0,
-			approvedBy,
-			new Date().toISOString(),
-			id,
-		);
+		try {
+			await stmt.run(
+				speciesNameId,
+				points,
+				article_points,
+				first_time_species ? 1 : 0,
+				flowered ? 1 : 0,
+				sexual_reproduction ? 1 : 0,
+				approvedBy,
+				new Date().toISOString(),
+				id,
+			);
+		} finally {
+			await stmt.finalize();
+		}
 	} catch (err) {
 		logger.error('Failed to update submission', err);
 		throw new Error("Failed to update submission");
