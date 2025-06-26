@@ -268,7 +268,7 @@ export const showWaitingPeriod = async (req: MulmRequest, res: Response) => {
 
 export const sendRequestChanges = async (req: MulmRequest, res: Response) => {
 	try {
-		const submission = await validateSubmission(req, res);
+ 		const submission = await validateSubmission(req, res);
 		if (!submission) {
 			res.status(400).send('Submission not found');
 			return;
@@ -297,7 +297,7 @@ export const sendRequestChanges = async (req: MulmRequest, res: Response) => {
 
 		// Redirect to approval queue for the submission's program
 		res.set('HX-Redirect', `/admin/queue/${submission.program}`).send();
-	} catch (error) {
+ 	} catch (error) {
 		logger.error('Error sending request changes:', error);
 		res.status(500).send('Failed to send feedback. Please try again.');
 	}
@@ -366,7 +366,8 @@ export const confirmWitnessAction = async (req: MulmRequest, res: Response) => {
 		onWitnessConfirmed(submission, member, witness),
 	]);
 
-	res.set('HX-Redirect', `/sub/${submission.id}`).send();
+	// Redirect to witness queue for the submission's program
+	res.set('HX-Redirect', `/admin/witness-queue/${submission.program}`).send();
 }
 
 export const declineWitnessForm = async (req: MulmRequest, res: Response) => {
@@ -560,7 +561,8 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
 		}
 	}
 
-	res.set('HX-Redirect', '/admin/queue').send();
+	// Redirect to approval queue for the submission's program
+	res.set('HX-Redirect', `/admin/queue/${submission.program}`).send();
 }
 
 export const checkMemberLevels = async (req: MulmRequest, res: Response) => {
