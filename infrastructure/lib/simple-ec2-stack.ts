@@ -48,10 +48,10 @@ export class SimpleEc2Stack extends cdk.Stack {
       ],
     });
 
-    // Create EC2 instance (t2.micro for free tier)
+    // Create EC2 instance (t3.micro for free tier)
     const instance = new ec2.Instance(this, 'Instance', {
       vpc,
-      instanceType: ec2.InstanceType.of(ec2.InstanceClass.T2, ec2.InstanceSize.MICRO),
+      instanceType: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MICRO),
       machineImage: new ec2.AmazonLinuxImage({
         generation: ec2.AmazonLinuxGeneration.AMAZON_LINUX_2023,
       }),
