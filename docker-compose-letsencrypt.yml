@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  mulm:
+    build: .
+    container_name: mulm_app
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - ./data:/app/data
+      - ./config.json:/app/config.json
+    networks:
+      - web
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf.template:/etc/nginx/templates/default.conf.template
+      - ./certbot/www:/var/www/certbot/:ro
+      - ./certbot/conf/:/etc/nginx/ssl/:ro
+    networks:
+      - web
+    depends_on:
+      - mulm
+    environment:
+      - DOMAIN=${DOMAIN}
+
+  certbot:
+    image: certbot/certbot:latest
+    volumes:
+      - ./certbot/www/:/var/www/certbot/:rw
+      - ./certbot/conf/:/etc/letsencrypt/:rw
+    # Initial certificate request - comment out after first run
+    command: certonly --webroot --webroot-path=/var/www/certbot --email ${LETSENCRYPT_EMAIL} --agree-tos --no-eff-email -d ${DOMAIN} -d www.${DOMAIN}
+    # For renewal - uncomment after initial certificate is obtained
+    # entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+networks:
+  web:
+    driver: bridge
