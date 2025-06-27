@@ -22,17 +22,32 @@ export class SimpleEc2Stack extends cdk.Stack {
       ],
     });
 
-    // Security group allowing SSH access
-    const securityGroup = new ec2.SecurityGroup(this, 'SSHSecurityGroup', {
+    // Security group for web server
+    const securityGroup = new ec2.SecurityGroup(this, 'WebServerSecurityGroup', {
       vpc,
-      description: 'Security group for single EC2 instance',
+      description: 'Security group for web server with SSH, HTTP, and HTTPS access',
       allowAllOutbound: true,
     });
 
+    // SSH access
     securityGroup.addIngressRule(
       ec2.Peer.anyIpv4(),
       ec2.Port.tcp(22),
       'Allow SSH access'
+    );
+
+    // HTTP access (for Let's Encrypt challenges and redirect to HTTPS)
+    securityGroup.addIngressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(80),
+      'Allow HTTP access'
+    );
+
+    // HTTPS access
+    securityGroup.addIngressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(443),
+      'Allow HTTPS access'
     );
 
     // Create key pair
