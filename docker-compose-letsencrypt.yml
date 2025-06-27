@@ -8,8 +8,7 @@ services:
     environment:
       - NODE_ENV=production
     volumes:
-      - ./data:/app/data
-      - ./config.json:/app/config.json
+      - /var/basny:/mnt/data
     networks:
       - web
 
