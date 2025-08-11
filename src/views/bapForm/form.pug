@@ -1,5 +1,6 @@
 include supplementLine.pug
 include inputs.pug
+include imageUpload.pug
 
 mixin CRUDForm()
 	if form.id
@@ -182,6 +183,9 @@ mixin CRUDForm()
 						aria-label="Add another supplement"
 						title="Add another supplement to your regimen"
 					) Add +
+	
+	//- Image Upload Section
+	+imageUploadSection()
 
 	unless form.submitted_on || editing
 		section.bg-blue-50.py-4.border-l-4.border-blue-400(aria-labelledby="witness-info")

@@ -119,7 +119,7 @@ async function processVariant(
   
   const buffer = await sharpInstance.toBuffer();
   const metadata = await sharp(buffer).metadata();
-  
+
   return {
     buffer,
     format: options.format,

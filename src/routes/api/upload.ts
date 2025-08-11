@@ -2,9 +2,9 @@ import express from 'express';
 import multer from 'multer';
 import { MulmRequest } from '../../sessions';
 import { processImage, ImageValidationError } from '../../utils/image-processor';
-import { 
-  isR2Enabled, 
-  generateImageKey, 
+import {
+  isR2Enabled,
+  generateImageKey,
   getPublicUrl,
   deleteImage,
   uploadToR2
@@ -70,41 +70,41 @@ router.post(
   upload.array('images', 5),
   async (req: MulmRequest, res): Promise<void> => {
     const { viewer } = req;
-  
+
     // Check authentication
     if (!viewer) {
       res.status(401).json({ error: 'Authentication required' });
       return;
     }
-  
+
     // Check if R2 is configured
     if (!isR2Enabled()) {
       res.status(503).json({ error: 'Image upload service is not configured' });
       return;
     }
-  
+
     const uploadId = (req.body as { uploadId?: string }).uploadId || generateUploadId();
     const submissionId = parseInt((req.body as { submissionId: string }).submissionId);
-  
+
     if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
       res.status(400).json({ error: 'No files uploaded' });
       return;
     }
-  
+
     const processedImages: ImageMetadata[] = [];
     const errors: string[] = [];
-  
+
     try {
       updateProgress(uploadId, 'processing', 10, 'Starting image processing...');
-    
+
       // Process each uploaded file
       for (let i = 0; i < req.files.length; i++) {
         const file = req.files[i];
         const fileProgress = 10 + (i * 80 / req.files.length);
-      
+
         try {
           updateProgress(uploadId, 'processing', fileProgress, `Processing image ${i + 1} of ${req.files.length}`);
-        
+
           // Process the image
           const processed = await processImage(file.buffer, {
             preferWebP: (req.body as { preferWebP?: string }).preferWebP === 'true'
@@ -179,7 +179,7 @@ router.post(
           logger.error('Failed to update submission with images', error);
         }
       }
-    
+
       // Return results
       res.json({
         success: true,
@@ -187,13 +187,13 @@ router.post(
         images: processedImages,
         errors: errors.length > 0 ? errors : undefined
       });
-    
+
     } catch (error) {
       logger.error('Upload failed', error);
       updateProgress(uploadId, 'error', 0, 'Upload failed');
-      res.status(500).json({ 
-        error: 'Upload failed', 
-        message: error instanceof Error ? error.message : 'Unknown error' 
+      res.status(500).json({
+        error: 'Upload failed',
+        message: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   });
