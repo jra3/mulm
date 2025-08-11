@@ -82,6 +82,8 @@ export const bapFields = z.object({
 
 	co2: z.enum(["no", "yes"]).optional(),
 	co2_description: z.string().optional(),
+	
+	images: z.string().optional(), // JSON string of image metadata
 })
 
 export const bapDraftForm = bapFields.pick({
