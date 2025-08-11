@@ -1,0 +1,345 @@
+import express from 'express';
+import request from 'supertest';
+import rateLimit from 'express-rate-limit';
+import { MulmRequest } from '../sessions';
+
+// Create rate limiters with test configuration
+const createTestRateLimiter = (options: any) => {
+  return rateLimit({
+    ...options,
+    skip: () => false, // Don't skip in tests
+    store: undefined, // Use default memory store
+    validate: false // Disable validation in tests to avoid IPv6 warnings
+  });
+};
+
+describe('Rate Limiting Middleware', () => {
+  let app: express.Application;
+  let uploadRateLimiter: any;
+  let deleteRateLimiter: any;
+  let progressRateLimiter: any;
+  let strictUploadLimiter: any;
+
+  beforeEach(() => {
+    app = express();
+    
+    // Create fresh rate limiters for each test
+    uploadRateLimiter = createTestRateLimiter({
+      windowMs: 60 * 1000,
+      max: 10,
+      standardHeaders: true,
+      legacyHeaders: false,
+      keyGenerator: (req: MulmRequest) => {
+        return req.viewer?.id?.toString() || req.ip || 'test';
+      },
+      handler: (req: any, res: any) => {
+        res.status(429).json({
+          error: 'Too many upload requests',
+          message: 'Please wait a moment before uploading more images. You can upload up to 10 images per minute.',
+          retryAfter: res.getHeader('Retry-After')
+        });
+      }
+    });
+
+    deleteRateLimiter = createTestRateLimiter({
+      windowMs: 60 * 1000,
+      max: 20,
+      standardHeaders: true,
+      legacyHeaders: false,
+      keyGenerator: (req: MulmRequest) => {
+        return req.viewer?.id?.toString() || req.ip || 'test';
+      },
+      handler: (req: any, res: any) => {
+        res.status(429).json({
+          error: 'Too many delete requests',
+          message: 'Please wait before deleting more images.',
+          retryAfter: res.getHeader('Retry-After')
+        });
+      }
+    });
+
+    progressRateLimiter = createTestRateLimiter({
+      windowMs: 60 * 1000,
+      max: 60,
+      standardHeaders: true,
+      legacyHeaders: false,
+      keyGenerator: (req: MulmRequest) => {
+        const uploadId = req.params.uploadId;
+        const userKey = req.viewer?.id?.toString() || req.ip || 'test';
+        return `${uploadId}:${userKey}`;
+      },
+      handler: (req: any, res: any) => {
+        res.status(429).end();
+      }
+    });
+
+    strictUploadLimiter = createTestRateLimiter({
+      windowMs: 60 * 1000,
+      max: 3,
+      standardHeaders: true,
+      legacyHeaders: false,
+      keyGenerator: (req: any) => req.ip || 'test',
+      handler: (req: any, res: any) => {
+        res.status(429).json({
+          error: 'Too many requests',
+          message: 'Please sign in to upload more images.'
+        });
+      },
+      skip: (req: MulmRequest) => !!req.viewer
+    });
+    
+    // Mock viewer middleware
+    app.use((req: MulmRequest, res, next) => {
+      // Simulate authenticated user for some tests
+      if (req.headers['x-auth'] === 'true') {
+        req.viewer = { id: 1, display_name: 'Test User', contact_email: 'test@example.com' };
+      }
+      next();
+    });
+  });
+
+  describe('Upload Rate Limiter', () => {
+    beforeEach(() => {
+      app.post('/upload', uploadRateLimiter, (req, res) => {
+        res.json({ success: true });
+      });
+    });
+
+    it('should allow uploads within rate limit', async () => {
+      // First 10 requests should succeed
+      for (let i = 0; i < 10; i++) {
+        const response = await request(app)
+          .post('/upload')
+          .set('x-auth', 'true')
+          .expect(200);
+        
+        expect(response.body).toEqual({ success: true });
+      }
+    });
+
+    it('should block uploads exceeding rate limit', async () => {
+      // Make 10 successful requests
+      for (let i = 0; i < 10; i++) {
+        await request(app)
+          .post('/upload')
+          .set('x-auth', 'true')
+          .expect(200);
+      }
+
+      // 11th request should be rate limited
+      const response = await request(app)
+        .post('/upload')
+        .set('x-auth', 'true')
+        .expect(429);
+
+      expect(response.body.error).toBe('Too many upload requests');
+      expect(response.body.message).toContain('10 images per minute');
+    });
+
+    it('should track rate limits per user', async () => {
+      // User 1 makes 10 requests
+      for (let i = 0; i < 10; i++) {
+        await request(app)
+          .post('/upload')
+          .set('x-auth', 'true')
+          .set('x-forwarded-for', '1.1.1.1')
+          .expect(200);
+      }
+
+      // User 1's 11th request should fail
+      await request(app)
+        .post('/upload')
+        .set('x-auth', 'true')
+        .set('x-forwarded-for', '1.1.1.1')
+        .expect(429);
+
+      // Different IP (unauthenticated) should still work
+      await request(app)
+        .post('/upload')
+        .set('x-forwarded-for', '2.2.2.2')
+        .expect(200);
+    });
+  });
+
+  describe('Delete Rate Limiter', () => {
+    beforeEach(() => {
+      app.delete('/delete', deleteRateLimiter, (req, res) => {
+        res.json({ success: true });
+      });
+    });
+
+    it('should allow 20 deletes per minute', async () => {
+      // First 20 requests should succeed
+      for (let i = 0; i < 20; i++) {
+        const response = await request(app)
+          .delete('/delete')
+          .set('x-auth', 'true')
+          .expect(200);
+        
+        expect(response.body).toEqual({ success: true });
+      }
+
+      // 21st request should be rate limited
+      const response = await request(app)
+        .delete('/delete')
+        .set('x-auth', 'true')
+        .expect(429);
+
+      expect(response.body.error).toBe('Too many delete requests');
+    });
+  });
+
+  describe('Progress Rate Limiter', () => {
+    beforeEach(() => {
+      app.get('/progress/:uploadId', progressRateLimiter, (req, res) => {
+        res.json({ uploadId: req.params.uploadId });
+      });
+    });
+
+    it('should allow 60 progress checks per minute per upload', async () => {
+      const uploadId = 'upload_123';
+      
+      // First 60 requests should succeed
+      for (let i = 0; i < 60; i++) {
+        const response = await request(app)
+          .get(`/progress/${uploadId}`)
+          .set('x-auth', 'true')
+          .expect(200);
+        
+        expect(response.body.uploadId).toBe(uploadId);
+      }
+
+      // 61st request should be rate limited
+      await request(app)
+        .get(`/progress/${uploadId}`)
+        .set('x-auth', 'true')
+        .expect(429);
+    });
+
+    it('should track progress limits per upload ID', async () => {
+      // Upload 1 can make 60 requests
+      for (let i = 0; i < 60; i++) {
+        await request(app)
+          .get('/progress/upload_1')
+          .set('x-auth', 'true')
+          .expect(200);
+      }
+
+      // Upload 2 should still work
+      await request(app)
+        .get('/progress/upload_2')
+        .set('x-auth', 'true')
+        .expect(200);
+    });
+  });
+
+  describe('Strict Upload Limiter', () => {
+    beforeEach(() => {
+      app.post('/strict', strictUploadLimiter, (req, res) => {
+        res.json({ success: true });
+      });
+    });
+
+    it('should limit unauthenticated users to 3 uploads', async () => {
+      // First 3 requests should succeed
+      for (let i = 0; i < 3; i++) {
+        await request(app)
+          .post('/strict')
+          .expect(200);
+      }
+
+      // 4th request should be rate limited
+      const response = await request(app)
+        .post('/strict')
+        .expect(429);
+
+      expect(response.body.error).toBe('Too many requests');
+      expect(response.body.message).toContain('sign in');
+    });
+
+    it('should not limit authenticated users', async () => {
+      // Authenticated users can make more than 3 requests
+      for (let i = 0; i < 10; i++) {
+        await request(app)
+          .post('/strict')
+          .set('x-auth', 'true')
+          .expect(200);
+      }
+    });
+  });
+
+  describe('Combined Rate Limiters', () => {
+    beforeEach(() => {
+      // Apply limiters in order: strict first, then regular upload limiter
+      app.post('/combined', strictUploadLimiter, uploadRateLimiter, (req, res) => {
+        res.json({ success: true });
+      });
+    });
+
+    it('should apply all rate limiters in order', async () => {
+      // Unauthenticated user hits strict limit first (3 requests)
+      for (let i = 0; i < 3; i++) {
+        await request(app)
+          .post('/combined')
+          .expect(200);
+      }
+
+      // 4th unauthenticated request should fail
+      await request(app)
+        .post('/combined')
+        .expect(429);
+
+      // Authenticated user can make 10 requests
+      for (let i = 0; i < 10; i++) {
+        await request(app)
+          .post('/combined')
+          .set('x-auth', 'true')
+          .set('x-forwarded-for', '3.3.3.3')
+          .expect(200);
+      }
+
+      // 11th authenticated request should fail
+      await request(app)
+        .post('/combined')
+        .set('x-auth', 'true')
+        .set('x-forwarded-for', '3.3.3.3')
+        .expect(429);
+    });
+  });
+
+  describe('Rate Limiter Headers', () => {
+    beforeEach(() => {
+      app.post('/headers', uploadRateLimiter, (req, res) => {
+        res.json({ success: true });
+      });
+    });
+
+    it('should include rate limit headers', async () => {
+      const response = await request(app)
+        .post('/headers')
+        .set('x-auth', 'true')
+        .expect(200);
+
+      expect(response.headers['x-ratelimit-limit']).toBe('10');
+      expect(response.headers['x-ratelimit-remaining']).toBeDefined();
+      expect(response.headers['x-ratelimit-reset']).toBeDefined();
+    });
+
+    it('should include retry-after header when rate limited', async () => {
+      // Exhaust rate limit
+      for (let i = 0; i < 10; i++) {
+        await request(app)
+          .post('/headers')
+          .set('x-auth', 'true');
+      }
+
+      const response = await request(app)
+        .post('/headers')
+        .set('x-auth', 'true')
+        .expect(429);
+
+      expect(response.headers['retry-after']).toBeDefined();
+      expect(response.body.retryAfter).toBeDefined();
+    });
+  });
+});
