@@ -1,4 +1,6 @@
-# CLAUDE.md - Project Context for AI Assistants
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 Mulm is a Breeder Awards Program (BAP) management platform for aquarium societies. It tracks breeding achievements, manages member submissions, and handles species data.
@@ -11,112 +13,115 @@ Mulm is a Breeder Awards Program (BAP) management platform for aquarium societie
 - **Infrastructure**: Docker Compose, Cloudflare tunnel
 - **Testing**: Jest with ts-jest
 
-## Key Architectural Decisions
-
-### Database Transactions
-We use a `withTransaction` wrapper pattern for database operations. The try/catch around ROLLBACK is intentional - it's the standard pattern for the sqlite3 package which doesn't expose transaction state checking.
-
-### Logging
-- Custom logger utility in `src/utils/logger.ts` that respects NODE_ENV
-- Automatically silences logs during tests (NODE_ENV=test)
-- Use `logger.error()`, `logger.warn()`, `logger.info()` instead of console.*
-
-### Form Validation
-- Zod schemas for all forms (see `src/forms/`)
-- Server-side validation with detailed error messages
-- Form state preservation on validation errors
-
 ## Development Commands
 ```bash
-npm run dev        # Start development server with hot reload
-npm run build      # Build TypeScript and assets
-npm test           # Run Jest tests
+npm run dev        # Start development server with hot reload (Nodemon + PostCSS watch)
+npm run build      # Build TypeScript and PostCSS assets
+npm test           # Run Jest tests  
 npm run lint       # Run ESLint
 npm run lint:fix   # Fix ESLint issues
-num run script     # runs something with ts-node
+npm run script     # Run scripts with ts-node (e.g., npm run script scripts/example.ts)
+npm start          # Start production server (requires build first)
 ```
 
-## Common Patterns
+### Testing Commands
+```bash
+npm test                      # Run all tests
+npm test -- path/to/test.ts   # Run specific test file
+npm test -- --watch           # Run tests in watch mode
+```
 
-### API Routes
-Routes are organized by domain in `src/routes/`:
-- Use `MulmRequest` type for typed sessions
-- Always validate user permissions
-- Return appropriate HTTP status codes
+## Architecture
 
-### Database Queries
-- Use prepared statements for all queries
-- Always finalize() prepared statements
-- Use the query helper from conn.ts for simple SELECT queries
-- Use withTransaction wrapper for transactions
+### Database Layer
+- **Dual connection pattern**: Separate read-only and write connections (`src/db/conn.ts`)
+- **Transaction wrapper**: `withTransaction()` function for atomic operations
+  - The try/catch around ROLLBACK is intentional - sqlite3 package doesn't expose transaction state
+- **Migration system**: Auto-runs on startup from `db/migrations/`
+- **Query helpers**: `query()` for SELECT, `insertOne()`, `updateOne()` for mutations
 
-### Testing
-- Tests use temporary SQLite databases
-- Each test gets a fresh database with migrations
-- Use `overrideConnection()` to inject test database
+### Session Management
+- Cookie-based sessions stored in SQLite
+- `MulmRequest` type extends Express Request with typed `viewer` property
+- Session middleware automatically populates viewer from database
 
-## Scripts
-These live alongside the src directory because they have incompatible tsconfig
-settings. All scripts meant to be run from the CLI should be put in scripts/ and
-tun with ts-node
+### Route Organization
+Routes are domain-organized in `src/routes/`:
+- **Public routes**: species, standings, typeahead
+- **Auth routes**: account, auth (including OAuth)
+- **Member routes**: member, submission, tank
+- **Admin routes**: adminRouter with approval/witness queues
 
-## Important Files
-- `src/index.ts` - Main application entry point
-- `src/db/conn.ts` - Database connection management
-- `src/sessions.ts` - Session middleware and types
-- `src/forms/` - Zod schemas for form validation
-- `db/migrations/` - SQL migration files
+### Form Validation
+- Zod schemas define all form structures (`src/forms/`)
+- Server-side validation with field-level error messages
+- Form state preservation on validation errors
 
-## Current Work & Known Issues
-- All should be in github
+### Testing Strategy
+- Each test gets isolated in-memory SQLite database
+- Migrations run automatically for each test database
+- `overrideConnection()` injects test database
+- Helper utilities in `src/__tests__/testDbHelper.helper.ts`
 
-## Security Considerations
-- Never expose config secrets in logs
-- Always validate file uploads server-side
-- Implement rate limiting on sensitive endpoints
+## Key Patterns
 
-## Deployment
-- Running in docker on a single linux maching via docker compose
-- Database is a sqlite file on disk, periodically backed up
-- Cloudflare tunnel for secure access
-- Environment-specific configs in config.json
+### Database Operations
+```typescript
+// Simple queries
+const results = await query<Type>('SELECT * FROM table WHERE id = ?', [id]);
 
-## Contributing Guidelines
-1. Follow existing code patterns
-2. Don't add comments when the code is self-explanatory
-3. Add tests for new features
-4. Update this file with significant changes
-5. Use conventional commit messages
-6. Run linter and unit tests before committing
+// Transactions
+await withTransaction(async (db) => {
+  // Multiple operations atomically
+  await db.run('INSERT ...');
+  await db.run('UPDATE ...');
+});
+
+// Always finalize prepared statements
+const stmt = await db.prepare('...');
+try {
+  await stmt.run(...);
+} finally {
+  await stmt.finalize();
+}
+```
+
+### Request Handling
+```typescript
+// Typed request with viewer
+router.get('/path', async (req: MulmRequest, res) => {
+  const { viewer } = req; // Typed viewer or undefined
+  if (!viewer) return res.redirect('/signin');
+  // ...
+});
+```
+
+## Scripts Directory
+Scripts use separate tsconfig for CLI compatibility. Run with:
+```bash
+npm run script scripts/scriptname.ts
+```
 
 ## Pug Template Guidelines
-**CRITICAL**: Avoid Tailwind class chain errors in Pug templates
+**CRITICAL**: Avoid Tailwind class chain errors
 
-### Common Pitfalls to Avoid:
-- ❌ **Mixed quotes**: `div(class="max-w-4xl" id='container')` 
-- ❌ **Long single lines**: Tailwind utility chains over 140 characters
-- ❌ **Single quotes**: Always use double quotes for attributes
-- ❌ **SVG viewBox**: `viewBox` must be lowercase `viewbox` in Pug
-- ❌ **Multiple blank lines**: Remove extra whitespace
+### Common Pitfalls
+- ❌ Mixed quotes: `div(class="max-w-4xl" id='container')`
+- ❌ Long single lines: Tailwind chains over 140 characters
+- ❌ SVG viewBox: Must be lowercase `viewbox` in Pug
 
-### Best Practices:
-- ✅ **Use double quotes**: `div(class="max-w-4xl mx-auto")`
-- ✅ **Break long class chains**:
+### Best Practices
+- ✅ Use double quotes: `div(class="max-w-4xl mx-auto")`
+- ✅ Break long class chains:
   ```pug
   div(
     class="bg-gradient-to-r from-yellow-50 to-amber-50" +
           " rounded-lg shadow-lg p-6"
   )
   ```
-- ✅ **Create component classes** for repeated patterns:
-  ```css
-  .approval-panel {
-    @apply bg-gray-600 p-4 shadow-md mt-6;
-  }
-  ```
-- ✅ **Use Pug class chains** for simple utilities: `div.flex.gap-4.items-center`
-- ✅ **Use class attributes** for complex responsive utilities
+- ✅ Simple utilities: `div.flex.gap-4.items-center`
 
-### Style Guidelines:
-- Follow the best practices outlined above for consistent template structure
-- Use double quotes for attributes and break long class chains for readability
+## Logging
+- Custom logger in `src/utils/logger.ts` respects NODE_ENV
+- Automatically silenced during tests (NODE_ENV=test)
+- Use `logger.error()`, `logger.warn()`, `logger.info()` instead of console.*
