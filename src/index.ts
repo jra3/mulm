@@ -196,7 +196,8 @@ app.get('/health', (_req, res) => {
 app.use(router);
 
 const PORT = parseInt(process.env.PORT || "4200");
-app.listen(PORT, () => {
+const HOST = '0.0.0.0'; // Listen on all interfaces
+app.listen(PORT, HOST, () => {
 	console.log(`Server running at http://localhost:${PORT}`);
 	console.log(`Server running at https://${config.domain}`);
 });
