@@ -18,20 +18,20 @@ type Viewer = {
 export type MulmRequest = Request & { viewer?: Viewer };
 
 export async function sessionMiddleware(
-	req: MulmRequest,
-	_res: Response,
-	next: NextFunction) {
+  req: MulmRequest,
+  _res: Response,
+  next: NextFunction) {
 
-	const token = String(req.cookies.session_id);
-	if (token) {
-		req.viewer = await getLoggedInUser(token);
-	}
-	next();
+  const token = String(req.cookies.session_id);
+  if (token) {
+    req.viewer = await getLoggedInUser(token);
+  }
+  next();
 }
 
 async function getLoggedInUser(token: string) {
-			const now = new Date().toISOString();
-			return (await query<Viewer>(`
+  const now = new Date().toISOString();
+  return (await query<Viewer>(`
 				SELECT
 					members.id as id,
 					members.display_name as display_name,
@@ -43,49 +43,49 @@ async function getLoggedInUser(token: string) {
 				FROM sessions JOIN members ON sessions.member_id = members.id
 				WHERE session_id = ? AND expires_on > ?;
 			`, [token, now])).pop();
-		}
+}
 
 export async function createUserSession(req: Request, res: Response, memberId: number) {
-	const cookieValue = generateSessionCookie();
-	try {
-		const conn = writeConn;
-		const expiry = new Date(Date.now() + (180 * 86400 * 1000));
-		const insertStmt = await conn.prepare(`
+  const cookieValue = generateSessionCookie();
+  try {
+    const conn = writeConn;
+    const expiry = new Date(Date.now() + (180 * 86400 * 1000));
+    const insertStmt = await conn.prepare(`
 			INSERT INTO sessions (session_id, member_id, expires_on) VALUES (?, ?, ?);
 		`);
-		try {
-			await insertStmt.run(cookieValue, memberId, expiry.toISOString());
-		} finally {
-			await insertStmt.finalize();
-		}
-	} catch (err) {
-		console.error(err);
-		throw new Error("Failed to get member");
-	}
+    try {
+      await insertStmt.run(cookieValue, memberId, expiry.toISOString());
+    } finally {
+      await insertStmt.finalize();
+    }
+  } catch (err) {
+    console.error(err);
+    throw new Error("Failed to get member");
+  }
 
-	res.cookie('session_id', cookieValue, {
-		httpOnly: true,
-		secure: process.env.NODE_ENV === 'production', // HTTPS only in production
-		sameSite: 'lax', // CSRF protection while allowing normal navigation from external sites
-		maxAge: 180 * 86400 * 1000, // 180 days
-	});
+  res.cookie('session_id', cookieValue, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+    sameSite: 'lax', // CSRF protection while allowing normal navigation from external sites
+    maxAge: 180 * 86400 * 1000, // 180 days
+  });
 }
 
 export async function destroyUserSession(req: MulmRequest, res: Response) {
-	res.cookie('session_id', null);
-	const token = String(req.cookies.session_id);
-	if (token !== undefined) {
-		try {
-			const conn = writeConn;
-			const deleteRow = await conn.prepare('DELETE FROM sessions WHERE session_id = ?');
-			try {
-				await deleteRow.run(token);
-			} finally {
-				await deleteRow.finalize();
-			}
-		} catch (err) {
-			console.error(err);
-			throw new Error("Failed to delete session");
-		}
-	}
+  res.cookie('session_id', null);
+  const token = String(req.cookies.session_id);
+  if (token !== undefined) {
+    try {
+      const conn = writeConn;
+      const deleteRow = await conn.prepare('DELETE FROM sessions WHERE session_id = ?');
+      try {
+        await deleteRow.run(token);
+      } finally {
+        await deleteRow.finalize();
+      }
+    } catch (err) {
+      console.error(err);
+      throw new Error("Failed to delete session");
+    }
+  }
 }

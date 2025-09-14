@@ -19,6 +19,7 @@ export default [
 		},
 	},
 	{rules: {
+		"indent": ["error", 2, { "SwitchCase": 1 }],
 		"@typescript-eslint/no-explicit-any": "warn",
 		"@typescript-eslint/no-floating-promises": "error",
 		"@typescript-eslint/no-misused-promises": "error"

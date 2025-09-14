@@ -21,296 +21,296 @@ import { logger } from "@/utils/logger";
 
 // Helper function to calculate total points for a member
 async function getMemberWithPoints(member: MemberRecord | null): Promise<MemberRecord & { fishTotalPoints: number; plantTotalPoints: number; coralTotalPoints: number } | null> {
-	if (!member) return null;
+  if (!member) return null;
 
-	const submissions: Submission[] = await getSubmissionsByMember(
-		member.id.toString(),
-		false, // don't include unsubmitted
-		false  // don't include unapproved
-	);
+  const submissions: Submission[] = await getSubmissionsByMember(
+    member.id.toString(),
+    false, // don't include unsubmitted
+    false  // don't include unapproved
+  );
 
-	const fishSubmissions = submissions.filter((sub: Submission) =>
-		sub.species_type === "Fish" || sub.species_type === "Invert"
-	);
-	const plantSubmissions = submissions.filter((sub: Submission) => sub.species_type === "Plant");
-	const coralSubmissions = submissions.filter((sub: Submission) => sub.species_type === "Coral");
+  const fishSubmissions = submissions.filter((sub: Submission) =>
+    sub.species_type === "Fish" || sub.species_type === "Invert"
+  );
+  const plantSubmissions = submissions.filter((sub: Submission) => sub.species_type === "Plant");
+  const coralSubmissions = submissions.filter((sub: Submission) => sub.species_type === "Coral");
 
-	const fishTotalPoints = fishSubmissions.reduce((sum: number, sub: Submission) => sum + (sub.total_points || 0), 0);
-	const plantTotalPoints = plantSubmissions.reduce((sum: number, sub: Submission) => sum + (sub.total_points || 0), 0);
-	const coralTotalPoints = coralSubmissions.reduce((sum: number, sub: Submission) => sum + (sub.total_points || 0), 0);
+  const fishTotalPoints = fishSubmissions.reduce((sum: number, sub: Submission) => sum + (sub.total_points || 0), 0);
+  const plantTotalPoints = plantSubmissions.reduce((sum: number, sub: Submission) => sum + (sub.total_points || 0), 0);
+  const coralTotalPoints = coralSubmissions.reduce((sum: number, sub: Submission) => sum + (sub.total_points || 0), 0);
 
-	return {
-		...member,
-		fishTotalPoints,
-		plantTotalPoints,
-		coralTotalPoints
-	};
+  return {
+    ...member,
+    fishTotalPoints,
+    plantTotalPoints,
+    coralTotalPoints
+  };
 }
 
 export function requireAdmin(
-	req: MulmRequest,
-	res: Response,
-	next: NextFunction) {
+  req: MulmRequest,
+  res: Response,
+  next: NextFunction) {
 
-	if (!req.viewer) {
-		res.status(401).send();
-		return;
-	} else if (!req.viewer?.is_admin) {
-		res.status(403).send();
-		return;
-	} else {
-		next();
-	}
+  if (!req.viewer) {
+    res.status(401).send();
+    return;
+  } else if (!req.viewer?.is_admin) {
+    res.status(403).send();
+    return;
+  } else {
+    next();
+  }
 }
 
 export const viewMembers = async (req: MulmRequest, res: Response) => {
-	const members = await getRosterWithPoints();
+  const members = await getRosterWithPoints();
 
-	res.render("admin/members", {
-		title: "Member Roster",
-		members,
-	});
+  res.render("admin/members", {
+    title: "Member Roster",
+    members,
+  });
 }
 
 export const viewEditSubmission = async (req: MulmRequest, res: Response) => {
-	const submission = await validateSubmission(req, res);
-	if (!submission) {
-		return;
-	}
-	const submissionMember = await getMember(submission.member_id);
+  const submission = await validateSubmission(req, res);
+  if (!submission) {
+    return;
+  }
+  const submissionMember = await getMember(submission.member_id);
 
-	res.render('submit', {
-		title: `Edit Submission`,
-		subtitle: "Editing as admin",
-		submissionId: submission.id,
-		form: {
-			...submission,
-			member_name: submissionMember?.display_name,
-			member_email: submissionMember?.contact_email,
-		},
-		errors: new Map(),
-		classOptions: getClassOptions(submission.species_type),
-		waterTypes,
-		speciesTypes,
-		foodTypes,
-		spawnLocations,
-		isLivestock: isLivestock(submission.species_type),
-		isAdmin: true,
-		editing: true,
-	});
-	return;
+  res.render('submit', {
+    title: `Edit Submission`,
+    subtitle: "Editing as admin",
+    submissionId: submission.id,
+    form: {
+      ...submission,
+      member_name: submissionMember?.display_name,
+      member_email: submissionMember?.contact_email,
+    },
+    errors: new Map(),
+    classOptions: getClassOptions(submission.species_type),
+    waterTypes,
+    speciesTypes,
+    foodTypes,
+    spawnLocations,
+    isLivestock: isLivestock(submission.species_type),
+    isAdmin: true,
+    editing: true,
+  });
+  return;
 }
 
 export const viewMemberUpdate = async (req: MulmRequest, res: Response) => {
-	const { memberId } = req.params;
-	const id = parseInt(memberId);
-	if (isNaN(id)) {
-		res.status(422).send("Invalid member ID");
-		return;
-	}
-	const member = await getMember(id);
-	const memberWithPoints = await getMemberWithPoints(member || null);
+  const { memberId } = req.params;
+  const id = parseInt(memberId);
+  if (isNaN(id)) {
+    res.status(422).send("Invalid member ID");
+    return;
+  }
+  const member = await getMember(id);
+  const memberWithPoints = await getMemberWithPoints(member || null);
 
-	// Render one table row for editing
-	res.render("admin/editMember", {
-		member: memberWithPoints
-	});
+  // Render one table row for editing
+  res.render("admin/editMember", {
+    member: memberWithPoints
+  });
 }
 
 export const viewMemberRow = async (req: MulmRequest, res: Response) => {
-	const { memberId } = req.params;
-	const id = parseInt(memberId);
-	if (isNaN(id)) {
-		res.status(422).send("Invalid member ID");
-		return;
-	}
-	const member = await getMember(id);
-	const memberWithPoints = await getMemberWithPoints(member || null);
+  const { memberId } = req.params;
+  const id = parseInt(memberId);
+  if (isNaN(id)) {
+    res.status(422).send("Invalid member ID");
+    return;
+  }
+  const member = await getMember(id);
+  const memberWithPoints = await getMemberWithPoints(member || null);
 
-	res.render("admin/singleMemberRow", {
-		member: memberWithPoints
-	});
+  res.render("admin/singleMemberRow", {
+    member: memberWithPoints
+  });
 }
 
 export const updateMemberFields = async (req: MulmRequest, res: Response) => {
-	const { memberId } = req.params;
-	const id = parseInt(memberId);
-	if (isNaN(id)) {
-		res.status(422).send("Invalid member ID");
-		return;
-	}
+  const { memberId } = req.params;
+  const id = parseInt(memberId);
+  if (isNaN(id)) {
+    res.status(422).send("Invalid member ID");
+    return;
+  }
 
-	// Parse only the editable fields (name, email, admin status)
-	const { display_name, contact_email, is_admin } = req.body as { display_name: string; contact_email: string; is_admin?: string };
-	await updateMember(id, {
-		display_name,
-		contact_email,
-		is_admin: is_admin !== undefined ? 1 : 0,
-	});
+  // Parse only the editable fields (name, email, admin status)
+  const { display_name, contact_email, is_admin } = req.body as { display_name: string; contact_email: string; is_admin?: string };
+  await updateMember(id, {
+    display_name,
+    contact_email,
+    is_admin: is_admin !== undefined ? 1 : 0,
+  });
 
-	// Get the updated member with total points
-	const member = await getMember(id);
-	const memberWithPoints = await getMemberWithPoints(member || null);
+  // Get the updated member with total points
+  const member = await getMember(id);
+  const memberWithPoints = await getMemberWithPoints(member || null);
 
-	res.render("admin/singleMemberRow", {
-		member: memberWithPoints
-	});
+  res.render("admin/singleMemberRow", {
+    member: memberWithPoints
+  });
 }
 
 export const showQueue = async (req: MulmRequest, res: Response) => {
-	const { program = "fish" } = req.params;
-	if (programs.indexOf(program) === -1) {
-		res.status(404).send("Invalid program");
-		return;
-	}
+  const { program = "fish" } = req.params;
+  if (programs.indexOf(program) === -1) {
+    res.status(404).send("Invalid program");
+    return;
+  }
 
-	const [submissions, programCounts, witnessCounts] = await Promise.all([
-		getOutstandingSubmissions(program),
-		getOutstandingSubmissionsCounts(),
-		getWitnessQueueCounts(),
-	]);
+  const [submissions, programCounts, witnessCounts] = await Promise.all([
+    getOutstandingSubmissions(program),
+    getOutstandingSubmissionsCounts(),
+    getWitnessQueueCounts(),
+  ]);
 
-	const subtitle = (() => {
-		switch (program) {
-			default:
-			case "fish":
-				return `Breeder Awards Program`;
-			case "plant":
-				return `Horticultural Awards Program`;
-			case "coral":
-				return `Coral Awards Program`;
-		}
-	})();
+  const subtitle = (() => {
+    switch (program) {
+      default:
+      case "fish":
+        return `Breeder Awards Program`;
+      case "plant":
+        return `Horticultural Awards Program`;
+      case "coral":
+        return `Coral Awards Program`;
+    }
+  })();
 
-	res.render("admin/queue", {
-		title: "Approval Queue",
-		subtitle,
-		submissions,
-		program,
-		programCounts,
-		witnessCounts,
-	});
+  res.render("admin/queue", {
+    title: "Approval Queue",
+    subtitle,
+    submissions,
+    program,
+    programCounts,
+    witnessCounts,
+  });
 }
 
 export const showWitnessQueue = async (req: MulmRequest, res: Response) => {
-	const { program = "fish" } = req.params;
-	if (programs.indexOf(program) === -1) {
-		res.status(404).send("Invalid program");
-		return;
-	}
+  const { program = "fish" } = req.params;
+  if (programs.indexOf(program) === -1) {
+    res.status(404).send("Invalid program");
+    return;
+  }
 
-	const [submissions, programCounts] = await Promise.all([
-		getWitnessQueue(program),
-		getWitnessQueueCounts(),
-	]);
+  const [submissions, programCounts] = await Promise.all([
+    getWitnessQueue(program),
+    getWitnessQueueCounts(),
+  ]);
 
-	const subtitle = (() => {
-		switch (program) {
-			default:
-			case "fish":
-				return `Breeder Awards Program`;
-			case "plant":
-				return `Horticultural Awards Program`;
-			case "coral":
-				return `Coral Awards Program`;
-		}
-	})();
+  const subtitle = (() => {
+    switch (program) {
+      default:
+      case "fish":
+        return `Breeder Awards Program`;
+      case "plant":
+        return `Horticultural Awards Program`;
+      case "coral":
+        return `Coral Awards Program`;
+    }
+  })();
 
-	res.render("admin/witnessQueue", {
-		title: "Witness Review Queue",
-		subtitle,
-		submissions,
-		program,
-		programCounts,
-	});
+  res.render("admin/witnessQueue", {
+    title: "Witness Review Queue",
+    subtitle,
+    submissions,
+    program,
+    programCounts,
+  });
 }
 
 export const showWaitingPeriod = async (req: MulmRequest, res: Response) => {
-	const { program = "fish" } = req.params;
-	if (programs.indexOf(program) === -1) {
-		res.status(404).send("Invalid program");
-		return;
-	}
+  const { program = "fish" } = req.params;
+  if (programs.indexOf(program) === -1) {
+    res.status(404).send("Invalid program");
+    return;
+  }
 
-	const [submissions, programCounts, witnessCounts] = await Promise.all([
-		getWaitingPeriodSubmissions(program),
-		getOutstandingSubmissionsCounts(),
-		getWitnessQueueCounts(),
-	]);
+  const [submissions, programCounts, witnessCounts] = await Promise.all([
+    getWaitingPeriodSubmissions(program),
+    getOutstandingSubmissionsCounts(),
+    getWitnessQueueCounts(),
+  ]);
 
-	// Import the waiting period utility to calculate status for each submission
-	const { getWaitingPeriodStatusBulk } = await import("@/utils/waitingPeriod");
+  // Import the waiting period utility to calculate status for each submission
+  const { getWaitingPeriodStatusBulk } = await import("@/utils/waitingPeriod");
 
-	// Add waiting period status to all submissions at once
-	const submissionsWithStatus = getWaitingPeriodStatusBulk(submissions);
+  // Add waiting period status to all submissions at once
+  const submissionsWithStatus = getWaitingPeriodStatusBulk(submissions);
 
-	const subtitle = (() => {
-		switch (program) {
-			default:
-			case "fish":
-				return `Breeder Awards Program`;
-			case "plant":
-				return `Horticultural Awards Program`;
-			case "coral":
-				return `Coral Awards Program`;
-		}
-	})();
+  const subtitle = (() => {
+    switch (program) {
+      default:
+      case "fish":
+        return `Breeder Awards Program`;
+      case "plant":
+        return `Horticultural Awards Program`;
+      case "coral":
+        return `Coral Awards Program`;
+    }
+  })();
 
-	res.render("admin/waitingPeriod", {
-		title: "Waiting Period Monitor",
-		subtitle,
-		submissions: submissionsWithStatus,
-		program,
-		programCounts,
-		witnessCounts,
-	});
+  res.render("admin/waitingPeriod", {
+    title: "Waiting Period Monitor",
+    subtitle,
+    submissions: submissionsWithStatus,
+    program,
+    programCounts,
+    witnessCounts,
+  });
 }
 
 export const sendRequestChanges = async (req: MulmRequest, res: Response) => {
-	try {
+  try {
  		const submission = await validateSubmission(req, res);
-		if (!submission) {
-			res.status(400).send('Submission not found');
-			return;
-		}
+    if (!submission) {
+      res.status(400).send('Submission not found');
+      return;
+    }
 
-		const member = await getMember(submission.member_id);
-		if (!member) {
-			res.status(400).send('Member not found');
-			return;
-		}
+    const member = await getMember(submission.member_id);
+    if (!member) {
+      res.status(400).send('Member not found');
+      return;
+    }
 
-		const content = getBodyString(req, "content");
-		if (!content || content.trim().length === 0) {
-			res.status(400).send('Please provide feedback message');
-			return;
-		}
+    const content = getBodyString(req, "content");
+    if (!content || content.trim().length === 0) {
+      res.status(400).send('Please provide feedback message');
+      return;
+    }
 
-		await Promise.all([
-			updateSubmission(submission.id, { submitted_on: null }),
-			sendChangesRequest(
-				submission,
-				member?.contact_email,
-				content,
-			)
-		]);
+    await Promise.all([
+      updateSubmission(submission.id, { submitted_on: null }),
+      sendChangesRequest(
+        submission,
+        member?.contact_email,
+        content,
+      )
+    ]);
 
-		// Redirect to approval queue for the submission's program
-		res.set('HX-Redirect', `/admin/queue/${submission.program}`).send();
+    // Redirect to approval queue for the submission's program
+    res.set('HX-Redirect', `/admin/queue/${submission.program}`).send();
  	} catch (error) {
-		logger.error('Error sending request changes:', error);
-		res.status(500).send('Failed to send feedback. Please try again.');
-	}
+    logger.error('Error sending request changes:', error);
+    res.status(500).send('Failed to send feedback. Please try again.');
+  }
 }
 
 export const requestChangesForm = async (req: MulmRequest, res: Response) => {
-	const submission = await validateSubmission(req, res);
-	if (!submission) {
-		res.send("Error: submission not found");
-		return;
-	}
+  const submission = await validateSubmission(req, res);
+  if (!submission) {
+    res.send("Error: submission not found");
+    return;
+  }
 
-	const contents = `
+  const contents = `
 Changes are requested form your BAP submission. Please review the notes below, make appropriate changes, and resubmit.
 
 -----------------
@@ -338,290 +338,290 @@ Substrate:
 	- Depth: ${submission.substrate_depth}
 	- Color: ${submission.substrate_color}
 `
-	res.render("admin/requestChanges", {
-		submission,
-		contents,
-	});
+  res.render("admin/requestChanges", {
+    submission,
+    contents,
+  });
 }
 
 export const confirmWitnessAction = async (req: MulmRequest, res: Response) => {
-	const submission = await validateSubmission(req, res);
-	if (!submission) {
-		res.send("Submission not found");
-		return;
-	}
+  const submission = await validateSubmission(req, res);
+  if (!submission) {
+    res.send("Submission not found");
+    return;
+  }
 
-	const [member, witness] = await Promise.all([
-		getMember(submission.member_id),
-		getMember(req.viewer!.id),
-	]);
+  const [member, witness] = await Promise.all([
+    getMember(submission.member_id),
+    getMember(req.viewer!.id),
+  ]);
 
-	if (!member || !witness) {
-		res.send("Member or witness not found");
-		return;
-	}
+  if (!member || !witness) {
+    res.send("Member or witness not found");
+    return;
+  }
 
-	await Promise.all([
-		confirmWitness(submission.id, req.viewer!.id),
-		onWitnessConfirmed(submission, member, witness),
-	]);
+  await Promise.all([
+    confirmWitness(submission.id, req.viewer!.id),
+    onWitnessConfirmed(submission, member, witness),
+  ]);
 
-	// Redirect to witness queue for the submission's program
-	res.set('HX-Redirect', `/admin/witness-queue/${submission.program}`).send();
+  // Redirect to witness queue for the submission's program
+  res.set('HX-Redirect', `/admin/witness-queue/${submission.program}`).send();
 }
 
 export const declineWitnessForm = async (req: MulmRequest, res: Response) => {
-	const submission = await validateSubmission(req, res);
-	if (!submission) {
-		res.send("Error: submission not found");
-		return;
-	}
+  const submission = await validateSubmission(req, res);
+  if (!submission) {
+    res.send("Error: submission not found");
+    return;
+  }
 
-	const reproductionTerm = submission.species_type === 'Plant' || submission.species_type === 'Coral' ? 'propagation' : 'spawn';
-	const offspringTerm = (() => {
-		switch (submission.species_type) {
-			case 'Fish':
-				return 'fry (and eggs if applicable)';
-			case 'Plant':
-				return 'plantlets';
-			case 'Coral':
-				return 'frags';
-			default:
-			case 'Invert':
-				return 'offspring';
-		}
-	})();
+  const reproductionTerm = submission.species_type === 'Plant' || submission.species_type === 'Coral' ? 'propagation' : 'spawn';
+  const offspringTerm = (() => {
+    switch (submission.species_type) {
+      case 'Fish':
+        return 'fry (and eggs if applicable)';
+      case 'Plant':
+        return 'plantlets';
+      case 'Coral':
+        return 'frags';
+      default:
+      case 'Invert':
+        return 'offspring';
+    }
+  })();
 
-	const contents = `
+  const contents = `
 Additional documentation is needed to verify this ${reproductionTerm}.
 
 • Please provide images or video links clearly showing the ${offspringTerm}.
 • Photos of the parents will also be helpful.
 `;
 
-	res.render("admin/declineWitness", {
-		submission,
-		contents,
-	});
+  res.render("admin/declineWitness", {
+    submission,
+    contents,
+  });
 };
 
 export const declineWitnessAction = async (req: MulmRequest, res: Response) => {
-	try {
-		const submission = await validateSubmission(req, res);
-		if (!submission) {
-			res.status(400).send('Submission not found');
-			return;
-		}
+  try {
+    const submission = await validateSubmission(req, res);
+    if (!submission) {
+      res.status(400).send('Submission not found');
+      return;
+    }
 
-		const member = await getMember(submission.member_id);
-		if (!member) {
-			res.status(400).send('Member not found');
-			return;
-		}
+    const member = await getMember(submission.member_id);
+    if (!member) {
+      res.status(400).send('Member not found');
+      return;
+    }
 
-		const reason = getBodyString(req, "reason");
-		if (!reason || reason.trim().length === 0) {
-			res.status(400).send('Please provide a reason for requesting more documentation');
-			return;
-		}
+    const reason = getBodyString(req, "reason");
+    if (!reason || reason.trim().length === 0) {
+      res.status(400).send('Please provide a reason for requesting more documentation');
+      return;
+    }
 
-		await Promise.all([
-			declineWitness(submission.id, req.viewer!.id),
-			onWitnessDeclined(submission, member, reason),
-		]);
+    await Promise.all([
+      declineWitness(submission.id, req.viewer!.id),
+      onWitnessDeclined(submission, member, reason),
+    ]);
 
-		// Redirect to witness queue for the submission's program
-		res.set('HX-Redirect', `/admin/witness-queue/${submission.program}`).send();
-	} catch (error) {
-		logger.error('Error declining witness:', error);
-		res.status(500).send('Failed to send request. Please try again.');
-	}
+    // Redirect to witness queue for the submission's program
+    res.set('HX-Redirect', `/admin/witness-queue/${submission.program}`).send();
+  } catch (error) {
+    logger.error('Error declining witness:', error);
+    res.status(500).send('Failed to send request. Please try again.');
+  }
 }
 
 export const inviteMember = async (req: MulmRequest, res: Response) => {
-	const errors = new Map<string, string>();
-	const renderDialog = () => {
-		res.render("admin/inviteUser", {
-			...req.body as object,
-			errors,
-		});
-	}
+  const errors = new Map<string, string>();
+  const renderDialog = () => {
+    res.render("admin/inviteUser", {
+      ...req.body as object,
+      errors,
+    });
+  }
 
-	const parsed = inviteSchema.safeParse(req.body);
-	if (!validateFormResult(parsed, errors, renderDialog)) {
-		return;
-	}
-	const { contact_email, display_name } = parsed.data;
-	let member = await getMemberByEmail(contact_email);
-	if (member == undefined) {
-		const name = String(display_name);
-		if (name.length > 2) {
-			const member_id = await createMember(parsed.data.contact_email, name);
-			member = await getMember(member_id);
-		}
+  const parsed = inviteSchema.safeParse(req.body);
+  if (!validateFormResult(parsed, errors, renderDialog)) {
+    return;
+  }
+  const { contact_email, display_name } = parsed.data;
+  let member = await getMemberByEmail(contact_email);
+  if (member == undefined) {
+    const name = String(display_name);
+    if (name.length > 2) {
+      const member_id = await createMember(parsed.data.contact_email, name);
+      member = await getMember(member_id);
+    }
 
-		if (!member) {
-			res.send("Failed to create member");
-			return;
-		}
-	}
+    if (!member) {
+      res.send("Failed to create member");
+      return;
+    }
+  }
 
-	const codeEntry: AuthCode = {
-		member_id: member.id,
-		code: generateRandomCode(24),
-		// 1 week expiration
-		expires_on: new Date(Date.now() + 60 * 60 * 1000 * 24 * 7),
-		purpose: "password_reset",
-	};
+  const codeEntry: AuthCode = {
+    member_id: member.id,
+    code: generateRandomCode(24),
+    // 1 week expiration
+    expires_on: new Date(Date.now() + 60 * 60 * 1000 * 24 * 7),
+    purpose: "password_reset",
+  };
 
-	await createAuthCode(codeEntry);
-	await sendInviteEmail(contact_email, member.display_name, codeEntry.code);
-	res.send("Invite sent");
+  await createAuthCode(codeEntry);
+  await sendInviteEmail(contact_email, member.display_name, codeEntry.code);
+  res.send("Invite sent");
 }
 
 export const approveSubmission = async (req: MulmRequest, res: Response) => {
-	const { viewer } = req;
+  const { viewer } = req;
 
-	const id = getBodyParam(req, 'id') as number;
-	const submission = (await getSubmissionById(id))!;
+  const id = getBodyParam(req, 'id') as number;
+  const submission = (await getSubmissionById(id))!;
 
-	const errors = new Map<string, string>();
-	const onError = () => {
-		res.render("admin/approvalPanel", {
-			submission: {
-				id: submission.id,
-				points: submission.points,
-				species_class: submission.species_class,
-			},
-			errors,
-			name: {
-				canonical_genus: getBodyString(req, 'canonical_genus'),
-				canonical_species_name: getBodyString(req, 'canonical_species_name'),
-			},
-		});
-	};
+  const errors = new Map<string, string>();
+  const onError = () => {
+    res.render("admin/approvalPanel", {
+      submission: {
+        id: submission.id,
+        points: submission.points,
+        species_class: submission.species_class,
+      },
+      errors,
+      name: {
+        canonical_genus: getBodyString(req, 'canonical_genus'),
+        canonical_species_name: getBodyString(req, 'canonical_species_name'),
+      },
+    });
+  };
 
-	const parsed = approvalSchema.safeParse(req.body);
-	if (!validateFormResult(parsed, errors, onError)) {
-		return;
-	}
+  const parsed = approvalSchema.safeParse(req.body);
+  if (!validateFormResult(parsed, errors, onError)) {
+    return;
+  }
 
-	const updates = parsed.data;
+  const updates = parsed.data;
 
-	const speciesGroupId = await recordName({
-		program_class: submission.species_class,
-		common_name: submission.species_common_name,
-		latin_name: submission.species_latin_name,
-		canonical_genus: parsed.data.canonical_genus,
-		canonical_species_name: parsed.data.canonical_species_name,
-	});
+  const speciesGroupId = await recordName({
+    program_class: submission.species_class,
+    common_name: submission.species_common_name,
+    latin_name: submission.species_latin_name,
+    canonical_genus: parsed.data.canonical_genus,
+    canonical_species_name: parsed.data.canonical_species_name,
+  });
 
-	await approve(viewer!.id, id, speciesGroupId, updates);
-	const member = await getMember(submission.member_id);
-	if (member) {
-		// member should always exist...
-		// Get the updated submission with points included
-		const updatedSubmission = await getSubmissionById(id);
-		if (updatedSubmission) {
-			await onSubmissionApprove(updatedSubmission, member);
+  await approve(viewer!.id, id, speciesGroupId, updates);
+  const member = await getMember(submission.member_id);
+  if (member) {
+    // member should always exist...
+    // Get the updated submission with points included
+    const updatedSubmission = await getSubmissionById(id);
+    if (updatedSubmission) {
+      await onSubmissionApprove(updatedSubmission, member);
 
-			// Create activity feed entry for submission approval
-			try {
-				await createActivity(
-					'submission_approved',
-					member.id,
-					updatedSubmission.id.toString(),
-					{
-						species_common_name: updatedSubmission.species_common_name,
-						species_type: updatedSubmission.species_type,
-						points: updatedSubmission.points || 0,
-						first_time_species: Boolean(updatedSubmission.first_time_species),
-						article_points: updatedSubmission.article_points || undefined
-					}
-				);
-			} catch (error) {
-				console.error('Error creating activity feed entry:', error);
-			}
+      // Create activity feed entry for submission approval
+      try {
+        await createActivity(
+          'submission_approved',
+          member.id,
+          updatedSubmission.id.toString(),
+          {
+            species_common_name: updatedSubmission.species_common_name,
+            species_type: updatedSubmission.species_type,
+            points: updatedSubmission.points || 0,
+            first_time_species: Boolean(updatedSubmission.first_time_species),
+            article_points: updatedSubmission.article_points || undefined
+          }
+        );
+      } catch (error) {
+        console.error('Error creating activity feed entry:', error);
+      }
 
-			// Check for level upgrades after approval
-			if (updatedSubmission.program) {
-				try {
-					await checkAndUpdateMemberLevel(
-						member.id,
+      // Check for level upgrades after approval
+      if (updatedSubmission.program) {
+        try {
+          await checkAndUpdateMemberLevel(
+            member.id,
 						updatedSubmission.program as Program
-					);
+          );
 
-					// Check for specialty awards after approval
-					await checkAndGrantSpecialtyAwards(member.id);
-				} catch (error) {
-					// Log error but don't fail the approval process
-					console.error('Error checking level upgrade and specialty awards:', error);
-				}
-			}
-		}
-	}
+          // Check for specialty awards after approval
+          await checkAndGrantSpecialtyAwards(member.id);
+        } catch (error) {
+          // Log error but don't fail the approval process
+          console.error('Error checking level upgrade and specialty awards:', error);
+        }
+      }
+    }
+  }
 
-	// Redirect to approval queue for the submission's program
-	res.set('HX-Redirect', `/admin/queue/${submission.program}`).send();
+  // Redirect to approval queue for the submission's program
+  res.set('HX-Redirect', `/admin/queue/${submission.program}`).send();
 }
 
 export const checkMemberLevels = async (req: MulmRequest, res: Response) => {
-	const memberId = parseInt(req.params.memberId);
-	if (!memberId) {
-		res.status(400).json({ error: 'Invalid member ID' });
-		return;
-	}
+  const memberId = parseInt(req.params.memberId);
+  if (!memberId) {
+    res.status(400).json({ error: 'Invalid member ID' });
+    return;
+  }
 
-	try {
-		const results = await checkAllMemberLevels(memberId);
-		const levelChanges = Object.entries(results)
-			.filter(([, result]) => result.levelChanged)
-			.map(([program, result]) => ({
-				program,
-				oldLevel: result.oldLevel,
-				newLevel: result.newLevel
-			}));
+  try {
+    const results = await checkAllMemberLevels(memberId);
+    const levelChanges = Object.entries(results)
+      .filter(([, result]) => result.levelChanged)
+      .map(([program, result]) => ({
+        program,
+        oldLevel: result.oldLevel,
+        newLevel: result.newLevel
+      }));
 
-		res.json({
-			success: true,
-			memberId,
-			levelChanges,
-			message: levelChanges.length > 0
-				? `Updated ${levelChanges.length} level(s) for member ${memberId}`
-				: `No level changes needed for member ${memberId}`
-		});
-	} catch (error) {
-		res.status(500).json({
-			error: 'Failed to check member levels',
-			details: error instanceof Error ? error.message : 'Unknown error'
-		});
-	}
+    res.json({
+      success: true,
+      memberId,
+      levelChanges,
+      message: levelChanges.length > 0
+        ? `Updated ${levelChanges.length} level(s) for member ${memberId}`
+        : `No level changes needed for member ${memberId}`
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Failed to check member levels',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
 }
 
 export const checkMemberSpecialtyAwards = async (req: MulmRequest, res: Response) => {
-	const memberId = parseInt(req.params.memberId);
-	if (!memberId) {
-		res.status(400).json({ error: 'Invalid member ID' });
-		return;
-	}
+  const memberId = parseInt(req.params.memberId);
+  if (!memberId) {
+    res.status(400).json({ error: 'Invalid member ID' });
+    return;
+  }
 
-	try {
-		const newAwards = await checkAllSpecialtyAwards(memberId);
+  try {
+    const newAwards = await checkAllSpecialtyAwards(memberId);
 
-		res.json({
-			success: true,
-			memberId,
-			newAwards,
-			totalNewAwards: newAwards.length,
-			message: newAwards.length > 0
-				? `Granted ${newAwards.length} new specialty award(s) for member ${memberId}: ${newAwards.join(', ')}`
-				: `No new specialty awards for member ${memberId}`
-		});
-	} catch (error) {
-		res.status(500).json({
-			error: 'Failed to check member specialty awards',
-			details: error instanceof Error ? error.message : 'Unknown error'
-		});
-	}
+    res.json({
+      success: true,
+      memberId,
+      newAwards,
+      totalNewAwards: newAwards.length,
+      message: newAwards.length > 0
+        ? `Granted ${newAwards.length} new specialty award(s) for member ${memberId}: ${newAwards.join(', ')}`
+        : `No new specialty awards for member ${memberId}`
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Failed to check member specialty awards',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
 }
 

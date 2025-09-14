@@ -53,90 +53,90 @@ export type Submission = {
 };
 
 export function formToDB(memberId: number, form: FormValues, submit: boolean) {
-	const program = (() => {
-		switch (form.species_type) {
-			case "Fish":
-			case "Invert":
-				return "fish";
-			case "Plant":
-				return "plant";
-			case "Coral":
-				return "coral";
-			case undefined:
-				return undefined;
-			default:
-				logger.warn('Unknown species type', form.species_type);
-				throw new Error("Unknown species type");
-		}
-	})();
+  const program = (() => {
+    switch (form.species_type) {
+      case "Fish":
+      case "Invert":
+        return "fish";
+      case "Plant":
+        return "plant";
+      case "Coral":
+        return "coral";
+      case undefined:
+        return undefined;
+      default:
+        logger.warn('Unknown species type', form.species_type);
+        throw new Error("Unknown species type");
+    }
+  })();
 
-	const arrayToJSON = (formField: unknown) => {
-		if (Array.isArray(formField)) {
-			return JSON.stringify(formField.filter((v) => v !== ""));
-		}
-		return undefined;
-	};
+  const arrayToJSON = (formField: unknown) => {
+    if (Array.isArray(formField)) {
+      return JSON.stringify(formField.filter((v) => v !== ""));
+    }
+    return undefined;
+  };
 
-	return {
-		member_id: memberId,
-		program,
-		submitted_on: submit ? new Date().toISOString() : undefined,
-		witness_verification_status: submit ? 'pending' as const : undefined,
-		...form,
-		member_name: undefined,
-		member_email: undefined,
-		foods: arrayToJSON(form.foods),
-		spawn_locations: arrayToJSON(form.spawn_locations),
-		supplement_type: arrayToJSON(form.supplement_type),
-		supplement_regimen: arrayToJSON(form.supplement_regimen),
-	};
+  return {
+    member_id: memberId,
+    program,
+    submitted_on: submit ? new Date().toISOString() : undefined,
+    witness_verification_status: submit ? 'pending' as const : undefined,
+    ...form,
+    member_name: undefined,
+    member_email: undefined,
+    foods: arrayToJSON(form.foods),
+    spawn_locations: arrayToJSON(form.spawn_locations),
+    supplement_type: arrayToJSON(form.supplement_type),
+    supplement_regimen: arrayToJSON(form.supplement_regimen),
+  };
 }
 
 export async function createSubmission(
-	memberId: number,
-	form: FormValues,
-	submit: boolean,
+  memberId: number,
+  form: FormValues,
+  submit: boolean,
 ) {
-	try {
-		const conn = writeConn;
-		const entries = formToDB(memberId, form, submit);
+  try {
+    const conn = writeConn;
+    const entries = formToDB(memberId, form, submit);
 
-		const fields = [];
-		const values = [];
-		const marks = [];
-		for (const [field, value] of Object.entries(entries)) {
-			if (value === undefined) {
-				continue;
-			}
-			fields.push(field);
-			values.push(value);
-			marks.push("?");
-		}
+    const fields = [];
+    const values = [];
+    const marks = [];
+    for (const [field, value] of Object.entries(entries)) {
+      if (value === undefined) {
+        continue;
+      }
+      fields.push(field);
+      values.push(value);
+      marks.push("?");
+    }
 
-		const stmt = await conn.prepare(`
+    const stmt = await conn.prepare(`
 			INSERT INTO submissions
 			(${fields.join(", ")})
 			VALUES
 			(${marks.join(", ")})`);
 
-		try {
-			const result = await stmt.run(values);
-			return result.lastID as number;
-		} finally {
-			await stmt.finalize();
-		}
-	} catch (err) {
-		logger.error('Failed to add submission', err);
-		throw new Error("Failed to add submission");
-	}
+    try {
+      const result = await stmt.run(values);
+      return result.lastID as number;
+    } finally {
+      await stmt.finalize();
+    }
+  } catch (err) {
+    logger.error('Failed to add submission', err);
+    throw new Error("Failed to add submission");
+  }
 }
 
 export function getSubmissionsByMember(
-	memberId: string,
-	includeUnsubmitted: boolean,
-	includeUnapproved: boolean,
+  memberId: string,
+  includeUnsubmitted: boolean,
+  includeUnapproved: boolean,
 ) {
-	let expr = `
+  let expr = `
 		SELECT
 			submissions.*,
 			submissions.points +
@@ -150,21 +150,21 @@ export function getSubmissionsByMember(
 		ON submissions.member_id == members.id
 		WHERE submissions.member_id = ?`;
 
-	if (!includeUnsubmitted) {
-		expr += ` AND submitted_on IS NOT NULL`;
-	}
+  if (!includeUnsubmitted) {
+    expr += ` AND submitted_on IS NOT NULL`;
+  }
 
-	if (!includeUnapproved) {
-		expr += ` AND approved_on IS NOT NULL`;
-	}
+  if (!includeUnapproved) {
+    expr += ` AND approved_on IS NOT NULL`;
+  }
 
-	expr += ` ORDER BY submitted_on DESC`;
+  expr += ` ORDER BY submitted_on DESC`;
 
-	return query<Submission>(expr, [memberId]);
+  return query<Submission>(expr, [memberId]);
 }
 
 export async function getSubmissionById(id: number) {
-	const result = await query<Submission>(`
+  const result = await query<Submission>(`
 		SELECT
 			submissions.*,
 			submissions.points +
@@ -177,33 +177,33 @@ export async function getSubmissionById(id: number) {
 		FROM submissions LEFT JOIN members
 		ON submissions.member_id == members.id
 		WHERE submissions.id = ?`,
-		[id],
-	);
-	return result.pop();
+  [id],
+  );
+  return result.pop();
 }
 
 export async function deleteSubmission(id: number) {
-	try {
-		const conn = writeConn;
-		const deleteRow = await conn.prepare("DELETE FROM submissions WHERE id = ?");
-		try {
-			return deleteRow.run(id);
-		} finally {
-			await deleteRow.finalize();
-		}
-	} catch (err) {
-		logger.error('Failed to delete submission', err);
-		throw new Error("Failed to delete submission");
-	}
+  try {
+    const conn = writeConn;
+    const deleteRow = await conn.prepare("DELETE FROM submissions WHERE id = ?");
+    try {
+      return deleteRow.run(id);
+    } finally {
+      await deleteRow.finalize();
+    }
+  } catch (err) {
+    logger.error('Failed to delete submission', err);
+    throw new Error("Failed to delete submission");
+  }
 }
 
 export function getApprovedSubmissionsInDateRange(
-	startDate: Date,
-	endDate: Date,
-	program: string,
+  startDate: Date,
+  endDate: Date,
+  program: string,
 ) {
-	return query<Submission>(
-		`
+  return query<Submission>(
+    `
 		SELECT
 			submissions.*,
 			submissions.points +
@@ -219,15 +219,15 @@ export function getApprovedSubmissionsInDateRange(
 		AND approved_on IS NOT NULL AND points IS NOT NULL
 		AND program = ?
 	`,
-		[startDate.toISOString(), endDate.toISOString(), program],
-	);
+    [startDate.toISOString(), endDate.toISOString(), program],
+  );
 }
 
 export async function getOutstandingSubmissions(program: string) {
-	const { filterEligibleSubmissions } = await import("@/utils/waitingPeriod");
+  const { filterEligibleSubmissions } = await import("@/utils/waitingPeriod");
 	
-	const allWitnessed = await query<Submission>(
-		`
+  const allWitnessed = await query<Submission>(
+    `
 		SELECT
 			submissions.*,
 			submissions.points +
@@ -243,15 +243,15 @@ export async function getOutstandingSubmissions(program: string) {
 		AND approved_on IS NULL
 		AND witness_verification_status = 'confirmed'
 		AND program = ?`,
-		[program],
-	);
+    [program],
+  );
 	
-	return filterEligibleSubmissions(allWitnessed);
+  return filterEligibleSubmissions(allWitnessed);
 }
 
 export function getWitnessQueue(program: string) {
-	return query<Submission>(
-		`
+  return query<Submission>(
+    `
 		SELECT
 			submissions.*,
 			members.display_name as member_name
@@ -261,13 +261,13 @@ export function getWitnessQueue(program: string) {
 		AND witness_verification_status = 'pending'
 		AND program = ?
 		ORDER BY submitted_on ASC`,
-		[program],
-	);
+    [program],
+  );
 }
 
 export function getWaitingPeriodSubmissions(program: string) {
-	return query<Submission>(
-		`
+  return query<Submission>(
+    `
 		SELECT
 			submissions.*,
 			members.display_name as member_name,
@@ -280,12 +280,12 @@ export function getWaitingPeriodSubmissions(program: string) {
 		AND approved_on IS NULL
 		AND program = ?
 		ORDER BY witnessed_on ASC`,
-		[program],
-	);
+    [program],
+  );
 }
 
 export async function getOutstandingSubmissionsCounts() {
-	const rows = await query<{ count: number; program: string }>(`
+  const rows = await query<{ count: number; program: string }>(`
 		SELECT COUNT(1) as count, program
 		FROM submissions JOIN members
 		ON submissions.member_id == members.id
@@ -293,110 +293,110 @@ export async function getOutstandingSubmissionsCounts() {
 		AND approved_on IS NULL
 		AND witness_verification_status = 'confirmed'
 		GROUP BY program`);
-	return Object.fromEntries(rows.map((row) => [row.program, row.count]));
+  return Object.fromEntries(rows.map((row) => [row.program, row.count]));
 }
 
 export async function getWitnessQueueCounts() {
-	const rows = await query<{ count: number; program: string }>(`
+  const rows = await query<{ count: number; program: string }>(`
 		SELECT COUNT(1) as count, program
 		FROM submissions JOIN members
 		ON submissions.member_id == members.id
 		WHERE submitted_on IS NOT NULL
 		AND witness_verification_status = 'pending'
 		GROUP BY program`);
-	return Object.fromEntries(rows.map((row) => [row.program, row.count]));
+  return Object.fromEntries(rows.map((row) => [row.program, row.count]));
 }
 
 export async function confirmWitness(submissionId: number, witnessAdminId: number) {
-	try {
-		return await withTransaction(async (db) => {
-			// Check current state and prevent self-witnessing - use transaction db
-			const stmt = await db.prepare(`
+  try {
+    return await withTransaction(async (db) => {
+      // Check current state and prevent self-witnessing - use transaction db
+      const stmt = await db.prepare(`
 				SELECT id, member_id, witness_verification_status 
 				FROM submissions WHERE id = ?`);
-			const current: Submission[] = await stmt.all(submissionId);
-			await stmt.finalize();
+      const current: Submission[] = await stmt.all(submissionId);
+      await stmt.finalize();
 			
-			if (!current[0]) {
-				throw new Error('Submission not found');
-			}
+      if (!current[0]) {
+        throw new Error('Submission not found');
+      }
 			
-			if (current[0].member_id === witnessAdminId) {
-				throw new Error('Cannot witness your own submission');
-			}
+      if (current[0].member_id === witnessAdminId) {
+        throw new Error('Cannot witness your own submission');
+      }
 			
-			if (current[0].witness_verification_status !== 'pending') {
-				throw new Error('Submission not in pending witness state');
-			}
+      if (current[0].witness_verification_status !== 'pending') {
+        throw new Error('Submission not in pending witness state');
+      }
 
-			const updateStmt = await db.prepare(`
+      const updateStmt = await db.prepare(`
 				UPDATE submissions SET
 					witnessed_by = ?,
 					witnessed_on = ?,
 					witness_verification_status = 'confirmed'
 				WHERE id = ? AND witness_verification_status = 'pending'`);
 			
-			const result = await updateStmt.run(witnessAdminId, new Date().toISOString(), submissionId);
-			await updateStmt.finalize();
+      const result = await updateStmt.run(witnessAdminId, new Date().toISOString(), submissionId);
+      await updateStmt.finalize();
 			
-			if (result.changes === 0) {
-				throw new Error('Submission state changed during operation');
-			}
+      if (result.changes === 0) {
+        throw new Error('Submission state changed during operation');
+      }
 			
-			logger.info(`Witness confirmed for submission ${submissionId} by admin ${witnessAdminId}`);
-		});
-	} catch (err) {
-		logger.error('Failed to confirm witness', err);
-		throw err;
-	}
+      logger.info(`Witness confirmed for submission ${submissionId} by admin ${witnessAdminId}`);
+    });
+  } catch (err) {
+    logger.error('Failed to confirm witness', err);
+    throw err;
+  }
 }
 
 export async function declineWitness(submissionId: number, witnessAdminId: number) {
-	try {
-		return await withTransaction(async (db) => {
-			// Check current state and prevent self-witnessing - use transaction db
-			const stmt = await db.prepare(`
+  try {
+    return await withTransaction(async (db) => {
+      // Check current state and prevent self-witnessing - use transaction db
+      const stmt = await db.prepare(`
 				SELECT id, member_id, witness_verification_status 
 				FROM submissions WHERE id = ?`);
-			const current: Submission[] = await stmt.all(submissionId);
-			await stmt.finalize();
+      const current: Submission[] = await stmt.all(submissionId);
+      await stmt.finalize();
 			
-			if (!current[0]) {
-				throw new Error('Submission not found');
-			}
+      if (!current[0]) {
+        throw new Error('Submission not found');
+      }
 			
-			if (current[0].member_id === witnessAdminId) {
-				throw new Error('Cannot witness your own submission');
-			}
+      if (current[0].member_id === witnessAdminId) {
+        throw new Error('Cannot witness your own submission');
+      }
 			
-			if (current[0].witness_verification_status !== 'pending') {
-				throw new Error('Submission not in pending witness state');
-			}
+      if (current[0].witness_verification_status !== 'pending') {
+        throw new Error('Submission not in pending witness state');
+      }
 
-			const updateStmt = await db.prepare(`
+      const updateStmt = await db.prepare(`
 				UPDATE submissions SET
 					witnessed_by = ?,
 					witnessed_on = ?,
 					witness_verification_status = 'declined'
 				WHERE id = ? AND witness_verification_status = 'pending'`);
 			
-			const result = await updateStmt.run(witnessAdminId, new Date().toISOString(), submissionId);
-			await updateStmt.finalize();
+      const result = await updateStmt.run(witnessAdminId, new Date().toISOString(), submissionId);
+      await updateStmt.finalize();
 			
-			if (result.changes === 0) {
-				throw new Error('Submission state changed during operation');
-			}
+      if (result.changes === 0) {
+        throw new Error('Submission state changed during operation');
+      }
 			
-			logger.info(`Witness declined for submission ${submissionId} by admin ${witnessAdminId}`);
-		});
-	} catch (err) {
-		logger.error('Failed to decline witness', err);
-		throw err;
-	}
+      logger.info(`Witness declined for submission ${submissionId} by admin ${witnessAdminId}`);
+    });
+  } catch (err) {
+    logger.error('Failed to decline witness', err);
+    throw err;
+  }
 }
 
 export function getApprovedSubmissions(program: string) {
-	return query<
+  return query<
 		Submission &
 			Required<
 				Pick<
@@ -405,7 +405,7 @@ export function getApprovedSubmissions(program: string) {
 				>
 			>
 	>(
-		`
+	  `
 		SELECT
 			submissions.*,
 			submissions.points +
@@ -421,13 +421,13 @@ export function getApprovedSubmissions(program: string) {
 		AND approved_on IS NOT NULL
 		AND points IS NOT NULL
 		AND program = ?`,
-		[program],
+	  [program],
 	);
 }
 
 export function getAllSubmissions(program: string) {
-	return query<Submission>(
-		`
+  return query<Submission>(
+    `
 		SELECT
 			submissions.*,
 			submissions.points +
@@ -440,8 +440,8 @@ export function getAllSubmissions(program: string) {
 		FROM submissions JOIN members
 		ON submissions.member_id == members.id
 		WHERE program = ? `,
-		[program],
-	);
+    [program],
+  );
 }
 
 type UpdateFor<T> = Partial<{
@@ -449,46 +449,46 @@ type UpdateFor<T> = Partial<{
 }>;
 
 export async function updateSubmission(id: number, updates: UpdateFor<Submission>) {
-	const entries = Object.fromEntries(
-		Object.entries(updates).filter(([, value]) => value !== undefined),
-	);
-	const fields = Object.keys(entries);
-	const values = Object.values(entries);
-	const setClause = fields.map((field) => `${field} = ?`).join(", ");
+  const entries = Object.fromEntries(
+    Object.entries(updates).filter(([, value]) => value !== undefined),
+  );
+  const fields = Object.keys(entries);
+  const values = Object.values(entries);
+  const setClause = fields.map((field) => `${field} = ?`).join(", ");
 
-	try {
-		const conn = writeConn;
-		const stmt = await conn.prepare(
-			`UPDATE submissions SET ${setClause} WHERE id = ?`,
-		);
-		try {
-			const result = await stmt.run(...values, id);
-			return result.changes;
-		} finally {
-			await stmt.finalize();
-		}
-	} catch (err) {
-		logger.error('Failed to update submission', err);
-		throw new Error("Failed to update submission");
-	}
+  try {
+    const conn = writeConn;
+    const stmt = await conn.prepare(
+      `UPDATE submissions SET ${setClause} WHERE id = ?`,
+    );
+    try {
+      const result = await stmt.run(...values, id);
+      return result.changes;
+    } finally {
+      await stmt.finalize();
+    }
+  } catch (err) {
+    logger.error('Failed to update submission', err);
+    throw new Error("Failed to update submission");
+  }
 }
 
 export async function approveSubmission(
-	approvedBy: number,
-	id: number,
-	speciesNameId: number,
-	updates: ApprovalFormValues,
+  approvedBy: number,
+  id: number,
+  speciesNameId: number,
+  updates: ApprovalFormValues,
 ) {
-	try {
-		const conn = writeConn;
-		const {
-			points,
-			article_points,
-			first_time_species,
-			flowered,
-			sexual_reproduction,
-		} = updates;
-		const stmt = await conn.prepare(`
+  try {
+    const conn = writeConn;
+    const {
+      points,
+      article_points,
+      first_time_species,
+      flowered,
+      sexual_reproduction,
+    } = updates;
+    const stmt = await conn.prepare(`
 			UPDATE submissions SET
 			  species_name_id = ?,
 				points = ?,
@@ -499,23 +499,23 @@ export async function approveSubmission(
 				approved_by = ?,
 				approved_on = ?
 			WHERE id = ?`);
-		try {
-			await stmt.run(
-				speciesNameId,
-				points,
-				article_points,
-				first_time_species ? 1 : 0,
-				flowered ? 1 : 0,
-				sexual_reproduction ? 1 : 0,
-				approvedBy,
-				new Date().toISOString(),
-				id,
-			);
-		} finally {
-			await stmt.finalize();
-		}
-	} catch (err) {
-		logger.error('Failed to update submission', err);
-		throw new Error("Failed to update submission");
-	}
+    try {
+      await stmt.run(
+        speciesNameId,
+        points,
+        article_points,
+        first_time_species ? 1 : 0,
+        flowered ? 1 : 0,
+        sexual_reproduction ? 1 : 0,
+        approvedBy,
+        new Date().toISOString(),
+        id,
+      );
+    } finally {
+      await stmt.finalize();
+    }
+  } catch (err) {
+    logger.error('Failed to update submission', err);
+    throw new Error("Failed to update submission");
+  }
 }

@@ -27,38 +27,38 @@ export interface AwardGrantedData {
 }
 
 export async function createActivity(
-    activityType: 'submission_approved' | 'award_granted',
-    memberId: number,
-    relatedId: string,
-    activityData: SubmissionApprovedData | AwardGrantedData
+  activityType: 'submission_approved' | 'award_granted',
+  memberId: number,
+  relatedId: string,
+  activityData: SubmissionApprovedData | AwardGrantedData
 ): Promise<void> {
-    try {
-        const conn = db(true);
-        const stmt = await conn.prepare(`
+  try {
+    const conn = db(true);
+    const stmt = await conn.prepare(`
             INSERT INTO activity_feed (activity_type, member_id, related_id, activity_data)
             VALUES (?, ?, ?, ?)
         `);
         
-        try {
-            await stmt.run(
-                activityType,
-                memberId,
-                relatedId,
-                JSON.stringify(activityData)
-            );
-        } finally {
-            await stmt.finalize();
-        }
-        
-        logger.info(`Created activity: ${activityType} for member ${memberId}`);
-    } catch (error) {
-        logger.error('Failed to create activity feed entry', error);
-        throw new Error('Failed to create activity feed entry');
+    try {
+      await stmt.run(
+        activityType,
+        memberId,
+        relatedId,
+        JSON.stringify(activityData)
+      );
+    } finally {
+      await stmt.finalize();
     }
+        
+    logger.info(`Created activity: ${activityType} for member ${memberId}`);
+  } catch (error) {
+    logger.error('Failed to create activity feed entry', error);
+    throw new Error('Failed to create activity feed entry');
+  }
 }
 
 export async function getRecentActivity(limit: number = 10): Promise<ActivityFeedItem[]> {
-    const activities = await query<ActivityFeedItem>(`
+  const activities = await query<ActivityFeedItem>(`
         SELECT 
             af.*,
             m.display_name as member_name
@@ -68,14 +68,14 @@ export async function getRecentActivity(limit: number = 10): Promise<ActivityFee
         LIMIT ?
     `, [limit]);
     
-    return activities;
+  return activities;
 }
 
 export async function getActivityByType(
-    activityType: 'submission_approved' | 'award_granted',
-    limit: number = 10
+  activityType: 'submission_approved' | 'award_granted',
+  limit: number = 10
 ): Promise<ActivityFeedItem[]> {
-    const activities = await query<ActivityFeedItem>(`
+  const activities = await query<ActivityFeedItem>(`
         SELECT 
             af.*,
             m.display_name as member_name
@@ -86,11 +86,11 @@ export async function getActivityByType(
         LIMIT ?
     `, [activityType, limit]);
     
-    return activities;
+  return activities;
 }
 
 export async function getActivityForMember(memberId: number, limit: number = 10): Promise<ActivityFeedItem[]> {
-    const activities = await query<ActivityFeedItem>(`
+  const activities = await query<ActivityFeedItem>(`
         SELECT 
             af.*,
             m.display_name as member_name
@@ -101,5 +101,5 @@ export async function getActivityForMember(memberId: number, limit: number = 10)
         LIMIT ?
     `, [memberId, limit]);
     
-    return activities;
+  return activities;
 }

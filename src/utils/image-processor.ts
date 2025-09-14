@@ -123,8 +123,8 @@ async function processVariant(
   return {
     buffer,
     format: options.format,
-    width: metadata.width!,
-    height: metadata.height!,
+    width: metadata.width,
+    height: metadata.height,
     size: buffer.length,
   };
 }
@@ -150,8 +150,8 @@ export async function processImage(
   
   // Process original (with max dimension limit)
   const original = await processVariant(buffer, {
-    width: originalMetadata.width! > MAX_DIMENSION ? MAX_DIMENSION : undefined,
-    height: originalMetadata.height! > MAX_DIMENSION ? MAX_DIMENSION : undefined,
+    width: originalMetadata.width > MAX_DIMENSION ? MAX_DIMENSION : undefined,
+    height: originalMetadata.height > MAX_DIMENSION ? MAX_DIMENSION : undefined,
     fit: 'inside',
     format,
     quality,
@@ -187,10 +187,10 @@ export async function processImage(
     medium,
     thumbnail,
     metadata: {
-      originalWidth: originalMetadata.width!,
-      originalHeight: originalMetadata.height!,
+      originalWidth: originalMetadata.width,
+      originalHeight: originalMetadata.height,
       originalSize: buffer.length,
-      originalFormat: originalMetadata.format!,
+      originalFormat: originalMetadata.format,
       processingTimeMs,
     },
   };

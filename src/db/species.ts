@@ -12,7 +12,7 @@ type NameSynonym = {
 }
 
 export async function querySpeciesNames() {
-	return query<NameSynonym>(`
+  return query<NameSynonym>(`
 		SELECT
 			species_name_group.group_id as name_group_id,
 			species_name_group.program_class as program_class,
@@ -26,9 +26,9 @@ export async function querySpeciesNames() {
 }
 
 export async function recordName(data: NameSynonym): Promise<number> {
-	try {
-		return await withTransaction(async (db) => {
-			const groupStmt = await db.prepare(`
+  try {
+    return await withTransaction(async (db) => {
+      const groupStmt = await db.prepare(`
 				INSERT INTO species_name_group(
 					program_class,
 					canonical_genus,
@@ -39,20 +39,20 @@ export async function recordName(data: NameSynonym): Promise<number> {
 				RETURNING group_id;
 			`);
 
-			const result = await groupStmt.get<{ group_id: number }>(
-				data.program_class,
-				data.canonical_genus,
-				data.canonical_species_name
-			);
-			await groupStmt.finalize();
+      const result = await groupStmt.get<{ group_id: number }>(
+        data.program_class,
+        data.canonical_genus,
+        data.canonical_species_name
+      );
+      await groupStmt.finalize();
 
-			if (!result || !result.group_id) {
-				throw new Error("Failed to insert or update species name group");
-			}
-			const group_id = result.group_id;
+      if (!result || !result.group_id) {
+        throw new Error("Failed to insert or update species name group");
+      }
+      const group_id = result.group_id;
 
-			// Insert or update the species name synonym
-			const nameStmt = await db.prepare(`
+      // Insert or update the species name synonym
+      const nameStmt = await db.prepare(`
 				INSERT INTO species_name(
 					group_id,
 					common_name,
@@ -62,46 +62,46 @@ export async function recordName(data: NameSynonym): Promise<number> {
 				ON CONFLICT(common_name, scientific_name)
 				DO UPDATE SET group_id = group_id;
 			`);
-			await nameStmt.run(group_id, data.common_name, data.latin_name);
-			await nameStmt.finalize();
+      await nameStmt.run(group_id, data.common_name, data.latin_name);
+      await nameStmt.finalize();
 
-			return group_id;
-		});
-	} catch (err) {
-		logger.error('Failed to record species name', err);
-		throw new Error("Failed to record species name");
-	}
+      return group_id;
+    });
+  } catch (err) {
+    logger.error('Failed to record species name', err);
+    throw new Error("Failed to record species name");
+  }
 }
 
 export async function mergeSpecies(canonicalGroupId: number, defunctGroupId: number): Promise<void> {
-	try {
-		await withTransaction(async (db) => {
-			// Update all species names to point to the canonical group
-			const updateStmt = await db.prepare(`
+  try {
+    await withTransaction(async (db) => {
+      // Update all species names to point to the canonical group
+      const updateStmt = await db.prepare(`
 				UPDATE species_name
 				SET group_id = ?
 				WHERE group_id = ?
 			`);
-			await updateStmt.run(canonicalGroupId, defunctGroupId);
-			await updateStmt.finalize();
+      await updateStmt.run(canonicalGroupId, defunctGroupId);
+      await updateStmt.finalize();
 
-			// Delete the defunct species group
-			const deleteStmt = await db.prepare(`
+      // Delete the defunct species group
+      const deleteStmt = await db.prepare(`
 				DELETE FROM species_name_group
 				WHERE group_id = ?
 			`);
-			await deleteStmt.run(defunctGroupId);
-			await deleteStmt.finalize();
-		});
-	} catch (err) {
-		logger.error('Failed to record species name', err);
-		logger.error('Failed to merge species groups', err);
-		throw new Error("Failed to merge species groups");
-	}
+      await deleteStmt.run(defunctGroupId);
+      await deleteStmt.finalize();
+    });
+  } catch (err) {
+    logger.error('Failed to record species name', err);
+    logger.error('Failed to merge species groups', err);
+    throw new Error("Failed to merge species groups");
+  }
 }
 
 export async function getCanonicalSpeciesName(speciesNameId: number) {
-	const rows = await query<{
+  const rows = await query<{
 		program_class: string;
 		canonical_genus: string;
 		canonical_species_name: string;
@@ -110,9 +110,9 @@ export async function getCanonicalSpeciesName(speciesNameId: number) {
 		FROM species_name JOIN species_name_group
 		ON species_name.group_id = species_name_group.group_id
 		WHERE species_name.name_id = ?`,
-		[speciesNameId]
+	[speciesNameId]
 	);
-	return rows.pop();
+  return rows.pop();
 }
 
 export type SpeciesFilters = {
@@ -139,44 +139,44 @@ export type SpeciesExplorerItem = {
  * Handles both typeahead and explorer use cases
  */
 function buildSpeciesSearchQuery(
-	search?: string,
-	species_type?: string,
-	species_class?: string,
-	sort: 'name' | 'reports' | 'breeders' = 'reports',
-	limit?: number
+  search?: string,
+  species_type?: string,
+  species_class?: string,
+  sort: 'name' | 'reports' | 'breeders' = 'reports',
+  limit?: number
 ): { sql: string; params: unknown[] } {
-	// Build ORDER BY clause
-	let orderBy = 'total_breeds DESC, total_breeders DESC';
-	if (sort === 'name') {
-		orderBy = 'sng.canonical_genus, sng.canonical_species_name';
-	} else if (sort === 'breeders') {
-		orderBy = 'total_breeders DESC, total_breeds DESC';
-	}
+  // Build ORDER BY clause
+  let orderBy = 'total_breeds DESC, total_breeders DESC';
+  if (sort === 'name') {
+    orderBy = 'sng.canonical_genus, sng.canonical_species_name';
+  } else if (sort === 'breeders') {
+    orderBy = 'total_breeders DESC, total_breeds DESC';
+  }
 
-	// Build WHERE conditions and parameters
-	const conditions: string[] = ['1=1'];
-	const params: unknown[] = [];
+  // Build WHERE conditions and parameters
+  const conditions: string[] = ['1=1'];
+  const params: unknown[] = [];
 
-	if (species_type) {
-		conditions.push('AND s.species_type = ?');
-		params.push(species_type);
-	}
+  if (species_type) {
+    conditions.push('AND s.species_type = ?');
+    params.push(species_type);
+  }
 
-	if (species_class) {
-		conditions.push('AND s.species_class = ?');
-		params.push(species_class);
-	}
+  if (species_class) {
+    conditions.push('AND s.species_class = ?');
+    params.push(species_class);
+  }
 
-	if (search && search.trim().length >= 2) {
-		const searchPattern = `%${search.trim().toLowerCase()}%`;
-		conditions.push(`AND (
+  if (search && search.trim().length >= 2) {
+    const searchPattern = `%${search.trim().toLowerCase()}%`;
+    conditions.push(`AND (
 			LOWER(sn.common_name) LIKE ? OR
 			LOWER(sn.scientific_name) LIKE ?
 		)`);
-		params.push(searchPattern, searchPattern);
-	}
+    params.push(searchPattern, searchPattern);
+  }
 
-	const sql = `
+  const sql = `
 		SELECT
 			sng.group_id,
 			sng.program_class,
@@ -197,11 +197,11 @@ function buildSpeciesSearchQuery(
 		${limit ? 'LIMIT ?' : ''}
 	`;
 
-	if (limit) {
-		params.push(limit);
-	}
+  if (limit) {
+    params.push(limit);
+  }
 
-	return { sql, params };
+  return { sql, params };
 }
 
 /**
@@ -209,37 +209,37 @@ function buildSpeciesSearchQuery(
  * Optimized for fast response times with minimal data transfer
  */
 export async function searchSpeciesTypeahead(
-	searchQuery: string,
-	filters: Omit<SpeciesFilters, 'search' | 'sort'> = {},
-	limit: number = 10
+  searchQuery: string,
+  filters: Omit<SpeciesFilters, 'search' | 'sort'> = {},
+  limit: number = 10
 ): Promise<SpeciesExplorerItem[]> {
-	if (!searchQuery || searchQuery.trim().length < 2) {
-		return [];
-	}
+  if (!searchQuery || searchQuery.trim().length < 2) {
+    return [];
+  }
 
-	const { sql, params } = buildSpeciesSearchQuery(
-		searchQuery,
-		filters.species_type,
-		filters.species_class,
-		'reports', // Default sort for typeahead
-		limit
-	);
+  const { sql, params } = buildSpeciesSearchQuery(
+    searchQuery,
+    filters.species_type,
+    filters.species_class,
+    'reports', // Default sort for typeahead
+    limit
+  );
 
-	return query<SpeciesExplorerItem>(sql, params);
+  return query<SpeciesExplorerItem>(sql, params);
 }
 
 export async function getSpeciesForExplorer(filters: SpeciesFilters = {}): Promise<SpeciesExplorerItem[]> {
-	const { species_type, species_class, search, sort = 'reports' } = filters;
+  const { species_type, species_class, search, sort = 'reports' } = filters;
 
-	const { sql, params } = buildSpeciesSearchQuery(
-		search,
-		species_type,
-		species_class,
-		sort
-		// No limit for explorer - return all results
-	);
+  const { sql, params } = buildSpeciesSearchQuery(
+    search,
+    species_type,
+    species_class,
+    sort
+    // No limit for explorer - return all results
+  );
 
-	return query<SpeciesExplorerItem>(sql, params);
+  return query<SpeciesExplorerItem>(sql, params);
 }
 
 export type SpeciesDetail = {
@@ -255,7 +255,7 @@ export type SpeciesDetail = {
 };
 
 export async function getSpeciesDetail(groupId: number) {
-	const groupRows = await query<{
+  const groupRows = await query<{
 		group_id: number;
 		program_class: string;
 		canonical_genus: string;
@@ -266,11 +266,11 @@ export async function getSpeciesDetail(groupId: number) {
 		WHERE group_id = ?
 	`, [groupId]);
 
-	if (groupRows.length === 0) {
-		return null;
-	}
+  if (groupRows.length === 0) {
+    return null;
+  }
 
-	const synonymRows = await query<{
+  const synonymRows = await query<{
 		name_id: number;
 		common_name: string;
 		scientific_name: string;
@@ -281,12 +281,12 @@ export async function getSpeciesDetail(groupId: number) {
 		ORDER BY common_name, scientific_name
 	`, [groupId]);
 
-	const detail: SpeciesDetail = {
-		...groupRows[0],
-		synonyms: synonymRows
-	};
+  const detail: SpeciesDetail = {
+    ...groupRows[0],
+    synonyms: synonymRows
+  };
 
-	return detail;
+  return detail;
 }
 
 export type SpeciesBreeder = {
@@ -306,7 +306,7 @@ export type SpeciesBreeder = {
 };
 
 export async function getBreedersForSpecies(groupId: number) {
-	return query<SpeciesBreeder>(`
+  return query<SpeciesBreeder>(`
 		SELECT
 			m.id as member_id,
 			m.display_name as member_name,
@@ -327,33 +327,33 @@ export async function getBreedersForSpecies(groupId: number) {
 		GROUP BY m.id, m.display_name
 		ORDER BY breed_count DESC, latest_breed_date DESC
 	`, [groupId]).then(rows => {
-		return rows.map(row => ({
-			...row,
-			submissions: row.submissions_concat ? row.submissions_concat.split(',').map((sub: string) => {
-				const [id, common_name, latin_name, approved_on, points] = sub.split('|');
-				return {
-					id: parseInt(id),
-					species_common_name: common_name,
-					species_latin_name: latin_name,
-					approved_on,
-					points: parseInt(points)
-				};
-			}) : []
-		}));
-	});
+    return rows.map(row => ({
+      ...row,
+      submissions: row.submissions_concat ? row.submissions_concat.split(',').map((sub: string) => {
+        const [id, common_name, latin_name, approved_on, points] = sub.split('|');
+        return {
+          id: parseInt(id),
+          species_common_name: common_name,
+          species_latin_name: latin_name,
+          approved_on,
+          points: parseInt(points)
+        };
+      }) : []
+    }));
+  });
 }
 
 
 
 export async function getFilterOptions() {
-	const speciesTypes = await query<{ species_type: string }>(`
+  const speciesTypes = await query<{ species_type: string }>(`
 		SELECT DISTINCT species_type
 		FROM submissions
 		WHERE approved_on IS NOT NULL
 		ORDER BY species_type
 	`);
 
-	return {
-		species_types: speciesTypes.map(s => s.species_type)
-	};
+  return {
+    species_types: speciesTypes.map(s => s.species_type)
+  };
 }

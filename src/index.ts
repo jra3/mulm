@@ -18,8 +18,8 @@ import * as species from "@/routes/species";
 import * as typeahead from "@/routes/typeahead";
 
 import {
-	getOutstandingSubmissionsCounts,
-	getWitnessQueueCounts,
+  getOutstandingSubmissionsCounts,
+  getWitnessQueueCounts,
 } from "./db/submissions";
 import { getRecentActivity } from "./db/activity";
 
@@ -49,65 +49,65 @@ app.use(sessionMiddleware);
 const router = express.Router();
 
 router.get("/annual", (req, res) => {
-	const year = getQueryString(req, 'year');
-	res.set("HX-Redirect", `/annual/${year}`).send();
+  const year = getQueryString(req, 'year');
+  res.set("HX-Redirect", `/annual/${year}`).send();
 });
 router.get("/annual/:stringYear{/:program}", standings.annual);
 router.get("/lifetime{/:program}", standings.lifetime);
 
 router.get("/", async (req: MulmRequest, res) => {
-	const { viewer } = req;
-	const isLoggedIn = Boolean(viewer);
-	const isAdmin = viewer?.is_admin;
+  const { viewer } = req;
+  const isLoggedIn = Boolean(viewer);
+  const isAdmin = viewer?.is_admin;
 
-	const args = {
-		title: "BAS BAP/HAP Portal",
-		message: "Welcome to BAS!",
-		googleURL: getGoogleOAuthURL(),
-		isLoggedIn,
-		isAdmin,
-	};
+  const args = {
+    title: "BAS BAP/HAP Portal",
+    message: "Welcome to BAS!",
+    googleURL: getGoogleOAuthURL(),
+    isLoggedIn,
+    isAdmin,
+  };
 
-	let approvalsProgram;
-	let approvalsCount = 0;
-	let witnessProgram;
-	let witnessCount = 0;
-	if (isAdmin) {
-		const [counts, witnessCounts] = await Promise.all([
-			getOutstandingSubmissionsCounts(),
-			getWitnessQueueCounts(),
-		]);
-		["coral", "plant", "fish"].forEach((program) => {
-			const count = counts[program];
-			if (count > 0) {
-				approvalsProgram = program;
-				approvalsCount += count;
-			}
-			const witnessCountForProgram = witnessCounts[program];
-			if (witnessCountForProgram > 0) {
-				witnessProgram = program;
-				witnessCount += witnessCountForProgram;
-			}
-		});
-	}
+  let approvalsProgram;
+  let approvalsCount = 0;
+  let witnessProgram;
+  let witnessCount = 0;
+  if (isAdmin) {
+    const [counts, witnessCounts] = await Promise.all([
+      getOutstandingSubmissionsCounts(),
+      getWitnessQueueCounts(),
+    ]);
+    ["coral", "plant", "fish"].forEach((program) => {
+      const count = counts[program];
+      if (count > 0) {
+        approvalsProgram = program;
+        approvalsCount += count;
+      }
+      const witnessCountForProgram = witnessCounts[program];
+      if (witnessCountForProgram > 0) {
+        witnessProgram = program;
+        witnessCount += witnessCountForProgram;
+      }
+    });
+  }
 
-	// Get recent activity for the feed
-	const recentActivity = await getRecentActivity(8);
+  // Get recent activity for the feed
+  const recentActivity = await getRecentActivity(8);
 
-	res.render("index", {
-		...args,
-		approvalsProgram,
-		approvalsCount,
-		witnessProgram,
-		witnessCount,
-		recentActivity,
-	});
+  res.render("index", {
+    ...args,
+    approvalsProgram,
+    approvalsCount,
+    witnessProgram,
+    witnessCount,
+    recentActivity,
+  });
 });
 
 // Entrypoint for BAP/HAP submission
 router.get("/submit", submission.renderSubmissionForm);
 router.get("/submit/addSupplement", (req, res) => {
-	res.render("bapForm/supplementSingleLine");
+  res.render("bapForm/supplementSingleLine");
 });
 
 router.get("/sub/:subId", submission.view);
@@ -124,14 +124,14 @@ router.delete("/tank/:name", tank.remove);
 
 router.get("/member/:memberId", member.view);
 router.get("/me", (req: MulmRequest, res) => {
-	const { viewer } = req;
-	if (!viewer) {
-		res.redirect("/");
-		return;
-	} else {
-		res.redirect(`/member/${viewer.id}`);
-		return;
-	}
+  const { viewer } = req;
+  if (!viewer) {
+    res.redirect("/");
+    return;
+  } else {
+    res.redirect(`/member/${viewer.id}`);
+    return;
+  }
 });
 
 router.get("/species", species.explorer);
@@ -154,24 +154,24 @@ router.post("/forgot-password", auth.sendForgotPassword);
 router.post("/reset-password", auth.resetPassword);
 
 router.get("/dialog/auth/signin", (req, res) => {
-	res.render("account/signin", {
-		viewer: {},
-		errors: new Map(),
-		googleURL: getGoogleOAuthURL(),
-	});
+  res.render("account/signin", {
+    viewer: {},
+    errors: new Map(),
+    googleURL: getGoogleOAuthURL(),
+  });
 });
 
 router.get("/dialog/auth/signup", (req, res) => {
-	res.render("account/signup", {
-		viewer: {},
-		errors: new Map(),
-	});
+  res.render("account/signup", {
+    viewer: {},
+    errors: new Map(),
+  });
 });
 
 router.get("/dialog/auth/forgot-password", (req, res) => {
-	res.render("account/forgotPassword", {
-		errors: new Map(),
-	});
+  res.render("account/forgotPassword", {
+    errors: new Map(),
+  });
 });
 
 // OAuth ///////////////////////////////////////////////////
@@ -187,10 +187,10 @@ router.get("/api/species/search", typeahead.searchSpecies);
 
 // Health check endpoint for Docker and monitoring
 app.get('/health', (_req, res) => {
-	res.status(200).json({ 
-		status: 'healthy',
-		timestamp: new Date().toISOString()
-	});
+  res.status(200).json({ 
+    status: 'healthy',
+    timestamp: new Date().toISOString()
+  });
 });
 
 app.use(router);
@@ -198,6 +198,6 @@ app.use(router);
 const PORT = parseInt(process.env.PORT || "4200");
 const HOST = '0.0.0.0'; // Listen on all interfaces
 app.listen(PORT, HOST, () => {
-	console.log(`Server running at http://localhost:${PORT}`);
-	console.log(`Server running at https://${config.domain}`);
+  console.log(`Server running at http://localhost:${PORT}`);
+  console.log(`Server running at https://${config.domain}`);
 });
