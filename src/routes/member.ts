@@ -2,6 +2,7 @@ import { getMemberWithAwards } from "@/db/members";
 import { getSubmissionsByMember } from "@/db/submissions";
 import { MulmRequest } from "@/sessions";
 import { Response } from "express";
+import { getSubmissionStatus } from "@/utils/submissionStatus";
 
 export const view = async (req: MulmRequest, res: Response) => {
   const { memberId } = req.params;
@@ -22,11 +23,17 @@ export const view = async (req: MulmRequest, res: Response) => {
     isSelf || isAdmin,
   );
 
-  const fishSubs = submissions.filter(
+  // Add status info to each submission
+  const submissionsWithStatus = submissions.map(sub => ({
+    ...sub,
+    statusInfo: getSubmissionStatus(sub)
+  }));
+
+  const fishSubs = submissionsWithStatus.filter(
     (sub) => sub.species_type === "Fish" || sub.species_type === "Invert",
   );
-  const plantSubs = submissions.filter((sub) => sub.species_type === "Plant");
-  const coralSubs = submissions.filter((sub) => sub.species_type === "Coral");
+  const plantSubs = submissionsWithStatus.filter((sub) => sub.species_type === "Plant");
+  const coralSubs = submissionsWithStatus.filter((sub) => sub.species_type === "Coral");
 
   const calculateTotalPoints = (subs: typeof submissions) => {
     let total = 0;

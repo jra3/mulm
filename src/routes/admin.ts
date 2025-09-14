@@ -18,6 +18,7 @@ import { checkAndUpdateMemberLevel, checkAllMemberLevels, Program } from "@/leve
 import { checkAndGrantSpecialtyAwards, checkAllSpecialtyAwards } from "@/specialtyAwardManager";
 import { createActivity } from "@/db/activity";
 import { logger } from "@/utils/logger";
+import { getSubmissionStatus } from "@/utils/submissionStatus";
 
 // Helper function to calculate total points for a member
 async function getMemberWithPoints(member: MemberRecord | null): Promise<MemberRecord & { fishTotalPoints: number; plantTotalPoints: number; coralTotalPoints: number } | null> {
@@ -170,6 +171,12 @@ export const showQueue = async (req: MulmRequest, res: Response) => {
     getWitnessQueueCounts(),
   ]);
 
+  // Add status info to each submission
+  const submissionsWithStatus = submissions.map(sub => ({
+    ...sub,
+    statusInfo: getSubmissionStatus(sub)
+  }));
+
   const subtitle = (() => {
     switch (program) {
       default:
@@ -185,7 +192,7 @@ export const showQueue = async (req: MulmRequest, res: Response) => {
   res.render("admin/queue", {
     title: "Approval Queue",
     subtitle,
-    submissions,
+    submissions: submissionsWithStatus,
     program,
     programCounts,
     witnessCounts,
@@ -204,6 +211,12 @@ export const showWitnessQueue = async (req: MulmRequest, res: Response) => {
     getWitnessQueueCounts(),
   ]);
 
+  // Add status info to each submission
+  const submissionsWithStatus = submissions.map(sub => ({
+    ...sub,
+    statusInfo: getSubmissionStatus(sub)
+  }));
+
   const subtitle = (() => {
     switch (program) {
       default:
@@ -219,7 +232,7 @@ export const showWitnessQueue = async (req: MulmRequest, res: Response) => {
   res.render("admin/witnessQueue", {
     title: "Witness Review Queue",
     subtitle,
-    submissions,
+    submissions: submissionsWithStatus,
     program,
     programCounts,
   });

@@ -10,6 +10,7 @@ mixin submissionTable(submissions, totalPoints)
 		table(data-sortable class="w-full bg-white shadow-sm rounded-lg")
 			thead
 				tr
+					th(class=heading) Status
 					th(class=heading) Class
 					th(class=heading) Common Name
 					th(class=heading) Latin Name
@@ -19,7 +20,21 @@ mixin submissionTable(submissions, totalPoints)
 
 			tbody
 				each sub in submissions
-					tr(class="hover:bg-gray-50")
+					- const rowClass = sub.statusInfo ? `hover:bg-gray-50 ${sub.statusInfo.rowColor}` : "hover:bg-gray-50"
+					tr(class=rowClass)
+						td(class=stringCell)
+							if sub.statusInfo
+								- const icon = sub.statusInfo.status === 'draft' ? '📝' : sub.statusInfo.status === 'pending-witness' ? '👁️' : sub.statusInfo.status === 'waiting-period' ? '⏳' : sub.statusInfo.status === 'pending-approval' ? '🔵' : sub.statusInfo.status === 'approved' ? '✅' : sub.statusInfo.status === 'denied' ? '❌' : ''
+								span(
+									class=`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${sub.statusInfo.bgColor} ${sub.statusInfo.color}`
+									title=sub.statusInfo.description
+								)
+									span.mr-1= icon
+									span= sub.statusInfo.label
+									if sub.statusInfo.daysRemaining !== undefined
+										span.ml-1.font-normal= `(${sub.statusInfo.daysRemaining}d)`
+							else
+								span.text-gray-500 Unknown
 						td(class=stringCell)= sub.species_class
 						td(class=stringCell)
 							a.link(href=`/sub/${sub.id}`)= sub.species_common_name
@@ -33,6 +48,7 @@ mixin submissionTable(submissions, totalPoints)
 			if totalPoints > 0
 				tfoot
 					tr(class="border-t-2 border-gray-800 font-bold bg-gray-50")
+						td(class=stringCell)
 						td(class=stringCell) Total:
 						td(class=stringCell)
 						td(class=stringCell)
