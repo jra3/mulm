@@ -11,11 +11,10 @@ services:
     expose:
       - "4200"
     volumes:
-      - /mnt/basny-data:/mnt/data
-      - ./src/config.production.json:/app/src/config.json:ro
+      - /mnt/basny-data/app:/mnt/app-data
+      - /mnt/basny-data/app/config/config.production.json:/app/src/config.json:ro
     environment:
       - NODE_ENV=production
-      - DATABASE_FILE=/mnt/data/database.db
     networks:
       - basny-network
     healthcheck:
@@ -36,9 +35,9 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - /mnt/basny-data/certs:/etc/letsencrypt:ro
-      - /mnt/basny-data/webroot:/var/www/certbot:ro
-      - /mnt/basny-data/nginx-logs:/var/log/nginx
+      - /mnt/basny-data/nginx/certs:/etc/letsencrypt:ro
+      - /mnt/basny-data/nginx/webroot:/var/www/certbot:ro
+      - /mnt/basny-data/nginx/logs:/var/log/nginx
     depends_on:
       - app
     networks:
@@ -55,8 +54,8 @@ services:
     container_name: basny-certbot
     restart: unless-stopped
     volumes:
-      - /mnt/basny-data/certs:/etc/letsencrypt
-      - /mnt/basny-data/webroot:/var/www/certbot
+      - /mnt/basny-data/nginx/certs:/etc/letsencrypt
+      - /mnt/basny-data/nginx/webroot:/var/www/certbot
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet --no-self-upgrade; sleep 12h & wait $${!}; done;'"
     networks:
       - basny-network
