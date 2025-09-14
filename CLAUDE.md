@@ -5,6 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 Mulm is a Breeder Awards Program (BAP) management platform for aquarium societies. It tracks breeding achievements, manages member submissions, and handles species data.
 
+**Production URL**: https://bap.basny.org
+
 ## Tech Stack
 - **Backend**: Node.js with Express.js and TypeScript
 - **Database**: SQLite with migrations

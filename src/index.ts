@@ -185,6 +185,14 @@ router.get("/api/species/search", typeahead.searchSpecies);
 
 ////////////////////////////////////////////////////////////
 
+// Health check endpoint for Docker and monitoring
+app.get('/health', (_req, res) => {
+	res.status(200).json({ 
+		status: 'healthy',
+		timestamp: new Date().toISOString()
+	});
+});
+
 app.use(router);
 
 const PORT = parseInt(process.env.PORT || "4200");

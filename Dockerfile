@@ -1,27 +1,54 @@
+# Build stage
 FROM node:20-alpine AS builder
 WORKDIR /app
-COPY package*.json .
-RUN npm install
 
-COPY tsconfig.json .
-COPY postcss.config.mjs .
-COPY src src
-COPY public public
+# Copy package files and install dependencies
+COPY package*.json ./
+RUN npm ci
 
+# Copy source files
+COPY tsconfig.json ./
+COPY postcss.config.mjs ./
+COPY src ./src
+COPY public ./public
+
+# Build the application
 RUN npm run build
 
+# Production stage
 FROM node:20-alpine AS runner
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci --omit=dev
 
-COPY ./../start.sh ./
+# Install production dependencies only
+COPY package*.json ./
+RUN npm ci --omit=dev && \
+    npm cache clean --force
+
+# Copy built application from builder
 COPY --from=builder /app/dist/src ./src
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/dist/views ./src/views
-COPY src/config.production.json ./src/config.json
-COPY db db
 
-RUN apk --no-cache add curl
+# Copy runtime files
+COPY start.sh ./
+COPY db ./db
+
+# Install curl for health checks
+RUN apk --no-cache add curl && \
+    chmod +x start.sh
+
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+# Set ownership
+RUN chown -R nodejs:nodejs /app
+
+USER nodejs
+
+EXPOSE 4200
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:4200/health || exit 1
 
 CMD ["/bin/sh", "start.sh"]

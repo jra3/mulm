@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  # Node.js application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: basny-app
+    restart: unless-stopped
+    expose:
+      - "4200"
+    volumes:
+      - /mnt/basny-data:/mnt/data
+      - ./src/config.production.json:/app/src/config.json:ro
+    environment:
+      - NODE_ENV=production
+      - DATABASE_FILE=/mnt/data/database.db
+    networks:
+      - basny-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4200/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Nginx reverse proxy with SSL
+  nginx:
+    image: nginx:alpine
+    container_name: basny-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - /mnt/basny-data/certs:/etc/letsencrypt:ro
+      - /mnt/basny-data/webroot:/var/www/certbot:ro
+      - /mnt/basny-data/nginx-logs:/var/log/nginx
+    depends_on:
+      - app
+    networks:
+      - basny-network
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Certbot for Let's Encrypt SSL certificates
+  certbot:
+    image: certbot/certbot:latest
+    container_name: basny-certbot
+    restart: unless-stopped
+    volumes:
+      - /mnt/basny-data/certs:/etc/letsencrypt
+      - /mnt/basny-data/webroot:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet --no-self-upgrade; sleep 12h & wait $${!}; done;'"
+    networks:
+      - basny-network
+
+networks:
+  basny-network:
+    driver: bridge
+
+volumes:
+  basny-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/basny-data
