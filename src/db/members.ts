@@ -19,7 +19,7 @@ export type Member = MemberRecord & {
 };
 
 type AwardRecord = {
-	member_id: string;
+	member_id: number;
 	award_name: string;
 	date_awarded: string;
 	award_type?: 'species' | 'meta_species' | 'manual';

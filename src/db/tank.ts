@@ -6,6 +6,7 @@ type Tank = {
 	member_id: number;
 	preset_name: string
 	tank_size: string | null;
+	filter_type: string | null;
 	water_change_volume: string | null;
 	water_change_frequency: string | null;
 	temperature: string | null;
