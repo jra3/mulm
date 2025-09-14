@@ -8,6 +8,8 @@ tmp/
 src/config.json
 src/config.production.json
 database.sqlite*
+db/database.db
+db/*.db
 public/index.css
 
 .\#*
