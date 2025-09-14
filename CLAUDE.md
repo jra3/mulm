@@ -12,8 +12,9 @@ Mulm is a Breeder Awards Program (BAP) management platform for aquarium societie
 - **Database**: SQLite with migrations
 - **Frontend**: Pug templates with HTMX for interactivity
 - **Styling**: Tailwind CSS with PostCSS
-- **Infrastructure**: Docker Compose, Cloudflare tunnel
+- **Infrastructure**: AWS EC2 with Docker Compose, nginx reverse proxy, Let's Encrypt SSL
 - **Testing**: Jest with ts-jest
+- **Storage**: Cloudflare R2 for image storage
 
 ## Development Commands
 ```bash
@@ -111,6 +112,7 @@ npm run script scripts/scriptname.ts
 - ❌ Mixed quotes: `div(class="max-w-4xl" id='container')`
 - ❌ Long single lines: Tailwind chains over 140 characters
 - ❌ SVG viewBox: Must be lowercase `viewbox` in Pug
+- ❌ Dot notation with colons: `div.hover:bg-blue-500` breaks - colons in Tailwind modifiers (hover:, md:, focus:) are incompatible with Pug's dot syntax
 
 ### Best Practices
 - ✅ Use double quotes: `div(class="max-w-4xl mx-auto")`
@@ -121,9 +123,70 @@ npm run script scripts/scriptname.ts
           " rounded-lg shadow-lg p-6"
   )
   ```
-- ✅ Simple utilities: `div.flex.gap-4.items-center`
+- ✅ Simple utilities only with dot notation: `div.flex.gap-4.items-center`
+- ✅ Use class attribute for modifiers: `div(class="hover:bg-blue-500 md:flex focus:outline-none")`
 
 ## Logging
 - Custom logger in `src/utils/logger.ts` respects NODE_ENV
 - Automatically silenced during tests (NODE_ENV=test)
 - Use `logger.error()`, `logger.warn()`, `logger.info()` instead of console.*
+
+## Production Deployment
+
+### Infrastructure
+- **Platform**: AWS EC2 (t3.micro) with 20GB EBS volume
+- **IP**: 54.87.111.167 (Elastic IP)
+- **SSH**: Connect via `ssh BAP` (configured in ~/.ssh/config)
+- **Location**: `/opt/basny` (application code), `/mnt/basny-data` (persistent data)
+- **CDK Stack**: Infrastructure defined in `infrastructure/` directory
+  - Deploy: `cd infrastructure && npm run cdk deploy`
+  - SSH key stored in AWS Systems Manager Parameter Store
+
+### Docker Containers
+Production runs three containers via `docker-compose.prod.yml`:
+- **basny-app**: Node.js application on port 4200 (internal)
+- **basny-nginx**: Reverse proxy handling HTTP/HTTPS traffic
+- **basny-certbot**: Automatic SSL certificate renewal
+
+### Data Persistence
+All persistent data lives on EBS volume at `/mnt/basny-data/`:
+```
+/mnt/basny-data/
+├── app/
+│   ├── config/config.production.json  # Production config
+│   └── database/database.db           # SQLite database
+└── nginx/
+    ├── certs/                         # SSL certificates
+    ├── logs/                          # Access/error logs
+    └── webroot/                       # ACME challenges
+```
+
+### Deployment Commands
+```bash
+# Deploy latest code
+ssh BAP "cd /opt/basny && git pull && sudo docker-compose -f docker-compose.prod.yml up -d --build"
+
+# View logs
+ssh BAP "sudo docker logs basny-app --tail 50"
+
+# Restart containers
+ssh BAP "cd /opt/basny && sudo docker-compose -f docker-compose.prod.yml restart"
+
+# Database backup
+ssh BAP "sqlite3 /mnt/basny-data/app/database/database.db '.backup /tmp/backup.db'"
+```
+
+## Configuration Management
+
+### Development
+- Config file: `src/config.json` (git-ignored)
+- Contains database path, OAuth credentials, SMTP settings, R2 storage keys
+
+### Production  
+- Config file: `/mnt/basny-data/app/config/config.production.json`
+- Mounted read-only into container at `/app/src/config.json`
+- Database path must be absolute: `"/mnt/app-data/database/database.db"`
+
+### Environment Variables
+- `NODE_ENV`: Set to "production" in docker-compose.prod.yml
+- `DATABASE_FILE`: Can override config file setting (optional)
