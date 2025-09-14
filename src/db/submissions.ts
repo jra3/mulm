@@ -24,6 +24,7 @@ export type Submission = {
 
 	foods: string;
 	spawn_locations: string;
+	propagation_method: string | null;
 	tank_size: string | null;
 	filter_type: string | null;
 	water_change_volume: string | null;
@@ -35,6 +36,13 @@ export type Submission = {
 	substrate_type: string | null;
 	substrate_depth: string | null;
 	substrate_color: string | null;
+	light_type: string | null;
+	light_strength: string | null;
+	light_hours: string | null;
+	co2: string | null;
+	co2_description: string | null;
+	supplement_type: string;
+	supplement_regimen: string;
 
 	submitted_on: string | null;
 	approved_on: string | null;
@@ -50,6 +58,10 @@ export type Submission = {
 	witnessed_by: number | null;
 	witnessed_on: string | null;
 	witness_verification_status: 'pending' | 'confirmed' | 'declined';
+
+	denied_on: string | null;
+	denied_by: number | null;
+	denied_reason: string | null;
 };
 
 export function formToDB(memberId: number, form: FormValues, submit: boolean) {
