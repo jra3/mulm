@@ -9,7 +9,6 @@ import {
   deleteImage,
   uploadToR2
 } from '../../utils/r2-client';
-import * as r2Client from '../../utils/r2-client';
 import { logger } from '../../utils/logger';
 import { updateOne, query } from '../../db/conn';
 import { ImageMetadata } from '../../utils/r2-client';
@@ -84,8 +83,8 @@ router.post(
       return;
     }
   
-    const uploadId = req.body.uploadId || generateUploadId();
-    const submissionId = parseInt(req.body.submissionId);
+    const uploadId = (req.body as { uploadId?: string }).uploadId || generateUploadId();
+    const submissionId = parseInt((req.body as { submissionId: string }).submissionId);
   
     if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
       res.status(400).json({ error: 'No files uploaded' });
@@ -108,7 +107,7 @@ router.post(
         
           // Process the image
           const processed = await processImage(file.buffer, {
-            preferWebP: req.body.preferWebP === 'true'
+            preferWebP: (req.body as { preferWebP?: string }).preferWebP === 'true'
           });
         
           // Generate unique keys for each size
@@ -166,7 +165,7 @@ router.post(
           );
         
           if (submission) {
-            const existingImages = submission.images ? JSON.parse(submission.images) : [];
+            const existingImages = submission.images ? JSON.parse(submission.images) as ImageMetadata[] : [];
             const allImages = [...existingImages, ...processedImages];
           
             // Update submission with new images
@@ -278,8 +277,8 @@ router.delete('/image/:key', deleteRateLimiter, async (req: MulmRequest, res): P
     ]);
     
     // Update submission to remove this image
-    const images = JSON.parse(submission.images);
-    const updatedImages = images.filter((img: ImageMetadata) => img.key !== key);
+    const images = JSON.parse(submission.images) as ImageMetadata[];
+    const updatedImages = images.filter((img) => img.key !== key);
     
     await updateOne(
       'submissions',

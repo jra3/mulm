@@ -1,18 +1,20 @@
+import { Request } from 'express';
 import rateLimit from 'express-rate-limit';
 import { MulmRequest } from '../sessions';
 import { logger } from '../utils/logger';
 
 // Helper function to properly handle IPv6 addresses
-const getIpKey = (req: any): string => {
+const getIpKey = (req: Request): string => {
   // For IPv6, we need to handle the address properly to prevent bypass
-  const ip = req.ip || req.socket?.remoteAddress || 'unknown';
+  const socket = req.socket as { remoteAddress?: string };
+  const ip = req.ip || socket?.remoteAddress || 'unknown';
   // Normalize IPv6 addresses (e.g., ::1 becomes 127.0.0.1)
-  if (ip.includes(':')) {
+  if (ip && typeof ip === 'string' && ip.includes(':')) {
     // For IPv6, use the first 64 bits (4 groups) to group by subnet
     const parts = ip.split(':').slice(0, 4);
     return parts.join(':');
   }
-  return ip;
+  return ip || 'unknown';
 };
 
 /**
@@ -28,12 +30,12 @@ export const uploadRateLimiter = rateLimit({
     // Use viewer ID for authenticated users, IP as fallback
     return req.viewer?.id?.toString() || getIpKey(req);
   },
-  handler: (req, res) => {
-    const mulmReq = req as MulmRequest;
+  handler: (_req, res) => {
+    const mulmReq = _req as MulmRequest;
     logger.warn('Rate limit exceeded for upload', {
       viewer: mulmReq.viewer?.id,
-      ip: req.ip,
-      path: req.path
+      ip: _req.ip,
+      path: _req.path
     });
     res.status(429).json({
       error: 'Too many upload requests',
@@ -41,7 +43,7 @@ export const uploadRateLimiter = rateLimit({
       retryAfter: res.getHeader('Retry-After')
     });
   },
-  skip: (req: MulmRequest) => {
+  skip: () => {
     // Skip rate limiting in test environment
     return process.env.NODE_ENV === 'test';
   }
@@ -59,12 +61,12 @@ export const deleteRateLimiter = rateLimit({
   keyGenerator: (req: MulmRequest) => {
     return req.viewer?.id?.toString() || getIpKey(req);
   },
-  handler: (req, res) => {
-    const mulmReq = req as MulmRequest;
+  handler: (_req, res) => {
+    const mulmReq = _req as MulmRequest;
     logger.warn('Rate limit exceeded for delete', {
       viewer: mulmReq.viewer?.id,
-      ip: req.ip,
-      path: req.path
+      ip: _req.ip,
+      path: _req.path
     });
     res.status(429).json({
       error: 'Too many delete requests',
@@ -72,7 +74,7 @@ export const deleteRateLimiter = rateLimit({
       retryAfter: res.getHeader('Retry-After')
     });
   },
-  skip: (req: MulmRequest) => {
+  skip: () => {
     return process.env.NODE_ENV === 'test';
   }
 });
@@ -92,17 +94,17 @@ export const progressRateLimiter = rateLimit({
     const userKey = req.viewer?.id?.toString() || getIpKey(req);
     return `${uploadId}:${userKey}`;
   },
-  handler: (req, res) => {
-    const mulmReq = req as MulmRequest;
+  handler: (_req, res) => {
+    const mulmReq = _req as MulmRequest;
     logger.warn('Rate limit exceeded for progress polling', {
       viewer: mulmReq.viewer?.id,
-      ip: req.ip,
-      uploadId: req.params.uploadId
+      ip: _req.ip,
+      uploadId: _req.params.uploadId
     });
     // For SSE, just close the connection
     res.status(429).end();
   },
-  skip: (req: MulmRequest) => {
+  skip: () => {
     return process.env.NODE_ENV === 'test';
   }
 });
@@ -117,10 +119,10 @@ export const strictUploadLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => getIpKey(req),
-  handler: (req, res) => {
+  handler: (_req, res) => {
     logger.warn('Unauthenticated rate limit exceeded', {
-      ip: req.ip,
-      path: req.path
+      ip: _req.ip,
+      path: _req.path
     });
     res.status(429).json({
       error: 'Too many requests',
@@ -145,11 +147,11 @@ export const dailyUploadLimiter = rateLimit({
   keyGenerator: (req: MulmRequest) => {
     return req.viewer?.id?.toString() || getIpKey(req);
   },
-  handler: (req, res) => {
-    const mulmReq = req as MulmRequest;
+  handler: (_req, res) => {
+    const mulmReq = _req as MulmRequest;
     logger.warn('Daily rate limit exceeded', {
       viewer: mulmReq.viewer?.id,
-      ip: req.ip
+      ip: _req.ip
     });
     res.status(429).json({
       error: 'Daily upload limit exceeded',

@@ -27,7 +27,7 @@ const PRESIGNED_URL_EXPIRY = 300; // 5 minutes
 let client: S3Client | null = null;
 let config: R2Config | null = null;
 
-export async function initR2() {
+export function initR2() {
   // Try environment variables first, then fall back to config.json
   const endpoint = process.env.R2_ENDPOINT || configFile.s3Url;
   const accessKeyId = process.env.R2_ACCESS_KEY_ID || configFile.s3AccessKeyId;

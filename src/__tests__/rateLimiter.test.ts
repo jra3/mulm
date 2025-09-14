@@ -1,12 +1,12 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import request from 'supertest';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { Options } from 'express-rate-limit';
 import { MulmRequest } from '../sessions';
 
 // Create rate limiters with test configuration
-const createTestRateLimiter = (options: any) => {
+const createTestRateLimiter = (options: Partial<Options>) => {
   return rateLimit({
-    ...options,
+    ...options as Options,
     skip: () => false, // Don't skip in tests
     store: undefined, // Use default memory store
     validate: false // Disable validation in tests to avoid IPv6 warnings
@@ -15,10 +15,10 @@ const createTestRateLimiter = (options: any) => {
 
 describe('Rate Limiting Middleware', () => {
   let app: express.Application;
-  let uploadRateLimiter: any;
-  let deleteRateLimiter: any;
-  let progressRateLimiter: any;
-  let strictUploadLimiter: any;
+  let uploadRateLimiter: express.RequestHandler;
+  let deleteRateLimiter: express.RequestHandler;
+  let progressRateLimiter: express.RequestHandler;
+  let strictUploadLimiter: express.RequestHandler;
 
   beforeEach(() => {
     app = express();
@@ -32,7 +32,7 @@ describe('Rate Limiting Middleware', () => {
       keyGenerator: (req: MulmRequest) => {
         return req.viewer?.id?.toString() || req.ip || 'test';
       },
-      handler: (req: any, res: any) => {
+      handler: (_req: Request, res: Response) => {
         res.status(429).json({
           error: 'Too many upload requests',
           message: 'Please wait a moment before uploading more images. You can upload up to 10 images per minute.',
@@ -49,7 +49,7 @@ describe('Rate Limiting Middleware', () => {
       keyGenerator: (req: MulmRequest) => {
         return req.viewer?.id?.toString() || req.ip || 'test';
       },
-      handler: (req: any, res: any) => {
+      handler: (_req: Request, res: Response) => {
         res.status(429).json({
           error: 'Too many delete requests',
           message: 'Please wait before deleting more images.',
@@ -68,7 +68,7 @@ describe('Rate Limiting Middleware', () => {
         const userKey = req.viewer?.id?.toString() || req.ip || 'test';
         return `${uploadId}:${userKey}`;
       },
-      handler: (req: any, res: any) => {
+      handler: (_req: Request, res: Response) => {
         res.status(429).end();
       }
     });
@@ -78,8 +78,8 @@ describe('Rate Limiting Middleware', () => {
       max: 3,
       standardHeaders: true,
       legacyHeaders: false,
-      keyGenerator: (req: any) => req.ip || 'test',
-      handler: (req: any, res: any) => {
+      keyGenerator: (req: Request) => req.ip || 'test',
+      handler: (_req: Request, res: Response) => {
         res.status(429).json({
           error: 'Too many requests',
           message: 'Please sign in to upload more images.'
@@ -132,8 +132,8 @@ describe('Rate Limiting Middleware', () => {
         .set('x-auth', 'true')
         .expect(429);
 
-      expect(response.body.error).toBe('Too many upload requests');
-      expect(response.body.message).toContain('10 images per minute');
+      expect((response.body as { error: string }).error).toBe('Too many upload requests');
+      expect((response.body as { message: string }).message).toContain('10 images per minute');
     });
 
     it('should track rate limits per user', async () => {
@@ -185,7 +185,7 @@ describe('Rate Limiting Middleware', () => {
         .set('x-auth', 'true')
         .expect(429);
 
-      expect(response.body.error).toBe('Too many delete requests');
+      expect((response.body as { error: string }).error).toBe('Too many delete requests');
     });
   });
 
@@ -206,7 +206,7 @@ describe('Rate Limiting Middleware', () => {
           .set('x-auth', 'true')
           .expect(200);
         
-        expect(response.body.uploadId).toBe(uploadId);
+        expect((response.body as { uploadId: string }).uploadId).toBe(uploadId);
       }
 
       // 61st request should be rate limited
@@ -253,8 +253,8 @@ describe('Rate Limiting Middleware', () => {
         .post('/strict')
         .expect(429);
 
-      expect(response.body.error).toBe('Too many requests');
-      expect(response.body.message).toContain('sign in');
+      expect((response.body as { error: string }).error).toBe('Too many requests');
+      expect((response.body as { message: string }).message).toContain('sign in');
     });
 
     it('should not limit authenticated users', async () => {
@@ -339,7 +339,7 @@ describe('Rate Limiting Middleware', () => {
         .expect(429);
 
       expect(response.headers['retry-after']).toBeDefined();
-      expect(response.body.retryAfter).toBeDefined();
+      expect((response.body as { retryAfter?: string }).retryAfter).toBeDefined();
     });
   });
 });
