@@ -1,0 +1,112 @@
+//- Mixin for displaying submission images
+//- Usage: +submissionImages(submission.images, 'gallery|thumbnails|single')
+
+mixin getImageUrl(imageMetadata, variant)
+	- const key = imageMetadata.key;
+	- const variantKey = key.replace('-original', `-${variant}`);
+	- const url = imageMetadata.url.replace(key, variantKey);
+	= url
+
+mixin submissionImages(imagesJson, layout='gallery')
+	- let images = [];
+	if imagesJson
+		- try {
+		-   images = typeof imagesJson === 'string' ? JSON.parse(imagesJson) : imagesJson;
+		- } catch(e) {
+		-   images = [];
+		- }
+
+	if images && images.length > 0
+		if layout === 'gallery'
+			//- Full gallery view for detail pages
+			div(class="mb-6")
+				h3(class="text-lg font-bold mb-3 text-gray-900") Submission Photos
+				div(class="grid grid-cols-1 gap-4" class="sm:grid-cols-2" class="lg:grid-cols-3")
+					each image, index in images
+						- const mediumUrl = image.url.replace('-original', '-medium');
+						- const originalUrl = image.url;
+						div(class="relative group overflow-hidden rounded-lg shadow-md bg-gray-100" +
+						          " hover:shadow-xl transition-shadow")
+							a(
+								href=originalUrl
+								target="_blank"
+								rel="noopener noreferrer"
+								class="block relative"
+							)
+								img(
+									src=mediumUrl
+									alt=`Submission photo ${index + 1}`
+									class="w-full h-64 object-cover"
+								)
+								div(class="absolute inset-0 flex items-center justify-center" +
+								          " pointer-events-none")
+									span(class="text-white opacity-0 group-hover:opacity-100" +
+									          " transition-opacity text-sm font-medium" +
+									          " bg-black bg-opacity-50 px-3 py-1 rounded" +
+									          " pointer-events-auto") View Full Size
+
+		else if layout === 'thumbnails'
+			//- Thumbnail view for tables/lists
+			div(class="flex gap-2 flex-wrap")
+				each image, index in images
+					- const thumbUrl = image.url.replace('-original', '-thumb');
+					- const originalUrl = image.url;
+					a(
+						href=originalUrl
+						target="_blank"
+						rel="noopener noreferrer"
+						class="block"
+						title=`View photo ${index + 1}`
+					)
+						img(
+							src=thumbUrl
+							alt=`Photo ${index + 1}`
+							class="w-16 h-16 object-cover rounded border-2" +
+							      " border-gray-300 hover:border-blue-500" +
+							      " transition-colors"
+							loading="lazy"
+						)
+
+		else if layout === 'single'
+			//- Single image view (first image only)
+			- const image = images[0];
+			- const mediumUrl = image.url.replace('-original', '-medium');
+			- const originalUrl = image.url;
+			div(class="mb-4")
+				a(
+					href=originalUrl
+					target="_blank"
+					rel="noopener noreferrer"
+					class="block rounded-lg overflow-hidden shadow-lg"
+				)
+					img(
+						src=mediumUrl
+						alt="Submission photo"
+						class="w-full max-h-96 object-contain bg-gray-100"
+						loading="lazy"
+					)
+				if images.length > 1
+					p(class="text-sm text-gray-600 mt-2 text-center")
+						| +#{images.length - 1} more photo#{images.length > 2 ? 's' : ''}
+	else
+		//- No images placeholder (optional, can be removed if you want nothing to show)
+		if layout === 'gallery'
+			div(class="text-gray-500 text-sm italic mb-4") No photos attached
+
+mixin imageCount(imagesJson)
+	- let images = [];
+	if imagesJson
+		- try {
+		-   images = typeof imagesJson === 'string' ? JSON.parse(imagesJson) : imagesJson;
+		- } catch(e) {
+		-   images = [];
+		- }
+
+	if images && images.length > 0
+		span(
+			class="inline-flex items-center px-2 py-0.5 rounded text-xs" +
+			      " font-medium bg-blue-100 text-blue-800"
+			title=`${images.length} photo${images.length !== 1 ? 's' : ''} attached`
+		)
+			span 📷
+			span(class="ml-1")= images.length
