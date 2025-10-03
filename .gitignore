@@ -4,12 +4,19 @@
 node_modules/
 dist/
 tmp/
+backups/
 
 src/config.json
 src/config.production.json
 database.sqlite*
 db/database.db
 db/*.db
+db/*.db-shm
+db/*.db-wal
 public/index.css
+
+# Test files
+public/*test*
+.playwright-mcp/
 
 .\#*
