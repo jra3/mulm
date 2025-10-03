@@ -2,6 +2,7 @@ function getTypeaheadConfig(element) {
 	return {
 		apiUrl: element.dataset.apiUrl,
 		linkedField: element.dataset.linkedField,
+		linkedValueField: element.dataset.linkedValueField,
 		valueField: element.dataset.valueField || 'value',
 		labelField: element.dataset.labelField || 'text',
 		searchFields: element.dataset.searchFields ? element.dataset.searchFields.split(',') : ['text'],
@@ -50,6 +51,23 @@ function buildTomSelectOptions(element, config) {
 				detail: { value, selectedOption },
 				bubbles: true
 			}));
+
+			// Auto-populate linked field if configured
+			if (config.linkedField && config.linkedValueField && selectedOption) {
+				const linkedElement = document.getElementById(config.linkedField);
+				if (linkedElement && linkedElement.tomSelectInstance) {
+					const linkedValue = selectedOption[config.linkedValueField];
+					if (linkedValue) {
+						const linkedInstance = linkedElement.tomSelectInstance;
+						// Add the option if it doesn't exist yet
+						if (!linkedInstance.options[linkedValue]) {
+							linkedInstance.addOption(selectedOption);
+						}
+						// Set the value
+						linkedInstance.setValue(linkedValue, false);
+					}
+				}
+			}
 		},
 
 		onLoad: function() {
