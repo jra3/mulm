@@ -161,10 +161,18 @@ All persistent data lives on EBS volume at `/mnt/basny-data/`:
     └── webroot/                       # ACME challenges
 ```
 
+**File Permissions (Security)**:
+- `config.production.json`: Must be `-rw------- 1001:65533` (600, owned by nodejs user)
+- `database.db`: Must be `-rw-r--r-- 1001:65533` (644, owned by nodejs user)
+- App runs as UID 1001 (nodejs user), so files must be readable by this user
+
 ### Deployment Commands
 ```bash
 # Deploy latest code
 ssh BAP "cd /opt/basny && git pull && sudo docker-compose -f docker-compose.prod.yml up -d --build"
+
+# Deploy with local changes (resets uncommitted changes on server)
+ssh BAP "cd /opt/basny && git reset --hard && git pull && sudo docker-compose -f docker-compose.prod.yml up -d --build"
 
 # View logs
 ssh BAP "sudo docker logs basny-app --tail 50"
@@ -172,8 +180,15 @@ ssh BAP "sudo docker logs basny-app --tail 50"
 # Restart containers
 ssh BAP "cd /opt/basny && sudo docker-compose -f docker-compose.prod.yml restart"
 
+# Restart specific container
+ssh BAP "cd /opt/basny && sudo docker-compose -f docker-compose.prod.yml restart nginx"
+
 # Database backup
 ssh BAP "sqlite3 /mnt/basny-data/app/database/database.db '.backup /tmp/backup.db'"
+
+# Fix file permissions if needed
+ssh BAP "sudo chown 1001:65533 /mnt/basny-data/app/config/config.production.json && sudo chmod 600 /mnt/basny-data/app/config/config.production.json"
+ssh BAP "sudo chown 1001:65533 /mnt/basny-data/app/database/database.db && sudo chmod 644 /mnt/basny-data/app/database/database.db"
 ```
 
 ## Configuration Management
@@ -182,11 +197,27 @@ ssh BAP "sqlite3 /mnt/basny-data/app/database/database.db '.backup /tmp/backup.d
 - Config file: `src/config.json` (git-ignored)
 - Contains database path, OAuth credentials, SMTP settings, R2 storage keys
 
-### Production  
+### Production
 - Config file: `/mnt/basny-data/app/config/config.production.json`
 - Mounted read-only into container at `/app/src/config.json`
 - Database path must be absolute: `"/mnt/app-data/database/database.db"`
+- **Permissions**: Must be 600 (owner-only) and owned by UID 1001 (nodejs user)
 
 ### Environment Variables
 - `NODE_ENV`: Set to "production" in docker-compose.prod.yml
 - `DATABASE_FILE`: Can override config file setting (optional)
+
+## Security Notes
+
+### Production Security Configuration
+- **Server version hiding**: `server_tokens off` in nginx.conf hides version numbers
+- **Express header**: `app.disable('x-powered-by')` hides Express version
+- **Default server block**: nginx rejects requests with invalid Host headers (prevents host header injection)
+- **File permissions**: Sensitive files (config, database) have restricted permissions
+- **HTTPS**: All HTTP traffic redirects to HTTPS with HSTS enabled
+- **Security headers**: X-Frame-Options, X-Content-Type-Options, X-XSS-Protection, Referrer-Policy
+
+### Nginx Configuration Notes
+- Files in `nginx/conf.d/` are automatically included
+- Remove any temporary/test config files (e.g., `ip-access.conf`) before production deployment
+- Default server block must be first to properly reject invalid requests
