@@ -16,6 +16,7 @@ import * as standings from "@/routes/standings";
 import * as tank from "@/routes/tank";
 import * as species from "@/routes/species";
 import * as typeahead from "@/routes/typeahead";
+import uploadRouter from "@/routes/api/upload";
 
 import {
   getOutstandingSubmissionsCounts,
@@ -26,8 +27,12 @@ import { getRecentActivity } from "./db/activity";
 import { MulmRequest, sessionMiddleware } from "./sessions";
 import { getGoogleOAuthURL } from "./oauth";
 import { getQueryString } from "./utils/request";
+import { initR2 } from "./utils/r2-client";
 
 const app = express();
+
+// Initialize R2 client for image uploads
+initR2();
 
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "pug");
@@ -182,6 +187,9 @@ router.get("/oauth/google", auth.googleOAuth);
 
 router.get("/api/members/search", typeahead.searchMembers);
 router.get("/api/species/search", typeahead.searchSpecies);
+
+// Image Upload API
+router.use("/api/upload", uploadRouter);
 
 ////////////////////////////////////////////////////////////
 
