@@ -8,7 +8,7 @@ function getTypeaheadConfig(element) {
 		minQueryLength: parseInt(element.dataset.minQueryLength) || 2,
 		maxItems: parseInt(element.dataset.maxItems) || 1,
 		allowCreate: element.dataset.allowCreate === 'true',
-		placeholder: element.dataset.placeholder || element.placeholder,
+		placeholder: element.dataset.placeholder || element.placeholder || '',
 		loadingClass: element.dataset.loadingClass || 'loading',
 		debounceMs: parseInt(element.dataset.debounceMs) || 300,
 		createOnBlur: element.dataset.createOnBlur === "true",
@@ -45,7 +45,7 @@ function buildTomSelectOptions(element, config) {
 		},
 
 		onChange: function (value) {
-			const selectedOption = tomSelectInstance.options[value];
+			const selectedOption = this.options[value];
 			element.dispatchEvent(new CustomEvent('typeahead:change', {
 				detail: { value, selectedOption },
 				bubbles: true
