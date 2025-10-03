@@ -31,6 +31,9 @@ import { initR2 } from "./utils/r2-client";
 
 const app = express();
 
+// Security: Hide Express version from X-Powered-By header
+app.disable('x-powered-by');
+
 // Initialize R2 client for image uploads
 initR2();
 
