@@ -273,13 +273,14 @@ describe('Pug Template Rendering', () => {
       /^account\/field\.pug$/,  // Mixin-only template
       /^activity\/activity-item\.pug$/,  // Mixin-only template
       /^activity\/award-granted\.pug$/,  // Include-only template
-      /^activity\/submission-approved\.pug$/,  // Include-only template  
+      /^activity\/submission-approved\.pug$/,  // Include-only template
       /^admin\/adminNav\.pug$/,  // Mixin-only template
       /^admin\/memberRow\.pug$/,  // Mixin-only template
       /^admin\/queueButton\.pug$/,  // Mixin-only template
       /^bapForm\/style\.pug$/,  // Style-only template
       /^bapForm\/supplementLine\.pug$/,  // Mixin-only template
       /^bapForm\/supplementSingleLine\.pug$/,  // Mixin-only template
+      /^mixins\/submissionImages\.pug$/,  // Mixin-only template
       /^onSelectType\.pug$/,  // Include-only template
     ];
     

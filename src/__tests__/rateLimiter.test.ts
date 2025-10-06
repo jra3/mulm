@@ -8,10 +8,9 @@ import { MulmRequest } from '../sessions';
 // Create rate limiters with test configuration
 const createTestRateLimiter = (options: Partial<Options>) => {
   return rateLimit({
-    ...options as Options,
-    skip: () => false, // Don't skip in tests
     store: undefined, // Use default memory store
-    validate: false // Disable validation in tests to avoid IPv6 warnings
+    validate: false, // Disable validation in tests to avoid IPv6 warnings
+    ...options as Options // Spread options last so they can override defaults
   });
 };
 
@@ -333,9 +332,10 @@ describe('Rate Limiting Middleware', () => {
         .set('x-forwarded-for', '6.6.6.6')
         .expect(200);
 
-      assert.strictEqual(response.headers['x-ratelimit-limit'], '10');
-      assert.ok(response.headers['x-ratelimit-remaining'] !== undefined);
-      assert.ok(response.headers['x-ratelimit-reset'] !== undefined);
+      // standardHeaders: true uses RateLimit-* headers (draft-7 format)
+      assert.strictEqual(response.headers['ratelimit-limit'], '10');
+      assert.ok(response.headers['ratelimit-remaining'] !== undefined);
+      assert.ok(response.headers['ratelimit-reset'] !== undefined);
     });
 
     test('should include retry-after header when rate limited', async () => {
