@@ -200,46 +200,24 @@ Migrations run automatically on startup. To create a new migration:
 # Format: YYYY-description.sql
 ```
 
+## Documentation
+
+Comprehensive documentation is available in the [GitHub Wiki](https://github.com/jra3/mulm/wiki):
+
+- **[Security Overview](https://github.com/jra3/mulm/wiki/Security-Overview)** - Security posture, audits, and active initiatives
+- **[Production Deployment](https://github.com/jra3/mulm/wiki/Production-Deployment)** - Deploy code changes, troubleshooting, SSL management
+- **[Infrastructure Guide](https://github.com/jra3/mulm/wiki/Infrastructure-Guide)** - AWS resources, critical resource protection, CDK deployment
+
 ## Deployment
 
-### Production Environment
-
-The application runs on AWS EC2 with the following components:
-
-- **EC2 Instance**: t3.micro (1 vCPU, 1GB RAM)
-- **Data Volume**: 8GB EBS volume (persistent across deployments)
-- **Elastic IP**: 98.91.62.199 (pinned, never changes)
-- **SSL**: Let's Encrypt via Certbot
-- **Containers**: Docker Compose with nginx, app, and certbot
-
-### Deploying Updates
+### Quick Deploy
 
 ```bash
 # Deploy latest code from main branch
 ssh BAP "cd /opt/basny && git pull && sudo docker-compose -f docker-compose.prod.yml up -d --build"
-
-# View logs
-ssh BAP "sudo docker logs basny-app --tail 50"
-
-# Restart containers
-ssh BAP "cd /opt/basny && sudo docker-compose -f docker-compose.prod.yml restart"
 ```
 
-### Infrastructure Management
-
-Infrastructure is managed with AWS CDK:
-
-```bash
-cd infrastructure
-npm run cdk deploy  # Deploy infrastructure changes
-npm run cdk diff    # Preview changes
-```
-
-**Critical Resources** (never delete):
-- EBS Volume: `vol-0aba5b85a1582b2c0` (contains database and config)
-- Elastic IP: `eipalloc-01f29c26363e0465a` (DNS points here)
-
-See `infrastructure/CRITICAL_RESOURCES.md` for recovery procedures.
+For detailed deployment procedures, troubleshooting, and infrastructure management, see the [Production Deployment](https://github.com/jra3/mulm/wiki/Production-Deployment) and [Infrastructure Guide](https://github.com/jra3/mulm/wiki/Infrastructure-Guide) wiki pages.
 
 ## Configuration Management
 
