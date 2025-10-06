@@ -4,6 +4,7 @@ export interface Config {
   googleClientId: string;
   googleClientSecret: string;
   adminsEmail: string;
+  bugReportEmail: string;
   fromEmail: string;
   smtpPassword: string;
   smtpHost: string;

@@ -20,7 +20,7 @@ mixin pageHeader(loggedIn, title, subtitle)
 				a.link(href="/species") Species
 				if loggedIn
 					a.link(href="/me") Me
-				a.link(href="mailto:bap+bugs@basny.org" title="Report a bug") 🐛
+				a.link(href=`mailto:${bugReportEmail}` title="Report a bug") 🐛
 				if loggedIn
 					a.link(href="/account") ⚙️
 

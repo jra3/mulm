@@ -54,6 +54,12 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(sessionMiddleware);
 
+// Make config available to all templates via res.locals
+app.use((_req, res, next) => {
+  res.locals.bugReportEmail = config.bugReportEmail;
+  next();
+});
+
 const router = express.Router();
 
 router.get("/annual", (req, res) => {
