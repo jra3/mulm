@@ -3,7 +3,6 @@ export interface Config {
   domain: string;
   googleClientId: string;
   googleClientSecret: string;
-  resendApiKey: string;
   adminsEmail: string;
   fromEmail: string;
   smtpPassword: string;
@@ -13,6 +12,8 @@ export interface Config {
   s3AccessKeyId: string;
   s3Secret: string;
   s3Url: string;
+  s3Bucket: string;
+  r2PublicUrl: string;
 }
 
 declare module "@/config.json" {
