@@ -154,9 +154,9 @@ export class InfrastructureStack extends cdk.Stack {
 			device: '/dev/xvdf',
 		});
 
-		// Use existing Elastic IP (54.87.111.167)
+		// Use existing Elastic IP (98.91.62.199)
 		// IMPORTANT: This EIP persists across all infrastructure updates
-		const eipAllocationId = 'eipalloc-030fa3f3db2993cfc';
+		const eipAllocationId = 'eipalloc-01f29c26363e0465a';
 
 		// Associate existing Elastic IP with instance
 		new ec2.CfnEIPAssociation(this, 'EIPAssociation', {
@@ -171,17 +171,17 @@ export class InfrastructureStack extends cdk.Stack {
 		});
 
 		new cdk.CfnOutput(this, 'PublicIP', {
-			value: '54.87.111.167',
+			value: '98.91.62.199',
 			description: 'Elastic IP Address (persistent)',
 		});
 
 		new cdk.CfnOutput(this, 'SSHCommand', {
-			value: 'ssh ec2-user@54.87.111.167',
+			value: 'ssh ec2-user@98.91.62.199',
 			description: 'SSH connection command',
 		});
 
 		new cdk.CfnOutput(this, 'ApplicationURL', {
-			value: 'http://54.87.111.167',
+			value: 'http://98.91.62.199',
 			description: 'Application URL (before SSL setup)',
 		});
 
