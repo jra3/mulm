@@ -118,7 +118,7 @@ export class InfrastructureStack extends cdk.Stack {
 			description: 'SSM Parameter name containing the private key',
 		});
 
-		// EC2 Instance
+		// EC2 Instance (root volume only - data volume attached separately)
 		const instance = new ec2.Instance(this, 'BasnyInstance', {
 			vpc,
 			vpcSubnets: {
@@ -140,38 +140,27 @@ export class InfrastructureStack extends cdk.Stack {
 						encrypted: true,
 					}),
 				},
-				{
-					deviceName: '/dev/xvdf',
-					volume: ec2.BlockDeviceVolume.ebs(8, {
-						volumeType: ec2.EbsDeviceVolumeType.GP3,
-						encrypted: true,
-						deleteOnTermination: false, // Persist data volume
-					}),
-				},
 			],
 			userData: ec2.UserData.custom(userDataScript),
 			userDataCausesReplacement: false,
 		});
 
-		// Elastic IP - Created separately so it persists across instance replacements
-		// IMPORTANT: This will be retained even if the instance is replaced
-		const eip = new ec2.CfnEIP(this, 'BasnyElasticIP', {
-			domain: 'vpc',
-			tags: [
-				{
-					key: 'Name',
-					value: 'BASNY-BAP-ElasticIP',
-				},
-				{
-					key: 'Persistent',
-					value: 'true',
-				},
-			],
+		// Attach existing persistent data volume
+		// IMPORTANT: This volume (vol-0aba5b85a1582b2c0) contains production data
+		// and must NEVER be replaced. It persists across all infrastructure updates.
+		new ec2.CfnVolumeAttachment(this, 'DataVolumeAttachment', {
+			volumeId: 'vol-0aba5b85a1582b2c0',
+			instanceId: instance.instanceId,
+			device: '/dev/xvdf',
 		});
 
-		// Associate Elastic IP with instance using allocation ID
+		// Use existing Elastic IP (54.87.111.167)
+		// IMPORTANT: This EIP persists across all infrastructure updates
+		const eipAllocationId = 'eipalloc-030fa3f3db2993cfc';
+
+		// Associate existing Elastic IP with instance
 		new ec2.CfnEIPAssociation(this, 'EIPAssociation', {
-			allocationId: eip.attrAllocationId,
+			allocationId: eipAllocationId,
 			instanceId: instance.instanceId,
 		});
 
@@ -182,17 +171,17 @@ export class InfrastructureStack extends cdk.Stack {
 		});
 
 		new cdk.CfnOutput(this, 'PublicIP', {
-			value: eip.ref,
-			description: 'Elastic IP Address',
+			value: '54.87.111.167',
+			description: 'Elastic IP Address (persistent)',
 		});
 
 		new cdk.CfnOutput(this, 'SSHCommand', {
-			value: `ssh ec2-user@${eip.ref}`,
+			value: 'ssh ec2-user@54.87.111.167',
 			description: 'SSH connection command',
 		});
 
 		new cdk.CfnOutput(this, 'ApplicationURL', {
-			value: `http://${eip.ref}`,
+			value: 'http://54.87.111.167',
 			description: 'Application URL (before SSL setup)',
 		});
 
