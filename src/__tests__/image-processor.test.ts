@@ -1,7 +1,5 @@
 import { processImage, validateImageBuffer, ImageValidationError, generatePreviewDataUrl } from '../utils/image-processor';
 import sharp from 'sharp';
-import fs from 'fs/promises';
-import path from 'path';
 
 describe('Image Processor', () => {
   // Create test images in memory
@@ -14,8 +12,8 @@ describe('Image Processor', () => {
         background: { r: 255, g: 0, b: 0 }
       }
     })
-    .toFormat(format)
-    .toBuffer();
+      .toFormat(format)
+      .toBuffer();
     
     return buffer;
   };
@@ -123,16 +121,16 @@ describe('Image Processor', () => {
           background: { r: 255, g: 0, b: 0 }
         }
       })
-      .withMetadata({
-        exif: {
-          IFD0: {
-            Copyright: 'Test Copyright',
-            Artist: 'Test Artist'
+        .withMetadata({
+          exif: {
+            IFD0: {
+              Copyright: 'Test Copyright',
+              Artist: 'Test Artist'
+            }
           }
-        }
-      })
-      .jpeg()
-      .toBuffer();
+        })
+        .jpeg()
+        .toBuffer();
 
       const result = await processImage(buffer);
       

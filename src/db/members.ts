@@ -160,13 +160,17 @@ export async function getRoster() {
 }
 
 export async function getRosterWithPoints() {
-  return query<MemberRecord & { fishTotalPoints: number; plantTotalPoints: number; coralTotalPoints: number }>(`
+  return query<MemberRecord & { fishTotalPoints: number; plantTotalPoints: number; coralTotalPoints: number; hasPassword: number; hasGoogleAccount: number }>(`
 		SELECT
 			m.*,
 			COALESCE(fish_points.total, 0) as fishTotalPoints,
 			COALESCE(plant_points.total, 0) as plantTotalPoints,
-			COALESCE(coral_points.total, 0) as coralTotalPoints
+			COALESCE(coral_points.total, 0) as coralTotalPoints,
+			CASE WHEN pa.member_id IS NOT NULL THEN 1 ELSE 0 END as hasPassword,
+			CASE WHEN ga.member_id IS NOT NULL THEN 1 ELSE 0 END as hasGoogleAccount
 		FROM members m
+		LEFT JOIN password_account pa ON m.id = pa.member_id
+		LEFT JOIN google_account ga ON m.id = ga.member_id
 		LEFT JOIN (
 			SELECT
 				member_id,

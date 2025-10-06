@@ -1,4 +1,4 @@
-import { getSubmissionStatus, SubmissionStatus } from '../utils/submissionStatus';
+import { getSubmissionStatus } from '../utils/submissionStatus';
 import { Submission } from '../db/submissions';
 
 describe('Submission Status Calculation', () => {

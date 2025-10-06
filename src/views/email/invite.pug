@@ -2,6 +2,78 @@ p= `Hi ${display_name}`
 
 - const url = `https://${domain}/set-password?code=${code}`
 p We've created an account for you on our BAP management site. To finish setting up your account you must choose a password.
+
+if submissions && submissions.length > 0
+	- const fishSubmissions = submissions.filter(s => s.species_type === 'Fish' || s.species_type === 'Invert')
+	- const plantSubmissions = submissions.filter(s => s.species_type === 'Plant')
+	- const coralSubmissions = submissions.filter(s => s.species_type === 'Coral')
+	- const fishTotal = fishSubmissions.reduce((sum, s) => sum + (s.total_points || 0), 0)
+	- const plantTotal = plantSubmissions.reduce((sum, s) => sum + (s.total_points || 0), 0)
+	- const coralTotal = coralSubmissions.reduce((sum, s) => sum + (s.total_points || 0), 0)
+
+	p
+		strong Your Current Achievements:
+
+	if fishSubmissions.length > 0
+		p
+			strong Breeder Awards Program (BAP) - Fish & Inverts
+			br
+			| Level: #{member.fish_level || 'None'} | Total Points: #{fishTotal}
+		table(style="width: 100%; border-collapse: collapse; margin-bottom: 20px;")
+			thead
+				tr(style="background-color: #f3f4f6;")
+					th(style="padding: 8px; text-align: left; border: 1px solid #ddd;") Species
+					th(style="padding: 8px; text-align: right; border: 1px solid #ddd;") Points
+					th(style="padding: 8px; text-align: left; border: 1px solid #ddd;") Date
+			tbody
+				each sub in fishSubmissions
+					tr
+						td(style="padding: 8px; border: 1px solid #ddd;")
+							em= sub.species_latin_name
+							|  (#{sub.species_common_name})
+						td(style="padding: 8px; text-align: right; border: 1px solid #ddd;")= sub.total_points || 0
+						td(style="padding: 8px; border: 1px solid #ddd;")= new Date(sub.reproduction_date).toLocaleDateString()
+
+	if plantSubmissions.length > 0
+		p
+			strong Horticultural Awards Program (HAP) - Plants
+			br
+			| Level: #{member.plant_level || 'None'} | Total Points: #{plantTotal}
+		table(style="width: 100%; border-collapse: collapse; margin-bottom: 20px;")
+			thead
+				tr(style="background-color: #f3f4f6;")
+					th(style="padding: 8px; text-align: left; border: 1px solid #ddd;") Species
+					th(style="padding: 8px; text-align: right; border: 1px solid #ddd;") Points
+					th(style="padding: 8px; text-align: left; border: 1px solid #ddd;") Date
+			tbody
+				each sub in plantSubmissions
+					tr
+						td(style="padding: 8px; border: 1px solid #ddd;")
+							em= sub.species_latin_name
+							|  (#{sub.species_common_name})
+						td(style="padding: 8px; text-align: right; border: 1px solid #ddd;")= sub.total_points || 0
+						td(style="padding: 8px; border: 1px solid #ddd;")= new Date(sub.reproduction_date).toLocaleDateString()
+
+	if coralSubmissions.length > 0
+		p
+			strong Coral Awards Program (CAP) - Corals
+			br
+			| Level: #{member.coral_level || 'None'} | Total Points: #{coralTotal}
+		table(style="width: 100%; border-collapse: collapse; margin-bottom: 20px;")
+			thead
+				tr(style="background-color: #f3f4f6;")
+					th(style="padding: 8px; text-align: left; border: 1px solid #ddd;") Species
+					th(style="padding: 8px; text-align: right; border: 1px solid #ddd;") Points
+					th(style="padding: 8px; text-align: left; border: 1px solid #ddd;") Date
+			tbody
+				each sub in coralSubmissions
+					tr
+						td(style="padding: 8px; border: 1px solid #ddd;")
+							em= sub.species_latin_name
+							|  (#{sub.species_common_name})
+						td(style="padding: 8px; text-align: right; border: 1px solid #ddd;")= sub.total_points || 0
+						td(style="padding: 8px; border: 1px solid #ddd;")= new Date(sub.reproduction_date).toLocaleDateString()
+
 p
 	| Click or copy this link into your browser&nbsp;
 	a(href=url)= url

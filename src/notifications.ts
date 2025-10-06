@@ -104,7 +104,7 @@ export async function sendResetEmail(email: string, display_name: string, code: 
 
 
 const renderInviteEmail = pug.compileFile("src/views/email/invite.pug");
-export async function sendInviteEmail(email: string, display_name: string, code: string) {
+export async function sendInviteEmail(email: string, display_name: string, code: string, member?: MemberRecord, submissions?: Submission[]) {
   return transporter.sendMail({
     from: fromEmail,
     to: email,
@@ -114,6 +114,8 @@ export async function sendInviteEmail(email: string, display_name: string, code:
       domain: config.domain,
       display_name,
       code,
+      member,
+      submissions,
     }),
   });
 }

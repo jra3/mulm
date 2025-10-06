@@ -1,4 +1,4 @@
-import { createMember, getMember, getMemberByEmail, getRosterWithPoints, updateMember, type MemberRecord } from "@/db/members";
+import { createMember, getMember, getMemberByEmail, getRosterWithPoints, updateMember, type MemberRecord, getMemberPassword, getGoogleAccountByMemberId } from "@/db/members";
 import { getOutstandingSubmissions, getOutstandingSubmissionsCounts, getSubmissionById, updateSubmission, getSubmissionsByMember, getWitnessQueue, getWitnessQueueCounts, getWaitingPeriodSubmissions, confirmWitness, declineWitness, type Submission } from "@/db/submissions";
 import { approvalSchema } from "@/forms/approval";
 import { inviteSchema } from "@/forms/member";
@@ -490,6 +490,60 @@ export const inviteMember = async (req: MulmRequest, res: Response) => {
   await createAuthCode(codeEntry);
   await sendInviteEmail(contact_email, member.display_name, codeEntry.code);
   res.send("Invite sent");
+}
+
+export const sendWelcomeEmail = async (req: MulmRequest, res: Response) => {
+  const { memberId } = req.params;
+  const id = parseInt(memberId);
+  if (isNaN(id)) {
+    res.status(422).send("Invalid member ID");
+    return;
+  }
+
+  try {
+    const member = await getMember(id);
+    if (!member) {
+      res.status(404).send("Member not found");
+      return;
+    }
+
+    // Check if member already has a password or Google account
+    const password = await getMemberPassword(member.id);
+    const googleAccount = await getGoogleAccountByMemberId(member.id);
+
+    if (password || googleAccount) {
+      res.status(400).send("Member already has login credentials");
+      return;
+    }
+
+    // Create auth code for password setup
+    const codeEntry: AuthCode = {
+      member_id: member.id,
+      code: generateRandomCode(24),
+      // 1 week expiration
+      expires_on: new Date(Date.now() + 60 * 60 * 1000 * 24 * 7),
+      purpose: "password_reset",
+    };
+
+    // Fetch approved submissions for the email
+    const submissions = await getSubmissionsByMember(
+      member.id.toString(),
+      false, // don't include unsubmitted
+      false  // don't include unapproved
+    );
+
+    await createAuthCode(codeEntry);
+    await sendInviteEmail(member.contact_email, member.display_name, codeEntry.code, member, submissions);
+
+    // Return updated member row
+    const memberWithPoints = await getMemberWithPoints(member);
+    res.render("admin/singleMemberRow", {
+      member: memberWithPoints
+    });
+  } catch (error) {
+    logger.error('Error sending welcome email:', error);
+    res.status(500).send('Failed to send welcome email. Please try again.');
+  }
 }
 
 export const approveSubmission = async (req: MulmRequest, res: Response) => {
