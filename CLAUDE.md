@@ -149,13 +149,19 @@ npm run script scripts/scriptname.ts
   - Tagged with `DoNotDelete=true`
   - **NEVER release or disassociate without updating DNS**
 
+**Resource Reference Method**:
+- Resource IDs stored in AWS Systems Manager Parameter Store
+- CDK stack reads from SSM parameters at synth time (human-readable names)
+- Parameters: `/basny/production/data-volume-id`, `/basny/production/elastic-ip-allocation-id`
+- View parameters: `aws --profile basny ssm get-parameters --names /basny/production/data-volume-id /basny/production/elastic-ip-allocation-id /basny/production/elastic-ip-address`
+
 **Data Loss Prevention**:
 - Stack has termination protection enabled (prevents `cdk destroy`)
 - UserData script checks for existing data before formatting volumes
 - See `infrastructure/CRITICAL_RESOURCES.md` for recovery procedures and backup strategy
 
 **Before ANY infrastructure changes**:
-1. Create EBS snapshot: `aws ec2 create-snapshot --volume-id vol-0aba5b85a1582b2c0`
+1. Create EBS snapshot: `aws --profile basny ec2 create-snapshot --volume-id vol-0aba5b85a1582b2c0`
 2. Create database backup: `ssh BAP "sqlite3 /mnt/basny-data/app/database/database.db '.backup /tmp/backup.db'"`
 3. Test changes on separate stack, NEVER with production volume attached
 

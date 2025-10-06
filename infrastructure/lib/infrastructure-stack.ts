@@ -8,16 +8,34 @@ import { readFileSync } from 'fs';
 import * as path from 'path';
 
 // ⚠️⚠️⚠️ CRITICAL PRODUCTION RESOURCES - DO NOT DELETE ⚠️⚠️⚠️
-// These resource IDs are HARDCODED and contain production data
-// Deleting these will result in COMPLETE DATA LOSS
-const PRODUCTION_DATA_VOLUME_ID = 'vol-0aba5b85a1582b2c0'; // 8GB EBS volume with database
-const PRODUCTION_ELASTIC_IP_ALLOCATION = 'eipalloc-01f29c26363e0465a'; // 98.91.62.199
-const PRODUCTION_IP_ADDRESS = '98.91.62.199'; // bap.basny.org DNS points here
-// ⚠️⚠️⚠️ DO NOT MODIFY THESE VALUES UNLESS YOU KNOW EXACTLY WHAT YOU'RE DOING ⚠️⚠️⚠️
+// Production resource IDs are stored in SSM Parameter Store
+// These parameters contain the IDs of production resources with live data
+// To update these values, use: aws ssm put-parameter --name <param> --value <new-value> --overwrite
+//
+// SSM Parameters:
+//   /basny/production/data-volume-id           - EBS volume with database, config, SSL certs
+//   /basny/production/elastic-ip-allocation-id - Elastic IP allocation ID
+//   /basny/production/elastic-ip-address       - Public IP address (bap.basny.org points here)
+// ⚠️⚠️⚠️ DO NOT DELETE THESE RESOURCES OR PARAMETERS ⚠️⚠️⚠️
 
 export class InfrastructureStack extends cdk.Stack {
 	constructor(scope: Construct, id: string, props?: cdk.StackProps) {
 		super(scope, id, props);
+
+		// Look up production resource IDs from SSM Parameter Store
+		// These values are loaded at CDK synth time
+		const PRODUCTION_DATA_VOLUME_ID = ssm.StringParameter.valueForStringParameter(
+			this,
+			'/basny/production/data-volume-id'
+		);
+		const PRODUCTION_ELASTIC_IP_ALLOCATION = ssm.StringParameter.valueForStringParameter(
+			this,
+			'/basny/production/elastic-ip-allocation-id'
+		);
+		const PRODUCTION_IP_ADDRESS = ssm.StringParameter.valueForStringParameter(
+			this,
+			'/basny/production/elastic-ip-address'
+		);
 
 		// VPC Configuration - Simple public subnet only
 		const vpc = new ec2.Vpc(this, 'BasnyVpc', {

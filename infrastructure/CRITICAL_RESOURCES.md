@@ -33,6 +33,40 @@ This document identifies production resources that contain live data and MUST NE
 - Protected tag: `DoNotDelete=true`
 - Stack termination protection enabled
 
+## SSM Parameter Store
+
+Critical resource IDs are stored in AWS Systems Manager Parameter Store. The CDK stack reads these parameters at synth time to reference the production resources.
+
+**Parameter Names**:
+- `/basny/production/data-volume-id` → `vol-0aba5b85a1582b2c0`
+- `/basny/production/elastic-ip-allocation-id` → `eipalloc-01f29c26363e0465a`
+- `/basny/production/elastic-ip-address` → `98.91.62.199`
+
+**Why SSM Parameter Store?**
+- Single source of truth for resource IDs
+- Human-readable parameter names instead of hardcoded IDs in code
+- Can update resource IDs without modifying code (if resources need to be recreated)
+- Version history tracked by SSM
+- Parameters are tagged with `Protected=true`
+
+**To view parameters**:
+```bash
+aws --profile basny ssm get-parameters \
+  --names /basny/production/data-volume-id \
+          /basny/production/elastic-ip-allocation-id \
+          /basny/production/elastic-ip-address
+```
+
+**To update a parameter** (only if resource is recreated):
+```bash
+aws --profile basny ssm put-parameter \
+  --name /basny/production/data-volume-id \
+  --value vol-NEW_VOLUME_ID \
+  --overwrite
+```
+
+**⚠️ IMPORTANT**: Only update these parameters if you've intentionally recreated the resources. Never change them to point to a different resource unless you're absolutely sure.
+
 ## Protection Strategy (5 Layers)
 
 1. **Visual Identification**: Resources tagged with `DoNotDelete=true` and descriptive names
