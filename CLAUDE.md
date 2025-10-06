@@ -133,6 +133,32 @@ npm run script scripts/scriptname.ts
 
 ## Production Deployment
 
+### ⚠️ CRITICAL RESOURCES - DO NOT DELETE ⚠️
+
+**IMPORTANT**: The following production resources contain live data and are protected:
+
+- **EBS Volume**: `vol-0aba5b85a1582b2c0` (8GB)
+  - Contains production database, config with secrets, SSL certificates
+  - Protected with RETAIN deletion policy in CDK
+  - Tagged with `DoNotDelete=true`
+  - **NEVER detach or delete this volume**
+
+- **Elastic IP**: `eipalloc-01f29c26363e0465a` (98.91.62.199)
+  - DNS (bap.basny.org) points to this IP
+  - Protected with RETAIN deletion policy in CDK
+  - Tagged with `DoNotDelete=true`
+  - **NEVER release or disassociate without updating DNS**
+
+**Data Loss Prevention**:
+- Stack has termination protection enabled (prevents `cdk destroy`)
+- UserData script checks for existing data before formatting volumes
+- See `infrastructure/CRITICAL_RESOURCES.md` for recovery procedures and backup strategy
+
+**Before ANY infrastructure changes**:
+1. Create EBS snapshot: `aws ec2 create-snapshot --volume-id vol-0aba5b85a1582b2c0`
+2. Create database backup: `ssh BAP "sqlite3 /mnt/basny-data/app/database/database.db '.backup /tmp/backup.db'"`
+3. Test changes on separate stack, NEVER with production volume attached
+
 ### Infrastructure
 - **Platform**: AWS EC2 (t3.micro) with 20GB EBS volume
 - **IP**: 98.91.62.199 (Elastic IP - eipalloc-01f29c26363e0465a)

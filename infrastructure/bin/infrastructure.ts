@@ -3,7 +3,12 @@ import * as cdk from 'aws-cdk-lib';
 import { InfrastructureStack } from '../lib/infrastructure-stack';
 
 const app = new cdk.App();
+
+// ⚠️ TERMINATION PROTECTION ENABLED ⚠️
+// This prevents accidental `cdk destroy` - you must explicitly disable it first
 new InfrastructureStack(app, 'InfrastructureStack', {
+  terminationProtection: true,
+
   /* If you don't specify 'env', this stack will be environment-agnostic.
    * Account/Region-dependent features and context lookups will not work,
    * but a single synthesized template can be deployed anywhere. */

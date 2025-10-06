@@ -22,14 +22,39 @@ systemctl enable docker
 curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 chmod +x /usr/local/bin/docker-compose
 
-# Format and mount EBS volume (only if not already formatted)
-if ! file -s $DEVICE | grep -q filesystem; then
-    mkfs -t ext4 $DEVICE
+# ⚠️ CRITICAL: Check if this is a fresh instance or if production data exists
+# This prevents accidentally formatting a volume that already has data
+INIT_FLAG="/var/lib/cloud/basny-initialized"
+
+if [ -f "$INIT_FLAG" ]; then
+    echo "Instance already initialized, skipping setup to prevent data loss"
+    # Just mount the existing volume
+    mkdir -p $DATA_DIR
+    mount $DEVICE $DATA_DIR
+    exit 0
 fi
 
-# Create mount point and mount volume
-mkdir -p $DATA_DIR
-mount $DEVICE $DATA_DIR
+# Check if volume has existing filesystem and data
+if file -s $DEVICE | grep -q filesystem; then
+    echo "Existing filesystem detected on $DEVICE"
+    mkdir -p $DATA_DIR
+    mount $DEVICE $DATA_DIR
+
+    # Check for production data markers
+    if [ -d "$DATA_DIR/app" ] || [ -d "$DATA_DIR/nginx" ]; then
+        echo "⚠️ PRODUCTION DATA DETECTED - Skipping initialization"
+        echo "Volume contains existing data and will not be modified"
+        # Mark as initialized to prevent future runs from modifying it
+        touch "$INIT_FLAG"
+        exit 0
+    fi
+    echo "Empty filesystem found, will initialize fresh"
+else
+    echo "No filesystem found, formatting $DEVICE"
+    mkfs -t ext4 $DEVICE
+    mkdir -p $DATA_DIR
+    mount $DEVICE $DATA_DIR
+fi
 
 # Add to fstab for persistent mounting
 echo "$DEVICE $DATA_DIR ext4 defaults,nofail 0 2" >> /etc/fstab

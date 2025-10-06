@@ -7,6 +7,14 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { readFileSync } from 'fs';
 import * as path from 'path';
 
+// ⚠️⚠️⚠️ CRITICAL PRODUCTION RESOURCES - DO NOT DELETE ⚠️⚠️⚠️
+// These resource IDs are HARDCODED and contain production data
+// Deleting these will result in COMPLETE DATA LOSS
+const PRODUCTION_DATA_VOLUME_ID = 'vol-0aba5b85a1582b2c0'; // 8GB EBS volume with database
+const PRODUCTION_ELASTIC_IP_ALLOCATION = 'eipalloc-01f29c26363e0465a'; // 98.91.62.199
+const PRODUCTION_IP_ADDRESS = '98.91.62.199'; // bap.basny.org DNS points here
+// ⚠️⚠️⚠️ DO NOT MODIFY THESE VALUES UNLESS YOU KNOW EXACTLY WHAT YOU'RE DOING ⚠️⚠️⚠️
+
 export class InfrastructureStack extends cdk.Stack {
 	constructor(scope: Construct, id: string, props?: cdk.StackProps) {
 		super(scope, id, props);
@@ -145,24 +153,26 @@ export class InfrastructureStack extends cdk.Stack {
 			userDataCausesReplacement: false,
 		});
 
-		// Attach existing persistent data volume
-		// IMPORTANT: This volume (vol-0aba5b85a1582b2c0) contains production data
-		// and must NEVER be replaced. It persists across all infrastructure updates.
-		new ec2.CfnVolumeAttachment(this, 'DataVolumeAttachment', {
-			volumeId: 'vol-0aba5b85a1582b2c0',
+		// ⚠️ CRITICAL: Attach existing persistent data volume
+		// This volume contains the production database, config, and SSL certificates
+		// It must NEVER be deleted or formatted. DeletionPolicy is set to RETAIN.
+		const dataVolumeAttachment = new ec2.CfnVolumeAttachment(this, 'DataVolumeAttachment', {
+			volumeId: PRODUCTION_DATA_VOLUME_ID,
 			instanceId: instance.instanceId,
 			device: '/dev/xvdf',
 		});
+		// RETAIN policy ensures volume persists even if stack is destroyed
+		dataVolumeAttachment.cfnOptions.deletionPolicy = cdk.CfnDeletionPolicy.RETAIN;
 
-		// Use existing Elastic IP (98.91.62.199)
-		// IMPORTANT: This EIP persists across all infrastructure updates
-		const eipAllocationId = 'eipalloc-01f29c26363e0465a';
-
-		// Associate existing Elastic IP with instance
-		new ec2.CfnEIPAssociation(this, 'EIPAssociation', {
-			allocationId: eipAllocationId,
+		// ⚠️ CRITICAL: Associate existing production Elastic IP
+		// DNS (bap.basny.org) points to this IP - do not change without updating DNS
+		// This EIP was created outside CDK and will not be deleted by stack operations
+		const eipAssociation = new ec2.CfnEIPAssociation(this, 'EIPAssociation', {
+			allocationId: PRODUCTION_ELASTIC_IP_ALLOCATION,
 			instanceId: instance.instanceId,
 		});
+		// RETAIN policy protects EIP association (though EIP itself is external)
+		eipAssociation.cfnOptions.deletionPolicy = cdk.CfnDeletionPolicy.RETAIN;
 
 		// Outputs
 		new cdk.CfnOutput(this, 'InstanceId', {
@@ -171,18 +181,18 @@ export class InfrastructureStack extends cdk.Stack {
 		});
 
 		new cdk.CfnOutput(this, 'PublicIP', {
-			value: '98.91.62.199',
-			description: 'Elastic IP Address (persistent)',
+			value: PRODUCTION_IP_ADDRESS,
+			description: 'Elastic IP Address (persistent - bap.basny.org)',
 		});
 
 		new cdk.CfnOutput(this, 'SSHCommand', {
-			value: 'ssh ec2-user@98.91.62.199',
+			value: `ssh ec2-user@${PRODUCTION_IP_ADDRESS}`,
 			description: 'SSH connection command',
 		});
 
 		new cdk.CfnOutput(this, 'ApplicationURL', {
-			value: 'http://98.91.62.199',
-			description: 'Application URL (before SSL setup)',
+			value: `http://${PRODUCTION_IP_ADDRESS}`,
+			description: 'Application URL (use https://bap.basny.org in production)',
 		});
 
 		// Tags
