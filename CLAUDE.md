@@ -382,7 +382,65 @@ ssh BAP "sudo chown 1001:65533 /mnt/basny-data/app/database/database.db && sudo 
 - **HTTPS**: All HTTP traffic redirects to HTTPS with HSTS enabled
 - **Security headers**: X-Frame-Options, X-Content-Type-Options, X-XSS-Protection, Referrer-Policy
 
-### Nginx Configuration Notes
+### Nginx Configuration
+
+**Configuration Files**:
+- `nginx/nginx.conf` - Main nginx config with rate limiting zones
+- `nginx/conf.d/default.conf` - Server blocks for HTTP/HTTPS
 - Files in `nginx/conf.d/` are automatically included
-- Remove any temporary/test config files (e.g., `ip-access.conf`) before production deployment
-- Default server block must be first to properly reject invalid requests
+- Remove any temporary/test config files before production deployment
+
+**SSL/HTTPS Setup**:
+- Let's Encrypt certificate for bap.basny.org
+- Auto-renewal via certbot container (runs every 12 hours)
+- Certificate stored in `/mnt/basny-data/nginx/certs/`
+- HTTP traffic redirects to HTTPS (301)
+- HSTS enabled with preload: `max-age=31536000; includeSubDomains; preload`
+- Modern TLS: TLSv1.2 and TLSv1.3 only
+
+**Rate Limiting** (defined in nginx.conf):
+- **General requests**: 10 req/sec (burst 20)
+  - Applied to all requests by default
+- **API endpoints** (`/api/*`): 30 req/sec (burst 50)
+  - Higher limit for API calls
+- **Upload endpoints** (`/submission`, `/tank`, `/upload`): 5 req/sec (burst 10)
+  - Lower limit to prevent abuse
+  - 100MB max upload size
+  - 300s timeout for large uploads
+
+**Security Headers**:
+- `Strict-Transport-Security`: Force HTTPS for 1 year
+- `X-Frame-Options: SAMEORIGIN`: Prevent clickjacking
+- `X-Content-Type-Options: nosniff`: Prevent MIME sniffing
+- `X-XSS-Protection: 1; mode=block`: Enable XSS filter
+- `Referrer-Policy: strict-origin-when-cross-origin`: Control referrer info
+
+**Default Server Block**:
+- First server block catches invalid Host headers
+- Returns 444 (close connection without response)
+- Prevents host header injection attacks
+
+**Updating Nginx Config**:
+```bash
+# Edit local config
+vim nginx/conf.d/default.conf
+
+# Copy to production and test
+scp nginx/conf.d/default.conf BAP:/tmp/
+ssh BAP "sudo cp /tmp/default.conf /opt/basny/nginx/conf.d/ && sudo docker exec basny-nginx nginx -t"
+
+# Reload nginx
+ssh BAP "sudo docker exec basny-nginx nginx -s reload"
+```
+
+**SSL Certificate Renewal**:
+```bash
+# Check certificate status
+ssh BAP "sudo docker exec basny-certbot certbot certificates"
+
+# Manual renewal (if needed)
+ssh BAP "sudo docker exec basny-certbot certbot renew"
+
+# Test renewal process
+ssh BAP "sudo docker exec basny-certbot certbot renew --dry-run"
+```
