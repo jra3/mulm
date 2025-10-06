@@ -163,7 +163,7 @@ router.use("/admin", adminRouter);
 
 router.post("/auth/signup", auth.signup);
 router.post("/auth/login", auth.passwordLogin);
-router.get("/auth/logout", auth.logout);
+router.post("/auth/logout", auth.logout);
 router.get("/auth/forgot-password", auth.validateForgotPassword);
 router.get("/auth/set-password", auth.validateForgotPassword);
 router.post("/auth/forgot-password", auth.sendForgotPassword);

@@ -75,6 +75,8 @@ export const passwordLogin = async (req: MulmRequest, res: Response) => {
 // Clears the session cookies and deletes the session from the db
 export const logout = async (req: MulmRequest, res: Response) => {
   await destroyUserSession(req, res);
+  // Use HX-Redirect for HTMX compatibility, falls back to regular redirect
+  res.set("HX-Redirect", "/");
   res.redirect("/");
 };
 
