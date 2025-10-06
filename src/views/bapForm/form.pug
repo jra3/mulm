@@ -4,11 +4,11 @@ include imageUpload.pug
 
 mixin CRUDForm()
 	if form.id
-		form#bapForm(hx-target="#bapForm" hx-swap="outerHTML" hx-patch=`/sub/${form.id}`)
+		form#bapForm(hx-target="#bapForm" hx-swap="outerHTML" hx-patch=`/submissions/${form.id}`)
 			input(type="hidden" name="id" value=form.id)
 			block
 	else
-		form#bapForm(hx-target="#bapForm" hx-swap="outerHTML" hx-post="/sub")
+		form#bapForm(hx-target="#bapForm" hx-swap="outerHTML" hx-post="/submissions")
 			block
 
 +CRUDForm
@@ -45,7 +45,7 @@ mixin CRUDForm()
 					.select-wrapper
 						select#species_type(
 							name="species_type"
-							hx-get="/submit"
+							hx-get="/submissions/new"
 							hx-include="closest form"
 							hx-swap="outerHTML"
 							hx-target="#bapForm"
@@ -117,14 +117,14 @@ mixin CRUDForm()
 						type="button"
 						hx-target="closest body"
 						hx-swap="beforeend"
-						hx-get="/tank/save"
+						hx-get="/tanks/new"
 						aria-label="Save tank settings for reuse"
 						title="Save your current tank settings to reuse in future submissions") Save
 					button.outline(
 						type="button"
 						hx-target="closest body"
 						hx-swap="beforeend"
-						hx-get="/tank/load"
+						hx-get="/tanks"
 						aria-label="Load previously saved tank settings"
 						title="Load tank settings from your saved configurations") Load
 
@@ -179,7 +179,7 @@ mixin CRUDForm()
 
 					button.outline(
 						type="button"
-						hx-get="/submit/addSupplement"
+						hx-get="/submissions/new/addSupplement"
 						hx-swap="beforeend"
 						hx-target="#supplements"
 						aria-label="Add another supplement"

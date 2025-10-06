@@ -49,11 +49,142 @@ npm test -- --watch           # Run tests in watch mode
 - Session middleware automatically populates viewer from database
 
 ### Route Organization
-Routes are domain-organized in `src/routes/`:
-- **Public routes**: species, standings, typeahead
-- **Auth routes**: account, auth (including OAuth)
-- **Member routes**: member, submission, tank
-- **Admin routes**: adminRouter with approval/witness queues
+Routes follow RESTful conventions and are domain-organized in `src/routes/`. All routes defined in `src/index.ts` with domain logic in separate route modules.
+
+#### RESTful Patterns
+We follow standard REST conventions for resource routes:
+```
+GET    /resource         - List all (index)
+GET    /resource/new     - New resource form
+POST   /resource         - Create resource
+GET    /resource/:id     - View single resource
+GET    /resource/:id/edit - Edit resource form
+PATCH  /resource/:id     - Update resource
+DELETE /resource/:id     - Delete resource
+```
+
+#### Main Route Groups
+
+**Submissions** (`src/routes/submission.ts`)
+```
+GET    /submissions/new              - New submission form
+GET    /submissions/new/addSupplement - Add supplement line (HTMX partial)
+POST   /submissions                  - Create submission
+GET    /submissions/:id              - View submission
+PATCH  /submissions/:id              - Update submission
+DELETE /submissions/:id              - Delete submission
+```
+
+**Tank Presets** (`src/routes/tank.ts`)
+```
+GET    /tank                 - View tank component (used in submission form)
+GET    /tanks                - List saved tank presets
+GET    /tanks/new            - New tank preset form (HTMX dialog)
+POST   /tanks                - Create tank preset
+PATCH  /tanks/:name          - Update tank preset (uses name, not ID)
+DELETE /tanks/:name           - Delete tank preset
+```
+
+**Account Management** (`src/routes/account.ts`)
+```
+GET    /account              - View account settings
+PATCH  /account              - Update account settings
+DELETE /account/google        - Unlink Google account (gets sub from session)
+```
+
+**Authentication** (`src/routes/auth.ts`)
+```
+POST   /auth/signup          - Create account
+POST   /auth/login           - Password login
+GET    /auth/logout          - Logout
+GET    /auth/forgot-password - Validate forgot password token
+GET    /auth/set-password    - Validate set password token
+POST   /auth/forgot-password - Send forgot password email
+POST   /auth/reset-password  - Reset password with token
+GET    /oauth/google         - Google OAuth callback (URL registered with Google)
+```
+
+**Auth Dialogs** (HTMX modals)
+```
+GET    /dialog/auth/signin          - Sign in dialog
+GET    /dialog/auth/signup          - Sign up dialog
+GET    /dialog/auth/forgot-password - Forgot password dialog
+```
+
+**Admin Routes** (`src/routes/adminRouter.ts`)
+All admin routes are under `/admin/` prefix with admin auth middleware.
+
+```
+# Queues
+GET    /admin/queue{/:program}          - Approval queue
+GET    /admin/witness-queue{/:program}  - Witness confirmation queue
+GET    /admin/waiting-period{/:program} - Waiting period queue
+
+# Submission Management
+POST   /admin/submissions/:id/approve          - Approve submission
+GET    /admin/submissions/:id/edit             - Edit submission (admin view)
+POST   /admin/submissions/:id/confirm-witness  - Confirm witness
+POST   /admin/submissions/:id/decline-witness  - Decline witness
+POST   /admin/submissions/:id/request-changes  - Request changes from submitter
+
+# Admin Dialogs (HTMX)
+GET    /admin/dialog/submissions/:id/decline-witness  - Decline witness form
+GET    /admin/dialog/submissions/:id/request-changes  - Request changes form
+
+# Member Management
+GET    /admin/members                           - List members
+GET    /admin/members/:memberId/edit            - Edit member form
+PATCH  /admin/members/:memberId                 - Update member
+POST   /admin/members/:memberId/check-levels    - Recalculate levels
+POST   /admin/members/:memberId/check-specialty-awards - Check specialty awards
+POST   /admin/members/:memberId/send-welcome    - Send welcome email
+POST   /admin/members/invite                    - Invite new member
+```
+
+**Public Routes**
+```
+GET    /                     - Homepage with recent submissions
+GET    /member/:memberId     - View member profile
+GET    /me                   - Redirect to viewer's profile
+GET    /standings{/:program} - Program standings
+GET    /species              - Species explorer
+GET    /species/:groupId     - Species group detail
+```
+
+**API Routes** (JSON responses)
+```
+GET    /api/members/search     - Typeahead search for members
+GET    /api/species/search     - Typeahead search for species
+```
+
+#### Route Guidelines
+
+**URL Parameter Naming**
+- Use `:id` for numeric database IDs (standard REST)
+- Use descriptive names for non-ID params (`:memberId`, `:program`, `:groupId`)
+- Tank presets use `:name` as identifier (legacy, unique constraint on name)
+
+**HTMX Integration**
+- Partial templates return fragments, not full pages
+- Use `hx-get`, `hx-post`, `hx-patch`, `hx-delete` with resource URLs
+- Dialog routes under `/dialog/` namespace return modal HTML
+- Admin dialogs under `/admin/dialog/` namespace
+
+**Special Cases**
+- OAuth callback URL (`/oauth/google`) cannot change - registered with Google
+- Some routes support optional parameters with `{/:param}` syntax
+- Submission validation accepts both `:id` and `:subId` for backward compatibility
+
+**Route Module Organization**
+- `src/routes/submission.ts` - Submission CRUD
+- `src/routes/tank.ts` - Tank preset management
+- `src/routes/account.ts` - User account settings
+- `src/routes/auth.ts` - Authentication and OAuth
+- `src/routes/member.ts` - Member profiles
+- `src/routes/species.ts` - Species explorer
+- `src/routes/standings.ts` - Program standings
+- `src/routes/typeahead.ts` - Search APIs
+- `src/routes/adminRouter.ts` - Admin-only routes (separate router with auth middleware)
 
 ### Form Validation
 - Zod schemas define all form structures (`src/forms/`)

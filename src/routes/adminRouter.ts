@@ -11,8 +11,7 @@ adminRouter.get("/witness-queue{/:program}", admin.showWitnessQueue);
 adminRouter.get("/waiting-period{/:program}", admin.showWaitingPeriod);
 
 adminRouter.post("/submissions/:id/approve", admin.approveSubmission);
-
-adminRouter.get("/edit{/:subId}", admin.viewEditSubmission);
+adminRouter.get("/submissions/:id/edit", admin.viewEditSubmission);
 
 adminRouter.get("/members", admin.viewMembers);
 adminRouter.get("/members/:memberId/edit", admin.viewMemberUpdate);
@@ -21,15 +20,13 @@ adminRouter.patch("/members/:memberId", admin.updateMemberFields);
 adminRouter.post("/members/:memberId/check-levels", admin.checkMemberLevels);
 adminRouter.post("/members/:memberId/check-specialty-awards", admin.checkMemberSpecialtyAwards);
 adminRouter.post("/members/:memberId/send-welcome", admin.sendWelcomeEmail);
+adminRouter.post("/members/invite", admin.inviteMember);
 
-adminRouter.post("/confirm-witness/:subId", admin.confirmWitnessAction);
-adminRouter.post("/decline-witness/:subId", admin.declineWitnessAction);
+adminRouter.post("/submissions/:id/confirm-witness", admin.confirmWitnessAction);
+adminRouter.post("/submissions/:id/decline-witness", admin.declineWitnessAction);
+adminRouter.post("/submissions/:id/request-changes", admin.sendRequestChanges);
 
-adminRouter.get("/dialog/decline-witness/:subId", admin.declineWitnessForm);
-
-adminRouter.post("/invite", admin.inviteMember);
-
-adminRouter.get("/dialog/request-changes/:subId", admin.requestChangesForm);
-adminRouter.post("/submissions/:subId/request-changes", admin.sendRequestChanges);
+adminRouter.get("/dialog/submissions/:id/decline-witness", admin.declineWitnessForm);
+adminRouter.get("/dialog/submissions/:id/request-changes", admin.requestChangesForm);
 
 export default adminRouter;

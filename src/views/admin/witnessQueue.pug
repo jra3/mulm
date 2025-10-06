@@ -46,7 +46,7 @@ mixin witnessQueueTable(submissions)
 						- const dateString = sub.submitted_on && new Date(sub.submitted_on).toLocaleDateString();
 						td(class=stringCell)= dateString
 						td(class=stringCell)
-							a(class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors" href=`/sub/${sub.id}`) Review
+							a(class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors" href=`/submissions/${sub.id}`) Review
 
 doctype html
 html

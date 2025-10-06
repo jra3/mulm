@@ -24,9 +24,9 @@ html
 					a(href='/admin/members')
 						button.primary Manage Members
 				if isLoggedIn
-					a(href='/submit')
+					a(href='/submissions/new')
 						button.primary New Species Submission
-					a(href='/logout')
+					a(href='/auth/logout')
 						button.outline Log Out
 				else
 					button.primary(

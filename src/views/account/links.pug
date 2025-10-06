@@ -7,7 +7,7 @@
 				span.font-base= googleAccount.google_email
 				button.destructive(
 					hx-target="#googleAccount"
-					hx-delete=`/account/google/${googleAccount.google_sub}`
+					hx-delete="/account/google"
 				) Unlink
 		else
 			a(href=googleURL alt='Continue with Google')

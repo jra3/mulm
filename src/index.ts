@@ -118,23 +118,25 @@ router.get("/", async (req: MulmRequest, res) => {
   });
 });
 
-// Entrypoint for BAP/HAP submission
-router.get("/submit", submission.renderSubmissionForm);
-router.get("/submit/addSupplement", (req, res) => {
+// Submission routes (BAP/HAP/CAP)
+router.get("/submissions/new", submission.renderSubmissionForm);
+router.get("/submissions/new/addSupplement", (req, res) => {
   res.render("bapForm/supplementSingleLine");
 });
+router.get("/submissions/:id", submission.view);
+router.post("/submissions", submission.create);
+router.patch("/submissions/:id", submission.update);
+router.delete("/submissions/:id", submission.remove);
 
-router.get("/sub/:subId", submission.view);
-router.post("/sub", submission.create);
-router.patch("/sub/:subId", submission.update);
-router.delete("/sub/:subId", submission.remove);
-
+// Tank form component (used in BAP submissions)
 router.get("/tank", tank.view);
-router.get("/tank/save", tank.saveTankForm);
-router.get("/tank/load", tank.loadTankList);
-router.post("/tank", tank.create);
-router.patch("/tank/:name", tank.update);
-router.delete("/tank/:name", tank.remove);
+
+// Tank preset management (RESTful CRUD)
+router.get("/tanks", tank.loadTankList);
+router.get("/tanks/new", tank.saveTankForm);
+router.post("/tanks", tank.create);
+router.patch("/tanks/:name", tank.update);
+router.delete("/tanks/:name", tank.remove);
 
 router.get("/member/:memberId", member.view);
 router.get("/me", (req: MulmRequest, res) => {
@@ -152,20 +154,23 @@ router.get("/species", species.explorer);
 router.get("/species/:groupId", species.detail);
 
 router.get("/account", account.viewAccountSettings);
-router.patch("/account", account.updateAccountSettings)
-router.delete("/account/google/:sub", account.unlinkGoogleAccount);
+router.patch("/account", account.updateAccountSettings);
+router.delete("/account/google", account.unlinkGoogleAccount);
 
 router.use("/admin", adminRouter);
 
-// Password Auth ///////////////////////////////////////////
+// Auth routes ///////////////////////////////////////////
 
-router.post("/signup", auth.signup);
-router.post("/login", auth.passwordLogin);
-router.get("/logout", auth.logout);
-router.get("/forgot-password", auth.validateForgotPassword);
-router.get("/set-password", auth.validateForgotPassword);
-router.post("/forgot-password", auth.sendForgotPassword);
-router.post("/reset-password", auth.resetPassword);
+router.post("/auth/signup", auth.signup);
+router.post("/auth/login", auth.passwordLogin);
+router.get("/auth/logout", auth.logout);
+router.get("/auth/forgot-password", auth.validateForgotPassword);
+router.get("/auth/set-password", auth.validateForgotPassword);
+router.post("/auth/forgot-password", auth.sendForgotPassword);
+router.post("/auth/reset-password", auth.resetPassword);
+
+// OAuth (external dependency - redirect_uri registered with Google)
+router.get("/oauth/google", auth.googleOAuth);
 
 router.get("/dialog/auth/signin", (req, res) => {
   res.render("account/signin", {
@@ -187,10 +192,6 @@ router.get("/dialog/auth/forgot-password", (req, res) => {
     errors: new Map(),
   });
 });
-
-// OAuth ///////////////////////////////////////////////////
-
-router.get("/oauth/google", auth.googleOAuth);
 
 // API ///////////////////////////////////////////////////
 

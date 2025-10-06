@@ -14,7 +14,7 @@
 				button.primary.p-4(type="submit") Approve
 				button.destructive(
 					type="button"
-					hx-get=`/admin/dialog/request-changes/${submission.id}`
+					hx-get=`/admin/dialog/submissions/${submission.id}/request-changes`
 					hx-target="closest body"
 					hx-swap="beforeend") Feedback
 

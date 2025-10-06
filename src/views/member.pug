@@ -38,9 +38,9 @@ mixin submissionTable(submissions, totalPoints)
 								span.text-gray-500 Unknown
 						td(class=stringCell)= sub.species_class
 						td(class=stringCell)
-							a.link(href=`/sub/${sub.id}`)= sub.species_common_name
+							a.link(href=`/submissions/${sub.id}`)= sub.species_common_name
 						td(class=stringCell)
-							a.link(href=`/sub/${sub.id}`)= sub.species_latin_name
+							a.link(href=`/submissions/${sub.id}`)= sub.species_latin_name
 						- const dateString = sub.submitted_on && new Date(sub.submitted_on).toLocaleDateString();
 						td(class=stringCell)= dateString
 						td(class=numberCell)= sub.points || "Unapproved"
@@ -127,4 +127,4 @@ html
 						h3(class="text-2xl font-bold text-gray-800 mb-2") No Submissions Yet
 						p(class="text-gray-600 mb-6") This member hasn't made any submissions to the program.
 						if isSelf
-							a(href="/submit" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500") Start Your First Submission
+							a(href="/submissions/new" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500") Start Your First Submission

@@ -3,7 +3,7 @@ include ../header.pug
 +dialog()
 	h2.text-xl.font-extrabold.mb-4 Request More Documentation
 	form.contents#witnessForm(
-		hx-post=`/admin/decline-witness/${submission.id}`
+		hx-post=`/admin/submissions/${submission.id}/decline-witness`
 		hx-trigger="submit"
 		hx-target="#witnessError"
 		hx-swap="innerHTML"

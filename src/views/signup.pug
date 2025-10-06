@@ -1,6 +1,6 @@
 
 h2.text-xl.font-extrabold.mb-4 Sign Up
-form.contents(hx-post="/signup" hx-target="closest div" hx-trigger="submit")
+form.contents(hx-post="/auth/signup" hx-target="closest div" hx-trigger="submit")
 	.flex.flex-col.gap-2(class="w-2/3")
 		.flex.items-center.gap-2
 			label.input-label(for="email") Email

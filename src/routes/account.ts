@@ -93,7 +93,13 @@ export const unlinkGoogleAccount = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  await deleteGoogleAccount(String(req.params.sub), viewer.id);
+  const googleAccount = await getGoogleAccountByMemberId(viewer.id);
+  if (!googleAccount) {
+    res.status(404).send("No Google account linked");
+    return;
+  }
+
+  await deleteGoogleAccount(googleAccount.google_sub, viewer.id);
   res.send("Unlinked Google account");
 }
 

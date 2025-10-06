@@ -9,7 +9,7 @@ mixin modal()
 +modal
 	.flex-col.text-center.space-y-6
 		.h2.text-2xl.p2 Log In
-		form(hx-post="/login" hx-trigger="submit").space-y-4
+		form(hx-post="/auth/login" hx-trigger="submit").space-y-4
 			input.text-input(name="email"	type="text" placeholder="Email Address")
 			input.text-input(name="password" type="password" placeholder="Password")
 			button.btn.primary(type="submit") Log In

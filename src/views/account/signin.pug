@@ -5,7 +5,7 @@ include ../header.pug
 	#signin.w-full.flex.flex-col.items-center.gap-2
 		h2.text-xl.font-extrabold.mb-4 Log In
 		form.contents(
-			hx-post="/login"
+			hx-post="/auth/login"
 			hx-trigger="submit"
 			hx-target="#loginError"
 			hx-swap="innerHTML")
