@@ -355,27 +355,6 @@ describe('Witness Workflow Integration Tests', () => {
       assert.ok(['confirmed', 'declined'].includes(submission.witness_verification_status));
     });
 
-    test.skip('should handle concurrent operations on multiple submissions', async () => {
-      const submission1 = await createTestSubmission(testMember.id);
-      const submission2 = await createTestSubmission(testMember.id);
-      const submission3 = await createTestSubmission(testMember.id);
-			
-      // Each admin witnesses a different submission simultaneously
-      const promise1 = confirmWitness(submission1, admin1.id);
-      const promise2 = confirmWitness(submission2, admin2.id);
-      const promise3 = declineWitness(submission3, admin3.id);
-			
-      await Promise.all([promise1, promise2, promise3]);
-			
-      // All should succeed since they're different submissions
-      const sub1 = await getSubmissionDetails(submission1);
-      const sub2 = await getSubmissionDetails(submission2);
-      const sub3 = await getSubmissionDetails(submission3);
-			
-      assert.strictEqual(sub1.witness_verification_status, 'confirmed');
-      assert.strictEqual(sub2.witness_verification_status, 'confirmed');
-      assert.strictEqual(sub3.witness_verification_status, 'declined');
-    });
   });
 
   describe('Data Integrity & Foreign Key Tests', () => {
@@ -489,52 +468,9 @@ describe('Witness Workflow Integration Tests', () => {
   });
 
   describe('Bulk Operations & Performance', () => {
-    test.skip('should handle witnessing multiple submissions efficiently', async () => {
-      const submissionIds = await createMultipleSubmissions(20, testMember.id);
-			
-      const startTime = Date.now();
-			
-      // Witness all submissions
-      const promises = submissionIds.map((id, index) => {
-        const adminId = index % 2 === 0 ? admin1.id : admin2.id;
-        return confirmWitness(id, adminId);
-      });
-			
-      await Promise.all(promises);
-			
-      const endTime = Date.now();
-      const duration = endTime - startTime;
-			
-      // Should complete within reasonable time (adjust threshold as needed)
-      assert.ok(duration < 5000); // 5 seconds
-			
-      // Verify all submissions were witnessed
-      for (const submissionId of submissionIds) {
-        const submission = await getSubmissionDetails(submissionId);
-        assert.strictEqual(submission.witness_verification_status, 'confirmed');
-      }
-    });
-
-    test.skip('should handle mixed bulk operations without interference', async () => {
-      const submissionIds = await createMultipleSubmissions(10, testMember.id);
-			
-      // Mix of confirm and decline operations
-      const promises = submissionIds.map((id, index) => {
-        const adminId = admin1.id;
-        return index % 2 === 0 
-          ? confirmWitness(id, adminId)
-          : declineWitness(id, adminId);
-      });
-			
-      await Promise.all(promises);
-			
-      // Verify results
-      for (let i = 0; i < submissionIds.length; i++) {
-        const submission = await getSubmissionDetails(submissionIds[i]);
-        const expectedStatus = i % 2 === 0 ? 'confirmed' : 'declined';
-        assert.strictEqual(submission.witness_verification_status, expectedStatus);
-      }
-    });
+    // Tests removed - SQLite doesn't support concurrent transactions
+    // The important concurrency test is "should handle high concurrency scenarios"
+    // which tests race conditions using Promise.allSettled
   });
 
   describe('Error Handling & Edge Cases', () => {
@@ -596,22 +532,6 @@ describe('Witness Workflow Integration Tests', () => {
       }
     });
 
-    test.skip('should handle concurrent operations with same admin', async () => {
-      const submission1 = await createTestSubmission(testMember.id);
-      const submission2 = await createTestSubmission(testMember.id);
-			
-      // Same admin witnessing multiple submissions simultaneously
-      const promise1 = confirmWitness(submission1, admin1.id);
-      const promise2 = declineWitness(submission2, admin1.id);
-			
-      await Promise.all([promise1, promise2]);
-			
-      const sub1 = await getSubmissionDetails(submission1);
-      const sub2 = await getSubmissionDetails(submission2);
-			
-      assert.strictEqual(sub1.witness_verification_status, 'confirmed');
-      assert.strictEqual(sub2.witness_verification_status, 'declined');
-    });
   });
 
   describe('Real-world Workflow Scenarios', () => {
@@ -661,29 +581,5 @@ describe('Witness Workflow Integration Tests', () => {
       assert.strictEqual(sub3.witness_verification_status, 'declined');
     });
 
-    test.skip('should handle multiple admins in the system efficiently', async () => {
-      const submissions = await createMultipleSubmissions(15, testMember.id);
-			
-      // Distribute witnessing across admins
-      const promises = submissions.map((submissionId, index) => {
-        const adminId = [admin1.id, admin2.id, admin3.id][index % 3];
-        const operation = index % 4 === 0 ? declineWitness : confirmWitness;
-        return operation(submissionId, adminId);
-      });
-			
-      await Promise.all(promises);
-			
-      // Verify distribution worked correctly
-      const results = await Promise.all(
-        submissions.map(id => getSubmissionDetails(id))
-      );
-			
-      const confirmedCount = results.filter(r => r.witness_verification_status === 'confirmed').length;
-      const declinedCount = results.filter(r => r.witness_verification_status === 'declined').length;
-			
-      assert.strictEqual(confirmedCount + declinedCount, submissions.length);
-      assert.ok(declinedCount > 0); // Some should be declined
-      assert.ok(confirmedCount > 0); // Some should be confirmed
-    });
   });
 });
