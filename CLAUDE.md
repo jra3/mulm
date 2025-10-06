@@ -135,7 +135,7 @@ npm run script scripts/scriptname.ts
 
 ### Infrastructure
 - **Platform**: AWS EC2 (t3.micro) with 20GB EBS volume
-- **IP**: 54.87.111.167 (Elastic IP - eipalloc-030fa3f3db2993cfc)
+- **IP**: 98.91.62.199 (Elastic IP - eipalloc-01f29c26363e0465a)
 - **Data Volume**: vol-0aba5b85a1582b2c0 (8GB, persistent across all deployments)
 - **SSH**: Connect via `ssh BAP` (configured in ~/.ssh/config)
 - **Location**: `/opt/basny` (application code), `/mnt/basny-data` (persistent data)
