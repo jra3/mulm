@@ -15,11 +15,13 @@ mixin pageHeader(loggedIn, title, subtitle)
 			.flex.text-center.gap-2
 				h2.text-2xl.font-bold.p2= title
 				h3.text-2xl.p2(class="text-gray-500")= subtitle
-			.space-x-4
+			.space-x-4.flex.items-center
 				a.link(href="/") Home
 				a.link(href="/species") Species
 				if loggedIn
 					a.link(href="/me") Me
+				a.link(href="mailto:bap+bugs@basny.org" title="Report a bug") 🐛
+				if loggedIn
 					a.link(href="/account") ⚙️
 
 mixin footer()
