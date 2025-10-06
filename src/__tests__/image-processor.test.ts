@@ -1,3 +1,5 @@
+import { describe, test } from 'node:test';
+import assert from 'node:assert';
 import { processImage, validateImageBuffer, ImageValidationError, generatePreviewDataUrl } from '../utils/image-processor';
 import sharp from 'sharp';
 
@@ -24,94 +26,94 @@ describe('Image Processor', () => {
   };
 
   describe('validateImageBuffer', () => {
-    it('should accept valid JPEG images', async () => {
+    test('should accept valid JPEG images', async () => {
       const buffer = await createTestImage(800, 600, 'jpeg');
-      await expect(validateImageBuffer(buffer)).resolves.not.toThrow();
+      await assert.doesNotReject(async () => await validateImageBuffer(buffer));
     });
 
-    it('should accept valid PNG images', async () => {
+    test('should accept valid PNG images', async () => {
       const buffer = await createTestImage(800, 600, 'png');
-      await expect(validateImageBuffer(buffer)).resolves.not.toThrow();
+      await assert.doesNotReject(async () => await validateImageBuffer(buffer));
     });
 
-    it('should accept valid WebP images', async () => {
+    test('should accept valid WebP images', async () => {
       const buffer = await createTestImage(800, 600, 'webp');
-      await expect(validateImageBuffer(buffer)).resolves.not.toThrow();
+      await assert.doesNotReject(async () => await validateImageBuffer(buffer));
     });
 
-    it('should reject non-image buffers', async () => {
+    test('should reject non-image buffers', async () => {
       const buffer = createInvalidBuffer();
-      await expect(validateImageBuffer(buffer)).rejects.toThrow(ImageValidationError);
+      await assert.rejects(async () => await validateImageBuffer(buffer), ImageValidationError);
     });
 
-    it('should reject images that are too small', async () => {
+    test('should reject images that are too small', async () => {
       const buffer = await createTestImage(300, 300); // Below 400x400 minimum
-      await expect(validateImageBuffer(buffer)).rejects.toThrow('Image too small');
+      await assert.rejects(async () => await validateImageBuffer(buffer), /Image too small/);
     });
 
-    it('should reject images that are too large', async () => {
+    test('should reject images that are too large', async () => {
       const buffer = await createTestImage(5000, 5000); // Above 4000x4000 maximum
-      await expect(validateImageBuffer(buffer)).rejects.toThrow('Image too large');
+      await assert.rejects(async () => await validateImageBuffer(buffer), /Image too large/);
     });
   });
 
   describe('processImage', () => {
-    it('should process a valid image into three sizes', async () => {
+    test('should process a valid image into three sizes', async () => {
       const buffer = await createTestImage(1200, 900);
       const result = await processImage(buffer);
 
-      expect(result).toHaveProperty('original');
-      expect(result).toHaveProperty('medium');
-      expect(result).toHaveProperty('thumbnail');
-      expect(result).toHaveProperty('metadata');
+      assert.ok(result.original !== undefined);
+      assert.ok(result.medium !== undefined);
+      assert.ok(result.thumbnail !== undefined);
+      assert.ok(result.metadata !== undefined);
 
       // Check original is within max dimensions
-      expect(result.original.width).toBeLessThanOrEqual(2048);
-      expect(result.original.height).toBeLessThanOrEqual(2048);
+      assert.ok(result.original.width <= 2048);
+      assert.ok(result.original.height <= 2048);
 
       // Check medium size
-      expect(result.medium.width).toBeLessThanOrEqual(800);
+      assert.ok(result.medium.width <= 800);
 
       // Check thumbnail is square
-      expect(result.thumbnail.width).toBe(150);
-      expect(result.thumbnail.height).toBe(150);
+      assert.strictEqual(result.thumbnail.width, 150);
+      assert.strictEqual(result.thumbnail.height, 150);
 
       // Check metadata
-      expect(result.metadata.originalWidth).toBe(1200);
-      expect(result.metadata.originalHeight).toBe(900);
-      expect(result.metadata.processingTimeMs).toBeGreaterThan(0);
+      assert.strictEqual(result.metadata.originalWidth, 1200);
+      assert.strictEqual(result.metadata.originalHeight, 900);
+      assert.ok(result.metadata.processingTimeMs > 0);
     });
 
-    it('should not enlarge small images', async () => {
+    test('should not enlarge small images', async () => {
       const buffer = await createTestImage(600, 400);
       const result = await processImage(buffer);
 
       // Original should not be enlarged
-      expect(result.original.width).toBe(600);
-      expect(result.original.height).toBe(400);
+      assert.strictEqual(result.original.width, 600);
+      assert.strictEqual(result.original.height, 400);
 
       // Medium should not be enlarged beyond original
-      expect(result.medium.width).toBe(600);
-      expect(result.medium.height).toBe(400);
+      assert.strictEqual(result.medium.width, 600);
+      assert.strictEqual(result.medium.height, 400);
     });
 
-    it('should handle portrait orientation correctly', async () => {
+    test('should handle portrait orientation correctly', async () => {
       const buffer = await createTestImage(600, 1200);
       const result = await processImage(buffer);
 
       // Check aspect ratio is preserved
-      expect(result.medium.height).toBeGreaterThan(result.medium.width);
+      assert.ok(result.medium.height > result.medium.width);
     });
 
-    it('should handle landscape orientation correctly', async () => {
+    test('should handle landscape orientation correctly', async () => {
       const buffer = await createTestImage(1200, 600);
       const result = await processImage(buffer);
 
       // Check aspect ratio is preserved
-      expect(result.medium.width).toBeGreaterThan(result.medium.height);
+      assert.ok(result.medium.width > result.medium.height);
     });
 
-    it('should strip EXIF data', async () => {
+    test('should strip EXIF data', async () => {
       // Create an image with EXIF data
       const buffer = await sharp({
         create: {
@@ -136,46 +138,46 @@ describe('Image Processor', () => {
       
       // Check that EXIF data is removed
       const processedMetadata = await sharp(result.original.buffer).metadata();
-      expect(processedMetadata.exif).toBeUndefined();
+      assert.strictEqual(processedMetadata.exif, undefined);
     });
 
-    it('should produce WebP format when requested', async () => {
+    test('should produce WebP format when requested', async () => {
       const buffer = await createTestImage(800, 600);
       const result = await processImage(buffer, { preferWebP: true });
 
-      expect(result.original.format).toBe('webp');
-      expect(result.medium.format).toBe('webp');
-      expect(result.thumbnail.format).toBe('webp');
+      assert.strictEqual(result.original.format, 'webp');
+      assert.strictEqual(result.medium.format, 'webp');
+      assert.strictEqual(result.thumbnail.format, 'webp');
     });
 
-    it('should produce JPEG format by default', async () => {
+    test('should produce JPEG format by default', async () => {
       const buffer = await createTestImage(800, 600);
       const result = await processImage(buffer);
 
-      expect(result.original.format).toBe('jpeg');
-      expect(result.medium.format).toBe('jpeg');
-      expect(result.thumbnail.format).toBe('jpeg');
+      assert.strictEqual(result.original.format, 'jpeg');
+      assert.strictEqual(result.medium.format, 'jpeg');
+      assert.strictEqual(result.thumbnail.format, 'jpeg');
     });
 
-    it('should reject invalid images', async () => {
+    test('should reject invalid images', async () => {
       const buffer = createInvalidBuffer();
-      await expect(processImage(buffer)).rejects.toThrow(ImageValidationError);
+      await assert.rejects(async () => await processImage(buffer), ImageValidationError);
     });
   });
 
   describe('generatePreviewDataUrl', () => {
-    it('should generate a valid data URL', async () => {
+    test('should generate a valid data URL', async () => {
       const buffer = await createTestImage(800, 600);
       const dataUrl = await generatePreviewDataUrl(buffer);
 
-      expect(dataUrl).toMatch(/^data:image\/jpeg;base64,/);
+      assert.match(dataUrl, /^data:image\/jpeg;base64,/);
       
       // Check that it's a valid base64 string
       const base64Data = dataUrl.replace(/^data:image\/jpeg;base64,/, '');
-      expect(() => Buffer.from(base64Data, 'base64')).not.toThrow();
+      assert.doesNotThrow(() => Buffer.from(base64Data, 'base64'));
     });
 
-    it('should create a small preview', async () => {
+    test('should create a small preview', async () => {
       const buffer = await createTestImage(2000, 1500);
       const dataUrl = await generatePreviewDataUrl(buffer);
       
@@ -184,13 +186,13 @@ describe('Image Processor', () => {
       const previewBuffer = Buffer.from(base64Data, 'base64');
       const metadata = await sharp(previewBuffer).metadata();
       
-      expect(metadata.width).toBe(50);
-      expect(metadata.height).toBe(50);
+      assert.strictEqual(metadata.width, 50);
+      assert.strictEqual(metadata.height, 50);
     });
   });
 
   describe('Performance', () => {
-    it('should process images within reasonable time', async () => {
+    test('should process images within reasonable time', async () => {
       const buffer = await createTestImage(2000, 1500);
       const startTime = Date.now();
       
@@ -198,7 +200,7 @@ describe('Image Processor', () => {
       
       const processingTime = Date.now() - startTime;
       // Should process within 5 seconds (generous for CI environments)
-      expect(processingTime).toBeLessThan(5000);
+      assert.ok(processingTime < 5000);
     });
   });
 });

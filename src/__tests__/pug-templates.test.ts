@@ -1,3 +1,5 @@
+import { describe, test } from 'node:test';
+import assert from 'node:assert';
 import pug from 'pug';
 import path from 'path';
 import fs from 'fs';
@@ -285,182 +287,185 @@ describe('Pug Template Rendering', () => {
   });
 
   describe('Template Syntax Validation', () => {
-    test.each(renderableTemplates)('should compile %s without syntax errors', (templatePath) => {
-      expect(() => {
-        pug.compileFile(templatePath, {
-          basedir: viewsPath,
-          pretty: false
+    for (const templatePath of renderableTemplates) {
+      test(`should compile ${templatePath} without syntax errors`, () => {
+        assert.doesNotThrow(() => {
+          pug.compileFile(templatePath, {
+            basedir: viewsPath,
+            pretty: false
+          });
         });
-      }).not.toThrow();
-    });
+      });
+    }
   });
 
   describe('Template Rendering', () => {
-    test.each(renderableTemplates)('should render %s without runtime errors', (templatePath) => {
-      const relativePath = path.relative(viewsPath, templatePath);
-      
-      // Create template-specific mock data
-      const templateData = { ...baseMockData } as Record<string, unknown>;
-      
-      // Add specific data based on template path patterns
-      if (relativePath.includes('admin/')) {
-        templateData.isAdmin = true;
-      }
-      
-      if (relativePath.includes('email/')) {
-        templateData.isLoggedIn = false;
-      }
-      
-      if (relativePath.includes('account/')) {
-        templateData.user = templateData.viewer;
-      }
+    for (const templatePath of renderableTemplates) {
+      test(`should render ${templatePath} without runtime errors`, () => {
+        const relativePath = path.relative(viewsPath, templatePath);
 
-      // Comprehensive template-specific data injection
-      switch (relativePath) {
-        case 'bapForm/form.pug':
-        case 'submit.pug':
-          (templateData).formAction = '/submit';
-          break;
+        // Create template-specific mock data
+        const templateData = { ...baseMockData } as Record<string, unknown>;
 
-        case 'species/detail.pug':
-          (templateData).submissions = templateData.fishSubs;
-          (templateData).breeders = [
-            { id: 1, name: 'John Doe', count: 5 },
-            { id: 2, name: 'Jane Smith', count: 3 }
-          ];
-          break;
-
-        case 'species/explorer.pug':
-          (templateData).filters = {
-            species_type: '',
-            species_class: '',
-            search: ''
-          };
-          (templateData).filterOptions = {
-            species_types: ['Fish', 'Plant', 'Coral'], 
-            species_classes: ['Cichlid', 'Catfish', 'Livebearers']
-          };
-          (templateData).speciesList = templateData.fishSubs;
-          (templateData).pagination = {
-            currentPage: 1,
-            totalPages: 1,
-            hasNext: false,
-            hasPrev: false
-          };
-          break;
-
-        case 'submission/review.pug':
-          (templateData).photos = [];
-          (templateData).canWitness = true;
-          (templateData).canApprove = true;
-          break;
-
-        case 'admin/approvalPanel.pug':
-          (templateData).formData = templateData.form;
-          (templateData).name = {
-            canonical_genus: 'Apistogramma',
-            canonical_species: 'cacatuoides'
-          };
-          break;
-
-        case 'bapForm/loadTankList.pug':
-          (templateData).presets = [
-            {
-              preset_name: 'Community Tank',
-              tank_size: '55 gallon',
-              water_temp: '76°F'
-            },
-            {
-              preset_name: 'Breeding Tank',
-              tank_size: '20 gallon',
-              water_temp: '78°F'
-            }
-          ];
-          break;
-
-        case 'lifetime.pug':
-          (templateData).levels = [
-            ['Novice Breeders', [
-              { id: 1, display_name: 'John Doe', points: 25 },
-              { id: 2, display_name: 'Jane Smith', points: 15 }
-            ]],
-            ['Intermediate Breeders', [
-              { id: 3, display_name: 'Bob Johnson', points: 125 },
-              { id: 4, display_name: 'Alice Brown', points: 100 }
-            ]]
-          ];
-          break;
-
-        case 'email/onWitnessConfirmed.pug': {
-          (templateData).witness = {
-            display_name: faker.person.fullName()
-          };
-          (templateData).domain = 'https://example.com';
-          // Update submission to have witness data
-          const witnessSubmission = {
-            ...(templateData.submission as Record<string, unknown>),
-            reproduction_date: new Date().toISOString(),
-            witnessed_on: new Date().toISOString(),
-            species_class: 'Cichlid'
-          };
-          (templateData).submission = witnessSubmission;
-          break;
+        // Add specific data based on template path patterns
+        if (relativePath.includes('admin/')) {
+          templateData.isAdmin = true;
         }
 
-        case 'index.pug':
-          // Index already has comprehensive data
-          break;
+        if (relativePath.includes('email/')) {
+          templateData.isLoggedIn = false;
+        }
 
-        default:
-          // Apply any additional common data for unhandled templates
-          break;
-      }
+        if (relativePath.includes('account/')) {
+          templateData.user = templateData.viewer;
+        }
 
-      expect(() => {
-        const compiledTemplate = pug.compileFile(templatePath, {
-          basedir: viewsPath,
-          pretty: false,
-          filters: {
-            // Add any custom filters if needed
+        // Comprehensive template-specific data injection
+        switch (relativePath) {
+          case 'bapForm/form.pug':
+          case 'submit.pug':
+            (templateData).formAction = '/submit';
+            break;
+
+          case 'species/detail.pug':
+            (templateData).submissions = templateData.fishSubs;
+            (templateData).breeders = [
+              { id: 1, name: 'John Doe', count: 5 },
+              { id: 2, name: 'Jane Smith', count: 3 }
+            ];
+            break;
+
+          case 'species/explorer.pug':
+            (templateData).filters = {
+              species_type: '',
+              species_class: '',
+              search: ''
+            };
+            (templateData).filterOptions = {
+              species_types: ['Fish', 'Plant', 'Coral'],
+              species_classes: ['Cichlid', 'Catfish', 'Livebearers']
+            };
+            (templateData).speciesList = templateData.fishSubs;
+            (templateData).pagination = {
+              currentPage: 1,
+              totalPages: 1,
+              hasNext: false,
+              hasPrev: false
+            };
+            break;
+
+          case 'submission/review.pug':
+            (templateData).photos = [];
+            (templateData).canWitness = true;
+            (templateData).canApprove = true;
+            break;
+
+          case 'admin/approvalPanel.pug':
+            (templateData).formData = templateData.form;
+            (templateData).name = {
+              canonical_genus: 'Apistogramma',
+              canonical_species: 'cacatuoides'
+            };
+            break;
+
+          case 'bapForm/loadTankList.pug':
+            (templateData).presets = [
+              {
+                preset_name: 'Community Tank',
+                tank_size: '55 gallon',
+                water_temp: '76°F'
+              },
+              {
+                preset_name: 'Breeding Tank',
+                tank_size: '20 gallon',
+                water_temp: '78°F'
+              }
+            ];
+            break;
+
+          case 'lifetime.pug':
+            (templateData).levels = [
+              ['Novice Breeders', [
+                { id: 1, display_name: 'John Doe', points: 25 },
+                { id: 2, display_name: 'Jane Smith', points: 15 }
+              ]],
+              ['Intermediate Breeders', [
+                { id: 3, display_name: 'Bob Johnson', points: 125 },
+                { id: 4, display_name: 'Alice Brown', points: 100 }
+              ]]
+            ];
+            break;
+
+          case 'email/onWitnessConfirmed.pug': {
+            (templateData).witness = {
+              display_name: faker.person.fullName()
+            };
+            (templateData).domain = 'https://example.com';
+            // Update submission to have witness data
+            const witnessSubmission = {
+              ...(templateData.submission as Record<string, unknown>),
+              reproduction_date: new Date().toISOString(),
+              witnessed_on: new Date().toISOString(),
+              species_class: 'Cichlid'
+            };
+            (templateData).submission = witnessSubmission;
+            break;
           }
+
+          case 'index.pug':
+            // Index already has comprehensive data
+            break;
+
+          default:
+            // Apply any additional common data for unhandled templates
+            break;
+        }
+
+        assert.doesNotThrow(() => {
+          const compiledTemplate = pug.compileFile(templatePath, {
+            basedir: viewsPath,
+            pretty: false,
+            filters: {
+              // Add any custom filters if needed
+            }
+          });
+
+          const html = compiledTemplate(templateData);
+
+          // Basic validation that we got valid HTML
+          assert.ok(html);
+          assert.strictEqual(typeof html, 'string');
+          assert.ok(html.length > 0);
+
+          // Ensure no unescaped template variables remain
+          assert.ok(!(/#{[^}]+}/.test(html)));
+          assert.ok(!(/!{[^}]+}/.test(html)));
         });
-        
-        const html = compiledTemplate(templateData);
-        
-        // Basic validation that we got valid HTML
-        expect(html).toBeTruthy();
-        expect(typeof html).toBe('string');
-        expect(html.length).toBeGreaterThan(0);
-        
-        // Ensure no unescaped template variables remain
-        expect(html).not.toMatch(/#{[^}]+}/);
-        expect(html).not.toMatch(/!{[^}]+}/);
-        
-      }).not.toThrow();
-    });
+      });
+    }
   });
 
   describe('Template Include Dependencies', () => {
     test('all include statements should reference existing files', () => {
       const includePattern = /^\s*include\s+(.+\.pug)$/gm;
       const errors: string[] = [];
-      
+
       for (const templatePath of pugFiles) {
         const content = fs.readFileSync(templatePath, 'utf8');
         const relativePath = path.relative(viewsPath, templatePath);
         let match;
-        
+
         while ((match = includePattern.exec(content)) !== null) {
           const includePath = match[1];
           const absoluteIncludePath = path.resolve(path.dirname(templatePath), includePath);
-          
+
           if (!fs.existsSync(absoluteIncludePath)) {
             errors.push(`${relativePath}: include "${includePath}" not found`);
           }
         }
       }
-      
-      expect(errors).toEqual([]);
+
+      assert.deepStrictEqual(errors, []);
     });
   });
 
@@ -470,35 +475,35 @@ describe('Pug Template Rendering', () => {
       const definedMixins = new Set<string>();
       const usedMixins = new Set<string>();
       const mixinDefPattern = /^mixin\s+(\w+)/gm;
-      
+
       // First pass: collect all defined mixins
       for (const templatePath of pugFiles) {
         const content = fs.readFileSync(templatePath, 'utf8');
         let match;
-        
+
         while ((match = mixinDefPattern.exec(content)) !== null) {
           definedMixins.add(match[1]);
         }
       }
-      
+
       // Second pass: collect all used mixins
       for (const templatePath of pugFiles) {
         const content = fs.readFileSync(templatePath, 'utf8');
         let match;
-        
+
         while ((match = mixinPattern.exec(content)) !== null) {
           usedMixins.add(match[1]);
         }
       }
-      
+
       // Check that all used mixins are defined somewhere
       // Filter out external/third-party mixins that might be defined elsewhere
       const knownExternalMixins = new Set(['htmxTypeahead']);
-      const undefinedMixins = Array.from(usedMixins).filter(mixin => 
+      const undefinedMixins = Array.from(usedMixins).filter(mixin =>
         !definedMixins.has(mixin) && !knownExternalMixins.has(mixin)
       );
-      
-      expect(undefinedMixins).toEqual([]);
+
+      assert.deepStrictEqual(undefinedMixins, []);
     });
   });
 });

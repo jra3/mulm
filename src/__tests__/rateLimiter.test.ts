@@ -1,3 +1,5 @@
+import { describe, test, beforeEach } from 'node:test';
+import assert from 'node:assert';
 import express, { Request, Response } from 'express';
 import request from 'supertest';
 import rateLimit, { Options } from 'express-rate-limit';
@@ -22,7 +24,8 @@ describe('Rate Limiting Middleware', () => {
 
   beforeEach(() => {
     app = express();
-    
+    app.set('trust proxy', true); // Trust x-forwarded-for headers
+
     // Create fresh rate limiters for each test
     uploadRateLimiter = createTestRateLimiter({
       windowMs: 60 * 1000,
@@ -92,7 +95,11 @@ describe('Rate Limiting Middleware', () => {
     app.use((req: MulmRequest, res, next) => {
       // Simulate authenticated user for some tests
       if (req.headers['x-auth'] === 'true') {
-        req.viewer = { id: 1, display_name: 'Test User', contact_email: 'test@example.com' };
+        // Generate unique user ID based on IP to isolate rate limit counters
+        const forwardedFor = req.headers['x-forwarded-for'] as string;
+        const ip = forwardedFor || req.ip || '127.0.0.1';
+        const userId = parseInt(ip.split('.').join('').replace(/[^0-9]/g, '')) || 1;
+        req.viewer = { id: userId, display_name: 'Test User', contact_email: 'test@example.com' };
       }
       next();
     });
@@ -105,7 +112,7 @@ describe('Rate Limiting Middleware', () => {
       });
     });
 
-    it('should allow uploads within rate limit', async () => {
+    test('should allow uploads within rate limit', async () => {
       // First 10 requests should succeed
       for (let i = 0; i < 10; i++) {
         const response = await request(app)
@@ -113,11 +120,11 @@ describe('Rate Limiting Middleware', () => {
           .set('x-auth', 'true')
           .expect(200);
         
-        expect(response.body).toEqual({ success: true });
+        assert.deepStrictEqual(response.body, { success: true });
       }
     });
 
-    it('should block uploads exceeding rate limit', async () => {
+    test('should block uploads exceeding rate limit', async () => {
       // Make 10 successful requests
       for (let i = 0; i < 10; i++) {
         await request(app)
@@ -132,11 +139,11 @@ describe('Rate Limiting Middleware', () => {
         .set('x-auth', 'true')
         .expect(429);
 
-      expect((response.body as { error: string }).error).toBe('Too many upload requests');
-      expect((response.body as { message: string }).message).toContain('10 images per minute');
+      assert.strictEqual((response.body as { error: string }).error, 'Too many upload requests');
+      assert.ok((response.body as { message: string }).message.includes('10 images per minute'));
     });
 
-    it('should track rate limits per user', async () => {
+    test('should track rate limits per user', async () => {
       // User 1 makes 10 requests
       for (let i = 0; i < 10; i++) {
         await request(app)
@@ -168,7 +175,7 @@ describe('Rate Limiting Middleware', () => {
       });
     });
 
-    it('should allow 20 deletes per minute', async () => {
+    test('should allow 20 deletes per minute', async () => {
       // First 20 requests should succeed
       for (let i = 0; i < 20; i++) {
         const response = await request(app)
@@ -176,7 +183,7 @@ describe('Rate Limiting Middleware', () => {
           .set('x-auth', 'true')
           .expect(200);
         
-        expect(response.body).toEqual({ success: true });
+        assert.deepStrictEqual(response.body, { success: true });
       }
 
       // 21st request should be rate limited
@@ -185,7 +192,7 @@ describe('Rate Limiting Middleware', () => {
         .set('x-auth', 'true')
         .expect(429);
 
-      expect((response.body as { error: string }).error).toBe('Too many delete requests');
+      assert.strictEqual((response.body as { error: string }).error, 'Too many delete requests');
     });
   });
 
@@ -196,7 +203,7 @@ describe('Rate Limiting Middleware', () => {
       });
     });
 
-    it('should allow 60 progress checks per minute per upload', async () => {
+    test('should allow 60 progress checks per minute per upload', async () => {
       const uploadId = 'upload_123';
       
       // First 60 requests should succeed
@@ -205,8 +212,8 @@ describe('Rate Limiting Middleware', () => {
           .get(`/progress/${uploadId}`)
           .set('x-auth', 'true')
           .expect(200);
-        
-        expect((response.body as { uploadId: string }).uploadId).toBe(uploadId);
+
+        assert.strictEqual((response.body as { uploadId: string }).uploadId, uploadId);
       }
 
       // 61st request should be rate limited
@@ -216,7 +223,7 @@ describe('Rate Limiting Middleware', () => {
         .expect(429);
     });
 
-    it('should track progress limits per upload ID', async () => {
+    test('should track progress limits per upload ID', async () => {
       // Upload 1 can make 60 requests
       for (let i = 0; i < 60; i++) {
         await request(app)
@@ -240,29 +247,32 @@ describe('Rate Limiting Middleware', () => {
       });
     });
 
-    it('should limit unauthenticated users to 3 uploads', async () => {
+    test('should limit unauthenticated users to 3 uploads', async () => {
       // First 3 requests should succeed
       for (let i = 0; i < 3; i++) {
         await request(app)
           .post('/strict')
+          .set('x-forwarded-for', '8.8.8.8')
           .expect(200);
       }
 
       // 4th request should be rate limited
       const response = await request(app)
         .post('/strict')
+        .set('x-forwarded-for', '8.8.8.8')
         .expect(429);
 
-      expect((response.body as { error: string }).error).toBe('Too many requests');
-      expect((response.body as { message: string }).message).toContain('sign in');
+      assert.strictEqual((response.body as { error: string }).error, 'Too many requests');
+      assert.ok((response.body as { message: string }).message.includes('sign in'));
     });
 
-    it('should not limit authenticated users', async () => {
+    test('should not limit authenticated users', async () => {
       // Authenticated users can make more than 3 requests
       for (let i = 0; i < 10; i++) {
         await request(app)
           .post('/strict')
           .set('x-auth', 'true')
+          .set('x-forwarded-for', '5.5.5.5')
           .expect(200);
       }
     });
@@ -276,17 +286,19 @@ describe('Rate Limiting Middleware', () => {
       });
     });
 
-    it('should apply all rate limiters in order', async () => {
+    test('should apply all rate limiters in order', async () => {
       // Unauthenticated user hits strict limit first (3 requests)
       for (let i = 0; i < 3; i++) {
         await request(app)
           .post('/combined')
+          .set('x-forwarded-for', '9.9.9.9')
           .expect(200);
       }
 
       // 4th unauthenticated request should fail
       await request(app)
         .post('/combined')
+        .set('x-forwarded-for', '9.9.9.9')
         .expect(429);
 
       // Authenticated user can make 10 requests
@@ -294,7 +306,7 @@ describe('Rate Limiting Middleware', () => {
         await request(app)
           .post('/combined')
           .set('x-auth', 'true')
-          .set('x-forwarded-for', '3.3.3.3')
+          .set('x-forwarded-for', '4.4.4.4')
           .expect(200);
       }
 
@@ -302,7 +314,7 @@ describe('Rate Limiting Middleware', () => {
       await request(app)
         .post('/combined')
         .set('x-auth', 'true')
-        .set('x-forwarded-for', '3.3.3.3')
+        .set('x-forwarded-for', '4.4.4.4')
         .expect(429);
     });
   });
@@ -314,32 +326,35 @@ describe('Rate Limiting Middleware', () => {
       });
     });
 
-    it('should include rate limit headers', async () => {
+    test('should include rate limit headers', async () => {
       const response = await request(app)
         .post('/headers')
         .set('x-auth', 'true')
+        .set('x-forwarded-for', '6.6.6.6')
         .expect(200);
 
-      expect(response.headers['x-ratelimit-limit']).toBe('10');
-      expect(response.headers['x-ratelimit-remaining']).toBeDefined();
-      expect(response.headers['x-ratelimit-reset']).toBeDefined();
+      assert.strictEqual(response.headers['x-ratelimit-limit'], '10');
+      assert.ok(response.headers['x-ratelimit-remaining'] !== undefined);
+      assert.ok(response.headers['x-ratelimit-reset'] !== undefined);
     });
 
-    it('should include retry-after header when rate limited', async () => {
+    test('should include retry-after header when rate limited', async () => {
       // Exhaust rate limit
       for (let i = 0; i < 10; i++) {
         await request(app)
           .post('/headers')
-          .set('x-auth', 'true');
+          .set('x-auth', 'true')
+          .set('x-forwarded-for', '7.7.7.7');
       }
 
       const response = await request(app)
         .post('/headers')
         .set('x-auth', 'true')
+        .set('x-forwarded-for', '7.7.7.7')
         .expect(429);
 
-      expect(response.headers['retry-after']).toBeDefined();
-      expect((response.body as { retryAfter?: string }).retryAfter).toBeDefined();
+      assert.ok(response.headers['retry-after'] !== undefined);
+      assert.ok((response.body as { retryAfter?: string }).retryAfter !== undefined);
     });
   });
 });
