@@ -135,12 +135,14 @@ npm run script scripts/scriptname.ts
 
 ### Infrastructure
 - **Platform**: AWS EC2 (t3.micro) with 20GB EBS volume
-- **IP**: 54.87.111.167 (Elastic IP)
+- **IP**: 54.87.111.167 (Elastic IP - eipalloc-030fa3f3db2993cfc)
+- **Data Volume**: vol-0aba5b85a1582b2c0 (8GB, persistent across all deployments)
 - **SSH**: Connect via `ssh BAP` (configured in ~/.ssh/config)
 - **Location**: `/opt/basny` (application code), `/mnt/basny-data` (persistent data)
 - **CDK Stack**: Infrastructure defined in `infrastructure/` directory
   - Deploy: `cd infrastructure && npm run cdk deploy`
   - SSH key stored in AWS Systems Manager Parameter Store
+  - ⚠️ **IMPORTANT**: EBS volume and Elastic IP are pinned in CDK code and will NEVER be replaced
 
 ### Docker Containers
 Production runs three containers via `docker-compose.prod.yml`:
