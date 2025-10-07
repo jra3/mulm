@@ -24,7 +24,7 @@ import { validateFormResult } from "@/forms/utils";
 import { getBodyParam } from "@/utils/request";
 import { sendResetEmail } from "@/notifications";
 import { getGoogleUser, translateGoogleOAuthCode } from "@/oauth";
-import { createUserSession, destroyUserSession, MulmRequest, validateAndConsumeOAuthState } from "@/sessions";
+import { regenerateSession, destroyUserSession, MulmRequest, validateAndConsumeOAuthState } from "@/sessions";
 import { Response } from "express";
 import { logger } from "@/utils/logger";
 
@@ -50,7 +50,7 @@ export const signup = async (req: MulmRequest, res: Response) => {
     const memberId = await createMember(body.email, body.display_name, {
       password: body.password,
     });
-    await createUserSession(req, res, memberId);
+    await regenerateSession(req, res, memberId);
     res.set("HX-redirect", "/").send();
   } catch (e: unknown) {
     console.error(e);
@@ -65,7 +65,7 @@ export const passwordLogin = async (req: MulmRequest, res: Response) => {
   if (member != undefined) {
     const pass = await getMemberPassword(member.id);
     if (await checkPassword(pass, data.password)) {
-      await createUserSession(req, res, member.id);
+      await regenerateSession(req, res, member.id);
       res.set("HX-Redirect", "/").send();
       return;
     }
@@ -177,7 +177,7 @@ export const resetPassword = async (req: MulmRequest, res: Response) => {
           deleteAuthCode(codeEntry.code),
           createOrUpdatePassword(member.id, passwordEntry),
         ]);
-        await createUserSession(req, res, member.id);
+        await regenerateSession(req, res, member.id);
         res.set("HX-redirect", "/").send();
         return;
       } catch (e: unknown) {
@@ -266,6 +266,6 @@ export const googleOAuth = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  await createUserSession(req, res, memberId);
+  await regenerateSession(req, res, memberId);
   res.redirect("/");
 };

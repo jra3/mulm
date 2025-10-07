@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { writeConn, query } from "./db/conn";
 import { generateRandomCode } from "./auth";
+import { regenerateSessionInDB, setOAuthState as setOAuthStateInDB, getAndClearOAuthState } from "./db/sessions";
 
 export const generateSessionCookie = () => generateRandomCode(64)
 
@@ -45,31 +46,30 @@ async function getLoggedInUser(token: string) {
 			`, [token, now])).pop();
 }
 
-export async function createUserSession(req: Request, res: Response, memberId: number) {
-  const cookieValue = generateSessionCookie();
-  try {
-    const conn = writeConn;
-    const expiry = new Date(Date.now() + (180 * 86400 * 1000));
-    const insertStmt = await conn.prepare(`
-			INSERT INTO sessions (session_id, member_id, expires_on) VALUES (?, ?, ?);
-		`);
-    try {
-      await insertStmt.run(cookieValue, memberId, expiry.toISOString());
-    } finally {
-      await insertStmt.finalize();
-    }
-  } catch (err) {
-    console.error(err);
-    throw new Error("Failed to get member");
-  }
+/**
+ * Regenerate session ID to prevent session fixation attacks
+ * Called after authentication events (login, signup, OAuth, password reset)
+ *
+ * This is critical for security - it ensures an attacker can't pre-set
+ * a session cookie and then have it authenticated when the victim logs in.
+ */
+export async function regenerateSession(req: Request, res: Response, memberId: number): Promise<void> {
+  const oldSessionId = String(req.cookies.session_id);
+  const newSessionId = generateSessionCookie();
+  const expiry = new Date(Date.now() + (180 * 86400 * 1000)).toISOString();
 
-  res.cookie('session_id', cookieValue, {
+  // Delete old session and create new one atomically
+  await regenerateSessionInDB(oldSessionId, newSessionId, memberId, expiry);
+
+  // Set new cookie
+  res.cookie('session_id', newSessionId, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production', // HTTPS only in production
-    sameSite: 'lax', // CSRF protection while allowing normal navigation from external sites
-    maxAge: 180 * 86400 * 1000, // 180 days
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 180 * 86400 * 1000,
   });
 }
+
 
 export async function destroyUserSession(req: MulmRequest, res: Response) {
   res.cookie('session_id', null);
@@ -94,18 +94,7 @@ export async function destroyUserSession(req: MulmRequest, res: Response) {
  * Store OAuth state parameter in session for CSRF protection
  */
 export async function setOAuthState(sessionId: string, state: string): Promise<void> {
-  try {
-    const conn = writeConn;
-    const stmt = await conn.prepare('UPDATE sessions SET oauth_state = ? WHERE session_id = ?');
-    try {
-      await stmt.run(state, sessionId);
-    } finally {
-      await stmt.finalize();
-    }
-  } catch (err) {
-    console.error(err);
-    throw new Error("Failed to set OAuth state");
-  }
+  await setOAuthStateInDB(sessionId, state);
 }
 
 /**
@@ -114,35 +103,6 @@ export async function setOAuthState(sessionId: string, state: string): Promise<v
  * State is one-time use and cleared after validation
  */
 export async function validateAndConsumeOAuthState(sessionId: string, state: string): Promise<boolean> {
-  try {
-    const conn = writeConn;
-
-    // Get current state
-    const selectStmt = await conn.prepare('SELECT oauth_state FROM sessions WHERE session_id = ?');
-    let storedState: string | null = null;
-    try {
-      const result = await selectStmt.get<{ oauth_state: string | null }>(sessionId);
-      storedState = result?.oauth_state || null;
-    } finally {
-      await selectStmt.finalize();
-    }
-
-    // Validate state
-    if (!storedState || storedState !== state) {
-      return false;
-    }
-
-    // Clear state (one-time use)
-    const updateStmt = await conn.prepare('UPDATE sessions SET oauth_state = NULL WHERE session_id = ?');
-    try {
-      await updateStmt.run(sessionId);
-    } finally {
-      await updateStmt.finalize();
-    }
-
-    return true;
-  } catch (err) {
-    console.error(err);
-    return false;
-  }
+  const storedState = await getAndClearOAuthState(sessionId);
+  return storedState === state;
 }
