@@ -9,6 +9,7 @@ import * as db from "@/db/submissions";
 import { getCanonicalSpeciesName, recordName } from "@/db/species";
 import { getWaitingPeriodStatus } from "@/utils/waitingPeriod";
 import { getNotesForSubmission } from "@/db/submission_notes";
+import { formatShortDate } from "@/utils/dateFormat";
 
 export const renderSubmissionForm = (req: MulmRequest, res: Response) => {
   const { viewer } = req;
@@ -45,14 +46,6 @@ export const view = async (req: MulmRequest, res: Response) => {
     return;
   }
   const { viewer } = req;
-
-  const local = (time?: string | null) => {
-    if (!time) {
-      return undefined;
-    }
-    const date = new Date(time);
-    return date.toLocaleDateString();
-  }
 
   const parseStringArray = (jsonString: string): string[] => {
     try {
@@ -137,13 +130,13 @@ export const view = async (req: MulmRequest, res: Response) => {
   res.render('submission/review', {
     submission: {
       ...submission,
-      reproduction_date: local(submission.reproduction_date),
-      submitted_on: local(submission.submitted_on),
-      witnessed_on: local(submission.witnessed_on),
-      approved_on: local(submission.approved_on),
+      reproduction_date: formatShortDate(submission.reproduction_date),
+      submitted_on: formatShortDate(submission.submitted_on),
+      witnessed_on: formatShortDate(submission.witnessed_on),
+      approved_on: formatShortDate(submission.approved_on),
       approved_by: approver?.display_name,
-      witnessed: witness && submission.witnessed_on ? `${witness.display_name} - ${local(submission.witnessed_on)}` : undefined,
-      approved: approver && submission.approved_on ? `${approver.display_name} - ${local(submission.approved_on)}` : undefined,
+      witnessed: witness && submission.witnessed_on ? `${witness.display_name} - ${formatShortDate(submission.witnessed_on)}` : undefined,
+      approved: approver && submission.approved_on ? `${approver.display_name} - ${formatShortDate(submission.approved_on)}` : undefined,
 
       foods: parseStringArray(submission.foods).join(","),
       spawn_locations: parseStringArray(submission.spawn_locations).join(","),
