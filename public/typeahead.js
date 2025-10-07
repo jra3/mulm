@@ -3,6 +3,8 @@ function getTypeaheadConfig(element) {
 		apiUrl: element.dataset.apiUrl,
 		linkedField: element.dataset.linkedField,
 		linkedValueField: element.dataset.linkedValueField,
+		hiddenIdField: element.dataset.hiddenIdField,
+		hiddenIdValueField: element.dataset.hiddenIdValueField,
 		valueField: element.dataset.valueField || 'value',
 		labelField: element.dataset.labelField || 'text',
 		searchFields: element.dataset.searchFields ? element.dataset.searchFields.split(',') : ['text'],
@@ -65,6 +67,17 @@ function buildTomSelectOptions(element, config) {
 						}
 						// Set the value
 						linkedInstance.setValue(linkedValue, false);
+					}
+				}
+			}
+
+			// Populate hidden ID field if configured
+			if (config.hiddenIdField && config.hiddenIdValueField && selectedOption) {
+				const hiddenElement = document.getElementById(config.hiddenIdField);
+				if (hiddenElement) {
+					const hiddenValue = selectedOption[config.hiddenIdValueField];
+					if (hiddenValue !== undefined && hiddenValue !== null) {
+						hiddenElement.value = hiddenValue;
 					}
 				}
 			}

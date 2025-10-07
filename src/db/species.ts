@@ -205,27 +205,64 @@ function buildSpeciesSearchQuery(
 }
 
 /**
- * Search species for typeahead/autocomplete with database-level limiting
- * Optimized for fast response times with minimal data transfer
+ * Search species names for typeahead/autocomplete
+ * Returns individual name records (not grouped) with name_id for foreign key reference
  */
 export async function searchSpeciesTypeahead(
   searchQuery: string,
   filters: Omit<SpeciesFilters, 'search' | 'sort'> = {},
   limit: number = 10
-): Promise<SpeciesExplorerItem[]> {
+): Promise<Array<{
+  name_id: number;
+  group_id: number;
+  common_name: string;
+  scientific_name: string;
+  program_class: string;
+  canonical_genus: string;
+  canonical_species_name: string;
+}>> {
   if (!searchQuery || searchQuery.trim().length < 2) {
     return [];
   }
 
-  const { sql, params } = buildSpeciesSearchQuery(
-    searchQuery,
-    filters.species_type,
-    filters.species_class,
-    'reports', // Default sort for typeahead
-    limit
-  );
+  const searchPattern = `%${searchQuery.trim().toLowerCase()}%`;
+  const conditions: string[] = ['1=1'];
+  const params: unknown[] = [];
 
-  return query<SpeciesExplorerItem>(sql, params);
+  if (filters.species_type) {
+    conditions.push('AND sng.program_class = ?');
+    params.push(filters.species_type);
+  }
+
+  if (filters.species_class) {
+    // Note: species_class filter would need to be stored somewhere to work here
+    // For now, we filter by program_class (species_type) only
+  }
+
+  conditions.push(`AND (
+    LOWER(sn.common_name) LIKE ? OR
+    LOWER(sn.scientific_name) LIKE ?
+  )`);
+  params.push(searchPattern, searchPattern);
+  params.push(limit);
+
+  const sql = `
+    SELECT
+      sn.name_id,
+      sn.group_id,
+      sn.common_name,
+      sn.scientific_name,
+      sng.program_class,
+      sng.canonical_genus,
+      sng.canonical_species_name
+    FROM species_name sn
+    JOIN species_name_group sng ON sn.group_id = sng.group_id
+    WHERE ${conditions.join(' ')}
+    ORDER BY sn.common_name, sn.scientific_name
+    LIMIT ?
+  `;
+
+  return query(sql, params);
 }
 
 export async function getSpeciesForExplorer(filters: SpeciesFilters = {}): Promise<SpeciesExplorerItem[]> {

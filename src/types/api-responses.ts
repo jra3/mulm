@@ -21,6 +21,8 @@ export interface SpeciesTypeaheadItem {
   program_class: string;
   /** Numeric group ID */
   group_id: number;
+  /** Specific name ID for foreign key reference */
+  name_id: number;
 }
 
 /**

@@ -6,7 +6,7 @@ import { MulmRequest } from "@/sessions";
 import { MemberRecord, getMember, getMemberByEmail } from "@/db/members";
 import { onSubmissionSend } from "@/notifications";
 import * as db from "@/db/submissions";
-import { getCanonicalSpeciesName } from "@/db/species";
+import { getCanonicalSpeciesName, recordName } from "@/db/species";
 import { getWaitingPeriodStatus } from "@/utils/waitingPeriod";
 import { getNotesForSubmission } from "@/db/submission_notes";
 
@@ -251,6 +251,25 @@ export const create = async (req: MulmRequest, res: Response) => {
 
   const memberId = member.id;
 
+  // Ensure species_name_id is set and validate it matches the expected program class
+  if (form.species_name_id) {
+    // Validate that the species_name_id references a species with matching program_class
+    const canonical = await getCanonicalSpeciesName(form.species_name_id);
+    if (!canonical || canonical.program_class !== form.species_type) {
+      res.status(400).send("Species name does not match selected species type");
+      return;
+    }
+  } else if (form.species_common_name && form.species_latin_name) {
+    // Create or find the species name record
+    const nameId = await recordName({
+      program_class: form.species_type!,
+      canonical_genus: form.species_latin_name.split(' ')[0],
+      canonical_species_name: form.species_latin_name.split(' ').slice(1).join(' ') || 'sp.',
+      common_name: form.species_common_name,
+      latin_name: form.species_latin_name,
+    });
+    form.species_name_id = nameId;
+  }
 
   // TODO figure out how to avoid read after write
   const subId = await db.createSubmission(memberId, form, !draft);
@@ -322,6 +341,26 @@ export const update = async (req: MulmRequest, res: Response) => {
       isAdmin: Boolean(viewer.is_admin),
     });
     return;
+  }
+
+  // Ensure species_name_id is set and validate it matches the expected program class
+  if (form.species_name_id) {
+    // Validate that the species_name_id references a species with matching program_class
+    const canonical = await getCanonicalSpeciesName(form.species_name_id);
+    if (!canonical || canonical.program_class !== form.species_type) {
+      res.status(400).send("Species name does not match selected species type");
+      return;
+    }
+  } else if (form.species_common_name && form.species_latin_name) {
+    // Create or find the species name record
+    const nameId = await recordName({
+      program_class: form.species_type!,
+      canonical_genus: form.species_latin_name.split(' ')[0],
+      canonical_species_name: form.species_latin_name.split(' ').slice(1).join(' ') || 'sp.',
+      common_name: form.species_common_name,
+      latin_name: form.species_latin_name,
+    });
+    form.species_name_id = nameId;
   }
 
   // TODO fix silly serial queries at some point
