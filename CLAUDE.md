@@ -264,6 +264,11 @@ npm run script scripts/scriptname.ts
 
 ## Production Deployment
 
+**📖 Full Documentation**: See [GitHub Wiki](https://github.com/jra3/mulm/wiki) for comprehensive guides:
+- [Production Deployment](https://github.com/jra3/mulm/wiki/Production-Deployment) - Deployment procedures, troubleshooting, rollback
+- [Infrastructure Guide](https://github.com/jra3/mulm/wiki/Infrastructure-Guide) - AWS resources, CDK deployment, recovery procedures
+- [Security Overview](https://github.com/jra3/mulm/wiki/Security-Overview) - Security posture and tracking
+
 ### ⚠️ CRITICAL RESOURCES - DO NOT DELETE ⚠️
 
 **IMPORTANT**: The following production resources contain live data and are protected:
@@ -289,10 +294,13 @@ npm run script scripts/scriptname.ts
 **Data Loss Prevention**:
 - Stack has termination protection enabled (prevents `cdk destroy`)
 - UserData script checks for existing data before formatting volumes
-- See `infrastructure/CRITICAL_RESOURCES.md` for recovery procedures and backup strategy
+- Five layers of protection: Visual identification, CDK deletion policies, stack termination protection, UserData safety checks, documentation
+
+**⚠️ Data Loss History**:
+On October 6, 2025, the production EBS volume was accidentally formatted due to a race condition in the UserData script. This resulted in complete loss of production database, SSL certificates, and production config. **Lesson**: Always test infrastructure changes with detached volumes first.
 
 **Before ANY infrastructure changes**:
-1. Create EBS snapshot: `aws --profile basny ec2 create-snapshot --volume-id vol-0aba5b85a1582b2c0`
+1. Create EBS snapshot: `aws --profile basny ec2 create-snapshot --volume-id vol-0aba5b85a1582b2c0 --description "Pre-deployment backup $(date +%Y%m%d-%H%M%S)" --tag-specifications 'ResourceType=snapshot,Tags=[{Key=Name,Value=BASNY-PreDeployment-Backup},{Key=DoNotDelete,Value=true}]'`
 2. Create database backup: `ssh BAP "sqlite3 /mnt/basny-data/app/database/database.db '.backup /tmp/backup.db'"`
 3. Test changes on separate stack, NEVER with production volume attached
 
@@ -332,28 +340,107 @@ All persistent data lives on EBS volume at `/mnt/basny-data/`:
 - App runs as UID 1001 (nodejs user), so files must be readable by this user
 
 ### Deployment Commands
+
+#### Standard Deployment
 ```bash
-# Deploy latest code
+# Deploy latest code from main branch
 ssh BAP "cd /opt/basny && git pull && sudo docker-compose -f docker-compose.prod.yml up -d --build"
 
 # Deploy with local changes (resets uncommitted changes on server)
 ssh BAP "cd /opt/basny && git reset --hard && git pull && sudo docker-compose -f docker-compose.prod.yml up -d --build"
 
+# Verify deployment
+ssh BAP "sudo docker ps"  # Check container status
+ssh BAP "sudo docker logs basny-app --tail 50"  # View app logs
+curl https://bap.basny.org/health  # Test health endpoint
+```
+
+#### Common Operations
+```bash
 # View logs
-ssh BAP "sudo docker logs basny-app --tail 50"
+ssh BAP "sudo docker logs basny-app --tail 100 -f"  # Application logs
+ssh BAP "sudo docker logs basny-nginx --tail 100 -f"  # Nginx logs
+ssh BAP "cd /opt/basny && sudo docker-compose -f docker-compose.prod.yml logs --tail 100 -f"  # All logs
 
-# Restart containers
-ssh BAP "cd /opt/basny && sudo docker-compose -f docker-compose.prod.yml restart"
+# Restart services
+ssh BAP "cd /opt/basny && sudo docker-compose -f docker-compose.prod.yml restart"  # All services
+ssh BAP "cd /opt/basny && sudo docker-compose -f docker-compose.prod.yml restart app"  # App only
+ssh BAP "cd /opt/basny && sudo docker-compose -f docker-compose.prod.yml restart nginx"  # Nginx only
 
-# Restart specific container
-ssh BAP "cd /opt/basny && sudo docker-compose -f docker-compose.prod.yml restart nginx"
+# Database operations
+ssh BAP "sqlite3 /mnt/basny-data/app/database/database.db '.backup /tmp/backup_$(date +%Y%m%d_%H%M%S).db'"  # Backup
+scp BAP:/tmp/backup_*.db ./backups/  # Download backup
+ssh BAP "sqlite3 /mnt/basny-data/app/database/database.db 'SELECT COUNT(*) FROM members;'"  # Query
+ssh BAP "sqlite3 /mnt/basny-data/app/database/database.db 'PRAGMA integrity_check;'"  # Check integrity
 
-# Database backup
-ssh BAP "sqlite3 /mnt/basny-data/app/database/database.db '.backup /tmp/backup.db'"
+# Update configuration
+ssh BAP "sudo nano /mnt/basny-data/app/config/config.production.json"  # Edit config
+ssh BAP "ls -la /mnt/basny-data/app/config/config.production.json"  # Check permissions (should be -rw------- 1001:65533)
+ssh BAP "cd /opt/basny && sudo docker-compose -f docker-compose.prod.yml restart app"  # Restart after config change
 
 # Fix file permissions if needed
 ssh BAP "sudo chown 1001:65533 /mnt/basny-data/app/config/config.production.json && sudo chmod 600 /mnt/basny-data/app/config/config.production.json"
 ssh BAP "sudo chown 1001:65533 /mnt/basny-data/app/database/database.db && sudo chmod 644 /mnt/basny-data/app/database/database.db"
+```
+
+#### Monitoring & Health Checks
+```bash
+# Application health
+curl https://bap.basny.org/health  # Should return: {"status":"healthy","timestamp":"..."}
+
+# Container health
+ssh BAP "sudo docker ps --format 'table {{.Names}}\t{{.Status}}'"
+
+# Resource usage
+ssh BAP "df -h /mnt/basny-data"  # Disk usage
+ssh BAP "free -h"  # Memory usage
+ssh BAP "top -bn1 | head -20"  # CPU usage
+```
+
+#### Troubleshooting
+```bash
+# Container issues
+ssh BAP "cd /opt/basny && sudo docker-compose -f docker-compose.prod.yml logs"  # View all logs
+ssh BAP "sudo docker ps -a"  # Check all containers including stopped
+ssh BAP "sudo docker restart basny-app"  # Restart stuck container
+ssh BAP "cd /opt/basny && sudo docker-compose -f docker-compose.prod.yml down && sudo docker-compose -f docker-compose.prod.yml up -d --build"  # Rebuild from scratch
+
+# Build issues
+ssh BAP "sudo docker builder prune -a"  # Clean build cache
+ssh BAP "sudo docker system df"  # Check disk usage
+ssh BAP "sudo docker image prune -a"  # Remove old images
+
+# Database issues
+ssh BAP "sqlite3 /mnt/basny-data/app/database/database.db 'PRAGMA integrity_check;'"  # Check integrity
+ssh BAP "sqlite3 /mnt/basny-data/app/database/database.db 'VACUUM;'"  # Compact database
+ssh BAP "ls -lh /mnt/basny-data/app/database/database.db"  # Check size
+
+# Disk space issues
+ssh BAP "du -h --max-depth=1 /mnt/basny-data/ | sort -hr"  # Find large directories
+ssh BAP "sudo docker system prune -a --volumes"  # Clean Docker resources (⚠️ removes unused containers/images/networks)
+ssh BAP "find /mnt/basny-data/nginx/logs -type f -size +100M -ls"  # Find large log files
+```
+
+#### Rollback Procedure
+```bash
+# 1. View recent commits
+ssh BAP "cd /opt/basny && git log --oneline -10"
+
+# 2. Revert to specific commit
+ssh BAP "cd /opt/basny && git reset --hard <commit-hash>"
+# Or revert to previous commit: ssh BAP "cd /opt/basny && git reset --hard HEAD~1"
+
+# 3. Rebuild previous version
+ssh BAP "cd /opt/basny && sudo docker-compose -f docker-compose.prod.yml up -d --build"
+
+# 4. Restore database if needed (list backups first)
+ssh BAP "ls -lh /tmp/backup_*.db"
+ssh BAP "sqlite3 /mnt/basny-data/app/database/database.db '.restore /tmp/backup_YYYYMMDD_HHMMSS.db'"
+ssh BAP "cd /opt/basny && sudo docker-compose -f docker-compose.prod.yml restart app"
+
+# 5. Verify rollback
+curl https://bap.basny.org/health
+ssh BAP "cd /opt/basny && git log --oneline -1"  # Check current commit
 ```
 
 ## Configuration Management
@@ -444,3 +531,246 @@ ssh BAP "sudo docker exec basny-certbot certbot renew"
 # Test renewal process
 ssh BAP "sudo docker exec basny-certbot certbot renew --dry-run"
 ```
+
+## Recovery Procedures
+
+### If Database is Lost
+
+1. **Locate most recent backup**:
+```bash
+ssh BAP
+ls -lah /tmp/*.sqlite /tmp/*.db  # Check local backups
+ls -lah ~/backups/*.sqlite ~/backups/*.db  # Check manual backups
+```
+
+2. **Restore database**:
+```bash
+# Stop application
+cd /opt/basny
+sudo docker-compose -f docker-compose.prod.yml down
+
+# Copy backup to data volume
+sudo cp /path/to/backup.sqlite /mnt/basny-data/app/database/database.db
+
+# Fix permissions (CRITICAL - must be owned by nodejs user UID 1001)
+sudo chown 1001:65533 /mnt/basny-data/app/database/database.db
+sudo chmod 644 /mnt/basny-data/app/database/database.db
+
+# Restart application
+sudo docker-compose -f docker-compose.prod.yml up -d
+```
+
+3. **Verify data integrity**:
+```bash
+sqlite3 /mnt/basny-data/app/database/database.db "PRAGMA integrity_check;"
+```
+
+### If Config is Lost
+
+1. **Restore config**:
+```bash
+# Copy config to data volume (from backup or password manager)
+sudo cp /tmp/config.production.json /mnt/basny-data/app/config/config.production.json
+
+# Fix permissions (CRITICAL - must be 600 owner-only)
+sudo chown 1001:65533 /mnt/basny-data/app/config/config.production.json
+sudo chmod 600 /mnt/basny-data/app/config/config.production.json
+
+# Restart application
+cd /opt/basny
+sudo docker-compose -f docker-compose.prod.yml restart
+```
+
+### If SSL Certificates are Lost
+
+1. **Verify DNS is pointing to current IP**:
+```bash
+dig bap.basny.org +short  # Should return: 98.91.62.199
+```
+
+2. **Re-issue SSL certificates** (after DNS propagates):
+```bash
+cd /opt/basny
+sudo ./scripts/init-letsencrypt.sh
+```
+
+### If Entire Volume is Lost
+
+**Prevention** (ALWAYS do before infrastructure changes):
+```bash
+aws --profile basny ec2 create-snapshot \
+  --volume-id vol-0aba5b85a1582b2c0 \
+  --description "Pre-deployment backup $(date +%Y%m%d-%H%M%S)" \
+  --tag-specifications 'ResourceType=snapshot,Tags=[{Key=Name,Value=BASNY-PreDeployment-Backup},{Key=DoNotDelete,Value=true}]'
+```
+
+**Recovery** (if snapshot exists):
+1. Create new volume from snapshot:
+```bash
+aws --profile basny ec2 create-volume \
+  --snapshot-id snap-XXXXXXXXX \
+  --availability-zone us-east-1a \
+  --volume-type gp3 \
+  --tag-specifications 'ResourceType=volume,Tags=[{Key=Name,Value=BASNY-Data-Restored},{Key=DoNotDelete,Value=true}]'
+```
+
+2. Update SSM parameter:
+```bash
+aws --profile basny ssm put-parameter \
+  --name /basny/production/data-volume-id \
+  --value vol-NEW_VOLUME_ID \
+  --overwrite
+```
+
+3. Redeploy CDK stack:
+```bash
+cd infrastructure
+npm run cdk deploy -- --profile basny
+```
+
+4. Verify data integrity:
+```bash
+ssh BAP
+ls -la /mnt/basny-data/app/
+sqlite3 /mnt/basny-data/app/database/database.db "PRAGMA integrity_check;"
+```
+
+## Infrastructure Deployment
+
+### Initial CDK Deployment
+
+**Prerequisites**:
+- AWS CLI configured with basny profile: `aws configure --profile basny`
+- AWS CDK CLI installed: `npm install -g aws-cdk`
+- Infrastructure dependencies: `cd infrastructure && npm install`
+
+**First-time deployment**:
+```bash
+# 1. Bootstrap CDK (creates toolkit stack: S3, ECR, IAM)
+cd infrastructure
+npm run cdk bootstrap -- --profile basny
+
+# 2. Build and deploy
+npm run build
+npm run cdk deploy -- --profile basny
+```
+
+**Outputs after deployment**:
+- InstanceId: EC2 instance identifier
+- PublicIP: Elastic IP address (98.91.62.199)
+- SSHCommand: Command to SSH into instance
+- KeyPairId: ID of the SSH key pair
+
+**Retrieve SSH key**:
+```bash
+cd infrastructure
+./scripts/get-private-key.sh  # Saves to ~/.ssh/basny-ec2-keypair.pem with 400 permissions
+```
+
+### CDK Redeployment
+
+When updating infrastructure (instance type, security groups, etc.):
+
+```bash
+# 1. Create snapshot FIRST (CRITICAL)
+aws --profile basny ec2 create-snapshot \
+  --volume-id vol-0aba5b85a1582b2c0 \
+  --description "Pre-deployment backup $(date +%Y%m%d-%H%M%S)"
+
+# 2. Build CDK stack
+cd infrastructure
+npm run build
+
+# 3. Preview changes
+npm run cdk diff -- --profile basny
+# Review: EC2 instance may be REPLACED, but EBS volume and Elastic IP will remain UNCHANGED
+
+# 4. Deploy
+npm run cdk deploy -- --profile basny
+
+# 5. Verify
+aws --profile basny ec2 describe-instances --filters "Name=tag:Name,Values=BASNY-Production"
+ssh BAP "sudo docker ps"
+```
+
+**What persists across redeployments**:
+- ✅ EBS Data Volume (vol-0aba5b85a1582b2c0) - references existing volume
+- ✅ Elastic IP (98.91.62.199) - associates with new instance
+- ✅ All data in /mnt/basny-data/
+
+**What gets replaced**:
+- EC2 instance (if configuration changed)
+- Root volume (contains no persistent data)
+
+### Testing Infrastructure Changes Safely
+
+**NEVER test with production volume attached!**
+
+1. **Create test volume**:
+```bash
+aws --profile basny ec2 create-volume \
+  --availability-zone us-east-1a \
+  --size 8 \
+  --volume-type gp3 \
+  --tag-specifications 'ResourceType=volume,Tags=[{Key=Name,Value=BASNY-Test}]'
+```
+
+2. **Update SSM parameter for test**:
+```bash
+aws --profile basny ssm put-parameter \
+  --name /basny/test/data-volume-id \
+  --value vol-TEST_VOLUME_ID \
+  --overwrite
+```
+
+3. **Deploy to separate stack**:
+```bash
+# Modify stack name in bin/infrastructure.ts to test name
+cd infrastructure
+npm run cdk deploy -- --profile basny
+```
+
+4. **Delete test resources after verification**:
+```bash
+npm run cdk destroy -- --profile basny
+aws --profile basny ec2 delete-volume --volume-id vol-TEST_VOLUME_ID
+```
+
+### Backup Strategy
+
+**Recommended schedule**:
+- Daily: Automated database backups to S3 (not yet implemented)
+- Weekly: Full EBS volume snapshots
+- Pre-deployment: Manual snapshot before infrastructure changes
+
+**Manual backup**:
+```bash
+# Database backup
+ssh BAP "sqlite3 /mnt/basny-data/app/database/database.db '.backup /tmp/backup-$(date +%Y%m%d-%H%M%S).db'"
+scp BAP:/tmp/backup-*.db ~/backups/
+
+# EBS snapshot
+aws --profile basny ec2 create-snapshot \
+  --volume-id vol-0aba5b85a1582b2c0 \
+  --description "Manual backup $(date +%Y%m%d-%H%M%S)" \
+  --tag-specifications 'ResourceType=snapshot,Tags=[{Key=Name,Value=BASNY-Manual-Backup},{Key=DoNotDelete,Value=true}]'
+
+# List snapshots
+aws --profile basny ec2 describe-snapshots \
+  --owner-ids self \
+  --filters "Name=tag:Name,Values=BASNY-*" \
+  --query 'Snapshots[*].[SnapshotId,StartTime,Description]' \
+  --output table
+```
+
+### Pre-Deployment Checklist
+
+Before ANY `cdk deploy` or infrastructure changes:
+- [ ] Create snapshot of production EBS volume
+- [ ] Verify production volume is NOT attached to test instance
+- [ ] Review UserData script for safety checks
+- [ ] Verify RETAIN deletion policies are set
+- [ ] Confirm stack termination protection is enabled
+- [ ] Have recent database backup available locally
+- [ ] Test changes on separate stack first
+- [ ] Review `cdk diff` output carefully
