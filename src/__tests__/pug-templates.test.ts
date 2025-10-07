@@ -271,6 +271,7 @@ describe('Pug Template Rendering', () => {
       /^bapForm\/inputs\.pug$/,  // Contains mixins only
       /^typeahead-examples\.pug$/,  // Uses undefined mixins
       /^account\/field\.pug$/,  // Mixin-only template
+      /^mixins\/date\.pug$/,  // Date formatting mixins only
       /^activity\/activity-item\.pug$/,  // Mixin-only template
       /^activity\/award-granted\.pug$/,  // Include-only template
       /^activity\/submission-approved\.pug$/,  // Include-only template
