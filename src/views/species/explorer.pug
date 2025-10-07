@@ -1,4 +1,5 @@
 include ../header.pug
+include ../mixins/date.pug
 
 doctype html
 html
@@ -161,11 +162,7 @@ html
 													= item.total_breeders
 
 											td.p-3.text-center.border-gray-300
-												if item.latest_breed_date
-													- const dateString = new Date(item.latest_breed_date).toLocaleDateString();
-													= dateString
-												else
-													span.text-gray-400 -
+												+shortDate(item.latest_breed_date, "Latest breeding date")
 
 				else
 					.bg-white.rounded-lg.shadow-md.p-8.text-center

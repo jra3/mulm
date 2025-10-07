@@ -1,4 +1,5 @@
 include ../header.pug
+include ../mixins/date.pug
 
 - const stringCell = ['p-3', 'overflow-hidden', 'text-ellipsis', 'whitespace-nowrap', 'border-gray-300'];
 - const heading = ['p-3', 'text-left', 'font-semibold', 'text-gray-700', 'bg-gray-50', 'border-gray-300'];
@@ -71,12 +72,12 @@ html
 												= breeder.breed_count === 1 ? ' breeding report' : ' breeding reports'
 										div.text-right.text-sm.text-gray-600
 											div
-												strong First: 
-												= new Date(breeder.first_breed_date).toLocaleDateString()
+												strong First:
+												+shortDate(breeder.first_breed_date, "First breed date")
 											if breeder.first_breed_date !== breeder.latest_breed_date
 												div
-													strong Latest: 
-													= new Date(breeder.latest_breed_date).toLocaleDateString()
+													strong Latest:
+													+shortDate(breeder.latest_breed_date, "Latest breed date")
 
 									// Breeding Reports
 									if breeder.submissions && breeder.submissions.length > 0
@@ -92,7 +93,8 @@ html
 																= submission.species_latin_name
 													div.text-right
 														.text-green-600.font-medium= submission.points + ' pts'
-														.text-gray-500= new Date(submission.approved_on).toLocaleDateString()
+														.text-gray-500
+															+shortDate(submission.approved_on, "Approved on")
 
 				else
 					.bg-white.rounded-lg.shadow-md.p-8.text-center
