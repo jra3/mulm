@@ -11,8 +11,21 @@ include ../header.pug
 		hx-disabled-elt="#feedbackSubmitBtn"
 		hx-on::response-error="this.querySelector('#requestChangesError').textContent = event.detail.xhr.responseText; document.getElementById('feedbackSubmitBtn').disabled = false;"
 	)
-		span#requestChangesError.font-semibold.text-red-600
-		textarea.w-full.h-96.bg-white(name="content" id="requestChangesText" required)= contents
+		span#requestChangesError.font-semibold.text-red-600(role="alert" aria-live="polite")
+		label.input-label(for="requestChangesText") Feedback for submitter
+		textarea.w-full.h-96.bg-white(
+			name="content"
+			id="requestChangesText"
+			required
+			minlength="10"
+			maxlength="1000"
+			aria-label="Feedback requesting changes to submission"
+			aria-describedby="requestChangesError"
+			aria-required="true"
+			placeholder="Provide specific feedback about what needs to be changed..."
+		)= contents
 		div.flex.items-center.gap-2
-			button#feedbackSubmitBtn.primary(type="submit") Send
+			button#feedbackSubmitBtn.primary(type="submit" hx-disabled-elt="this")
+				span Send
+				span.htmx-indicator.spinner
 			+loadingSpinner("feedbackIndicator")

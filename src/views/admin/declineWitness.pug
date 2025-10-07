@@ -11,12 +11,21 @@ include ../header.pug
 		hx-disabled-elt="#witnessSubmitBtn"
 		hx-on::response-error="this.querySelector('#witnessError').textContent = event.detail.xhr.responseText; document.getElementById('witnessSubmitBtn').disabled = false;"
 	)
-		span#witnessError.font-semibold.text-red-600
+		span#witnessError.font-semibold.text-red-600(role="alert" aria-live="polite")
+		label.input-label(for="witnessReasonText") Reason for requesting more documentation
 		textarea.w-full.h-96.bg-white(
 			name="reason"
 			id="witnessReasonText"
 			required
+			minlength="10"
+			maxlength="1000"
+			aria-label="Reason for declining witness verification"
+			aria-describedby="witnessError"
+			aria-required="true"
+			placeholder="Explain what additional documentation or clarification is needed..."
 		)= contents
 		div.flex.items-center.gap-2
-			button#witnessSubmitBtn.primary(type="submit") Send Request
+			button#witnessSubmitBtn.primary(type="submit" hx-disabled-elt="this")
+				span Send Request
+				span.htmx-indicator.spinner
 			+loadingSpinner("witnessIndicator")
