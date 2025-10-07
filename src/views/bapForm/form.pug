@@ -219,5 +219,9 @@ mixin CRUDForm()
 				button.outline(class="w-2/5 max-w-200" type="submit" name="draft" value="true" title="Save your progress without submitting for review") Save Draft
 				if form.id
 					// Delete button for drafts - smaller, inline with Submit/Save Draft
-					form(hx-delete=`/submissions/${form.id}` hx-confirm="Are you sure you want to permanently delete this draft? This cannot be undone." style="display: inline;")
-						button.destructive(class="px-4 py-2 text-sm" type="submit") Delete Draft
+					button.destructive(
+						class="px-4 py-2 text-sm"
+						hx-delete=`/submissions/${form.id}`
+						hx-confirm="Are you sure you want to permanently delete this draft? This cannot be undone."
+						type="button"
+					) Delete Draft
