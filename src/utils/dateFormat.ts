@@ -39,12 +39,13 @@ export function formatShortDate(date: string | Date | null | undefined): string 
   }
 
   const d = new Date(date!);
-  // Use UTC methods to avoid timezone issues
-  const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(d.getUTCDate()).padStart(2, '0');
-  const year = d.getUTCFullYear();
-
-  return `${month}/${day}/${year}`;
+  // Use Intl.DateTimeFormat for consistent formatting
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'UTC',
+    month: '2-digit',
+    day: '2-digit',
+    year: 'numeric'
+  }).format(d);
 }
 
 /**
@@ -64,17 +65,13 @@ export function formatLongDate(date: string | Date | null | undefined): string {
   }
 
   const d = new Date(date!);
-  const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
-
-  // Use UTC methods to avoid timezone issues
-  const month = monthNames[d.getUTCMonth()];
-  const day = d.getUTCDate();
-  const year = d.getUTCFullYear();
-
-  return `${month} ${day}, ${year}`;
+  // Use Intl.DateTimeFormat for consistent formatting
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'UTC',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  }).format(d);
 }
 
 /**

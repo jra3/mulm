@@ -1,5 +1,6 @@
 include header.pug
 include mixins/submissionImages.pug
+include mixins/date.pug
 
 - const stringCell = ['p-3', 'text-left', 'border-b', 'border-gray-200'];
 - const heading = ['p-3', 'text-left', 'font-bold', 'text-gray-900', 'border-b-2', 'border-gray-300', 'bg-gray-50', 'cursor-pointer', 'select-none', 'hover:bg-gray-100'];
@@ -52,8 +53,8 @@ mixin submissionTable(submissions, totalPoints)
 							a.link(href=`/submissions/${sub.id}`)= sub.species_common_name
 						td(class=stringCell)
 							a.link(href=`/submissions/${sub.id}`)= sub.species_latin_name
-						- const dateString = sub.submitted_on && new Date(sub.submitted_on).toLocaleDateString();
-						td(class=stringCell)= dateString
+						td(class=stringCell)
+							+shortDate(sub.submitted_on, "Submitted on")
 						td(class=numberCell)= sub.points || "Unapproved"
 						td(class=numberCell)= sub.total_points || "Unapproved"
 
@@ -101,15 +102,13 @@ html
 											h4(class="font-bold text-amber-900 text-lg")= award.award_name
 											div(class="text-sm text-amber-700 mt-1") Achieved through expertise across multiple species groups
 										div(class="text-sm text-amber-600")
-											- const awardDate = new Date(award.date_awarded).toLocaleDateString();
-											= awardDate
+											+shortDate(award.date_awarded, "Award granted on")
 							else
 								div(class="bg-white rounded-lg shadow-md p-4 border-l-4 border-blue-500")
 									div(class="flex items-center justify-between")
 										h4(class="font-semibold text-gray-800")= award.award_name
 										div(class="text-sm text-gray-500")
-											- const awardDate = new Date(award.date_awarded).toLocaleDateString();
-											= awardDate
+											+shortDate(award.date_awarded, "Award granted on")
 		- const hasAnySubmissions = fishSubs.length > 0 || plantSubs.length > 0 || coralSubs.length > 0;
 
 		if hasAnySubmissions

@@ -17,13 +17,14 @@
 //-   +shortDate(award.date_awarded, "Award granted on")
 mixin shortDate(date, label)
 	if date
-		- const { formatShortDate, formatISODate } = require('../../utils/dateFormat')
-		- const formatted = formatShortDate(date)
-		- const iso = formatISODate(date)
-		if formatted
+		- const d = new Date(date)
+		- if (!isNaN(d.getTime())) {
+			- const formatted = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: '2-digit', day: '2-digit', year: 'numeric' }).format(d)
+			- const iso = d.toISOString()
 			time(datetime=iso aria-label=label)= formatted
-		else
+		- } else {
 			span -
+		- }
 	else
 		span -
 
@@ -38,13 +39,14 @@ mixin shortDate(date, label)
 //-   +longDate(member.created_at, "Member since")
 mixin longDate(date, label)
 	if date
-		- const { formatLongDate, formatISODate } = require('../../utils/dateFormat')
-		- const formatted = formatLongDate(date)
-		- const iso = formatISODate(date)
-		if formatted
+		- const d = new Date(date)
+		- if (!isNaN(d.getTime())) {
+			- const formatted = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'long', day: 'numeric', year: 'numeric' }).format(d)
+			- const iso = d.toISOString()
 			time(datetime=iso aria-label=label)= formatted
-		else
+		- } else {
 			span -
+		- }
 	else
 		span -
 
@@ -59,13 +61,31 @@ mixin longDate(date, label)
 //-   +relativeDate(submission.submitted_on, "Submitted")
 mixin relativeDate(date, label)
 	if date
-		- const { formatRelativeDate, formatISODate } = require('../../utils/dateFormat')
-		- const formatted = formatRelativeDate(date)
-		- const iso = formatISODate(date)
-		if formatted
+		- const d = new Date(date)
+		- if (!isNaN(d.getTime())) {
+			- const now = new Date()
+			- const diffMs = now.getTime() - d.getTime()
+			- const diffSec = Math.floor(diffMs / 1000)
+			- const diffMin = Math.floor(diffSec / 60)
+			- const diffHour = Math.floor(diffMin / 60)
+			- const diffDay = Math.floor(diffHour / 24)
+			- const diffWeek = Math.floor(diffDay / 7)
+			- const diffMonth = Math.floor(diffDay / 30)
+			- const diffYear = Math.floor(diffDay / 365)
+			- let formatted = ''
+			- if (diffMs < 0) formatted = 'in the future'
+			- else if (diffMin < 1) formatted = 'just now'
+			- else if (diffHour < 1) formatted = diffMin === 1 ? '1 minute ago' : `${diffMin} minutes ago`
+			- else if (diffDay < 1) formatted = diffHour === 1 ? '1 hour ago' : `${diffHour} hours ago`
+			- else if (diffWeek < 1) formatted = diffDay === 1 ? '1 day ago' : `${diffDay} days ago`
+			- else if (diffMonth < 1) formatted = diffWeek === 1 ? '1 week ago' : `${diffWeek} weeks ago`
+			- else if (diffYear < 1) formatted = diffMonth === 1 ? '1 month ago' : `${diffMonth} months ago`
+			- else formatted = diffYear === 1 ? '1 year ago' : `${diffYear} years ago`
+			- const iso = d.toISOString()
 			time(datetime=iso aria-label=label)= formatted
-		else
+		- } else {
 			span -
+		- }
 	else
 		span -
 
@@ -80,16 +100,10 @@ mixin relativeDate(date, label)
 //-   +dateTime(submission.submitted_on, 'short')
 //-   +dateTime(activity.created_at, 'relative', 'Activity occurred')
 mixin dateTime(date, format = 'short', label)
-	if date
-		- const { formatShortDate, formatLongDate, formatRelativeDate, formatISODate } = require('../../utils/dateFormat')
-		- const iso = formatISODate(date)
-		- let formatted = ''
-		- if (format === 'long') formatted = formatLongDate(date)
-		- else if (format === 'relative') formatted = formatRelativeDate(date)
-		- else formatted = formatShortDate(date)
-		if formatted
-			time(datetime=iso aria-label=label)= formatted
-		else
-			span -
-	else
-		span -
+	- if (format === 'long') {
+		+longDate(date, label)
+	- } else if (format === 'relative') {
+		+relativeDate(date, label)
+	- } else {
+		+shortDate(date, label)
+	- }
