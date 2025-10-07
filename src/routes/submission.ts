@@ -186,6 +186,11 @@ function parseAndValidateForm(req: MulmRequest): {
     parsed = bapDraftForm.safeParse(req.body);
     form = extractValid(bapFields, req.body);
     draft = true;
+    // For drafts, skip validation errors and accept partial data
+    if (parsed.success) {
+      form = { ...form, ...parsed.data };
+    }
+    return { form, draft };
   } else {
     parsed = bapForm.safeParse(req.body);
     form = extractValid(bapFields, req.body);
