@@ -1,11 +1,21 @@
 function getTypeaheadConfig(element) {
+	const labelField = element.dataset.labelField || 'text';
+	let searchFields = ['text'];
+
+	if (element.dataset.searchFields) {
+		const fields = element.dataset.searchFields.split(',').map(f => f.trim()).filter(f => f);
+		if (fields.length > 0) {
+			searchFields = fields;
+		}
+	}
+
 	return {
 		apiUrl: element.dataset.apiUrl,
 		linkedField: element.dataset.linkedField,
 		linkedValueField: element.dataset.linkedValueField,
 		valueField: element.dataset.valueField || 'value',
-		labelField: element.dataset.labelField || 'text',
-		searchFields: element.dataset.searchFields ? element.dataset.searchFields.split(',') : ['text'],
+		labelField: labelField,
+		searchFields: searchFields,
 		minQueryLength: parseInt(element.dataset.minQueryLength) || 2,
 		maxItems: parseInt(element.dataset.maxItems) || 1,
 		allowCreate: element.dataset.allowCreate === 'true',
@@ -20,7 +30,7 @@ function buildTomSelectOptions(element, config) {
 	return {
 		valueField: config.valueField,
 		labelField: config.labelField,
-		searchField: config.searchFields,
+		searchField: config.searchFields || [config.labelField],
 		create: config.allowCreate,
 		createOnBlur: config.createOnBlur,
 		maxItems: config.maxItems,

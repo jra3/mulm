@@ -24,7 +24,7 @@ html
 			}
 
 			function initializeTypeaheads() {
-				const typeaheadElements = document.querySelectorAll('.tom-select-typeahead:not(.tomselected)');
+				const typeaheadElements = document.querySelectorAll('select.tom-select-typeahead:not(.tomselected)');
 				typeaheadElements.forEach(function(element) {
 					const config = getTypeaheadConfig(element);
 					const tomSelectOptions = buildTomSelectOptions(element, config);
