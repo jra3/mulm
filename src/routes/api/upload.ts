@@ -53,11 +53,33 @@ function generateUploadId(): string {
  */
 function updateProgress(uploadId: string, stage: string, percent: number, message: string) {
   uploadProgress.set(uploadId, { stage, percent, message });
-  
+
   // Clean up old progress entries after 5 minutes
   setTimeout(() => {
     uploadProgress.delete(uploadId);
   }, 5 * 60 * 1000);
+}
+
+/**
+ * Clean up uploaded files from R2
+ * Used when upload fails or database transaction rolls back
+ */
+async function cleanupUploadedFiles(keys: string[]): Promise<void> {
+  if (keys.length === 0) {
+    return;
+  }
+
+  logger.info('Cleaning up uploaded files', { count: keys.length });
+
+  const deletePromises = keys.map(key =>
+    deleteImage(key).catch(err => {
+      logger.error('Failed to cleanup file during batch delete', { key, error: err });
+      // Don't throw - best effort cleanup
+    })
+  );
+
+  await Promise.allSettled(deletePromises);
+  logger.info('Cleanup complete', { attempted: keys.length });
 }
 
 /**
@@ -92,6 +114,7 @@ router.post(
     }
 
     const processedImages: ImageMetadata[] = [];
+    const uploadedKeys: string[] = []; // Track all uploaded keys for cleanup
     const errors: string[] = [];
 
     try {
@@ -109,22 +132,25 @@ router.post(
           const processed = await processImage(file.buffer, {
             preferWebP: (req.body as { preferWebP?: string }).preferWebP === 'true'
           });
-        
+
           // Generate unique keys for each size
           const baseKey = generateImageKey(viewer.id, submissionId || 0, file.originalname);
           const originalKey = baseKey.replace(/\.(jpg|jpeg|png|webp)$/i, '-original.$1');
           const mediumKey = baseKey.replace(/\.(jpg|jpeg|png|webp)$/i, '-medium.$1');
           const thumbnailKey = baseKey.replace(/\.(jpg|jpeg|png|webp)$/i, '-thumb.$1');
-        
+
           updateProgress(uploadId, 'uploading', fileProgress + 10, `Uploading image ${i + 1} to storage...`);
-        
+
           // Upload all sizes to R2
           await Promise.all([
             uploadToR2(originalKey, processed.original.buffer, `image/${processed.original.format}`),
             uploadToR2(mediumKey, processed.medium.buffer, `image/${processed.medium.format}`),
             uploadToR2(thumbnailKey, processed.thumbnail.buffer, `image/${processed.thumbnail.format}`)
           ]);
-        
+
+          // Track uploaded keys for potential cleanup
+          uploadedKeys.push(originalKey, mediumKey, thumbnailKey);
+
           // Create metadata entry
           const metadata: ImageMetadata = {
             key: originalKey,
@@ -133,16 +159,16 @@ router.post(
             uploadedAt: new Date().toISOString(),
             contentType: `image/${processed.original.format}`
           };
-        
+
           processedImages.push(metadata);
-        
+
           logger.info('Image uploaded successfully', {
             memberId: viewer.id,
             submissionId,
             key: originalKey,
             size: processed.original.size
           });
-        
+
         } catch (error) {
           if (error instanceof ImageValidationError) {
             errors.push(`${file.originalname}: ${error.message}`);
@@ -184,22 +210,9 @@ router.post(
         } catch (error) {
           logger.error('Failed to update submission with images', error);
 
-          // Clean up R2 uploads on database transaction failure
-          logger.info('Cleaning up R2 uploads after database failure');
-          for (const image of processedImages) {
-            try {
-              await deleteImage(image.key);
-              // Delete the other sizes
-              const mediumKey = image.key.replace('-original', '-medium');
-              const thumbKey = image.key.replace('-original', '-thumb');
-              await Promise.all([
-                deleteImage(mediumKey).catch(() => {}),
-                deleteImage(thumbKey).catch(() => {})
-              ]);
-            } catch (deleteError) {
-              logger.error('Failed to clean up R2 image after database failure', deleteError);
-            }
-          }
+          // Clean up ALL uploaded R2 files on database transaction failure
+          logger.info('Cleaning up R2 uploads after database failure', { keyCount: uploadedKeys.length });
+          await cleanupUploadedFiles(uploadedKeys);
 
           // Rethrow the original error
           throw error;
