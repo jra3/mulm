@@ -1,4 +1,14 @@
 function getTypeaheadConfig(element) {
+	const labelField = element.dataset.labelField || 'text';
+	let searchFields = ['text'];
+
+	if (element.dataset.searchFields) {
+		const fields = element.dataset.searchFields.split(',').map(f => f.trim()).filter(f => f);
+		if (fields.length > 0) {
+			searchFields = fields;
+		}
+	}
+
 	return {
 		apiUrl: element.dataset.apiUrl,
 		linkedField: element.dataset.linkedField,
@@ -6,8 +16,8 @@ function getTypeaheadConfig(element) {
 		hiddenIdField: element.dataset.hiddenIdField,
 		hiddenIdValueField: element.dataset.hiddenIdValueField,
 		valueField: element.dataset.valueField || 'value',
-		labelField: element.dataset.labelField || 'text',
-		searchFields: element.dataset.searchFields ? element.dataset.searchFields.split(',') : ['text'],
+		labelField: labelField,
+		searchFields: searchFields,
 		minQueryLength: parseInt(element.dataset.minQueryLength) || 2,
 		maxItems: parseInt(element.dataset.maxItems) || 1,
 		allowCreate: element.dataset.allowCreate === 'true',
@@ -22,7 +32,7 @@ function buildTomSelectOptions(element, config) {
 	return {
 		valueField: config.valueField,
 		labelField: config.labelField,
-		searchField: config.searchFields,
+		searchField: config.searchFields || [config.labelField],
 		create: config.allowCreate,
 		createOnBlur: config.createOnBlur,
 		maxItems: config.maxItems,
@@ -79,16 +89,20 @@ function buildTomSelectOptions(element, config) {
 					console.log('[Typeahead] Linked value to set:', linkedValue);
 					if (linkedValue) {
 						const linkedInstance = linkedElement.tomSelectInstance;
-
-						// Create a properly structured option for the linked field
-						// The linked field has its own valueField/labelField config
 						const linkedConfig = getTypeaheadConfig(linkedElement);
+
+						// Create option object using the linked field's configuration
 						const linkedOption = {
 							[linkedConfig.valueField]: linkedValue,
 							[linkedConfig.labelField]: linkedValue,
-							// Copy over all the original data
+							// Copy over all the original data for compatibility
 							...selectedOption
 						};
+
+						// Ensure secondary field is properly set
+						if (linkedConfig.secondaryField && selectedOption[linkedConfig.secondaryField]) {
+							linkedOption[linkedConfig.secondaryField] = selectedOption[linkedConfig.secondaryField];
+						}
 
 						console.log('[Typeahead] Linked field config:', linkedConfig);
 						console.log('[Typeahead] Created linked option:', linkedOption);

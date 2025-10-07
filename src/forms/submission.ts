@@ -87,12 +87,7 @@ export const bapFields = z.object({
   images: z.string().optional(), // JSON string of image metadata
 })
 
-export const bapDraftForm = bapFields.pick({
-  id: true,
-  member_name: true,
-  member_email: true,
-  species_common_name: true,
-})
+export const bapDraftForm = bapFields.partial()
 
 export const bapForm = bapFields.refine(
   (data) => !isLivestock(data.species_type) || Boolean(data.count),
