@@ -346,14 +346,20 @@ export const remove = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  // Admin always delete
-  if (!viewer.is_admin) {
-    // Owner can delete when not submitted
-    if (viewer.id !== submission.member_id && submission.submitted_on != null) {
-      res.status(403).send();
-      return;
-    }
+  // Admin can always delete
+  if (viewer.is_admin) {
+    await db.deleteSubmission(submission.id);
+    res.set('HX-Redirect', '/').send();
+    return;
   }
 
-  await db.deleteSubmission(submission.id);
+  // Owner can delete if not approved (no points awarded yet)
+  if (viewer.id === submission.member_id && submission.approved_on === null) {
+    await db.deleteSubmission(submission.id);
+    res.set('HX-Redirect', '/').send();
+    return;
+  }
+
+  // Not authorized
+  res.status(403).send('Cannot delete approved submissions');
 }

@@ -77,6 +77,12 @@ html
 					form(hx-patch=`/submissions/${submission.id}`)
 						button.primary(name="unsubmit" type="submit") Edit Submission
 
+			// Delete button - Admin can always delete, Owner can delete if not approved
+			if isAdmin || (isSelf && !isApproved)
+				div.flex.justify-center.max-w-4xl.mx-auto.text-center.gap-4.mt-4
+					form(hx-delete=`/submissions/${submission.id}` hx-confirm="Are you sure you want to permanently delete this submission? This cannot be undone.")
+						button.destructive(type="submit") Delete Submission
+
 			if isAdmin
 				// Witness Actions Panel - only show for pending witness verification
 				if submission.witness_verification_status === 'pending'
