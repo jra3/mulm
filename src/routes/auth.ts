@@ -61,15 +61,31 @@ export const signup = async (req: MulmRequest, res: Response) => {
 
 export const passwordLogin = async (req: MulmRequest, res: Response) => {
   const data = loginSchema.parse(req.body);
+
+  // Always fetch member AND password to normalize timing
   const member = await getMemberByEmail(data.email);
-  if (member != undefined) {
-    const pass = await getMemberPassword(member.id);
-    if (await checkPassword(pass, data.password)) {
-      await regenerateSession(req, res, member.id);
-      res.set("HX-Redirect", "/").send();
-      return;
-    }
+  const pass = member ? await getMemberPassword(member.id) : null;
+
+  // Always call checkPassword even if member doesn't exist (timing attack mitigation)
+  // Use dummy password entry if member not found
+  const isValid = await checkPassword(
+    pass ?? {
+      N: 16384,
+      r: 8,
+      p: 1,
+      salt: "dGltaW5nQXR0YWNrTWl0aWdhdGlvblNhbHQxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY=", // Base64 dummy
+      hash: "dGltaW5nQXR0YWNrTWl0aWdhdGlvbkhhc2gxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY=" // Base64 dummy
+    },
+    data.password
+  );
+
+  if (member && isValid) {
+    await regenerateSession(req, res, member.id);
+    res.set("HX-Redirect", "/").send();
+    return;
   }
+
+  // Generic error message (no distinction between invalid email vs password)
   res.send("Incorrect email or password");
 };
 
@@ -127,21 +143,27 @@ export const sendForgotPassword = async (req: MulmRequest, res: Response) => {
   }
 
   const member = await getMemberByEmail(parsed.data.email);
-  if (member == undefined) {
-    // should fake success to prevent email enumeration
-    errors.set("success", "Check your email for a reset link.");
-    renderDialog();
-    return;
-  }
 
+  // Always create auth code structure (timing attack mitigation)
   const code: AuthCode = {
-    member_id: member.id,
+    member_id: member?.id ?? 0,
     code: generateRandomCode(24),
     expires_on: new Date(Date.now() + 60 * 60 * 1000),
     purpose: "password_reset",
   };
-  await createAuthCode(code);
-  await sendResetEmail(member.contact_email, member.display_name, code.code);
+
+  if (member) {
+    // Actually save code and send email
+    await Promise.all([
+      createAuthCode(code),
+      sendResetEmail(member.contact_email, member.display_name, code.code)
+    ]);
+  } else {
+    // Simulate same operations for timing (300ms ~ DB write + email send)
+    await new Promise(resolve => setTimeout(resolve, 300));
+  }
+
+  // Always show success message (prevents email enumeration)
   errors.set("success", "Check your email for a reset link.");
   renderDialog();
 };
