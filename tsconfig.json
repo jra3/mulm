@@ -13,12 +13,12 @@
 		"forceConsistentCasingInFileNames": true,
 		"noImplicitAny": true,
 		"skipLibCheck": true,
-		"types": ["jest", "node"],
+		"types": ["node"],
 
 		"baseUrl": ".",
 		"paths": {
 			"@/*": [ "src/*" ]
 		}
 	},
-	"exclude": ["infrastructure/cdk.out", "node_modules", "dist", "scripts"]
+	"exclude": ["infrastructure/cdk.out", "node_modules", "dist", "scripts", "src/__tests__", "**/*.test.ts"]
 }
