@@ -112,7 +112,7 @@ mixin bapTypeaheadInput(options = {})
 			aria-invalid=errors.has(name) ? "true" : "false"
 			aria-describedby=errors.has(name) ? `${name}-error` : undefined
 			aria-required=required !== false ? "true" : "false")
-			if form[name]
+			if form[name] !== undefined && form[name] !== null && form[name] !== ''
 				option(value=form[name] selected)= form[name]
 		if disabled
 			input.text-input(

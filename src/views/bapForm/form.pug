@@ -3,231 +3,231 @@ include inputs.pug
 include imageUpload.pug
 
 mixin CRUDForm()
-	if form.id
-		form#bapForm(hx-target="#bapForm" hx-swap="outerHTML" hx-patch=`/submissions/${form.id}`)
-			input(type="hidden" name="id" value=form.id)
-			block
-	else
-		form#bapForm(hx-target="#bapForm" hx-swap="outerHTML" hx-post="/submissions")
-			block
+    if form.id
+        form#bapForm(hx-target="#bapForm" hx-swap="outerHTML" hx-patch=`/submissions/${form.id}`)
+            input(type="hidden" name="id" value=form.id)
+            block
+    else
+        form#bapForm(hx-target="#bapForm" hx-swap="outerHTML" hx-post="/submissions")
+            block
 
 +CRUDForm
-	.sr-only
-		h1 Breeding Award Submission Form
-		p Complete all required fields marked with a red asterisk. You can save your progress as a draft using the Save Draft button at the bottom of the form.
-	section.bg-gray-100.py-4(aria-labelledby="member-section")
-		div.max-w-4xl.mx-auto.text-left.px-4
-			h2#member-section(class="text-xl sm:text-2xl font-bold mb-4") Member Details
-			div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
-				if isAdmin
-					+bapTypeaheadInput({
-						label: "Member Name",
-						name: "member_name",
-						placeholder: "Jacques Cousteau...",
-						apiUrl: "/api/members/search",
-						searchFields: "name,email",
-					})
-				else
-					+bapTextInput("Member Name", "member_name", "Jacques Cousteau")(disabled=true)
-				+bapTextInput("Member Email", "member_email", "deep@bluesea.net")(disabled=true)
+    .sr-only
+        h1 Breeding Award Submission Form
+        p Complete all required fields marked with a red asterisk. You can save your progress as a draft using the Save Draft button at the bottom of the form.
+    section.bg-gray-100.py-4(aria-labelledby="member-section")
+        div.max-w-4xl.mx-auto.text-left.px-4
+            h2#member-section(class="text-xl sm:text-2xl font-bold mb-4") Member Details
+            div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
+                if isAdmin
+                    +bapTypeaheadInput({
+                        label: "Member Name",
+                        name: "member_name",
+                        placeholder: "Jacques Cousteau...",
+                        apiUrl: "/api/members/search",
+                        searchFields: "name,email",
+                    })
+                else
+                    +bapTextInput("Member Name", "member_name", "Jacques Cousteau")(disabled=true)
+                +bapTextInput("Member Email", "member_email", "deep@bluesea.net")(disabled=true)
 
-	section.bg-gray-100.py-4(aria-labelledby="species-section")
-		div.max-w-4xl.mx-auto.text-left.px-4
-			h2#species-section(class="text-xl sm:text-2xl font-bold mb-4") Species Details
+    section.bg-gray-100.py-4(aria-labelledby="species-section")
+        div.max-w-4xl.mx-auto.text-left.px-4
+            h2#species-section(class="text-xl sm:text-2xl font-bold mb-4") Species Details
 
-			div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
-				+bapSimpleSelectInput("Water Type", "water_type")
-					for water in waterTypes
-						option(value=water, selected=water == form.water_type)= water
+            div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
+                +bapSimpleSelectInput("Water Type", "water_type")
+                    for water in waterTypes
+                        option(value=water, selected=water == form.water_type)= water
 
-				div.grid.gap-2
-					label.input-label(for="species_type") Species Type
-					.select-wrapper
-						select#species_type(
-							name="species_type"
-							hx-get="/submissions/new"
-							hx-include="closest form"
-							hx-swap="outerHTML"
-							hx-target="#bapForm"
-							hx-select="#bapForm"
-							hx-push-url="false"
-							aria-required="true"
-							aria-describedby="species-type-hint")
-							for speciesType in speciesTypes
-								option(value=speciesType, selected=speciesType == form.species_type)= speciesType
-					span#species-type-hint.sr-only Changing this will update the available fields
+                div.grid.gap-2
+                    label.input-label(for="species_type") Species Type
+                    .select-wrapper
+                        select#species_type(
+                            name="species_type"
+                            hx-get="/submissions/new"
+                            hx-include="closest form"
+                            hx-swap="outerHTML"
+                            hx-target="#bapForm"
+                            hx-select="#bapForm"
+                            hx-push-url="false"
+                            aria-required="true"
+                            aria-describedby="species-type-hint")
+                            for speciesType in speciesTypes
+                                option(value=speciesType, selected=speciesType == form.species_type)= speciesType
+                    span#species-type-hint.sr-only Changing this will update the available fields
 
-				+bapSimpleSelectInput("Species Class", "species_class")
-					each option in classOptions
-						option(value=option.value selected=form.species_class == option.value)= option.text
-				- const dateLabel = isLivestock ? "Date Spawned" : "Date Propagated";
-				+bapTextInput(dateLabel, "reproduction_date", "", "date")
+                +bapSimpleSelectInput("Species Class", "species_class")
+                    each option in classOptions
+                        option(value=option.value selected=form.species_class == option.value)= option.text
+                - const dateLabel = isLivestock ? "Date Spawned" : "Date Propagated";
+                +bapTextInput(dateLabel, "reproduction_date", "", "date")
 
-				input(type="hidden" name="species_name_id" id="species_name_id" value=form.species_name_id || "")
+                input(type="hidden" name="species_name_id" id="species_name_id" value=form.species_name_id || "")
 
-				+bapTypeaheadInput({
-					label: "Species Common Name",
-					name: "species_common_name",
-					placeholder: "Guppy",
-					apiUrl: "/api/species/search",
-					searchFields: "common_name",
-					valueField: "common_name",
-					labelField: "common_name",
-					secondaryField: "scientific_name",
-					linkedField: "species_latin_name",
-					linkedValueField: "scientific_name",
-					hiddenIdField: "species_name_id",
-					hiddenIdValueField: "name_id",
-					allowCreate: true,
-					createOnBlur: true,
-				})
-				+bapTypeaheadInput({
-					label: "Species Latin Name",
-					name: "species_latin_name",
-					placeholder: "Poecilia reticulata",
-					apiUrl: "/api/species/search",
-					searchFields: "scientific_name",
-					valueField: "scientific_name",
-					labelField: "scientific_name",
-					secondaryField: "common_name",
-					hiddenIdField: "species_name_id",
-					hiddenIdValueField: "name_id",
-					allowCreate: true,
-					createOnBlur: true,
-				})
+                +bapTypeaheadInput({
+                    label: "Species Common Name",
+                    name: "species_common_name",
+                    placeholder: "Guppy",
+                    apiUrl: "/api/species/search",
+                    searchFields: "common_name",
+                    valueField: "common_name",
+                    labelField: "common_name",
+                    secondaryField: "scientific_name",
+                    linkedField: "species_latin_name",
+                    linkedValueField: "scientific_name",
+                    hiddenIdField: "species_name_id",
+                    hiddenIdValueField: "name_id",
+                    allowCreate: true,
+                    createOnBlur: true,
+                })
+                +bapTypeaheadInput({
+                    label: "Species Latin Name",
+                    name: "species_latin_name",
+                    placeholder: "Poecilia reticulata",
+                    apiUrl: "/api/species/search",
+                    searchFields: "scientific_name",
+                    valueField: "scientific_name",
+                    labelField: "scientific_name",
+                    secondaryField: "common_name",
+                    hiddenIdField: "species_name_id",
+                    hiddenIdValueField: "name_id",
+                    allowCreate: true,
+                    createOnBlur: true,
+                })
 
-				if isLivestock
-					+bapTextInput("# of Fry", "count", "Zillions")
+                if isLivestock
+                    +bapTextInput("# of Fry", "count", "Zillions")
 
-				if hasFoods
-					+bapMultiSelectInput("Foods", "foods", "foods")
-						each food in foodTypes
-							- const selected = form.foods && form.foods.includes(food);
-							option(value=food selected=selected)= food
+                if hasFoods
+                    +bapMultiSelectInput("Foods", "foods", "foods")
+                        each food in foodTypes
+                            - const selected = form.foods && form.foods.includes(food);
+                            option(value=food selected=selected)= food
 
-				if hasSpawnLocations
-					+bapMultiSelectInput("Spawn Locations", "spawn_locations", "spawns")
-						each loc in spawnLocations
-							- const selected = form.spawn_locations && form.spawn_locations.includes(loc);
-							option(value=loc selected=selected)= loc
+                if hasSpawnLocations
+                    +bapMultiSelectInput("Spawn Locations", "spawn_locations", "spawns")
+                        each loc in spawnLocations
+                            - const selected = form.spawn_locations && form.spawn_locations.includes(loc);
+                            option(value=loc selected=selected)= loc
 
-				if !isLivestock
-					+bapTextInput("Propagation Method", "propagation_method", "Cuttings, Runners, Seed...")
+                if !isLivestock
+                    +bapTextInput("Propagation Method", "propagation_method", "Cuttings, Runners, Seed...")
 
-	section.bg-gray-100.py-4(aria-labelledby="tank-section")
-		div.max-w-4xl.mx-auto.text-left.px-4
-			.flex.justify-between.items-center.mb-4
-				h2#tank-section(class="text-xl sm:text-2xl font-bold") Tank Details
-				.flex.gap-2
-					button.primary(
-						type="button"
-						hx-target="closest body"
-						hx-swap="beforeend"
-						hx-get="/tanks/new"
-						aria-label="Save tank settings for reuse"
-						title="Save your current tank settings to reuse in future submissions") Save
-					button.outline(
-						type="button"
-						hx-target="closest body"
-						hx-swap="beforeend"
-						hx-get="/tanks"
-						aria-label="Load previously saved tank settings"
-						title="Load tank settings from your saved configurations") Load
+    section.bg-gray-100.py-4(aria-labelledby="tank-section")
+        div.max-w-4xl.mx-auto.text-left.px-4
+            .flex.justify-between.items-center.mb-4
+                h2#tank-section(class="text-xl sm:text-2xl font-bold") Tank Details
+                .flex.gap-2
+                    button.primary(
+                        type="button"
+                        hx-target="closest body"
+                        hx-swap="beforeend"
+                        hx-get="/tanks/new"
+                        aria-label="Save tank settings for reuse"
+                        title="Save your current tank settings to reuse in future submissions") Save
+                    button.outline(
+                        type="button"
+                        hx-target="closest body"
+                        hx-swap="beforeend"
+                        hx-get="/tanks"
+                        aria-label="Load previously saved tank settings"
+                        title="Load tank settings from your saved configurations") Load
 
-			div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")#tankSettings
-				include tank.pug
-				if hasLighting
-					+bapTextInput("Lighting Type", "light_type", "LED, Sunlight, Ambient...")
-					+bapTextInput("Light Strength", "light_strength", "200W, 5 PAR...")
-					+bapTextInput("Light Hours", "light_hours", "16...")
+            div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")#tankSettings
+                include tank.pug
+                if hasLighting
+                    +bapTextInput("Lighting Type", "light_type", "LED, Sunlight, Ambient...")
+                    +bapTextInput("Light Strength", "light_strength", "200W, 5 PAR...")
+                    +bapTextInput("Light Hours", "light_hours", "16...")
 
-			div.flex.mt-4.gap-2.w-full.justify-center-center.text-center.items-center.hidden
-				button.p-2.rounded-md(class="bg-red-500 text-white") Clear
-				button.p-2.rounded-md(class="bg-black text-white") Save
-				button.p-2.rounded-md(class="bg-black text-white") Load
+            div.flex.mt-4.gap-2.w-full.justify-center-center.text-center.items-center.hidden
+                button.p-2.rounded-md(class="bg-red-500 text-white") Clear
+                button.p-2.rounded-md(class="bg-black text-white") Save
+                button.p-2.rounded-md(class="bg-black text-white") Load
 
-	if hasSupplements
-		section.bg-gray-100.py-4(aria-labelledby="supplements-section")
-			div.max-w-4xl.mx-auto.text-left.px-4
+    if hasSupplements
+        section.bg-gray-100.py-4(aria-labelledby="supplements-section")
+            div.max-w-4xl.mx-auto.text-left.px-4
 
-				h2#supplements-section(class="text-xl sm:text-2xl font-bold mb-4") Supplements
+                h2#supplements-section(class="text-xl sm:text-2xl font-bold mb-4") Supplements
 
-				div.w-full.gap-2
-					- const hasCO2 = form.co2 === "yes";
-					.grid.gap-2
-						label.input-label(for="co2") CO2?
-						.select-wrapper
-							select(
-								id="co2"
-								value=form.co2
-								name="co2"
-								hx-trigger="change"
-								hx-on:change="document.getElementById('CO2Desc').classList.toggle('hidden', this.value === 'no')"
-								aria-controls="CO2Desc")
-								option(value="no", selected=!hasCO2) No
-								option(value="yes", selected=hasCO2) Yes
+                div.w-full.gap-2
+                    - const hasCO2 = form.co2 === "yes";
+                    .grid.gap-2
+                        label.input-label(for="co2") CO2?
+                        .select-wrapper
+                            select(
+                                id="co2"
+                                value=form.co2
+                                name="co2"
+                                hx-trigger="change"
+                                hx-on:change="document.getElementById('CO2Desc').classList.toggle('hidden', this.value === 'no')"
+                                aria-controls="CO2Desc")
+                                option(value="no", selected=!hasCO2) No
+                                option(value="yes", selected=hasCO2) Yes
 
-					div#CO2Desc(class=`${hasCO2 ? "" : "hidden"}`)
-						textarea.text-input(
-							id="co2_description"
-							name="co2_description"
-							rows="4"
-							placeholder="Describe CO2 injection..."
-							aria-label="CO2 injection description")
+                    div#CO2Desc(class=`${hasCO2 ? "" : "hidden"}`)
+                        textarea.text-input(
+                            id="co2_description"
+                            name="co2_description"
+                            rows="4"
+                            placeholder="Describe CO2 injection..."
+                            aria-label="CO2 injection description")
 
-					div.py-4.w-full.flex-col#supplements
-						label.input-label Others
-						if !!form.supplement_type
-							each type, index in form.supplement_type
-								+supplementLine(type, form.supplement_regimen[index])
-						else
-							+supplementLine("", "")
+                    div.py-4.w-full.flex-col#supplements
+                        label.input-label Others
+                        if !!form.supplement_type
+                            each type, index in form.supplement_type
+                                +supplementLine(type, form.supplement_regimen[index])
+                        else
+                            +supplementLine("", "")
 
-					button.outline(
-						type="button"
-						hx-get="/submissions/new/addSupplement"
-						hx-swap="beforeend"
-						hx-target="#supplements"
-						aria-label="Add another supplement"
-						title="Add another supplement to your regimen"
-					) Add +
-	
-	//- Image Upload Section
-	+imageUploadSection()
+                    button.outline(
+                        type="button"
+                        hx-get="/submissions/new/addSupplement"
+                        hx-swap="beforeend"
+                        hx-target="#supplements"
+                        aria-label="Add another supplement"
+                        title="Add another supplement to your regimen"
+                    ) Add +
 
-	unless form.submitted_on || editing
-		section.bg-blue-50.py-4.border-l-4.border-blue-400(aria-labelledby="witness-info")
-			div.max-w-4xl.mx-auto.px-4
-				h3#witness-info.text-lg.font-semibold.text-blue-900.mb-2 📋 Witness Verification Required
-				if form.species_type === 'Plant' || form.species_type === 'Coral'
-					p.text-blue-800.mb-2 After submitting, your propagation will need to be verified by a program admin before final approval.
-				else
-					p.text-blue-800.mb-2 After submitting, your spawn will need to be verified by a program admin before final approval.
-				ul.text-sm.text-blue-700.list-disc.list-inside.space-y-1
-					li Any program admin can witness your submission
-					li You'll receive email notification when witnessed
-					if form.species_type === 'Fish' && form.species_class === 'Marine'
-						li 30-day waiting period required after spawn date
-					else if form.species_type === 'Plant'
-						li 60-day waiting period required after propagation date
-					else if form.species_type === 'Coral'
-						li 60-day waiting period required after propagation date
-					else
-						li 60-day waiting period required after spawn date
-					li Final approval and point assignment occurs after waiting period
+    //- Image Upload Section
+    +imageUploadSection()
 
-	section.bg-gray-100.py-4
-		div.flex.justify-center.max-w-4xl.mx-auto.text-center.gap-4
-			if form.submitted_on || editing
-				button.primary(class="w-2/5 max-w-200" type="submit" title="Save changes to your submission") Save Edits
-			else
-				button.primary(class="w-2/5 max-w-200" type="submit" title="Submit your entry for witness verification and review") Submit
-				button.outline(class="w-2/5 max-w-200" type="submit" name="draft" value="true" title="Save your progress without submitting for review") Save Draft
-				if form.id
-					// Delete button for drafts - smaller, inline with Submit/Save Draft
-					button.destructive(
-						class="px-4 py-2 text-sm"
-						hx-delete=`/submissions/${form.id}`
-						hx-confirm="Are you sure you want to permanently delete this draft? This cannot be undone."
-						type="button"
-					) Delete Draft
+    unless form.submitted_on || editing
+        section.bg-blue-50.py-4.border-l-4.border-blue-400(aria-labelledby="witness-info")
+            div.max-w-4xl.mx-auto.px-4
+                h3#witness-info.text-lg.font-semibold.text-blue-900.mb-2 📋 Witness Verification Required
+                if form.species_type === 'Plant' || form.species_type === 'Coral'
+                    p.text-blue-800.mb-2 After submitting, your propagation will need to be verified by a program admin before final approval.
+                else
+                    p.text-blue-800.mb-2 After submitting, your spawn will need to be verified by a program admin before final approval.
+                ul.text-sm.text-blue-700.list-disc.list-inside.space-y-1
+                    li Any program admin can witness your submission
+                    li You'll receive email notification when witnessed
+                    if form.species_type === 'Fish' && form.species_class === 'Marine'
+                        li 30-day waiting period required after spawn date
+                    else if form.species_type === 'Plant'
+                        li 60-day waiting period required after propagation date
+                    else if form.species_type === 'Coral'
+                        li 60-day waiting period required after propagation date
+                    else
+                        li 60-day waiting period required after spawn date
+                    li Final approval and point assignment occurs after waiting period
+
+    section.bg-gray-100.py-4
+        div.flex.justify-center.max-w-4xl.mx-auto.text-center.gap-4
+            if form.submitted_on || editing
+                button.primary(class="w-2/5 max-w-200" type="submit" title="Save changes to your submission") Save Edits
+            else
+                button.primary(class="w-2/5 max-w-200" type="submit" title="Submit your entry for witness verification and review") Submit
+                button.outline(class="w-2/5 max-w-200" type="submit" name="draft" value="true" title="Save your progress without submitting for review") Save Draft
+                if form.id
+                    // Delete button for drafts - smaller, inline with Submit/Save Draft
+                    button.destructive(
+                        class="px-4 py-2 text-sm"
+                        hx-delete=`/submissions/${form.id}`
+                        hx-confirm="Are you sure you want to permanently delete this draft? This cannot be undone."
+                        type="button"
+                    ) Delete Draft

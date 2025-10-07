@@ -66,7 +66,6 @@ export const searchSpecies = async (req: MulmRequest, res: Response<SpeciesTypea
     );
 		
     const formattedSpecies: SpeciesTypeaheadItem[] = species.map(s => ({
-      value: s.group_id.toString(),
       text: `${s.common_name} (${s.scientific_name})`,
       common_name: s.common_name,
       scientific_name: s.scientific_name,

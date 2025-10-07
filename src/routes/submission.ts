@@ -256,7 +256,25 @@ export const create = async (req: MulmRequest, res: Response) => {
     // Validate that the species_name_id references a species with matching program_class
     const canonical = await getCanonicalSpeciesName(form.species_name_id);
     if (!canonical || canonical.program_class !== form.species_type) {
-      res.status(400).send("Species name does not match selected species type");
+      const errors = new Map<string, string>();
+      errors.set('species_type', 'Species name does not match selected species type');
+      const selectedType = form.species_type || 'Fish';
+      res.render('bapForm/form', {
+        title: getBapFormTitle(selectedType),
+        form,
+        errors,
+        classOptions: getClassOptions(selectedType),
+        waterTypes,
+        speciesTypes,
+        foodTypes,
+        spawnLocations,
+        isLivestock: isLivestock(selectedType),
+        hasFoods: hasFoods(selectedType),
+        hasSpawnLocations: hasSpawnLocations(selectedType),
+        hasLighting: hasLighting(selectedType),
+        hasSupplements: hasSupplements(selectedType),
+        isAdmin: Boolean(viewer.is_admin),
+      });
       return;
     }
   } else if (form.species_common_name && form.species_latin_name) {
@@ -348,7 +366,25 @@ export const update = async (req: MulmRequest, res: Response) => {
     // Validate that the species_name_id references a species with matching program_class
     const canonical = await getCanonicalSpeciesName(form.species_name_id);
     if (!canonical || canonical.program_class !== form.species_type) {
-      res.status(400).send("Species name does not match selected species type");
+      const errors = new Map<string, string>();
+      errors.set('species_type', 'Species name does not match selected species type');
+      const selectedType = form.species_type || 'Fish';
+      res.render('bapForm/form', {
+        title: getBapFormTitle(selectedType),
+        form,
+        errors,
+        classOptions: getClassOptions(selectedType),
+        waterTypes,
+        speciesTypes,
+        foodTypes,
+        spawnLocations,
+        isLivestock: isLivestock(selectedType),
+        hasFoods: hasFoods(selectedType),
+        hasSpawnLocations: hasSpawnLocations(selectedType),
+        hasLighting: hasLighting(selectedType),
+        hasSupplements: hasSupplements(selectedType),
+        isAdmin: Boolean(viewer.is_admin),
+      });
       return;
     }
   } else if (form.species_common_name && form.species_latin_name) {

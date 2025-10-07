@@ -9,8 +9,6 @@
  * Used by frontend autocomplete components
  */
 export interface SpeciesTypeaheadItem {
-  /** The group ID as a string for form value */
-  value: string;
   /** Display text combining genus and species */
   text: string;
   /** First common name if available */
