@@ -217,3 +217,10 @@ mixin CRUDForm()
 			else
 				button.primary(class="w-2/5 max-w-200" type="submit" title="Submit your entry for witness verification and review") Submit
 				button.outline(class="w-2/5 max-w-200" type="submit" name="draft" value="true" title="Save your progress without submitting for review") Save Draft
+
+	// Delete button for drafts
+	if form.id && !form.submitted_on
+		section.bg-gray-100.py-2
+			div.flex.justify-center.max-w-4xl.mx-auto.text-center
+				form(hx-delete=`/submissions/${form.id}` hx-confirm="Are you sure you want to permanently delete this draft? This cannot be undone.")
+					button.destructive(class="w-2/5 max-w-200" type="submit") Delete Draft
