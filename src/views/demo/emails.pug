@@ -1,0 +1,135 @@
+include ../header.pug
+
+doctype html
+html
+	+headTag(title)
+		style.
+			.email-container {
+				max-width: 600px;
+				margin: 20px auto;
+				border: 2px solid #e2e8f0;
+				border-radius: 8px;
+				background: white;
+				box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+			}
+			.email-label {
+				background: #1e293b;
+				color: white;
+				padding: 10px 20px;
+				font-weight: bold;
+				border-radius: 6px 6px 0 0;
+			}
+			.viewport-toggle {
+				position: fixed;
+				top: 80px;
+				right: 20px;
+				z-index: 1000;
+				background: white;
+				padding: 15px;
+				border-radius: 8px;
+				box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+			}
+			.mobile-view .email-container {
+				max-width: 375px;
+			}
+			.email-preview {
+				background: #f8fafc;
+				min-height: 100vh;
+				padding: 20px;
+			}
+
+	body.bg-white.text-gray-800
+		+pageHeader(true, title)
+
+		.viewport-toggle
+			h3.text-sm.font-bold.mb-2 Viewport
+			.flex.flex-col.gap-2
+				button#desktopBtn.primary(onclick="setViewport('desktop')") Desktop
+				button#mobileBtn.outline(onclick="setViewport('mobile')") Mobile (375px)
+
+		.email-preview#emailPreview.max-w-7xl.mx-auto.px-4.py-8
+
+			h2.text-2xl.font-bold.mb-6 Email Templates Preview
+
+			//- Email 1: Witness Confirmed
+			.email-container.mb-8
+				.email-label 1. Witness Confirmation Email
+				div
+					include ../email/onWitnessConfirmed.pug
+
+			//- Email 2: Witness Declined
+			.email-container.mb-8
+				.email-label 2. Witness Review Required Email
+				div
+					- const reason = sampleData.reason
+					include ../email/onWitnessDeclined.pug
+
+			//- Email 3: Forgot Password
+			.email-container.mb-8
+				.email-label 3. Password Reset Email
+				div(style="padding: 20px; font-family: Arial, sans-serif;")
+					p= `Hi ${member.display_name}`
+					p You have requested a password reset for your account.
+					p
+						| Click or copy this link&nbsp;
+						a(href=`https://${domain}/auth/forgot-password?code=${code}`)= `https://${domain}/auth/forgot-password?code=${code}`
+						|  to choose a new password.
+
+			//- Email 4: Approval
+			.email-container.mb-8
+				.email-label 4. Submission Approved Email
+				div(style="padding: 20px; font-family: Arial, sans-serif;")
+					p= `Hi ${member.display_name}`
+					p
+						| Congratulations!&nbsp;
+						a(href=`https://${domain}/submissions/${submission.id}`) Your submission
+						|  has been approved!
+					ul
+						li= `Common Name: ${submission.species_common_name}`
+						li= `Scientific Name: ${submission.species_latin_name}`
+						li= `Base Points Awarded: ${submission.points}`
+						if submission.total_points && submission.total_points !== submission.points
+							li= `Total Points: ${submission.total_points}`
+
+			//- Email 5: Submission Received
+			.email-container.mb-8
+				.email-label 5. Submission Received Email
+				div(style="padding: 20px; font-family: Arial, sans-serif;")
+					p= `Hi ${member.display_name}`
+					p Your BAP submission has been received and is being reviewed.
+
+			//- Email 6: Level Upgrade
+			.email-container.mb-8
+				.email-label 6. Level Upgrade Email
+				div(style="padding: 20px; font-family: Arial, sans-serif;")
+					p= `Hi ${member.display_name}`
+					p Congratulations! You've achieved a new award level!
+					p= `Award: ${award.award_name}`
+
+			//- Email 7: Member Invitation (skip for now - complex)
+			.email-container.mb-8
+				.email-label 7. Member Invitation Email (Complex - See invite.pug)
+				div(style="padding: 20px; font-family: Arial, sans-serif;")
+					p Member invitation with full submission tables
+					p See src/views/email/invite.pug for current implementation
+
+		script.
+			function setViewport(type) {
+				const preview = document.getElementById('emailPreview');
+				const desktopBtn = document.getElementById('desktopBtn');
+				const mobileBtn = document.getElementById('mobileBtn');
+
+				if (type === 'mobile') {
+					preview.classList.add('mobile-view');
+					mobileBtn.classList.remove('outline');
+					mobileBtn.classList.add('primary');
+					desktopBtn.classList.remove('primary');
+					desktopBtn.classList.add('outline');
+				} else {
+					preview.classList.remove('mobile-view');
+					desktopBtn.classList.remove('outline');
+					desktopBtn.classList.add('primary');
+					mobileBtn.classList.remove('primary');
+					mobileBtn.classList.add('outline');
+				}
+			}

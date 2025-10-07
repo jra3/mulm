@@ -30,6 +30,7 @@ import { generateRandomCode } from "./auth";
 import { getQueryString } from "./utils/request";
 import { initR2 } from "./utils/r2-client";
 import { loginRateLimiter, signupRateLimiter, forgotPasswordRateLimiter, oauthRateLimiter } from "./middleware/rateLimiter";
+import * as emailDemo from "./routes/emailDemo";
 
 const app = express();
 
@@ -158,6 +159,9 @@ router.get("/me", (req: MulmRequest, res) => {
 });
 
 router.get("/species", species.explorer);
+
+// Demo routes (dev/admin only)
+router.get("/demo/emails", emailDemo.emailDemoPage);
 router.get("/species/:groupId", species.detail);
 
 router.get("/account", account.viewAccountSettings);
