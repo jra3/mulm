@@ -1,12 +1,13 @@
 import config from "./config.json";
 
-export function getGoogleOAuthURL(): string {
+export function getGoogleOAuthURL(state: string): string {
   const endpoint = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   endpoint.searchParams.append("access_type", "offline");
   endpoint.searchParams.append("client_id", config.googleClientId);
   endpoint.searchParams.append("redirect_uri", `https://${config.domain}/oauth/google`);
   endpoint.searchParams.append("scope", "email profile");
   endpoint.searchParams.append("response_type", "code");
+  endpoint.searchParams.append("state", state); // CSRF protection
   return String(endpoint);
 }
 

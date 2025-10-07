@@ -26,6 +26,7 @@ import { sendResetEmail } from "@/notifications";
 import { getGoogleUser, translateGoogleOAuthCode } from "@/oauth";
 import { createUserSession, destroyUserSession, MulmRequest } from "@/sessions";
 import { Response } from "express";
+import { logger } from "@/utils/logger";
 
 export const signup = async (req: MulmRequest, res: Response) => {
   const errors = new Map<string, string>();
@@ -192,7 +193,31 @@ export const resetPassword = async (req: MulmRequest, res: Response) => {
 // OAuth
 
 export const googleOAuth = async (req: MulmRequest, res: Response) => {
-  const { code } = req.query;
+  const { code, state } = req.query;
+
+  // Validate state parameter for CSRF protection
+  if (!state || typeof state !== 'string') {
+    logger.warn('Missing OAuth state parameter');
+    res.status(400).send("Invalid OAuth request. Please try logging in again.");
+    return;
+  }
+
+  const sessionId = String(req.cookies.session_id);
+  if (!sessionId) {
+    logger.warn('Missing session ID during OAuth callback');
+    res.status(400).send("Session expired. Please try logging in again.");
+    return;
+  }
+
+  const { validateAndConsumeOAuthState } = await import('../sessions');
+  const isValidState = await validateAndConsumeOAuthState(sessionId, state);
+
+  if (!isValidState) {
+    logger.warn('Invalid OAuth state parameter', { sessionId, receivedState: state });
+    res.status(403).send("Invalid OAuth state. This may be a CSRF attack. Please try logging in again.");
+    return;
+  }
+
   const resp = await translateGoogleOAuthCode(code as string);
   const payload: unknown = await resp.json();
 

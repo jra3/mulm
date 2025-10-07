@@ -24,8 +24,9 @@ import {
 } from "./db/submissions";
 import { getRecentActivity } from "./db/activity";
 
-import { MulmRequest, sessionMiddleware } from "./sessions";
+import { MulmRequest, sessionMiddleware, setOAuthState } from "./sessions";
 import { getGoogleOAuthURL } from "./oauth";
+import { generateRandomCode } from "./auth";
 import { getQueryString } from "./utils/request";
 import { initR2 } from "./utils/r2-client";
 
@@ -74,10 +75,15 @@ router.get("/", async (req: MulmRequest, res) => {
   const isLoggedIn = Boolean(viewer);
   const isAdmin = viewer?.is_admin;
 
+  // Generate OAuth state for CSRF protection
+  const sessionId = String(req.cookies.session_id);
+  const oauthState = generateRandomCode(32);
+  await setOAuthState(sessionId, oauthState);
+
   const args = {
     title: "BAS BAP/HAP Portal",
     message: "Welcome to BAS!",
-    googleURL: getGoogleOAuthURL(),
+    googleURL: getGoogleOAuthURL(oauthState),
     isLoggedIn,
     isAdmin,
   };
@@ -172,11 +178,16 @@ router.post("/auth/reset-password", auth.resetPassword);
 // OAuth (external dependency - redirect_uri registered with Google)
 router.get("/oauth/google", auth.googleOAuth);
 
-router.get("/dialog/auth/signin", (req, res) => {
+router.get("/dialog/auth/signin", async (req, res) => {
+  // Generate OAuth state for CSRF protection
+  const sessionId = String(req.cookies.session_id);
+  const oauthState = generateRandomCode(32);
+  await setOAuthState(sessionId, oauthState);
+
   res.render("account/signin", {
     viewer: {},
     errors: new Map(),
-    googleURL: getGoogleOAuthURL(),
+    googleURL: getGoogleOAuthURL(oauthState),
   });
 });
 

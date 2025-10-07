@@ -1,8 +1,8 @@
-import { checkPassword, makePasswordEntry } from "@/auth";
+import { checkPassword, makePasswordEntry, generateRandomCode } from "@/auth";
 import { getMemberPassword, createOrUpdatePassword, updateMember, getGoogleAccountByMemberId, deleteGoogleAccount } from "@/db/members";
 import { updateSchema } from "@/forms/login";
 import { getGoogleOAuthURL } from "@/oauth";
-import { MulmRequest } from "@/sessions";
+import { MulmRequest, setOAuthState } from "@/sessions";
 import { Response } from "express";
 
 export const viewAccountSettings = async (req: MulmRequest, res: Response) => {
@@ -12,11 +12,16 @@ export const viewAccountSettings = async (req: MulmRequest, res: Response) => {
     return;
   }
 
+  // Generate OAuth state for CSRF protection
+  const sessionId = String(req.cookies.session_id);
+  const oauthState = generateRandomCode(32);
+  await setOAuthState(sessionId, oauthState);
+
   const [
     googleURL,
     googleAccount
   ] = await Promise.all([
-    getGoogleOAuthURL(),
+    Promise.resolve(getGoogleOAuthURL(oauthState)),
     getGoogleAccountByMemberId(viewer.id),
   ]);
 
@@ -43,9 +48,14 @@ export const updateAccountSettings = async (req: MulmRequest, res: Response) => 
       errors.set(String(issue.path[0]), issue.message);
     });
 
+    // Generate OAuth state for error case
+    const sessionId = String(req.cookies.session_id);
+    const oauthState = generateRandomCode(32);
+    await setOAuthState(sessionId, oauthState);
+
     res.render("account/settings", {
       viewer,
-      googleURL: getGoogleOAuthURL(),
+      googleURL: getGoogleOAuthURL(oauthState),
       errors,
     });
     return;
@@ -76,11 +86,16 @@ export const updateAccountSettings = async (req: MulmRequest, res: Response) => 
     contact_email: form.email,
   });
 
+  // Generate OAuth state for success case
+  const sessionId2 = String(req.cookies.session_id);
+  const oauthState2 = generateRandomCode(32);
+  await setOAuthState(sessionId2, oauthState2);
+
   res.render("account/settings", {
     viewer: {
       display_name: form.display_name,
       contact_email: form.email,
-      googleURL: getGoogleOAuthURL(),
+      googleURL: getGoogleOAuthURL(oauthState2),
     },
     errors,
   });

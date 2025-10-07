@@ -89,3 +89,60 @@ export async function destroyUserSession(req: MulmRequest, res: Response) {
     }
   }
 }
+
+/**
+ * Store OAuth state parameter in session for CSRF protection
+ */
+export async function setOAuthState(sessionId: string, state: string): Promise<void> {
+  try {
+    const conn = writeConn;
+    const stmt = await conn.prepare('UPDATE sessions SET oauth_state = ? WHERE session_id = ?');
+    try {
+      await stmt.run(state, sessionId);
+    } finally {
+      await stmt.finalize();
+    }
+  } catch (err) {
+    console.error(err);
+    throw new Error("Failed to set OAuth state");
+  }
+}
+
+/**
+ * Validate and consume OAuth state parameter
+ * Returns true if state is valid, false otherwise
+ * State is one-time use and cleared after validation
+ */
+export async function validateAndConsumeOAuthState(sessionId: string, state: string): Promise<boolean> {
+  try {
+    const conn = writeConn;
+
+    // Get current state
+    const selectStmt = await conn.prepare('SELECT oauth_state FROM sessions WHERE session_id = ?');
+    let storedState: string | null = null;
+    try {
+      const result = await selectStmt.get<{ oauth_state: string | null }>(sessionId);
+      storedState = result?.oauth_state || null;
+    } finally {
+      await selectStmt.finalize();
+    }
+
+    // Validate state
+    if (!storedState || storedState !== state) {
+      return false;
+    }
+
+    // Clear state (one-time use)
+    const updateStmt = await conn.prepare('UPDATE sessions SET oauth_state = NULL WHERE session_id = ?');
+    try {
+      await updateStmt.run(sessionId);
+    } finally {
+      await updateStmt.finalize();
+    }
+
+    return true;
+  } catch (err) {
+    console.error(err);
+    return false;
+  }
+}
