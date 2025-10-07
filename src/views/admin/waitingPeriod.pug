@@ -1,6 +1,7 @@
 include ../header.pug
 include queueButton.pug
 include adminNav.pug
+include ../mixins/date.pug
 
 - const stringCell = ['p-3', 'text-left', 'border-b', 'border-gray-200'];
 - const heading = ['p-3', 'text-left', 'font-bold', 'text-gray-900', 'border-b-2', 'border-gray-300', 'bg-gray-50', 'cursor-pointer', 'select-none', 'hover:bg-gray-100'];
@@ -27,10 +28,10 @@ mixin waitingPeriodTable(submissions)
 						td(class=stringCell)= sub.species_class
 						td(class=stringCell)= sub.species_common_name
 						td(class=stringCell)= sub.species_latin_name
-						- const reproDate = sub.reproduction_date && new Date(sub.reproduction_date).toLocaleDateString();
-						td(class=stringCell)= reproDate
-						- const witnessDate = sub.witnessed_on && new Date(sub.witnessed_on).toLocaleDateString();
-						td(class=stringCell)= witnessDate
+						td(class=stringCell)
+							+shortDate(sub.reproduction_date, "Reproduction date")
+						td(class=stringCell)
+							+shortDate(sub.witnessed_on, "Witnessed on")
 						td(class=stringCell)= sub.witnessed_by_name || 'Unknown'
 						td(class=stringCell)
 							if sub.waitingStatus.eligible

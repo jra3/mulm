@@ -2,6 +2,7 @@ include ../header.pug
 include queueButton.pug
 include adminNav.pug
 include ../mixins/submissionImages.pug
+include ../mixins/date.pug
 
 - const stringCell = ['p-3', 'text-left', 'border-b', 'border-gray-200'];
 - const heading = ['p-3', 'text-left', 'font-bold', 'text-gray-900', 'border-b-2', 'border-gray-300', 'bg-gray-50', 'cursor-pointer', 'select-none', 'hover:bg-gray-100'];
@@ -41,8 +42,8 @@ mixin approvalQueueTable(submissions)
 						td(class=stringCell)= sub.species_class
 						td(class=stringCell)= sub.species_common_name
 						td(class=stringCell)= sub.species_latin_name
-						- const dateString = sub.submitted_on && new Date(sub.submitted_on).toLocaleDateString();
-						td(class=stringCell)= dateString
+						td(class=stringCell)
+							+shortDate(sub.submitted_on, "Submitted on")
 						td(class=stringCell)
 							a(class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors" href=`/submissions/${sub.id}`) Review
 
