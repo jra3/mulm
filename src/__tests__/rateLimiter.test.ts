@@ -357,4 +357,165 @@ describe('Rate Limiting Middleware', () => {
       assert.ok((response.body as { retryAfter?: string }).retryAfter !== undefined);
     });
   });
+
+  describe('Login Rate Limiter', () => {
+    let loginLimiter: express.RequestHandler;
+
+    beforeEach(() => {
+      loginLimiter = createTestRateLimiter({
+        windowMs: 15 * 60 * 1000,
+        max: 5,
+        keyGenerator: (req) => {
+          const email = (req.body as { email?: string }).email || 'unknown';
+          const ip = req.ip || 'test';
+          return `${ip}:${email}`;
+        },
+        handler: (_req, res) => {
+          res.status(429).send('Too many login attempts. Please wait 15 minutes before trying again.');
+        }
+      });
+
+      app.use(express.json());
+      app.post('/auth/login', loginLimiter, (req, res) => {
+        res.json({ success: true });
+      });
+    });
+
+    test('should allow 5 login attempts within rate limit', async () => {
+      for (let i = 0; i < 5; i++) {
+        await request(app)
+          .post('/auth/login')
+          .send({ email: 'test@test.com', password: 'pass' })
+          .expect(200);
+      }
+    });
+
+    test('should block 6th login attempt', async () => {
+      // First 5 succeed
+      for (let i = 0; i < 5; i++) {
+        await request(app)
+          .post('/auth/login')
+          .send({ email: 'test@test.com', password: 'pass' })
+          .expect(200);
+      }
+
+      // 6th fails
+      const response = await request(app)
+        .post('/auth/login')
+        .send({ email: 'test@test.com', password: 'pass' })
+        .expect(429);
+
+      assert.ok(response.text.includes('Too many login attempts'));
+    });
+
+    test('should rate limit per IP+email combination', async () => {
+      // 5 attempts for email1
+      for (let i = 0; i < 5; i++) {
+        await request(app)
+          .post('/auth/login')
+          .send({ email: 'email1@test.com', password: 'pass' })
+          .expect(200);
+      }
+
+      // email1 is rate limited
+      await request(app)
+        .post('/auth/login')
+        .send({ email: 'email1@test.com', password: 'pass' })
+        .expect(429);
+
+      // But email2 from same IP still works
+      await request(app)
+        .post('/auth/login')
+        .send({ email: 'email2@test.com', password: 'pass' })
+        .expect(200);
+    });
+  });
+
+  describe('Signup Rate Limiter', () => {
+    let signupLimiter: express.RequestHandler;
+
+    beforeEach(() => {
+      signupLimiter = createTestRateLimiter({
+        windowMs: 60 * 60 * 1000,
+        max: 3,
+        keyGenerator: (req) => req.ip || 'test',
+        handler: (_req, res) => {
+          res.status(429).send('Too many signup attempts. Please wait an hour before trying again.');
+        }
+      });
+
+      app.use(express.json());
+      app.post('/auth/signup', signupLimiter, (req, res) => {
+        res.json({ success: true });
+      });
+    });
+
+    test('should allow 3 signups per hour', async () => {
+      for (let i = 0; i < 3; i++) {
+        await request(app)
+          .post('/auth/signup')
+          .send({ email: `user${i}@test.com` })
+          .expect(200);
+      }
+    });
+
+    test('should block 4th signup from same IP', async () => {
+      // First 3 succeed
+      for (let i = 0; i < 3; i++) {
+        await request(app)
+          .post('/auth/signup')
+          .send({ email: `user${i}@test.com` })
+          .expect(200);
+      }
+
+      // 4th fails
+      await request(app)
+        .post('/auth/signup')
+        .send({ email: 'user4@test.com' })
+        .expect(429);
+    });
+  });
+
+  describe('Forgot Password Rate Limiter', () => {
+    let forgotLimiter: express.RequestHandler;
+
+    beforeEach(() => {
+      forgotLimiter = createTestRateLimiter({
+        windowMs: 60 * 60 * 1000,
+        max: 3,
+        keyGenerator: (req) => req.ip || 'test',
+        handler: (_req, res) => {
+          res.status(429).send('Too many password reset requests. Please wait an hour before trying again.');
+        }
+      });
+
+      app.use(express.json());
+      app.post('/auth/forgot-password', forgotLimiter, (req, res) => {
+        res.json({ success: true });
+      });
+    });
+
+    test('should allow 3 password reset requests per hour', async () => {
+      for (let i = 0; i < 3; i++) {
+        await request(app)
+          .post('/auth/forgot-password')
+          .send({ email: 'test@test.com' })
+          .expect(200);
+      }
+    });
+
+    test('should block 4th password reset request', async () => {
+      for (let i = 0; i < 3; i++) {
+        await request(app)
+          .post('/auth/forgot-password')
+          .send({ email: 'test@test.com' })
+          .expect(200);
+      }
+
+      await request(app)
+        .post('/auth/forgot-password')
+        .send({ email: 'test@test.com' })
+        .expect(429);
+    });
+  });
 });
