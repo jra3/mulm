@@ -48,14 +48,8 @@ export const updateAccountSettings = async (req: MulmRequest, res: Response) => 
       errors.set(String(issue.path[0]), issue.message);
     });
 
-    // Generate OAuth state for error case
-    const sessionId = String(req.cookies.session_id);
-    const oauthState = generateRandomCode(32);
-    await setOAuthState(sessionId, oauthState);
-
     res.render("account/settings", {
       viewer,
-      googleURL: getGoogleOAuthURL(oauthState),
       errors,
     });
     return;
@@ -86,16 +80,10 @@ export const updateAccountSettings = async (req: MulmRequest, res: Response) => 
     contact_email: form.email,
   });
 
-  // Generate OAuth state for success case
-  const sessionId2 = String(req.cookies.session_id);
-  const oauthState2 = generateRandomCode(32);
-  await setOAuthState(sessionId2, oauthState2);
-
   res.render("account/settings", {
     viewer: {
       display_name: form.display_name,
       contact_email: form.email,
-      googleURL: getGoogleOAuthURL(oauthState2),
     },
     errors,
   });

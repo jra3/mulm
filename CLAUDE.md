@@ -36,6 +36,21 @@ npm test -- --watch           # Run tests in watch mode
 
 ## Architecture
 
+### Code Quality Standards
+
+**CRITICAL**: Follow these rules for maintainable, performant code:
+
+- ❌ **Never use dynamic imports** - Always use static imports at the top of files
+  ```typescript
+  // WRONG
+  const { someFunction } = await import('../module');
+
+  // CORRECT
+  import { someFunction } from '../module';
+  ```
+- ❌ **Never use `require()`** in TypeScript - Use ES6 imports
+- ✅ **Static imports only** - Enables tree shaking, type checking, and better performance
+
 ### Database Layer
 - **Dual connection pattern**: Separate read-only and write connections (`src/db/conn.ts`)
 - **Transaction wrapper**: `withTransaction()` function for atomic operations

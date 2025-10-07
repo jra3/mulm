@@ -24,7 +24,7 @@ import { validateFormResult } from "@/forms/utils";
 import { getBodyParam } from "@/utils/request";
 import { sendResetEmail } from "@/notifications";
 import { getGoogleUser, translateGoogleOAuthCode } from "@/oauth";
-import { createUserSession, destroyUserSession, MulmRequest } from "@/sessions";
+import { createUserSession, destroyUserSession, MulmRequest, validateAndConsumeOAuthState } from "@/sessions";
 import { Response } from "express";
 import { logger } from "@/utils/logger";
 
@@ -209,7 +209,6 @@ export const googleOAuth = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const { validateAndConsumeOAuthState } = await import('../sessions');
   const isValidState = await validateAndConsumeOAuthState(sessionId, state);
 
   if (!isValidState) {
