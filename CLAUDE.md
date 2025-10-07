@@ -306,7 +306,7 @@ include mixins/date.pug
 
 ### Key Rules
 - ✅ **Always use mixins in templates** - They generate proper `<time>` elements
-- ✅ **Use UTC methods** - Utilities use getUTCMonth(), getUTCDate(), etc. to avoid timezone issues
+- ✅ **Use local timezone** - Dates display in user's local timezone to match calendar dates
 - ✅ **Handle null/undefined** - All utilities return empty string for invalid dates
 - ✅ **Provide aria-labels** - Second parameter adds context for screen readers
 - ❌ **Never use** `.toLocaleDateString()` or `.toDateString()` directly

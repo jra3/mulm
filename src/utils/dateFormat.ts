@@ -39,9 +39,8 @@ export function formatShortDate(date: string | Date | null | undefined): string 
   }
 
   const d = new Date(date!);
-  // Use Intl.DateTimeFormat for consistent formatting
+  // Use Intl.DateTimeFormat for consistent formatting (local timezone)
   return new Intl.DateTimeFormat('en-US', {
-    timeZone: 'UTC',
     month: '2-digit',
     day: '2-digit',
     year: 'numeric'
@@ -65,9 +64,8 @@ export function formatLongDate(date: string | Date | null | undefined): string {
   }
 
   const d = new Date(date!);
-  // Use Intl.DateTimeFormat for consistent formatting
+  // Use Intl.DateTimeFormat for consistent formatting (local timezone)
   return new Intl.DateTimeFormat('en-US', {
-    timeZone: 'UTC',
     month: 'long',
     day: 'numeric',
     year: 'numeric'

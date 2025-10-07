@@ -19,7 +19,7 @@ mixin shortDate(date, label)
 	if date
 		- const d = new Date(date)
 		- if (!isNaN(d.getTime())) {
-			- const formatted = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: '2-digit', day: '2-digit', year: 'numeric' }).format(d)
+			- const formatted = new Intl.DateTimeFormat('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }).format(d)
 			- const iso = d.toISOString()
 			time(datetime=iso aria-label=label)= formatted
 		- } else {
@@ -41,7 +41,7 @@ mixin longDate(date, label)
 	if date
 		- const d = new Date(date)
 		- if (!isNaN(d.getTime())) {
-			- const formatted = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'long', day: 'numeric', year: 'numeric' }).format(d)
+			- const formatted = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(d)
 			- const iso = d.toISOString()
 			time(datetime=iso aria-label=label)= formatted
 		- } else {
