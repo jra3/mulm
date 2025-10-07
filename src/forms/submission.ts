@@ -35,8 +35,8 @@ const speciesTypeEnum = z.enum(["Fish", "Invert", "Plant", "Coral"]);
 
 export const bapFields = z.object({
   id: z.string().optional().transform((val) => (val ? parseInt(val) : undefined)),
-  member_name: z.string().nonempty({ message: "Required" }),
-  member_email: z.string().email("Valid address required"),
+  member_name: z.string().min(1, "Required").max(100, "Name too long (max 100 characters)"),
+  member_email: z.string().email("Valid address required").max(100, "Email too long (max 100 characters)"),
   water_type: waterTypeEnum,
   species_type: speciesTypeEnum,
   reproduction_date: z
@@ -52,36 +52,36 @@ export const bapFields = z.object({
       return true;
     }, { message: "Required" }),
 
-  species_class: z.string().nonempty({ message: "Required" }),
-  species_latin_name: z.string().nonempty({ message: "Required" }),
-  species_common_name: z.string().nonempty({ message: "Required" }),
+  species_class: z.string().min(1, "Required").max(100, "Class too long (max 100 characters)"),
+  species_latin_name: z.string().min(1, "Required").max(200, "Species name too long (max 200 characters)"),
+  species_common_name: z.string().min(1, "Required").max(200, "Common name too long (max 200 characters)"),
 
-  count: z.string().optional(),
+  count: z.string().max(20, "Count too long (max 20 characters)").optional(),
   foods: multiSelect.optional(),
   spawn_locations: multiSelect.optional(),
-  propagation_method: z.string().optional(),
+  propagation_method: z.string().max(500, "Method description too long (max 500 characters)").optional(),
 
-  tank_size: z.string().nonempty({ message: "Required" }),
-  filter_type: z.string().nonempty({ message: "Required" }),
-  water_change_volume: z.string().nonempty({ message: "Required" }),
-  water_change_frequency: z.string().nonempty({ message: "Required" }),
-  temperature: z.string().nonempty({ message: "Required" }),
-  ph: z.string().nonempty({ message: "Required" }),
-  gh: z.string().optional(),
-  specific_gravity: z.string().optional(),
-  substrate_type: z.string().nonempty({ message: "Required" }),
-  substrate_depth: z.string().nonempty({ message: "Required" }),
-  substrate_color: z.string().nonempty({ message: "Required" }),
+  tank_size: z.string().min(1, "Required").max(50, "Tank size too long (max 50 characters)"),
+  filter_type: z.string().min(1, "Required").max(200, "Filter description too long (max 200 characters)"),
+  water_change_volume: z.string().min(1, "Required").max(20, "Volume too long (max 20 characters)"),
+  water_change_frequency: z.string().min(1, "Required").max(100, "Frequency too long (max 100 characters)"),
+  temperature: z.string().min(1, "Required").max(20, "Temperature too long (max 20 characters)"),
+  ph: z.string().min(1, "Required").max(10, "pH value too long (max 10 characters)"),
+  gh: z.string().max(10, "GH value too long (max 10 characters)").optional(),
+  specific_gravity: z.string().max(10, "Specific gravity too long (max 10 characters)").optional(),
+  substrate_type: z.string().min(1, "Required").max(200, "Substrate description too long (max 200 characters)"),
+  substrate_depth: z.string().min(1, "Required").max(50, "Substrate depth too long (max 50 characters)"),
+  substrate_color: z.string().min(1, "Required").max(50, "Substrate color too long (max 50 characters)"),
 
-  light_type: z.string().optional(),
-  light_strength: z.string().optional(),
-  light_hours: z.string().optional(),
+  light_type: z.string().max(200, "Light type too long (max 200 characters)").optional(),
+  light_strength: z.string().max(50, "Light strength too long (max 50 characters)").optional(),
+  light_hours: z.string().max(20, "Light hours too long (max 20 characters)").optional(),
 
   supplement_type: multiSelect.optional(),
   supplement_regimen: multiSelect.optional(),
 
   co2: z.enum(["no", "yes"]).optional(),
-  co2_description: z.string().optional(),
+  co2_description: z.string().max(1000, "Description too long (max 1000 characters)").optional(),
 
   images: z.string().optional(), // JSON string of image metadata
 })

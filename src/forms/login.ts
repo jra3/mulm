@@ -1,16 +1,16 @@
 import * as z from "zod"
 
 export const loginSchema = z.object({
-  email: z.string(),
-  password: z.string(),
+  email: z.string().max(100, "Email too long (max 100 characters)"),
+  password: z.string().max(100, "Password too long (max 100 characters)"),
   rememberMe: z.boolean().optional(),
 })
 
 export const signupSchema = z.object({
-  email: z.string().email(),
-  display_name: z.string().min(2, "Too short"),
-  password: z.string(),
-  password_confirm: z.string(),
+  email: z.string().email().max(100, "Email too long (max 100 characters)"),
+  display_name: z.string().min(2, "Too short").max(100, "Name too long (max 100 characters)"),
+  password: z.string().max(100, "Password too long (max 100 characters)"),
+  password_confirm: z.string().max(100, "Password too long (max 100 characters)"),
 }).refine(
   (data) => (data.password_confirm === data.password),
   {
@@ -20,11 +20,11 @@ export const signupSchema = z.object({
 )
 
 export const updateSchema = z.object({
-  email: z.string().email(),
-  display_name: z.string().min(2, "Too short"),
-  current_password: z.string().optional(),
-  password: z.string().optional(),
-  password_confirm: z.string(),
+  email: z.string().email().max(100, "Email too long (max 100 characters)"),
+  display_name: z.string().min(2, "Too short").max(100, "Name too long (max 100 characters)"),
+  current_password: z.string().max(100, "Password too long (max 100 characters)").optional(),
+  password: z.string().max(100, "Password too long (max 100 characters)").optional(),
+  password_confirm: z.string().max(100, "Password too long (max 100 characters)"),
 }).refine(
   (data) => (data.password_confirm === data.password),
   {
@@ -34,13 +34,13 @@ export const updateSchema = z.object({
 )
 
 export const forgotSchema = z.object({
-  email: z.string().email(),
+  email: z.string().email().max(100, "Email too long (max 100 characters)"),
 });
 
 export const resetSchema = z.object({
-  code: z.string(),
-  password: z.string(),
-  password_confirm: z.string(),
+  code: z.string().max(200, "Code too long"),
+  password: z.string().max(100, "Password too long (max 100 characters)"),
+  password_confirm: z.string().max(100, "Password too long (max 100 characters)"),
 }).refine(
   (data) => (data.password_confirm === data.password),
   {
