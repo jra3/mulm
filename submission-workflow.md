@@ -68,6 +68,40 @@ graph TD
     V --> W[Member Can Edit]
     W --> A
 
+    %% Deletion flows
+    A -->|Delete| DEL1[Owner Delete - Draft]
+    B -->|Delete| DEL1
+    C -->|Owner Delete| DEL2[Owner Delete - Not Approved]
+    G -->|Owner Delete| DEL2
+    X -->|Owner Delete| DEL2
+
+    A -->|Admin Delete| DEL3[Admin Delete - Any State]
+    B -->|Admin Delete| DEL3
+    C -->|Admin Delete| DEL3
+    G -->|Admin Delete| DEL3
+    X -->|Admin Delete| DEL3
+    L -->|Admin Delete| DEL3
+    N -->|Admin Delete| DEL3
+    U -->|Admin Delete| DEL3
+
+    DEL1 --> END1[Deleted]
+    DEL2 --> END1
+    DEL3 --> END1
+
+    %% Post-approval editing flows
+    N -->|Owner: Add Photos| PHOTO[Photo-Only Edit]
+    U -->|Owner: Add Photos| PHOTO
+    PHOTO --> N
+
+    N -->|Admin: Full Edit| EDIT[Admin Edit All Fields]
+    U -->|Admin: Full Edit| EDIT
+    EDIT --> N
+
+    N -->|Owner: Request Correction| REQ[Email Admin for Correction]
+    U -->|Owner: Request Correction| REQ
+    REQ --> ADMIN_EMAIL[Admin Receives Email]
+    ADMIN_EMAIL --> EDIT
+
     style A fill:#1976d2,color:#ffffff,stroke:#0d47a1,stroke-width:2px
     style C fill:#ffa000,color:#ffffff,stroke:#ff6f00,stroke-width:2px
     style G fill:#f57c00,color:#ffffff,stroke:#e65100,stroke-width:2px
@@ -75,6 +109,13 @@ graph TD
     style N fill:#388e3c,color:#ffffff,stroke:#1b5e20,stroke-width:2px
     style U fill:#7b1fa2,color:#ffffff,stroke:#4a148c,stroke-width:2px
     style H fill:#d32f2f,color:#ffffff,stroke:#b71c1c,stroke-width:2px
+    style DEL1 fill:#d32f2f,color:#ffffff,stroke:#b71c1c,stroke-width:2px
+    style DEL2 fill:#d32f2f,color:#ffffff,stroke:#b71c1c,stroke-width:2px
+    style DEL3 fill:#d32f2f,color:#ffffff,stroke:#b71c1c,stroke-width:2px
+    style END1 fill:#424242,color:#ffffff,stroke:#212121,stroke-width:2px
+    style PHOTO fill:#00796b,color:#ffffff,stroke:#004d40,stroke-width:2px
+    style EDIT fill:#00796b,color:#ffffff,stroke:#004d40,stroke-width:2px
+    style REQ fill:#5d4037,color:#ffffff,stroke:#3e2723,stroke-width:2px
 ```
 
 ## State Definitions
@@ -88,6 +129,18 @@ graph TD
 | **Witness Declined** | `witness_verification_status: 'declined'` | Witness declined to verify, member can resubmit |
 | **Approved** | `approved_by: member_id`<br>`approved_on: datetime`<br>`points: number` | Admin approved witnessed submission and assigned points |
 | **Complete** | All approval fields set | Fully processed with points, emails, level checks, awards, and activity feed |
+| **Deleted** | Record removed from database | Submission permanently deleted |
+
+## Permission Matrix
+
+| State | Owner Can Delete? | Admin Can Delete? | Owner Can Edit Data? | Owner Can Add Photos? | Admin Can Edit Data? |
+|-------|------------------|------------------|---------------------|---------------------|---------------------|
+| **Draft** | ✅ Yes | ✅ Yes | ✅ Yes (full edit) | ✅ Yes | ✅ Yes |
+| **Submitted** | ✅ Yes | ✅ Yes | ❌ No (can unsubmit) | ✅ Yes | ✅ Yes |
+| **Witnessed** | ✅ Yes | ✅ Yes | ❌ No | ✅ Yes | ✅ Yes |
+| **Waiting Period** | ✅ Yes | ✅ Yes | ❌ No | ✅ Yes | ✅ Yes |
+| **Approved** | ❌ No | ✅ Yes | ❌ No | ✅ Yes | ✅ Yes |
+| **Complete** | ❌ No | ✅ Yes | ❌ No (can request) | ✅ Yes | ✅ Yes |
 
 ## State Transitions
 
@@ -155,6 +208,49 @@ graph TD
 - Send notification to member explaining issue
 - Reset appropriate timestamps and status fields
 - Allow member to edit and resubmit
+
+### 8. Deletion Transitions
+**Trigger**: User/admin clicks delete button with confirmation
+**Requirements**:
+- **Owner deletion**: Allowed only if `approved_on IS NULL` (not yet awarded points)
+- **Admin deletion**: Allowed at ANY state
+**Side Effects**:
+- Permanently remove submission record from database
+- Delete associated images from R2 storage
+- Remove from any queues (witness, waiting period, approval)
+- No notification sent (deletion is immediate and final)
+
+### 9. Post-Approval Photo Addition
+**Trigger**: Owner clicks "Add Photos" on approved submission
+**Requirements**:
+- Owner must be logged in
+- Submission must have `approved_on IS NOT NULL`
+**Side Effects**:
+- Update only `images` field in database
+- No change to points, approval status, or other fields
+- No email notifications
+
+### 10. Post-Approval Data Edit (Admin Only)
+**Trigger**: Admin clicks "Edit" on approved submission
+**Requirements**:
+- User must be admin
+- Submission can be in any state
+**Side Effects**:
+- Update any/all fields in database
+- Show warning banner during edit
+- Optional: Log edit to `edit_history` field
+- No automatic recalculation of points (admin must update manually if needed)
+
+### 11. Correction Request (Owner)
+**Trigger**: Owner clicks "Request Correction" on approved submission
+**Requirements**:
+- Owner must be logged in
+- Submission must have `approved_on IS NOT NULL`
+**Side Effects**:
+- Send email to admins with correction request text
+- Email includes link to submission and edit page
+- No database changes
+- Show success message to owner
 
 ## Admin Interfaces Required
 
