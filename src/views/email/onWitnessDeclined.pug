@@ -1,3 +1,5 @@
+include ../mixins/date.pug
+
 doctype html
 html
 	head
@@ -68,8 +70,12 @@ html
 				h3 Submission Details:
 				p <strong>Species:</strong> #{submission.species_common_name} (#{submission.species_latin_name})
 				p <strong>Species Class:</strong> #{submission.species_class}
-				p <strong>Reproduction Date:</strong> #{new Date(submission.reproduction_date).toLocaleDateString()}
-				p <strong>Submitted On:</strong> #{new Date(submission.submitted_on).toLocaleDateString()}
+				p
+					strong Reproduction Date:
+					+longDate(submission.reproduction_date)
+				p
+					strong Submitted On:
+					+longDate(submission.submitted_on)
 			
 			.reason-box
 				h3 Reason for Review:

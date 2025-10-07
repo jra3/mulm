@@ -1,3 +1,5 @@
+include ../mixins/date.pug
+
 p= `Hi ${display_name}`
 
 - const url = `https://${domain}/auth/set-password?code=${code}`
@@ -32,7 +34,8 @@ if submissions && submissions.length > 0
 							em= sub.species_latin_name
 							|  (#{sub.species_common_name})
 						td(style="padding: 8px; text-align: right; border: 1px solid #ddd;")= sub.total_points || 0
-						td(style="padding: 8px; border: 1px solid #ddd;")= new Date(sub.reproduction_date).toLocaleDateString()
+						td(style="padding: 8px; border: 1px solid #ddd;")
+							+longDate(sub.reproduction_date)
 
 	if plantSubmissions.length > 0
 		p
@@ -52,7 +55,8 @@ if submissions && submissions.length > 0
 							em= sub.species_latin_name
 							|  (#{sub.species_common_name})
 						td(style="padding: 8px; text-align: right; border: 1px solid #ddd;")= sub.total_points || 0
-						td(style="padding: 8px; border: 1px solid #ddd;")= new Date(sub.reproduction_date).toLocaleDateString()
+						td(style="padding: 8px; border: 1px solid #ddd;")
+							+longDate(sub.reproduction_date)
 
 	if coralSubmissions.length > 0
 		p
@@ -72,7 +76,8 @@ if submissions && submissions.length > 0
 							em= sub.species_latin_name
 							|  (#{sub.species_common_name})
 						td(style="padding: 8px; text-align: right; border: 1px solid #ddd;")= sub.total_points || 0
-						td(style="padding: 8px; border: 1px solid #ddd;")= new Date(sub.reproduction_date).toLocaleDateString()
+						td(style="padding: 8px; border: 1px solid #ddd;")
+							+longDate(sub.reproduction_date)
 
 p
 	| Click or copy this link into your browser&nbsp;
