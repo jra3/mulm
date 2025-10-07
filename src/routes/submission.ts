@@ -8,6 +8,7 @@ import { onSubmissionSend } from "@/notifications";
 import * as db from "@/db/submissions";
 import { getCanonicalSpeciesName } from "@/db/species";
 import { getWaitingPeriodStatus } from "@/utils/waitingPeriod";
+import { getNotesForSubmission } from "@/db/submission_notes";
 
 export const renderSubmissionForm = (req: MulmRequest, res: Response) => {
   const { viewer } = req;
@@ -130,6 +131,9 @@ export const view = async (req: MulmRequest, res: Response) => {
   // Calculate waiting period eligibility
   const waitingPeriodStatus = getWaitingPeriodStatus(submission);
 
+  // Fetch admin notes if viewer is an admin
+  const adminNotes = aspect.isAdmin ? await getNotesForSubmission(submission.id) : [];
+
   res.render('submission/review', {
     submission: {
       ...submission,
@@ -147,6 +151,7 @@ export const view = async (req: MulmRequest, res: Response) => {
     canonicalName,
     name: nameGroup,
     waitingPeriodStatus,
+    adminNotes,
     ...aspect,
   });
 }

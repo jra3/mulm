@@ -19,6 +19,8 @@ import { checkAndGrantSpecialtyAwards, checkAllSpecialtyAwards } from "@/special
 import { createActivity } from "@/db/activity";
 import { logger } from "@/utils/logger";
 import { getSubmissionStatus } from "@/utils/submissionStatus";
+import { addNote, getNotesForSubmission, updateNote, deleteNote, getNoteById } from "@/db/submission_notes";
+import { submissionNoteForm } from "@/forms/submissionNote";
 
 // Helper function to calculate total points for a member
 async function getMemberWithPoints(member: MemberRecord | null): Promise<MemberRecord & { fishTotalPoints: number; plantTotalPoints: number; coralTotalPoints: number } | null> {
@@ -690,5 +692,161 @@ export const checkMemberSpecialtyAwards = async (req: MulmRequest, res: Response
       details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
+}
+
+/**
+ * POST /admin/submissions/:id/notes
+ * Add an admin note to a submission
+ */
+export async function addSubmissionNote(req: MulmRequest, res: Response) {
+  // Auth already verified by requireAdmin middleware
+  const { viewer } = req;
+  const submissionId = parseInt(req.params.id);
+
+  if (!submissionId) {
+    res.status(400).send('Invalid submission ID');
+    return;
+  }
+
+  // Validate form
+  const parsed = submissionNoteForm.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).send('Invalid note: ' + parsed.error.issues[0].message);
+    return;
+  }
+
+  try {
+    // Add the note
+    const noteId = await addNote(submissionId, viewer!.id, parsed.data.note_text);
+
+    // Fetch the newly created note with admin details
+    const notes = await getNotesForSubmission(submissionId);
+    const newNote = notes.find(n => n.id === noteId);
+
+    if (!newNote) {
+      res.status(500).send('Note created but could not be retrieved');
+      return;
+    }
+
+    // Render just the new note HTML for HTMX to insert
+    res.render('admin/submissionNote', {
+      note: newNote
+    });
+  } catch (error) {
+    logger.error('Failed to add submission note', error);
+    res.status(500).send('Failed to add note');
+  }
+}
+
+/**
+ * PATCH /admin/submissions/:submissionId/notes/:noteId
+ * Update an existing admin note
+ */
+export async function updateSubmissionNote(req: MulmRequest, res: Response) {
+  const { viewer } = req;
+  const noteId = parseInt(req.params.noteId);
+
+  if (!noteId) {
+    res.status(400).send('Invalid note ID');
+    return;
+  }
+
+  // Verify the note exists
+  const note = await getNoteById(noteId);
+  if (!note) {
+    res.status(404).send('Note not found');
+    return;
+  }
+
+  // Validate form
+  const parsed = submissionNoteForm.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).send('Invalid note: ' + parsed.error.issues[0].message);
+    return;
+  }
+
+  try {
+    // Update the note
+    await updateNote(noteId, parsed.data.note_text);
+
+    // Fetch the updated note
+    const updatedNote = await getNoteById(noteId);
+    if (!updatedNote) {
+      res.status(500).send('Note updated but could not be retrieved');
+      return;
+    }
+
+    // Render the updated note HTML
+    res.render('admin/submissionNote', {
+      note: updatedNote
+    });
+  } catch (error) {
+    logger.error('Failed to update submission note', error);
+    res.status(500).send('Failed to update note');
+  }
+}
+
+/**
+ * DELETE /admin/submissions/:submissionId/notes/:noteId
+ * Delete an admin note
+ */
+export async function deleteSubmissionNote(req: MulmRequest, res: Response) {
+  const noteId = parseInt(req.params.noteId);
+
+  if (!noteId) {
+    res.status(400).send('Invalid note ID');
+    return;
+  }
+
+  // Verify the note exists
+  const note = await getNoteById(noteId);
+  if (!note) {
+    res.status(404).send('Note not found');
+    return;
+  }
+
+  try {
+    await deleteNote(noteId);
+    res.status(200).send(''); // Return empty response for HTMX to remove the element
+  } catch (error) {
+    logger.error('Failed to delete submission note', error);
+    res.status(500).send('Failed to delete note');
+  }
+}
+
+export async function editSubmissionNoteForm(req: MulmRequest, res: Response) {
+  const noteId = parseInt(req.params.noteId);
+  if (!noteId) {
+    res.status(400).send('Invalid note ID');
+    return;
+  }
+
+  const note = await getNoteById(noteId);
+  if (!note) {
+    res.status(404).send('Note not found');
+    return;
+  }
+
+  res.render('admin/submissionNoteEdit', {
+    note
+  });
+}
+
+export async function cancelEditSubmissionNote(req: MulmRequest, res: Response) {
+  const noteId = parseInt(req.params.noteId);
+  if (!noteId) {
+    res.status(400).send('Invalid note ID');
+    return;
+  }
+
+  const note = await getNoteById(noteId);
+  if (!note) {
+    res.status(404).send('Note not found');
+    return;
+  }
+
+  res.render('admin/submissionNote', {
+    note
+  });
 }
 

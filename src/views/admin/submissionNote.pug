@@ -1,0 +1,30 @@
+//- Single admin note display
+//- Used for rendering individual notes (including HTMX insertions)
+div.bg-white.rounded.border.border-gray-300.p-3(id=`note-${note.id}`)
+	div.flex.justify-between.items-start.mb-2
+		div.flex.items-center.gap-2
+			if note.admin_name
+				span.text-sm.font-semibold.text-gray-700= note.admin_name
+			else
+				span.text-sm.font-semibold.text-gray-400.italic Former Admin
+			span.text-xs.text-gray-500= new Date(note.created_at).toLocaleString()
+
+		//- Action buttons
+		div.flex.gap-3(id=`note-actions-${note.id}`)
+			button.text-xs.text-red-600(
+				class="hover:text-red-800"
+				type="button"
+				hx-delete=`/admin/submissions/${note.submission_id}/notes/${note.id}`
+				hx-confirm="Are you sure you want to delete this note?"
+				hx-target=`#note-${note.id}`
+				hx-swap="outerHTML"
+			) Delete
+
+	//- Note text (double-click to edit)
+	p.text-sm.text-gray-800.whitespace-pre-wrap(
+		class="cursor-pointer"
+		hx-get=`/admin/submissions/${note.submission_id}/notes/${note.id}/edit`
+		hx-trigger="dblclick"
+		hx-target=`#note-${note.id}`
+		hx-swap="outerHTML"
+	)= note.note_text

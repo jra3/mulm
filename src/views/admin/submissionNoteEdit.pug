@@ -1,0 +1,31 @@
+//- Edit form for admin note
+div.bg-white.rounded.border.border-gray-300.p-3(id=`note-${note.id}`)
+	div.flex.justify-between.items-start.mb-2
+		div.flex.items-center.gap-2
+			if note.admin_name
+				span.text-sm.font-semibold.text-gray-700= note.admin_name
+			else
+				span.text-sm.font-semibold.text-gray-400.italic Former Admin
+			span.text-xs.text-gray-500= new Date(note.created_at).toLocaleString()
+
+	//- Edit form
+	form(
+		hx-patch=`/admin/submissions/${note.submission_id}/notes/${note.id}`
+		hx-target=`#note-${note.id}`
+		hx-swap="outerHTML"
+	)
+		textarea.text-input.mb-2(
+			name="note_text"
+			rows="3"
+			required
+			maxlength="2000"
+		)= note.note_text
+		div.flex.gap-2
+			button.primary.text-sm.px-3.py-1(type="submit") Save
+			button.text-sm.px-3.py-1(
+				class="bg-gray-300 hover:bg-gray-400 text-gray-800"
+				type="button"
+				hx-get=`/admin/submissions/${note.submission_id}/notes/${note.id}/cancel`
+				hx-target=`#note-${note.id}`
+				hx-swap="outerHTML"
+			) Cancel
