@@ -135,6 +135,20 @@ export type SpeciesExplorerItem = {
 };
 
 /**
+ * Individual species name record for typeahead/autocomplete
+ * Represents a single name variant (synonym) for a species
+ */
+export type SpeciesNameRecord = {
+	name_id: number;
+	group_id: number;
+	common_name: string;
+	scientific_name: string;
+	program_class: string;
+	canonical_genus: string;
+	canonical_species_name: string;
+};
+
+/**
  * Unified species search function with flexible options
  * Handles both typeahead and explorer use cases
  */
@@ -212,15 +226,7 @@ export async function searchSpeciesTypeahead(
   searchQuery: string,
   filters: Omit<SpeciesFilters, 'search' | 'sort'> = {},
   limit: number = 10
-): Promise<Array<{
-  name_id: number;
-  group_id: number;
-  common_name: string;
-  scientific_name: string;
-  program_class: string;
-  canonical_genus: string;
-  canonical_species_name: string;
-}>> {
+): Promise<SpeciesNameRecord[]> {
   if (!searchQuery || searchQuery.trim().length < 2) {
     return [];
   }
