@@ -27,6 +27,7 @@ import { getGoogleUser, translateGoogleOAuthCode } from "@/oauth";
 import { regenerateSession, destroyUserSession, MulmRequest, validateAndConsumeOAuthState } from "@/sessions";
 import { Response } from "express";
 import { logger } from "@/utils/logger";
+import { recordFailedAttempt, isAccountLocked, clearFailedAttempts, getRemainingLockoutTime } from "@/services/accountLockout";
 
 export const signup = async (req: MulmRequest, res: Response) => {
   const errors = new Map<string, string>();
@@ -64,6 +65,22 @@ export const passwordLogin = async (req: MulmRequest, res: Response) => {
 
   // Always fetch member AND password to normalize timing
   const member = await getMemberByEmail(data.email);
+
+  // Check if account is locked (before attempting password check)
+  if (member && await isAccountLocked(member.id)) {
+    const remainingSeconds = await getRemainingLockoutTime(member.id);
+    const remainingMinutes = Math.ceil(remainingSeconds / 60);
+    logger.warn('Login attempt on locked account', {
+      memberId: member.id,
+      ip: req.ip
+    });
+    res.status(403).send(
+      `Account temporarily locked due to multiple failed login attempts. ` +
+      `Please try again in ${remainingMinutes} minute${remainingMinutes !== 1 ? 's' : ''}.`
+    );
+    return;
+  }
+
   const pass = member ? await getMemberPassword(member.id) : null;
 
   // Always call checkPassword even if member doesn't exist (timing attack mitigation)
@@ -80,9 +97,28 @@ export const passwordLogin = async (req: MulmRequest, res: Response) => {
   );
 
   if (member && isValid) {
+    // Successful login - clear failed attempts
+    await clearFailedAttempts(member.id);
     await regenerateSession(req, res, member.id);
     res.set("HX-Redirect", "/").send();
     return;
+  }
+
+  // Failed login - record attempt if member exists
+  if (member) {
+    const locked = await recordFailedAttempt(member.id, req.ip || 'unknown');
+    if (locked) {
+      const remainingMinutes = 15; // Lockout duration
+      logger.warn('Account locked after failed attempts', {
+        memberId: member.id,
+        ip: req.ip
+      });
+      res.status(403).send(
+        `Account locked due to too many failed login attempts. ` +
+        `Please wait ${remainingMinutes} minutes or reset your password.`
+      );
+      return;
+    }
   }
 
   // Generic error message (no distinction between invalid email vs password)
