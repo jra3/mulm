@@ -10,7 +10,7 @@ import {
   uploadToR2
 } from '../../utils/r2-client';
 import { logger } from '../../utils/logger';
-import { updateOne, query } from '../../db/conn';
+import { updateOne, query, withTransaction } from '../../db/conn';
 import { ImageMetadata } from '../../utils/r2-client';
 import {
   getUploadRateLimiters,
@@ -158,25 +158,51 @@ router.post(
       // If this is for a submission, update the database
       if (submissionId && processedImages.length > 0) {
         try {
-        // Get existing images
-          const [submission] = await query<{ images: string | null }>(
-            'SELECT images FROM submissions WHERE id = ?',
-            [submissionId]
-          );
-        
-          if (submission) {
-            const existingImages = submission.images ? JSON.parse(submission.images) as ImageMetadata[] : [];
-            const allImages = [...existingImages, ...processedImages];
-          
-            // Update submission with new images
-            await updateOne(
-              'submissions',
-              { id: submissionId },
-              { images: JSON.stringify(allImages) }
-            );
-          }
+          // Wrap database operations in a transaction for atomicity
+          await withTransaction(async (db) => {
+            // Get existing images
+            const stmt = await db.prepare('SELECT images FROM submissions WHERE id = ?');
+            try {
+              const submission = await stmt.get<{ images: string | null }>(submissionId);
+
+              if (submission) {
+                const existingImages = submission.images ? JSON.parse(submission.images) as ImageMetadata[] : [];
+                const allImages = [...existingImages, ...processedImages];
+
+                // Update submission with new images
+                const updateStmt = await db.prepare('UPDATE submissions SET images = ? WHERE id = ?');
+                try {
+                  await updateStmt.run(JSON.stringify(allImages), submissionId);
+                } finally {
+                  await updateStmt.finalize();
+                }
+              }
+            } finally {
+              await stmt.finalize();
+            }
+          });
         } catch (error) {
           logger.error('Failed to update submission with images', error);
+
+          // Clean up R2 uploads on database transaction failure
+          logger.info('Cleaning up R2 uploads after database failure');
+          for (const image of processedImages) {
+            try {
+              await deleteImage(image.key);
+              // Delete the other sizes
+              const mediumKey = image.key.replace('-original', '-medium');
+              const thumbKey = image.key.replace('-original', '-thumb');
+              await Promise.all([
+                deleteImage(mediumKey).catch(() => {}),
+                deleteImage(thumbKey).catch(() => {})
+              ]);
+            } catch (deleteError) {
+              logger.error('Failed to clean up R2 image after database failure', deleteError);
+            }
+          }
+
+          // Rethrow the original error
+          throw error;
         }
       }
 
@@ -253,21 +279,37 @@ router.delete('/image/:key', deleteRateLimiter, async (req: MulmRequest, res): P
   const { key } = req.params;
   
   try {
-    // Verify the user owns this image (check if it's in their submissions)
-    const [submission] = await query<{ images: string }>(
-      `SELECT images FROM submissions 
-       WHERE member_id = ? AND images LIKE ?`,
-      [viewer.id, `%${key}%`]
-    );
-    
-    if (!submission) {
+    // Verify the user owns this image and get submission data in a transaction
+    let submissionId: number | undefined;
+    let existingImages: ImageMetadata[] | undefined;
+
+    await withTransaction(async (db) => {
+      const stmt = await db.prepare(`
+        SELECT id, images FROM submissions
+        WHERE member_id = ? AND images LIKE ?
+      `);
+      try {
+        const submission = await stmt.get<{ id: number; images: string }>(viewer.id, `%${key}%`);
+
+        if (!submission) {
+          throw new Error('Image not found or access denied');
+        }
+
+        submissionId = submission.id;
+        existingImages = JSON.parse(submission.images) as ImageMetadata[];
+      } finally {
+        await stmt.finalize();
+      }
+    });
+
+    if (!submissionId || !existingImages) {
       res.status(403).json({ error: 'Image not found or access denied' });
       return;
     }
-    
+
     // Delete from R2
     await deleteImage(key);
-    
+
     // Also delete the other sizes
     const mediumKey = key.replace('-original', '-medium');
     const thumbKey = key.replace('-original', '-thumb');
@@ -275,22 +317,28 @@ router.delete('/image/:key', deleteRateLimiter, async (req: MulmRequest, res): P
       deleteImage(mediumKey).catch(() => {}), // Ignore errors for variants
       deleteImage(thumbKey).catch(() => {})
     ]);
-    
-    // Update submission to remove this image
-    const images = JSON.parse(submission.images) as ImageMetadata[];
-    const updatedImages = images.filter((img) => img.key !== key);
-    
-    await updateOne(
-      'submissions',
-      { member_id: viewer.id, images: submission.images },
-      { images: JSON.stringify(updatedImages) }
-    );
-    
+
+    // Update submission to remove this image in a transaction
+    await withTransaction(async (db) => {
+      const updatedImages = existingImages!.filter((img) => img.key !== key);
+
+      const stmt = await db.prepare('UPDATE submissions SET images = ? WHERE id = ? AND member_id = ?');
+      try {
+        await stmt.run(JSON.stringify(updatedImages), submissionId, viewer.id);
+      } finally {
+        await stmt.finalize();
+      }
+    });
+
     res.json({ success: true });
-    
+
   } catch (error) {
     logger.error('Failed to delete image', error);
-    res.status(500).json({ error: 'Failed to delete image' });
+    if (error instanceof Error && error.message === 'Image not found or access denied') {
+      res.status(403).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: 'Failed to delete image' });
+    }
   }
 });
 
