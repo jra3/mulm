@@ -12,7 +12,9 @@ include ../header.pug
 			+textInput("Email", "email")
 			+passwordInput("Password", "password")
 			.flex.gap-2.items-center
-				button.primary(type="submit") Log In
+				button.primary(type="submit" hx-disabled-elt="this")
+					span Log In
+					span.htmx-indicator.spinner
 				a.link(
 					hx-get="/dialog/auth/signup"
 					hx-swap="outerHTML"

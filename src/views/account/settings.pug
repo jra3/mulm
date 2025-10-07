@@ -9,4 +9,6 @@ include ./field.pug
 			+passwordInput("Current Password", "current_password")
 			+passwordInput("New Password", "password")
 			+passwordInput("Confirm New Password", "password_confirm")
-		button.mt-4.primary(type="submit") Update
+		button.mt-4.primary(type="submit" hx-disabled-elt="this")
+			span Update
+			span.htmx-indicator.spinner

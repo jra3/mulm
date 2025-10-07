@@ -7,5 +7,7 @@ include ./field.pug
 		+textInput("Email", "email", viewer.contact_email)
 		+passwordInput("Password", "password")
 		+passwordInput("Confirm Password", "password_confirm")
-		button.primary(type="submit") Sign Up
+		button.primary(type="submit" hx-disabled-elt="this")
+			span Sign Up
+			span.htmx-indicator.spinner
 	span#signupError(class="font-extrabold text-red-400")= errors.get("form")

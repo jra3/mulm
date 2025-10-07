@@ -50,9 +50,42 @@ button.outline {
 	display: inline;
 }
 
+.htmx-request.htmx-indicator {
+	display: inline;
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.spinner {
+	display: inline-block;
+	width: 1rem;
+	height: 1rem;
+	border: 2px solid rgba(255, 255, 255, 0.3);
+	border-top-color: currentColor;
+	border-radius: 50%;
+	animation: spin 0.6s linear infinite;
+}
+
+.spinner-sm {
+	width: 0.75rem;
+	height: 0.75rem;
+	border-width: 2px;
+}
+
 /* Disabled button state for HTMX */
 button:disabled, button.htmx-request {
-	@apply opacity-50 cursor-not-allowed;
+	@apply opacity-70 cursor-not-allowed;
+}
+
+/* Show spinner in buttons during HTMX requests */
+button.htmx-request .spinner {
+	display: inline-block;
+	margin-left: 0.5rem;
 }
 
 select {
