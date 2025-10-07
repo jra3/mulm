@@ -743,7 +743,6 @@ export async function addSubmissionNote(req: MulmRequest, res: Response) {
  * Update an existing admin note
  */
 export async function updateSubmissionNote(req: MulmRequest, res: Response) {
-  const { viewer } = req;
   const noteId = parseInt(req.params.noteId);
 
   if (!noteId) {
@@ -814,6 +813,10 @@ export async function deleteSubmissionNote(req: MulmRequest, res: Response) {
   }
 }
 
+/**
+ * GET /admin/submissions/:submissionId/notes/:noteId/edit
+ * Render the edit form for a note
+ */
 export async function editSubmissionNoteForm(req: MulmRequest, res: Response) {
   const noteId = parseInt(req.params.noteId);
   if (!noteId) {
@@ -832,6 +835,10 @@ export async function editSubmissionNoteForm(req: MulmRequest, res: Response) {
   });
 }
 
+/**
+ * GET /admin/submissions/:submissionId/notes/:noteId/cancel
+ * Cancel editing a note and return to read-only view
+ */
 export async function cancelEditSubmissionNote(req: MulmRequest, res: Response) {
   const noteId = parseInt(req.params.noteId);
   if (!noteId) {

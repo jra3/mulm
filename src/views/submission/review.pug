@@ -160,6 +160,7 @@ html
 						hx-post=`/admin/submissions/${submission.id}/notes`
 						hx-target="#notes-list"
 						hx-swap="beforeend"
+						hx-on--after-request="this.reset()"
 					)
 						div.mb-2
 							label.input-label(for="note_text") Add Note

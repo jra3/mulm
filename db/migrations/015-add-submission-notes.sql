@@ -13,5 +13,5 @@ CREATE TABLE submission_notes (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_submission_notes_submission ON submission_notes(submission_id, created_at DESC);
+CREATE INDEX idx_submission_notes_submission ON submission_notes(submission_id, created_at ASC);
 CREATE INDEX idx_submission_notes_admin ON submission_notes(admin_id);
