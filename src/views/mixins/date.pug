@@ -1,0 +1,95 @@
+//- Date Formatting Mixins
+//-
+//- Use these mixins for consistent, accessible date display across all templates.
+//- All mixins use semantic <time> elements with proper datetime attributes.
+//-
+//- IMPORTANT: Never use .toLocaleDateString() directly in templates.
+//- Always use these mixins for date formatting.
+
+//- Short date format: MM/DD/YYYY
+//- Used for compact display in tables and lists
+//-
+//- @param {string|Date} date - The date to format
+//- @param {string} [label] - Optional aria-label for screen readers
+//-
+//- Examples:
+//-   +shortDate(submission.submitted_on)
+//-   +shortDate(award.date_awarded, "Award granted on")
+mixin shortDate(date, label)
+	if date
+		- const { formatShortDate, formatISODate } = require('../../utils/dateFormat')
+		- const formatted = formatShortDate(date)
+		- const iso = formatISODate(date)
+		if formatted
+			time(datetime=iso aria-label=label)= formatted
+		else
+			span -
+	else
+		span -
+
+//- Long date format: "Month DD, YYYY"
+//- Used for detailed views and formal contexts
+//-
+//- @param {string|Date} date - The date to format
+//- @param {string} [label] - Optional aria-label for screen readers
+//-
+//- Examples:
+//-   +longDate(submission.approved_on)
+//-   +longDate(member.created_at, "Member since")
+mixin longDate(date, label)
+	if date
+		- const { formatLongDate, formatISODate } = require('../../utils/dateFormat')
+		- const formatted = formatLongDate(date)
+		- const iso = formatISODate(date)
+		if formatted
+			time(datetime=iso aria-label=label)= formatted
+		else
+			span -
+	else
+		span -
+
+//- Relative date format: "X days ago"
+//- Used for activity feeds and recent events
+//-
+//- @param {string|Date} date - The date to format
+//- @param {string} [label] - Optional aria-label for screen readers
+//-
+//- Examples:
+//-   +relativeDate(activity.created_at)
+//-   +relativeDate(submission.submitted_on, "Submitted")
+mixin relativeDate(date, label)
+	if date
+		- const { formatRelativeDate, formatISODate } = require('../../utils/dateFormat')
+		- const formatted = formatRelativeDate(date)
+		- const iso = formatISODate(date)
+		if formatted
+			time(datetime=iso aria-label=label)= formatted
+		else
+			span -
+	else
+		span -
+
+//- Flexible date format with custom format type
+//- Used when you need specific formatting in special contexts
+//-
+//- @param {string|Date} date - The date to format
+//- @param {string} [format='short'] - Format type: 'short', 'long', or 'relative'
+//- @param {string} [label] - Optional aria-label for screen readers
+//-
+//- Examples:
+//-   +dateTime(submission.submitted_on, 'short')
+//-   +dateTime(activity.created_at, 'relative', 'Activity occurred')
+mixin dateTime(date, format = 'short', label)
+	if date
+		- const { formatShortDate, formatLongDate, formatRelativeDate, formatISODate } = require('../../utils/dateFormat')
+		- const iso = formatISODate(date)
+		- let formatted = ''
+		- if (format === 'long') formatted = formatLongDate(date)
+		- else if (format === 'relative') formatted = formatRelativeDate(date)
+		- else formatted = formatShortDate(date)
+		if formatted
+			time(datetime=iso aria-label=label)= formatted
+		else
+			span -
+	else
+		span -

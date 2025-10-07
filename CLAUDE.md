@@ -257,6 +257,66 @@ npm run script scripts/scriptname.ts
 - ✅ Simple utilities only with dot notation: `div.flex.gap-4.items-center`
 - ✅ Use class attribute for modifiers: `div(class="hover:bg-blue-500 md:flex focus:outline-none")`
 
+## Date Formatting
+
+**IMPORTANT**: All date formatting must use centralized utilities and mixins for consistency and accessibility.
+
+### Utilities (`src/utils/dateFormat.ts`)
+Never use `.toLocaleDateString()` or `.toDateString()` directly. Always use these utilities:
+
+```typescript
+import { formatShortDate, formatLongDate, formatRelativeDate, formatISODate, isValidDate } from '@/utils/dateFormat';
+
+// Compact format for tables
+formatShortDate('2025-01-15') // "01/15/2025"
+
+// Long format for detailed views
+formatLongDate('2025-01-15') // "January 15, 2025"
+
+// Relative format for activity feeds
+formatRelativeDate('2025-10-04') // "3 days ago"
+
+// ISO format for datetime attributes
+formatISODate('2025-01-15') // "2025-01-15T00:00:00.000Z"
+
+// Validate before formatting
+if (isValidDate(dateString)) {
+  // format it
+}
+```
+
+### Pug Mixins (`src/views/mixins/date.pug`)
+Use these mixins in templates for semantic HTML with accessibility:
+
+```pug
+include mixins/date.pug
+
+//- Short format (MM/DD/YYYY) - for tables
++shortDate(submission.submitted_on)
+
+//- Long format (Month DD, YYYY) - for detailed views
++longDate(submission.approved_on, "Approved on")
+
+//- Relative format (X days ago) - for activity feeds
++relativeDate(activity.created_at)
+
+//- Flexible format
++dateTime(date, 'short')  // or 'long', 'relative'
+```
+
+### Key Rules
+- ✅ **Always use mixins in templates** - They generate proper `<time>` elements
+- ✅ **Use UTC methods** - Utilities use getUTCMonth(), getUTCDate(), etc. to avoid timezone issues
+- ✅ **Handle null/undefined** - All utilities return empty string for invalid dates
+- ✅ **Provide aria-labels** - Second parameter adds context for screen readers
+- ❌ **Never use** `.toLocaleDateString()` or `.toDateString()` directly
+- ❌ **Never format dates** in route handlers - pass raw ISO strings to templates
+
+### Database Storage
+- Always store dates as ISO strings using `new Date().toISOString()`
+- Display formatting happens at the presentation layer only (templates)
+- Never store formatted dates in the database
+
 ## Logging
 - Custom logger in `src/utils/logger.ts` respects NODE_ENV
 - Automatically silenced during tests (NODE_ENV=test)
