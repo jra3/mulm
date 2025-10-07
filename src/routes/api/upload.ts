@@ -10,7 +10,7 @@ import {
   uploadToR2
 } from '../../utils/r2-client';
 import { logger } from '../../utils/logger';
-import { updateOne, query, withTransaction } from '../../db/conn';
+import { withTransaction } from '../../db/conn';
 import { ImageMetadata } from '../../utils/r2-client';
 import {
   getUploadRateLimiters,

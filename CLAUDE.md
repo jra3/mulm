@@ -304,13 +304,20 @@ include mixins/date.pug
 +dateTime(date, 'short')  // or 'long', 'relative'
 ```
 
+### When to Use Each Format
+
+- **shortDate** - Tables, lists, compact displays (MM/DD/YYYY)
+- **longDate** - Emails, formal contexts, detailed views ("January 15, 2025")
+- **relativeDate** - Activity feeds, recent events ("3 days ago")
+- **Server-side formatting** - Only for form fields/disabled inputs (use `formatShortDate()`)
+
 ### Key Rules
 - ✅ **Always use mixins in templates** - They generate proper `<time>` elements
 - ✅ **Use local timezone** - Dates display in user's local timezone to match calendar dates
 - ✅ **Handle null/undefined** - All utilities return empty string for invalid dates
 - ✅ **Provide aria-labels** - Second parameter adds context for screen readers
 - ❌ **Never use** `.toLocaleDateString()` or `.toDateString()` directly
-- ❌ **Never format dates** in route handlers - pass raw ISO strings to templates
+- ❌ **Never format dates** in route handlers unless needed for form fields
 
 ### Database Storage
 - Always store dates as ISO strings using `new Date().toISOString()`
