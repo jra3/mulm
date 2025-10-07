@@ -293,7 +293,7 @@ export const update = async (req: MulmRequest, res: Response) => {
 
   if ("unsubmit" in req.body) {
     await db.updateSubmission(submission.id, { submitted_on: null });
-    res.set('HX-Redirect', '/sub/' + submission.id).send();
+    res.set('HX-Redirect', '/submissions/' + submission.id).send();
     return;
   }
 
