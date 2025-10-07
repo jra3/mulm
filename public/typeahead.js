@@ -69,9 +69,22 @@ function buildTomSelectOptions(element, config) {
 					const linkedValue = selectedOption[config.linkedValueField];
 					if (linkedValue) {
 						const linkedInstance = linkedElement.tomSelectInstance;
+						const linkedConfig = getTypeaheadConfig(linkedElement);
+
+						// Create option object using the linked field's configuration
+						const linkedOption = {
+							[linkedConfig.valueField]: linkedValue,
+							[linkedConfig.labelField]: linkedValue
+						};
+
+						// Copy over any other relevant fields from the selected option
+						if (linkedConfig.secondaryField && selectedOption[linkedConfig.secondaryField]) {
+							linkedOption[linkedConfig.secondaryField] = selectedOption[linkedConfig.secondaryField];
+						}
+
 						// Add the option if it doesn't exist yet
 						if (!linkedInstance.options[linkedValue]) {
-							linkedInstance.addOption(selectedOption);
+							linkedInstance.addOption(linkedOption);
 						}
 						// Set the value
 						linkedInstance.setValue(linkedValue, false);
