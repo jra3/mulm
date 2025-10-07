@@ -1,6 +1,7 @@
+include ../mixins/date.pug
+
 mixin activityItem(activity)
     - const data = JSON.parse(activity.activity_data)
-    - const timeAgo = new Date(activity.created_at).toLocaleDateString()
     
     .activity-item.bg-white.rounded-lg.shadow-sm.border.border-gray-200.p-4.mb-3
         .flex.items-start.space-x-3
@@ -19,5 +20,6 @@ mixin activityItem(activity)
                     include submission-approved
                 else if activity.activity_type === 'award_granted'
                     include award-granted
-                    
-                .text-xs.text-gray-500.mt-1= timeAgo
+
+                .text-xs.text-gray-500.mt-1
+                    +relativeDate(activity.created_at, "Activity occurred")
