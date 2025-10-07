@@ -176,3 +176,84 @@ export function getUploadRateLimiters() {
     dailyUploadLimiter      // Finally check daily limits
   ];
 }
+
+/**
+ * Rate limiter for login endpoint
+ * Prevents brute force password attacks
+ */
+export const loginRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 attempts per 15 minutes
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    // Rate limit by IP + email to prevent targeted attacks
+    const email = (req.body as { email?: string }).email || 'unknown';
+    return `${getIpKey(req)}:${email}`;
+  },
+  handler: (_req, res) => {
+    logger.warn('Login rate limit exceeded', {
+      ip: _req.ip,
+      email: (_req.body as { email?: string }).email
+    });
+    res.status(429).send('Too many login attempts. Please wait 15 minutes before trying again.');
+  },
+  skip: () => process.env.NODE_ENV === 'test'
+});
+
+/**
+ * Rate limiter for signup endpoint
+ * Prevents mass account creation
+ */
+export const signupRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3, // 3 signups per hour per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => getIpKey(req),
+  handler: (_req, res) => {
+    logger.warn('Signup rate limit exceeded', {
+      ip: _req.ip
+    });
+    res.status(429).send('Too many signup attempts. Please wait an hour before trying again.');
+  },
+  skip: () => process.env.NODE_ENV === 'test'
+});
+
+/**
+ * Rate limiter for forgot password endpoint
+ * Prevents email spam and enumeration
+ */
+export const forgotPasswordRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3, // 3 password reset requests per hour per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => getIpKey(req),
+  handler: (_req, res) => {
+    logger.warn('Forgot password rate limit exceeded', {
+      ip: _req.ip
+    });
+    res.status(429).send('Too many password reset requests. Please wait an hour before trying again.');
+  },
+  skip: () => process.env.NODE_ENV === 'test'
+});
+
+/**
+ * Rate limiter for OAuth callback
+ * Prevents OAuth flow abuse
+ */
+export const oauthRateLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 10, // 10 OAuth attempts per 5 minutes per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => getIpKey(req),
+  handler: (_req, res) => {
+    logger.warn('OAuth rate limit exceeded', {
+      ip: _req.ip
+    });
+    res.status(429).send('Too many OAuth attempts. Please wait a few minutes before trying again.');
+  },
+  skip: () => process.env.NODE_ENV === 'test'
+});

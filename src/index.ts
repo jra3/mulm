@@ -29,6 +29,7 @@ import { getGoogleOAuthURL } from "./oauth";
 import { generateRandomCode } from "./auth";
 import { getQueryString } from "./utils/request";
 import { initR2 } from "./utils/r2-client";
+import { loginRateLimiter, signupRateLimiter, forgotPasswordRateLimiter, oauthRateLimiter } from "./middleware/rateLimiter";
 
 const app = express();
 
@@ -167,16 +168,16 @@ router.use("/admin", adminRouter);
 
 // Auth routes ///////////////////////////////////////////
 
-router.post("/auth/signup", auth.signup);
-router.post("/auth/login", auth.passwordLogin);
+router.post("/auth/signup", signupRateLimiter, auth.signup);
+router.post("/auth/login", loginRateLimiter, auth.passwordLogin);
 router.post("/auth/logout", auth.logout);
 router.get("/auth/forgot-password", auth.validateForgotPassword);
 router.get("/auth/set-password", auth.validateForgotPassword);
-router.post("/auth/forgot-password", auth.sendForgotPassword);
+router.post("/auth/forgot-password", forgotPasswordRateLimiter, auth.sendForgotPassword);
 router.post("/auth/reset-password", auth.resetPassword);
 
 // OAuth (external dependency - redirect_uri registered with Google)
-router.get("/oauth/google", auth.googleOAuth);
+router.get("/oauth/google", oauthRateLimiter, auth.googleOAuth);
 
 router.get("/dialog/auth/signin", async (req, res) => {
   // Generate OAuth state for CSRF protection
