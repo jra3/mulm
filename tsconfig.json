@@ -20,5 +20,5 @@
 			"@/*": [ "src/*" ]
 		}
 	},
-	"exclude": ["infrastructure/cdk.out", "node_modules", "dist", "scripts", "src/__tests__", "**/*.test.ts"]
+	"exclude": ["infrastructure/cdk.out", "node_modules", "dist", "scripts", "src/__tests__", "**/*.test.ts", "src/mcp"]
 }
