@@ -1,0 +1,88 @@
+//- Admin Actions Panel Component
+//- Collapsible panel for admin dashboard access
+//-
+//- @param witnessCount - Number of submissions awaiting witness
+//- @param approvalsCount - Number of submissions ready for approval
+//- @param witnessProgram - Program type for witness queue link
+//- @param approvalsProgram - Program type for approval queue link
+
+mixin adminActionsPanel(witnessCount, approvalsCount, witnessProgram, approvalsProgram)
+	- const totalCount = witnessCount + approvalsCount
+	- const hasItems = totalCount > 0
+
+	.admin-actions-panel.mx-auto.max-w-md(
+		class=hasItems ? "has-pending-items" : ""
+		role="region"
+		aria-label="Admin dashboard actions")
+
+		//- Panel header (always visible)
+		button.admin-panel-header(
+			type="button"
+			hx-get="/admin/panel-toggle"
+			hx-swap="none"
+			hx-on:click="this.closest('.admin-actions-panel').classList.toggle('expanded')"
+			aria-expanded="false"
+			aria-controls="adminPanelContent"
+			aria-label=`Admin actions panel, ${totalCount} items pending`)
+
+			.flex.items-center.justify-between.w-full
+				.flex.items-center.gap-3
+					span.font-bold.text-lg Admin Dashboard
+					if hasItems
+						span.admin-count-badge(
+							class="bg-red-500 text-white"
+							aria-label=`${totalCount} items requiring attention`)= totalCount
+
+				//- Chevron icon
+				svg.chevron-icon(
+					width="24"
+					height="24"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					aria-hidden="true")
+					path(d="M19 9l-7 7-7-7")
+
+		//- Panel content (expandable)
+		.admin-panel-content#adminPanelContent(aria-hidden="true")
+			.admin-action-items
+
+				//- Witness Queue
+				a.admin-action-item(
+					href=`/admin/witness-queue/${witnessProgram}`
+					class=witnessCount > 0 ? "has-items" : ""
+					aria-label=`Witness queue, ${witnessCount} submissions`)
+					.flex.items-center.justify-between.w-full
+						.flex.items-center.gap-2
+							span 👁️
+							span Witness Queue
+						if witnessCount > 0
+							span.item-badge(class="bg-purple-100 text-purple-800")= witnessCount
+						else
+							span.text-gray-400.text-sm None
+
+				//- Approval Queue
+				a.admin-action-item(
+					href=`/admin/queue/${approvalsProgram}`
+					class=approvalsCount > 0 ? "has-items" : ""
+					aria-label=`Approval queue, ${approvalsCount} submissions`)
+					.flex.items-center.justify-between.w-full
+						.flex.items-center.gap-2
+							span 🔵
+							span Approval Queue
+						if approvalsCount > 0
+							span.item-badge(class="bg-blue-100 text-blue-800")= approvalsCount
+						else
+							span.text-gray-400.text-sm None
+
+				//- Manage Members
+				a.admin-action-item(
+					href="/admin/members"
+					aria-label="Manage members")
+					.flex.items-center.justify-between.w-full
+						.flex.items-center.gap-2
+							span 👥
+							span Manage Members
+						svg(width="20" height="20" viewBox="0 0 20 20" fill="currentColor")
+							path(fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z")
