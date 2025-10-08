@@ -17,12 +17,9 @@
 --   - group_id references use subqueries
 -- ============================================================
 
--- ============================================================
--- NOTE: Tables created in migration 003-species-name-tracking.sql
--- This migration only imports species data
--- ============================================================
-
 -- Up
+
+-- Species data import (tables created in migration 003)
 
 -- ============================================================
 -- SPECIES GROUPS (Canonical Species)
@@ -31,3311 +28,3311 @@
 
 -- Genus: Abramites
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Abramites', 'hypselonotus');
+VALUES ('Miscellaneous', 'Abramites', 'hypselonotus');
 
 -- Genus: Acanthicus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Acanthicus', 'adonis');
+VALUES ('Catfish & Loaches', 'Acanthicus', 'adonis');
 
 -- Genus: Acantopsis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Acantopsis', 'dialuzona');
+VALUES ('Catfish & Loaches', 'Acantopsis', 'dialuzona');
 
 -- Genus: Acarichthys
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Acarichthys', 'heckelii');
+VALUES ('Miscellaneous', 'Acarichthys', 'heckelii');
 
 -- Genus: Acestrorhynchus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Acestrorhynchus', 'falcatus');
+VALUES ('Miscellaneous', 'Acestrorhynchus', 'falcatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Acestrorhynchus', 'nasutus');
+VALUES ('Miscellaneous', 'Acestrorhynchus', 'nasutus');
 
 -- Genus: Achiroides
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Achiroides', 'melanorhynchus');
+VALUES ('Miscellaneous', 'Achiroides', 'melanorhynchus');
 
 -- Genus: Achirus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Achirus', 'errans');
+VALUES ('Miscellaneous', 'Achirus', 'errans');
 
 -- Genus: Acipenser
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Acipenser', 'ruthenus');
+VALUES ('Miscellaneous', 'Acipenser', 'ruthenus');
 
 -- Genus: Acrochordonichthys
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Acrochordonichthys', 'rugosus');
+VALUES ('Catfish & Loaches', 'Acrochordonichthys', 'rugosus');
 
 -- Genus: Agamyxis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Agamyxis', 'pectinifrons');
+VALUES ('Catfish & Loaches', 'Agamyxis', 'pectinifrons');
 
 -- Genus: Ageneiosus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Ageneiosus', 'inermis');
+VALUES ('Catfish & Loaches', 'Ageneiosus', 'inermis');
 
 -- Genus: Aguarunichthys
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aguarunichthys', 'torosus');
+VALUES ('Catfish & Loaches', 'Aguarunichthys', 'torosus');
 
 -- Genus: Akysis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Akysis', 'prashadi');
+VALUES ('Catfish & Loaches', 'Akysis', 'prashadi');
 
 -- Genus: Alestes
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Alestes', 'chaperi');
+VALUES ('Characins', 'Alestes', 'chaperi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Alestes', 'longipinnis');
+VALUES ('Characins', 'Alestes', 'longipinnis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Alestes', 'nurse');
+VALUES ('Characins', 'Alestes', 'nurse');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Alestes', 'taeniurus');
+VALUES ('Characins', 'Alestes', 'taeniurus');
 
 -- Genus: Alestopetersius
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Alestopetersius', 'caudalis');
+VALUES ('Characins', 'Alestopetersius', 'caudalis');
 
 -- Genus: Alfaro
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Alfaro', 'cultratus');
+VALUES ('Miscellaneous', 'Alfaro', 'cultratus');
 
 -- Genus: Allenbatrachus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Allenbatrachus', 'grunniens');
+VALUES ('Miscellaneous', 'Allenbatrachus', 'grunniens');
 
 -- Genus: Altolamprologus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Altolamprologus', 'calvus');
+VALUES ('Miscellaneous', 'Altolamprologus', 'calvus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Altolamprologus', 'compressiceps');
+VALUES ('Miscellaneous', 'Altolamprologus', 'compressiceps');
 
 -- Genus: Amatitlania
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Amatitlania', 'nigrofasciata');
+VALUES ('Cichlids', 'Amatitlania', 'nigrofasciata');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Amatitlania', 'sajica');
+VALUES ('Cichlids', 'Amatitlania', 'sajica');
 
 -- Genus: Ambastaia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Ambastaia', 'sidthimunki');
+VALUES ('Miscellaneous', 'Ambastaia', 'sidthimunki');
 
 -- Genus: Amia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Amia', 'calva');
+VALUES ('Miscellaneous', 'Amia', 'calva');
 
 -- Genus: Amphilophus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Amphilophus', 'citrinellus');
+VALUES ('Cichlids', 'Amphilophus', 'citrinellus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Amphilophus', 'hybrid');
+VALUES ('Cichlids', 'Amphilophus', 'hybrid');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Amphilophus', 'istlanus');
+VALUES ('Cichlids', 'Amphilophus', 'istlanus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Amphilophus', 'labiatus');
+VALUES ('Cichlids', 'Amphilophus', 'labiatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Amphilophus', 'trimaculatus');
+VALUES ('Cichlids', 'Amphilophus', 'trimaculatus');
 
 -- Genus: Anabas
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Anabas', 'testudineus');
+VALUES ('Miscellaneous', 'Anabas', 'testudineus');
 
 -- Genus: Anableps
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Anableps', 'anableps');
+VALUES ('Miscellaneous', 'Anableps', 'anableps');
 
 -- Genus: Ancistomus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Ancistomus', 'feldbergae');
+VALUES ('Miscellaneous', 'Ancistomus', 'feldbergae');
 
 -- Genus: Ancistrus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Ancistrus', 'aguaboensis');
+VALUES ('Catfish & Loaches', 'Ancistrus', 'aguaboensis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Ancistrus', 'cirrhosus');
+VALUES ('Catfish & Loaches', 'Ancistrus', 'cirrhosus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Ancistrus', 'hoplogenys');
+VALUES ('Catfish & Loaches', 'Ancistrus', 'hoplogenys');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Ancistrus', 'macrophthalmus');
+VALUES ('Catfish & Loaches', 'Ancistrus', 'macrophthalmus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Ancistrus', 'ranunculus');
+VALUES ('Catfish & Loaches', 'Ancistrus', 'ranunculus');
 
 -- Genus: Andinoacara
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Andinoacara', 'pulcher');
+VALUES ('Miscellaneous', 'Andinoacara', 'pulcher');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Andinoacara', 'rivulatus');
+VALUES ('Miscellaneous', 'Andinoacara', 'rivulatus');
 
 -- Genus: Anomalochromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Anomalochromis', 'thomasi');
+VALUES ('Cichlids', 'Anomalochromis', 'thomasi');
 
 -- Genus: Anostomus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Anostomus', 'anostomus');
+VALUES ('Miscellaneous', 'Anostomus', 'anostomus');
 
 -- Genus: Aphaniops
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aphaniops', 'dispar');
+VALUES ('Miscellaneous', 'Aphaniops', 'dispar');
 
 -- Genus: Aphyocharax
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aphyocharax', 'alburnus');
+VALUES ('Characins', 'Aphyocharax', 'alburnus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aphyocharax', 'anisitsi');
+VALUES ('Characins', 'Aphyocharax', 'anisitsi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aphyocharax', 'dentatus');
+VALUES ('Characins', 'Aphyocharax', 'dentatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aphyocharax', 'erythrurus');
+VALUES ('Characins', 'Aphyocharax', 'erythrurus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aphyocharax', 'nattereri');
+VALUES ('Characins', 'Aphyocharax', 'nattereri');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aphyocharax', 'paraguayensis');
+VALUES ('Characins', 'Aphyocharax', 'paraguayensis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aphyocharax', 'rathbuni');
+VALUES ('Characins', 'Aphyocharax', 'rathbuni');
 
 -- Genus: Aphyosemion
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aphyosemion', 'australe');
+VALUES ('Killifish', 'Aphyosemion', 'australe');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aphyosemion', 'bitaeniatum');
+VALUES ('Killifish', 'Aphyosemion', 'bitaeniatum');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aphyosemion', 'bivittatum');
+VALUES ('Killifish', 'Aphyosemion', 'bivittatum');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aphyosemion', 'cyanostictum');
+VALUES ('Killifish', 'Aphyosemion', 'cyanostictum');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aphyosemion', 'gabunense');
+VALUES ('Killifish', 'Aphyosemion', 'gabunense');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aphyosemion', 'ogoense');
+VALUES ('Killifish', 'Aphyosemion', 'ogoense');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aphyosemion', 'striatum');
+VALUES ('Killifish', 'Aphyosemion', 'striatum');
 
 -- Genus: Apistogramma
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Apistogramma', 'agassizii');
+VALUES ('Cichlids', 'Apistogramma', 'agassizii');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Apistogramma', 'atahualpa');
+VALUES ('Miscellaneous', 'Apistogramma', 'atahualpa');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Apistogramma', 'bitaeniata');
+VALUES ('Cichlids', 'Apistogramma', 'bitaeniata');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Apistogramma', 'borellii');
+VALUES ('Cichlids', 'Apistogramma', 'borellii');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Apistogramma', 'cacatuoides');
+VALUES ('Cichlids', 'Apistogramma', 'cacatuoides');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Apistogramma', 'hongsloi');
+VALUES ('Miscellaneous', 'Apistogramma', 'hongsloi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Apistogramma', 'macmasteri');
+VALUES ('Miscellaneous', 'Apistogramma', 'macmasteri');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Apistogramma', 'panduro');
+VALUES ('Miscellaneous', 'Apistogramma', 'panduro');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Apistogramma', 'pantalone');
+VALUES ('Miscellaneous', 'Apistogramma', 'pantalone');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Apistogramma', 'piaroa');
+VALUES ('Miscellaneous', 'Apistogramma', 'piaroa');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Apistogramma', 'trifasciata');
+VALUES ('Miscellaneous', 'Apistogramma', 'trifasciata');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Apistogramma', 'uaupesi');
+VALUES ('Miscellaneous', 'Apistogramma', 'uaupesi');
 
 -- Genus: Apistogrammoides
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Apistogrammoides', 'pucallpaensis');
+VALUES ('Miscellaneous', 'Apistogrammoides', 'pucallpaensis');
 
 -- Genus: Aplocheilus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aplocheilus', 'dayi');
+VALUES ('Killifish', 'Aplocheilus', 'dayi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aplocheilus', 'lineatus');
+VALUES ('Miscellaneous', 'Aplocheilus', 'lineatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aplocheilus', 'panchax');
+VALUES ('Miscellaneous', 'Aplocheilus', 'panchax');
 
 -- Genus: Apteronotus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Apteronotus', 'albifrons');
+VALUES ('Miscellaneous', 'Apteronotus', 'albifrons');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Apteronotus', 'leptorhynchus');
+VALUES ('Miscellaneous', 'Apteronotus', 'leptorhynchus');
 
 -- Genus: Aquilonium
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aquilonium', 'mdoka');
+VALUES ('Miscellaneous', 'Aquilonium', 'mdoka');
 
 -- Genus: Arapaima
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Arapaima', 'gigas');
+VALUES ('Miscellaneous', 'Arapaima', 'gigas');
 
 -- Genus: Archocentrus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Archocentrus', 'myrnae');
+VALUES ('Cichlids', 'Archocentrus', 'myrnae');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Archocentrus', 'nigrofasciatus');
+VALUES ('Cichlids', 'Archocentrus', 'nigrofasciatus');
 
 -- Genus: Ariopsis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Ariopsis', 'seemanni');
+VALUES ('Catfish & Loaches', 'Ariopsis', 'seemanni');
 
 -- Genus: Aristochromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aristochromis', 'christyi');
+VALUES ('Miscellaneous', 'Aristochromis', 'christyi');
 
 -- Genus: Arnoldichthys
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Arnoldichthys', 'spilopterus');
+VALUES ('Characins', 'Arnoldichthys', 'spilopterus');
 
 -- Genus: Aspidoras
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aspidoras', 'fuscoguttatus');
+VALUES ('Miscellaneous', 'Aspidoras', 'fuscoguttatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aspidoras', 'lakoi');
+VALUES ('Miscellaneous', 'Aspidoras', 'lakoi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aspidoras', 'pauciradiatus');
+VALUES ('Miscellaneous', 'Aspidoras', 'pauciradiatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aspidoras', 'poecilus');
+VALUES ('Miscellaneous', 'Aspidoras', 'poecilus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aspidoras', 'rochai');
+VALUES ('Catfish & Loaches', 'Aspidoras', 'rochai');
 
 -- Genus: Astatoreochromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Astatoreochromis', 'alluaudi');
+VALUES ('Miscellaneous', 'Astatoreochromis', 'alluaudi');
 
 -- Genus: Astatotilapia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Astatotilapia', 'latifasciata');
+VALUES ('Miscellaneous', 'Astatotilapia', 'latifasciata');
 
 -- Genus: Asterophysus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Asterophysus', 'batrachus');
+VALUES ('Catfish & Loaches', 'Asterophysus', 'batrachus');
 
 -- Genus: Astronotus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Astronotus', 'ocellatus');
+VALUES ('Miscellaneous', 'Astronotus', 'ocellatus');
 
 -- Genus: Astyanax
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Astyanax', 'fasciatus');
+VALUES ('Characins', 'Astyanax', 'fasciatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Astyanax', 'mexicanus');
+VALUES ('Characins', 'Astyanax', 'mexicanus');
 
 -- Genus: Atractosteus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Atractosteus', 'spatula');
+VALUES ('Miscellaneous', 'Atractosteus', 'spatula');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Atractosteus', 'tristoechus');
+VALUES ('Miscellaneous', 'Atractosteus', 'tristoechus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Atractosteus', 'tropicus');
+VALUES ('Miscellaneous', 'Atractosteus', 'tropicus');
 
 -- Genus: Atyopsis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Atyopsis', 'moluccensis');
+VALUES ('Shrimp', 'Atyopsis', 'moluccensis');
 
 -- Genus: Auchenipterichthys
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Auchenipterichthys', 'coracoideus');
+VALUES ('Catfish & Loaches', 'Auchenipterichthys', 'coracoideus');
 
 -- Genus: Auchenoglanis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Auchenoglanis', 'occidentalis');
+VALUES ('Catfish & Loaches', 'Auchenoglanis', 'occidentalis');
 
 -- Genus: Aulonocara
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aulonocara', 'baenschi');
+VALUES ('Cichlids', 'Aulonocara', 'baenschi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aulonocara', 'freibergi');
+VALUES ('Miscellaneous', 'Aulonocara', 'freibergi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aulonocara', 'hansbaenschi');
+VALUES ('Miscellaneous', 'Aulonocara', 'hansbaenschi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aulonocara', 'hueseri');
+VALUES ('Miscellaneous', 'Aulonocara', 'hueseri');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aulonocara', 'jacobfreibergi');
+VALUES ('Miscellaneous', 'Aulonocara', 'jacobfreibergi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aulonocara', 'kandeensis');
+VALUES ('Miscellaneous', 'Aulonocara', 'kandeensis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aulonocara', 'koningsi');
+VALUES ('Miscellaneous', 'Aulonocara', 'koningsi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aulonocara', 'korneliae');
+VALUES ('Miscellaneous', 'Aulonocara', 'korneliae');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aulonocara', 'maylandi');
+VALUES ('Miscellaneous', 'Aulonocara', 'maylandi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aulonocara', 'nyassae');
+VALUES ('Cichlids', 'Aulonocara', 'nyassae');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aulonocara', 'rostratum');
+VALUES ('Miscellaneous', 'Aulonocara', 'rostratum');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aulonocara', 'saulosi');
+VALUES ('Miscellaneous', 'Aulonocara', 'saulosi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aulonocara', 'species');
+VALUES ('Miscellaneous', 'Aulonocara', 'species');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aulonocara', 'steveni');
+VALUES ('Miscellaneous', 'Aulonocara', 'steveni');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Aulonocara', 'stuartgranti');
+VALUES ('Miscellaneous', 'Aulonocara', 'stuartgranti');
 
 -- Genus: Auriglobus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Auriglobus', 'modestus');
+VALUES ('Miscellaneous', 'Auriglobus', 'modestus');
 
 -- Genus: Australoheros
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Australoheros', 'scitulus');
+VALUES ('Miscellaneous', 'Australoheros', 'scitulus');
 
 -- Genus: Austrolebias
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Austrolebias', 'nigripinnis');
+VALUES ('Miscellaneous', 'Austrolebias', 'nigripinnis');
 
 -- Genus: Axelrodia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Axelrodia', 'riesei');
+VALUES ('Characins', 'Axelrodia', 'riesei');
 
 -- Genus: Badis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Badis', 'badis');
+VALUES ('Miscellaneous', 'Badis', 'badis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Badis', 'burmanicus');
+VALUES ('Miscellaneous', 'Badis', 'burmanicus');
 
 -- Genus: Bagarius
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Bagarius', 'lica');
+VALUES ('Miscellaneous', 'Bagarius', 'lica');
 
 -- Genus: Bagrichthys
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Bagrichthys', 'macracanthus');
+VALUES ('Catfish & Loaches', 'Bagrichthys', 'macracanthus');
 
 -- Genus: Bagroides
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Bagroides', 'melapterus');
+VALUES ('Catfish & Loaches', 'Bagroides', 'melapterus');
 
 -- Genus: Balantiocheilos
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Balantiocheilos', 'melanopterus');
+VALUES ('Miscellaneous', 'Balantiocheilos', 'melanopterus');
 
 -- Genus: Balantiocheilus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Balantiocheilus', 'melanopterus');
+VALUES ('Miscellaneous', 'Balantiocheilus', 'melanopterus');
 
 -- Genus: Barbodes
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Barbodes', 'binotatus');
+VALUES ('Cyprinids', 'Barbodes', 'binotatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Barbodes', 'callipterus');
+VALUES ('Cyprinids', 'Barbodes', 'callipterus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Barbodes', 'camptacanthus');
+VALUES ('Cyprinids', 'Barbodes', 'camptacanthus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Barbodes', 'dorsimaculatus');
+VALUES ('Cyprinids', 'Barbodes', 'dorsimaculatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Barbodes', 'dunckeri');
+VALUES ('Cyprinids', 'Barbodes', 'dunckeri');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Barbodes', 'everetti');
+VALUES ('Cyprinids', 'Barbodes', 'everetti');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Barbodes', 'fasciatus');
+VALUES ('Cyprinids', 'Barbodes', 'fasciatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Barbodes', 'fasciolatus');
+VALUES ('Cyprinids', 'Barbodes', 'fasciolatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Barbodes', 'holotaenia');
+VALUES ('Cyprinids', 'Barbodes', 'holotaenia');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Barbodes', 'kerstenii');
+VALUES ('Cyprinids', 'Barbodes', 'kerstenii');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Barbodes', 'lateristriga');
+VALUES ('Cyprinids', 'Barbodes', 'lateristriga');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Barbodes', 'pentazona');
+VALUES ('Cyprinids', 'Barbodes', 'pentazona');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Barbodes', 'schwanenfeldi');
+VALUES ('Cyprinids', 'Barbodes', 'schwanenfeldi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Barbodes', 'semifasciolatus');
+VALUES ('Cyprinids', 'Barbodes', 'semifasciolatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Barbodes', 'unitantiatus');
+VALUES ('Cyprinids', 'Barbodes', 'unitantiatus');
 
 -- Genus: Barbonymus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Barbonymus', 'schwanenfeldii');
+VALUES ('Cyprinids', 'Barbonymus', 'schwanenfeldii');
 
 -- Genus: Barbucca
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Barbucca', 'diabolica');
+VALUES ('Catfish & Loaches', 'Barbucca', 'diabolica');
 
 -- Genus: Barbus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Barbus', 'schwanefeldi');
+VALUES ('Cyprinids', 'Barbus', 'schwanefeldi');
 
 -- Genus: Baryancistrus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Baryancistrus', 'beggini');
+VALUES ('Miscellaneous', 'Baryancistrus', 'beggini');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Baryancistrus', 'chrysolomus');
+VALUES ('Catfish & Loaches', 'Baryancistrus', 'chrysolomus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Baryancistrus', 'xanthellus');
+VALUES ('Catfish & Loaches', 'Baryancistrus', 'xanthellus');
 
 -- Genus: Bathyaethiops
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Bathyaethiops', 'caudomaculatus');
+VALUES ('Characins', 'Bathyaethiops', 'caudomaculatus');
 
 -- Genus: Beaufortia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Beaufortia', 'kweichowensis');
+VALUES ('Catfish & Loaches', 'Beaufortia', 'kweichowensis');
 
 -- Genus: Bedotia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Bedotia', 'geayi');
+VALUES ('Miscellaneous', 'Bedotia', 'geayi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Bedotia', 'madagascariensis');
+VALUES ('Miscellaneous', 'Bedotia', 'madagascariensis');
 
 -- Genus: Belontia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Belontia', 'hasselti');
+VALUES ('Anabantoids', 'Belontia', 'hasselti');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Belontia', 'signata');
+VALUES ('Anabantoids', 'Belontia', 'signata');
 
 -- Genus: Betta
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Betta', 'albimarginata');
+VALUES ('Anabantoids', 'Betta', 'albimarginata');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Betta', 'bellica');
+VALUES ('Anabantoids', 'Betta', 'bellica');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Betta', 'coccina');
+VALUES ('Anabantoids', 'Betta', 'coccina');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Betta', 'imbellis');
+VALUES ('Anabantoids', 'Betta', 'imbellis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Betta', 'macrostoma');
+VALUES ('Anabantoids', 'Betta', 'macrostoma');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Betta', 'picta');
+VALUES ('Anabantoids', 'Betta', 'picta');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Betta', 'pugnax');
+VALUES ('Anabantoids', 'Betta', 'pugnax');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Betta', 'rubra');
+VALUES ('Anabantoids', 'Betta', 'rubra');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Betta', 'smaragdina');
+VALUES ('Anabantoids', 'Betta', 'smaragdina');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Betta', 'splendens');
+VALUES ('Anabantoids', 'Betta', 'splendens');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Betta', 'taeniata');
+VALUES ('Anabantoids', 'Betta', 'taeniata');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Betta', 'unimaculata');
+VALUES ('Anabantoids', 'Betta', 'unimaculata');
 
 -- Genus: Biotodoma
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Biotodoma', 'cupido');
+VALUES ('Cichlids', 'Biotodoma', 'cupido');
 
 -- Genus: Biotoecus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Biotoecus', 'opercularis');
+VALUES ('Cichlids', 'Biotoecus', 'opercularis');
 
 -- Genus: Boehlkea
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Boehlkea', 'fredcochui');
+VALUES ('Characins', 'Boehlkea', 'fredcochui');
 
 -- Genus: Boraras
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Boraras', 'brigittae');
+VALUES ('Cyprinids', 'Boraras', 'brigittae');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Boraras', 'maculatus');
+VALUES ('Cyprinids', 'Boraras', 'maculatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Boraras', 'merah');
+VALUES ('Cyprinids', 'Boraras', 'merah');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Boraras', 'urophthalmoides');
+VALUES ('Cyprinids', 'Boraras', 'urophthalmoides');
 
 -- Genus: Botia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Botia', 'almorhae');
+VALUES ('Catfish & Loaches', 'Botia', 'almorhae');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Botia', 'dario');
+VALUES ('Catfish & Loaches', 'Botia', 'dario');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Botia', 'kubotai');
+VALUES ('Catfish & Loaches', 'Botia', 'kubotai');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Botia', 'lohachata');
+VALUES ('Catfish & Loaches', 'Botia', 'lohachata');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Botia', 'macracantha');
+VALUES ('Catfish & Loaches', 'Botia', 'macracantha');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Botia', 'rostrata');
+VALUES ('Catfish & Loaches', 'Botia', 'rostrata');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Botia', 'striata');
+VALUES ('Catfish & Loaches', 'Botia', 'striata');
 
 -- Genus: Boulengerella
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Boulengerella', 'maculata');
+VALUES ('Characins', 'Boulengerella', 'maculata');
 
 -- Genus: Brachygobius
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Brachygobius', 'aggregatus');
+VALUES ('Miscellaneous', 'Brachygobius', 'aggregatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Brachygobius', 'doriae');
+VALUES ('Miscellaneous', 'Brachygobius', 'doriae');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Brachygobius', 'xanthozonus');
+VALUES ('Miscellaneous', 'Brachygobius', 'xanthozonus');
 
 -- Genus: Brachyplatystoma
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Brachyplatystoma', 'juruense');
+VALUES ('Catfish & Loaches', 'Brachyplatystoma', 'juruense');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Brachyplatystoma', 'tigrinum');
+VALUES ('Miscellaneous', 'Brachyplatystoma', 'tigrinum');
 
 -- Genus: Brevibora
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Brevibora', 'dorsiocellata');
+VALUES ('Cyprinids', 'Brevibora', 'dorsiocellata');
 
 -- Genus: Brochis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Brochis', 'multiradiatus');
+VALUES ('Miscellaneous', 'Brochis', 'multiradiatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Brochis', 'splendens');
+VALUES ('Miscellaneous', 'Brochis', 'splendens');
 
 -- Genus: Brycinus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Brycinus', 'longipinnis');
+VALUES ('Characins', 'Brycinus', 'longipinnis');
 
 -- Genus: Buccochromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Buccochromis', 'heterotaenia');
+VALUES ('Miscellaneous', 'Buccochromis', 'heterotaenia');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Buccochromis', 'nototaenia');
+VALUES ('Miscellaneous', 'Buccochromis', 'nototaenia');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Buccochromis', 'rhoadesii');
+VALUES ('Miscellaneous', 'Buccochromis', 'rhoadesii');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Buccochromis', 'spectabilis');
+VALUES ('Miscellaneous', 'Buccochromis', 'spectabilis');
 
 -- Genus: Bunocephalus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Bunocephalus', 'coracoideus');
+VALUES ('Catfish & Loaches', 'Bunocephalus', 'coracoideus');
 
 -- Genus: Butis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Butis', 'butis');
+VALUES ('Miscellaneous', 'Butis', 'butis');
 
 -- Genus: Caecobarbus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Caecobarbus', 'geertsi');
+VALUES ('Cyprinids', 'Caecobarbus', 'geertsi');
 
 -- Genus: Calamoichthys
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Calamoichthys', 'calabaricus');
+VALUES ('Miscellaneous', 'Calamoichthys', 'calabaricus');
 
 -- Genus: Callichthys
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Callichthys', 'callichthys');
+VALUES ('Miscellaneous', 'Callichthys', 'callichthys');
 
 -- Genus: Callochromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Callochromis', 'melanostigma');
+VALUES ('Miscellaneous', 'Callochromis', 'melanostigma');
 
 -- Genus: Calophysus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Calophysus', 'macropterus');
+VALUES ('Catfish & Loaches', 'Calophysus', 'macropterus');
 
 -- Genus: Cambarellus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Cambarellus', 'diminutus');
+VALUES ('Miscellaneous', 'Cambarellus', 'diminutus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Cambarellus', 'patzcuarensis');
+VALUES ('Miscellaneous', 'Cambarellus', 'patzcuarensis');
 
 -- Genus: Campylomormyrus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Campylomormyrus', 'tamandua');
+VALUES ('Miscellaneous', 'Campylomormyrus', 'tamandua');
 
 -- Genus: Capoeta
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Capoeta', 'hulstaerti');
+VALUES ('Cyprinids', 'Capoeta', 'hulstaerti');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Capoeta', 'laubuca');
+VALUES ('Miscellaneous', 'Capoeta', 'laubuca');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Capoeta', 'lutrensis');
+VALUES ('Miscellaneous', 'Capoeta', 'lutrensis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Capoeta', 'puckelli');
+VALUES ('Cyprinids', 'Capoeta', 'puckelli');
 
 -- Genus: Caquetaia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Caquetaia', 'kraussii');
+VALUES ('Cichlids', 'Caquetaia', 'kraussii');
 
 -- Genus: Carassius
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Carassius', 'auratus');
+VALUES ('Miscellaneous', 'Carassius', 'auratus');
 
 -- Genus: Carinotetraodon
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Carinotetraodon', 'irrubesco');
+VALUES ('Miscellaneous', 'Carinotetraodon', 'irrubesco');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Carinotetraodon', 'travancoricus');
+VALUES ('Miscellaneous', 'Carinotetraodon', 'travancoricus');
 
 -- Genus: Carnegiella
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Carnegiella', 'marthae');
+VALUES ('Miscellaneous', 'Carnegiella', 'marthae');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Carnegiella', 'myersi');
+VALUES ('Miscellaneous', 'Carnegiella', 'myersi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Carnegiella', 'schereri');
+VALUES ('Miscellaneous', 'Carnegiella', 'schereri');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Carnegiella', 'strigata');
+VALUES ('Miscellaneous', 'Carnegiella', 'strigata');
 
 -- Genus: Catoprion
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Catoprion', 'mento');
+VALUES ('Miscellaneous', 'Catoprion', 'mento');
 
 -- Genus: Celetaia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Celetaia', 'persculpta');
+VALUES ('Snail', 'Celetaia', 'persculpta');
 
 -- Genus: Centromochlus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Centromochlus', 'heckelii');
+VALUES ('Miscellaneous', 'Centromochlus', 'heckelii');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Centromochlus', 'schultzi');
+VALUES ('Catfish & Loaches', 'Centromochlus', 'schultzi');
 
 -- Genus: Ceratogarra
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Ceratogarra', 'cambodgiensis');
+VALUES ('Miscellaneous', 'Ceratogarra', 'cambodgiensis');
 
 -- Genus: Cetopsis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Cetopsis', 'coecutiens');
+VALUES ('Catfish & Loaches', 'Cetopsis', 'coecutiens');
 
 -- Genus: Chaca
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Chaca', 'bankanensis');
+VALUES ('Catfish & Loaches', 'Chaca', 'bankanensis');
 
 -- Genus: Chalceus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Chalceus', 'erythrurus');
+VALUES ('Miscellaneous', 'Chalceus', 'erythrurus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Chalceus', 'macrolepidotus');
+VALUES ('Miscellaneous', 'Chalceus', 'macrolepidotus');
 
 -- Genus: Champsochromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Champsochromis', 'caeruleus');
+VALUES ('Miscellaneous', 'Champsochromis', 'caeruleus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Champsochromis', 'spilorhynchus');
+VALUES ('Miscellaneous', 'Champsochromis', 'spilorhynchus');
 
 -- Genus: Channa
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Channa', 'aurantimaculata');
+VALUES ('Miscellaneous', 'Channa', 'aurantimaculata');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Channa', 'barca');
+VALUES ('Miscellaneous', 'Channa', 'barca');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Channa', 'bleheri');
+VALUES ('Miscellaneous', 'Channa', 'bleheri');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Channa', 'gachua');
+VALUES ('Miscellaneous', 'Channa', 'gachua');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Channa', 'lucius');
+VALUES ('Miscellaneous', 'Channa', 'lucius');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Channa', 'marulioides');
+VALUES ('Miscellaneous', 'Channa', 'marulioides');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Channa', 'micropeltes');
+VALUES ('Miscellaneous', 'Channa', 'micropeltes');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Channa', 'pleurophthalma');
+VALUES ('Miscellaneous', 'Channa', 'pleurophthalma');
 
 -- Genus: Channallabes
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Channallabes', 'apus');
+VALUES ('Catfish & Loaches', 'Channallabes', 'apus');
 
 -- Genus: Cheirodon
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Cheirodon', 'axelrodi');
+VALUES ('Characins', 'Cheirodon', 'axelrodi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Cheirodon', 'kriegi');
+VALUES ('Characins', 'Cheirodon', 'kriegi');
 
 -- Genus: Chiapaheros
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Chiapaheros', 'grammodes');
+VALUES ('Cichlids', 'Chiapaheros', 'grammodes');
 
 -- Genus: Chilatherina
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Chilatherina', 'alleni');
+VALUES ('Miscellaneous', 'Chilatherina', 'alleni');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Chilatherina', 'bleheri');
+VALUES ('Miscellaneous', 'Chilatherina', 'bleheri');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Chilatherina', 'fasciata');
+VALUES ('Miscellaneous', 'Chilatherina', 'fasciata');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Chilatherina', 'pricei');
+VALUES ('Miscellaneous', 'Chilatherina', 'pricei');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Chilatherina', 'sentaniensis');
+VALUES ('Miscellaneous', 'Chilatherina', 'sentaniensis');
 
 -- Genus: Chilodus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Chilodus', 'punctatus');
+VALUES ('Miscellaneous', 'Chilodus', 'punctatus');
 
 -- Genus: Chilotilapia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Chilotilapia', 'rhoadesii');
+VALUES ('Miscellaneous', 'Chilotilapia', 'rhoadesii');
 
 -- Genus: Chindongo
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Chindongo', 'socolofi');
+VALUES ('Miscellaneous', 'Chindongo', 'socolofi');
 
 -- Genus: Chitala
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Chitala', 'blanci');
+VALUES ('Miscellaneous', 'Chitala', 'blanci');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Chitala', 'ornata');
+VALUES ('Miscellaneous', 'Chitala', 'ornata');
 
 -- Genus: Chlamydogobius
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Chlamydogobius', 'eremius');
+VALUES ('Miscellaneous', 'Chlamydogobius', 'eremius');
 
 -- Genus: Chonerhinos
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Chonerhinos', 'naritus');
+VALUES ('Miscellaneous', 'Chonerhinos', 'naritus');
 
 -- Genus: Chromidotilapia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Chromidotilapia', 'guntheri');
+VALUES ('Miscellaneous', 'Chromidotilapia', 'guntheri');
 
 -- Genus: Chromobotia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Chromobotia', 'macracanthus');
+VALUES ('Catfish & Loaches', 'Chromobotia', 'macracanthus');
 
 -- Genus: Cichla
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Cichla', 'intermedia');
+VALUES ('Native', 'Cichla', 'intermedia');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Cichla', 'kelberi');
+VALUES ('Native', 'Cichla', 'kelberi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Cichla', 'ocellaris');
+VALUES ('Native', 'Cichla', 'ocellaris');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Cichla', 'orinocensis');
+VALUES ('Native', 'Cichla', 'orinocensis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Cichla', 'temensis');
+VALUES ('Native', 'Cichla', 'temensis');
 
 -- Genus: Cichlasoma
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Cichlasoma', 'amazonarum');
+VALUES ('Cichlids', 'Cichlasoma', 'amazonarum');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Cichlasoma', 'dimerus');
+VALUES ('Miscellaneous', 'Cichlasoma', 'dimerus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Cichlasoma', 'salvini');
+VALUES ('Cichlids', 'Cichlasoma', 'salvini');
 
 -- Genus: Cincelichthys
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Cincelichthys', 'bocourti');
+VALUES ('Cichlids', 'Cincelichthys', 'bocourti');
 
 -- Genus: Clarias
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Clarias', 'batrachus');
+VALUES ('Catfish & Loaches', 'Clarias', 'batrachus');
 
 -- Genus: Cleithracara
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Cleithracara', 'maronii');
+VALUES ('Cichlids', 'Cleithracara', 'maronii');
 
 -- Genus: Colomesus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Colomesus', 'asellus');
+VALUES ('Miscellaneous', 'Colomesus', 'asellus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Colomesus', 'psittacus');
+VALUES ('Miscellaneous', 'Colomesus', 'psittacus');
 
 -- Genus: Colossoma
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Colossoma', 'bidens');
+VALUES ('Miscellaneous', 'Colossoma', 'bidens');
 
 -- Genus: Congochromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Congochromis', 'sabinae');
+VALUES ('Miscellaneous', 'Congochromis', 'sabinae');
 
 -- Genus: Copadichromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Copadichromis', 'atripinnis');
+VALUES ('Miscellaneous', 'Copadichromis', 'atripinnis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Copadichromis', 'azureus');
+VALUES ('Miscellaneous', 'Copadichromis', 'azureus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Copadichromis', 'borleyi');
+VALUES ('Miscellaneous', 'Copadichromis', 'borleyi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Copadichromis', 'chrysonotos');
+VALUES ('Miscellaneous', 'Copadichromis', 'chrysonotos');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Copadichromis', 'trewavasae');
+VALUES ('Miscellaneous', 'Copadichromis', 'trewavasae');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Copadichromis', 'virginalis');
+VALUES ('Miscellaneous', 'Copadichromis', 'virginalis');
 
 -- Genus: Copeina
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Copeina', 'eigenmanni');
+VALUES ('Miscellaneous', 'Copeina', 'eigenmanni');
 
 -- Genus: Copella
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Copella', 'arnoldi');
+VALUES ('Characins', 'Copella', 'arnoldi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Copella', 'guttata');
+VALUES ('Miscellaneous', 'Copella', 'guttata');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Copella', 'meinkeni');
+VALUES ('Characins', 'Copella', 'meinkeni');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Copella', 'nattereri');
+VALUES ('Miscellaneous', 'Copella', 'nattereri');
 
 -- Genus: Corydoras
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'acutus');
+VALUES ('Catfish & Loaches', 'Corydoras', 'acutus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'adolfoi');
+VALUES ('Catfish & Loaches', 'Corydoras', 'adolfoi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'aeneus');
+VALUES ('Catfish & Loaches', 'Corydoras', 'aeneus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'agassizii');
+VALUES ('Catfish & Loaches', 'Corydoras', 'agassizii');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'ambiacus');
+VALUES ('Catfish & Loaches', 'Corydoras', 'ambiacus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'atropersonatus');
+VALUES ('Catfish & Loaches', 'Corydoras', 'atropersonatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'axelrodi');
+VALUES ('Catfish & Loaches', 'Corydoras', 'axelrodi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'bondi');
+VALUES ('Catfish & Loaches', 'Corydoras', 'bondi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'britskii');
+VALUES ('Catfish & Loaches', 'Corydoras', 'britskii');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'caudimaculatus');
+VALUES ('Catfish & Loaches', 'Corydoras', 'caudimaculatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'cochui');
+VALUES ('Catfish & Loaches', 'Corydoras', 'cochui');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'concolor');
+VALUES ('Catfish & Loaches', 'Corydoras', 'concolor');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'crypticus');
+VALUES ('Catfish & Loaches', 'Corydoras', 'crypticus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'delphax');
+VALUES ('Catfish & Loaches', 'Corydoras', 'delphax');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'duplicareus');
+VALUES ('Catfish & Loaches', 'Corydoras', 'duplicareus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'ehrhardti');
+VALUES ('Catfish & Loaches', 'Corydoras', 'ehrhardti');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'elegans');
+VALUES ('Catfish & Loaches', 'Corydoras', 'elegans');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'eques');
+VALUES ('Catfish & Loaches', 'Corydoras', 'eques');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'evelynae');
+VALUES ('Catfish & Loaches', 'Corydoras', 'evelynae');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'geoffroy');
+VALUES ('Catfish & Loaches', 'Corydoras', 'geoffroy');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'granti');
+VALUES ('Catfish & Loaches', 'Corydoras', 'granti');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'guapore');
+VALUES ('Catfish & Loaches', 'Corydoras', 'guapore');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'habrosus');
+VALUES ('Catfish & Loaches', 'Corydoras', 'habrosus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'haraldschultzi');
+VALUES ('Catfish & Loaches', 'Corydoras', 'haraldschultzi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'hastatus');
+VALUES ('Catfish & Loaches', 'Corydoras', 'hastatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'incolicana');
+VALUES ('Catfish & Loaches', 'Corydoras', 'incolicana');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'julii');
+VALUES ('Catfish & Loaches', 'Corydoras', 'julii');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'leucomelas');
+VALUES ('Catfish & Loaches', 'Corydoras', 'leucomelas');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'loretoensis');
+VALUES ('Catfish & Loaches', 'Corydoras', 'loretoensis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'loxozonus');
+VALUES ('Catfish & Loaches', 'Corydoras', 'loxozonus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'melanistius');
+VALUES ('Catfish & Loaches', 'Corydoras', 'melanistius');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'melanotaenia');
+VALUES ('Catfish & Loaches', 'Corydoras', 'melanotaenia');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'melini');
+VALUES ('Catfish & Loaches', 'Corydoras', 'melini');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'metae');
+VALUES ('Catfish & Loaches', 'Corydoras', 'metae');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'multiradiatus');
+VALUES ('Catfish & Loaches', 'Corydoras', 'multiradiatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'nanus');
+VALUES ('Catfish & Loaches', 'Corydoras', 'nanus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'narcissus');
+VALUES ('Catfish & Loaches', 'Corydoras', 'narcissus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'nattereri');
+VALUES ('Catfish & Loaches', 'Corydoras', 'nattereri');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'ornatus');
+VALUES ('Catfish & Loaches', 'Corydoras', 'ornatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'paleatus');
+VALUES ('Catfish & Loaches', 'Corydoras', 'paleatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'panda');
+VALUES ('Catfish & Loaches', 'Corydoras', 'panda');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'pastazensis');
+VALUES ('Catfish & Loaches', 'Corydoras', 'pastazensis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'pygmaeus');
+VALUES ('Catfish & Loaches', 'Corydoras', 'pygmaeus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'rabauti');
+VALUES ('Catfish & Loaches', 'Corydoras', 'rabauti');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'reticulatus');
+VALUES ('Catfish & Loaches', 'Corydoras', 'reticulatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'robineae');
+VALUES ('Catfish & Loaches', 'Corydoras', 'robineae');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'schwartzi');
+VALUES ('Catfish & Loaches', 'Corydoras', 'schwartzi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'similis');
+VALUES ('Catfish & Loaches', 'Corydoras', 'similis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'sodalis');
+VALUES ('Catfish & Loaches', 'Corydoras', 'sodalis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'splendens');
+VALUES ('Catfish & Loaches', 'Corydoras', 'splendens');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'sterbai');
+VALUES ('Catfish & Loaches', 'Corydoras', 'sterbai');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'sychri');
+VALUES ('Catfish & Loaches', 'Corydoras', 'sychri');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'trilineatus');
+VALUES ('Catfish & Loaches', 'Corydoras', 'trilineatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'venezuelanus');
+VALUES ('Catfish & Loaches', 'Corydoras', 'venezuelanus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'xinguensis');
+VALUES ('Catfish & Loaches', 'Corydoras', 'xinguensis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corydoras', 'zygatus');
+VALUES ('Catfish & Loaches', 'Corydoras', 'zygatus');
 
 -- Genus: Corynopoma
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Corynopoma', 'riisei');
+VALUES ('Characins', 'Corynopoma', 'riisei');
 
 -- Genus: Creatochanes
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Creatochanes', 'spilurus');
+VALUES ('Characins', 'Creatochanes', 'spilurus');
 
 -- Genus: Crenicara
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Crenicara', 'punctulata');
+VALUES ('Cichlids', 'Crenicara', 'punctulata');
 
 -- Genus: Crenicichla
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Crenicichla', 'compressiceps');
+VALUES ('Cichlids', 'Crenicichla', 'compressiceps');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Crenicichla', 'lugubris');
+VALUES ('Miscellaneous', 'Crenicichla', 'lugubris');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Crenicichla', 'regani');
+VALUES ('Cichlids', 'Crenicichla', 'regani');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Crenicichla', 'rosemariae');
+VALUES ('Cichlids', 'Crenicichla', 'rosemariae');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Crenicichla', 'tigrina');
+VALUES ('Cichlids', 'Crenicichla', 'tigrina');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Crenicichla', 'zebrina');
+VALUES ('Cichlids', 'Crenicichla', 'zebrina');
 
 -- Genus: Crenuchus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Crenuchus', 'spilurus');
+VALUES ('Characins', 'Crenuchus', 'spilurus');
 
 -- Genus: Cribroheros
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Cribroheros', 'bussingi');
+VALUES ('Miscellaneous', 'Cribroheros', 'bussingi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Cribroheros', 'longimanus');
+VALUES ('Miscellaneous', 'Cribroheros', 'longimanus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Cribroheros', 'robertsoni');
+VALUES ('Cichlids', 'Cribroheros', 'robertsoni');
 
 -- Genus: Crossocheilus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Crossocheilus', 'langei');
+VALUES ('Cyprinids', 'Crossocheilus', 'langei');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Crossocheilus', 'oblongus');
+VALUES ('Miscellaneous', 'Crossocheilus', 'oblongus');
 
 -- Genus: Cryptoheros
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Cryptoheros', 'cutteri');
+VALUES ('Cichlids', 'Cryptoheros', 'cutteri');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Cryptoheros', 'nanoluteus');
+VALUES ('Miscellaneous', 'Cryptoheros', 'nanoluteus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Cryptoheros', 'nigrofasciatus');
+VALUES ('Cichlids', 'Cryptoheros', 'nigrofasciatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Cryptoheros', 'panamensis');
+VALUES ('Cichlids', 'Cryptoheros', 'panamensis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Cryptoheros', 'septemfasciatus');
+VALUES ('Cichlids', 'Cryptoheros', 'septemfasciatus');
 
 -- Genus: Ctenobrycon
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Ctenobrycon', 'spilurus');
+VALUES ('Characins', 'Ctenobrycon', 'spilurus');
 
 -- Genus: Ctenolucius
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Ctenolucius', 'hujeta');
+VALUES ('Miscellaneous', 'Ctenolucius', 'hujeta');
 
 -- Genus: Ctenopoma
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Ctenopoma', 'acutirostre');
+VALUES ('Anabantoids', 'Ctenopoma', 'acutirostre');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Ctenopoma', 'kingsleyae');
+VALUES ('Anabantoids', 'Ctenopoma', 'kingsleyae');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Ctenopoma', 'weeksii');
+VALUES ('Anabantoids', 'Ctenopoma', 'weeksii');
 
 -- Genus: Ctenops
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Ctenops', 'nobilis');
+VALUES ('Anabantoids', 'Ctenops', 'nobilis');
 
 -- Genus: Culaea
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Culaea', 'inconstans');
+VALUES ('Miscellaneous', 'Culaea', 'inconstans');
 
 -- Genus: Cynotilapia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Cynotilapia', 'afra');
+VALUES ('Cichlids', 'Cynotilapia', 'afra');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Cynotilapia', 'zebroides');
+VALUES ('Miscellaneous', 'Cynotilapia', 'zebroides');
 
 -- Genus: Cyphotilapia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Cyphotilapia', 'frontosa');
+VALUES ('Miscellaneous', 'Cyphotilapia', 'frontosa');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Cyphotilapia', 'gibberosa');
+VALUES ('Miscellaneous', 'Cyphotilapia', 'gibberosa');
 
 -- Genus: Cyprichromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Cyprichromis', 'leptosoma');
+VALUES ('Cichlids', 'Cyprichromis', 'leptosoma');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Cyprichromis', 'zonatus');
+VALUES ('Miscellaneous', 'Cyprichromis', 'zonatus');
 
 -- Genus: Cyprinella
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Cyprinella', 'lutrensis');
+VALUES ('Miscellaneous', 'Cyprinella', 'lutrensis');
 
 -- Genus: Cyprinus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Cyprinus', 'carpio');
+VALUES ('Miscellaneous', 'Cyprinus', 'carpio');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Cyprinus', 'rubrofuscus');
+VALUES ('Miscellaneous', 'Cyprinus', 'rubrofuscus');
 
 -- Genus: Cyrtocara
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Cyrtocara', 'moorii');
+VALUES ('Cichlids', 'Cyrtocara', 'moorii');
 
 -- Genus: Danio
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Danio', 'albolineatus');
+VALUES ('Cyprinids', 'Danio', 'albolineatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Danio', 'choprae');
+VALUES ('Cyprinids', 'Danio', 'choprae');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Danio', 'erythromicron');
+VALUES ('Cyprinids', 'Danio', 'erythromicron');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Danio', 'kerri');
+VALUES ('Cyprinids', 'Danio', 'kerri');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Danio', 'kyathit');
+VALUES ('Cyprinids', 'Danio', 'kyathit');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Danio', 'margaritatus');
+VALUES ('Cyprinids', 'Danio', 'margaritatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Danio', 'nigrofasciatus');
+VALUES ('Cyprinids', 'Danio', 'nigrofasciatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Danio', 'rerio');
+VALUES ('Cyprinids', 'Danio', 'rerio');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Danio', 'tinwini');
+VALUES ('Cyprinids', 'Danio', 'tinwini');
 
 -- Genus: Dario
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Dario', 'dario');
+VALUES ('Miscellaneous', 'Dario', 'dario');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Dario', 'tigris');
+VALUES ('Miscellaneous', 'Dario', 'tigris');
 
 -- Genus: Datnioides
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Datnioides', 'campbelli');
+VALUES ('Miscellaneous', 'Datnioides', 'campbelli');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Datnioides', 'microlepis');
+VALUES ('Miscellaneous', 'Datnioides', 'microlepis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Datnioides', 'polota');
+VALUES ('Miscellaneous', 'Datnioides', 'polota');
 
 -- Genus: Dawkinsia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Dawkinsia', 'arulius');
+VALUES ('Cyprinids', 'Dawkinsia', 'arulius');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Dawkinsia', 'assimilis');
+VALUES ('Cyprinids', 'Dawkinsia', 'assimilis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Dawkinsia', 'rohani');
+VALUES ('Cyprinids', 'Dawkinsia', 'rohani');
 
 -- Genus: Dermogenys
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Dermogenys', 'pusilla');
+VALUES ('Miscellaneous', 'Dermogenys', 'pusilla');
 
 -- Genus: Desmopuntius
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Desmopuntius', 'hexazona');
+VALUES ('Cyprinids', 'Desmopuntius', 'hexazona');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Desmopuntius', 'rhomboocellatus');
+VALUES ('Cyprinids', 'Desmopuntius', 'rhomboocellatus');
 
 -- Genus: Devario
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Devario', 'aequipinnatus');
+VALUES ('Cyprinids', 'Devario', 'aequipinnatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Devario', 'auropurpureus');
+VALUES ('Cyprinids', 'Devario', 'auropurpureus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Devario', 'malabaricus');
+VALUES ('Cyprinids', 'Devario', 'malabaricus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Devario', 'pathirana');
+VALUES ('Cyprinids', 'Devario', 'pathirana');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Devario', 'sondhii');
+VALUES ('Cyprinids', 'Devario', 'sondhii');
 
 -- Genus: Dianema
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Dianema', 'urostriatum');
+VALUES ('Catfish & Loaches', 'Dianema', 'urostriatum');
 
 -- Genus: Dichotomyctere
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Dichotomyctere', 'nigroviridis');
+VALUES ('Miscellaneous', 'Dichotomyctere', 'nigroviridis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Dichotomyctere', 'ocellatus');
+VALUES ('Miscellaneous', 'Dichotomyctere', 'ocellatus');
 
 -- Genus: Dicrossus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Dicrossus', 'filamentosus');
+VALUES ('Cichlids', 'Dicrossus', 'filamentosus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Dicrossus', 'maculatus');
+VALUES ('Cichlids', 'Dicrossus', 'maculatus');
 
 -- Genus: Dimidiochromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Dimidiochromis', 'compressiceps');
+VALUES ('Miscellaneous', 'Dimidiochromis', 'compressiceps');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Dimidiochromis', 'strigatus');
+VALUES ('Miscellaneous', 'Dimidiochromis', 'strigatus');
 
 -- Genus: Distichodus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Distichodus', 'affinis');
+VALUES ('Miscellaneous', 'Distichodus', 'affinis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Distichodus', 'noboli');
+VALUES ('Miscellaneous', 'Distichodus', 'noboli');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Distichodus', 'sexfasciatus');
+VALUES ('Miscellaneous', 'Distichodus', 'sexfasciatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Distichodus', 'teugelsi');
+VALUES ('Miscellaneous', 'Distichodus', 'teugelsi');
 
 -- Genus: Dormitator
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Dormitator', 'latifrons');
+VALUES ('Miscellaneous', 'Dormitator', 'latifrons');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Dormitator', 'maculatus');
+VALUES ('Miscellaneous', 'Dormitator', 'maculatus');
 
 -- Genus: Doryichthys
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Doryichthys', 'martensii');
+VALUES ('Miscellaneous', 'Doryichthys', 'martensii');
 
 -- Genus: Duringlanis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Duringlanis', 'perugiae');
+VALUES ('Catfish & Loaches', 'Duringlanis', 'perugiae');
 
 -- Genus: Ectodus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Ectodus', 'descampsii');
+VALUES ('Cichlids', 'Ectodus', 'descampsii');
 
 -- Genus: Eigenmannia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Eigenmannia', 'virescens');
+VALUES ('Miscellaneous', 'Eigenmannia', 'virescens');
 
 -- Genus: Elassoma
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Elassoma', 'evergladei');
+VALUES ('Native', 'Elassoma', 'evergladei');
 
 -- Genus: Electrophorus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Electrophorus', 'electricus');
+VALUES ('Miscellaneous', 'Electrophorus', 'electricus');
 
 -- Genus: Enneacampus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Enneacampus', 'ansorgii');
+VALUES ('Miscellaneous', 'Enneacampus', 'ansorgii');
 
 -- Genus: Enneacanthus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Enneacanthus', 'chaetodon');
+VALUES ('Native', 'Enneacanthus', 'chaetodon');
 
 -- Genus: Enteromius
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Enteromius', 'fasciolatus');
+VALUES ('Cyprinids', 'Enteromius', 'fasciolatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Enteromius', 'hulstaerti');
+VALUES ('Cyprinids', 'Enteromius', 'hulstaerti');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Enteromius', 'jae');
+VALUES ('Cyprinids', 'Enteromius', 'jae');
 
 -- Genus: Epalzeorhynchos
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Epalzeorhynchos', 'bicolor');
+VALUES ('Miscellaneous', 'Epalzeorhynchos', 'bicolor');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Epalzeorhynchos', 'frenatum');
+VALUES ('Miscellaneous', 'Epalzeorhynchos', 'frenatum');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Epalzeorhynchos', 'kalopterus');
+VALUES ('Miscellaneous', 'Epalzeorhynchos', 'kalopterus');
 
 -- Genus: Epiplatys
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Epiplatys', 'annulatus');
+VALUES ('Killifish', 'Epiplatys', 'annulatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Epiplatys', 'dageti');
+VALUES ('Miscellaneous', 'Epiplatys', 'dageti');
 
 -- Genus: Eretmodus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Eretmodus', 'cyanostictus');
+VALUES ('Cichlids', 'Eretmodus', 'cyanostictus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Eretmodus', 'marksmithi');
+VALUES ('Cichlids', 'Eretmodus', 'marksmithi');
 
 -- Genus: Erpetoichthys
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Erpetoichthys', 'calabaricus');
+VALUES ('Miscellaneous', 'Erpetoichthys', 'calabaricus');
 
 -- Genus: Erythrinus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Erythrinus', 'erythrinus');
+VALUES ('Miscellaneous', 'Erythrinus', 'erythrinus');
 
 -- Genus: Esox
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Esox', 'lucius');
+VALUES ('Miscellaneous', 'Esox', 'lucius');
 
 -- Genus: Ethelwynnae
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Ethelwynnae', 'chitande');
+VALUES ('Miscellaneous', 'Ethelwynnae', 'chitande');
 
 -- Genus: Etheostoma
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Etheostoma', 'caeruleum');
+VALUES ('Miscellaneous', 'Etheostoma', 'caeruleum');
 
 -- Genus: Etroplus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Etroplus', 'canarensis');
+VALUES ('Miscellaneous', 'Etroplus', 'canarensis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Etroplus', 'suratensis');
+VALUES ('Miscellaneous', 'Etroplus', 'suratensis');
 
 -- Genus: Exochochromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Exochochromis', 'anagenys');
+VALUES ('Miscellaneous', 'Exochochromis', 'anagenys');
 
 -- Genus: Exodon
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Exodon', 'paradoxus');
+VALUES ('Characins', 'Exodon', 'paradoxus');
 
 -- Genus: Fluvitrygon
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Fluvitrygon', 'oxyrhynchus');
+VALUES ('Miscellaneous', 'Fluvitrygon', 'oxyrhynchus');
 
 -- Genus: Fossorochromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Fossorochromis', 'rostratus');
+VALUES ('Miscellaneous', 'Fossorochromis', 'rostratus');
 
 -- Genus: Fundulopanchax
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Fundulopanchax', 'gardneri');
+VALUES ('Killifish', 'Fundulopanchax', 'gardneri');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Fundulopanchax', 'sjostedti');
+VALUES ('Killifish', 'Fundulopanchax', 'sjostedti');
 
 -- Genus: Fundulus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Fundulus', 'chrysotus');
+VALUES ('Miscellaneous', 'Fundulus', 'chrysotus');
 
 -- Genus: Gambusia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Gambusia', 'affinis');
+VALUES ('Livebearers', 'Gambusia', 'affinis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Gambusia', 'holbrooki');
+VALUES ('Livebearers', 'Gambusia', 'holbrooki');
 
 -- Genus: Garra
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Garra', 'flavatra');
+VALUES ('Miscellaneous', 'Garra', 'flavatra');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Garra', 'taeniata');
+VALUES ('Miscellaneous', 'Garra', 'taeniata');
 
 -- Genus: Gasteropelecus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Gasteropelecus', 'levis');
+VALUES ('Miscellaneous', 'Gasteropelecus', 'levis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Gasteropelecus', 'sternicla');
+VALUES ('Miscellaneous', 'Gasteropelecus', 'sternicla');
 
 -- Genus: Gastromyzon
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Gastromyzon', 'ctenocephalus');
+VALUES ('Catfish & Loaches', 'Gastromyzon', 'ctenocephalus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Gastromyzon', 'zebrinus');
+VALUES ('Catfish & Loaches', 'Gastromyzon', 'zebrinus');
 
 -- Genus: Geophagus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Geophagus', 'altifrons');
+VALUES ('Cichlids', 'Geophagus', 'altifrons');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Geophagus', 'argyrostictus');
+VALUES ('Miscellaneous', 'Geophagus', 'argyrostictus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Geophagus', 'brasiliansis');
+VALUES ('Cichlids', 'Geophagus', 'brasiliansis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Geophagus', 'brasiliensis');
+VALUES ('Cichlids', 'Geophagus', 'brasiliensis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Geophagus', 'pellegrini');
+VALUES ('Miscellaneous', 'Geophagus', 'pellegrini');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Geophagus', 'sveni');
+VALUES ('Miscellaneous', 'Geophagus', 'sveni');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Geophagus', 'winemilleri');
+VALUES ('Miscellaneous', 'Geophagus', 'winemilleri');
 
 -- Genus: Girardinus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Girardinus', 'metallicus');
+VALUES ('Miscellaneous', 'Girardinus', 'metallicus');
 
 -- Genus: Glossamia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Glossamia', 'aprion');
+VALUES ('Miscellaneous', 'Glossamia', 'aprion');
 
 -- Genus: Glossolepis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Glossolepis', 'dorityi');
+VALUES ('Miscellaneous', 'Glossolepis', 'dorityi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Glossolepis', 'incisis');
+VALUES ('Miscellaneous', 'Glossolepis', 'incisis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Glossolepis', 'incisus');
+VALUES ('Miscellaneous', 'Glossolepis', 'incisus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Glossolepis', 'multisquamata');
+VALUES ('Miscellaneous', 'Glossolepis', 'multisquamata');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Glossolepis', 'pseudoincisus');
+VALUES ('Miscellaneous', 'Glossolepis', 'pseudoincisus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Glossolepis', 'wanamensis');
+VALUES ('Miscellaneous', 'Glossolepis', 'wanamensis');
 
 -- Genus: Gnathocharax
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Gnathocharax', 'steindachneri');
+VALUES ('Characins', 'Gnathocharax', 'steindachneri');
 
 -- Genus: Gnathonemus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Gnathonemus', 'macrolepidotus');
+VALUES ('Miscellaneous', 'Gnathonemus', 'macrolepidotus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Gnathonemus', 'petersii');
+VALUES ('Miscellaneous', 'Gnathonemus', 'petersii');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Gnathonemus', 'tamandua');
+VALUES ('Miscellaneous', 'Gnathonemus', 'tamandua');
 
 -- Genus: Gobioides
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Gobioides', 'broussonnetii');
+VALUES ('Miscellaneous', 'Gobioides', 'broussonnetii');
 
 -- Genus: Guianacara
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Guianacara', 'dacrya');
+VALUES ('Cichlids', 'Guianacara', 'dacrya');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Guianacara', 'owroewefi');
+VALUES ('Cichlids', 'Guianacara', 'owroewefi');
 
 -- Genus: Gymnarchus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Gymnarchus', 'niloticus');
+VALUES ('Miscellaneous', 'Gymnarchus', 'niloticus');
 
 -- Genus: Gymnochanda
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Gymnochanda', 'filamentosa');
+VALUES ('Miscellaneous', 'Gymnochanda', 'filamentosa');
 
 -- Genus: Gymnocorymbus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Gymnocorymbus', 'ternetzi');
+VALUES ('Characins', 'Gymnocorymbus', 'ternetzi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Gymnocorymbus', 'thayeri');
+VALUES ('Characins', 'Gymnocorymbus', 'thayeri');
 
 -- Genus: Gymnogeophagus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Gymnogeophagus', 'balzanii');
+VALUES ('Miscellaneous', 'Gymnogeophagus', 'balzanii');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Gymnogeophagus', 'gymnogenys');
+VALUES ('Miscellaneous', 'Gymnogeophagus', 'gymnogenys');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Gymnogeophagus', 'rhabdotus');
+VALUES ('Miscellaneous', 'Gymnogeophagus', 'rhabdotus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Gymnogeophagus', 'terrapurpura');
+VALUES ('Miscellaneous', 'Gymnogeophagus', 'terrapurpura');
 
 -- Genus: Gymnorhamphicthys
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Gymnorhamphicthys', 'rondoni');
+VALUES ('Miscellaneous', 'Gymnorhamphicthys', 'rondoni');
 
 -- Genus: Gymnothorax
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Gymnothorax', 'polyuranodon');
+VALUES ('Miscellaneous', 'Gymnothorax', 'polyuranodon');
 
 -- Genus: Gyrinocheilus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Gyrinocheilus', 'aymonieri');
+VALUES ('Miscellaneous', 'Gyrinocheilus', 'aymonieri');
 
 -- Genus: Haludaria
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Haludaria', 'fasciata');
+VALUES ('Cyprinids', 'Haludaria', 'fasciata');
 
 -- Genus: Hampala
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hampala', 'macrolepidota');
+VALUES ('Cyprinids', 'Hampala', 'macrolepidota');
 
 -- Genus: Haplochromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Haplochromis', 'chromogynos');
+VALUES ('Miscellaneous', 'Haplochromis', 'chromogynos');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Haplochromis', 'latifasciatus');
+VALUES ('Miscellaneous', 'Haplochromis', 'latifasciatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Haplochromis', 'nyererei');
+VALUES ('Miscellaneous', 'Haplochromis', 'nyererei');
 
 -- Genus: Hara
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hara', 'jerdoni');
+VALUES ('Catfish & Loaches', 'Hara', 'jerdoni');
 
 -- Genus: Harttia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Harttia', 'punctata');
+VALUES ('Miscellaneous', 'Harttia', 'punctata');
 
 -- Genus: Hasemania
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hasemania', 'nana');
+VALUES ('Characins', 'Hasemania', 'nana');
 
 -- Genus: Helostoma
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Helostoma', 'temmincki');
+VALUES ('Anabantoids', 'Helostoma', 'temmincki');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Helostoma', 'temminckii');
+VALUES ('Anabantoids', 'Helostoma', 'temminckii');
 
 -- Genus: Hemiancistrus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hemiancistrus', 'guahiborum');
+VALUES ('Catfish & Loaches', 'Hemiancistrus', 'guahiborum');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hemiancistrus', 'plecostomus');
+VALUES ('Catfish & Loaches', 'Hemiancistrus', 'plecostomus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hemiancistrus', 'snethlageae');
+VALUES ('Catfish & Loaches', 'Hemiancistrus', 'snethlageae');
 
 -- Genus: Hemibagrus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hemibagrus', 'wyckii');
+VALUES ('Catfish & Loaches', 'Hemibagrus', 'wyckii');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hemibagrus', 'wyckioides');
+VALUES ('Catfish & Loaches', 'Hemibagrus', 'wyckioides');
 
 -- Genus: Hemichromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hemichromis', 'bimaculatus');
+VALUES ('Cichlids', 'Hemichromis', 'bimaculatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hemichromis', 'exsul');
+VALUES ('Cichlids', 'Hemichromis', 'exsul');
 
 -- Genus: Hemigrammus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hemigrammus', 'armstrongi');
+VALUES ('Characins', 'Hemigrammus', 'armstrongi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hemigrammus', 'caudovittatus');
+VALUES ('Characins', 'Hemigrammus', 'caudovittatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hemigrammus', 'coerueus');
+VALUES ('Characins', 'Hemigrammus', 'coerueus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hemigrammus', 'coeruleus');
+VALUES ('Characins', 'Hemigrammus', 'coeruleus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hemigrammus', 'erythrophthalmus');
+VALUES ('Characins', 'Hemigrammus', 'erythrophthalmus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hemigrammus', 'erythrozonus');
+VALUES ('Characins', 'Hemigrammus', 'erythrozonus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hemigrammus', 'filamentosus');
+VALUES ('Characins', 'Hemigrammus', 'filamentosus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hemigrammus', 'hyanuary');
+VALUES ('Characins', 'Hemigrammus', 'hyanuary');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hemigrammus', 'marginatus');
+VALUES ('Characins', 'Hemigrammus', 'marginatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hemigrammus', 'nanus');
+VALUES ('Characins', 'Hemigrammus', 'nanus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hemigrammus', 'ocellifer');
+VALUES ('Characins', 'Hemigrammus', 'ocellifer');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hemigrammus', 'proneki');
+VALUES ('Characins', 'Hemigrammus', 'proneki');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hemigrammus', 'pulcher');
+VALUES ('Characins', 'Hemigrammus', 'pulcher');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hemigrammus', 'rhodostomus');
+VALUES ('Characins', 'Hemigrammus', 'rhodostomus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hemigrammus', 'rodwayi');
+VALUES ('Characins', 'Hemigrammus', 'rodwayi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hemigrammus', 'unilineatus');
+VALUES ('Characins', 'Hemigrammus', 'unilineatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hemigrammus', 'vorderwinkleri');
+VALUES ('Characins', 'Hemigrammus', 'vorderwinkleri');
 
 -- Genus: Hemiodus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hemiodus', 'gracilis');
+VALUES ('Miscellaneous', 'Hemiodus', 'gracilis');
 
 -- Genus: Hemirhamphodon
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hemirhamphodon', 'pogonognathus');
+VALUES ('Miscellaneous', 'Hemirhamphodon', 'pogonognathus');
 
 -- Genus: Hepsetus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hepsetus', 'odoe');
+VALUES ('Characins', 'Hepsetus', 'odoe');
 
 -- Genus: Herichthys
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Herichthys', 'carpintis');
+VALUES ('Cichlids', 'Herichthys', 'carpintis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Herichthys', 'cyanoguttatus');
+VALUES ('Cichlids', 'Herichthys', 'cyanoguttatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Herichthys', 'deppii');
+VALUES ('Cichlids', 'Herichthys', 'deppii');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Herichthys', 'tamasopoensis');
+VALUES ('Cichlids', 'Herichthys', 'tamasopoensis');
 
 -- Genus: Heros
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Heros', 'appendiculatus');
+VALUES ('Miscellaneous', 'Heros', 'appendiculatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Heros', 'efasciatus');
+VALUES ('Miscellaneous', 'Heros', 'efasciatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Heros', 'liberifer');
+VALUES ('Miscellaneous', 'Heros', 'liberifer');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Heros', 'severus');
+VALUES ('Miscellaneous', 'Heros', 'severus');
 
 -- Genus: Herotilapia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Herotilapia', 'multispinosa');
+VALUES ('Cichlids', 'Herotilapia', 'multispinosa');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Herotilapia', 'multispinosus');
+VALUES ('Cichlids', 'Herotilapia', 'multispinosus');
 
 -- Genus: Heterandria
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Heterandria', 'formosa');
+VALUES ('Killifish', 'Heterandria', 'formosa');
 
 -- Genus: Heteropneustes
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Heteropneustes', 'fossilis');
+VALUES ('Catfish & Loaches', 'Heteropneustes', 'fossilis');
 
 -- Genus: Heterotis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Heterotis', 'niloticus');
+VALUES ('Miscellaneous', 'Heterotis', 'niloticus');
 
 -- Genus: Homaloptera
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Homaloptera', 'orthogoniata');
+VALUES ('Catfish & Loaches', 'Homaloptera', 'orthogoniata');
 
 -- Genus: Hoplarchus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hoplarchus', 'psittacus');
+VALUES ('Cichlids', 'Hoplarchus', 'psittacus');
 
 -- Genus: Hoplosternum
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hoplosternum', 'littorale');
+VALUES ('Catfish & Loaches', 'Hoplosternum', 'littorale');
 
 -- Genus: Horabagrus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Horabagrus', 'brachysoma');
+VALUES ('Catfish & Loaches', 'Horabagrus', 'brachysoma');
 
 -- Genus: Hyalobagrus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyalobagrus', 'flavus');
+VALUES ('Catfish & Loaches', 'Hyalobagrus', 'flavus');
 
 -- Genus: Hydrocynus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hydrocynus', 'goliath');
+VALUES ('Miscellaneous', 'Hydrocynus', 'goliath');
 
 -- Genus: Hydrolycus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hydrolycus', 'scomberoides');
+VALUES ('Miscellaneous', 'Hydrolycus', 'scomberoides');
 
 -- Genus: Hymenochirus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hymenochirus', 'boettgeri');
+VALUES ('Miscellaneous', 'Hymenochirus', 'boettgeri');
 
 -- Genus: Hypancistrus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hypancistrus', 'contradens');
+VALUES ('Catfish & Loaches', 'Hypancistrus', 'contradens');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hypancistrus', 'inspector');
+VALUES ('Catfish & Loaches', 'Hypancistrus', 'inspector');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hypancistrus', 'zebra');
+VALUES ('Catfish & Loaches', 'Hypancistrus', 'zebra');
 
 -- Genus: Hyphessobrycon
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'agulha');
+VALUES ('Characins', 'Hyphessobrycon', 'agulha');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'amandae');
+VALUES ('Characins', 'Hyphessobrycon', 'amandae');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'anisitsi');
+VALUES ('Characins', 'Hyphessobrycon', 'anisitsi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'bellottii');
+VALUES ('Characins', 'Hyphessobrycon', 'bellottii');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'bentosi');
+VALUES ('Characins', 'Hyphessobrycon', 'bentosi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'bifasciatus');
+VALUES ('Characins', 'Hyphessobrycon', 'bifasciatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'callistus');
+VALUES ('Characins', 'Hyphessobrycon', 'callistus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'chiribiquete');
+VALUES ('Characins', 'Hyphessobrycon', 'chiribiquete');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'columbianus');
+VALUES ('Characins', 'Hyphessobrycon', 'columbianus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'eos');
+VALUES ('Characins', 'Hyphessobrycon', 'eos');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'eques');
+VALUES ('Characins', 'Hyphessobrycon', 'eques');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'erythrostigma');
+VALUES ('Characins', 'Hyphessobrycon', 'erythrostigma');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'flammeus');
+VALUES ('Characins', 'Hyphessobrycon', 'flammeus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'haroldschultzi');
+VALUES ('Characins', 'Hyphessobrycon', 'haroldschultzi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'herbertaxelrodi');
+VALUES ('Characins', 'Hyphessobrycon', 'herbertaxelrodi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'heterorhabdus');
+VALUES ('Characins', 'Hyphessobrycon', 'heterorhabdus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'innesi');
+VALUES ('Characins', 'Hyphessobrycon', 'innesi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'loretoensis');
+VALUES ('Characins', 'Hyphessobrycon', 'loretoensis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'margitae');
+VALUES ('Characins', 'Hyphessobrycon', 'margitae');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'megalopterus');
+VALUES ('Characins', 'Hyphessobrycon', 'megalopterus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'micropterus');
+VALUES ('Characins', 'Hyphessobrycon', 'micropterus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'minor');
+VALUES ('Characins', 'Hyphessobrycon', 'minor');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'negodagua');
+VALUES ('Characins', 'Hyphessobrycon', 'negodagua');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'peruvianus');
+VALUES ('Characins', 'Hyphessobrycon', 'peruvianus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'procyon');
+VALUES ('Characins', 'Hyphessobrycon', 'procyon');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'pulchripinnis');
+VALUES ('Characins', 'Hyphessobrycon', 'pulchripinnis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'pyrrhonotus');
+VALUES ('Characins', 'Hyphessobrycon', 'pyrrhonotus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'rosaceus');
+VALUES ('Characins', 'Hyphessobrycon', 'rosaceus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'roseus');
+VALUES ('Characins', 'Hyphessobrycon', 'roseus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'scholzei');
+VALUES ('Characins', 'Hyphessobrycon', 'scholzei');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'serpae');
+VALUES ('Characins', 'Hyphessobrycon', 'serpae');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'simulans');
+VALUES ('Characins', 'Hyphessobrycon', 'simulans');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'sweglesi');
+VALUES ('Characins', 'Hyphessobrycon', 'sweglesi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'takasei');
+VALUES ('Characins', 'Hyphessobrycon', 'takasei');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'ulreyi');
+VALUES ('Characins', 'Hyphessobrycon', 'ulreyi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'vinaceus');
+VALUES ('Characins', 'Hyphessobrycon', 'vinaceus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hyphessobrycon', 'wadai');
+VALUES ('Characins', 'Hyphessobrycon', 'wadai');
 
 -- Genus: Hypoptopoma
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hypoptopoma', 'gulare');
+VALUES ('Miscellaneous', 'Hypoptopoma', 'gulare');
 
 -- Genus: Hypostomus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hypostomus', 'faveolus');
+VALUES ('Catfish & Loaches', 'Hypostomus', 'faveolus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hypostomus', 'gibbiceps');
+VALUES ('Catfish & Loaches', 'Hypostomus', 'gibbiceps');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hypostomus', 'plecostomus');
+VALUES ('Catfish & Loaches', 'Hypostomus', 'plecostomus');
 
 -- Genus: Hypselecara
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hypselecara', 'temporalis');
+VALUES ('Cichlids', 'Hypselecara', 'temporalis');
 
 -- Genus: Hypseleotris
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hypseleotris', 'compressa');
+VALUES ('Miscellaneous', 'Hypseleotris', 'compressa');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hypseleotris', 'cyprinoides');
+VALUES ('Miscellaneous', 'Hypseleotris', 'cyprinoides');
 
 -- Genus: Hypsibarbus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hypsibarbus', 'wetmorei');
+VALUES ('Cyprinids', 'Hypsibarbus', 'wetmorei');
 
 -- Genus: Hypsophrys
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Hypsophrys', 'nicaraguensis');
+VALUES ('Cichlids', 'Hypsophrys', 'nicaraguensis');
 
 -- Genus: Ictalurus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Ictalurus', 'furcatus');
+VALUES ('Catfish & Loaches', 'Ictalurus', 'furcatus');
 
 -- Genus: Iguanodectes
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Iguanodectes', 'geisleri');
+VALUES ('Characins', 'Iguanodectes', 'geisleri');
 
 -- Genus: Inpaichthys
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Inpaichthys', 'kerri');
+VALUES ('Characins', 'Inpaichthys', 'kerri');
 
 -- Genus: Iodotropheus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Iodotropheus', 'sprengerae');
+VALUES ('Cichlids', 'Iodotropheus', 'sprengerae');
 
 -- Genus: Iriatherina
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Iriatherina', 'werneri');
+VALUES ('Miscellaneous', 'Iriatherina', 'werneri');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Iriatherina', 'werneria');
+VALUES ('Miscellaneous', 'Iriatherina', 'werneria');
 
 -- Genus: Ivanacara
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Ivanacara', 'adoketa');
+VALUES ('Miscellaneous', 'Ivanacara', 'adoketa');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Ivanacara', 'bimaculata');
+VALUES ('Miscellaneous', 'Ivanacara', 'bimaculata');
 
 -- Genus: Jordanella
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Jordanella', 'floridae');
+VALUES ('Miscellaneous', 'Jordanella', 'floridae');
 
 -- Genus: Julidochromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Julidochromis', 'dickfeldi');
+VALUES ('Miscellaneous', 'Julidochromis', 'dickfeldi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Julidochromis', 'marksmithi');
+VALUES ('Miscellaneous', 'Julidochromis', 'marksmithi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Julidochromis', 'marlieri');
+VALUES ('Miscellaneous', 'Julidochromis', 'marlieri');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Julidochromis', 'ornatus');
+VALUES ('Miscellaneous', 'Julidochromis', 'ornatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Julidochromis', 'regani');
+VALUES ('Miscellaneous', 'Julidochromis', 'regani');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Julidochromis', 'transcriptus');
+VALUES ('Miscellaneous', 'Julidochromis', 'transcriptus');
 
 -- Genus: Kali
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Kali', 'jamas');
+VALUES ('Miscellaneous', 'Kali', 'jamas');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Kali', 'moysi');
+VALUES ('Miscellaneous', 'Kali', 'moysi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Kali', 'tawa');
+VALUES ('Miscellaneous', 'Kali', 'tawa');
 
 -- Genus: Knodus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Knodus', 'borki');
+VALUES ('Characins', 'Knodus', 'borki');
 
 -- Genus: Kottelatia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Kottelatia', 'brittani');
+VALUES ('Cyprinids', 'Kottelatia', 'brittani');
 
 -- Genus: Krobia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Krobia', 'xinguensis');
+VALUES ('Miscellaneous', 'Krobia', 'xinguensis');
 
 -- Genus: Kronoheros
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Kronoheros', 'umbriferus');
+VALUES ('Cichlids', 'Kronoheros', 'umbriferus');
 
 -- Genus: Kryptopterus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Kryptopterus', 'macrocephalus');
+VALUES ('Catfish & Loaches', 'Kryptopterus', 'macrocephalus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Kryptopterus', 'vitreolus');
+VALUES ('Catfish & Loaches', 'Kryptopterus', 'vitreolus');
 
 -- Genus: Labeo
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Labeo', 'chrysophekadion');
+VALUES ('Miscellaneous', 'Labeo', 'chrysophekadion');
 
 -- Genus: Labeotropheus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Labeotropheus', 'fuelleborni');
+VALUES ('Cichlids', 'Labeotropheus', 'fuelleborni');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Labeotropheus', 'trewavasae');
+VALUES ('Miscellaneous', 'Labeotropheus', 'trewavasae');
 
 -- Genus: Labidochromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Labidochromis', 'caeruleus');
+VALUES ('Cichlids', 'Labidochromis', 'caeruleus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Labidochromis', 'joanjohnsonae');
+VALUES ('Cichlids', 'Labidochromis', 'joanjohnsonae');
 
 -- Genus: Ladigesia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Ladigesia', 'roloffi');
+VALUES ('Characins', 'Ladigesia', 'roloffi');
 
 -- Genus: Laetacara
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Laetacara', 'araguaiae');
+VALUES ('Miscellaneous', 'Laetacara', 'araguaiae');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Laetacara', 'curviceps');
+VALUES ('Cichlids', 'Laetacara', 'curviceps');
 
 -- Genus: Lamprichthys
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Lamprichthys', 'tanganicanus');
+VALUES ('Killifish', 'Lamprichthys', 'tanganicanus');
 
 -- Genus: Lamprologus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Lamprologus', 'brevis');
+VALUES ('Miscellaneous', 'Lamprologus', 'brevis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Lamprologus', 'meleagris');
+VALUES ('Miscellaneous', 'Lamprologus', 'meleagris');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Lamprologus', 'ocellatus');
+VALUES ('Miscellaneous', 'Lamprologus', 'ocellatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Lamprologus', 'ornatipinnis');
+VALUES ('Miscellaneous', 'Lamprologus', 'ornatipinnis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Lamprologus', 'speciosus');
+VALUES ('Miscellaneous', 'Lamprologus', 'speciosus');
 
 -- Genus: Lasiancistrus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Lasiancistrus', 'heteracanthus');
+VALUES ('Catfish & Loaches', 'Lasiancistrus', 'heteracanthus');
 
 -- Genus: Lates
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Lates', 'niloticus');
+VALUES ('Miscellaneous', 'Lates', 'niloticus');
 
 -- Genus: Laubuca
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Laubuca', 'dadiburjori');
+VALUES ('Miscellaneous', 'Laubuca', 'dadiburjori');
 
 -- Genus: Lepidarchus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Lepidarchus', 'adonis');
+VALUES ('Characins', 'Lepidarchus', 'adonis');
 
 -- Genus: Lepidiolamprologus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Lepidiolamprologus', 'kendalli');
+VALUES ('Miscellaneous', 'Lepidiolamprologus', 'kendalli');
 
 -- Genus: Lepidosiren
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Lepidosiren', 'paradoxa');
+VALUES ('Miscellaneous', 'Lepidosiren', 'paradoxa');
 
 -- Genus: Lepisosteus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Lepisosteus', 'oculatus');
+VALUES ('Miscellaneous', 'Lepisosteus', 'oculatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Lepisosteus', 'osseus');
+VALUES ('Miscellaneous', 'Lepisosteus', 'osseus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Lepisosteus', 'platyrhincus');
+VALUES ('Miscellaneous', 'Lepisosteus', 'platyrhincus');
 
 -- Genus: Lepomis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Lepomis', 'humilis');
+VALUES ('Native', 'Lepomis', 'humilis');
 
 -- Genus: Leporacanthicus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Leporacanthicus', 'galaxias');
+VALUES ('Catfish & Loaches', 'Leporacanthicus', 'galaxias');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Leporacanthicus', 'heterodon');
+VALUES ('Catfish & Loaches', 'Leporacanthicus', 'heterodon');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Leporacanthicus', 'joselimai');
+VALUES ('Catfish & Loaches', 'Leporacanthicus', 'joselimai');
 
 -- Genus: Leporinus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Leporinus', 'fasciatus');
+VALUES ('Miscellaneous', 'Leporinus', 'fasciatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Leporinus', 'species');
+VALUES ('Miscellaneous', 'Leporinus', 'species');
 
 -- Genus: Leptobarbus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Leptobarbus', 'hoevenii');
+VALUES ('Cyprinids', 'Leptobarbus', 'hoevenii');
 
 -- Genus: Leptobotia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Leptobotia', 'elongata');
+VALUES ('Catfish & Loaches', 'Leptobotia', 'elongata');
 
 -- Genus: Leuciscus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Leuciscus', 'idus');
+VALUES ('Miscellaneous', 'Leuciscus', 'idus');
 
 -- Genus: Lichnochromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Lichnochromis', 'acuticeps');
+VALUES ('Miscellaneous', 'Lichnochromis', 'acuticeps');
 
 -- Genus: Limia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Limia', 'vittata');
+VALUES ('Livebearers', 'Limia', 'vittata');
 
 -- Genus: Liosomadoras
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Liosomadoras', 'oncinus');
+VALUES ('Catfish & Loaches', 'Liosomadoras', 'oncinus');
 
 -- Genus: Luciocephalus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Luciocephalus', 'aura');
+VALUES ('Miscellaneous', 'Luciocephalus', 'aura');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Luciocephalus', 'pulcher');
+VALUES ('Miscellaneous', 'Luciocephalus', 'pulcher');
 
 -- Genus: Luciosoma
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Luciosoma', 'setigerum');
+VALUES ('Miscellaneous', 'Luciosoma', 'setigerum');
 
 -- Genus: Macrochirichthys
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Macrochirichthys', 'macrochirus');
+VALUES ('Miscellaneous', 'Macrochirichthys', 'macrochirus');
 
 -- Genus: Macrognathus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Macrognathus', 'circumcinctus');
+VALUES ('Miscellaneous', 'Macrognathus', 'circumcinctus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Macrognathus', 'siamensis');
+VALUES ('Miscellaneous', 'Macrognathus', 'siamensis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Macrognathus', 'tapirus');
+VALUES ('Miscellaneous', 'Macrognathus', 'tapirus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Macrognathus', 'zebrinus');
+VALUES ('Miscellaneous', 'Macrognathus', 'zebrinus');
 
 -- Genus: Macropodus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Macropodus', 'ocellatus');
+VALUES ('Anabantoids', 'Macropodus', 'ocellatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Macropodus', 'opercularis');
+VALUES ('Anabantoids', 'Macropodus', 'opercularis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Macropodus', 'spechti');
+VALUES ('Anabantoids', 'Macropodus', 'spechti');
 
 -- Genus: Malapterurus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Malapterurus', 'electricus');
+VALUES ('Catfish & Loaches', 'Malapterurus', 'electricus');
 
 -- Genus: Malpulutta
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Malpulutta', 'kretseri');
+VALUES ('Miscellaneous', 'Malpulutta', 'kretseri');
 
 -- Genus: Marosatherina
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Marosatherina', 'ladigesi');
+VALUES ('Miscellaneous', 'Marosatherina', 'ladigesi');
 
 -- Genus: Maskaheros
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Maskaheros', 'argenteus');
+VALUES ('Cichlids', 'Maskaheros', 'argenteus');
 
 -- Genus: Mastacembelus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Mastacembelus', 'armatus');
+VALUES ('Miscellaneous', 'Mastacembelus', 'armatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Mastacembelus', 'erythrotaenia');
+VALUES ('Miscellaneous', 'Mastacembelus', 'erythrotaenia');
 
 -- Genus: Mayaheros
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Mayaheros', 'urophthalmus');
+VALUES ('Cichlids', 'Mayaheros', 'urophthalmus');
 
 -- Genus: Maylandia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Maylandia', 'aurora');
+VALUES ('Miscellaneous', 'Maylandia', 'aurora');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Maylandia', 'callainos');
+VALUES ('Cichlids', 'Maylandia', 'callainos');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Maylandia', 'estherae');
+VALUES ('Cichlids', 'Maylandia', 'estherae');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Maylandia', 'greshakei');
+VALUES ('Cichlids', 'Maylandia', 'greshakei');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Maylandia', 'lombardoi');
+VALUES ('Cichlids', 'Maylandia', 'lombardoi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Maylandia', 'zebra');
+VALUES ('Miscellaneous', 'Maylandia', 'zebra');
 
 -- Genus: Megalamphodus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Megalamphodus', 'megalopterus');
+VALUES ('Characins', 'Megalamphodus', 'megalopterus');
 
 -- Genus: Megalampodus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Megalampodus', 'megalopterus');
+VALUES ('Characins', 'Megalampodus', 'megalopterus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Megalampodus', 'sweglesi');
+VALUES ('Characins', 'Megalampodus', 'sweglesi');
 
 -- Genus: Megalechis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Megalechis', 'thoracata');
+VALUES ('Miscellaneous', 'Megalechis', 'thoracata');
 
 -- Genus: Megalodoras
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Megalodoras', 'uranoscopus');
+VALUES ('Catfish & Loaches', 'Megalodoras', 'uranoscopus');
 
 -- Genus: Melanochromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Melanochromis', 'auratus');
+VALUES ('Cichlids', 'Melanochromis', 'auratus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Melanochromis', 'chipokae');
+VALUES ('Cichlids', 'Melanochromis', 'chipokae');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Melanochromis', 'cyaneorhabdos');
+VALUES ('Cichlids', 'Melanochromis', 'cyaneorhabdos');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Melanochromis', 'joanjohnsonae');
+VALUES ('Miscellaneous', 'Melanochromis', 'joanjohnsonae');
 
 -- Genus: Melanotaenia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Melanotaenia', 'affinis');
+VALUES ('Miscellaneous', 'Melanotaenia', 'affinis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Melanotaenia', 'australis');
+VALUES ('Miscellaneous', 'Melanotaenia', 'australis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Melanotaenia', 'boesemani');
+VALUES ('Miscellaneous', 'Melanotaenia', 'boesemani');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Melanotaenia', 'duboulayi');
+VALUES ('Miscellaneous', 'Melanotaenia', 'duboulayi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Melanotaenia', 'etnaensis');
+VALUES ('Miscellaneous', 'Melanotaenia', 'etnaensis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Melanotaenia', 'fluviatilis');
+VALUES ('Miscellaneous', 'Melanotaenia', 'fluviatilis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Melanotaenia', 'fredericki');
+VALUES ('Miscellaneous', 'Melanotaenia', 'fredericki');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Melanotaenia', 'herbertaxelrodi');
+VALUES ('Miscellaneous', 'Melanotaenia', 'herbertaxelrodi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Melanotaenia', 'kamaka');
+VALUES ('Miscellaneous', 'Melanotaenia', 'kamaka');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Melanotaenia', 'klasioensis');
+VALUES ('Miscellaneous', 'Melanotaenia', 'klasioensis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Melanotaenia', 'lacustris');
+VALUES ('Miscellaneous', 'Melanotaenia', 'lacustris');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Melanotaenia', 'mairasi');
+VALUES ('Miscellaneous', 'Melanotaenia', 'mairasi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Melanotaenia', 'nigrans');
+VALUES ('Miscellaneous', 'Melanotaenia', 'nigrans');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Melanotaenia', 'parkinsoni');
+VALUES ('Miscellaneous', 'Melanotaenia', 'parkinsoni');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Melanotaenia', 'parva');
+VALUES ('Miscellaneous', 'Melanotaenia', 'parva');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Melanotaenia', 'picta');
+VALUES ('Miscellaneous', 'Melanotaenia', 'picta');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Melanotaenia', 'praecox');
+VALUES ('Miscellaneous', 'Melanotaenia', 'praecox');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Melanotaenia', 'rubrivittata');
+VALUES ('Miscellaneous', 'Melanotaenia', 'rubrivittata');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Melanotaenia', 'sahulensis');
+VALUES ('Miscellaneous', 'Melanotaenia', 'sahulensis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Melanotaenia', 'sexlineata');
+VALUES ('Miscellaneous', 'Melanotaenia', 'sexlineata');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Melanotaenia', 'splendida');
+VALUES ('Miscellaneous', 'Melanotaenia', 'splendida');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Melanotaenia', 'susii');
+VALUES ('Miscellaneous', 'Melanotaenia', 'susii');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Melanotaenia', 'trifasciata');
+VALUES ('Miscellaneous', 'Melanotaenia', 'trifasciata');
 
 -- Genus: Mesoheros
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Mesoheros', 'festae');
+VALUES ('Cichlids', 'Mesoheros', 'festae');
 
 -- Genus: Mesonauta
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Mesonauta', 'festivus');
+VALUES ('Cichlids', 'Mesonauta', 'festivus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Mesonauta', 'insignis');
+VALUES ('Cichlids', 'Mesonauta', 'insignis');
 
 -- Genus: Mesonoemacheilus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Mesonoemacheilus', 'triangularis');
+VALUES ('Catfish & Loaches', 'Mesonoemacheilus', 'triangularis');
 
 -- Genus: Metriaclima
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Metriaclima', 'aurora');
+VALUES ('Miscellaneous', 'Metriaclima', 'aurora');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Metriaclima', 'callainos');
+VALUES ('Cichlids', 'Metriaclima', 'callainos');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Metriaclima', 'estherae');
+VALUES ('Miscellaneous', 'Metriaclima', 'estherae');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Metriaclima', 'fainzilberi');
+VALUES ('Miscellaneous', 'Metriaclima', 'fainzilberi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Metriaclima', 'greshakei');
+VALUES ('Miscellaneous', 'Metriaclima', 'greshakei');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Metriaclima', 'pulpican');
+VALUES ('Cichlids', 'Metriaclima', 'pulpican');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Metriaclima', 'tarakiki');
+VALUES ('Miscellaneous', 'Metriaclima', 'tarakiki');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Metriaclima', 'usisyae');
+VALUES ('Miscellaneous', 'Metriaclima', 'usisyae');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Metriaclima', 'zebra');
+VALUES ('Miscellaneous', 'Metriaclima', 'zebra');
 
 -- Genus: Metynnis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Metynnis', 'argenteus');
+VALUES ('Miscellaneous', 'Metynnis', 'argenteus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Metynnis', 'hypsauchen');
+VALUES ('Miscellaneous', 'Metynnis', 'hypsauchen');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Metynnis', 'lippincottianus');
+VALUES ('Miscellaneous', 'Metynnis', 'lippincottianus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Metynnis', 'schomburgkii');
+VALUES ('Miscellaneous', 'Metynnis', 'schomburgkii');
 
 -- Genus: Micralestes
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Micralestes', 'acutidens');
+VALUES ('Characins', 'Micralestes', 'acutidens');
 
 -- Genus: Microbrycon
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Microbrycon', 'fredcochui');
+VALUES ('Characins', 'Microbrycon', 'fredcochui');
 
 -- Genus: Microctenopoma
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Microctenopoma', 'ansorgii');
+VALUES ('Miscellaneous', 'Microctenopoma', 'ansorgii');
 
 -- Genus: Microdevario
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Microdevario', 'kubotai');
+VALUES ('Cyprinids', 'Microdevario', 'kubotai');
 
 -- Genus: Microglanis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Microglanis', 'iheringi');
+VALUES ('Catfish & Loaches', 'Microglanis', 'iheringi');
 
 -- Genus: Micropoecilia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Micropoecilia', 'branneri');
+VALUES ('Miscellaneous', 'Micropoecilia', 'branneri');
 
 -- Genus: Mikrogeophagus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Mikrogeophagus', 'altispinosus');
+VALUES ('Miscellaneous', 'Mikrogeophagus', 'altispinosus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Mikrogeophagus', 'ramirezi');
+VALUES ('Cichlids', 'Mikrogeophagus', 'ramirezi');
 
 -- Genus: Mimagoniates
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Mimagoniates', 'barberi');
+VALUES ('Characins', 'Mimagoniates', 'barberi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Mimagoniates', 'inequalis');
+VALUES ('Characins', 'Mimagoniates', 'inequalis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Mimagoniates', 'microlepis');
+VALUES ('Characins', 'Mimagoniates', 'microlepis');
 
 -- Genus: Misgurnus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Misgurnus', 'anguillicaudatus');
+VALUES ('Catfish & Loaches', 'Misgurnus', 'anguillicaudatus');
 
 -- Genus: Moenkhausia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Moenkhausia', 'dichroura');
+VALUES ('Characins', 'Moenkhausia', 'dichroura');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Moenkhausia', 'oligolepis');
+VALUES ('Characins', 'Moenkhausia', 'oligolepis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Moenkhausia', 'pittieri');
+VALUES ('Characins', 'Moenkhausia', 'pittieri');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Moenkhausia', 'sanctaefilomenae');
+VALUES ('Characins', 'Moenkhausia', 'sanctaefilomenae');
 
 -- Genus: Mogurnda
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Mogurnda', 'cingulata');
+VALUES ('Miscellaneous', 'Mogurnda', 'cingulata');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Mogurnda', 'mogurnda');
+VALUES ('Miscellaneous', 'Mogurnda', 'mogurnda');
 
 -- Genus: Monocirrhus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Monocirrhus', 'polyacanthus');
+VALUES ('Miscellaneous', 'Monocirrhus', 'polyacanthus');
 
 -- Genus: Monodactylus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Monodactylus', 'argenteus');
+VALUES ('Miscellaneous', 'Monodactylus', 'argenteus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Monodactylus', 'sebae');
+VALUES ('Miscellaneous', 'Monodactylus', 'sebae');
 
 -- Genus: Myleus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Myleus', 'schomburgkii');
+VALUES ('Characins', 'Myleus', 'schomburgkii');
 
 -- Genus: Mylochromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Mylochromis', 'anaphyrmus');
+VALUES ('Miscellaneous', 'Mylochromis', 'anaphyrmus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Mylochromis', 'lateristriga');
+VALUES ('Miscellaneous', 'Mylochromis', 'lateristriga');
 
 -- Genus: Myloplus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Myloplus', 'arnoldi');
+VALUES ('Miscellaneous', 'Myloplus', 'arnoldi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Myloplus', 'asterias');
+VALUES ('Miscellaneous', 'Myloplus', 'asterias');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Myloplus', 'rubripinnis');
+VALUES ('Miscellaneous', 'Myloplus', 'rubripinnis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Myloplus', 'schomburgkii');
+VALUES ('Miscellaneous', 'Myloplus', 'schomburgkii');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Myloplus', 'schultzei');
+VALUES ('Miscellaneous', 'Myloplus', 'schultzei');
 
 -- Genus: Mylossoma
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Mylossoma', 'argenteum');
+VALUES ('Miscellaneous', 'Mylossoma', 'argenteum');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Mylossoma', 'duriventris');
+VALUES ('Characins', 'Mylossoma', 'duriventris');
 
 -- Genus: Mystus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Mystus', 'leucophasis');
+VALUES ('Catfish & Loaches', 'Mystus', 'leucophasis');
 
 -- Genus: Myxocyprinus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Myxocyprinus', 'asiaticus');
+VALUES ('Miscellaneous', 'Myxocyprinus', 'asiaticus');
 
 -- Genus: Nandopsis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Nandopsis', 'haitiensis');
+VALUES ('Cichlids', 'Nandopsis', 'haitiensis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Nandopsis', 'octofasciatum');
+VALUES ('Cichlids', 'Nandopsis', 'octofasciatum');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Nandopsis', 'tetracanthus');
+VALUES ('Cichlids', 'Nandopsis', 'tetracanthus');
 
 -- Genus: Nandus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Nandus', 'nandus');
+VALUES ('Miscellaneous', 'Nandus', 'nandus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Nandus', 'nebulosus');
+VALUES ('Miscellaneous', 'Nandus', 'nebulosus');
 
 -- Genus: Nannacara
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Nannacara', 'anomala');
+VALUES ('Cichlids', 'Nannacara', 'anomala');
 
 -- Genus: Nannaethiops
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Nannaethiops', 'tritaeniatus');
+VALUES ('Characins', 'Nannaethiops', 'tritaeniatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Nannaethiops', 'unitaeniatus');
+VALUES ('Characins', 'Nannaethiops', 'unitaeniatus');
 
 -- Genus: Nannostomus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Nannostomus', 'beckfordi');
+VALUES ('Miscellaneous', 'Nannostomus', 'beckfordi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Nannostomus', 'eques');
+VALUES ('Miscellaneous', 'Nannostomus', 'eques');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Nannostomus', 'espei');
+VALUES ('Miscellaneous', 'Nannostomus', 'espei');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Nannostomus', 'marginatus');
+VALUES ('Miscellaneous', 'Nannostomus', 'marginatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Nannostomus', 'mortenthaleri');
+VALUES ('Miscellaneous', 'Nannostomus', 'mortenthaleri');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Nannostomus', 'rubrocaudatus');
+VALUES ('Miscellaneous', 'Nannostomus', 'rubrocaudatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Nannostomus', 'trifasciatus');
+VALUES ('Miscellaneous', 'Nannostomus', 'trifasciatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Nannostomus', 'unifasciatus');
+VALUES ('Miscellaneous', 'Nannostomus', 'unifasciatus');
 
 -- Genus: Nanochromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Nanochromis', 'splendens');
+VALUES ('Miscellaneous', 'Nanochromis', 'splendens');
 
 -- Genus: Neetroplus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Neetroplus', 'nematopus');
+VALUES ('Miscellaneous', 'Neetroplus', 'nematopus');
 
 -- Genus: Nematobrycon
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Nematobrycon', 'amphiloxus');
+VALUES ('Characins', 'Nematobrycon', 'amphiloxus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Nematobrycon', 'lacortei');
+VALUES ('Characins', 'Nematobrycon', 'lacortei');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Nematobrycon', 'palmeri');
+VALUES ('Characins', 'Nematobrycon', 'palmeri');
 
 -- Genus: Neocaridina
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Neocaridina', 'davidi');
+VALUES ('Shrimp', 'Neocaridina', 'davidi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Neocaridina', 'heteropoda');
+VALUES ('Shrimp', 'Neocaridina', 'heteropoda');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Neocaridina', 'shrimp');
+VALUES ('Shrimp', 'Neocaridina', 'shrimp');
 
 -- Genus: Neoceratodus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Neoceratodus', 'forsteri');
+VALUES ('Miscellaneous', 'Neoceratodus', 'forsteri');
 
 -- Genus: Neochromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Neochromis', 'omnicaeruleus');
+VALUES ('Miscellaneous', 'Neochromis', 'omnicaeruleus');
 
 -- Genus: Neolamprologus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Neolamprologus', 'brichardi');
+VALUES ('Cichlids', 'Neolamprologus', 'brichardi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Neolamprologus', 'caudopunctatus');
+VALUES ('Miscellaneous', 'Neolamprologus', 'caudopunctatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Neolamprologus', 'cylindricus');
+VALUES ('Miscellaneous', 'Neolamprologus', 'cylindricus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Neolamprologus', 'hecqui');
+VALUES ('Miscellaneous', 'Neolamprologus', 'hecqui');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Neolamprologus', 'leleupi');
+VALUES ('Cichlids', 'Neolamprologus', 'leleupi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Neolamprologus', 'marunguensis');
+VALUES ('Cichlids', 'Neolamprologus', 'marunguensis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Neolamprologus', 'multifasciatus');
+VALUES ('Miscellaneous', 'Neolamprologus', 'multifasciatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Neolamprologus', 'mustax');
+VALUES ('Miscellaneous', 'Neolamprologus', 'mustax');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Neolamprologus', 'sexfasciatus');
+VALUES ('Miscellaneous', 'Neolamprologus', 'sexfasciatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Neolamprologus', 'signatus');
+VALUES ('Miscellaneous', 'Neolamprologus', 'signatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Neolamprologus', 'similis');
+VALUES ('Miscellaneous', 'Neolamprologus', 'similis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Neolamprologus', 'splendens');
+VALUES ('Miscellaneous', 'Neolamprologus', 'splendens');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Neolamprologus', 'tretocephalus');
+VALUES ('Miscellaneous', 'Neolamprologus', 'tretocephalus');
 
 -- Genus: Neolebias
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Neolebias', 'ansorgei');
+VALUES ('Miscellaneous', 'Neolebias', 'ansorgei');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Neolebias', 'landgrafi');
+VALUES ('Miscellaneous', 'Neolebias', 'landgrafi');
 
 -- Genus: Neosilurus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Neosilurus', 'ater');
+VALUES ('Catfish & Loaches', 'Neosilurus', 'ater');
 
 -- Genus: Neovespicula
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Neovespicula', 'depressifrons');
+VALUES ('Miscellaneous', 'Neovespicula', 'depressifrons');
 
 -- Genus: Nimbochromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Nimbochromis', 'fuscotaeniatus');
+VALUES ('Miscellaneous', 'Nimbochromis', 'fuscotaeniatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Nimbochromis', 'linni');
+VALUES ('Miscellaneous', 'Nimbochromis', 'linni');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Nimbochromis', 'livingstonii');
+VALUES ('Cichlids', 'Nimbochromis', 'livingstonii');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Nimbochromis', 'polystigma');
+VALUES ('Miscellaneous', 'Nimbochromis', 'polystigma');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Nimbochromis', 'venustus');
+VALUES ('Cichlids', 'Nimbochromis', 'venustus');
 
 -- Genus: Nomorhamphus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Nomorhamphus', 'liemi');
+VALUES ('Miscellaneous', 'Nomorhamphus', 'liemi');
 
 -- Genus: Nothobranchius
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Nothobranchius', 'guentheri');
+VALUES ('Killifish', 'Nothobranchius', 'guentheri');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Nothobranchius', 'rachovii');
+VALUES ('Killifish', 'Nothobranchius', 'rachovii');
 
 -- Genus: Notropis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Notropis', 'chrosomus');
+VALUES ('Miscellaneous', 'Notropis', 'chrosomus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Notropis', 'species');
+VALUES ('Miscellaneous', 'Notropis', 'species');
 
 -- Genus: Oliotius
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Oliotius', 'oligolepis');
+VALUES ('Cyprinids', 'Oliotius', 'oligolepis');
 
 -- Genus: Omobranchus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Omobranchus', 'zebra');
+VALUES ('Miscellaneous', 'Omobranchus', 'zebra');
 
 -- Genus: Ophthalmotilapia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Ophthalmotilapia', 'boops');
+VALUES ('Miscellaneous', 'Ophthalmotilapia', 'boops');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Ophthalmotilapia', 'ventralis');
+VALUES ('Miscellaneous', 'Ophthalmotilapia', 'ventralis');
 
 -- Genus: Oreichthys
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Oreichthys', 'crenuchoides');
+VALUES ('Cyprinids', 'Oreichthys', 'crenuchoides');
 
 -- Genus: Oryzias
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Oryzias', 'javanicus');
+VALUES ('Miscellaneous', 'Oryzias', 'javanicus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Oryzias', 'latipes');
+VALUES ('Miscellaneous', 'Oryzias', 'latipes');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Oryzias', 'woworae');
+VALUES ('Miscellaneous', 'Oryzias', 'woworae');
 
 -- Genus: Osphronemus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Osphronemus', 'goramy');
+VALUES ('Anabantoids', 'Osphronemus', 'goramy');
 
 -- Genus: Osteochilus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Osteochilus', 'hasselti');
+VALUES ('Cyprinids', 'Osteochilus', 'hasselti');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Osteochilus', 'vittatus');
+VALUES ('Miscellaneous', 'Osteochilus', 'vittatus');
 
 -- Genus: Osteoglossum
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Osteoglossum', 'bicirrhosum');
+VALUES ('Miscellaneous', 'Osteoglossum', 'bicirrhosum');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Osteoglossum', 'ferreirai');
+VALUES ('Miscellaneous', 'Osteoglossum', 'ferreirai');
 
 -- Genus: Otocinclus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Otocinclus', 'cocama');
+VALUES ('Miscellaneous', 'Otocinclus', 'cocama');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Otocinclus', 'macrospilus');
+VALUES ('Miscellaneous', 'Otocinclus', 'macrospilus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Otocinclus', 'vittatus');
+VALUES ('Catfish & Loaches', 'Otocinclus', 'vittatus');
 
 -- Genus: Otopharynx
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Otopharynx', 'lithobates');
+VALUES ('Miscellaneous', 'Otopharynx', 'lithobates');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Otopharynx', 'tetrastigma');
+VALUES ('Characins', 'Otopharynx', 'tetrastigma');
 
 -- Genus: Oxydoras
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Oxydoras', 'niger');
+VALUES ('Catfish & Loaches', 'Oxydoras', 'niger');
 
 -- Genus: Oxyeleotris
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Oxyeleotris', 'marmorata');
+VALUES ('Miscellaneous', 'Oxyeleotris', 'marmorata');
 
 -- Genus: Oxygaster
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Oxygaster', 'oxygastroides');
+VALUES ('Cyprinids', 'Oxygaster', 'oxygastroides');
 
 -- Genus: Pachypanchax
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pachypanchax', 'omalonotus');
+VALUES ('Miscellaneous', 'Pachypanchax', 'omalonotus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pachypanchax', 'playfairii');
+VALUES ('Miscellaneous', 'Pachypanchax', 'playfairii');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pachypanchax', 'sakaramyi');
+VALUES ('Miscellaneous', 'Pachypanchax', 'sakaramyi');
 
 -- Genus: Palaemon
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Palaemon', 'paludosus');
+VALUES ('Shrimp', 'Palaemon', 'paludosus');
 
 -- Genus: Panaqolus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Panaqolus', 'albivermis');
+VALUES ('Catfish & Loaches', 'Panaqolus', 'albivermis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Panaqolus', 'albomaculatus');
+VALUES ('Catfish & Loaches', 'Panaqolus', 'albomaculatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Panaqolus', 'changae');
+VALUES ('Catfish & Loaches', 'Panaqolus', 'changae');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Panaqolus', 'maccus');
+VALUES ('Catfish & Loaches', 'Panaqolus', 'maccus');
 
 -- Genus: Panaque
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Panaque', 'armbrusteri');
+VALUES ('Catfish & Loaches', 'Panaque', 'armbrusteri');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Panaque', 'bathyphilus');
+VALUES ('Catfish & Loaches', 'Panaque', 'bathyphilus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Panaque', 'cochliodon');
+VALUES ('Miscellaneous', 'Panaque', 'cochliodon');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Panaque', 'maccus');
+VALUES ('Catfish & Loaches', 'Panaque', 'maccus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Panaque', 'nigrolineatus');
+VALUES ('Catfish & Loaches', 'Panaque', 'nigrolineatus');
 
 -- Genus: Pangasianodon
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pangasianodon', 'hypophthalmus');
+VALUES ('Miscellaneous', 'Pangasianodon', 'hypophthalmus');
 
 -- Genus: Pangasius
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pangasius', 'hypophthalmus');
+VALUES ('Catfish & Loaches', 'Pangasius', 'hypophthalmus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pangasius', 'sanitwongsei');
+VALUES ('Miscellaneous', 'Pangasius', 'sanitwongsei');
 
 -- Genus: Pangio
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pangio', 'anguillaris');
+VALUES ('Catfish & Loaches', 'Pangio', 'anguillaris');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pangio', 'kuhlii');
+VALUES ('Catfish & Loaches', 'Pangio', 'kuhlii');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pangio', 'oblonga');
+VALUES ('Catfish & Loaches', 'Pangio', 'oblonga');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pangio', 'semicincta');
+VALUES ('Catfish & Loaches', 'Pangio', 'semicincta');
 
 -- Genus: Pantodon
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pantodon', 'buchholzi');
+VALUES ('Miscellaneous', 'Pantodon', 'buchholzi');
 
 -- Genus: Pao
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pao', 'baileyi');
+VALUES ('Miscellaneous', 'Pao', 'baileyi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pao', 'palembangensis');
+VALUES ('Miscellaneous', 'Pao', 'palembangensis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pao', 'suvattii');
+VALUES ('Miscellaneous', 'Pao', 'suvattii');
 
 -- Genus: Papyrocranus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Papyrocranus', 'afer');
+VALUES ('Miscellaneous', 'Papyrocranus', 'afer');
 
 -- Genus: Parachanna
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Parachanna', 'obscura');
+VALUES ('Miscellaneous', 'Parachanna', 'obscura');
 
 -- Genus: Paracheirodon
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Paracheirodon', 'axelrodi');
+VALUES ('Characins', 'Paracheirodon', 'axelrodi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Paracheirodon', 'innesi');
+VALUES ('Characins', 'Paracheirodon', 'innesi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Paracheirodon', 'simulans');
+VALUES ('Characins', 'Paracheirodon', 'simulans');
 
 -- Genus: Parachromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Parachromis', 'dovii');
+VALUES ('Cichlids', 'Parachromis', 'dovii');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Parachromis', 'friedrichsthalii');
+VALUES ('Cichlids', 'Parachromis', 'friedrichsthalii');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Parachromis', 'managuensis');
+VALUES ('Cichlids', 'Parachromis', 'managuensis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Parachromis', 'motaguensis');
+VALUES ('Cichlids', 'Parachromis', 'motaguensis');
 
 -- Genus: Paracyprichromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Paracyprichromis', 'nigripinnis');
+VALUES ('Miscellaneous', 'Paracyprichromis', 'nigripinnis');
 
 -- Genus: Paralabidochromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Paralabidochromis', 'sauvagei');
+VALUES ('Miscellaneous', 'Paralabidochromis', 'sauvagei');
 
 -- Genus: Parambassis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Parambassis', 'pulcinella');
+VALUES ('Miscellaneous', 'Parambassis', 'pulcinella');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Parambassis', 'ranga');
+VALUES ('Miscellaneous', 'Parambassis', 'ranga');
 
 -- Genus: Parancistrus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Parancistrus', 'aurantiacus');
+VALUES ('Catfish & Loaches', 'Parancistrus', 'aurantiacus');
 
 -- Genus: Parasphaerichthys
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Parasphaerichthys', 'ocellatus');
+VALUES ('Anabantoids', 'Parasphaerichthys', 'ocellatus');
 
 -- Genus: Paratilapia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Paratilapia', 'polleni');
+VALUES ('Cichlids', 'Paratilapia', 'polleni');
 
 -- Genus: Paretroplus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Paretroplus', 'menarambo');
+VALUES ('Miscellaneous', 'Paretroplus', 'menarambo');
 
 -- Genus: Pareutropius
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pareutropius', 'buffei');
+VALUES ('Catfish & Loaches', 'Pareutropius', 'buffei');
 
 -- Genus: Peckoltia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Peckoltia', 'cavatica');
+VALUES ('Catfish & Loaches', 'Peckoltia', 'cavatica');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Peckoltia', 'compta');
+VALUES ('Catfish & Loaches', 'Peckoltia', 'compta');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Peckoltia', 'sabaji');
+VALUES ('Catfish & Loaches', 'Peckoltia', 'sabaji');
 
 -- Genus: Pelvicachromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pelvicachromis', 'pulcher');
+VALUES ('Miscellaneous', 'Pelvicachromis', 'pulcher');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pelvicachromis', 'subocellatus');
+VALUES ('Miscellaneous', 'Pelvicachromis', 'subocellatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pelvicachromis', 'taeniatus');
+VALUES ('Miscellaneous', 'Pelvicachromis', 'taeniatus');
 
 -- Genus: Periophthalmus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Periophthalmus', 'argentilineatus');
+VALUES ('Miscellaneous', 'Periophthalmus', 'argentilineatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Periophthalmus', 'barbarus');
+VALUES ('Miscellaneous', 'Periophthalmus', 'barbarus');
 
 -- Genus: Petenia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Petenia', 'splendida');
+VALUES ('Miscellaneous', 'Petenia', 'splendida');
 
 -- Genus: Pethia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pethia', 'conchonius');
+VALUES ('Cyprinids', 'Pethia', 'conchonius');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pethia', 'gelius');
+VALUES ('Cyprinids', 'Pethia', 'gelius');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pethia', 'nigrofasciata');
+VALUES ('Cyprinids', 'Pethia', 'nigrofasciata');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pethia', 'padamya');
+VALUES ('Cyprinids', 'Pethia', 'padamya');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pethia', 'setnai');
+VALUES ('Cyprinids', 'Pethia', 'setnai');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pethia', 'stoliczkana');
+VALUES ('Cyprinids', 'Pethia', 'stoliczkana');
 
 -- Genus: Petitella
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Petitella', 'bleheri');
+VALUES ('Characins', 'Petitella', 'bleheri');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Petitella', 'georgiae');
+VALUES ('Characins', 'Petitella', 'georgiae');
 
 -- Genus: Phallichthys
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Phallichthys', 'amates');
+VALUES ('Miscellaneous', 'Phallichthys', 'amates');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Phallichthys', 'tico');
+VALUES ('Miscellaneous', 'Phallichthys', 'tico');
 
 -- Genus: Phenacogrammus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Phenacogrammus', 'interruptus');
+VALUES ('Characins', 'Phenacogrammus', 'interruptus');
 
 -- Genus: Phractocephalus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Phractocephalus', 'hemioliopterus');
+VALUES ('Catfish & Loaches', 'Phractocephalus', 'hemioliopterus');
 
 -- Genus: Phractolaemus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Phractolaemus', 'ansorgii');
+VALUES ('Miscellaneous', 'Phractolaemus', 'ansorgii');
 
 -- Genus: Physoschistura
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Physoschistura', 'mango');
+VALUES ('Catfish & Loaches', 'Physoschistura', 'mango');
 
 -- Genus: Pimelodella
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pimelodella', 'catfish');
+VALUES ('Catfish & Loaches', 'Pimelodella', 'catfish');
 
 -- Genus: Pimelodus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pimelodus', 'blochii');
+VALUES ('Catfish & Loaches', 'Pimelodus', 'blochii');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pimelodus', 'pictus');
+VALUES ('Catfish & Loaches', 'Pimelodus', 'pictus');
 
 -- Genus: Placidochromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Placidochromis', 'electra');
+VALUES ('Miscellaneous', 'Placidochromis', 'electra');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Placidochromis', 'johnstoni');
+VALUES ('Miscellaneous', 'Placidochromis', 'johnstoni');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Placidochromis', 'milomo');
+VALUES ('Miscellaneous', 'Placidochromis', 'milomo');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Placidochromis', 'phenochilus');
+VALUES ('Miscellaneous', 'Placidochromis', 'phenochilus');
 
 -- Genus: Planiloricaria
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Planiloricaria', 'cryptodon');
+VALUES ('Miscellaneous', 'Planiloricaria', 'cryptodon');
 
 -- Genus: Platydoras
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Platydoras', 'armatulus');
+VALUES ('Catfish & Loaches', 'Platydoras', 'armatulus');
 
 -- Genus: Platystomatichthys
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Platystomatichthys', 'sturio');
+VALUES ('Catfish & Loaches', 'Platystomatichthys', 'sturio');
 
 -- Genus: Poecilia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Poecilia', 'latipinna');
+VALUES ('Livebearers', 'Poecilia', 'latipinna');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Poecilia', 'sphenops');
+VALUES ('Livebearers', 'Poecilia', 'sphenops');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Poecilia', 'velifera');
+VALUES ('Livebearers', 'Poecilia', 'velifera');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Poecilia', 'wingei');
+VALUES ('Livebearers', 'Poecilia', 'wingei');
 
 -- Genus: Poecilocharax
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Poecilocharax', 'weitzmani');
+VALUES ('Characins', 'Poecilocharax', 'weitzmani');
 
 -- Genus: Polycentropsis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Polycentropsis', 'abbreviata');
+VALUES ('Miscellaneous', 'Polycentropsis', 'abbreviata');
 
 -- Genus: Polyodon
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Polyodon', 'spathula');
+VALUES ('Miscellaneous', 'Polyodon', 'spathula');
 
 -- Genus: Polypterus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Polypterus', 'delhezi');
+VALUES ('Miscellaneous', 'Polypterus', 'delhezi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Polypterus', 'endlicherii');
+VALUES ('Miscellaneous', 'Polypterus', 'endlicherii');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Polypterus', 'ornatipinnis');
+VALUES ('Miscellaneous', 'Polypterus', 'ornatipinnis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Polypterus', 'polli');
+VALUES ('Miscellaneous', 'Polypterus', 'polli');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Polypterus', 'retropinnis');
+VALUES ('Miscellaneous', 'Polypterus', 'retropinnis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Polypterus', 'senegalus');
+VALUES ('Miscellaneous', 'Polypterus', 'senegalus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Polypterus', 'teugelsi');
+VALUES ('Miscellaneous', 'Polypterus', 'teugelsi');
 
 -- Genus: Pomacea
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pomacea', 'bridgesii');
+VALUES ('Snail', 'Pomacea', 'bridgesii');
 
 -- Genus: Poropanchax
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Poropanchax', 'normani');
+VALUES ('Miscellaneous', 'Poropanchax', 'normani');
 
 -- Genus: Potamotrygon
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Potamotrygon', 'leopoldi');
+VALUES ('Miscellaneous', 'Potamotrygon', 'leopoldi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Potamotrygon', 'motoro');
+VALUES ('Miscellaneous', 'Potamotrygon', 'motoro');
 
 -- Genus: Prionobrama
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Prionobrama', 'filigera');
+VALUES ('Characins', 'Prionobrama', 'filigera');
 
 -- Genus: Pristella
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pristella', 'maxillaris');
+VALUES ('Characins', 'Pristella', 'maxillaris');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pristella', 'tetra');
+VALUES ('Characins', 'Pristella', 'tetra');
 
 -- Genus: Pristolepis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pristolepis', 'fasciata');
+VALUES ('Miscellaneous', 'Pristolepis', 'fasciata');
 
 -- Genus: Probarbus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Probarbus', 'jullieni');
+VALUES ('Miscellaneous', 'Probarbus', 'jullieni');
 
 -- Genus: Procatopus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Procatopus', 'nototaenia');
+VALUES ('Miscellaneous', 'Procatopus', 'nototaenia');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Procatopus', 'similis');
+VALUES ('Miscellaneous', 'Procatopus', 'similis');
 
 -- Genus: Prochilodus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Prochilodus', 'insignis');
+VALUES ('Miscellaneous', 'Prochilodus', 'insignis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Prochilodus', 'taeniurus');
+VALUES ('Miscellaneous', 'Prochilodus', 'taeniurus');
 
 -- Genus: Protomelas
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Protomelas', 'annectens');
+VALUES ('Miscellaneous', 'Protomelas', 'annectens');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Protomelas', 'fenestratus');
+VALUES ('Miscellaneous', 'Protomelas', 'fenestratus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Protomelas', 'ornatus');
+VALUES ('Miscellaneous', 'Protomelas', 'ornatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Protomelas', 'taeniolatus');
+VALUES ('Cichlids', 'Protomelas', 'taeniolatus');
 
 -- Genus: Protopterus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Protopterus', 'annectens');
+VALUES ('Miscellaneous', 'Protopterus', 'annectens');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Protopterus', 'dolloi');
+VALUES ('Miscellaneous', 'Protopterus', 'dolloi');
 
 -- Genus: Pseudacanthicus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pseudacanthicus', 'leopardus');
+VALUES ('Catfish & Loaches', 'Pseudacanthicus', 'leopardus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pseudacanthicus', 'pirarara');
+VALUES ('Catfish & Loaches', 'Pseudacanthicus', 'pirarara');
 
 -- Genus: Pseudancistrus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pseudancistrus', 'asurini');
+VALUES ('Catfish & Loaches', 'Pseudancistrus', 'asurini');
 
 -- Genus: Pseudanos
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pseudanos', 'trimaculatus');
+VALUES ('Miscellaneous', 'Pseudanos', 'trimaculatus');
 
 -- Genus: Pseudetroplus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pseudetroplus', 'maculatus');
+VALUES ('Miscellaneous', 'Pseudetroplus', 'maculatus');
 
 -- Genus: Pseudochalceus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pseudochalceus', 'kyburzi');
+VALUES ('Characins', 'Pseudochalceus', 'kyburzi');
 
 -- Genus: Pseudocorynopoma
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pseudocorynopoma', 'doriae');
+VALUES ('Characins', 'Pseudocorynopoma', 'doriae');
 
 -- Genus: Pseudocrenilabrus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pseudocrenilabrus', 'multicolor');
+VALUES ('Miscellaneous', 'Pseudocrenilabrus', 'multicolor');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pseudocrenilabrus', 'nicholsi');
+VALUES ('Miscellaneous', 'Pseudocrenilabrus', 'nicholsi');
 
 -- Genus: Pseudolithoxus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pseudolithoxus', 'dumus');
+VALUES ('Catfish & Loaches', 'Pseudolithoxus', 'dumus');
 
 -- Genus: Pseudomugil
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pseudomugil', 'cyanodorsalis');
+VALUES ('Miscellaneous', 'Pseudomugil', 'cyanodorsalis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pseudomugil', 'furcatus');
+VALUES ('Miscellaneous', 'Pseudomugil', 'furcatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pseudomugil', 'gertrudae');
+VALUES ('Miscellaneous', 'Pseudomugil', 'gertrudae');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pseudomugil', 'luminatus');
+VALUES ('Miscellaneous', 'Pseudomugil', 'luminatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pseudomugil', 'signifer');
+VALUES ('Miscellaneous', 'Pseudomugil', 'signifer');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pseudomugil', 'tenellus');
+VALUES ('Miscellaneous', 'Pseudomugil', 'tenellus');
 
 -- Genus: Pseudomystus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pseudomystus', 'leiacanthus');
+VALUES ('Catfish & Loaches', 'Pseudomystus', 'leiacanthus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pseudomystus', 'siamensis');
+VALUES ('Catfish & Loaches', 'Pseudomystus', 'siamensis');
 
 -- Genus: Pseudoplatystoma
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pseudoplatystoma', 'fasciatum');
+VALUES ('Miscellaneous', 'Pseudoplatystoma', 'fasciatum');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pseudoplatystoma', 'tigrinum');
+VALUES ('Miscellaneous', 'Pseudoplatystoma', 'tigrinum');
 
 -- Genus: Pseudorinelepis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pseudorinelepis', 'genibarbis');
+VALUES ('Catfish & Loaches', 'Pseudorinelepis', 'genibarbis');
 
 -- Genus: Pseudosphromenus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pseudosphromenus', 'dayi');
+VALUES ('Miscellaneous', 'Pseudosphromenus', 'dayi');
 
 -- Genus: Pseudotropheus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pseudotropheus', 'crabro');
+VALUES ('Cichlids', 'Pseudotropheus', 'crabro');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pseudotropheus', 'cyaneorhabdos');
+VALUES ('Cichlids', 'Pseudotropheus', 'cyaneorhabdos');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pseudotropheus', 'demasoni');
+VALUES ('Miscellaneous', 'Pseudotropheus', 'demasoni');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pseudotropheus', 'hajomaylandi');
+VALUES ('Miscellaneous', 'Pseudotropheus', 'hajomaylandi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pseudotropheus', 'johannii');
+VALUES ('Cichlids', 'Pseudotropheus', 'johannii');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pseudotropheus', 'polit');
+VALUES ('Miscellaneous', 'Pseudotropheus', 'polit');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pseudotropheus', 'saulosi');
+VALUES ('Miscellaneous', 'Pseudotropheus', 'saulosi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pseudotropheus', 'socolofi');
+VALUES ('Cichlids', 'Pseudotropheus', 'socolofi');
 
 -- Genus: Pteronotropis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pteronotropis', 'metallicus');
+VALUES ('Miscellaneous', 'Pteronotropis', 'metallicus');
 
 -- Genus: Pterophyllum
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pterophyllum', 'altum');
+VALUES ('Miscellaneous', 'Pterophyllum', 'altum');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pterophyllum', 'leopoldi');
+VALUES ('Miscellaneous', 'Pterophyllum', 'leopoldi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pterophyllum', 'scalare');
+VALUES ('Miscellaneous', 'Pterophyllum', 'scalare');
 
 -- Genus: Pterosturisoma
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pterosturisoma', 'microps');
+VALUES ('Miscellaneous', 'Pterosturisoma', 'microps');
 
 -- Genus: Pterygoplichthys
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pterygoplichthys', 'gibbiceps');
+VALUES ('Catfish & Loaches', 'Pterygoplichthys', 'gibbiceps');
 
 -- Genus: Pundamilia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pundamilia', 'macrocephala');
+VALUES ('Miscellaneous', 'Pundamilia', 'macrocephala');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pundamilia', 'nyererei');
+VALUES ('Miscellaneous', 'Pundamilia', 'nyererei');
 
 -- Genus: Puntigrus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Puntigrus', 'tetrazona');
+VALUES ('Cyprinids', 'Puntigrus', 'tetrazona');
 
 -- Genus: Puntius
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Puntius', 'conchonius');
+VALUES ('Cyprinids', 'Puntius', 'conchonius');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Puntius', 'fasciatus');
+VALUES ('Cyprinids', 'Puntius', 'fasciatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Puntius', 'lineatus');
+VALUES ('Cyprinids', 'Puntius', 'lineatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Puntius', 'nigrofasciatus');
+VALUES ('Cyprinids', 'Puntius', 'nigrofasciatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Puntius', 'somphongsi');
+VALUES ('Cyprinids', 'Puntius', 'somphongsi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Puntius', 'titteya');
+VALUES ('Cyprinids', 'Puntius', 'titteya');
 
 -- Genus: Pygocentrus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pygocentrus', 'nattereri');
+VALUES ('Miscellaneous', 'Pygocentrus', 'nattereri');
 
 -- Genus: Pyrrhulina
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pyrrhulina', 'brevis');
+VALUES ('Miscellaneous', 'Pyrrhulina', 'brevis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pyrrhulina', 'rachoviana');
+VALUES ('Miscellaneous', 'Pyrrhulina', 'rachoviana');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pyrrhulina', 'spilota');
+VALUES ('Characins', 'Pyrrhulina', 'spilota');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Pyrrhulina', 'vittata');
+VALUES ('Miscellaneous', 'Pyrrhulina', 'vittata');
 
 -- Genus: Rasbora
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Rasbora', 'borapetensis');
+VALUES ('Cyprinids', 'Rasbora', 'borapetensis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Rasbora', 'cephalotaenia');
+VALUES ('Cyprinids', 'Rasbora', 'cephalotaenia');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Rasbora', 'einthovenii');
+VALUES ('Cyprinids', 'Rasbora', 'einthovenii');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Rasbora', 'heteromorpha');
+VALUES ('Cyprinids', 'Rasbora', 'heteromorpha');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Rasbora', 'kalochroma');
+VALUES ('Cyprinids', 'Rasbora', 'kalochroma');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Rasbora', 'patrickyapi');
+VALUES ('Cyprinids', 'Rasbora', 'patrickyapi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Rasbora', 'trilineata');
+VALUES ('Cyprinids', 'Rasbora', 'trilineata');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Rasbora', 'vulcanus');
+VALUES ('Cyprinids', 'Rasbora', 'vulcanus');
 
 -- Genus: Rasboroides
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Rasboroides', 'vaterifloris');
+VALUES ('Cyprinids', 'Rasboroides', 'vaterifloris');
 
 -- Genus: Retroculus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Retroculus', 'lapidifer');
+VALUES ('Miscellaneous', 'Retroculus', 'lapidifer');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Retroculus', 'xinguensis');
+VALUES ('Miscellaneous', 'Retroculus', 'xinguensis');
 
 -- Genus: Rhadinocentrus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Rhadinocentrus', 'ornatus');
+VALUES ('Miscellaneous', 'Rhadinocentrus', 'ornatus');
 
 -- Genus: Rhamphochromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Rhamphochromis', 'macrophthalmus');
+VALUES ('Miscellaneous', 'Rhamphochromis', 'macrophthalmus');
 
 -- Genus: Rhodeus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Rhodeus', 'sericeus');
+VALUES ('Miscellaneous', 'Rhodeus', 'sericeus');
 
 -- Genus: Rocio
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Rocio', 'octofasciata');
+VALUES ('Cichlids', 'Rocio', 'octofasciata');
 
 -- Genus: Roeboides
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Roeboides', 'guatemalensis');
+VALUES ('Miscellaneous', 'Roeboides', 'guatemalensis');
 
 -- Genus: Rubricatochromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Rubricatochromis', 'bimaculatus');
+VALUES ('Cichlids', 'Rubricatochromis', 'bimaculatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Rubricatochromis', 'lifalili');
+VALUES ('Cichlids', 'Rubricatochromis', 'lifalili');
 
 -- Genus: Sahyadria
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Sahyadria', 'denisonii');
+VALUES ('Cyprinids', 'Sahyadria', 'denisonii');
 
 -- Genus: Salariopsis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Salariopsis', 'fluviatilis');
+VALUES ('Miscellaneous', 'Salariopsis', 'fluviatilis');
 
 -- Genus: Satanoperca
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Satanoperca', 'daemon');
+VALUES ('Miscellaneous', 'Satanoperca', 'daemon');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Satanoperca', 'jurupari');
+VALUES ('Miscellaneous', 'Satanoperca', 'jurupari');
 
 -- Genus: Sawbwa
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Sawbwa', 'resplendens');
+VALUES ('Cyprinids', 'Sawbwa', 'resplendens');
 
 -- Genus: Scaphirhynchus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Scaphirhynchus', 'platorynchus');
+VALUES ('Miscellaneous', 'Scaphirhynchus', 'platorynchus');
 
 -- Genus: Scatophagus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Scatophagus', 'argus');
+VALUES ('Miscellaneous', 'Scatophagus', 'argus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Scatophagus', 'tetracanthus');
+VALUES ('Miscellaneous', 'Scatophagus', 'tetracanthus');
 
 -- Genus: Schistura
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Schistura', 'balteata');
+VALUES ('Catfish & Loaches', 'Schistura', 'balteata');
 
 -- Genus: Sciaenochromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Sciaenochromis', 'fryeri');
+VALUES ('Cichlids', 'Sciaenochromis', 'fryeri');
 
 -- Genus: Scleromystax
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Scleromystax', 'barbatus');
+VALUES ('Miscellaneous', 'Scleromystax', 'barbatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Scleromystax', 'macropterus');
+VALUES ('Miscellaneous', 'Scleromystax', 'macropterus');
 
 -- Genus: Scleropages
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Scleropages', 'formosus');
+VALUES ('Miscellaneous', 'Scleropages', 'formosus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Scleropages', 'jardinii');
+VALUES ('Miscellaneous', 'Scleropages', 'jardinii');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Scleropages', 'leichardti');
+VALUES ('Miscellaneous', 'Scleropages', 'leichardti');
 
 -- Genus: Scobinancistrus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Scobinancistrus', 'aureatus');
+VALUES ('Catfish & Loaches', 'Scobinancistrus', 'aureatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Scobinancistrus', 'pariolispos');
+VALUES ('Catfish & Loaches', 'Scobinancistrus', 'pariolispos');
 
 -- Genus: Selenotoca
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Selenotoca', 'multifasciata');
+VALUES ('Miscellaneous', 'Selenotoca', 'multifasciata');
 
 -- Genus: Semaprochilodus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Semaprochilodus', 'insignis');
+VALUES ('Miscellaneous', 'Semaprochilodus', 'insignis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Semaprochilodus', 'taeniurus');
+VALUES ('Miscellaneous', 'Semaprochilodus', 'taeniurus');
 
 -- Genus: Serrasalmus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Serrasalmus', 'rhombeus');
+VALUES ('Miscellaneous', 'Serrasalmus', 'rhombeus');
 
 -- Genus: Sewellia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Sewellia', 'lineolata');
+VALUES ('Catfish & Loaches', 'Sewellia', 'lineolata');
 
 -- Genus: Sicyopus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Sicyopus', 'multisquamatus');
+VALUES ('Miscellaneous', 'Sicyopus', 'multisquamatus');
 
 -- Genus: Simpsonichthys
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Simpsonichthys', 'boitonei');
+VALUES ('Miscellaneous', 'Simpsonichthys', 'boitonei');
 
 -- Genus: Sinibotia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Sinibotia', 'pulchra');
+VALUES ('Catfish & Loaches', 'Sinibotia', 'pulchra');
 
 -- Genus: Sorubim
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Sorubim', 'lima');
+VALUES ('Catfish & Loaches', 'Sorubim', 'lima');
 
 -- Genus: Sorubimichthys
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Sorubimichthys', 'planiceps');
+VALUES ('Catfish & Loaches', 'Sorubimichthys', 'planiceps');
 
 -- Genus: Sphaerichthys
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Sphaerichthys', 'osphromenoides');
+VALUES ('Anabantoids', 'Sphaerichthys', 'osphromenoides');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Sphaerichthys', 'selatanensis');
+VALUES ('Anabantoids', 'Sphaerichthys', 'selatanensis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Sphaerichthys', 'vaillanti');
+VALUES ('Anabantoids', 'Sphaerichthys', 'vaillanti');
 
 -- Genus: Steatocranus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Steatocranus', 'casuarius');
+VALUES ('Cichlids', 'Steatocranus', 'casuarius');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Steatocranus', 'tinanti');
+VALUES ('Cichlids', 'Steatocranus', 'tinanti');
 
 -- Genus: Steatogenys
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Steatogenys', 'duidae');
+VALUES ('Miscellaneous', 'Steatogenys', 'duidae');
 
 -- Genus: Sternarchus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Sternarchus', 'albifrons');
+VALUES ('Miscellaneous', 'Sternarchus', 'albifrons');
 
 -- Genus: Stigmatochromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Stigmatochromis', 'melanchros');
+VALUES ('Miscellaneous', 'Stigmatochromis', 'melanchros');
 
 -- Genus: Stigmatogobius
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Stigmatogobius', 'sadanundio');
+VALUES ('Miscellaneous', 'Stigmatogobius', 'sadanundio');
 
 -- Genus: Stiphodon
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Stiphodon', 'annieae');
+VALUES ('Miscellaneous', 'Stiphodon', 'annieae');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Stiphodon', 'atropurpureus');
+VALUES ('Miscellaneous', 'Stiphodon', 'atropurpureus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Stiphodon', 'elegans');
+VALUES ('Miscellaneous', 'Stiphodon', 'elegans');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Stiphodon', 'ornatus');
+VALUES ('Miscellaneous', 'Stiphodon', 'ornatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Stiphodon', 'rutilaureus');
+VALUES ('Miscellaneous', 'Stiphodon', 'rutilaureus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Stiphodon', 'semoni');
+VALUES ('Miscellaneous', 'Stiphodon', 'semoni');
 
 -- Genus: Stomatepia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Stomatepia', 'pindu');
+VALUES ('Miscellaneous', 'Stomatepia', 'pindu');
 
 -- Genus: Sturisoma
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Sturisoma', 'panamense');
+VALUES ('Miscellaneous', 'Sturisoma', 'panamense');
 
 -- Genus: Sturisomatichthys
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Sturisomatichthys', 'aureus');
+VALUES ('Miscellaneous', 'Sturisomatichthys', 'aureus');
 
 -- Genus: Symphysodon
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Symphysodon', 'aequifasciata');
+VALUES ('Miscellaneous', 'Symphysodon', 'aequifasciata');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Symphysodon', 'aequifasciatus');
+VALUES ('Miscellaneous', 'Symphysodon', 'aequifasciatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Symphysodon', 'discus');
+VALUES ('Miscellaneous', 'Symphysodon', 'discus');
 
 -- Genus: Syncrossus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Syncrossus', 'berdmorei');
+VALUES ('Catfish & Loaches', 'Syncrossus', 'berdmorei');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Syncrossus', 'helodes');
+VALUES ('Catfish & Loaches', 'Syncrossus', 'helodes');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Syncrossus', 'hymenophysa');
+VALUES ('Catfish & Loaches', 'Syncrossus', 'hymenophysa');
 
 -- Genus: Synodontis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Synodontis', 'angelicus');
+VALUES ('Catfish & Loaches', 'Synodontis', 'angelicus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Synodontis', 'brichardi');
+VALUES ('Catfish & Loaches', 'Synodontis', 'brichardi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Synodontis', 'decorus');
+VALUES ('Catfish & Loaches', 'Synodontis', 'decorus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Synodontis', 'eupterus');
+VALUES ('Catfish & Loaches', 'Synodontis', 'eupterus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Synodontis', 'flavitaeniata');
+VALUES ('Catfish & Loaches', 'Synodontis', 'flavitaeniata');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Synodontis', 'multipunctatus');
+VALUES ('Catfish & Loaches', 'Synodontis', 'multipunctatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Synodontis', 'nigrita');
+VALUES ('Catfish & Loaches', 'Synodontis', 'nigrita');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Synodontis', 'nigriventris');
+VALUES ('Catfish & Loaches', 'Synodontis', 'nigriventris');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Synodontis', 'njassae');
+VALUES ('Catfish & Loaches', 'Synodontis', 'njassae');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Synodontis', 'ocellifer');
+VALUES ('Catfish & Loaches', 'Synodontis', 'ocellifer');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Synodontis', 'petricola');
+VALUES ('Catfish & Loaches', 'Synodontis', 'petricola');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Synodontis', 'schoutedeni');
+VALUES ('Catfish & Loaches', 'Synodontis', 'schoutedeni');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Synodontis', 'waterloti');
+VALUES ('Catfish & Loaches', 'Synodontis', 'waterloti');
 
 -- Genus: Taeniochromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Taeniochromis', 'holotaenia');
+VALUES ('Miscellaneous', 'Taeniochromis', 'holotaenia');
 
 -- Genus: Taenioides
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Taenioides', 'cirratus');
+VALUES ('Miscellaneous', 'Taenioides', 'cirratus');
 
 -- Genus: Tahuantinsuyoa
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Tahuantinsuyoa', 'macantzatza');
+VALUES ('Miscellaneous', 'Tahuantinsuyoa', 'macantzatza');
 
 -- Genus: Tanichthys
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Tanichthys', 'albonubes');
+VALUES ('Cyprinids', 'Tanichthys', 'albonubes');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Tanichthys', 'micagemmae');
+VALUES ('Cyprinids', 'Tanichthys', 'micagemmae');
 
 -- Genus: Tateurndina
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Tateurndina', 'ocellicauda');
+VALUES ('Miscellaneous', 'Tateurndina', 'ocellicauda');
 
 -- Genus: Tatia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Tatia', 'intermedia');
+VALUES ('Miscellaneous', 'Tatia', 'intermedia');
 
 -- Genus: Teleocichla
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Teleocichla', 'centrarchus');
+VALUES ('Miscellaneous', 'Teleocichla', 'centrarchus');
 
 -- Genus: Telmatherina
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Telmatherina', 'ladigesi');
+VALUES ('Miscellaneous', 'Telmatherina', 'ladigesi');
 
 -- Genus: Telmatochromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Telmatochromis', 'vittatus');
+VALUES ('Miscellaneous', 'Telmatochromis', 'vittatus');
 
 -- Genus: Terranatos
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Terranatos', 'dolichopterus');
+VALUES ('Miscellaneous', 'Terranatos', 'dolichopterus');
 
 -- Genus: Tetraodon
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Tetraodon', 'cutcutia');
+VALUES ('Miscellaneous', 'Tetraodon', 'cutcutia');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Tetraodon', 'lineatus');
+VALUES ('Miscellaneous', 'Tetraodon', 'lineatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Tetraodon', 'mbu');
+VALUES ('Miscellaneous', 'Tetraodon', 'mbu');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Tetraodon', 'miurus');
+VALUES ('Miscellaneous', 'Tetraodon', 'miurus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Tetraodon', 'schoutedeni');
+VALUES ('Miscellaneous', 'Tetraodon', 'schoutedeni');
 
 -- Genus: Thayeria
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Thayeria', 'boehlkei');
+VALUES ('Characins', 'Thayeria', 'boehlkei');
 
 -- Genus: Thoracocharax
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Thoracocharax', 'stellatus');
+VALUES ('Miscellaneous', 'Thoracocharax', 'stellatus');
 
 -- Genus: Thorichthys
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Thorichthys', 'aureus');
+VALUES ('Miscellaneous', 'Thorichthys', 'aureus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Thorichthys', 'helleri');
+VALUES ('Cichlids', 'Thorichthys', 'helleri');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Thorichthys', 'maculipinnis');
+VALUES ('Cichlids', 'Thorichthys', 'maculipinnis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Thorichthys', 'meeki');
+VALUES ('Cichlids', 'Thorichthys', 'meeki');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Thorichthys', 'pasionis');
+VALUES ('Cichlids', 'Thorichthys', 'pasionis');
 
 -- Genus: Tinca
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Tinca', 'tinca');
+VALUES ('Miscellaneous', 'Tinca', 'tinca');
 
 -- Genus: Toxotes
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Toxotes', 'chatareus');
+VALUES ('Miscellaneous', 'Toxotes', 'chatareus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Toxotes', 'jaculator');
+VALUES ('Miscellaneous', 'Toxotes', 'jaculator');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Toxotes', 'jaculatrix');
+VALUES ('Miscellaneous', 'Toxotes', 'jaculatrix');
 
 -- Genus: Trachelyichthys
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Trachelyichthys', 'exilis');
+VALUES ('Catfish & Loaches', 'Trachelyichthys', 'exilis');
 
 -- Genus: Trichogaster
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Trichogaster', 'chuna');
+VALUES ('Anabantoids', 'Trichogaster', 'chuna');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Trichogaster', 'labiosa');
+VALUES ('Anabantoids', 'Trichogaster', 'labiosa');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Trichogaster', 'lalius');
+VALUES ('Anabantoids', 'Trichogaster', 'lalius');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Trichogaster', 'microlepis');
+VALUES ('Anabantoids', 'Trichogaster', 'microlepis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Trichogaster', 'trichopterus');
+VALUES ('Anabantoids', 'Trichogaster', 'trichopterus');
 
 -- Genus: Trichopodus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Trichopodus', 'leerii');
+VALUES ('Anabantoids', 'Trichopodus', 'leerii');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Trichopodus', 'microlepis');
+VALUES ('Anabantoids', 'Trichopodus', 'microlepis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Trichopodus', 'pectoralis');
+VALUES ('Anabantoids', 'Trichopodus', 'pectoralis');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Trichopodus', 'trichopterus');
+VALUES ('Anabantoids', 'Trichopodus', 'trichopterus');
 
 -- Genus: Trichopsis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Trichopsis', 'pumila');
+VALUES ('Anabantoids', 'Trichopsis', 'pumila');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Trichopsis', 'vittata');
+VALUES ('Anabantoids', 'Trichopsis', 'vittata');
 
 -- Genus: Trichromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Trichromis', 'salvini');
+VALUES ('Cichlids', 'Trichromis', 'salvini');
 
 -- Genus: Trigonopoma
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Trigonopoma', 'gracile');
+VALUES ('Cyprinids', 'Trigonopoma', 'gracile');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Trigonopoma', 'pauciperforatum');
+VALUES ('Cyprinids', 'Trigonopoma', 'pauciperforatum');
 
 -- Genus: Trigonostigma
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Trigonostigma', 'espei');
+VALUES ('Cyprinids', 'Trigonostigma', 'espei');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Trigonostigma', 'hengeli');
+VALUES ('Cyprinids', 'Trigonostigma', 'hengeli');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Trigonostigma', 'heteromorpha');
+VALUES ('Cyprinids', 'Trigonostigma', 'heteromorpha');
 
 -- Genus: Trochilocharax
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Trochilocharax', 'ornatus');
+VALUES ('Characins', 'Trochilocharax', 'ornatus');
 
 -- Genus: Tropheus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Tropheus', 'brichardi');
+VALUES ('Miscellaneous', 'Tropheus', 'brichardi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Tropheus', 'duboisi');
+VALUES ('Miscellaneous', 'Tropheus', 'duboisi');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Tropheus', 'moorii');
+VALUES ('Miscellaneous', 'Tropheus', 'moorii');
 
 -- Genus: Tyrannochromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Tyrannochromis', 'macrostoma');
+VALUES ('Miscellaneous', 'Tyrannochromis', 'macrostoma');
 
 -- Genus: Tyttocharax
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Tyttocharax', 'madeirae');
+VALUES ('Characins', 'Tyttocharax', 'madeirae');
 
 -- Genus: Uaru
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Uaru', 'amphiacanthoides');
+VALUES ('Miscellaneous', 'Uaru', 'amphiacanthoides');
 
 -- Genus: Vaillantella
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Vaillantella', 'maassi');
+VALUES ('Catfish & Loaches', 'Vaillantella', 'maassi');
 
 -- Genus: Vieja
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Vieja', 'maculicauda');
+VALUES ('Cichlids', 'Vieja', 'maculicauda');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Vieja', 'melanura');
+VALUES ('Miscellaneous', 'Vieja', 'melanura');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Vieja', 'melanurus');
+VALUES ('Cichlids', 'Vieja', 'melanurus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Vieja', 'zonata');
+VALUES ('Miscellaneous', 'Vieja', 'zonata');
 
 -- Genus: Viviparus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Viviparus', 'malleattus');
+VALUES ('Snail', 'Viviparus', 'malleattus');
 
 -- Genus: Wallaceochromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Wallaceochromis', 'humilis');
+VALUES ('Miscellaneous', 'Wallaceochromis', 'humilis');
 
 -- Genus: Xenentodon
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Xenentodon', 'cancila');
+VALUES ('Miscellaneous', 'Xenentodon', 'cancila');
 
 -- Genus: Xenomystus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Xenomystus', 'nigri');
+VALUES ('Miscellaneous', 'Xenomystus', 'nigri');
 
 -- Genus: Xenotilapia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Xenotilapia', 'flavipinnis');
+VALUES ('Cichlids', 'Xenotilapia', 'flavipinnis');
 
 -- Genus: Xenotoca
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Xenotoca', 'eiseni');
+VALUES ('Miscellaneous', 'Xenotoca', 'eiseni');
 
 -- Genus: Xiphophorus
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Xiphophorus', 'helleri');
+VALUES ('Livebearers', 'Xiphophorus', 'helleri');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Xiphophorus', 'hellerii');
+VALUES ('Livebearers', 'Xiphophorus', 'hellerii');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Xiphophorus', 'maculatus');
+VALUES ('Livebearers', 'Xiphophorus', 'maculatus');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Xiphophorus', 'montezumae');
+VALUES ('Livebearers', 'Xiphophorus', 'montezumae');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Xiphophorus', 'variatus');
+VALUES ('Livebearers', 'Xiphophorus', 'variatus');
 
 -- Genus: Yaoshania
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Yaoshania', 'pachychilus');
+VALUES ('Catfish & Loaches', 'Yaoshania', 'pachychilus');
 
 -- Genus: Yasuhikotakia
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Yasuhikotakia', 'modesta');
+VALUES ('Catfish & Loaches', 'Yasuhikotakia', 'modesta');
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Yasuhikotakia', 'morleti');
+VALUES ('Catfish & Loaches', 'Yasuhikotakia', 'morleti');
 
 -- Genus: Yssichromis
 INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-VALUES ('Fish', 'Yssichromis', 'piceatus');
+VALUES ('Miscellaneous', 'Yssichromis', 'piceatus');
 
 -- ============================================================
 -- SPECIES NAME VARIANTS
@@ -25181,10 +25178,3 @@ VALUES (
 -- Name variants: 3258
 -- Average names per species: 2.9
 -- ============================================================
-
-
--- Down
--- Note: This will remove ALL species data, including any added after this migration
--- Use with caution
-DELETE FROM species_name;
-DELETE FROM species_name_group;
