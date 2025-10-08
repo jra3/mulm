@@ -87,9 +87,9 @@ router.get("/", async (req: MulmRequest, res) => {
     isAdmin,
   };
 
-  let approvalsProgram;
+  let approvalsProgram = 'fish'; // Default to fish
   let approvalsCount = 0;
-  let witnessProgram;
+  let witnessProgram = 'fish'; // Default to fish
   let witnessCount = 0;
   if (isAdmin) {
     const [counts, witnessCounts] = await Promise.all([
