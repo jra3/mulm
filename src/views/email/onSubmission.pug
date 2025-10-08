@@ -1,9 +1,112 @@
-p= `Hi ${member.display_name}`
-p
-	| Thank you for&nbsp;
-	a(href=`https://${domain}/submissions/${submission.id}`) your submission.
-	|  Please work with the BAP team to verify your submission. Typically this is done by bringing specimens to a meeting to have them witnessed`
+include ../mixins/date.pug
 
-ul
-	li= `Common Name: ${submission.species_common_name}`
-	li= `Scientific Name: ${submission.species_latin_name}`
+doctype html
+html
+	head
+		meta(charset="utf-8")
+		title Submission Received
+		style.
+			body {
+				font-family: Arial, sans-serif;
+				line-height: 1.6;
+				color: #333;
+				max-width: 600px;
+				margin: 0 auto;
+				padding: 20px;
+			}
+			.header {
+				background-color: #2563eb;
+				color: white;
+				padding: 20px;
+				text-align: center;
+				border-radius: 8px 8px 0 0;
+			}
+			.content {
+				background-color: #f8fafc;
+				padding: 20px;
+				border: 1px solid #e2e8f0;
+			}
+			.submission-details {
+				background-color: white;
+				padding: 15px;
+				border-radius: 6px;
+				margin: 15px 0;
+				border-left: 4px solid #3b82f6;
+			}
+			.info-box {
+				background-color: #dbeafe;
+				border-left: 4px solid #2563eb;
+				padding: 15px;
+				margin: 15px 0;
+				border-radius: 6px;
+			}
+			.footer {
+				background-color: #64748b;
+				color: white;
+				padding: 15px;
+				text-align: center;
+				border-radius: 0 0 8px 8px;
+				font-size: 12px;
+			}
+			.button {
+				display: inline-block;
+				background-color: #2563eb;
+				color: white;
+				padding: 10px 20px;
+				text-decoration: none;
+				border-radius: 5px;
+				margin: 10px 0;
+			}
+			h1, h2, h3 {
+				margin: 0;
+			}
+			ul {
+				margin: 10px 0;
+			}
+	body
+		.header
+			h1 Brooklyn Aquarium Society
+			h3 Breeder Awards Program
+
+		.content
+			p Hello #{member.display_name},
+
+			p Thank you for your BAP submission! We've received it and it's now in the verification queue.
+
+			.submission-details
+				h3 Submission Details:
+				p <strong>Species:</strong> #{submission.species_common_name} (#{submission.species_latin_name})
+				p <strong>Species Class:</strong> #{submission.species_class}
+				p
+					strong Reproduction Date:
+					+longDate(submission.reproduction_date)
+				p
+					strong Submitted On:
+					+longDate(submission.submitted_on)
+
+			.info-box
+				h3 Next Steps:
+				ol
+					li <strong>Witness Verification:</strong> A program admin will verify your breeding success
+					li <strong>Waiting Period:</strong> After verification, your submission enters a waiting period
+					if submission.species_type === 'Fish' && submission.species_class === 'Marine'
+						li Marine fish: 30-day waiting period
+					else if submission.species_type === 'Plant'
+						li Plants: 60-day waiting period
+					else if submission.species_type === 'Coral'
+						li Corals: 60-day waiting period
+					else
+						li Freshwater fish & inverts: 60-day waiting period
+					li <strong>Final Approval:</strong> After the waiting period, you'll receive points and recognition!
+
+			p You'll receive email notifications at each step of the approval process.
+
+			p
+				a.button(href=`https://${domain}/submissions/${submission.id}`) View Your Submission
+
+		.footer
+			p
+				strong Brooklyn Aquarium Society
+			p Educating Aquarists since 1911
+			p
+				a(href="https://basny.org" style="color: white;") basny.org

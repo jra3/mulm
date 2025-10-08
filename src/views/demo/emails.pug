@@ -94,9 +94,8 @@ html
 			//- Email 5: Submission Received
 			.email-container.mb-8
 				.email-label 5. Submission Received Email
-				div(style="padding: 20px; font-family: Arial, sans-serif;")
-					p= `Hi ${member.display_name}`
-					p Your BAP submission has been received and is being reviewed.
+				div
+					include ../email/onSubmission.pug
 
 			//- Email 6: Level Upgrade
 			.email-container.mb-8
