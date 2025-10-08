@@ -2,7 +2,7 @@ import { checkPassword, makePasswordEntry, generateRandomCode } from "@/auth";
 import { getMemberPassword, createOrUpdatePassword, updateMember, getGoogleAccountByMemberId, deleteGoogleAccount } from "@/db/members";
 import { updateSchema } from "@/forms/login";
 import { getGoogleOAuthURL } from "@/oauth";
-import { MulmRequest, setOAuthState } from "@/sessions";
+import { MulmRequest } from "@/sessions";
 import { Response } from "express";
 
 export const viewAccountSettings = async (req: MulmRequest, res: Response) => {
@@ -18,6 +18,7 @@ export const viewAccountSettings = async (req: MulmRequest, res: Response) => {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
+    path: '/oauth/google', // Only sent to OAuth callback
     maxAge: 10 * 60 * 1000, // 10 minutes
   });
 
