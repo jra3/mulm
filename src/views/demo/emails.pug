@@ -67,29 +67,15 @@ html
 			//- Email 3: Forgot Password
 			.email-container.mb-8
 				.email-label 3. Password Reset Email
-				div(style="padding: 20px; font-family: Arial, sans-serif;")
-					p= `Hi ${member.display_name}`
-					p You have requested a password reset for your account.
-					p
-						| Click or copy this link&nbsp;
-						a(href=`https://${domain}/auth/forgot-password?code=${code}`)= `https://${domain}/auth/forgot-password?code=${code}`
-						|  to choose a new password.
+				div
+					- const display_name = member.display_name
+					include ../email/onForgotPassword.pug
 
 			//- Email 4: Approval
 			.email-container.mb-8
 				.email-label 4. Submission Approved Email
-				div(style="padding: 20px; font-family: Arial, sans-serif;")
-					p= `Hi ${member.display_name}`
-					p
-						| Congratulations!&nbsp;
-						a(href=`https://${domain}/submissions/${submission.id}`) Your submission
-						|  has been approved!
-					ul
-						li= `Common Name: ${submission.species_common_name}`
-						li= `Scientific Name: ${submission.species_latin_name}`
-						li= `Base Points Awarded: ${submission.points}`
-						if submission.total_points && submission.total_points !== submission.points
-							li= `Total Points: ${submission.total_points}`
+				div
+					include ../email/onApproval.pug
 
 			//- Email 5: Submission Received
 			.email-container.mb-8
@@ -100,10 +86,11 @@ html
 			//- Email 6: Level Upgrade
 			.email-container.mb-8
 				.email-label 6. Level Upgrade Email
-				div(style="padding: 20px; font-family: Arial, sans-serif;")
-					p= `Hi ${member.display_name}`
-					p Congratulations! You've achieved a new award level!
-					p= `Award: ${award.award_name}`
+				div
+					- const program = 'fish'
+					- const newLevel = award.award_name
+					- const totalPoints = 25
+					include ../email/onLevelUpgrade.pug
 
 			//- Email 7: Member Invitation (skip for now - complex)
 			.email-container.mb-8

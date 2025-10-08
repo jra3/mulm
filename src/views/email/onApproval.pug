@@ -1,20 +1,126 @@
-p= `Hi ${member.display_name}`
-p
-	| Congratulations!&nbsp;
-	a(href=`https://${domain}/submissions/${submission.id}`) Your submission
-	|  has been approved!
+include ../mixins/date.pug
 
-ul
-	li= `Common Name: ${submission.species_common_name}`
-	li= `Scientific Name: ${submission.species_latin_name}`
-	li= `Base Points Awarded: ${submission.points}`
-	if submission.article_points && submission.article_points > 0
-		li= `Article Points: ${submission.article_points}`
-	if submission.first_time_species
-		li= `First Time Species Bonus: 5 points`
-	if submission.flowered
-		li= `Flowering Bonus: ${submission.points} points`
-	if submission.sexual_reproduction
-		li= `Sexual Reproduction Bonus: ${submission.points} points`
-	if submission.total_points && submission.total_points !== submission.points
-		li= `Total Points: ${submission.total_points}`
+doctype html
+html
+	head
+		meta(charset="utf-8")
+		title Submission Approved
+		style.
+			body {
+				font-family: Arial, sans-serif;
+				line-height: 1.6;
+				color: #333;
+				max-width: 600px;
+				margin: 0 auto;
+				padding: 20px;
+			}
+			.header {
+				background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+				color: white;
+				padding: 30px 20px;
+				text-align: center;
+				border-radius: 8px 8px 0 0;
+			}
+			.celebration {
+				font-size: 48px;
+				margin: 10px 0;
+			}
+			.content {
+				background-color: #f8fafc;
+				padding: 20px;
+				border: 1px solid #e2e8f0;
+			}
+			.submission-details {
+				background-color: white;
+				padding: 15px;
+				border-radius: 6px;
+				margin: 15px 0;
+				border-left: 4px solid #10b981;
+			}
+			.points-box {
+				background-color: #d1fae5;
+				border-left: 4px solid #10b981;
+				padding: 20px;
+				margin: 15px 0;
+				border-radius: 6px;
+				text-align: center;
+			}
+			.points-large {
+				font-size: 36px;
+				font-weight: bold;
+				color: #059669;
+				margin: 10px 0;
+			}
+			.footer {
+				background-color: #64748b;
+				color: white;
+				padding: 15px;
+				text-align: center;
+				border-radius: 0 0 8px 8px;
+				font-size: 12px;
+			}
+			.button {
+				display: inline-block;
+				background-color: #10b981;
+				color: white;
+				padding: 12px 24px;
+				text-decoration: none;
+				border-radius: 5px;
+				margin: 10px 0;
+				font-weight: bold;
+			}
+			h1, h2, h3 {
+				margin: 0;
+			}
+			ul {
+				list-style: none;
+				padding: 0;
+			}
+			ul li {
+				padding: 5px 0;
+			}
+	body
+		.header
+			h1 Brooklyn Aquarium Society
+			h3 Breeder Awards Program
+			.celebration 🎉
+
+		.content
+			p Hello #{member.display_name},
+
+			p
+				strong Congratulations! Your BAP submission has been approved!
+
+			.submission-details
+				h3 Submission Details:
+				p <strong>Species:</strong> #{submission.species_common_name} (#{submission.species_latin_name})
+				p <strong>Species Class:</strong> #{submission.species_class}
+				p
+					strong Approved On:
+					+longDate(submission.approved_on)
+
+			.points-box
+				h3 Points Awarded
+				.points-large= submission.total_points || submission.points
+				ul
+					li= `Base Points: ${submission.points}`
+					if submission.article_points && submission.article_points > 0
+						li= `Article Points: +${submission.article_points}`
+					if submission.first_time_species
+						li First Time Species Bonus: +5 points
+					if submission.flowered
+						li= `Flowering Bonus: +${submission.points} points`
+					if submission.sexual_reproduction
+						li= `Sexual Reproduction Bonus: +${submission.points} points`
+
+			p Your achievement has been recorded and these points contribute to your award level progression!
+
+			p
+				a.button(href=`https://${domain}/submissions/${submission.id}`) View Your Approved Submission
+
+		.footer
+			p
+				strong Brooklyn Aquarium Society
+			p Educating Aquarists since 1911
+			p
+				a(href="https://basny.org" style="color: white;") basny.org

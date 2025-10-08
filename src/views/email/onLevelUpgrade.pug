@@ -1,39 +1,120 @@
-p= `Hi ${member.display_name}`
-p
-	| Congratulations! You've achieved a new level in the&nbsp;
-	if program === 'fish'
-		| Breeder Awards Program (BAP)
-	else if program === 'plant'
-		| Horticultural Awards Program (HAP)  
-	else if program === 'coral'
-		| Coral Awards Program (CAP)
-	else
-		= program + ' Program'
-	| !
+doctype html
+html
+	head
+		meta(charset="utf-8")
+		title Award Level Achieved
+		style.
+			body {
+				font-family: Arial, sans-serif;
+				line-height: 1.6;
+				color: #333;
+				max-width: 600px;
+				margin: 0 auto;
+				padding: 20px;
+			}
+			.header {
+				background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+				color: white;
+				padding: 30px 20px;
+				text-align: center;
+				border-radius: 8px 8px 0 0;
+			}
+			.trophy {
+				font-size: 64px;
+				margin: 10px 0;
+			}
+			.content {
+				background-color: #f8fafc;
+				padding: 20px;
+				border: 1px solid #e2e8f0;
+			}
+			.award-box {
+				background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+				border-left: 4px solid #f59e0b;
+				padding: 20px;
+				margin: 15px 0;
+				border-radius: 6px;
+				text-align: center;
+			}
+			.award-title {
+				font-size: 28px;
+				font-weight: bold;
+				color: #92400e;
+				margin: 10px 0;
+			}
+			.points-badge {
+				background-color: white;
+				color: #92400e;
+				padding: 10px 20px;
+				border-radius: 20px;
+				display: inline-block;
+				margin: 10px 0;
+				font-weight: bold;
+				font-size: 18px;
+			}
+			.footer {
+				background-color: #64748b;
+				color: white;
+				padding: 15px;
+				text-align: center;
+				border-radius: 0 0 8px 8px;
+				font-size: 12px;
+			}
+			.button {
+				display: inline-block;
+				background-color: #f59e0b;
+				color: white;
+				padding: 12px 24px;
+				text-decoration: none;
+				border-radius: 5px;
+				margin: 10px 0;
+				font-weight: bold;
+			}
+			h1, h2, h3 {
+				margin: 0;
+			}
+	body
+		.header
+			h1 Brooklyn Aquarium Society
+			- let programName = 'Awards Program'
+			- if (program === 'fish') programName = 'Breeder Awards Program'
+			- else if (program === 'plant') programName = 'Horticultural Awards Program'
+			- else if (program === 'coral') programName = 'Coral Awards Program'
+			h3= programName
+			.trophy 🏆
 
-p
-	| You are now a&nbsp;
-	strong= newLevel
-	| ! This achievement recognizes your dedication and success in&nbsp;
-	if program === 'fish' || program === 'invert'
-		| breeding aquatic species
-	else if program === 'plant'
-		| aquatic horticulture
-	else if program === 'coral'
-		| coral propagation
-	else
-		= program + ' activities'
-	| .
+		.content
+			p Hello #{member.display_name},
 
-if totalPoints
-	p Your current point total: #{totalPoints} points
+			p
+				strong Congratulations! You've achieved a new award level!
 
-p
-	| Keep up the excellent work! You can view your&nbsp;
-	a(href=`https://${domain}/me`) submission history and achievements
-	|  in your member dashboard.
+			.award-box
+				.award-title= newLevel
+				- if (totalPoints)
+					.points-badge= `${totalPoints} Total Points`
 
-p
-	| Congratulations again on this milestone!
-	br
-	| – The BASNY BAP Team
+				p This achievement recognizes your dedication and success in
+				- if (program === 'fish' || program === 'invert')
+					| breeding aquatic species
+				- else if (program === 'plant')
+					| aquatic horticulture
+				- else if (program === 'coral')
+					| coral propagation
+				- else
+					= program + ' activities'
+				| !
+
+			p Your hard work, expertise, and contributions to the aquarium hobby are truly appreciated. This milestone reflects your growing knowledge and successful breeding achievements.
+
+			p Keep up the excellent work! Each submission you make contributes to the advancement of our collective understanding of aquatic species.
+
+			p
+				a.button(href=`https://${domain}/me`) View Your Achievements
+
+		.footer
+			p
+				strong Brooklyn Aquarium Society
+			p Educating Aquarists since 1911
+			p
+				a(href="https://basny.org" style="color: white;") basny.org
