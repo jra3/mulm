@@ -12,14 +12,14 @@ export const viewAccountSettings = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  // Generate OAuth state for CSRF protection
-  const sessionId = String(req.cookies.session_id);
+  // Generate OAuth state for CSRF protection (stored in cookie)
   const oauthState = generateRandomCode(32);
-  if (sessionId && sessionId !== 'undefined' && sessionId !== 'null') {
-    await setOAuthState(sessionId, oauthState).catch(() => {
-      // Ignore errors for invalid sessions
-    });
-  }
+  res.cookie('oauth_state', oauthState, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 10 * 60 * 1000, // 10 minutes
+  });
 
   const [
     googleURL,

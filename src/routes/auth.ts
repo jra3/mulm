@@ -260,19 +260,20 @@ export const googleOAuth = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const sessionId = String(req.cookies.session_id);
+  // Validate state parameter using cookie (works for both anonymous and logged-in users)
+  const storedState = String(req.cookies.oauth_state);
 
-  // Validate state only if we have a session
-  // Anonymous users (no session) can still use OAuth to create accounts
-  if (sessionId && sessionId !== 'undefined' && sessionId !== 'null') {
-    const isValidState = await validateAndConsumeOAuthState(sessionId, state);
-
-    if (!isValidState) {
-      logger.warn('Invalid OAuth state parameter', { sessionId, receivedState: state });
-      res.status(403).send("Invalid OAuth state. This may be a CSRF attack. Please try logging in again.");
-      return;
-    }
+  if (!storedState || storedState !== state) {
+    logger.warn('Invalid OAuth state parameter', {
+      storedState: storedState?.substring(0, 10) + '...',
+      receivedState: state?.substring(0, 10) + '...'
+    });
+    res.status(403).send("Invalid OAuth state. This may be a CSRF attack. Please try logging in again.");
+    return;
   }
+
+  // Clear the state cookie (one-time use)
+  res.clearCookie('oauth_state');
 
   const resp = await translateGoogleOAuthCode(code as string);
   const payload: unknown = await resp.json();
