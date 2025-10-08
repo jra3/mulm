@@ -83,7 +83,7 @@ button:disabled, button.htmx-request {
 
 /* Admin Actions Panel */
 .admin-actions-panel {
-	@apply inline-block;
+	@apply relative;
 }
 
 .admin-panel-header {
@@ -91,7 +91,7 @@ button:disabled, button.htmx-request {
 	@apply hover:bg-gray-200 transition-colors duration-200;
 	@apply focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2;
 	@apply text-sm font-medium h-9 shadow-sm;
-	@apply inline-flex items-center gap-2;
+	@apply flex items-center justify-center gap-2;
 }
 
 .admin-count-badge {
