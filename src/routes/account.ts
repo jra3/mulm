@@ -15,7 +15,11 @@ export const viewAccountSettings = async (req: MulmRequest, res: Response) => {
   // Generate OAuth state for CSRF protection
   const sessionId = String(req.cookies.session_id);
   const oauthState = generateRandomCode(32);
-  await setOAuthState(sessionId, oauthState);
+  if (sessionId && sessionId !== 'undefined' && sessionId !== 'null') {
+    await setOAuthState(sessionId, oauthState).catch(() => {
+      // Ignore errors for invalid sessions
+    });
+  }
 
   const [
     googleURL,

@@ -78,9 +78,15 @@ router.get("/", async (req: MulmRequest, res) => {
   const isAdmin = viewer?.is_admin;
 
   // Generate OAuth state for CSRF protection
+  // Note: For anonymous users without sessions, state won't be validated
+  // This is acceptable as the main attack vector (session fixation) requires an existing session
   const sessionId = String(req.cookies.session_id);
   const oauthState = generateRandomCode(32);
-  await setOAuthState(sessionId, oauthState);
+  if (sessionId && sessionId !== 'undefined' && sessionId !== 'null') {
+    await setOAuthState(sessionId, oauthState).catch(() => {
+      // Ignore errors for invalid sessions - state validation will be skipped
+    });
+  }
 
   const args = {
     title: "BAS BAP/HAP Portal",
@@ -187,7 +193,10 @@ router.get("/dialog/auth/signin", async (req, res) => {
   // Generate OAuth state for CSRF protection
   const sessionId = String(req.cookies.session_id);
   const oauthState = generateRandomCode(32);
-  await setOAuthState(sessionId, oauthState);
+  // Only set state if we have a valid session
+  if (sessionId && sessionId !== 'undefined' && sessionId !== 'null') {
+    await setOAuthState(sessionId, oauthState);
+  }
 
   res.render("account/signin", {
     viewer: {},

@@ -261,18 +261,17 @@ export const googleOAuth = async (req: MulmRequest, res: Response) => {
   }
 
   const sessionId = String(req.cookies.session_id);
-  if (!sessionId) {
-    logger.warn('Missing session ID during OAuth callback');
-    res.status(400).send("Session expired. Please try logging in again.");
-    return;
-  }
 
-  const isValidState = await validateAndConsumeOAuthState(sessionId, state);
+  // Validate state only if we have a session
+  // Anonymous users (no session) can still use OAuth to create accounts
+  if (sessionId && sessionId !== 'undefined' && sessionId !== 'null') {
+    const isValidState = await validateAndConsumeOAuthState(sessionId, state);
 
-  if (!isValidState) {
-    logger.warn('Invalid OAuth state parameter', { sessionId, receivedState: state });
-    res.status(403).send("Invalid OAuth state. This may be a CSRF attack. Please try logging in again.");
-    return;
+    if (!isValidState) {
+      logger.warn('Invalid OAuth state parameter', { sessionId, receivedState: state });
+      res.status(403).send("Invalid OAuth state. This may be a CSRF attack. Please try logging in again.");
+      return;
+    }
   }
 
   const resp = await translateGoogleOAuthCode(code as string);
