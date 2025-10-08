@@ -1,9 +1,11 @@
+include ../mixins/countBadge.pug
+
 mixin queueButton(program, text, count, queueType = "queue")
 	- const baseUrl = queueType === "witness" ? `/admin/witness-queue/${program}` : queueType === "waiting" ? `/admin/waiting-period/${program}` : `/admin/queue/${program}`;
 	if count > 0
 		a(href=baseUrl)
-			button.primary= `${text} `
-				span.bg-red-500.px-1.py-1.rounded-xl= count
-
+			button.primary
+				| #{text} #{' '}
+				+countBadge(count)
 	else
 		button.outline(disabled alt=`No outstanding reviews for ${program}`)= text
