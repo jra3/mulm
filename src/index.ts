@@ -25,8 +25,7 @@ import {
 import { getRecentActivity } from "./db/activity";
 
 import { MulmRequest, sessionMiddleware } from "./sessions";
-import { getGoogleOAuthURL } from "./oauth";
-import { generateRandomCode } from "./auth";
+import { getGoogleOAuthURL, setOAuthStateCookie } from "./oauth";
 import { getQueryString } from "./utils/request";
 import { initR2 } from "./utils/r2-client";
 import { loginRateLimiter, signupRateLimiter, forgotPasswordRateLimiter, oauthRateLimiter } from "./middleware/rateLimiter";
@@ -190,14 +189,7 @@ router.get("/oauth/google", oauthRateLimiter, auth.googleOAuth);
 
 router.get("/dialog/auth/signin", async (req, res) => {
   // Generate OAuth state for CSRF protection (stored in cookie)
-  const oauthState = generateRandomCode(32);
-  res.cookie('oauth_state', oauthState, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/oauth/google', // Only sent to OAuth callback
-    maxAge: 10 * 60 * 1000, // 10 minutes
-  });
+  const oauthState = setOAuthStateCookie(res);
 
   res.render("account/signin", {
     viewer: {},

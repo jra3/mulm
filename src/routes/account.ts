@@ -1,7 +1,7 @@
-import { checkPassword, makePasswordEntry, generateRandomCode } from "@/auth";
+import { checkPassword, makePasswordEntry } from "@/auth";
 import { getMemberPassword, createOrUpdatePassword, updateMember, getGoogleAccountByMemberId, deleteGoogleAccount } from "@/db/members";
 import { updateSchema } from "@/forms/login";
-import { getGoogleOAuthURL } from "@/oauth";
+import { getGoogleOAuthURL, setOAuthStateCookie } from "@/oauth";
 import { MulmRequest } from "@/sessions";
 import { Response } from "express";
 
@@ -13,14 +13,7 @@ export const viewAccountSettings = async (req: MulmRequest, res: Response) => {
   }
 
   // Generate OAuth state for CSRF protection (stored in cookie)
-  const oauthState = generateRandomCode(32);
-  res.cookie('oauth_state', oauthState, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/oauth/google', // Only sent to OAuth callback
-    maxAge: 10 * 60 * 1000, // 10 minutes
-  });
+  const oauthState = setOAuthStateCookie(res);
 
   const [
     googleURL,

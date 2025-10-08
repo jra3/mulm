@@ -1,4 +1,23 @@
 import config from "./config.json";
+import { Response } from "express";
+import { generateRandomCode } from "./auth";
+
+/**
+ * Set OAuth state cookie for CSRF protection
+ * Call this before redirecting user to Google OAuth
+ * Returns the generated state token
+ */
+export function setOAuthStateCookie(res: Response): string {
+  const state = generateRandomCode(32);
+  res.cookie('oauth_state', state, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/oauth/google', // Only sent to OAuth callback
+    maxAge: 10 * 60 * 1000, // 10 minutes
+  });
+  return state;
+}
 
 export function getGoogleOAuthURL(state: string): string {
   const endpoint = new URL("https://accounts.google.com/o/oauth2/v2/auth");
