@@ -98,6 +98,7 @@ export async function sendResetEmail(email: string, display_name: string, code: 
       domain: config.domain,
       display_name,
       code,
+      programContactEmail: config.adminsEmail,
     }),
   });
 }
@@ -184,6 +185,7 @@ export async function onWitnessDeclined(
       submission,
       member,
       reason,
+      programContactEmail: config.adminsEmail,
     }),
   });
 }

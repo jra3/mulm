@@ -90,7 +90,10 @@ html
 			p You can edit and resubmit your submission here:
 			a.button(href=`${domain}/submissions/${submission.id}`) Edit Submission
 			
-			p If you have questions about the feedback, please contact the program administrators or reach out to a club member for assistance.
+			p
+				| If you have questions about the feedback, please&nbsp;
+				a(href=`mailto:${programContactEmail}` style="color: #2563eb; text-decoration: underline;") contact the program administrators
+				|  or reach out to a club member for assistance.
 			
 			p Thank you for your understanding and participation in the Breeder Awards Program!
 		

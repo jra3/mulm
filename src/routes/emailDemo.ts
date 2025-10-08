@@ -18,6 +18,7 @@ export const emailDemoPage = async (req: MulmRequest, res: Response) => {
   const sampleData = {
     // Common data
     domain: 'bap.basny.org',
+    programContactEmail: 'bap@basny.org', // Sample email for demo
 
     // Member data
     member: {
