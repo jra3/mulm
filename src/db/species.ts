@@ -236,7 +236,7 @@ export async function searchSpeciesTypeahead(
   const params: unknown[] = [];
 
   if (filters.species_type) {
-    conditions.push('AND sng.program_class = ?');
+    conditions.push('AND sng.species_type = ?');
     params.push(filters.species_type);
   }
 
@@ -259,6 +259,7 @@ export async function searchSpeciesTypeahead(
       sn.common_name,
       sn.scientific_name,
       sng.program_class,
+      sng.species_type,
       sng.canonical_genus,
       sng.canonical_species_name
     FROM species_name sn
