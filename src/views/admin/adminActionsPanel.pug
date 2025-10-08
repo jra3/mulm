@@ -8,58 +8,38 @@
 
 mixin adminActionsPanel(witnessCount, approvalsCount, witnessProgram, approvalsProgram)
 	- const totalCount = witnessCount + approvalsCount
-	- const hasItems = totalCount > 0
 
-	.admin-actions-panel.mx-auto.max-w-md(
-		class=hasItems ? "has-pending-items" : ""
-		role="region"
-		aria-label="Admin dashboard actions")
+	.admin-popover(
+		role="group"
+		aria-label="Admin dashboard")
 
-		//- Panel header (always visible)
-		button.admin-panel-header(
+		//- Simple button (aligns with other buttons)
+		button.outline(
 			type="button"
-			hx-get="/admin/panel-toggle"
-			hx-swap="none"
-			hx-on:click="this.closest('.admin-actions-panel').classList.toggle('expanded')"
-			aria-expanded="false"
-			aria-controls="adminPanelContent"
-			aria-label=`Admin actions, ${totalCount} items pending`)
-
+			hx-on:click="this.closest('.admin-popover').classList.toggle('open')"
+			aria-haspopup="true"
+			aria-label=`Admin menu, ${totalCount} items pending`)
 			| Admin
-			if hasItems
+			if totalCount > 0
 				| #{' '}
-				span.bg-red-500.text-white.rounded-full.text-xs.font-bold.inline-flex.items-center.justify-center(style="width: 1.5rem; height: 1.5rem;")= totalCount
-			svg.chevron-icon(
-				width="16"
-				height="16"
-				viewBox="0 0 16 16"
-				fill="currentColor"
-				aria-hidden="true"
-				style="margin-left: auto")
-				path(d="M4 6l4 4 4-4")
+				span.bg-red-500.px-1.py-1.rounded-xl= totalCount
 
-		//- Panel content (expandable)
-		.admin-panel-content#adminPanelContent(aria-hidden="true")
-			.admin-action-items
+		//- Popover menu (floats over content)
+		.admin-popover-menu(role="menu")
+			a.admin-menu-item(
+				href=`/admin/witness-queue/${witnessProgram}`
+				role="menuitem")
+				span Witness Queue
+				if witnessCount > 0
+					span.bg-red-500.text-white.px-1.py-1.rounded-xl.text-xs.ml-2= witnessCount
 
-				//- Witness Queue
-				a.admin-action-item(
-					href=`/admin/witness-queue/${witnessProgram}`
-					aria-label=`Witness queue, ${witnessCount} submissions`)
-					span Witness Queue
-					if witnessCount > 0
-						span.bg-red-500.text-white.px-1.py-1.rounded-xl.text-xs.font-bold.ml-1= witnessCount
+			a.admin-menu-item(
+				href=`/admin/queue/${approvalsProgram}`
+				role="menuitem")
+				span Approval Queue
+				if approvalsCount > 0
+					span.bg-red-500.text-white.px-1.py-1.rounded-xl.text-xs.ml-2= approvalsCount
 
-				//- Approval Queue
-				a.admin-action-item(
-					href=`/admin/queue/${approvalsProgram}`
-					aria-label=`Approval queue, ${approvalsCount} submissions`)
-					span Approval Queue
-					if approvalsCount > 0
-						span.bg-red-500.text-white.px-1.py-1.rounded-xl.text-xs.font-bold.ml-1= approvalsCount
-
-				//- Manage Members
-				a.admin-action-item(
-					href="/admin/members"
-					aria-label="Manage members")
-					span Manage Members
+			a.admin-menu-item(
+				href="/admin/members"
+				role="menuitem") Manage Members

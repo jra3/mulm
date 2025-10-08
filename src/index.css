@@ -81,57 +81,28 @@ button:disabled, button.htmx-request {
 	@apply opacity-70 cursor-not-allowed;
 }
 
-/* Admin Actions Panel */
-.admin-actions-panel {
-	@apply relative;
+/* Admin Popover */
+.admin-popover {
+	@apply relative inline-block;
 }
 
-.admin-panel-header {
-	@apply bg-white text-gray-900 px-4 rounded-2xl border border-gray-500;
-	@apply hover:bg-gray-200 transition-colors duration-200;
-	@apply focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2;
-	@apply text-sm font-medium h-9 shadow-sm;
-	@apply flex items-center justify-center gap-2;
+.admin-popover-menu {
+	@apply absolute left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-300;
+	@apply opacity-0 invisible transition-all duration-200;
+	@apply z-50;
+	transform: translateY(-10px);
 }
 
-.admin-count-badge {
-	@apply inline-flex items-center justify-center px-2 py-1 text-xs font-bold rounded-xl;
-	@apply bg-red-500 text-white min-w-[1.25rem];
+.admin-popover.open .admin-popover-menu {
+	@apply opacity-100 visible;
+	transform: translateY(0);
 }
 
-.chevron-icon {
-	@apply transition-transform duration-200 text-gray-500;
-}
-
-.admin-actions-panel.expanded .chevron-icon {
-	@apply rotate-180;
-}
-
-.admin-panel-content {
-	@apply bg-white border-x border-b border-gray-300 rounded-b-2xl mt-1;
-	@apply transition-all duration-200 ease-in-out;
-	max-height: 0;
-	opacity: 0;
-	overflow: hidden;
-}
-
-.admin-actions-panel.expanded .admin-panel-content {
-	max-height: 300px;
-	opacity: 1;
-}
-
-.admin-action-items {
-	@apply divide-y divide-gray-200;
-}
-
-.admin-action-item {
-	@apply block p-3 transition-colors duration-150;
-	@apply hover:bg-gray-50 text-gray-900;
-}
-
-.item-badge {
-	@apply inline-flex items-center justify-center px-2 py-1 text-xs font-bold rounded-xl;
-	@apply bg-red-500 text-white min-w-[1.25rem];
+.admin-menu-item {
+	@apply block px-4 py-3 text-gray-900 hover:bg-gray-50;
+	@apply transition-colors duration-150;
+	@apply first:rounded-t-lg last:rounded-b-lg;
+	@apply border-b border-gray-200 last:border-b-0;
 }
 
 select {
