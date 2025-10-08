@@ -87,14 +87,14 @@ button:disabled, button.htmx-request {
 }
 
 .admin-panel-header {
-	@apply w-full bg-white text-gray-900 px-4 py-2 rounded-lg border border-gray-500;
-	@apply hover:bg-gray-50 transition-colors duration-200;
+	@apply w-full bg-white text-gray-900 px-4 py-2 rounded-2xl border border-gray-500;
+	@apply hover:bg-gray-200 transition-colors duration-200;
 	@apply focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2;
-	@apply text-sm font-medium;
+	@apply text-sm font-medium h-9;
 }
 
 .admin-count-badge {
-	@apply inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full;
+	@apply inline-flex items-center justify-center px-2 py-1 text-xs font-bold rounded-xl;
 	@apply bg-red-500 text-white min-w-[1.25rem];
 }
 
@@ -107,7 +107,7 @@ button:disabled, button.htmx-request {
 }
 
 .admin-panel-content {
-	@apply bg-white border-x border-b border-gray-300 rounded-b-lg;
+	@apply bg-white border-x border-b border-gray-300 rounded-b-2xl mt-1;
 	@apply transition-all duration-200 ease-in-out;
 	max-height: 0;
 	opacity: 0;
@@ -129,8 +129,8 @@ button:disabled, button.htmx-request {
 }
 
 .item-badge {
-	@apply inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded;
-	@apply bg-gray-200 text-gray-800;
+	@apply inline-flex items-center justify-center px-2 py-1 text-xs font-bold rounded-xl;
+	@apply bg-red-500 text-white min-w-[1.25rem];
 }
 
 select {
