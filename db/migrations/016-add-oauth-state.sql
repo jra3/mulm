@@ -1,4 +1,6 @@
 -- Up
+-- NOTE: This column is no longer used (switched to cookie-based OAuth state)
+-- Kept for backward compatibility and to avoid table recreation
 ALTER TABLE sessions ADD COLUMN oauth_state TEXT DEFAULT NULL;
 
 -- Down

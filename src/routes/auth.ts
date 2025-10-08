@@ -24,7 +24,7 @@ import { validateFormResult } from "@/forms/utils";
 import { getBodyParam } from "@/utils/request";
 import { sendResetEmail } from "@/notifications";
 import { getGoogleUser, translateGoogleOAuthCode } from "@/oauth";
-import { regenerateSession, destroyUserSession, MulmRequest, validateAndConsumeOAuthState } from "@/sessions";
+import { regenerateSession, destroyUserSession, MulmRequest } from "@/sessions";
 import { Response } from "express";
 import { logger } from "@/utils/logger";
 import { recordFailedAttempt, isAccountLocked, clearFailedAttempts, getRemainingLockoutTime } from "@/services/accountLockout";

@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { writeConn, query } from "./db/conn";
 import { generateRandomCode } from "./auth";
-import { regenerateSessionInDB, setOAuthState as setOAuthStateInDB, getAndClearOAuthState } from "./db/sessions";
+import { regenerateSessionInDB } from "./db/sessions";
 
 export const generateSessionCookie = () => generateRandomCode(64)
 
@@ -90,19 +90,3 @@ export async function destroyUserSession(req: MulmRequest, res: Response) {
   }
 }
 
-/**
- * Store OAuth state parameter in session for CSRF protection
- */
-export async function setOAuthState(sessionId: string, state: string): Promise<void> {
-  await setOAuthStateInDB(sessionId, state);
-}
-
-/**
- * Validate and consume OAuth state parameter
- * Returns true if state is valid, false otherwise
- * State is one-time use and cleared after validation
- */
-export async function validateAndConsumeOAuthState(sessionId: string, state: string): Promise<boolean> {
-  const storedState = await getAndClearOAuthState(sessionId);
-  return storedState === state;
-}
