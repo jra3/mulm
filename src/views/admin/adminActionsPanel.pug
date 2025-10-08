@@ -1,3 +1,5 @@
+include ../mixins/countBadge.pug
+
 //- Admin Actions Panel Component
 //- Collapsible panel for admin dashboard access
 //-
@@ -19,26 +21,24 @@ mixin adminActionsPanel(witnessCount, approvalsCount, witnessProgram, approvalsP
 			hx-on:click="this.closest('.admin-popover').classList.toggle('open')"
 			aria-haspopup="true"
 			aria-label=`Admin menu, ${totalCount} items pending`)
-			| Admin
-			if totalCount > 0
-				| #{' '}
-				span.bg-red-500.px-1.py-1.rounded-xl= totalCount
+			| Admin #{' '}
+			+countBadge(totalCount)
 
 		//- Popover menu (floats over content)
 		.admin-popover-menu(role="menu")
 			a.admin-menu-item(
 				href=`/admin/witness-queue/${witnessProgram}`
 				role="menuitem")
-				span Witness Queue
-				if witnessCount > 0
-					span.bg-red-500.text-white.px-1.py-1.rounded-xl.text-xs.ml-2= witnessCount
+				.flex.items-center.justify-between.w-full
+					span Witness Queue
+					+countBadge(witnessCount)
 
 			a.admin-menu-item(
 				href=`/admin/queue/${approvalsProgram}`
 				role="menuitem")
-				span Approval Queue
-				if approvalsCount > 0
-					span.bg-red-500.text-white.px-1.py-1.rounded-xl.text-xs.ml-2= approvalsCount
+				.flex.items-center.justify-between.w-full
+					span Approval Queue
+					+countBadge(approvalsCount)
 
 			a.admin-menu-item(
 				href="/admin/members"

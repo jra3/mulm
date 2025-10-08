@@ -1,0 +1,14 @@
+//- Count Badge Mixin
+//- Displays a number in a round red badge
+//-
+//- @param {number} count - The number to display
+//-
+//- Usage:
+//-   +countBadge(5)
+
+mixin countBadge(count)
+	if count && count > 0
+		span(
+			class="inline-flex items-center justify-center bg-red-500 text-white text-xs font-bold rounded-full"
+			style="min-width: 1.5rem; width: 1.5rem; height: 1.5rem;"
+		)= count
