@@ -18,11 +18,10 @@ html
 					a.link.font-extrabold(href='https://www.basny.org/Documents/BAP/BAS-BAP-Manual.pdf') [Program Manual]
 
 		section.bg-gray-100.py-4
-			.flex.flex-col.justify-center.text-center.items-center.gap-4.px-4
-				if isAdmin
-					+adminActionsPanel(witnessCount, approvalsCount, witnessProgram, approvalsProgram)
-
-				.flex.gap-2(class="md:flex-row")
+			.flex.flex-col.justify-center.text-center.items-center.gap-2
+				.flex.flex-col.gap-2.items-center(class="md:flex-row")
+					if isAdmin
+						+adminActionsPanel(witnessCount, approvalsCount, witnessProgram, approvalsProgram)
 					if isLoggedIn
 						a(href='/submissions/new')
 							button.primary New Species Submission

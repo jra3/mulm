@@ -25,20 +25,17 @@ mixin adminActionsPanel(witnessCount, approvalsCount, witnessProgram, approvalsP
 			aria-controls="adminPanelContent"
 			aria-label=`Admin actions, ${totalCount} items pending`)
 
-			.flex.items-center.justify-between.w-full
-				.flex.items-center.gap-3
-					span.font-semibold Admin
-					if hasItems
-						span.admin-count-badge= totalCount
-
-				//- Chevron
-				svg.chevron-icon(
-					width="16"
-					height="16"
-					viewBox="0 0 16 16"
-					fill="currentColor"
-					aria-hidden="true")
-					path(d="M4 6l4 4 4-4")
+			span Admin
+			if hasItems
+				span.bg-red-500.text-white.px-1.py-1.rounded-xl.text-xs.font-bold.ml-1= totalCount
+			svg.chevron-icon(
+				width="16"
+				height="16"
+				viewBox="0 0 16 16"
+				fill="currentColor"
+				aria-hidden="true"
+				style="margin-left: auto")
+				path(d="M4 6l4 4 4-4")
 
 		//- Panel content (expandable)
 		.admin-panel-content#adminPanelContent(aria-hidden="true")
@@ -48,19 +45,17 @@ mixin adminActionsPanel(witnessCount, approvalsCount, witnessProgram, approvalsP
 				a.admin-action-item(
 					href=`/admin/witness-queue/${witnessProgram}`
 					aria-label=`Witness queue, ${witnessCount} submissions`)
-					.flex.items-center.justify-between.w-full
-						span Witness Queue
-						if witnessCount > 0
-							span.item-badge= witnessCount
+					span Witness Queue
+					if witnessCount > 0
+						span.bg-red-500.text-white.px-1.py-1.rounded-xl.text-xs.font-bold.ml-1= witnessCount
 
 				//- Approval Queue
 				a.admin-action-item(
 					href=`/admin/queue/${approvalsProgram}`
 					aria-label=`Approval queue, ${approvalsCount} submissions`)
-					.flex.items-center.justify-between.w-full
-						span Approval Queue
-						if approvalsCount > 0
-							span.item-badge= approvalsCount
+					span Approval Queue
+					if approvalsCount > 0
+						span.bg-red-500.text-white.px-1.py-1.rounded-xl.text-xs.font-bold.ml-1= approvalsCount
 
 				//- Manage Members
 				a.admin-action-item(
