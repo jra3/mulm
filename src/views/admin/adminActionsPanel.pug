@@ -23,26 +23,22 @@ mixin adminActionsPanel(witnessCount, approvalsCount, witnessProgram, approvalsP
 			hx-on:click="this.closest('.admin-actions-panel').classList.toggle('expanded')"
 			aria-expanded="false"
 			aria-controls="adminPanelContent"
-			aria-label=`Admin actions panel, ${totalCount} items pending`)
+			aria-label=`Admin actions, ${totalCount} items pending`)
 
 			.flex.items-center.justify-between.w-full
 				.flex.items-center.gap-3
-					span.font-bold.text-lg Admin Dashboard
+					span.font-semibold Admin
 					if hasItems
-						span.admin-count-badge(
-							class="bg-red-500 text-white"
-							aria-label=`${totalCount} items requiring attention`)= totalCount
+						span.admin-count-badge= totalCount
 
-				//- Chevron icon
+				//- Chevron
 				svg.chevron-icon(
-					width="24"
-					height="24"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
+					width="16"
+					height="16"
+					viewBox="0 0 16 16"
+					fill="currentColor"
 					aria-hidden="true")
-					path(d="M19 9l-7 7-7-7")
+					path(d="M4 6l4 4 4-4")
 
 		//- Panel content (expandable)
 		.admin-panel-content#adminPanelContent(aria-hidden="true")
@@ -51,38 +47,23 @@ mixin adminActionsPanel(witnessCount, approvalsCount, witnessProgram, approvalsP
 				//- Witness Queue
 				a.admin-action-item(
 					href=`/admin/witness-queue/${witnessProgram}`
-					class=witnessCount > 0 ? "has-items" : ""
 					aria-label=`Witness queue, ${witnessCount} submissions`)
 					.flex.items-center.justify-between.w-full
-						.flex.items-center.gap-2
-							span 👁️
-							span Witness Queue
+						span Witness Queue
 						if witnessCount > 0
-							span.item-badge(class="bg-purple-100 text-purple-800")= witnessCount
-						else
-							span.text-gray-400.text-sm None
+							span.item-badge= witnessCount
 
 				//- Approval Queue
 				a.admin-action-item(
 					href=`/admin/queue/${approvalsProgram}`
-					class=approvalsCount > 0 ? "has-items" : ""
 					aria-label=`Approval queue, ${approvalsCount} submissions`)
 					.flex.items-center.justify-between.w-full
-						.flex.items-center.gap-2
-							span 🔵
-							span Approval Queue
+						span Approval Queue
 						if approvalsCount > 0
-							span.item-badge(class="bg-blue-100 text-blue-800")= approvalsCount
-						else
-							span.text-gray-400.text-sm None
+							span.item-badge= approvalsCount
 
 				//- Manage Members
 				a.admin-action-item(
 					href="/admin/members"
 					aria-label="Manage members")
-					.flex.items-center.justify-between.w-full
-						.flex.items-center.gap-2
-							span 👥
-							span Manage Members
-						svg(width="20" height="20" viewBox="0 0 20 20" fill="currentColor")
-							path(fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z")
+					span Manage Members

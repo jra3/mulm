@@ -83,26 +83,23 @@ button:disabled, button.htmx-request {
 
 /* Admin Actions Panel */
 .admin-actions-panel {
-	@apply mb-6 rounded-lg overflow-hidden shadow-md;
+	@apply mb-4;
 }
 
 .admin-panel-header {
-	@apply w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-4;
-	@apply hover:from-purple-700 hover:to-indigo-700 transition-all duration-200;
-	@apply focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2;
-}
-
-.admin-actions-panel.has-pending-items .admin-panel-header {
-	@apply animate-pulse;
-	animation-duration: 2s;
+	@apply w-full bg-white text-gray-900 px-4 py-2 rounded-lg border border-gray-500;
+	@apply hover:bg-gray-50 transition-colors duration-200;
+	@apply focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2;
+	@apply text-sm font-medium;
 }
 
 .admin-count-badge {
-	@apply inline-flex items-center justify-center px-3 py-1 text-sm font-bold rounded-full min-w-[2rem];
+	@apply inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded-full;
+	@apply bg-red-500 text-white min-w-[1.25rem];
 }
 
 .chevron-icon {
-	@apply transition-transform duration-300;
+	@apply transition-transform duration-200 text-gray-500;
 }
 
 .admin-actions-panel.expanded .chevron-icon {
@@ -110,32 +107,30 @@ button:disabled, button.htmx-request {
 }
 
 .admin-panel-content {
-	@apply bg-purple-50 transition-all duration-300 ease-in-out;
+	@apply bg-white border-x border-b border-gray-300 rounded-b-lg;
+	@apply transition-all duration-200 ease-in-out;
 	max-height: 0;
 	opacity: 0;
 	overflow: hidden;
 }
 
 .admin-actions-panel.expanded .admin-panel-content {
-	max-height: 500px;
+	max-height: 300px;
 	opacity: 1;
 }
 
 .admin-action-items {
-	@apply divide-y divide-purple-200;
+	@apply divide-y divide-gray-200;
 }
 
 .admin-action-item {
-	@apply block p-4 transition-colors duration-200;
-	@apply hover:bg-purple-100 text-gray-900 font-medium;
-}
-
-.admin-action-item.has-items {
-	@apply bg-white;
+	@apply block p-3 transition-colors duration-150;
+	@apply hover:bg-gray-50 text-gray-900;
 }
 
 .item-badge {
-	@apply inline-flex items-center justify-center px-2 py-1 text-xs font-bold rounded-full min-w-[1.5rem];
+	@apply inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold rounded;
+	@apply bg-gray-200 text-gray-800;
 }
 
 select {
