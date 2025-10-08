@@ -76,15 +76,8 @@ router.get("/", async (req: MulmRequest, res) => {
   const isLoggedIn = Boolean(viewer);
   const isAdmin = viewer?.is_admin;
 
-  // Generate OAuth state for CSRF protection
-  // Store state in httpOnly cookie for anonymous users (no session yet)
-  const oauthState = generateRandomCode(32);
-  res.cookie('oauth_state', oauthState, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 10 * 60 * 1000, // 10 minutes (short-lived for OAuth flow)
-  });
+  // Generate OAuth state for CSRF protection (stored in cookie)
+  const oauthState = setOAuthStateCookie(res);
 
   const args = {
     title: "BAS BAP/HAP Portal",
