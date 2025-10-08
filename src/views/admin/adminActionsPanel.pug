@@ -25,9 +25,10 @@ mixin adminActionsPanel(witnessCount, approvalsCount, witnessProgram, approvalsP
 			aria-controls="adminPanelContent"
 			aria-label=`Admin actions, ${totalCount} items pending`)
 
-			span Admin
+			| Admin
 			if hasItems
-				span.bg-red-500.text-white.px-1.py-1.rounded-xl.text-xs.font-bold.ml-1= totalCount
+				| #{' '}
+				span.bg-red-500.text-white.rounded-full.text-xs.font-bold.inline-flex.items-center.justify-center(style="width: 1.5rem; height: 1.5rem;")= totalCount
 			svg.chevron-icon(
 				width="16"
 				height="16"
