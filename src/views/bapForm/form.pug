@@ -65,6 +65,7 @@ mixin CRUDForm()
 
                 input(type="hidden" name="species_name_id" id="species_name_id" value=form.species_name_id || "")
 
+                - const speciesTypeParam = form.species_type || 'Fish'
                 +bapTypeaheadInput({
                     label: "Species Common Name",
                     name: "species_common_name",
@@ -80,7 +81,7 @@ mixin CRUDForm()
                     hiddenIdValueField: "name_id",
                     allowCreate: true,
                     createOnBlur: true,
-                })(data-param-species-type=form.species_type || 'Fish')
+                })(data-param-species_type=speciesTypeParam)
                 +bapTypeaheadInput({
                     label: "Species Latin Name",
                     name: "species_latin_name",
@@ -94,7 +95,7 @@ mixin CRUDForm()
                     hiddenIdValueField: "name_id",
                     allowCreate: true,
                     createOnBlur: true,
-                })(data-param-species-type=form.species_type || 'Fish')
+                })(data-param-species_type=speciesTypeParam)
 
                 if isLivestock
                     +bapTextInput("# of Fry", "count", "Zillions")
