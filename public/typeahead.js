@@ -58,13 +58,7 @@ function buildTomSelectOptions(element, config) {
 		},
 
 		onChange: function (value) {
-			console.log('[Typeahead] onChange called with value:', value);
-			console.log('[Typeahead] this.getValue():', this.getValue());
-			console.log('[Typeahead] this.items:', this.items);
-			console.log('[Typeahead] All options:', Object.keys(this.options));
-
 			const selectedOption = this.options[value];
-			console.log('[Typeahead] selectedOption from this.options[value]:', selectedOption);
 
 			// Sync TomSelect internal state to underlying select element
 			this.sync();
@@ -76,17 +70,9 @@ function buildTomSelectOptions(element, config) {
 
 			// Auto-populate linked field if configured
 			if (config.linkedField && config.linkedValueField && selectedOption) {
-				console.log('[Typeahead] Attempting to link:', {
-					linkedField: config.linkedField,
-					linkedValueField: config.linkedValueField,
-					selectedOption
-				});
 				const linkedElement = document.getElementById(config.linkedField);
-				console.log('[Typeahead] Linked element:', linkedElement);
-				console.log('[Typeahead] Has TomSelect instance?:', linkedElement?.tomSelectInstance);
 				if (linkedElement && linkedElement.tomSelectInstance) {
 					const linkedValue = selectedOption[config.linkedValueField];
-					console.log('[Typeahead] Linked value to set:', linkedValue);
 					if (linkedValue) {
 						const linkedInstance = linkedElement.tomSelectInstance;
 						const linkedConfig = getTypeaheadConfig(linkedElement);
@@ -104,20 +90,14 @@ function buildTomSelectOptions(element, config) {
 							linkedOption[linkedConfig.secondaryField] = selectedOption[linkedConfig.secondaryField];
 						}
 
-						console.log('[Typeahead] Linked field config:', linkedConfig);
-						console.log('[Typeahead] Created linked option:', linkedOption);
-
 						// Add the option if it doesn't exist yet
 						if (!linkedInstance.options[linkedValue]) {
-							console.log('[Typeahead] Adding option to linked field');
 							linkedInstance.addOption(linkedOption);
 						}
 						// Set the value
-						console.log('[Typeahead] Setting linked field value:', linkedValue);
 						// Clear and set to force visual update
 						linkedInstance.clear(true);
 						linkedInstance.setValue(linkedValue, true); // silent=false to trigger change
-						console.log('[Typeahead] Linked field value set');
 					}
 				}
 			}
