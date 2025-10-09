@@ -6,11 +6,12 @@ import { getQueryString } from '@/utils/request';
 import { speciesExplorerQuerySchema } from '@/forms/species-explorer';
 import { validateQueryWithFallback } from '@/forms/utils';
 import { sendApiErrors } from '@/utils/api-responses';
-import { 
+import {
   MemberTypeaheadItem,
   SpeciesTypeaheadItem,
-  ApiErrorResponse 
+  ApiErrorResponse
 } from '@/types/api-responses';
+import { logger } from '@/utils/logger';
 
 /**
  * Search members for typeahead/autocomplete
@@ -31,7 +32,7 @@ export const searchMembers = async (req: MulmRequest, res: Response<MemberTypeah
         
     res.json(formattedMembers);
   } catch (error) {
-    console.error("Error in member search API:", error);
+    logger.error("Error in member search API", error);
     sendApiErrors.searchFailed(res, "members");
   }
 };
@@ -76,7 +77,7 @@ export const searchSpecies = async (req: MulmRequest, res: Response<SpeciesTypea
 		
     res.json(formattedSpecies);
   } catch (error) {
-    console.error("Error in species typeahead search:", error);
+    logger.error("Error in species typeahead search", error);
     sendApiErrors.searchFailed(res, "species");
   }
 };

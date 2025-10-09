@@ -173,6 +173,15 @@ select {
 	@apply bg-gray-300;
 }
 
+/* Single-value typeaheads: display as plain text without pill styling */
+.ts-control.single-value .item {
+	@apply m-0 p-0 rounded-none bg-transparent;
+}
+
+.ts-control.single-value .item.active {
+	@apply bg-transparent;
+}
+
 .ts-dropdown {
 	@apply border-2 border-gray-300 bg-white shadow-xs rounded-lg z-[10];
 	position: absolute;

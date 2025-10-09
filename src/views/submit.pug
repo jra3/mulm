@@ -31,6 +31,10 @@ html
 					const tomSelect = new TomSelect(element, tomSelectOptions);
 					// Store reference for potential cleanup
 					element.tomSelectInstance = tomSelect;
+					// Add class for single-value styling
+					if (config.maxItems === 1) {
+						tomSelect.control.classList.add('single-value');
+					}
 				});
 			}
 

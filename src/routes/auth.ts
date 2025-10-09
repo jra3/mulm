@@ -54,7 +54,7 @@ export const signup = async (req: MulmRequest, res: Response) => {
     await regenerateSession(req, res, memberId);
     res.set("HX-redirect", "/").send();
   } catch (e: unknown) {
-    console.error(e);
+    logger.error("Failed to create member account", e);
     errors.set("form", "Failed to create new member account");
     onError();
   }
@@ -239,7 +239,7 @@ export const resetPassword = async (req: MulmRequest, res: Response) => {
         res.set("HX-redirect", "/").send();
         return;
       } catch (e: unknown) {
-        console.error(e);
+        logger.error("Failed to reset password", e);
         errors.set("form", "Failed to reset password");
       }
     }
@@ -284,7 +284,7 @@ export const googleOAuth = async (req: MulmRequest, res: Response) => {
     payload === null ||
     !("access_token" in payload)
   ) {
-    console.error(payload);
+    logger.error("OAuth token exchange failed", payload);
     res.status(401).send("Login Failed!");
     return;
   }

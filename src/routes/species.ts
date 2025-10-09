@@ -1,15 +1,16 @@
 import { Response } from "express";
 import { MulmRequest } from "@/sessions";
-import { 
-  getSpeciesForExplorer, 
-  getSpeciesDetail, 
-  getBreedersForSpecies, 
+import {
+  getSpeciesForExplorer,
+  getSpeciesDetail,
+  getBreedersForSpecies,
   getFilterOptions,
-  SpeciesFilters 
+  SpeciesFilters
 } from "@/db/species";
 import { getClassOptions } from "@/forms/submission";
 import { speciesExplorerQuerySchema } from "@/forms/species-explorer";
 import { validateQueryWithFallback } from "@/forms/utils";
+import { logger } from "@/utils/logger";
 
 export async function explorer(req: MulmRequest, res: Response) {
   const { viewer } = req;
@@ -47,7 +48,7 @@ export async function explorer(req: MulmRequest, res: Response) {
       validationErrors: validation.errors
     });
   } catch (error) {
-    console.error("Error loading species explorer:", error);
+    logger.error("Error loading species explorer", error);
     res.status(500).render("error", {
       title: "Error - BAS BAP/HAP Portal",
       isLoggedIn,
@@ -97,7 +98,7 @@ export async function detail(req: MulmRequest, res: Response) {
       totalBreeders: breeders.length
     });
   } catch (error) {
-    console.error("Error loading species detail:", error);
+    logger.error("Error loading species detail", error);
     res.status(500).render("error", {
       title: "Error - BAS BAP/HAP Portal",
       isLoggedIn,

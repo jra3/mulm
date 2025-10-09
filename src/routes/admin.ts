@@ -609,7 +609,7 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
           }
         );
       } catch (error) {
-        console.error('Error creating activity feed entry:', error);
+        logger.error('Error creating activity feed entry', error);
       }
 
       // Check for level upgrades after approval
@@ -624,7 +624,7 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
           await checkAndGrantSpecialtyAwards(member.id);
         } catch (error) {
           // Log error but don't fail the approval process
-          console.error('Error checking level upgrade and specialty awards:', error);
+          logger.error('Error checking level upgrade and specialty awards', error);
         }
       }
     }

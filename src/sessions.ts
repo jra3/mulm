@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { writeConn, query } from "./db/conn";
 import { generateRandomCode } from "./auth";
 import { regenerateSessionInDB } from "./db/sessions";
+import { logger } from "./utils/logger";
 
 export const generateSessionCookie = () => generateRandomCode(64)
 
@@ -84,7 +85,7 @@ export async function destroyUserSession(req: MulmRequest, res: Response) {
         await deleteRow.finalize();
       }
     } catch (err) {
-      console.error(err);
+      logger.error("Failed to delete session", err);
       throw new Error("Failed to delete session");
     }
   }

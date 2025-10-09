@@ -4,6 +4,7 @@ import { updateSchema } from "@/forms/login";
 import { getGoogleOAuthURL, setOAuthStateCookie } from "@/oauth";
 import { MulmRequest } from "@/sessions";
 import { Response } from "express";
+import { logger } from "@/utils/logger";
 
 export const viewAccountSettings = async (req: MulmRequest, res: Response) => {
   const { viewer } = req;
@@ -69,7 +70,7 @@ export const updateAccountSettings = async (req: MulmRequest, res: Response) => 
       }
     }
   } catch (e: unknown) {
-    console.error(e);
+    logger.error("Failed to update password", e);
     errors.set("password", "Unknown error");
   }
 
