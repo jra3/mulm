@@ -115,11 +115,11 @@ function buildTomSelectOptions(element, config) {
 						// Set the value
 						console.log('[Typeahead] Setting linked field value:', linkedValue);
 						linkedInstance.setValue(linkedValue, false);
-						// Refresh the UI
-						linkedInstance.refreshOptions(false);
+						// Refresh the visual display
+						linkedInstance.refreshItems();
 						// Sync the linked field too
 						linkedInstance.sync();
-						console.log('[Typeahead] Linked field synced');
+						console.log('[Typeahead] Linked field synced and refreshed');
 					}
 				}
 			}
