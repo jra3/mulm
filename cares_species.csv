@@ -1,0 +1,769 @@
+family,family_common_name,scientific_name,classification,iucn_classification,assessment_date,iucn_assessment_date,authority,authority_link,species_link
+Adrianichthyidae,Ricefish,Oryzias celebensis,VU,,Aug-1996,,IUCN,,
+Adrianichthyidae,Ricefish,Oryzias marmoratus,VU,,,,IUCN,,
+Adrianichthyidae,Ricefish,Oryzias matanensis,VU,,,,IUCN,,
+Adrianichthyidae,Ricefish,Oryzias nigrimas,VU,,,,IUCN,,
+Adrianichthyidae,Ricefish,Oryzias orthognathus,EN,,,,IUCN,,
+Adrianichthyidae,Ricefish,Oryzias profundicola,VU,,,,IUCN,,
+Anabantidae,Climbing gouramies,Belontia signata,CWU,,,,PVL,,
+Anabantidae,Climbing gouramies,Betta albimarginata,CVU,,Mar-09,,AL,,
+Anabantidae,Climbing gouramies,Betta brownorum,CEN,,,,PVL,,
+Anabantidae,Climbing gouramies,Betta burdigala,VU,,Aug-1996,,IUCN,http://www.iucnredlist.org/apps/redlist/details/2772/0,
+Anabantidae,Climbing gouramies,Betta channoides,CVU,,Mar-09,,AL,,
+Anabantidae,Climbing gouramies,Betta chini,VU,,,,IUCN,,
+Anabantidae,Climbing gouramies,Betta chloropharynx,VU,,,,IUCN,,
+Anabantidae,Climbing gouramies,Betta coccina,CEN,,,,PVL,,
+Anabantidae,Climbing gouramies,Betta foerschi,CEN,,,,PVL,,
+Anabantidae,Climbing gouramies,Betta hipposideros,VU,,,,IUCN,,
+Anabantidae,Climbing gouramies,Betta livida,EN,,,,IUCN,,
+Anabantidae,Climbing gouramies,Betta macrostoma,VU,,,,IUCN,,
+Anabantidae,Climbing gouramies,Betta miniopinna,CR,,,,IUCN,,
+Anabantidae,Climbing gouramies,Betta persephone,CR,,,,IUCN,,
+Anabantidae,Climbing gouramies,Betta pi,CVU,,May-12,,AL,,
+Anabantidae,Climbing gouramies,Betta rutilans,CEN,,,,PVL,,
+Anabantidae,Climbing gouramies,Betta schalleri,CEN,,,,PVL,,
+Anabantidae,Climbing gouramies,Betta simplex,CR,,May-12,,IUCN,,
+Anabantidae,Climbing gouramies,Betta spilotogena,CR,,,,IUCN,,
+Anabantidae,Climbing gouramies,Betta tomi,VU,,,,IUCN,,
+Anabantidae,Climbing gouramies,Betta tussyae,CEN,,,,PVL,,
+Anabantidae,Climbing gouramies,Betta uberis,CCR,,May-12,,AL,,
+Anabantidae,Climbing gouramies,Macropodus hongkongensis,CVU,,May-12,,AL,,
+Anabantidae,Climbing gouramies,Malpulutta kretseri,CEN,,,,PVL,,
+Anabantidae,Climbing gouramies,Parosphromenus alfredi,CVU,,Sep-09,,AL,,
+Anabantidae,Climbing gouramies,Parosphromenus alleni,CVU,,Sep-09,,AL,,
+Anabantidae,Climbing gouramies,Parosphromenus anjunganensis,CVU,,Sep-09,,AL,,
+Anabantidae,Climbing gouramies,Parosphromenus bintan,CVU,,Sep-09,,AL,,
+Anabantidae,Climbing gouramies,Parosphromenus deissneri,CVU,,Sep-09,,AL,,
+Anabantidae,Climbing gouramies,Parosphromenus filamentosus,CVU,,Sep-09,,AL,,
+Anabantidae,Climbing gouramies,Parosphromenus harveyi,EN,,,,IUCN,,
+Anabantidae,Climbing gouramies,Parosphromenus linkei,CVU,,Sep-09,,AL,,
+Anabantidae,Climbing gouramies,Parosphromenus nagyi,CVU,,Sep-09,,AL,,
+Anabantidae,Climbing gouramies,Parosphromenus opallios,CVU,,Sep-09,,AL,,
+Anabantidae,Climbing gouramies,Parosphromenus ornaticauda,CVU,,Sep-09,,AL,,
+Anabantidae,Climbing gouramies,Parosphromenus pahuensis,CVU,,Sep-09,,AL,,
+Anabantidae,Climbing gouramies,Parosphromenus paludicola,CVU,,Sep-09,,AL,,
+Anabantidae,Climbing gouramies,Parosphromenus parvulus,CVU,,Sep-09,,AL,,
+Anabantidae,Climbing gouramies,Parosphromenus quindecim,CVU,,Sep-09,,AL,,
+Anabantidae,Climbing gouramies,Parosphromenus rubrimontis,CVU,,Sep-09,,AL,,
+Anabantidae,Climbing gouramies,Parosphromenus sumatranus,CVU,,Sep-09,,AL,,
+Anabantidae,Climbing gouramies,Parosphromenus tweediei,CVU,,Sep-09,,AL,,
+Aphaniidae,Eurasian Killifish,Aphanius almiriensis,CR,CCR,Jan-2008,Feb-2023,IUCN / RP,https://dx.doi.org/10.2305/IUCN.UK.2008.RLTS.T135600A4157504.en,https://www.fishbase.se/summary/Aphanius-almiriensis.html
+Aphaniidae,Eurasian Killifish,Aphanius anatoliae,NT,CNT,March-2013,Feb-2023,IUCN / RP,https://dx.doi.org/10.2305/IUCN.UK.2014-1.RLTS.T1843A19005979.en,https://www.fishbase.se/summary/10452
+Aphaniidae,Eurasian Killifish,Aphanius anatoliae ‘sureyanus’,EN,CEN,"——–
+(Feb-2023)",,RP,https://caresforfish.org/?page_id=475,
+Aphaniidae,Eurasian Killifish,Aphanius anatoliae ‘transgrediens’ CR ——– IUCN,CR,,——–,,IUCN,,https://caresforfish.org/?page_id=475
+Aphaniidae,Eurasian Killifish,Aphanius apodus CCR Feb-2023 RP,CCR,,Feb-2023,,RP,https://caresforfish.org/?page_id=475,https://caresforfish.org/?page_id=475
+Aphaniidae,Eurasian Killifish,Aphanius arakensis,CCR,,Feb-2023,,RP,https://caresforfish.org/?page_id=475,
+Aphaniidae,Eurasian Killifish,Aphanius baeticus,EN,CEN,"——–
+(Feb-2023)",,RP,https://caresforfish.org/?page_id=475,
+Aphaniidae,Eurasian Killifish,Aphanius danfordii CR (CCR) ——– (Feb-2023) IUCN ( RP ),CR,CCR,"——–
+(Feb-2023)",,RP,https://caresforfish.org/?page_id=475,https://caresforfish.org/?page_id=475
+Aphaniidae,Eurasian Killifish,Aphanius dispar ‘richardsoni’,EN,CEN,"——–
+(Feb-2023)",,RP,https://caresforfish.org/?page_id=475,
+Aphaniidae,Eurasian Killifish,Aphanius farsicus CCR Feb-2023 RP,CCR,,Feb-2023,,RP,https://caresforfish.org/?page_id=475,https://caresforfish.org/?page_id=475
+Aphaniidae,Eurasian Killifish,Aphanius iberus EN (CEN) ——– (Feb-2023) IUCN ( RP ),EN,CEN,"——–
+(Feb-2023)",,RP,https://caresforfish.org/?page_id=475,https://caresforfish.org/?page_id=475
+Aphaniidae,Eurasian Killifish,Aphanius iconii CNT Feb-2023 RP,CNT,,Feb-2023,,RP,https://caresforfish.org/?page_id=475,https://caresforfish.org/?page_id=475
+Aphaniidae,Eurasian Killifish,Aphanius isfahanensis CEN Feb-2023 RP,CEN,,Feb-2023,,RP,https://caresforfish.org/?page_id=475,https://caresforfish.org/?page_id=475
+Aphaniidae,Eurasian Killifish,Aphanius kruppi CNT Feb-2023 RP,CNT,,Feb-2023,,RP,https://caresforfish.org/?page_id=475,https://caresforfish.org/?page_id=475
+Aphaniidae,Eurasian Killifish,Aphanius maeandricus,CNT,,Feb-2023,,RP,https://caresforfish.org/?page_id=475,
+Aphaniidae,Eurasian Killifish,Aphanius mento ‘mentoides’ CNT Feb-2023 RP,CNT,,Feb-2023,,RP,https://caresforfish.org/?page_id=475,https://caresforfish.org/?page_id=475
+Aphaniidae,Eurasian Killifish,Aphanius mento ‘similis’,CCR,,Feb-2023,,RP,https://caresforfish.org/?page_id=475,
+Aphaniidae,Eurasian Killifish,Aphanius saourensis CEW (CR) Feb-2023 (——–) RP (IUCN),CEW,CR,Feb-2023,,RP,https://caresforfish.org/?page_id=475,https://caresforfish.org/?page_id=475
+Aphaniidae,Eurasian Killifish,Aphanius sirhani CR (CCR) ——– (Feb-2023) IUCN ( RP ),CR,CCR,"——–
+(Feb-2023)",,RP,https://caresforfish.org/?page_id=475,https://caresforfish.org/?page_id=475
+Aphaniidae,Eurasian Killifish,Aphanius vladykovi,CEN,,Feb-2023,,RP,https://caresforfish.org/?page_id=475,
+Aplocheilidae,Killifish,Campellolebias dorsimaculatus,CVU,CR,Jul-2017,Nov-2018,RP / (IUCN),https://caresforfish.org/?page_id=475,
+Aplocheilidae,Killifish,Nematolebias whitei,CVU,EN,Jul-2017,May-2022,RP,https://caresforfish.org/?page_id=475,
+Aplocheilidae,Killifish,Pachypanchax arnoulti,VU,,Jun-2016,,IUCN,,
+Aplocheilidae,Killifish,Pachypanchax omalonotus,CVU,EN,Sep-2004,Jun-2016,PVL / (IUCN),,
+Aplocheilidae,Killifish,Pachypanchax patriciae,CVU,EN,Sep-2004,Jun-2016,PVL / (IUCN),,
+Aplocheilidae,Killifish,Pachypanchax sakaramyi,EN,,Jun-2016,,IUCN,,
+Aplocheilidae,Killifish,Pachypanchax sparksorum,CVU,EN,Sep-2004,Jun-2016,PVL / (IUCN),,
+Aplocheilidae,Killifish,Pachypanchax varatraza,CVU,EN,Sep-2004,Jun-2016,PVL / (IUCN),,
+Aplocheilidae,Killifish,Pachypanchax,CVU,,Sep-2004,,PVL,,
+Aplocheilidae,Killifish,Pachypanchax,CVU,,Sep-2004,,PVL,,
+Aplocheilidae,Killifish,Pachypanchax,CVU,,Sept-2004,,PVL,,
+Aplocheilidae,Killifish,Pachypanchax,CCR,,Jul-2009,,PVL,,
+Aplocheilidae,Killifish,Spectrolebias reticulatus,CEW,NT,Jul-2017,May-2022,RP / (IUCN),https://caresforfish.org/?page_id=475,
+Bedotiidae,Madagascan rainbowfish,Bedotia albomarginata,EN,,Jun-2016,,IUCN,http://www.iucnredlist.org/apps/redlist/details/55324377/0,
+Bedotiidae,Madagascan rainbowfish,Bedotia marojejy,VU,,,,IUCN,,
+Bedotiidae,Madagascan rainbowfish,Bedotia masoala,VU,,,,IUCN,,
+Bedotiidae,Madagascan rainbowfish,Bedotia tricolor,CR,,,,IUCN,,
+Bedotiidae,Madagascan rainbowfish,Bedotia,VU,,,,IUCN,,
+Bedotiidae,Madagascan rainbowfish,Bedotia,VU,,,,IUCN,,
+Bedotiidae,Madagascan rainbowfish,Bedotia,VU,,,,IUCN,,
+Bedotiidae,Madagascan rainbowfish,Bedotia,VU,,,,IUCN,,
+Bedotiidae,Madagascan rainbowfish,Bedotia,VU,,,,IUCN,,
+Bedotiidae,Madagascan rainbowfish,Bedotia,CR,,May-2012,,IUCN,,
+Bedotiidae,Madagascan rainbowfish,Bedotia,VU,,,,IUCN,,
+Bedotiidae,Madagascan rainbowfish,Bedotia,VU,,,,IUCN,,
+Bedotiidae,Madagascan rainbowfish,Bedotia,CR,,,,IUCN,,
+Bedotiidae,Madagascan rainbowfish,Rheocles alaotrensis,EN,,Jul-2016,,IUCN,http://www.iucnredlist.org/apps/redlist/details/19478/0,
+Bedotiidae,Madagascan rainbowfish,Rheocles derhami,CCR,,,,PVL,,
+Bedotiidae,Madagascan rainbowfish,Rheocles lateralis,CVU,,,,PVL,,
+Bedotiidae,Madagascan rainbowfish,Rheocles pellegrini,CVU,,,,PVL,,
+Bedotiidae,Madagascan rainbowfish,Rheocles sikorae,CEN,,,,PVL,,
+Bedotiidae,Madagascan rainbowfish,Rheocles vatosoa,VU,,,,IUCN,,
+Bedotiidae,Madagascan rainbowfish,Rheocles wrightae,EN,,,,IUCN,,
+Bedotiidae,Madagascan rainbowfish,Rheocles,CVU,,,,PVL,,
+Bedotiidae,Madagascan rainbowfish,Rheocles,CCR,,,,PVL,,
+Characidae,Tetras,Arnoldichthys spilopterus,CEN,,,,PVL,https://caresforfish.org/?page_id=854,
+Characidae,Tetras,Rachoviscus crassiceps,CEN,,,,PVL,https://caresforfish.org/?page_id=854,
+Characidae,Tetras,Rachoviscus graciliceps,CEN,,,,PVL,https://caresforfish.org/?page_id=854,
+Cichlidae,Cichlids,Allochromis welcommei,CCR,VU,Jan-2017,Jan-2016,GS,,https://cichlidae.com/species.php?id=1980
+Cichlidae,Cichlids,Altolamprologus calvus,CCR,NT,Jan-2024,Jan-2006,AK,,https://cichlidae.com/species.php?id=5
+Cichlidae,Cichlids,Amatitlania altoflava,CVU,,Jan-2017,,PVL,,https://cichlidae.com/species.php?id=196
+Cichlidae,Cichlids,Amatitlania kanna,CVU,EN,Feb-2023,Jun-2019,PVL,,https://cichlidae.com/species.php?id=2011
+Cichlidae,Cichlids,Amatitlania myrnae,CEN,,Jan-2017,,PVL,,https://cichlidae.com/species.php?id=198
+Cichlidae,Cichlids,Amatitlania nanolutea,CVU,,Jan-2017,,PVL,,https://cichlidae.com/species.php?id=199
+Cichlidae,Cichlids,Amatitlania sajica,CNT,VU,Feb-2023,Jun-2019,PVL,,https://cichlidae.com/species.php?id=201
+Cichlidae,Cichlids,Amatitlania septemfasciata,CVU,,Jan-2017,,PVL,,https://cichlidae.com/species.php?id=202
+Cichlidae,Cichlids,Amphilophus istlanus,CVU,,Jan-2017,,PVL,,https://cichlidae.com/species.php?id=188
+Cichlidae,Cichlids,Amphilophus lyonsi,CCR,,Jan-2017,,PVL,,https://cichlidae.com/species.php?id=167
+Cichlidae,Cichlids,Astatotilapia aeneocolor,VU,,Jan-2006,,IUCN,http://www.iucnredlist.org/details/60498/0,https://cichlidae.com/species.php?id=379
+Cichlidae,Cichlids,Astatotilapia barbarae,CR,,May-2012,,IUCN,http://www.iucnredlist.org/details/2193/0,https://cichlidae.com/species.php?id=759
+Cichlidae,Cichlids,Astatotilapia brownae,CVU,CR,Jan-2017,Mar-2010,GS,,https://cichlidae.com/species.php?id=761
+Cichlidae,Cichlids,Astatotilapia desfontainii,CCR,EN,Jan-2017,Feb-2006,GS,,https://cichlidae.com/species.php?id=373
+Cichlidae,Cichlids,Astatotilapia flaviijosephi,CVU,VU,Jan-2017,Jan-2013,PVL,,https://cichlidae.com/species.php?id=798
+Cichlidae,Cichlids,Astatotilapia latifasciata,CEN,CR,Jan-2017,Jan-1996,GS,,https://cichlidae.com/species.php?id=560
+Cichlidae,Cichlids,Astatotilapia nubila,VU,,Mar-2010,,IUCN,http://www.iucnredlist.org/details/60340/0,https://cichlidae.com/species.php?id=561
+Cichlidae,Cichlids,Astatotilapia tweddlei,VU,,Jan-2006,,IUCN,http://www.iucnredlist.org/details/60847/0,https://cichlidae.com/species.php?id=785
+Cichlidae,Cichlids,Astatotilapia velifer,VU,,Aug-1996,,IUCN,http://www.iucnredlist.org/details/2199/0,https://cichlidae.com/species.php?id=786
+Cichlidae,Cichlids,Astatotilapia,CEN,,Jul-2024,,PG,,
+Cichlidae,Cichlids,Astatotilapia,CCR,,Jan-2020,,PVL,,
+Cichlidae,Cichlids,Astatotilapia,CEN,,Jan-2017,,GS,,
+Cichlidae,Cichlids,Astatotilapia,CEN,,Jan-2017,,GS,,
+Cichlidae,Cichlids,Astatotilapia,CVU,,Jan-2017,,GS,,
+Cichlidae,Cichlids,Aulonocara baenschi,CEN,CR,Jan-2017,Jan-2018,AK,,https://cichlidae.com/species.php?id=13
+Cichlidae,Cichlids,Aulonocara ethelwynnae,NT,,May-2018,,IUCN,https://www.iucnredlist.org/species/61060/148658521,https://cichlidae.com/species.php?id=15
+Cichlidae,Cichlids,Aulonocara guentheri,CEN,EN,Jan-2017,May-2018,AK,,https://cichlidae.com/species.php?id=16
+Cichlidae,Cichlids,Aulonocara kandeense,CR,,May-2018,,IUCN,http://www.iucnredlist.org/details/61068/0,https://cichlidae.com/species.php?id=415
+Cichlidae,Cichlids,Aulonocara maylandi,CR,,May-2018,,IUCN,http://www.iucnredlist.org/details/61067/0,https://cichlidae.com/species.php?id=417
+Cichlidae,Cichlids,Aulonocara nyassae,CEN,NT,Jan-2024,Jun-2018,AK,,https://cichlidae.com/species.php?id=413
+Cichlidae,Cichlids,Aulonocara,CCR,,Jan-2024,,AK,,https://cichlidae.com/species.php?id=2056
+Cichlidae,Cichlids,Aulonocara,CCR,,Jan-2017,,AK,,https://cichlidae.com/species.php?id=2057
+Cichlidae,Cichlids,Benitochromis nigrodorsalis,CVU,EN,Jan-2017,Feb-2009,AL,,https://cichlidae.com/species.php?id=22
+Cichlidae,Cichlids,Benitochromis ufermanni,CVU,EN,Jan-2017,Feb-2009,AL,,https://cichlidae.com/species.php?id=1030
+Cichlidae,Cichlids,Cardiopharynx schoutedeni,CVU,LC,Jan-2017,Jan-2006,AK,,https://cichlidae.com/species.php?id=1188
+Cichlidae,Cichlids,Champsochromis spilorhynchus,CEN,EN,Jan-2017,May-2018,AK,,https://cichlidae.com/species.php?id=28
+Cichlidae,Cichlids,Chetia brevis,EN,,Mar-2007,,IUCN,http://www.iucnredlist.org/details/4626/0,https://cichlidae.com/species.php?id=1329
+Cichlidae,Cichlids,Chindongo ater,CNT,NT,Apr-2024,Jan-2018,AK,https://caresforfish.org/?page_id=357,https://cichlidae.com/species.php?id=525
+Cichlidae,Cichlids,Chindongo cyaneus,CNT,NT,Apr-2024,Jan-2018,AK,https://caresforfish.org/?page_id=357,https://cichlidae.com/species.php?id=527
+Cichlidae,Cichlids,Chindongo demasoni,CVU,VU,Apr-2024,Jan-2018,AK,https://caresforfish.org/?page_id=357,https://cichlidae.com/species.php?id=528
+Cichlidae,Cichlids,Chindongo elongatus,CNT,NT,Apr-2024,Jan-2018,AK,https://caresforfish.org/?page_id=357,https://cichlidae.com/species.php?id=137
+Cichlidae,Cichlids,Chindongo flavus,CNT,NT,Apr-2024,Jan-2018,AK,https://caresforfish.org/?page_id=357,https://cichlidae.com/species.php?id=529
+Cichlidae,Cichlids,Chindongo saulosi,CCR,CR,Apr-2024,Jan-2018,AK,,https://cichlidae.com/species.php?id=419
+Cichlidae,Cichlids,Coelotilapia joka,CEN,EN,Aug-2025,May-2019,AL,,https://cichlidae.com/species.php?id=154
+Cichlidae,Cichlids,Copadichromis ilesi,CEW,LC,Jan-2024,Jun-2018,AK,,https://cichlidae.com/species.php?id=1197
+Cichlidae,Cichlids,Copadichromis mloto,CEN,DD,Jan-2017,May-2018,AK,,https://cichlidae.com/species.php?id=1153
+Cichlidae,Cichlids,Copadichromis nkatae,CR,,Jun-2018,,IUCN,https://www.iucnredlist.org/species/61030/47229648,https://cichlidae.com/species.php?id=1202
+Cichlidae,Cichlids,Copadichromis pleurostigma,CEN,LC,Jan-2024,Jan-2018,AK,,https://cichlidae.com/species.php?id=1164
+Cichlidae,Cichlids,Copadichromis pleurostigmoides,CEN,LC,Jan-2017,Jan-2018,AK,,https://cichlidae.com/species.php?id=1203
+Cichlidae,Cichlids,Copadichromis virginalis,NT,,Jun-2018,,IUCN,https://www.iucnredlist.org/species/60879/155042587,https://cichlidae.com/species.php?id=1205
+Cichlidae,Cichlids,Copadichromis,CEW,,Jan-2024,,AK,,https://cichlidae.com/species.php?id=2362
+Cichlidae,Cichlids,Copadichromis,CEN,,Jan-2024,,AK,,https://cichlidae.com/species.php?id=2070
+Cichlidae,Cichlids,Coptodon bakossiorum,CR,,Feb-2009,,IUCN,http://www.iucnredlist.org/details/21888/0,https://cichlidae.com/species.php?id=632
+Cichlidae,Cichlids,Coptodon bemini,CR,,Feb-2009,,IUCN,http://www.iucnredlist.org/details/21889/0,https://cichlidae.com/species.php?id=634
+Cichlidae,Cichlids,Coptodon bythobates,CR,,Feb-2009,,IUCN,http://www.iucnredlist.org/details/21890/0,https://cichlidae.com/species.php?id=637
+Cichlidae,Cichlids,Coptodon deckerti,CR,,Feb-2009,,IUCN,http://www.iucnredlist.org/details/21897/0,https://cichlidae.com/species.php?id=645
+Cichlidae,Cichlids,Coptodon flavus,CR,,Feb-2009,,IUCN,http://www.iucnredlist.org/details/21891/0,https://cichlidae.com/species.php?id=647
+Cichlidae,Cichlids,Coptodon gutturosus,CR,,Feb-2009,,IUCN,http://www.iucnredlist.org/details/21892/0,https://cichlidae.com/species.php?id=650
+Cichlidae,Cichlids,Coptodon imbrifernus,CR,,Feb-2009,,IUCN,http://www.iucnredlist.org/details/21893/0,https://cichlidae.com/species.php?id=651
+Cichlidae,Cichlids,Coptodon kottae,EN,,Feb-2009,,IUCN,http://www.iucnredlist.org/details/21898/0,https://cichlidae.com/species.php?id=653
+Cichlidae,Cichlids,Coptodon snyderae,CR,,Feb-2009,,IUCN,http://www.iucnredlist.org/details/21894/0,https://cichlidae.com/species.php?id=661
+Cichlidae,Cichlids,Coptodon spongotroktis,CR,,Feb-2009,,IUCN,http://www.iucnredlist.org/details/21895/0,https://cichlidae.com/species.php?id=663
+Cichlidae,Cichlids,Coptodon thysi,CR,,Feb-2009,,IUCN,http://www.iucnredlist.org/details/21896/0,https://cichlidae.com/species.php?id=665
+Cichlidae,Cichlids,Corematodus shiranus,CEN,CR,Jan-2017,Jun-2018,AK,,https://cichlidae.com/species.php?id=1388
+Cichlidae,Cichlids,Cribroheros bussingi,CEN,,Jan-2017,,PVL,,https://cichlidae.com/species.php?id=359
+Cichlidae,Cichlids,Cribroheros rhytisma,CEN,LC,Jan-2017,Mar-2007,PVL,,https://cichlidae.com/species.php?id=179
+Cichlidae,Cichlids,Cyathopharynx foae,CVU,,Jan-2024,,AK,,https://cichlidae.com/species.php?id=34
+Cichlidae,Cichlids,Cyathopharynx furcifer,CVU,,Jan-2024,,AK,,https://cichlidae.com/species.php?id=35
+Cichlidae,Cichlids,Cyclopharynx fwae,CEN,LC,Jan-2020,Feb-2009,GS,,https://cichlidae.com/species.php?id=1714
+Cichlidae,Cichlids,Cyclopharynx schwetzi,CEN,LC,Jan-2020,Feb-2009,GS,,https://cichlidae.com/species.php?id=1715
+Cichlidae,Cichlids,Cyprichromis,CVU,,Jan-2024,,AK,,https://cichlidae.com/reference.php?id=487
+Cichlidae,Cichlids,Cyrtocara moorii,CVU,VU,Jan-2017,May-2018,AK,,https://cichlidae.com/species.php?id=30
+Cichlidae,Cichlids,Danakilia,CVU,,Jan-2017,,AL,,https://cichlidae.com/species.php?id=313
+Cichlidae,Cichlids,Dimidiochromis dimidiatus,CVU,LC,Jan-2024,Jun-2018,AK,,https://cichlidae.com/species.php?id=37
+Cichlidae,Cichlids,Docimodus johnstoni,CVU,LC,Jan-2024,Jun-2018,AK,,https://cichlidae.com/species.php?id=1613
+Cichlidae,Cichlids,Enantiopus,CCR,,Jan-2024,,AK,,https://cichlidae.com/species.php?id=42
+Cichlidae,Cichlids,Enigmatochromis lucanusi,CVU,,Jan-2017,,AL,,https://cichlidae.com/species.php?id=2328
+Cichlidae,Cichlids,Enterochromis coprologus,CR,,Mar-2010,,IUCN,http://www.iucnredlist.org/details/185823/0,https://cichlidae.com/species.php?id=2658
+Cichlidae,Cichlids,Enterochromis erythromaculatus,EN,,Jan-2006,,IUCN,http://www.iucnredlist.org/details/60509/0,https://cichlidae.com/species.php?id=1740
+Cichlidae,Cichlids,Enterochromis paropius,CEN,LC,Jan-2017,Mar-2010,GS,,https://cichlidae.com/species.php?id=1911
+Cichlidae,Cichlids,Enterochromis,CEN,,Jan-2017,,GS,,
+Cichlidae,Cichlids,Enterochromis,CEW,,Jan-2017,,GS,,
+Cichlidae,Cichlids,Etia nguti,CVU,DD,Jan-2017,Feb-2009,AL,,https://cichlidae.com/species.php?id=197
+Cichlidae,Cichlids,Etroplus canarensis,CVU,EN,Jan-2017,Mar-2011,PVL,,https://cichlidae.com/species.php?id=162
+Cichlidae,Cichlids,Gaurochromis hiatus,CR,,Mar-2010,,IUCN,http://www.iucnredlist.org/details/185809/8482069,https://cichlidae.com/species.php?id=1789
+Cichlidae,Cichlids,Gaurochromis,CEN,,Jul-2024,,PG,,
+Cichlidae,Cichlids,Gobiocichla ethelwynnae,CEN,EN,Apr-2024,Feb-2009,AL,,https://cichlidae.com/species.php?id=1535
+Cichlidae,Cichlids,Haplochromis acidens,CVU,DD,Jan-2017,Mar-2010,GS,,https://cichlidae.com/species.php?id=375
+Cichlidae,Cichlids,Haplochromis adolphifrederici,CVU,,Jun-2020,,GS,,https://cichlidae.com/species.php?id=377
+Cichlidae,Cichlids,Haplochromis annectidens,CR,,Aug-1996,,IUCN,http://www.iucnredlist.org/details/9686/0,https://cichlidae.com/species.php?id=1243
+Cichlidae,Cichlids,Haplochromis astatodon,CVU,,Jun-2020,,GS,,https://cichlidae.com/species.php?id=1254
+Cichlidae,Cichlids,Haplochromis crebridens,CVU,LC,Jun-2020,Jan-2006,GS,,https://cichlidae.com/species.php?id=1495
+Cichlidae,Cichlids,Haplochromis flavus,CEN,LC,Jan-2017,Mar-2010,GS,,https://cichlidae.com/species.php?id=1750
+Cichlidae,Cichlids,Haplochromis graueri,CVU,LC,Jun-2020,Jan-2006,GS,,https://cichlidae.com/species.php?id=1783
+Cichlidae,Cichlids,Haplochromis guiarti,CR,,Aug-2010,,IUCN,http://www.iucnredlist.org/details/60532/0,https://cichlidae.com/species.php?id=1784
+Cichlidae,Cichlids,Haplochromis heusinkveldi,CR,,Mar-2010,,IUCN,http://www.iucnredlist.org/details/60725/0,https://cichlidae.com/species.php?id=1788
+Cichlidae,Cichlids,Haplochromis howesi,VU,,Mar-2010,,IUCN,http://www.iucnredlist.org/details/60535/0,https://cichlidae.com/species.php?id=1790
+Cichlidae,Cichlids,Haplochromis katavi,VU,,Jan-2006,,IUCN,http://www.iucnredlist.org/details/61215/0,https://cichlidae.com/species.php?id=769
+Cichlidae,Cichlids,Haplochromis lividus,CVU,DD,Jan-2017,Mar-2010,GS,,https://cichlidae.com/species.php?id=1814
+Cichlidae,Cichlids,Haplochromis microchrysomelas,CVU,LC,Jun-2020,Jan-2006,GS,,https://cichlidae.com/species.php?id=1842
+Cichlidae,Cichlids,Haplochromis nigroides,CVU,LC,Jun-2020,Jan-2006,GS,,https://cichlidae.com/species.php?id=1880
+Cichlidae,Cichlids,Haplochromis olivaceus,CVU,LC,Jun-2020,Jan-2006,GS,,https://cichlidae.com/species.php?id=1890
+Cichlidae,Cichlids,Haplochromis paucidens,CVU,LC,Jun-2020,Jan-2006,GS,,https://cichlidae.com/species.php?id=1596
+Cichlidae,Cichlids,Haplochromis rubescens,CVU,LC,Jun-2020,Jan-2006,GS,,https://cichlidae.com/species.php?id=1945
+Cichlidae,Cichlids,Haplochromis scheffersi,CVU,LC,Jun-2020,Jan-2006,GS,,https://cichlidae.com/species.php?id=1952
+Cichlidae,Cichlids,Haplochromis tanaos,CVU,LC,Jan-2017,Mar-2010,GS,,https://cichlidae.com/species.php?id=1965
+Cichlidae,Cichlids,Haplochromis thereuterion,CEN,VU,Jan-2017,Mar-2010,GS,,https://cichlidae.com/species.php?id=984
+Cichlidae,Cichlids,Haplochromis vittatus,CVU,LC,Jun-2020,Jan-2006,GS,,https://cichlidae.com/species.php?id=1978
+Cichlidae,Cichlids,Haplochromis,CEN,,Jul-2024,,PG,,
+Cichlidae,Cichlids,Haplochromis,CCR,,Jul-2024,,PG,,
+Cichlidae,Cichlids,Haplochromis,CCR,,Jul-2024,,PG,,
+Cichlidae,Cichlids,Haplochromis,CVU,,Jul-2024,,PG,,
+Cichlidae,Cichlids,Haplochromis,CVU,,Jul-2017,,GS,,
+Cichlidae,Cichlids,Haplochromis,CEN,,Jul-2024,,PG,,
+Cichlidae,Cichlids,Haplochromis,CNT,,Jan-2017,,GS,,
+Cichlidae,Cichlids,Haplochromis,CEN,,Jul-2024,,PG,,
+Cichlidae,Cichlids,Haplochromis,CVU,,Jun-2020,,GS,,https://cichlidae.com/species.php?id=1639
+Cichlidae,Cichlids,Haplochromis,CCR,,Jul-2024,,PG,,
+Cichlidae,Cichlids,Haplochromis,CEN,,Jul-2024,,PG,,
+Cichlidae,Cichlids,Haplochromis,CCN,,Jul-2024,,PG,,
+Cichlidae,Cichlids,Haplochromis,CEN,,Jan-2017,,GS,,
+Cichlidae,Cichlids,Haplochromis,CVU,,Jun-2020,,GS,,
+Cichlidae,Cichlids,Haplochromis,CVU,,Jan-2017,,GS,,
+Cichlidae,Cichlids,Haplochromis,CVU,,Aug-2025,,PG,,https://cichlidae.com/species.php?id=1811
+Cichlidae,Cichlids,Haplochromis (Enterochromis),CEN,,Jul-2024,,PG,,
+Cichlidae,Cichlids,Haplochromis,CEN,,Jul-2024,,PG,,
+Cichlidae,Cichlids,Haplochromis,CEN,,Jul-2024,,PG,,
+Cichlidae,Cichlids,Haplochromis,CCR,,Jul-2024,,PG,,
+Cichlidae,Cichlids,Haplochromis,CCR,,Jul-2024,,PG,,
+Cichlidae,Cichlids,Haplochromis,CVU,,Jan-2017,,GS,,
+Cichlidae,Cichlids,Haplochromis,CEN,,Jul-2024,,PG,,
+Cichlidae,Cichlids,Harpagochromis cavifrons,CCR,DD,Jan-2017,Mar-2010,GS,,https://cichlidae.com/species.php?id=1463
+Cichlidae,Cichlids,Harpagochromis,CEN,,Jan-2020,,PVL,,
+Cichlidae,Cichlids,Harpagochromis squamipinnis,CEN,,Jul-2024,,PG,,https://cichlidae.com/species.php?id=1551
+Cichlidae,Cichlids,Harpagochromis vonlinnei,CR,,Mar-2010,,IUCN,http://www.iucnredlist.org/details/185813/0,https://cichlidae.com/species.php?id=2026
+Cichlidae,Cichlids,Harpagochromis,CNT,,Jan-2017,,GS,,https://cichlidae.com/species.php?id=941
+Cichlidae,Cichlids,Harpagochromis,CCR,,Jul-2024,,PG,,
+Cichlidae,Cichlids,Harpagochromis,CCR,,Jul-2024,,PG,,
+Cichlidae,Cichlids,Harpagochromis,CEW,,Jan-2017,,GS,,
+Cichlidae,Cichlids,Hemichromis cristatus,CVU,,Jan-2017,,PVL,,https://cichlidae.com/species.php?id=46
+Cichlidae,Cichlids,Hemichromis fasciatus,CVU,,Jun-2020,,AL,,https://cichlidae.com/species.php?id=408
+Cichlidae,Cichlids,Herichthys bartoni,VU,,Aug-1996,,IUCN,http://www.iucnredlist.org/details/192893/0,https://cichlidae.com/species.php?id=204
+Cichlidae,Cichlids,Herichthys labridens,CVU,EN,Jan-2017,Aug-1996,PVL,,https://cichlidae.com/species.php?id=209
+Cichlidae,Cichlids,Herichthys minckleyi,VU,,Aug-1996,,IUCN,http://www.iucnredlist.org/details/4836/0,https://cichlidae.com/species.php?id=212
+Cichlidae,Cichlids,Hericythys steindachneri,NT,,Mar-2007,,IUCN,http://www.iucnredlist.org/details/169397/0,https://cichlidae.com/species.php?id=214
+Cichlidae,Cichlids,Herichthys tepehua,CNT,,Jan-2017,,CRC,https://cichlidae.com,https://cichlidae.com/species.php?id=206
+Cichlidae,Cichlids,Heterochromis multidens,CNT,LC,Jan-2017,Feb-2009,PVL,,https://cichlidae.com/species.php?id=48
+Cichlidae,Cichlids,Hoplotilapia retrodens,CEW,VU,Jan-2017,Apr-2010,GS,,https://cichlidae.com/species.php?id=1720
+Cichlidae,Cichlids,Julidochromis marksmithi,CNT,,Jan-2024,,AK,,
+Cichlidae,Cichlids,Julidochromis,CCR,,Jan-2024,,AK,,
+Cichlidae,Cichlids,Katria katria,CVU,VU,Jan-2017,Jun-2016,PVL,,https://cichlidae.com/species.php?id=351
+Cichlidae,Cichlids,Konia dikume,CR,,Feb-2009,,IUCN,http://www.iucnredlist.org/details/11054/0,https://cichlidae.com/species.php?id=998
+Cichlidae,Cichlids,Konia eisentrauti,CR,,Feb-2009,,IUCN,http://www.iucnredlist.org/details/11055/0,https://cichlidae.com/species.php?id=999
+Cichlidae,Cichlids,Labidochromis joanjohnsonae,NT,,Jun-2018,,IUCN,https://www.iucnredlist.org/species/61118/148845802,https://cichlidae.com/species.php?id=470
+Cichlidae,Cichlids,Labrochromis ishmaeli,CEW,CR,Jan-2017,Mar-2010,GS,,https://cichlidae.com/species.php?id=1399
+Cichlidae,Cichlids,Lethrinops altus,CVU,LC,Jan-2017,Jun-2018,AK,,https://cichlidae.com/species.php?id=1229
+Cichlidae,Cichlids,Lethrinops macracanthus,CVU,DD,Jan-2017,Jun-2018,AK,,https://cichlidae.com/species.php?id=1432
+Cichlidae,Cichlids,Lethrinops macrophthalmus,CVU,LC,Jan-2017,Jun-2018,AK,,https://cichlidae.com/species.php?id=1441
+Cichlidae,Cichlids,Lethrinops micrentodon,CVU,DD,Jan-2017,May-2018,AK,,https://cichlidae.com/species.php?id=1424
+Cichlidae,Cichlids,Lethrinops microdon,CVU,DD,Jan-2017,Jan-2018,AK,,https://cichlidae.com/species.php?id=1434
+Cichlidae,Cichlids,Limbochromis robertsi,CVU,EN,Jan-2017,Apr-2006,AL,,https://cichlidae.com/species.php?id=1149
+Cichlidae,Cichlids,Lipochromis cryptodon,CEN,DD,Jan-2017,Mar-2010,GS,,https://cichlidae.com/species.php?id=1498
+Cichlidae,Cichlids,Lipochromis maxillaris,CEN,VU,Jan-2017,Mar-2010,GS,,https://cichlidae.com/species.php?id=1836
+Cichlidae,Cichlids,Lipochromis melanopterus,CEN,VU,Jan-2017,Mar-2010,GS,,https://cichlidae.com/species.php?id=987
+Cichlidae,Cichlids,Lipochromis microdon,CEN,CR,Jan-2017,Mar-2010,GS,,https://cichlidae.com/species.php?id=1843
+Cichlidae,Cichlids,Lipochromis parvidens,CEW,LC,Jan-2017,Mar-2010,GS,,https://cichlidae.com/species.php?id=983
+Cichlidae,Cichlids,Lipochromis parvidens,CEN,LC,Jan-2017,Jan-2006,GS,,https://cichlidae.com/species.php?id=1438
+Cichlidae,Cichlids,Lipochromis taurinus,CVU,LC,Jan-2017,Jan-2006,GS,,https://cichlidae.com/species.php?id=1947
+Cichlidae,Cichlids,Lipochromis,CEW,,Jan-2017,,GS,,
+Cichlidae,Cichlids,Lipochromis,CEN,,Jan-2017,,GS,,
+Cichlidae,Cichlids,Lipochromis,CEW,,Jan-2017,,GS,,
+Cichlidae,Cichlids,Lithochromis rubripinnis,CCR,LC,Jan-2017,Apr-2010,GS,,https://cichlidae.com/species.php?id=1723
+Cichlidae,Cichlids,Lithochromis rufus,CCR,LC,Jan-2017,Apr-2010,GS,,https://cichlidae.com/species.php?id=1949
+Cichlidae,Cichlids,Lithochromis xanthopteryx,VU,,Apr-2010,,IUCN,http://www.iucnredlist.org/details/60570/0,https://cichlidae.com/species.php?id=1846
+Cichlidae,Cichlids,Macropleurodus bicolor,VU,,Apr-2010,,IUCN,http://www.iucnredlist.org/details/12616/0,https://cichlidae.com/species.php?id=1278
+Cichlidae,Cichlids,Mbipia lutea,VU,,Apr-2010,,IUCN,http://www.iucnredlist.org/details/60574/0,https://cichlidae.com/species.php?id=949
+Cichlidae,Cichlids,Mbipia,CNT,,Jan-2017,,GS,,
+Cichlidae,Cichlids,Mbipia,CNT,,Jan-2017,,GS,,
+Cichlidae,Cichlids,Mchenga conophoros,CVU,CR,Jan-2017,May-2018,AK,,https://cichlidae.com/species.php?id=1206
+Cichlidae,Cichlids,Mchenga cyclicos,NT,,Jun-2018,,IUCN,https://www.iucnredlist.org/species/60862/148845333,https://cichlidae.com/species.php?id=1163
+Cichlidae,Cichlids,Mchenga flavimanus,CEN,LC,Jan-2017,Jun-2018,AK,,https://cichlidae.com/species.php?id=1163
+Cichlidae,Cichlids,Melanochromis chipokae,CEN,CR,Jan-2017,May-2018,AK,,https://cichlidae.com/species.php?id=75
+Cichlidae,Cichlids,Melanochromis lepidiadaptes,CR,,May-2018,,IUCN,https://www.iucnredlist.org/species/61121/148653388,https://cichlidae.com/species.php?id=472
+Cichlidae,Cichlids,Melanochromis mossambiquensis,NT,,Jun-2018,,IUCN,https://www.iucnredlist.org/species/57486681/148848009,https://cichlidae.com/species.php?id=2061
+Cichlidae,Cichlids,Melanochromis robustus,NT,,Jun-2018,,IUCN,https://www.iucnredlist.org/species/61127/148845927,https://cichlidae.com/species.php?id=466
+Cichlidae,Cichlids,Melanochromis vermivorus,NT,,Jun-2018,,IUCN,https://www.iucnredlist.org/species/61129/148846067,https://cichlidae.com/species.php?id=478
+Cichlidae,Cichlids,Melanochromis wochepa,NT,,Jun-2018,,IUCN,https://www.iucnredlist.org/species/57486708/148848174,https://cichlidae.com/species.php?id=2062
+Cichlidae,Cichlids,Metriaclima greshakei,NT,,Jun-2018,,IUCN,https://www.iucnredlist.org/species/61142/148846463,https://cichlidae.com/species.php?id=1374
+Cichlidae,Cichlids,Metriaclima xanstomachus,NT,,Jun-2018,,IUCN,https://www.iucnredlist.org/species/61154/148846595,https://cichlidae.com/species.php?id=1382
+Cichlidae,Cichlids,Myaka myaka,CR,,Feb-2009,,IUCN,http://www.iucnredlist.org/details/14034/0,https://cichlidae.com/species.php?id=915
+Cichlidae,Cichlids,Mylochromis ensatus,CVU,LC,Jan-2024,Jun-2018,AK / (IUCN),,https://cichlidae.com/species.php?id=1507
+Cichlidae,Cichlids,Mylochromis gracilis,CVU,LC,Jan-2024,Jun-2018,AK / (IUCN),,https://cichlidae.com/species.php?id=1509
+Cichlidae,Cichlids,Mylochromis lateristriga,CEN,LC,Jan-2024,Jun-2018,AK,,https://cichlidae.com/species.php?id=1504
+Cichlidae,Cichlids,Mylochromis obtusus,CEW,LC,Jan-2017,Jun-2018,AK,,https://cichlidae.com/species.php?id=1515
+Cichlidae,Cichlids,Mylochromis,CEW,,Jan-2017,,AK,,https://cichlidae.com/species.php?id=2851
+Cichlidae,Cichlids,Nanochromis transvestitus,CEN,EN,Aug-2025,Feb-2009,AL,,https://cichlidae.com/species.php?id=84
+Cichlidae,Cichlids,Neochromis gigas,VU,,Jan-2006,,IUCN,http://www.iucnredlist.org/details/61094/0,https://cichlidae.com/species.php?id=937
+Cichlidae,Cichlids,Neochromis greenwoodi,CVU,,Jan-2017,,GS,,https://cichlidae.com/species.php?id=938
+Cichlidae,Cichlids,Neochromis omnicaeruleus,CVU,LC,Jan-2017,Apr-2010,GS,,https://cichlidae.com/species.php?id=939
+Cichlidae,Cichlids,Neochromis rufocaudalis,CVU,LC,Jan-2017,Apr-2010,GS,,https://cichlidae.com/species.php?id=935
+Cichlidae,Cichlids,Neochromis simotes,CCR,DD,Jan-2017,Apr-2010,GS,,https://cichlidae.com/species.php?id=1904
+Cichlidae,Cichlids,Neochromis,CEN,,Jul-2024,,PG,,
+Cichlidae,Cichlids,Neochromis,CNT,,Jan-2017,,GS,,
+Cichlidae,Cichlids,Neochromis,CVU,,Jan-2017,,GS,,https://cichlidae.com/species.php?id=2344
+Cichlidae,Cichlids,Neolamprologus leleupi longior “yellow”,CVU,,Jan-2024,,AK,,https://cichlidae.com/species.php?id=1816
+Cichlidae,Cichlids,Neolamprologus mustax “Mbita”,CCR,,Jan-2024,,AK,,https://cichlidae.com/species.php?id=1816
+Cichlidae,Cichlids,Nyassachromis boadzulu,EN,,May-2018,,IUCN,http://www.iucnredlist.org/details/60859/0,https://cichlidae.com/species.php?id=1168
+Cichlidae,Cichlids,Nyassachromis breviceps,CEW,CR,Jul-2024,May-2018,AK,,https://cichlidae.com/species.php?id=1332
+Cichlidae,Cichlids,Nyassachromis,CEN,,Jul-2024,,AK,,https://cichlidae.com/species.php?id=2852
+Cichlidae,Cichlids,Ophthalmotilapia boops,CCR,LC,Jan-2017,Jan-2006,AK,,https://cichlidae.com/species.php?id=685
+Cichlidae,Cichlids,Oreochromis alcalica,EN,,Sep-2006,,IUCN,http://www.iucnredlist.org/details/60452/0,https://cichlidae.com/species.php?id=571
+Cichlidae,Cichlids,Oreochromis amphimelas,EN,,Jan-2006,,IUCN,http://www.iucnredlist.org/details/60629/0,https://cichlidae.com/species.php?id=1075
+Cichlidae,Cichlids,Oreochromis andersonii,VU,,Mar-2007,,IUCN,https://www.iucnredlist.org/species/60623/12385801,https://cichlidae.com/species.php?id=1055
+Cichlidae,Cichlids,Oreochromis chungruruensis,CR,,May-2018,,IUCN,http://www.iucnredlist.org/details/60626/0,https://cichlidae.com/species.php?id=1080
+Cichlidae,Cichlids,Oreochromis esculentus,NT,,Mar-2021,,IUCN,https://www.iucnredlist.org/species/15457/47182096,https://cichlidae.com/species.php?id=1082
+Cichlidae,Cichlids,Oreochromis grahami,EN,,Jun-2022,,IUCN,http://www.iucnredlist.org/details/60453/0,https://cichlidae.com/species.php?id=572
+Cichlidae,Cichlids,Oreochromis hunteri,CR,,Jun-2022,,IUCN,http://www.iucnredlist.org/details/60634/0,https://cichlidae.com/species.php?id=1045
+Cichlidae,Cichlids,Oreochromis jipe,EN,,Jun-2022,,IUCN,http://www.iucnredlist.org/details/60628/0,https://cichlidae.com/species.php?id=1089
+Cichlidae,Cichlids,Oreochromis karomo,CR,,Jan-2006,,IUCN,http://www.iucnredlist.org/details/60632/0,https://cichlidae.com/species.php?id=1091
+Cichlidae,Cichlids,Oreochromis karongae,EN,,May-2004,,IUCN,http://www.iucnredlist.org/details/61293/0,https://cichlidae.com/species.php?id=1092
+Cichlidae,Cichlids,Oreochromis latilabris,VU,,Jun-2006,,IUCN,http://www.iucnredlist.org/details/60319/0,https://cichlidae.com/species.php?id=573
+Cichlidae,Cichlids,Oreochromis lepidurus,EN,,Feb-2009,,IUCN,http://www.iucnredlist.org/details/60319/0,https://cichlidae.com/species.php?id=1094
+Cichlidae,Cichlids,Oreochromis lidole,EN,,May-2004,,IUCN,http://www.iucnredlist.org/details/61276/0,https://cichlidae.com/species.php?id=1096
+Cichlidae,Cichlids,Oreochromis macrochir,VU,,Mar-2007,,IUCN,https://www.iucnredlist.org/species/63336/12659168,https://cichlidae.com/species.php?id=1097
+Cichlidae,Cichlids,Oreochromis mortimeri,CR,,Mar-2007,,IUCN,https://www.iucnredlist.org/species/63337/12659594,https://cichlidae.com/species.php?id=1100
+Cichlidae,Cichlids,Oreochromis mossambicus,VU,,Oct-2017,,IUCN,https://www.iucnredlist.org/species/63338/174782954,https://cichlidae.com/species.php?id=1054
+Cichlidae,Cichlids,Oreochromis ndalalani,VU,,Jun-2006,,IUCN,http://www.iucnredlist.org/details/61291/0,https://cichlidae.com/species.php?id=574
+Cichlidae,Cichlids,Oreochromis rukwaensis,CEN,VU,Jan-2017,Jan-2006,PVL,,https://cichlidae.com/species.php?id=1116
+Cichlidae,Cichlids,Oreochromis squamipinnis,CR,,May-2018,,IUCN,http://www.iucnredlist.org/details/60760/0,https://cichlidae.com/species.php?id=1051
+Cichlidae,Cichlids,Oreochromis variabilis,NT,,Feb-2020,,IUCN,http://www.iucnredlist.org/details/15458/0,https://cichlidae.com/species.php?id=1062
+Cichlidae,Cichlids,Otopharynx pachycheilus,VU,,May-2018,,IUCN,http://www.iucnredlist.org/details/61002/0,https://cichlidae.com/species.php?id=1039
+Cichlidae,Cichlids,Otopharynx selenurus,CEN,DD,Jul-2024,May-2018,AK,,https://cichlidae.com/species.php?id=1040
+Cichlidae,Cichlids,Otopharynx,CEN,,Jul-2024,,AK,,https://cichlidae.com/species.php?id=2480
+Cichlidae,Cichlids,Otopharynx,CEN,,Jul-2024,,AK,,https://cichlidae.com/species.php?id=2481
+Cichlidae,Cichlids,Otopharynx,CEN,,Jul-2024,,AK,,https://cichlidae.com/species.php?id=2486
+Cichlidae,Cichlids,Otopharynx,CEN,,Jul-2024,,AK,,https://cichlidae.com/species.php?id=1445
+Cichlidae,Cichlids,Paralabidochromis beadlei,CR,,Aug-1996,,IUCN,http://www.iucnredlist.org/details/16115/0,https://cichlidae.com/species.php?id=1273
+Cichlidae,Cichlids,Paralabidochromis chilotes,CVU,LC,Jan-2017,Mar-2010,GS,,https://cichlidae.com/species.php?id=83
+Cichlidae,Cichlids,Paralabidochromis chromogynos,VU,,Mar-2010,,IUCN,http://www.iucnredlist.org/details/60647/0,https://cichlidae.com/species.php?id=913
+Cichlidae,Cichlids,Paralabidochromis crassilabris,CR,,Mar-2010,,IUCN,http://www.iucnredlist.org/details/16118/0,https://cichlidae.com/species.php?id=1492
+Cichlidae,Cichlids,Paralabidochromis labiatus,NT,,Jan-2006,,IUCN,http://www.iucnredlist.org/details/60507/0,https://cichlidae.com/species.php?id=1805
+Cichlidae,Cichlids,Paralabidochromis plagiodon,CVU,VU,Jan-2017,Mar-2010,GS,,https://cichlidae.com/species.php?id=1926
+Cichlidae,Cichlids,Paralabidochromis sauvagei,CVU,VU,Jan-2017,Mar-2010,GS,,https://cichlidae.com/species.php?id=31
+Cichlidae,Cichlids,Paralabidochromis victoriae,CCR,DD,Jan-2017,Apr-2010,GS,,https://cichlidae.com/species.php?id=914
+Cichlidae,Cichlids,Paralabidochromis,CVU,,Jan-2017,,GS,,
+Cichlidae,Cichlids,Paralabidochromis,CVU,,Jan-2017,,GS,,
+Cichlidae,Cichlids,Paratilapia polleni,VU,,Jun-2016,,IUCN,http://www.iucnredlist.org/details/16199/0,https://cichlidae.com/species.php?id=353
+Cichlidae,Cichlids,Paratilapia,CEN,,Jan-2017,,TECM,,
+Cichlidae,Cichlids,Paratilapia,CEN,,Jan-2017,,TECM,,
+Cichlidae,Cichlids,Paratilapia,CEN,,Jan-2017,,TECM,,
+Cichlidae,Cichlids,Paratilapia,CVU,,Jan-2017,,PVL,,https://cichlidae.com/species.php?id=2698
+Cichlidae,Cichlids,Paratilapia,CCR,,Jan-2017,,TECM,,
+Cichlidae,Cichlids,Paratilapia,CR,,,,,,
+Cichlidae,Cichlids,Paretroplus dambabe,EN,,Jun-2016,,IUCN,http://www.iucnredlist.org/details/44495/0,https://cichlidae.com/species.php?id=568
+Cichlidae,Cichlids,Paretroplus damii,VU,,Jun-2016,,IUCN,http://www.iucnredlist.org/details/40706/0,https://cichlidae.com/species.php?id=341
+Cichlidae,Cichlids,Paretroplus kieneri,VU,,Jul-2016,,IUCN,http://www.iucnredlist.org/details/16235/0,https://cichlidae.com/species.php?id=343
+Cichlidae,Cichlids,Paretroplus,CEN,,Jan-2017,,TECM,,
+Cichlidae,Cichlids,Paretroplus maculatus,CR,,May-2016,,IUCN,http://www.iucnredlist.org/details/16236/0,https://cichlidae.com/species.php?id=343
+Cichlidae,Cichlids,Paretroplus maromandia,EN,,Jul-2016,,IUCN,http://www.iucnredlist.org/details/44493/0,https://cichlidae.com/species.php?id=344
+Cichlidae,Cichlids,Paretroplus menarambo,CR,,Jun-2016,,IUCN,http://www.iucnredlist.org/details/44492/0,https://cichlidae.com/species.php?id=345
+Cichlidae,Cichlids,Paretroplus nourissati,EN,,Jun-2016,,IUCN,http://www.iucnredlist.org/details/44494/0,https://cichlidae.com/species.php?id=346
+Cichlidae,Cichlids,Paretroplus polyactis,VU,,Jun-2016,,IUCN,http://www.iucnredlist.org/details/16238/0,https://cichlidae.com/species.php?id=348
+Cichlidae,Cichlids,Paretroplus tsimoly,EN,,Jul-2016,,IUCN,http://www.iucnredlist.org/details/44500/0,https://cichlidae.com/species.php?id=349
+Cichlidae,Cichlids,Paretroplus,VU,,,,,,
+Cichlidae,Cichlids,Paretroplus,CVU,,Jan-2017,,TECM,,
+Cichlidae,Cichlids,Paretroplus,CCR,,Jan-2017,,TECM,,
+Cichlidae,Cichlids,Paretroplus,CVU,,Jan-2017,,TECM,,
+Cichlidae,Cichlids,Pelvicachromis sacrimontis,CVU,,Jan-2017,,AL,,https://cichlidae.com/species.php?id=917
+Cichlidae,Cichlids,Pelvicachromis silviae,CVU,,Jan-2017,,AL,,https://cichlidae.com/species.php?id=123
+Cichlidae,Cichlids,Petrochromis,CCR,,Jul-2024,,AK,,https://cichlidae.com/species.php?id=1855
+Cichlidae,Cichlids,Placidochromis longimanus,CVU,LC,Jul-2024,Jun-2018,AK,,https://cichlidae.com/species.php?id=499
+Cichlidae,Cichlids,Placidochromis phenochilus,EN,,Jun-2018,,IUCN,http://www.iucnredlist.org/details/60979/0,https://cichlidae.com/species.php?id=131
+Cichlidae,Cichlids,Placidochromis,CVU,,Jul-2024,,AK,,https://cichlidae.com/species.php?id=2503
+Cichlidae,Cichlids,Placidochromis,CEN,,Jul-2024,,AK,,https://cichlidae.com/species.php?id=2509
+Cichlidae,Cichlids,Placidochromis,CEN,,Jul-2024,,AK,,https://cichlidae.com/species.php?id=988
+Cichlidae,Cichlids,Platytaeniodus degeni,CEW,LC,Jan-2017,Apr-2010,GS,,https://cichlidae.com/species.php?id=1585
+Cichlidae,Cichlids,Platytaeniodus,CVU,,Jan-2017,,GS,,https://cichlidae.com/species.php?id=2046
+Cichlidae,Cichlids,Prognathochromis argenteus,CR,,Mar-2010,,IUCN,http://www.iucnredlist.org/details/60538/0,https://cichlidae.com/species.php?id=1248
+Cichlidae,Cichlids,Prognathochromis bayoni,CCR,DD,Jan-2017,Mar-2010,GS,,https://cichlidae.com/species.php?id=1269
+Cichlidae,Cichlids,Prognathochromis (Haplochromis) gowersi,CCR,DD,Jul-2024,Apr-2010,IUCN,https://www.iucnredlist.org/species/18316/96989483,https://cichlidae.com/species.php?id=1269
+Cichlidae,Cichlids,Prognathochromis perrieri,CEW,CR,Jan-2017,Mar-2010,GS,,https://cichlidae.com/species.php?id=2066
+Cichlidae,Cichlids,Prognathochromis,CNT,,Jan-2017,,GS,,
+Cichlidae,Cichlids,Protomelas,CEN,,Jul-2024,,AK,,https://cichlidae.com/species.php?id=2298
+Cichlidae,Cichlids,Protomelas,CEN,,Jul-2024,,AK,,https://cichlidae.com/species.php?id=132
+Cichlidae,Cichlids,Psammochromis aelocephalus,CR,,Mar-2010,,IUCN,http://www.iucnredlist.org/details/60662/0,https://cichlidae.com/species.php?id=378
+Cichlidae,Cichlids,Psammochromis riponianus,CVU,LC,Jul-2009,Mar-2010,GS,,https://cichlidae.com/species.php?id=1903
+Cichlidae,Cichlids,Psammochromis schubotzi,CEN,,Jul-2024,,PG,,https://cichlidae.com/species.php?id=1953
+Cichlidae,Cichlids,Pseudotropheus brevis,EN,,May-2018,,IUCN,https://www.iucnredlist.org/species/61111/148653947,https://cichlidae.com/species.php?id=2551
+Cichlidae,Cichlids,Pseudotropheus cyaneorhabdos,EN,,May-2018,,IUCN,https://www.iucnredlist.org/species/61113/148659251,https://cichlidae.com/species.php?id=467
+Cichlidae,Cichlids,Pseudotropheus galanos,NT,,Jun-2018,,IUCN,https://www.iucnredlist.org/species/61113/148659251,https://cichlidae.com/species.php?id=531
+Cichlidae,Cichlids,Pseudotropheus interruptus,NT,,Jun-2018,,IUCN,https://www.iucnredlist.org/species/61117/47235125,https://cichlidae.com/species.php?id=469
+Cichlidae,Cichlids,Pseudotropheus tursiops,NT,,Jun-2018,,IUCN,https://www.iucnredlist.org/species/61177/148847376,https://cichlidae.com/species.php?id=546
+Cichlidae,Cichlids,Pseudotropheus williamsi,NT,,Jun-2018,,IUCN,https://www.iucnredlist.org/species/61178/47239051,https://cichlidae.com/species.php?id=524
+Cichlidae,Cichlids,Pseudocrenilabrus,CVU,,Jul-2024,,PG,,
+Cichlidae,Cichlids,Pseudocrenilabrus,CVU,,Jul-2024,,PG,,
+Cichlidae,Cichlids,Ptychochromis curvidens,CVU,,Jan-2017,,TECM,,https://cichlidae.com/species.php?id=1663
+Cichlidae,Cichlids,Ptychochromis grandidieri,CVU,LC,Jan-2017,Jun-2016,IUCN,http://www.iucnredlist.org/details/44502/0,https://cichlidae.com/species.php?id=955
+Cichlidae,Cichlids,Ptychochromis inornatus,EN,,Jun-2016,,IUCN,http://www.iucnredlist.org/details/44503/0,https://cichlidae.com/species.php?id=747
+Cichlidae,Cichlids,Ptychochromis insolitus,CCR,CR,Jan-2017,Jun-2016,IUCN,http://www.iucnredlist.org/details/44510/0,https://cichlidae.com/species.php?id=1664
+Cichlidae,Cichlids,Ptychochromis loisellei,CVU,EN,Jan-2017,Jul-2016,IUCN,http://www.iucnredlist.org/details/44499/0,https://cichlidae.com/species.php?id=2672
+Cichlidae,Cichlids,Ptychochromis mainty,CVU,,Jan-2017,,TECM,,https://cichlidae.com/species.php?id=2117
+Cichlidae,Cichlids,Ptychochromis makira,CVU,,Jan-2017,,PVL,,https://cichlidae.com/species.php?id=1661
+Cichlidae,Cichlids,Ptychochromis oligacanthus,EN,,Jun-2016,,IUCN,http://www.iucnredlist.org/details/18830/0,https://cichlidae.com/species.php?id=353
+Cichlidae,Cichlids,Ptychochromis,CVU,,Jan-2017,,TECM,,
+Cichlidae,Cichlids,Ptychochromoides betsileanus,CR,,Jun-2016,,IUCN,http://www.iucnredlist.org/details/18832/0,https://cichlidae.com/species.php?id=350
+Cichlidae,Cichlids,Ptychochromoides vondrozo,EN,,May-2016,,IUCN,http://www.iucnredlist.org/details/44511/0,https://cichlidae.com/species.php?id=954
+Cichlidae,Cichlids,Ptyochromis fischeri,VU,,Jul-2010,,IUCN,http://www.iucnredlist.org/details/185824/0,
+Cichlidae,Cichlids,Ptyochromis,CEN,,Jul-2017,,GS,,
+Cichlidae,Cichlids,Ptyochromis,CVU,,Jul-2009,,GS,,
+Cichlidae,Cichlids,Pundamilia igneopinnis,EN,,Apr-2010,,IUCN,http://www.iucnredlist.org/details/60670/0,https://cichlidae.com/species.php?id=945
+Cichlidae,Cichlids,Pundamilia macrocephala,VU,,Apr-2010,,IUCN,http://www.iucnredlist.org/details/60671/0,https://cichlidae.com/species.php?id=946
+Cichlidae,Cichlids,Pundamilia nyererei,CVU,,Aug-2025,,PG,,
+Cichlidae,Cichlids,Pundamilia nyererei,CVU,,Aug-2025,,PG,,
+Cichlidae,Cichlids,Pundamilia nyererei,CVU,,Aug-2025,,PG,,
+Cichlidae,Cichlids,Pundamilia nyererei,CVU,,Aug-2025,,PG,,
+Cichlidae,Cichlids,Pundamilia nyererei,CVU,,Aug-2025,,PG,,
+Cichlidae,Cichlids,Pundamilia nyererei,CVU,,Aug-2025,,PG,,
+Cichlidae,Cichlids,Pundamilia nyererei,CVU,,Aug-2025,,PG,,
+Cichlidae,Cichlids,Pundamilia nyererei,CVU,,Aug-2025,,PG,,
+Cichlidae,Cichlids,Pundamilia nyererei,CVU,,Aug-2025,,PG,,
+Cichlidae,Cichlids,Pundamilia pundamilia,CVU,LC,Jan-2017,Apr-2010,GS,,https://cichlidae.com/species.php?id=943
+Cichlidae,Cichlids,Pundamilia,CVU,,Jan-2017,,GS,,
+Cichlidae,Cichlids,Pundamilia,CVU,,Jan-2017,,GS,,
+Cichlidae,Cichlids,Pundamilia,CVU,,Jan-2020,,GS,,
+Cichlidae,Cichlids,Pundamilia,CVU,,Jan-2017,,GS,,
+Cichlidae,Cichlids,Pungu maclareni,CR,,Mar-2007,,IUCN,http://www.iucnredlist.org/details/18879/0,https://cichlidae.com/species.php?id=971
+Cichlidae,Cichlids,Pyxichromis orthostoma,CEN,VU,Jan-2017,Aug-1996,GS,,https://cichlidae.com/species.php?id=974
+Cichlidae,Cichlids,Rocio spinosissima,CVU,LC,Jan-2017,Mar-2007,PVL,,https://cichlidae.com/species.php?id=171
+Cichlidae,Cichlids,Sarotherodon caroli,CR,,Feb-2009,,IUCN,http://www.iucnredlist.org/details/19908/0,https://cichlidae.com/species.php?id=1000
+Cichlidae,Cichlids,Sarotherodon knauerae,CCR,,Aug-2025,,AL,,https://cichlidae.com/species.php?id=2080
+Cichlidae,Cichlids,Sarotherodon linnellii,CR,,Feb-2009,,IUCN,http://www.iucnredlist.org/details/19909/0,https://cichlidae.com/species.php?id=1001
+Cichlidae,Cichlids,Sarotherodon lohbergeri,CR,,Feb-2009,,IUCN,http://www.iucnredlist.org/details/19910/0,https://cichlidae.com/species.php?id=1002
+Cichlidae,Cichlids,Sarotherodon steinbachi,CR,,Feb-2009,,IUCN,http://www.iucnredlist.org/details/19911/0,https://cichlidae.com/species.php?id=1003
+Cichlidae,Cichlids,Schwetzochromis neodon,CEN,LC,Jan-2020,Feb-2009,GS,,https://cichlidae.com/species.php?id=1875
+Cichlidae,Cichlids,Serranochromis stappersi,CVU,LC,Jul-2024,Feb-2009,IUCN,https://www.iucnredlist.org/species/181866/7752811,https://cichlidae.com/species.php?id=1318
+Cichlidae,Cichlids,Stomatepia mariae,CR,,Feb-2009,,IUCN,http://www.iucnredlist.org/details/20864/0,https://cichlidae.com/species.php?id=996
+Cichlidae,Cichlids,Stomatepia mongo,CR,,Feb-2009,,IUCN,http://www.iucnredlist.org/details/20865/0,https://cichlidae.com/species.php?id=997
+Cichlidae,Cichlids,Stomatepia pindu,CR,,Feb-2009,,IUCN,http://www.iucnredlist.org/details/20866/0,https://cichlidae.com/species.php?id=995
+Cichlidae,Cichlids,Taeniolethrinops,CEN,,Jul-2024,,AK,,https://cichlidae.com/species.php?id=2574
+Cichlidae,Cichlids,Teleogramma brichardi,CR,,Feb-2023,Feb-2009,AL,,https://cichlidae.com/species.php?id=1348
+Cichlidae,Cichlids,Thoracochromis brauschi,CVU,LC,Jan-2017,Feb-2009,GS,,https://cichlidae.com/species.php?id=562
+Cichlidae,Cichlids,Thoracochromis callichromus,CVU,LC,Aug-2018,Feb-2009,GS,,https://cichlidae.com/species.php?id=1366
+Cichlidae,Cichlids,Thoracochromis flavententis,CCR,,Jul-2024,,PG,,
+Cichlidae,Cichlids,Thoracochromis pharyngalis,CEN,,Jul-2024,,PG,,https://cichlidae.com/species.php?id=691
+Cichlidae,Cichlids,Thorichthys callolepis,VU,,Jan-2017,,CRC,https://cichlidae.com,https://cichlidae.com/species.php?id=245
+Cichlidae,Cichlids,Tilapia busumana,CEN,VU,Mar-2018,Apr-2006,AL,,https://cichlidae.com/species.php?id=636
+Cichlidae,Cichlids,Tilapia guinasana,CR,,Mar-2007,,IUCN,http://www.iucnredlist.org/details/63354/0,https://cichlidae.com/species.php?id=648
+Cichlidae,Cichlids,Tilapia ruweti,CNT,LC,Jan-2017,May-2009,PVL,,https://cichlidae.com/species.php?id=660
+Cichlidae,Cichlids,Tramitichromis variabilis,CEW,LC,Jan-2017,Jun-2018,AK,,https://cichlidae.com/species.php?id=1977
+Cichlidae,Cichlids,Trematocranus brevirostris,CVU,LC,Jul-2024,Jun-2018,AK,,https://cichlidae.com/species.php?id=1541
+Cichlidae,Cichlids,Trematocranus labifer,CEW,DD,Jul-2024,Jun-2018,AK,,https://cichlidae.com/species.php?id=1465
+Cichlidae,Cichlids,Trematocranus microstoma,EN,,May-2018,,IUCN,https://www.iucnredlist.org/species/60947/148654097,https://cichlidae.com/species.php?id=1460
+Cichlidae,Cichlids,Tropheops biriwira,NT,,Jun-2018,,IUCN,https://www.iucnredlist.org/species/117850663/148848731,https://cichlidae.com/species.php?id=2291
+Cichlidae,Cichlids,Tropheops kumwera,NT,,Jun-2018,,IUCN,https://www.iucnredlist.org/species/117850739/148848837,https://cichlidae.com/species.php?id=2286
+Cichlidae,Cichlids,Tropheops microstoma,NT,,Jun-2018,,IUCN,https://www.iucnredlist.org/species/61158/148846735,https://cichlidae.com/species.php?id=537
+Cichlidae,Cichlids,Tropheops modestus,NT,,Jun-2018,,IUCN,https://www.iucnredlist.org/species/61172/148847246,https://cichlidae.com/species.php?id=539
+Cichlidae,Cichlids,Tropheus brichardi “Mtosi / Fiery Fry”,CCR,,Jul-2024,,AK,,https://cichlidae.com/species.php?id=157
+Cichlidae,Cichlids,Tropheus duboisi,CCR,,Jan-2024,,AK,,https://cichlidae.com/species.php?id=158
+Cichlidae,Cichlids,Tropheus moorii,CCR,,Jan-2024,,AK,,https://cichlidae.com/species.php?id=159
+Cichlidae,Cichlids,Xenotilapia burtoni,CCR,VU,Jan-2024,Jan-2006,AK,,https://cichlidae.com/species.php?id=898
+Cichlidae,Cichlids,Xystichromis nuchisquamulatus,CEN,DD,Jan-2017,Mar-2010,GS,,https://cichlidae.com/species.php?id=970
+Cichlidae,Cichlids,Xystichromis phytophagus,CNT,DD,Jan-2017,Mar-2010,GS,,https://cichlidae.com/species.php?id=44
+Cichlidae,Cichlids,Xystichromis,CNT,,Jan-2017,,GS,,
+Cichlidae,Cichlids,Xystichromis,CNT,,Jan-2017,,GS,,
+Cichlidae,Cichlids,Xystichromis,CVU,,Jan-2017,,GS,,https://cichlidae.com/species.php?id=1561
+Cichlidae,Cichlids,Xystichromis,CCR,,Jan-2017,,GS,,https://cichlidae.com/species.php?id=1712
+Cichlidae,Cichlids,Xystichromis,CVU,,Jan-2017,,GS,,
+Cichlidae,Cichlids,Yssichromis argens,CEN,,Jan-2017,,GS,,https://cichlidae.com/species.php?id=1608
+Cichlidae,Cichlids,Yssichromis heusinkveldi,CR,,Mar-2010,,IUCN,http://www.iucnredlist.org/details/40268/0,https://cichlidae.com/species.php?id=60725
+Cichlidae,Cichlids,Yssichromis laprogramma,LC,,Mar-2010,,IUCN,http://www.iucnredlist.org/details/185845/0,https://cichlidae.com/species.php?id=1610
+Cichlidae,Cichlids,Yssichromis piceatus,CCR,,Jan-2017,,GS,,https://cichlidae.com/species.php?id=780
+Cichlidae,Cichlids,Yssichromis pyrrhocephalus,CVU,LC,Jan-2017,Mar-2010,GS,,https://cichlidae.com/species.php?id=1607
+Cichlidae,Cichlids,Yssichromis,CEW,,Jan-2017,,GS,,
+Cobitidae,True loaches,Ambastaia sidthimunki,EN,,Feb-2011,,IUCN,http://www.iucnredlist.org/apps/redlist/details/2953/0,
+Cyprinidae,Minnows & Carps,Barbus asoka,EN,,,,IUCN,,
+Cyprinidae,Minnows & Carps,Barbus bandula,CEN,,,,PVL,,
+Cyprinidae,Minnows & Carps,Barbus brevipinnis,NT,,May-2012,,IUCN,,
+Cyprinidae,Minnows & Carps,Barbus martenstyni,EN,,,,IUCN,,
+Cyprinidae,Minnows & Carps,Barbus narayani,CEN,,,,PVL,,
+Cyprinidae,Minnows & Carps,Barbus srilankensis,CEN,,,,PVL,,
+Cyprinidae,Minnows & Carps,Chela caeruleostigmata,EN,,May-2012,,IUCN,,
+Cyprinidae,Minnows & Carps,Danio pathirana,EN,,May-2012,,IUCN,,
+Cyprinidae,Minnows & Carps,Danio,CEN,,,,PVL,,
+Cyprinidae,Minnows & Carps,Epalzeorhynchos bicolor,CR,,May-2012,,IUCN,,
+Cyprinidae,Minnows & Carps,Garra barreimiae,VU,,,,IUCN,,
+Cyprinidae,Minnows & Carps,Garra dunsirei,VU,,,,IUCN,,
+Cyprinidae,Minnows & Carps,Garra longipinnis,VU,,,,IUCN,,
+Cyprinidae,Minnows & Carps,Opsaridium peringueyi,CVU,,,,PVL,,
+Cyprinidae,Minnows & Carps,Rohanella titteya,CNT,,Oct-2013,,PVL,,
+Cyprinidae,Minnows & Carps,Tanichthys albonubes,CEW,,,,PVL,,
+Cyprinidae,Minnows & Carps,Tanichthys micagemmae,CVU,,,,PVL,,
+Cyprinidae,Minnows & Carps,Tanichthys thacbaensis,CVU,,May-2010,,PVL,,
+Cyprinidae,Minnows & Carps,Tanichthys,CEW,,,,PVL,,
+Cyprinidae,Minnows & Carps,Trigonostigma somphongsi,CR,,Feb-2011,,IUCN,,
+Cyprinodontidae,Pupfish,Aphanius transgrediens,CR,,Mar-2013,,IUCN,https://www.iucnredlist.org/species/1850/19006201 ,
+Cyprinodontidae,Pupfish,Cualac tessellatus,VU,,Nov-2018,,IUCN,https://www.iucnredlist.org/species/5933/3078207 ,http://www.mexfish.info/species.php?id=452
+Cyprinodontidae,Pupfish,Cyprinodon alvarezi,CEW,EW,Jun-2024,Sep-2018,RP,https://caresforfish.org/?page_id=475,http://www.mexfish.info/species.php?id=454
+Cyprinodontidae,Pupfish,Cyprinodon beltrani,VU,,Sep-2018,,IUCN,https://www.iucnredlist.org/species/6146/3104812,http://www.mexfish.info/species.php?id=458
+Cyprinodontidae,Pupfish,Cyprinodon fontinalis,EN,,Oct-2018,,IUCN,https://www.iucnredlist.org/species/6153/3104874,http://www.mexfish.info/species.php?id=465
+Cyprinodontidae,Pupfish,Cyprinodon labiosus,VU,,Dec-2018,,IUCN,https://www.iucnredlist.org/species/6154/3104905 ,http://www.mexfish.info/species.php?id=467
+Cyprinodontidae,Pupfish,Cyprinodon longidorsalis,CEW,EW,Jun-2024,Sep-2018,RP,https://caresforfish.org/?page_id=475,http://www.mexfish.info/species.php?id=469
+Cyprinodontidae,Pupfish,Cyprinodon macrolepis,NT,,Sep-2018,,IUCN,https://www.iucnredlist.org/species/6174/3107266,http://www.mexfish.info/species.php?id=470
+Cyprinodontidae,Pupfish,Cyprinodon maya,VU,,Sep-2018,,IUCN,https://www.iucnredlist.org/species/6158/3105157,http://www.mexfish.info/species.php?id=474
+Cyprinodontidae,Pupfish,Cyprinodon meeki,EN,,Sep-2018,,IUCN,https://www.iucnredlist.org/species/6159/3105308,http://www.mexfish.info/species.php?id=475
+Cyprinodontidae,Pupfish,Cyprinodon pachycephalus,CR,,Sep-2018,,IUCN,https://www.iucnredlist.org/species/6162/3106242,http://www.mexfish.info/species.php?id=477
+Cyprinodontidae,Pupfish,Cyprinodon simus,NT,,Sep-2018,,IUCN,https://www.iucnredlist.org/species/6167/3107162,http://www.mexfish.info/species.php?id=481
+Cyprinodontidae,Pupfish,Cyprinodon verecundus,VU,,Oct-2018,,IUCN,https://www.iucnredlist.org/species/6170/3107217,http://www.mexfish.info/species.php?id=482
+Cyprinodontidae,Pupfish,Cyprinodon veronicae,CEW,EW,Jun-2024,Sep-2018,RP,,http://www.mexfish.info/species.php?id=483
+Cyprinodontidae,Pupfish,Megupsilon aporus,EX,,Sep-2018,,IUCN,https://www.iucnredlist.org/species/13013/511283,http://www.mexfish.info/species.php?id=510
+Gobiidae,Gobies,Glossogobius flavipinnis,VU,,Aug-1996,,IUCN,,
+Gobiidae,Gobies,Glossogobius intermedius,VU,,,,IUCN,,
+Gobiidae,Gobies,Glossogobius matanensis,VU,,,,IUCN,,
+Goodeidae,Splitfins,Allodontichthys hubbsi,CEN,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=4
+Goodeidae,Splitfins,Allodontichthys polylepis,CCR,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=5
+Goodeidae,Splitfins,Allodontichthys tamazulae,CVU,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=21
+Goodeidae,Splitfins,Allodontichthys zonistius,CVU,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=3
+Goodeidae,Splitfins,Alloophorus robustus,CVU,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=42
+Goodeidae,Splitfins,Allotoca catarinae,CCR,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=7
+Goodeidae,Splitfins,Allotoca diazi,CCR,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=8
+Goodeidae,Splitfins,Allotoca dugesi,CEN,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=6
+Goodeidae,Splitfins,Allotoca goslinei,CEW,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=9
+Goodeidae,Splitfins,Allotoca maculata,CCR,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=10
+Goodeidae,Splitfins,Allotoca meeki,CCR,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=11
+Goodeidae,Splitfins,Allotoca zacapuensis,CCR,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=13
+Goodeidae,Splitfins,Ameca splendens,CCR,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=49
+Goodeidae,Splitfins,Ataeniobius toweri,CEN,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=50
+Goodeidae,Splitfins,Chapalichthys encaustus,CVU,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=54
+Goodeidae,Splitfins,Chapalichthys pardalis,CCR,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=55
+Goodeidae,Splitfins,Characodon audax,CCR,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=30
+Goodeidae,Splitfins,Characodon lateralis,CCR,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=29
+Goodeidae,Splitfins,Crenichthys baileyi moapae,CEN,,Feb-17,,JL,,
+Goodeidae,Splitfins,Girardinichthys ireneae,CCR,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=899
+Goodeidae,Splitfins,Girardinichthys multiradiatus,CEN,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=18
+Goodeidae,Splitfins,Girardinichthys viviparus,CCR,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=19
+Goodeidae,Splitfins,Ilyodon whitei,CVU,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=47
+Goodeidae,Splitfins,Neoophorus regalis,CCR,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=12
+Goodeidae,Splitfins,Neotoca bilineata,CEN,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=35
+Goodeidae,Splitfins,Skiffia francesae,CEW,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=36
+Goodeidae,Splitfins,Skiffia lermae,CEN,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=34
+Goodeidae,Splitfins,Skiffia multipunctata,CEN,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=37
+Goodeidae,Splitfins,Xenoophorus captivus,CEN,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=39
+Goodeidae,Splitfins,Xenotaenia resolanae,CVU,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=33
+Goodeidae,Splitfins,Xenotoca doadrioi,CCR,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=901
+Goodeidae,Splitfins,Xenotoca eiseni,CEN,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=27
+Goodeidae,Splitfins,Xenotoca lyonsi,CCR,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=902
+Goodeidae,Splitfins,Xenotoca melanosoma,CVU,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=28
+Goodeidae,Splitfins,Zoogoneticus purhepechus,CVU,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=52
+Goodeidae,Splitfins,Zoogoneticus quitzeoensis,CEN,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=51
+Goodeidae,Splitfins,Zoogoneticus tequila,CEN,,Feb-17,,JL,,http://www.mexfish.info/species.php?id=53
+Loricariidae,Armoured catfish,Ancistomus,CVU,,Feb-2013,,ST,,
+Loricariidae,Armoured catfish,Ancistrus,CVU,,Feb-2013,,ST,,
+Loricariidae,Armoured catfish,Baryancistrus chrysolomus,CVU,,Feb-2013,,ST,,
+Loricariidae,Armoured catfish,Baryancistrus,CVU,,Feb-2013,,ST,,
+Loricariidae,Armoured catfish,Baryancistrus,CVU,,Feb-2013,,ST,,
+Loricariidae,Armoured catfish,Baryancistrus xanthellus,CVU,,Feb-2013,,ST,,
+Loricariidae,Armoured catfish,Hopliancistrus,CVU,,Feb-2013,,ST,,
+Loricariidae,Armoured catfish,Hypancistrus seideli,CVU,,August-2025,,ST,,
+Loricariidae,Armoured catfish,Leporacanthicus heterodon,CVU,,Feb-2013,,ST,,
+Loricariidae,Armoured catfish,Oligancistrus punctatissimus,CVU,,Feb-2013,,ST,,
+Loricariidae,Armoured catfish,Oligancistrus,CVU,,Feb-2013,,ST,,
+Loricariidae,Armoured catfish,Oligancistrus,CVU,,Feb-2013,,ST,,
+Loricariidae,Armoured catfish,Oligancistrus,CVU,,Feb-2013,,ST,,
+Loricariidae,Armoured catfish,Oligancistrus,CVU,,Feb-2013,,ST,,
+Loricariidae,Armoured catfish,Panaqolus,CVU,,Feb-2013,,ST,,
+Loricariidae,Armoured catfish,Panaque,CVU,,Feb-2013,,ST,,
+Loricariidae,Armoured catfish,Parancistrus aurantiacus,CVU,,Feb-2013,,ST,,
+Loricariidae,Armoured catfish,Parancistrus nudiventris,CVU,,Feb-2013,,ST,,
+Loricariidae,Armoured catfish,Parancistrus,CVU,,Feb-2013,,ST,,
+Loricariidae,Armoured catfish,Peckoltia aff. snethlageae,CVU,,Feb-2013,,ST,,
+Loricariidae,Armoured catfish,Peckoltia aff. vittata,CVU,,Feb-2013,,ST,,
+Loricariidae,Armoured catfish,Pseudacanthicus,CVU,,Feb-2013,,ST,,
+Loricariidae,Armoured catfish,Pseudacanthicus,CVU,,Feb-2013,,ST,,
+Loricariidae,Armoured catfish,Pseudacanthicus,CVU,,Feb-2013,,ST,,
+Loricariidae,Armoured catfish,Pseudancistrus,CVU,,Feb-2013,,ST,,
+Loricariidae,Armoured catfish,Scobinancistrus aureatus,CVU,,Feb-2013,,ST,,
+Loricariidae,Armoured catfish,Scobinancistrus aff. pariolispos,CVU,,Feb-2013,,ST,,
+Loricariidae,Armoured catfish,Scobinancistrus,CVU,,Feb-2013,,ST,,
+Melanotaeniidae,Rainbowfish,Cairnsichthys rhombosomoides,VU,,Aug-96,,IUCN,http://www.iucnredlist.org/details/3461/0,
+Melanotaeniidae,Rainbowfish,Chilatherina alleni,VU,,March-2007,,IUCN,http://www.iucnredlist.org/details/169522/0,
+Melanotaeniidae,Rainbowfish,Chilatherina axelrodi,CNT,,July-2017,,KB,https://caresforfish.org/?page_id=1093,
+Melanotaeniidae,Rainbowfish,Chilatherina bleheri,VU,,Aug-96,,IUCN,http://www.iucnredlist.org/details/4629/0,
+Melanotaeniidae,Rainbowfish,Chilatherina bulolo,CVU,,July-2017,,KB,https://caresforfish.org/?page_id=1093,
+Melanotaeniidae,Rainbowfish,Chilatherina campsi,CNT,,July-2017,,KB,https://caresforfish.org/?page_id=1093,
+Melanotaeniidae,Rainbowfish,Chilatherina sentaniensis,CEW,,July-2017,,GL,https://caresforfish.org/?page_id=709,
+Melanotaeniidae,Rainbowfish,Glossolepis dorityi,CEW,,July-2017,,GL,https://caresforfish.org/?page_id=709,
+Melanotaeniidae,Rainbowfish,Glossolepis incisus,CNT,,July-2017,,KB,https://caresforfish.org/?page_id=1093,
+Melanotaeniidae,Rainbowfish,Glossolepis kabia,CNT,,July-2017,,KB,https://caresforfish.org/?page_id=1093,
+Melanotaeniidae,Rainbowfish,Glossolepis maculosus,CVU,,July-2017,,KB,https://caresforfish.org/?page_id=1093,
+Melanotaeniidae,Rainbowfish,Glossolepis multisquamata,CNT,,July-2017,,KB,https://caresforfish.org/?page_id=1093,
+Melanotaeniidae,Rainbowfish,Glossolepis pseudoincisus,CVU,,July-2017,,KB,https://caresforfish.org/?page_id=1093,
+Melanotaeniidae,Rainbowfish,Glossolepis ramuensis,CVU,,July-2017,,KB,https://caresforfish.org/?page_id=1093,
+Melanotaeniidae,Rainbowfish,Glossolepis wanamensis,CR,,August-1996,,IUCN,http://www.iucnredlist.org/details/9272/0,
+Melanotaeniidae,Rainbowfish,Melanotaenia arfakensis,VU,,August-1996,,IUCN,http://www.iucnredlist.org/details/13057/0,
+Melanotaeniidae,Rainbowfish,Melanotaenia boesemani,EN,,August-1996,,IUCN,http://www.iucnredlist.org/details/13058/0,
+Melanotaeniidae,Rainbowfish,Melanotaenia eachamensis,VU,,August-1996,,IUCN,http://www.iucnredlist.org/details/13054/0,
+Melanotaeniidae,Rainbowfish,Melanotaenia lacustris,VU,,August-1996,,IUCN,http://www.iucnredlist.org/details/13065/0,
+Melanotaeniidae,Rainbowfish,Melanotaenia oktediensis,VU,,August-1996,,IUCN,http://www.iucnredlist.org/details/13070/0,
+Melanotaeniidae,Rainbowfish,Melanotaenia parva,VU,,August-1996,,IUCN,http://www.iucnredlist.org/details/13072/0,
+Melanotaeniidae,Rainbowfish,Rhadinocentrus ornatus,CVU,,July-2017,,KB,https://caresforfish.org/?page_id=1093,
+Mochokidae,Squeakers,Chiloglanis bifurcus,EN,,Oct-2013,,IUCN,,
+Mochokidae,Squeakers,Synodontis brichardi,VU,,Oct-2013,,IUCN,,
+Mochokidae,Squeakers,Synodontis koensis,NT,,Oct-2013,,IUCN,,
+Mochokidae,Squeakers,Synodontis macrops,VU,,,,IUCN,,
+Mochokidae,Squeakers,Synodontis pardalis,NT,,Oct-2013,,IUCN,,
+Mochokidae,Squeakers,Synodontis ruandae,VU,,,,IUCN,,
+Nothobranchiidae,Toothcarps,Aphyosemion poliaki,EN,,Feb-2009,,IUCN,https://www.iucnredlist.org/species/182748/7959211 ,
+Nothobranchiidae,Toothcarps,Epiplatys grahami,CEN,,,,PVL,https://caresforfish.org/?page_id=854,
+Nothobranchiidae,Toothcarps,Foerschichthys flavipinnis,CEN,,,,PVL,https://caresforfish.org/?page_id=854,
+Nothobranchiidae,Toothcarps,Fundulopanchax amieti,EN,,Feb-2009,,IUCN,https://www.iucnredlist.org/species/182209/7831690,
+Nothobranchiidae,Toothcarps,Fundulopanchax sjoestedti,CEN,,Feb-2023,,PVL,https://caresforfish.org/?page_id=854,
+Nothobranchiidae,Toothcarps,Nothobranchius albimarginatus,EN,,Oct-2018,,IUCN,https://www.iucnredlist.org/species/61268/47242786,
+Nothobranchiidae,Toothcarps,Nothobranchius annectens,NT,,Oct-2018,,IUCN,https://www.iucnredlist.org/species/61218/47240568,
+Nothobranchiidae,Toothcarps,Nothobranchius bojiensis,VU,,Oct-2018,,IUCN,https://www.iucnredlist.org/species/60431/47188751,
+Nothobranchiidae,Toothcarps,Nothobranchius elongatus,VU,,Oct-2018,,IUCN,https://www.iucnredlist.org/species/60442/47189428,
+Nothobranchiidae,Toothcarps,Nothobranchius flammicomantis,VU,,Oct-2018,,IUCN,https://www.iucnredlist.org/species/60382/47186080,
+Nothobranchiidae,Toothcarps,Nothobranchius foerschi,VU,,Oct-2018,,IUCN,https://www.iucnredlist.org/species/60348/47184248,
+Nothobranchiidae,Toothcarps,Nothobranchius geminus,VU,,Oct-2018,,IUCN,https://www.iucnredlist.org/species/61296/47244197,
+Nothobranchiidae,Toothcarps,Nothobranchius interruptus,EN,,Dec-2018,,IUCN,https://www.iucnredlist.org/species/60432/47188802,
+Nothobranchiidae,Toothcarps,Nothobranchius kilomberoensis,VU,,Dec-2018,,IUCN,https://www.iucnredlist.org/species/61220/47240673,
+Nothobranchiidae,Toothcarps,Nothobranchius korthausae,EN,,Dec-2018,,IUCN,http://www.iucnredlist.org/details/60308/47182634,
+Nothobranchiidae,Toothcarps,Nothobranchius lourensi,NT,,Dec-2018,,IUCN,https://www.iucnredlist.org/species/61288/47243786,
+Nothobranchiidae,Toothcarps,Nothobranchius luekei,EN,,Dec-2018,,IUCN,https://www.iucnredlist.org/species/60336/47183695,
+Nothobranchiidae,Toothcarps,Nothobranchius orthonotus,CVU,,,,PVL,https://caresforfish.org/?page_id=854,
+Nothobranchiidae,Toothcarps,Nothobranchius patrizii,CVU,,,,PVL,https://caresforfish.org/?page_id=854,
+Nothobranchiidae,Toothcarps,Nothobranchius polli,CEN,EN,Jun-2024,Jan-2019,RP / (IUCN),https://caresforfish.org/?page_id=475,
+Nothobranchiidae,Toothcarps,Nothobranchius rubripinnis,EN,,Jan-2019,,IUCN,https://www.iucnredlist.org/species/141974769/47184187,
+Nothobranchiidae,Toothcarps,Nothobranchius steinforti,CR,,Jan-2019,,IUCN,https://www.iucnredlist.org/species/61221/47240724,
+Nothobranchiidae,Toothcarps,Nothobranchius willerti,VU,,Jan-2019,,IUCN,https://www.iucnredlist.org/species/60441/47189377,
+Nothobranchiidae,Toothcarps,Nothobranchius,VU,,Sep-2019,,IUCN,https://www.iucnredlist.org/species/156301922/131472679,
+Nothobranchiidae,Toothcarps,Nothobranchius kafuensis,CEN,,,,PVL,https://caresforfish.org/?page_id=854,
+Nothobranchiidae,Toothcarps,Nothobranchius,VU,,,,IUCN,,
+Poeciliidae,Livebearers,Brachyrhaphis holdridgei,NT,,Feb-20,,IUCN,https://www.iucnredlist.org/species/162001789/164691511,
+Poeciliidae,Livebearers,Brachyrhaphis rhabdophora,VU,,Nov-19,,IUCN,https://www.iucnredlist.org/species/164691400/164691526,
+Poeciliidae,Livebearers,Brachyrhaphis roseni,NT,,Dec-19,,IUCN,https://www.iucnredlist.org/species/164691405/164691531,
+Poeciliidae,Livebearers,Brachyrhaphis terrabensis,NT,,Sep-19,,IUCN,https://www.iucnredlist.org/species/164691408/164691536,
+Poeciliidae,Livebearers,Carlhubbsia kidderi,CNT,,Sep-24,,MT,https://caresforfish.org/?page_id=1586,
+Poeciliidae,Livebearers,Cnesterodon carnegiei,VU,,Nov-18,,IUCN,https://www.iucnredlist.org/species/186496/1813944,
+Poeciliidae,Livebearers,Cnesterodon holopteros,EN,,Feb-21,,IUCN,https://www.iucnredlist.org/species/176509361/176509376,
+Poeciliidae,Livebearers,Cnesterodon hypselurus,EN,,Nov-18,,IUCN,https://www.iucnredlist.org/species/186991/1821484,
+Poeciliidae,Livebearers,Cnesterodon iguape,CR,,Nov-18,,IUCN,https://www.iucnredlist.org/species/187059/1822504,
+Poeciliidae,Livebearers,Cnesterodon omorgmatos,CR,,Nov-18,,IUCN,https://www.iucnredlist.org/species/186502/1814034,
+Poeciliidae,Livebearers,Cnesterodon pirai,CR,,Nov-20,,IUCN,https://www.iucnredlist.org/species/176509627/176509769,
+Poeciliidae,Livebearers,Cnesterodon septentrionalis,NT,,Nov-18,,IUCN,https://www.iucnredlist.org/species/134701062/134701066,
+Poeciliidae,Livebearers,Gambusia alvarezi,CVU,,Sep-24,,MT,https://caresforfish.org/?page_id=1586,
+Poeciliidae,Livebearers,Gambusia beebei,CR,,Apr-20,,IUCN,https://www.iucnredlist.org/species/125922864/125963354,
+Poeciliidae,Livebearers,Gambusia clarkhubbsi,VU,,Feb-12,,IUCN,https://www.iucnredlist.org/species/202392/18231600,
+Poeciliidae,Livebearers,Gambusia dominicensis,EN,,May-12,,IUCN,,
+Poeciliidae,Livebearers,Gambusia eurystoma,CR,,Nov-18,,IUCN,https://www.iucnredlist.org/species/8889/3147634,
+Poeciliidae,Livebearers,Gambusia gaigei,VU,,Feb-12,,IUCN,https://www.iucnredlist.org/species/8890/18229201,
+Poeciliidae,Livebearers,Gambusia heterochir,VU,,Feb-12,,IUCN,https://www.iucnredlist.org/species/8892/18232529,
+Poeciliidae,Livebearers,Gambusia hurtadoi,CR,,Nov-18,,IUCN,https://www.iucnredlist.org/species/8893/3147754,
+Poeciliidae,Livebearers,Gambusia krumholzi,VU,,Nov-18,,IUCN,https://www.iucnredlist.org/species/8898/3147911,
+Poeciliidae,Livebearers,Gambusia longispinis,EN,,Nov-18,,IUCN,https://www.iucnredlist.org/species/8894/3147805,
+Poeciliidae,Livebearers,Gambusia melapleura,VU,,Apr-20,,IUCN,https://www.iucnredlist.org/species/125961472/125963374,
+Poeciliidae,Livebearers,Gambusia nobilis,EN,,Feb-12,,IUCN,https://www.iucnredlist.org/species/8895/18232636,
+Poeciliidae,Livebearers,Gambusia pseudopunctata,EN,,Apr-20,,IUCN,https://www.iucnredlist.org/species/125961752/125963384,
+Poeciliidae,Livebearers,Gambusia senilis,NT,,Dec-18,,IUCN,https://www.iucnredlist.org/species/8896/129984165,
+Poeciliidae,Livebearers,Gambusia wrayi,NT,,Apr-20,,IUCN,https://www.iucnredlist.org/species/125962259/125963394,
+Poeciliidae,Livebearers,Gambusia xanthosoma,EN,,Apr-20,,IUCN,https://www.iucnredlist.org/species/125962361/125963399,
+Poeciliidae,Livebearers,Gambusia zarskei,VU,,Mar-19,,IUCN,https://www.iucnredlist.org/species/140314366/140314376,
+Poeciliidae,Livebearers,Hiatirhaphis parismina,VU,,Nov-19,,IUCN,https://www.iucnredlist.org/species/164692295/164692531,
+Poeciliidae,Livebearers,Limia caymanensis,NT,,May-20,,IUCN,https://www.iucnredlist.org/species/125979553/125986553,
+Poeciliidae,Livebearers,Limia fuscomaculata,CR,,May-20,,IUCN,https://www.iucnredlist.org/species/125979703/125986568,
+Poeciliidae,Livebearers,Limia garnieri,CR,,May-20,,IUCN,https://www.iucnredlist.org/species/125979710/125986573,
+Poeciliidae,Livebearers,Limia grossidens,CR,,Jun-20,,IUCN,https://www.iucnredlist.org/species/125979756/125986578,
+Poeciliidae,Livebearers,Limia immaculata,CR,,Jun-20,,IUCN,https://www.iucnredlist.org/species/125979839/125986588,
+Poeciliidae,Livebearers,Limia islai,CR,,Jun-20,,IUCN,https://www.iucnredlist.org/species/177038422/177038441,
+Poeciliidae,Livebearers,Limia mandibularis,CR,,Jun-20,,IUCN,https://www.iucnredlist.org/species/177038449/177038459,
+Poeciliidae,Livebearers,Limia melanogaster,NT,,May-20,,IUCN,https://www.iucnredlist.org/species/125979910/125986593,
+Poeciliidae,Livebearers,Limia miragoanensis,CR,,Jun-20,,IUCN,https://www.iucnredlist.org/species/125980030/125986598,
+Poeciliidae,Livebearers,Limia nigrofasciata,CR,,Jun-20,,IUCN,https://www.iucnredlist.org/species/125980226/125986608,
+Poeciliidae,Livebearers,Limia ornata,CR,,Jun-20,,IUCN,https://www.iucnredlist.org/species/125980547/125986618,
+Poeciliidae,Livebearers,Limia rivasi,CR,,May-20,,IUCN,https://www.iucnredlist.org/species/125981340/125986633,
+Poeciliidae,Livebearers,Limia sulphurophila,CR,,May-20,,IUCN,https://www.iucnredlist.org/species/125981966/125986638,
+Poeciliidae,Livebearers,Limia versicolor,VU,,May-20,,IUCN,https://www.iucnredlist.org/species/125982185/125986643,
+Poeciliidae,Livebearers,Limia yaguajali,EN,,May-20,,IUCN,https://www.iucnredlist.org/species/125986113/125986653,
+Poeciliidae,Livebearers,Limia zonata,NT,,May-20,,IUCN,https://www.iucnredlist.org/species/125986415/125986658,
+Poeciliidae,Livebearers,Nomorhamphus weberi,NT,,Jun-18,,IUCN,https://www.iucnredlist.org/species/90982032/90982071,
+Poeciliidae,Livebearers,Pamphorichthys pertapeh,CR,,Nov-18,,IUCN,https://www.iucnredlist.org/species/186797/1818524,
+Poeciliidae,Livebearers,Phallichthys quadripunctatus,EN,,Dec-19,,IUCN,https://www.iucnredlist.org/species/164691443/164691571,
+Poeciliidae,Livebearers,Phallichthys tico,VU,,Feb-19,,IUCN,https://www.iucnredlist.org/species/164691446/164691576,
+Poeciliidae,Livebearers,Phalloceros ocellatus,NT,,Nov-18,,IUCN,https://www.iucnredlist.org/species/186563/1815002,
+Poeciliidae,Livebearers,Phalloptychus eigenmanni,CR,,Nov-18,,IUCN,https://www.iucnredlist.org/species/186558/1814927,
+Poeciliidae,Livebearers,Phalloptychus iheringii,NT,,Nov-18,,IUCN,https://www.iucnredlist.org/species/186532/1814484,
+Poeciliidae,Livebearers,Phallotorynus dispilos,EN,,Feb-21,,IUCN,https://www.iucnredlist.org/species/176510310/176510489,
+Poeciliidae,Livebearers,Phallotorynus fasciolatus,CR,,Nov-18,,IUCN,https://www.iucnredlist.org/species/187089/1822954,
+Poeciliidae,Livebearers,Phallotorynus jucundus,EN,,Nov-18,,IUCN,https://www.iucnredlist.org/species/186661/1816472,
+Poeciliidae,Livebearers,Poecilia dauli,VU,,Aug-19,,IUCN,https://www.iucnredlist.org/species/118043721/118043726,
+Poeciliidae,Livebearers,Poecilia dominicensis,NT,,May-20,,IUCN,https://www.iucnredlist.org/species/125979602/125986558,
+Poeciliidae,Livebearers,Poecilia elegans,NT,CVU,"May-20
+(Sep-24)",,IUCN / (MT),https://www.iucnredlist.org/species/125979665/125986563,
+Poeciliidae,Livebearers,Poecilia latipunctata,CVU,,Sep-24,,MT,https://caresforfish.org/?page_id=1586,
+Poeciliidae,Livebearers,Poecilia rositae,EN,,Feb-20,,IUCN,https://www.iucnredlist.org/species/164691464/164691596,
+Poeciliidae,Livebearers,Poecilia sulphuraria,EN,,Nov-18,,IUCN,https://www.iucnredlist.org/species/17833/1531411,
+Poeciliidae,Livebearers,Poecilia teresae,EN,,Oct-19,,IUCN,https://www.iucnredlist.org/species/191754/2002441,
+Poeciliidae,Livebearers,Poecilia velifera,VU,,Mar-18,,IUCN,https://www.iucnredlist.org/species/191755/2002448,
+Poeciliidae,Livebearers,Poecilia wingei,EN,,Mar-21,,IUCN,https://www.iucnredlist.org/species/177429528/177429532,
+Poeciliidae,Livebearers,Poeciliopsis catemaco,EN,,Mar-18,,IUCN,https://www.iucnredlist.org/species/191758/2002469,
+Poeciliidae,Livebearers,Poeciliopsis elongata,NT,,May-08,,IUCN,https://www.iucnredlist.org/species/169376/6614160,
+Poeciliidae,Livebearers,Poeciliopsis jackschultzi,EN,,Nov-19,,IUCN,https://www.iucnredlist.org/species/178839665/178839800,
+Poeciliidae,Livebearers,Poeciliopsis latidens,NT,,Dec-18,,IUCN,https://www.iucnredlist.org/species/183314/1736282,
+Poeciliidae,Livebearers,Poeciliopsis monacha,EN,,Dec-18,,IUCN,https://www.iucnredlist.org/species/17837/1532241,
+Poeciliidae,Livebearers,Poeciliopsis paucimaculata,EN,,Feb-20,,IUCN,https://www.iucnredlist.org/species/168627110/170647198,
+Poeciliidae,Livebearers,Poeciliopsis retropinna,VU,,Sep-19,,IUCN,https://www.iucnredlist.org/species/164691475/164691606,
+Poeciliidae,Livebearers,Poeciliopsis santaelena,VU,,Feb-20,,IUCN,https://www.iucnredlist.org/species/168627060/170647203,
+Poeciliidae,Livebearers,Poeciliopsis occidentalis sonorensis,CNT,,May-12,,MT,https://caresforfish.org/?page_id=1586,
+Poeciliidae,Livebearers,Priapella chamulae,CNT,,May-12,,MT,https://caresforfish.org/?page_id=1586,
+Poeciliidae,Livebearers,Priapella olmecae,EN,,Mar-18,,IUCN,https://www.iucnredlist.org/species/191771/2002553,
+Poeciliidae,Livebearers,Priapichthys puetzi,CR,,Oct-19,,IUCN,https://www.iucnredlist.org/species/164692174/164692491,
+Poeciliidae,Livebearers,Pseudoxiphophorus attenuatus,CR,,Oct-19,,IUCN,https://www.iucnredlist.org/species/125341177/164692315,
+Poeciliidae,Livebearers,Pseudoxiphophorus cataractae,VU,,Oct-19,,IUCN,https://www.iucnredlist.org/species/125341262/164692320,
+Poeciliidae,Livebearers,Pseudoxiphophorus diremptus,VU,,Oct-19,,IUCN,https://www.iucnredlist.org/species/125341281/164692325,
+Poeciliidae,Livebearers,Quintana atrizona,CR,,Jun-20,,IUCN,https://www.iucnredlist.org/species/125989524/125989542,
+Poeciliidae,Livebearers,Scolichthys iota,VU,,Oct-19,,IUCN,https://www.iucnredlist.org/species/164692223/164692501,
+Poeciliidae,Livebearers,Xenodexia ctenolepis,CVU,,Sep-24,,MT,https://caresforfish.org/?page_id=1586,
+Poeciliidae,Livebearers,Xenophallus umbratilis,VU,,Aug-19,,IUCN,https://www.iucnredlist.org/species/164692230/164692506,
+Poeciliidae,Livebearers,Xiphophorus andersi,EN,,Mar-18,,IUCN,https://www.iucnredlist.org/species/191775/2002876,
+Poeciliidae,Livebearers,Xiphophorus couchianus,EW,,Oct-18,,IUCN,https://www.iucnredlist.org/species/23156/157724204,
+Poeciliidae,Livebearers,Xiphophorus gordoni,EN,,Dec-18,,IUCN,https://www.iucnredlist.org/species/23157/2784873,
+Poeciliidae,Livebearers,Xiphophorus kallmani,CNT,,Sep-24,,MT,https://caresforfish.org/?page_id=1586,
+Poeciliidae,Livebearers,Xiphophorus malinche,CVU,,Sep-24,,MT,https://caresforfish.org/?page_id=1586,
+Poeciliidae,Livebearers,Xiphophorus meyeri,EW,,Oct-18,,IUCN,https://www.iucnredlist.org/species/23158/2784905,
+Poeciliidae,Livebearers,Xiphophorus milleri,CNT,,Sep-24,,MT,https://caresforfish.org/?page_id=1586,
+Poeciliidae,Livebearers,Xiphophorus mixei,CVU,,Sep-24,,MT,https://caresforfish.org/?page_id=1586,
+Poeciliidae,Livebearers,Xiphophorus monticola,CVU,,Sep-24,,MT,https://caresforfish.org/?page_id=1586,
+Poeciliidae,Livebearers,Xiphophorus signum,VU,,Oct-19,,IUCN,https://www.iucnredlist.org/species/164692241/164692516,
+Pseudomugilidae,Blue eyes,Kiunga ballochi,CR,,Mar-2007,,IUCN,http://www.iucnredlist.org/apps/redlist/details/11021/0,
+Pseudomugilidae,Blue eyes,Kiunga bleheri,CEN,,July-2017,,KB,https://caresforfish.org/?page_id=1093,
+Pseudomugilidae,Blue eyes,Pseudomugil connieae,CEN,,July-2017,,KB,https://caresforfish.org/?page_id=1093,
+Pseudomugilidae,Blue eyes,Pseudomugil cyanodorsalis,CNT,,July-2017,,KB,https://caresforfish.org/?page_id=1093,
+Pseudomugilidae,Blue eyes,Pseudomugil furcatus,CNT,,July-2017,,KB,https://caresforfish.org/?page_id=1093,
+Pseudomugilidae,Blue eyes,Pseudomugil ivantsoffi,CVU,,July-2017,,KB,https://caresforfish.org/?page_id=1093,
+Pseudomugilidae,Blue eyes,Pseudomugil luminatus,CNT,,July-2017,,KB,https://caresforfish.org/?page_id=1093,
+Pseudomugilidae,Blue eyes,Pseudomugil mellis,CCR,,July-2017,,KB,https://caresforfish.org/?page_id=1093,
+Pseudomugilidae,Blue eyes,Pseudomugil novaeguineae,CEN,,July-2017,,KB,https://caresforfish.org/?page_id=1093,
+Pseudomugilidae,Blue eyes,Pseudomugil paskai,CCR,,July-2017,,KB,https://caresforfish.org/?page_id=1093,
+Pseudomugilidae,Blue eyes,Pseudomugil pellucidus,CEN,,July-2017,,KB,https://caresforfish.org/?page_id=1093,
+Pseudomugilidae,Blue eyes,Pseudomugil reticulatus,CEN,,July-2017,,KB,https://caresforfish.org/?page_id=1093,
+Pseudomugilidae,Blue eyes,Pseudomugil tenellus,CVU,,July-2017,,KB,https://caresforfish.org/?page_id=1093,
+Rivulidae,Rivulus,Austrolebias wolterstorffi,CVU,,Jan-2014,,PVL,,
+Rivulidae,Rivulus,Campellolebias brucei,VU,,Aug-1996,,IUCN,http://www.iucnredlist.org/apps/redlist/details/3708/0,
+Rivulidae,Rivulus,Cynolebias boitonei,VU,,1996-08,,IUCN,http://www.iucnredlist.org/apps/redlist/details/6083/0,
+Rivulidae,Rivulus,Cynolebias constanciae,VU,,,,IUCN,,
+Rivulidae,Rivulus,Cynolebias splendens,VU,,,,IUCN,,
+Rivulidae,Rivulus,Leptolebias cruzi,CEN,,,,PVL,,
+Rivulidae,Rivulus,Leptolebias fluminensis,CEN,,,,PVL,,
+Rivulidae,Rivulus,Leptolebias marmoratus,CEN,,,,PVL,,
+Rivulidae,Rivulus,Leptolebias minimus,CEN,,,,PVL,,
+Rivulidae,Rivulus,Leptolebias opalescens,VU,,,,IUCN,,
+Rivulidae,Rivulus,Leptolebias sandrii,CEN,,,,PVL,,
+Rivulidae,Rivulus,Nematolebias papilliferus,CEN,,,,PVL,,
+Rivulidae,Rivulus,Rivulus fuscolineatus,CEN,,,,PVL,,
+Rivulidae,Rivulus,Rivulus uroflammeus,CEN,,,,PVL,,
+Valenciidae,Valencias,Valencia hispanica,CR,CCR,Jan-2006,Feb-2023,RP,https://caresforfish.org/?page_id=475,
+Valenciidae,Valencias,Valencia letourneuxi,CR,CCR,Jan-2006,Feb-2023,IUCN,http://www.iucnredlist.org/apps/redlist/details/22830/0,
+Valenciidae,Valencias,Valencia robertae,CCR,,Feb-2023,,RP,https://caresforfish.org/?page_id=475,
