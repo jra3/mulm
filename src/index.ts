@@ -208,6 +208,7 @@ router.get("/dialog/auth/forgot-password", (req, res) => {
 
 router.get("/api/members/search", typeahead.searchMembers);
 router.get("/api/species/search", typeahead.searchSpecies);
+router.get("/api/video/preview", submission.videoPreview);
 
 // Image Upload API
 router.use("/api/upload", uploadRouter);

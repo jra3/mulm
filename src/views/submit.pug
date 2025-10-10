@@ -38,9 +38,14 @@ html
 				});
 			}
 
-			document.addEventListener("htmx:load", function () {
-				initStaticMultiSelects();
-				initializeTypeaheads();
+			document.addEventListener("htmx:load", function (event) {
+				// Only reinitialize Tom Select if the form itself was swapped
+				// Don't reinitialize for partial updates like video preview
+				const target = event.detail.elt;
+				if (target && target.id === 'bapForm') {
+					initStaticMultiSelects();
+					initializeTypeaheads();
+				}
 			});
 
 			// Debugging the onChange events

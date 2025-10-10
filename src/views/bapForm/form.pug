@@ -74,8 +74,6 @@ mixin CRUDForm()
                     valueField: "common_name",
                     labelField: "common_name",
                     secondaryField: "scientific_name",
-                    linkedField: "species_latin_name",
-                    linkedValueField: "scientific_name",
                     hiddenIdField: "species_name_id",
                     hiddenIdValueField: "name_id",
                     allowCreate: true,
@@ -211,8 +209,16 @@ mixin CRUDForm()
                     value=form.video_url || ""
                     placeholder="https://www.youtube.com/watch?v=..."
                     aria-describedby="video-url-hint"
+                    hx-get="/api/video/preview"
+                    hx-trigger="keyup changed delay:1s"
+                    hx-target="#video-preview-container"
+                    hx-swap="innerHTML"
+                    hx-vals='js:{"url": document.getElementById("video_url").value}'
                 )
                 span#video-url-hint.text-xs.text-gray-500 Paste a link from YouTube or Vimeo
+
+                //- Preview container
+                div#video-preview-container
 
     unless form.submitted_on || editing
         section.bg-blue-50.py-4.border-l-4.border-blue-400(aria-labelledby="screening-info")

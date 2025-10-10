@@ -10,7 +10,7 @@ import { getCanonicalSpeciesName, recordName } from "@/db/species";
 import { getWaitingPeriodStatus } from "@/utils/waitingPeriod";
 import { getNotesForSubmission } from "@/db/submission_notes";
 import { formatShortDate } from "@/utils/dateFormat";
-import { parseVideoUrlWithOEmbed } from "@/utils/videoParser";
+import { parseVideoUrlWithOEmbed, isValidVideoUrl } from "@/utils/videoParser";
 
 export const renderSubmissionForm = (req: MulmRequest, res: Response) => {
   const { viewer } = req;
@@ -448,4 +448,47 @@ export const remove = async (req: MulmRequest, res: Response) => {
 
   // Not authorized
   res.status(403).send('Cannot delete approved submissions');
+}
+
+/**
+ * GET /api/video/preview?url=VIDEO_URL
+ * Returns a preview card for a video URL (validates, fetches metadata, renders HTML)
+ */
+export const videoPreview = async (req: MulmRequest, res: Response) => {
+  const url = req.query.url as string;
+
+  // Validate URL
+  if (!url || typeof url !== 'string') {
+    res.status(400).send('');
+    return;
+  }
+
+  // Check if it's a valid video URL
+  if (!isValidVideoUrl(url)) {
+    res.render('bapForm/videoPreviewError', {
+      error: 'Please enter a valid YouTube or Vimeo URL'
+    });
+    return;
+  }
+
+  try {
+    // Fetch video metadata with oEmbed
+    const metadata = await parseVideoUrlWithOEmbed(url);
+
+    if (metadata.platform === 'unknown' || !metadata.videoId) {
+      res.render('bapForm/videoPreviewError', {
+        error: 'Could not parse video URL. Please check the link and try again.'
+      });
+      return;
+    }
+
+    // Render preview card
+    res.render('bapForm/videoPreview', {
+      metadata
+    });
+  } catch (error) {
+    res.render('bapForm/videoPreviewError', {
+      error: 'Failed to load video preview. The link may be invalid or the video may be private.'
+    });
+  }
 }
