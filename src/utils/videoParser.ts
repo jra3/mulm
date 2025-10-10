@@ -2,8 +2,11 @@
  * Video URL Parser
  *
  * Extracts platform, video ID, and thumbnail URL from video sharing links.
- * Supports YouTube and Vimeo.
+ * Supports YouTube and Vimeo with optional oEmbed enrichment.
  */
+
+import { fetchOEmbed } from './oembed';
+import { logger } from './logger';
 
 export interface VideoMetadata {
   platform: 'youtube' | 'vimeo' | 'unknown';
@@ -11,6 +14,10 @@ export interface VideoMetadata {
   thumbnailUrl: string | null;
   embedUrl: string | null;
   originalUrl: string;
+  title?: string;
+  author?: string;
+  width?: number;
+  height?: number;
 }
 
 /**
@@ -130,6 +137,42 @@ function parseVimeoUrl(url: string): VideoMetadata {
     embedUrl: null,
     originalUrl: url,
   };
+}
+
+/**
+ * Parse a video URL and enrich with oEmbed data (async)
+ * Falls back to direct URL parsing if oEmbed fails
+ */
+export async function parseVideoUrlWithOEmbed(url: string): Promise<VideoMetadata> {
+  // First, parse the URL to get basic metadata
+  const basic = parseVideoUrl(url);
+
+  // If platform is unknown, return immediately
+  if (basic.platform === 'unknown' || !basic.videoId) {
+    return basic;
+  }
+
+  try {
+    // Try to fetch oEmbed data
+    const oembedData = await fetchOEmbed(basic.platform, url);
+
+    if (oembedData) {
+      // Enrich metadata with oEmbed data
+      return {
+        ...basic,
+        thumbnailUrl: oembedData.thumbnail_url || basic.thumbnailUrl,
+        title: oembedData.title,
+        author: oembedData.author_name,
+        width: oembedData.thumbnail_width,
+        height: oembedData.thumbnail_height,
+      };
+    }
+  } catch (error) {
+    logger.warn(`Failed to fetch oEmbed data for ${url}:`, error);
+  }
+
+  // Fall back to basic metadata
+  return basic;
 }
 
 /**

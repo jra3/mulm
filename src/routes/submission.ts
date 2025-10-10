@@ -10,6 +10,7 @@ import { getCanonicalSpeciesName, recordName } from "@/db/species";
 import { getWaitingPeriodStatus } from "@/utils/waitingPeriod";
 import { getNotesForSubmission } from "@/db/submission_notes";
 import { formatShortDate } from "@/utils/dateFormat";
+import { parseVideoUrlWithOEmbed } from "@/utils/videoParser";
 
 export const renderSubmissionForm = (req: MulmRequest, res: Response) => {
   const { viewer } = req;
@@ -127,6 +128,12 @@ export const view = async (req: MulmRequest, res: Response) => {
   // Fetch admin notes if viewer is an admin
   const adminNotes = aspect.isAdmin ? await getNotesForSubmission(submission.id) : [];
 
+  // Fetch oEmbed data for video if present
+  let videoMetadata = null;
+  if (submission.video_url) {
+    videoMetadata = await parseVideoUrlWithOEmbed(submission.video_url);
+  }
+
   res.render('submission/review', {
     submission: {
       ...submission,
@@ -145,6 +152,7 @@ export const view = async (req: MulmRequest, res: Response) => {
     name: nameGroup,
     waitingPeriodStatus,
     adminNotes,
+    videoMetadata,
     ...aspect,
   });
 }

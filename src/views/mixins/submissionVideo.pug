@@ -1,15 +1,17 @@
 //- Mixin for displaying submission video link with thumbnail
-//- Usage: +submissionVideo(submission.video_url)
+//- Usage: +submissionVideo(submission.video_url, videoMetadata)
+//- videoMetadata is optional pre-fetched oEmbed data from the route handler
 
-mixin submissionVideo(videoUrl)
-	- const { parseVideoUrl } = require('../../utils/videoParser');
-
+mixin submissionVideo(videoUrl, videoMetadata)
 	if videoUrl
-		- const video = parseVideoUrl(videoUrl);
+		- const video = videoMetadata || { platform: 'unknown', thumbnailUrl: null };
 
 		if video.platform !== 'unknown' && video.thumbnailUrl
 			div(class="mb-6")
-				h3(class="text-lg font-bold mb-3 text-gray-900") Video
+				h3(class="text-lg font-bold mb-3 text-gray-900")
+					| Video
+					if video.title
+						|  - #{video.title}
 
 				//- Video thumbnail with play button overlay
 				a(
@@ -52,6 +54,8 @@ mixin submissionVideo(videoUrl)
 						else
 							= video.platform
 
+				if video.author
+					p(class="text-sm text-gray-600 mt-1") by #{video.author}
 				p(class="text-xs text-gray-500 mt-2 italic") Click to watch on #{video.platform === 'youtube' ? 'YouTube' : video.platform === 'vimeo' ? 'Vimeo' : 'external site'}
 
 		else if videoUrl.trim()
