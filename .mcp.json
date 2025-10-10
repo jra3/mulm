@@ -6,6 +6,13 @@
         "run",
         "mcp:species"
       ]
+    },
+    "member-management": {
+      "command": "npm",
+      "args": [
+        "run",
+        "mcp:members"
+      ]
     }
   }
 }
