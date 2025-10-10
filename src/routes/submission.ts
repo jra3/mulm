@@ -116,6 +116,7 @@ export const view = async (req: MulmRequest, res: Response) => {
     return {
       canonical_genus: genus,
       canonical_species_name: parts.join(" "),
+      is_cares_species: 0,
     };
   })();
 

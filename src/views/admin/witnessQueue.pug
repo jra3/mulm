@@ -3,6 +3,7 @@ include queueButton.pug
 include adminNav.pug
 include ../mixins/submissionImages.pug
 include ../mixins/date.pug
+include ../mixins/caresBadge.pug
 
 - const stringCell = ['p-3', 'text-left', 'border-b', 'border-gray-200'];
 - const heading = ['p-3', 'text-left', 'font-bold', 'text-gray-900', 'border-b-2', 'border-gray-300', 'bg-gray-50', 'cursor-pointer', 'select-none', 'hover:bg-gray-100'];
@@ -41,7 +42,11 @@ mixin witnessQueueTable(submissions)
 						td(class=stringCell)= sub.member_name
 						td(class=stringCell)= sub.species_class
 						td(class=stringCell)= sub.species_common_name
-						td(class=stringCell)= sub.species_latin_name
+						td(class=stringCell)
+							.flex.items-center.gap-2
+								span= sub.species_latin_name
+								if sub.is_cares_species == 1
+									+caresBadge('sm')
 						td(class=stringCell)
 							+shortDate(sub.reproduction_date, "Reproduction date")
 						td(class=stringCell)

@@ -1,0 +1,15 @@
+//- CARES Badge Mixin
+//- Displays a green pill badge linking to the CARES Fish Preservation Program
+//-
+//- Parameters:
+//-   size - Optional size variant: 'sm' (small, inline), 'md' (medium, default)
+
+mixin caresBadge(size)
+	- const sizeClasses = size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-3 py-1 text-sm'
+	a(
+		class=`inline-flex items-center rounded-full font-semibold bg-green-100 text-green-800 hover:bg-green-200 ${sizeClasses}`
+		href="https://caresforfish.org/"
+		target="_blank"
+		rel="noopener noreferrer"
+		title="This species is part of the C.A.R.E.S. preservation program"
+	) C.A.R.E.S.

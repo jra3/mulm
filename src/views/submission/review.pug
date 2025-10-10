@@ -26,7 +26,16 @@ html
 					+reviewTextInput("Member Name", "member_name")
 
 			div.max-w-4xl.mx-auto.text-left.pt-4.px-4
-				h2(class="text-l font-bold mb-4") Species Details
+				.flex.items-center.gap-2.mb-4
+					h2(class="text-l font-bold") Species Details
+					if name && name.is_cares_species == 1
+						a.px-3.py-1.rounded-full.text-sm.font-semibold(
+							class="bg-green-100 text-green-800 hover:bg-green-200"
+							href="https://caresforfish.org/"
+							target="_blank"
+							rel="noopener noreferrer"
+							title="This species is part of the C.A.R.E.S. preservation program"
+						) C.A.R.E.S.
 				div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
 					+reviewTextInput("Common Name", "species_common_name")
 					+reviewTextInput("Latin Name", "species_latin_name")

@@ -105,6 +105,7 @@ export async function getCanonicalSpeciesName(speciesNameId: number) {
 		program_class: string;
 		canonical_genus: string;
 		canonical_species_name: string;
+		is_cares_species: number;
 	}>(`
 		SELECT species_name_group.*
 		FROM species_name JOIN species_name_group
@@ -132,6 +133,7 @@ export type SpeciesExplorerItem = {
 	common_names: string;
 	scientific_names: string;
 	latest_breed_date: string | null;
+	is_cares_species: number;
 };
 
 /**
@@ -196,6 +198,7 @@ function buildSpeciesSearchQuery(
 			sng.program_class,
 			sng.canonical_genus,
 			sng.canonical_species_name,
+			sng.is_cares_species,
 			COALESCE(COUNT(DISTINCT s.id), 0) as total_breeds,
 			COALESCE(COUNT(DISTINCT s.member_id), 0) as total_breeders,
 			COALESCE(GROUP_CONCAT(DISTINCT sn.common_name), '') as common_names,
@@ -205,7 +208,7 @@ function buildSpeciesSearchQuery(
 		LEFT JOIN species_name sn ON sng.group_id = sn.group_id
 		LEFT JOIN submissions s ON s.species_name_id = sn.name_id AND s.approved_on IS NOT NULL
 		WHERE ${conditions.join(' ')}
-		GROUP BY sng.group_id, sng.program_class, sng.canonical_genus, sng.canonical_species_name
+		GROUP BY sng.group_id, sng.program_class, sng.canonical_genus, sng.canonical_species_name, sng.is_cares_species
 		HAVING total_breeds > 0
 		ORDER BY ${orderBy}
 		${limit ? 'LIMIT ?' : ''}
@@ -291,6 +294,7 @@ export type SpeciesDetail = {
 	program_class: string;
 	canonical_genus: string;
 	canonical_species_name: string;
+	is_cares_species: number;
 	synonyms: Array<{
 		name_id: number;
 		common_name: string;
@@ -304,8 +308,9 @@ export async function getSpeciesDetail(groupId: number) {
 		program_class: string;
 		canonical_genus: string;
 		canonical_species_name: string;
+		is_cares_species: number;
 	}>(`
-		SELECT group_id, program_class, canonical_genus, canonical_species_name
+		SELECT group_id, program_class, canonical_genus, canonical_species_name, is_cares_species
 		FROM species_name_group
 		WHERE group_id = ?
 	`, [groupId]);
