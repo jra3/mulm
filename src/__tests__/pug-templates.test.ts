@@ -398,7 +398,7 @@ describe('Pug Template Rendering', () => {
             ];
             break;
 
-          case 'email/onWitnessConfirmed.pug': {
+          case 'email/onScreeningApproved.pug': {
             (templateData).witness = {
               display_name: faker.person.fullName()
             };

@@ -59,30 +59,30 @@ export function getSubmissionStatus(submission: Partial<Submission>): StatusInfo
     };
   }
 
-  // Submissions needing witness verification
+  // Submissions needing admin screening
   if (submission.witness_verification_status === 'pending') {
     return {
       status: 'pending-witness',
-      label: 'Needs Witness',
+      label: 'Pending Screening',
       color: 'text-purple-800',
       bgColor: 'bg-purple-100',
       rowColor: 'bg-purple-50',
-      description: 'Awaiting witness verification'
+      description: 'Awaiting admin screening'
     };
   }
 
-  // Witnessed submissions in waiting period
+  // Screened submissions awaiting auction
   if (submission.witness_verification_status === 'confirmed' && submission.witnessed_on) {
     const waitingPeriodStatus = getWaitingPeriodStatus(submission as Submission);
 
     if (!waitingPeriodStatus.eligible) {
       return {
         status: 'waiting-period',
-        label: 'Waiting Period',
+        label: 'Awaiting Auction',
         color: 'text-orange-800',
         bgColor: 'bg-orange-100',
         rowColor: 'bg-orange-50',
-        description: `${waitingPeriodStatus.daysRemaining} days remaining`,
+        description: `${waitingPeriodStatus.daysRemaining} days until auction eligible`,
         daysRemaining: waitingPeriodStatus.daysRemaining
       };
     }

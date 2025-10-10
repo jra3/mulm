@@ -19,8 +19,8 @@ const transporter = nodemailer.createTransport({
 
 
 const renderOnSubmission = pug.compileFile("src/views/email/onSubmission.pug");
-const renderOnWitnessConfirmed = pug.compileFile("src/views/email/onWitnessConfirmed.pug");
-const renderOnWitnessDeclined = pug.compileFile("src/views/email/onWitnessDeclined.pug");
+const renderOnScreeningApproved = pug.compileFile("src/views/email/onScreeningApproved.pug");
+const renderOnScreeningRejected = pug.compileFile("src/views/email/onScreeningRejected.pug");
 export async function onSubmissionSend(
   sub: Submission,
   member: MemberRecord,
@@ -151,7 +151,7 @@ export async function onLevelUpgrade(
   });
 }
 
-export async function onWitnessConfirmed(
+export async function onScreeningApproved(
   submission: Submission,
   member: MemberRecord,
   witness: MemberRecord,
@@ -160,8 +160,8 @@ export async function onWitnessConfirmed(
     from: fromEmail,
     to: member.contact_email,
     bcc: DEBUG_EMAIL,
-    subject: `Witness Confirmed - ${submission.species_common_name}`,
-    html: renderOnWitnessConfirmed({
+    subject: `Screening Approved - ${submission.species_common_name}`,
+    html: renderOnScreeningApproved({
       domain: config.domain,
       submission,
       member,
@@ -170,7 +170,7 @@ export async function onWitnessConfirmed(
   });
 }
 
-export async function onWitnessDeclined(
+export async function onScreeningRejected(
   submission: Submission,
   member: MemberRecord,
   reason: string,
@@ -179,8 +179,8 @@ export async function onWitnessDeclined(
     from: fromEmail,
     to: member.contact_email,
     bcc: DEBUG_EMAIL,
-    subject: `Witness Review Required - ${submission.species_common_name}`,
-    html: renderOnWitnessDeclined({
+    subject: `Additional Information Needed - ${submission.species_common_name}`,
+    html: renderOnScreeningRejected({
       domain: config.domain,
       submission,
       member,

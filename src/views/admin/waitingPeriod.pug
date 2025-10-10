@@ -16,9 +16,9 @@ mixin waitingPeriodTable(submissions)
 					th(class=heading) Common Name
 					th(class=heading) Latin Name
 					th(class=heading) Reproduction Date
-					th(class=heading data-sort-method="date" data-sort-default) Witnessed On
-					th(class=heading) Witnessed By
-					th(class=heading data-sort-method="number") Days Remaining
+					th(class=heading data-sort-method="date" data-sort-default) Screened On
+					th(class=heading) Screened By
+					th(class=heading data-sort-method="number") Days Until Eligible
 					th(class="p-3 text-left font-bold text-gray-900 border-b-2 border-gray-300 bg-gray-50" data-sort-method="none") Actions
 
 			tbody
@@ -65,7 +65,7 @@ html
 				+waitingPeriodTable(submissions)
 			else
 				.text-center.py-12
-					.text-gray-500.text-lg No submissions in waiting period for #{subtitle.toLowerCase()}.
+					.text-gray-500.text-lg No submissions awaiting auction eligibility for #{subtitle.toLowerCase()}.
 					p.text-sm.text-gray-400.mt-2 Check other programs using the navigation below.
 
 		+adminNav("waiting", programCounts, witnessCounts)

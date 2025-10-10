@@ -51,18 +51,18 @@ html
 
 			h2.text-2xl.font-bold.mb-6 Email Templates Preview
 
-			//- Email 1: Witness Confirmed
+			//- Email 1: Screening Approved
 			.email-container.mb-8
-				.email-label 1. Witness Confirmation Email
+				.email-label 1. Screening Approved Email
 				div
-					include ../email/onWitnessConfirmed.pug
+					include ../email/onScreeningApproved.pug
 
-			//- Email 2: Witness Declined
+			//- Email 2: Screening Rejected
 			.email-container.mb-8
-				.email-label 2. Witness Review Required Email
+				.email-label 2. Additional Information Needed Email
 				div
 					- const reason = sampleData.reason
-					include ../email/onWitnessDeclined.pug
+					include ../email/onScreeningRejected.pug
 
 			//- Email 3: Forgot Password
 			.email-container.mb-8

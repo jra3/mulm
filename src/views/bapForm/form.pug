@@ -215,25 +215,30 @@ mixin CRUDForm()
                 span#video-url-hint.text-xs.text-gray-500 Paste a link from YouTube or Vimeo
 
     unless form.submitted_on || editing
-        section.bg-blue-50.py-4.border-l-4.border-blue-400(aria-labelledby="witness-info")
+        section.bg-blue-50.py-4.border-l-4.border-blue-400(aria-labelledby="screening-info")
             div.max-w-4xl.mx-auto.px-4
-                h3#witness-info.text-lg.font-semibold.text-blue-900.mb-2 📋 Witness Verification Required
+                h3#screening-info.text-lg.font-semibold.text-blue-900.mb-2 📋 What Happens After Submission
                 if form.species_type === 'Plant' || form.species_type === 'Coral'
-                    p.text-blue-800.mb-2 After submitting, your propagation will need to be verified by a program admin before final approval.
+                    p.text-blue-800.mb-2 After submitting, a program admin will screen your propagation report for completeness and help identify the species.
                 else
-                    p.text-blue-800.mb-2 After submitting, your spawn will need to be verified by a program admin before final approval.
+                    p.text-blue-800.mb-2 After submitting, a program admin will screen your breeding report for completeness and help identify the species.
                 ul.text-sm.text-blue-700.list-disc.list-inside.space-y-1
-                    li Any program admin can witness your submission
-                    li You'll receive email notification when witnessed
+                    li Admin reviews your submission (no home visit required)
+                    li We'll help verify species identification - photos/videos are very helpful!
+                    li You'll receive email notification when screening is complete
                     if form.species_type === 'Fish' && form.species_class === 'Marine'
-                        li 30-day waiting period required after spawn date
+                        li Raise fry for 30 days to prove viability
+                        li Bring at least 6 healthy fry to a monthly meeting/auction
                     else if form.species_type === 'Plant'
-                        li 60-day waiting period required after propagation date
+                        li Grow propagation for 60 days to prove success
+                        li Bring plants to a monthly meeting/auction to receive points
                     else if form.species_type === 'Coral'
-                        li 60-day waiting period required after propagation date
+                        li Grow propagation for 60 days to prove success
+                        li Bring corals to a monthly meeting/auction to receive points
                     else
-                        li 60-day waiting period required after spawn date
-                    li Final approval and point assignment occurs after waiting period
+                        li Raise fry for 60 days to prove viability
+                        li Bring at least 6 healthy fry to a monthly meeting/auction
+                    li Points awarded at the meeting when offspring are presented!
 
     section.bg-gray-100.py-4
         div.flex.justify-center.max-w-4xl.mx-auto.text-center.gap-4

@@ -30,14 +30,14 @@ mixin adminActionsPanel(witnessCount, approvalsCount, witnessProgram, approvalsP
 				href=`/admin/witness-queue/${witnessProgram}`
 				role="menuitem")
 				.flex.items-center.justify-between.w-full
-					span Witness Queue
+					span Screening Queue
 					+countBadge(witnessCount)
 
 			a.admin-menu-item(
 				href=`/admin/queue/${approvalsProgram}`
 				role="menuitem")
 				.flex.items-center.justify-between.w-full
-					span Approval Queue
+					span Points Award Queue
 					+countBadge(approvalsCount)
 
 			a.admin-menu-item(

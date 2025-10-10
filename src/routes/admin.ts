@@ -2,7 +2,7 @@ import { createMember, getMember, getMemberByEmail, getRosterWithPoints, updateM
 import { getOutstandingSubmissions, getOutstandingSubmissionsCounts, getSubmissionById, updateSubmission, getSubmissionsByMember, getWitnessQueue, getWitnessQueueCounts, getWaitingPeriodSubmissions, confirmWitness, declineWitness, type Submission } from "@/db/submissions";
 import { approvalSchema } from "@/forms/approval";
 import { inviteSchema } from "@/forms/member";
-import { onSubmissionApprove, sendChangesRequest, sendInviteEmail, onWitnessConfirmed, onWitnessDeclined } from "@/notifications";
+import { onSubmissionApprove, sendChangesRequest, sendInviteEmail, onScreeningApproved, onScreeningRejected } from "@/notifications";
 import { programs } from "@/programs";
 import { MulmRequest } from "@/sessions";
 import { Response, NextFunction } from "express";
@@ -192,7 +192,7 @@ export const showQueue = async (req: MulmRequest, res: Response) => {
   })();
 
   res.render("admin/queue", {
-    title: "Approval Queue",
+    title: "Points Award Queue",
     subtitle,
     submissions: submissionsWithStatus,
     program,
@@ -232,7 +232,7 @@ export const showWitnessQueue = async (req: MulmRequest, res: Response) => {
   })();
 
   res.render("admin/witnessQueue", {
-    title: "Witness Review Queue",
+    title: "Screening Queue",
     subtitle,
     submissions: submissionsWithStatus,
     program,
@@ -272,7 +272,7 @@ export const showWaitingPeriod = async (req: MulmRequest, res: Response) => {
   })();
 
   res.render("admin/waitingPeriod", {
-    title: "Waiting Period Monitor",
+    title: "Auction Eligibility Monitor",
     subtitle,
     submissions: submissionsWithStatus,
     program,
@@ -378,7 +378,7 @@ export const confirmWitnessAction = async (req: MulmRequest, res: Response) => {
 
   await Promise.all([
     confirmWitness(submission.id, req.viewer!.id),
-    onWitnessConfirmed(submission, member, witness),
+    onScreeningApproved(submission, member, witness),
   ]);
 
   // Redirect to witness queue for the submission's program
@@ -442,7 +442,7 @@ export const declineWitnessAction = async (req: MulmRequest, res: Response) => {
 
     await Promise.all([
       declineWitness(submission.id, req.viewer!.id),
-      onWitnessDeclined(submission, member, reason),
+      onScreeningRejected(submission, member, reason),
     ]);
 
     // Redirect to witness queue for the submission's program

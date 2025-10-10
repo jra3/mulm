@@ -1,0 +1,95 @@
+include ../mixins/date.pug
+
+doctype html
+html
+	head
+		meta(charset="utf-8")
+		title Screening Approved
+		style.
+			body {
+				font-family: Arial, sans-serif;
+				line-height: 1.6;
+				color: #333;
+				max-width: 600px;
+				margin: 0 auto;
+				padding: 20px;
+			}
+			.header {
+				background-color: #2563eb;
+				color: white;
+				padding: 20px;
+				text-align: center;
+				border-radius: 8px 8px 0 0;
+			}
+			.content {
+				background-color: #f8fafc;
+				padding: 20px;
+				border: 1px solid #e2e8f0;
+			}
+			.submission-details {
+				background-color: white;
+				padding: 15px;
+				border-radius: 6px;
+				margin: 15px 0;
+				border-left: 4px solid #10b981;
+			}
+			.footer {
+				background-color: #64748b;
+				color: white;
+				padding: 15px;
+				text-align: center;
+				border-radius: 0 0 8px 8px;
+				font-size: 12px;
+			}
+			.button {
+				display: inline-block;
+				background-color: #2563eb;
+				color: white;
+				padding: 10px 20px;
+				text-decoration: none;
+				border-radius: 5px;
+				margin: 10px 0;
+			}
+	body
+		.header
+			h1 Screening Approved!
+
+		.content
+			p Hello #{member.display_name},
+
+			p Great news! Your BAP submission has been reviewed and approved for screening by #{witness.display_name}.
+
+			.submission-details
+				h3 Submission Details:
+				p <strong>Species:</strong> #{submission.species_common_name} (#{submission.species_latin_name})
+				p <strong>Species Class:</strong> #{submission.species_class}
+				p
+					strong Reproduction Date:
+					+longDate(submission.reproduction_date)
+				p <strong>Screened By:</strong> #{witness.display_name}
+				p
+					strong Screened On:
+					+longDate(submission.witnessed_on)
+
+			p <strong>Next Steps:</strong>
+
+			if submission.species_type === 'Fish' && submission.species_class === 'Marine'
+				p After 30 days from your reproduction date, bring at least 6 healthy fry to a monthly meeting/auction. Points will be awarded at the meeting when you present your fry!
+			else if submission.species_type === 'Plant'
+				p After 60 days from your reproduction date, bring your successful propagation to a monthly meeting/auction. Points will be awarded at the meeting when you present your plants!
+			else if submission.species_type === 'Coral'
+				p After 60 days from your reproduction date, bring your successful propagation to a monthly meeting/auction. Points will be awarded at the meeting when you present your corals!
+			else
+				p After 60 days from your reproduction date, bring at least 6 healthy fry to a monthly meeting/auction. Points will be awarded at the meeting when you present your fry!
+
+			p You can view your submission status at any time:
+			a.button(href=`${domain}/submissions/${submission.id}`) View Submission
+
+			p Thank you for participating in the Breeder Awards Program!
+
+		.footer
+			p
+				strong Brooklyn Aquarium Society
+			p Educating Aquarists since 1911
+			p
+				a(href="https://basny.org" style="color: white;") basny.org

@@ -71,7 +71,7 @@ html
 		.content
 			p Hello #{member.display_name},
 
-			p Thank you for your BAP submission! We've received it and it's now in the verification queue.
+			p Thank you for your BAP submission! We've received it and it's now in the screening queue.
 
 			.submission-details
 				h3 Submission Details:
@@ -87,17 +87,20 @@ html
 			.info-box
 				h3 Next Steps:
 				ol
-					li <strong>Witness Verification:</strong> A program admin will verify your breeding success
-					li <strong>Waiting Period:</strong> After verification, your submission enters a waiting period
+					li <strong>Admin Screening:</strong> A program admin will review your submission for completeness
 					if submission.species_type === 'Fish' && submission.species_class === 'Marine'
-						li Marine fish: 30-day waiting period
+						li <strong>Mature Your Fry:</strong> Raise at least 6 healthy fry for 30 days
+						li <strong>Bring to Auction:</strong> After 30 days, bring fry to a monthly meeting/auction
 					else if submission.species_type === 'Plant'
-						li Plants: 60-day waiting period
+						li <strong>Grow Your Propagation:</strong> Ensure successful growth for 60 days
+						li <strong>Bring to Auction:</strong> After 60 days, bring plants to a monthly meeting/auction
 					else if submission.species_type === 'Coral'
-						li Corals: 60-day waiting period
+						li <strong>Grow Your Propagation:</strong> Ensure successful growth for 60 days
+						li <strong>Bring to Auction:</strong> After 60 days, bring corals to a monthly meeting/auction
 					else
-						li Freshwater fish & inverts: 60-day waiting period
-					li <strong>Final Approval:</strong> After the waiting period, you'll receive points and recognition!
+						li <strong>Mature Your Fry:</strong> Raise at least 6 healthy fry for 60 days
+						li <strong>Bring to Auction:</strong> After 60 days, bring fry to a monthly meeting/auction
+					li <strong>Points Awarded:</strong> Points are awarded at the meeting when fry/plants/corals are presented!
 
 			p You'll receive email notifications at each step of the approval process.
 

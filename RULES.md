@@ -169,26 +169,57 @@ from other hobbyists.
 
 # Claiming Points
 
-NOTE This section needs the most work. The program as outlined here is, i think, outdated and unworkable.
+## General Rules
 
-* You must be a member in good standing with BAS.  
-* Points may be awarded to families/couples or to individuals, but not to both.  
-* All requirements must be completed within 4 months after a BAP committee person witnessed breeding. If not completed, the offspring are not eligible for the BAP.  
-* It is the breeder’s responsibility to complete all necessary forms, verify that the forms are submitted, the proper points are recorded and that the spawns are verified.  
-* Points may be obtained only once per species of fish/coral invertebrate/plant.  
-  * If a fish has been reclassified under a different scientific name, it will not count as a new species. E.g. Bristlenose Pleco being reclassified (Ancistrus temminckii to Ancistrus cirrhosus)  
-  * Color variations do not count as a separate species. E.g. Discus varieties Symphysodon aequifasciatus “Pigeon Blood” and Symphysodon aequifasciatus “Gold Dragon” do not count as separate species.  
-* Fish  
-  * When you have spawned your fish, they must be “witnessed”; that is, a member of the Breeder Award Program will come to your home to inspect the fry and parents and verify  
-    the species within 7 days of the time they become free swimming. A committee member will revisit to verify the fry are alive 60 days after free swimming or fry may be brought to a club meeting after 60 days.  
-  * .A minimum of six (6) fry will be considered a spawn, if maintained for 60 days. Special consideration will be given to fish that are less prolific and to Junior members, upon request of the breeder to the committee, to waive the six (6) fish minimum.  
-  * Marine fish will be 20 point fish if the fry are free swimming for 30 days.  
-* Plants  
-  * a committee member must be notified immediately and the committee member must inspect the “cutting” within 7 days. The “cutting” must be re-visited to determine reasonable growth within 60 days of original viewing. Floating plants; by doubling the amount; bunch plants, by doubling the number of rooted growing stems; runner or divided plants must have one healthy plant capable of living independently. Sexual reproduction: the flowerings must be identified in full bloom attached to the parent plant.   
-  * For seeded plants, there must be a healthy seedling sufficiently developed to be identified as the offspring of the parent plant.  
-  * Plants must have viable offspring or grow offshoots that develop root systems. Acceptable methods are by cuttings, offshoots, runners, or plantlets that develop their own root systems and can survive on their own, flowering or seed production, and by flower pollination fro the members own plant.  
-* Corals  
-  * a committee member must be notified immediately and the committee member must inspect the “cutting” within 7 days. The “cutting” must be re-visited to determine reasonable growth within 60 days of original viewing. 
+* You must be a member in good standing with BAS.
+* Points may be awarded to families/couples or to individuals, but not to both.
+* It is the breeder's responsibility to complete all necessary forms and ensure submissions are properly recorded.
+* Points may be obtained only once per species of fish/coral invertebrate/plant.
+  * If a fish has been reclassified under a different scientific name, it will not count as a new species. E.g. Bristlenose Pleco being reclassified (Ancistrus temminckii to Ancistrus cirrhosus)
+  * Color variations do not count as a separate species. E.g. Discus varieties Symphysodon aequifasciatus "Pigeon Blood" and Symphysodon aequifasciatus "Gold Dragon" do not count as separate species.
+
+## Submission Process
+
+### 1. Submit Online Form
+After successful breeding/propagation, submit your report online at [bap.basny.org](https://bap.basny.org). Include:
+* Species information and reproduction details
+* Tank parameters and breeding conditions
+* Photos or video links of offspring (highly recommended)
+
+### 2. Admin Screening
+A program admin will review your submission for completeness and credibility. This is **not** an in-person home visit - admins review based on the information and photos/videos you provide.
+
+### 3. Mature Your Offspring
+After admin screening approval, raise your offspring to demonstrate viability:
+
+* **Fish (Freshwater)**: Raise at least 6 healthy fry for 60 days from free-swimming
+* **Fish (Marine)**: Raise at least 6 healthy fry for 30 days from free-swimming (marine fish are more difficult and receive 20 points minimum)
+* **Plants**: Ensure successful propagation growth for 60 days
+  * Acceptable methods: cuttings, offshoots, runners, plantlets with independent root systems, flowering, or seed production
+  * Floating plants: doubling the amount
+  * Bunch plants: doubling the number of rooted growing stems
+  * Runner/divided plants: one healthy plant capable of living independently
+* **Corals**: Ensure successful propagation growth for 60 days
+
+**Special Consideration**: For fish that are less prolific, or for Junior members, the committee may waive the 6-fish minimum upon request.
+
+### 4. Bring to Monthly Auction
+After the maturation period, bring your offspring to a Brooklyn Aquarium Society monthly meeting/auction to present them. **Points are awarded at the meeting** when you physically present the offspring to a program admin.
+
+**What to Bring**:
+* At least 6 healthy fry (for fish) that meet the age requirements
+* Propagated plants or coral frags that demonstrate successful growth
+* The offspring should be in good health and match the species you submitted
+
+### 5. Receive Points
+A program admin will verify your offspring at the meeting and award points. Points are recorded immediately and contribute to your award level progression.
+
+## Important Notes
+
+* You do **not** need a home visit for verification
+* Admins screen submissions based on photos, videos, and credibility
+* The maturation period (30-60 days) ensures offspring viability before points are awarded
+* Bringing offspring to the auction supports the club and lets other members see your success! 
 
 # Assigning & Challenging Points
 
