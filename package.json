@@ -15,6 +15,7 @@
 		"test:watch": "NODE_ENV=test tsx --test --watch 'src/**/*.test.ts'",
 		"start": "node dist/src/index.js",
 		"mcp:species": "tsx src/mcp/species-server.ts",
+		"mcp:members": "tsx src/mcp/member-server.ts",
 		"lint": "eslint 'src/**/*.ts'",
 		"lint:fix": "eslint 'src/**/*.ts' --fix",
 		"script": "ts-node"
