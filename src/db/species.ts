@@ -102,9 +102,15 @@ export async function mergeSpecies(canonicalGroupId: number, defunctGroupId: num
 
 export async function getCanonicalSpeciesName(speciesNameId: number) {
   const rows = await query<{
+		group_id: number;
 		program_class: string;
+		species_type: string;
 		canonical_genus: string;
 		canonical_species_name: string;
+		base_points: number | null;
+		is_cares_species: number;
+		external_references: string | null;
+		image_links: string | null;
 	}>(`
 		SELECT species_name_group.*
 		FROM species_name JOIN species_name_group

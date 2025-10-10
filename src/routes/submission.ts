@@ -257,15 +257,15 @@ export const create = async (req: MulmRequest, res: Response) => {
 
   const memberId = member.id;
 
-  // Ensure species_name_id is set and validate it matches the expected program class
+  // Ensure species_name_id is set and validate it matches the expected species type
   if (form.species_name_id) {
-    // Validate that the species_name_id references a species with matching program_class
+    // Validate that the species_name_id references a species with matching species_type
     const canonical = await getCanonicalSpeciesName(form.species_name_id);
-    if (!canonical || canonical.program_class !== form.species_type) {
+    if (!canonical || canonical.species_type !== form.species_type) {
       const errors = new Map<string, string>();
-      errors.set('species_type', 'Species name does not match selected species type');
+      errors.set('species_type', `Species name does not match selected species type. This species is classified as "${canonical?.species_type}", but you selected "${form.species_type}".`);
       const selectedType = form.species_type || 'Fish';
-      res.render('bapForm/form', {
+      res.render('submit', {
         title: getBapFormTitle(selectedType),
         form,
         errors,
@@ -308,11 +308,8 @@ export const create = async (req: MulmRequest, res: Response) => {
     await onSubmissionSend(sub, member);
   }
 
-  res.render('submission/success', {
-    title: "Submission Complete",
-    member,
-    subId,
-  });
+  // Redirect to the submission view page after successful creation
+  res.set('HX-Redirect', `/submissions/${subId}`).status(200).send();
 }
 
 export const update = async (req: MulmRequest, res: Response) => {
@@ -367,15 +364,15 @@ export const update = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  // Ensure species_name_id is set and validate it matches the expected program class
+  // Ensure species_name_id is set and validate it matches the expected species type
   if (form.species_name_id) {
-    // Validate that the species_name_id references a species with matching program_class
+    // Validate that the species_name_id references a species with matching species_type
     const canonical = await getCanonicalSpeciesName(form.species_name_id);
-    if (!canonical || canonical.program_class !== form.species_type) {
+    if (!canonical || canonical.species_type !== form.species_type) {
       const errors = new Map<string, string>();
-      errors.set('species_type', 'Species name does not match selected species type');
+      errors.set('species_type', `Species name does not match selected species type. This species is classified as "${canonical?.species_type}", but you selected "${form.species_type}".`);
       const selectedType = form.species_type || 'Fish';
-      res.render('bapForm/form', {
+      res.render('submit', {
         title: getBapFormTitle(selectedType),
         form,
         errors,
@@ -413,11 +410,8 @@ export const update = async (req: MulmRequest, res: Response) => {
     await onSubmissionSend(sub, member);
   }
 
-  res.render('submission/success', {
-    title: "Edits Saved",
-    member,
-    subId: submission.id,
-  });
+  // Redirect to the submission view page after successful update
+  res.set('HX-Redirect', `/submissions/${submission.id}`).status(200).send();
 }
 
 export const remove = async (req: MulmRequest, res: Response) => {

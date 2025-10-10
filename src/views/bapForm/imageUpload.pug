@@ -49,10 +49,18 @@ mixin imageUploadSection()
 
 //- Client-side JavaScript for handling uploads
 script.
-  let uploadedImages = !{form.images || '[]'};
-  let uploadInProgress = false;
-  let eventSource = null;
-  
+  // Use window scope to avoid redeclaration errors when HTMX swaps the form
+  if (!window.uploadState) {
+    window.uploadState = {
+      uploadedImages: !{form.images || '[]'},
+      uploadInProgress: false,
+      eventSource: null
+    };
+  } else {
+    // Update existing images if form was swapped
+    window.uploadState.uploadedImages = !{form.images || '[]'};
+  }
+
   function handleDragOver(e) {
     e.preventDefault();
     e.currentTarget.classList.add('border-blue-500', 'bg-blue-50');
@@ -81,33 +89,33 @@ script.
   }
   
   async function uploadFiles(files) {
-    if (uploadInProgress) {
+    if (window.uploadState.uploadInProgress) {
       alert('Please wait for the current upload to complete');
       return;
     }
-    
+
     // Check total image count
-    if (uploadedImages.length + files.length > 5) {
+    if (window.uploadState.uploadedImages.length + files.length > 5) {
       alert('You can upload a maximum of 5 images total');
       return;
     }
-    
-    uploadInProgress = true;
+
+    window.uploadState.uploadInProgress = true;
     const uploadId = 'upload_' + Date.now();
-    
+
     // Show progress
     document.getElementById('upload-progress').classList.remove('hidden');
     document.getElementById('upload-errors').classList.add('hidden');
-    
+
     // Set up SSE for progress tracking
-    eventSource = new EventSource('/api/upload/progress/' + uploadId);
-    eventSource.onmessage = function(event) {
+    window.uploadState.eventSource = new EventSource('/api/upload/progress/' + uploadId);
+    window.uploadState.eventSource.onmessage = function(event) {
       const data = JSON.parse(event.data);
       updateProgress(data.percent, data.message);
-      
+
       if (data.stage === 'complete' || data.stage === 'error') {
-        eventSource.close();
-        eventSource = null;
+        window.uploadState.eventSource.close();
+        window.uploadState.eventSource = null;
       }
     };
     
@@ -130,10 +138,10 @@ script.
       
       if (result.success) {
         // Add uploaded images to the list
-        uploadedImages = uploadedImages.concat(result.images);
+        window.uploadState.uploadedImages = window.uploadState.uploadedImages.concat(result.images);
         updateImageGrid();
         updateHiddenField();
-        
+
         // Show errors if any
         if (result.errors && result.errors.length > 0) {
           showErrors(result.errors);
@@ -145,46 +153,46 @@ script.
       console.error('Upload error:', error);
       showErrors(['Upload failed: ' + error.message]);
     } finally {
-      uploadInProgress = false;
+      window.uploadState.uploadInProgress = false;
       document.getElementById('upload-progress').classList.add('hidden');
       document.getElementById('image-input').value = '';
-      
-      if (eventSource) {
-        eventSource.close();
+
+      if (window.uploadState.eventSource) {
+        window.uploadState.eventSource.close();
       }
     }
   }
-  
+
   function updateProgress(percent, message) {
     document.getElementById('progress-bar').style.width = percent + '%';
     document.getElementById('progress-text').textContent = message;
   }
-  
+
   function showErrors(errors) {
     const errorContainer = document.getElementById('upload-errors');
     const errorList = document.getElementById('error-list');
-    
+
     errorList.innerHTML = '';
     errors.forEach(error => {
       const li = document.createElement('li');
       li.textContent = error;
       errorList.appendChild(li);
     });
-    
+
     errorContainer.classList.remove('hidden');
   }
-  
+
   function updateImageGrid() {
     const grid = document.getElementById('image-preview-grid');
     grid.innerHTML = '';
-    
-    uploadedImages.forEach((image, index) => {
+
+    window.uploadState.uploadedImages.forEach((image, index) => {
       const div = document.createElement('div');
       div.className = 'relative group';
       div.innerHTML = `
-        <img src="${image.url}" alt="Uploaded image ${index + 1}" 
+        <img src="${image.url}" alt="Uploaded image ${index + 1}"
              class="w-full h-32 object-cover rounded-lg shadow-md">
-        <button type="button" 
+        <button type="button"
                 onclick="removeImage(${index})"
                 class="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                 aria-label="Remove image">
@@ -196,28 +204,28 @@ script.
       grid.appendChild(div);
     });
   }
-  
+
   function removeImage(index) {
     if (confirm('Remove this image?')) {
       // If image has a key, we should delete from R2
-      const image = uploadedImages[index];
+      const image = window.uploadState.uploadedImages[index];
       if (image.key) {
         fetch('/api/upload/image/' + encodeURIComponent(image.key), {
           method: 'DELETE'
         }).catch(console.error);
       }
-      
-      uploadedImages.splice(index, 1);
+
+      window.uploadState.uploadedImages.splice(index, 1);
       updateImageGrid();
       updateHiddenField();
     }
   }
-  
+
   function updateHiddenField() {
-    document.getElementById('images-metadata').value = JSON.stringify(uploadedImages);
+    document.getElementById('images-metadata').value = JSON.stringify(window.uploadState.uploadedImages);
   }
-  
+
   // Initialize grid if there are existing images
-  if (uploadedImages.length > 0) {
+  if (window.uploadState.uploadedImages.length > 0) {
     updateImageGrid();
   }
