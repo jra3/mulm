@@ -1,9 +1,7 @@
 services:
   # Node.js application
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/jra3/mulm:latest
     container_name: basny-app
     restart: unless-stopped
     expose:

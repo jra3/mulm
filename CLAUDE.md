@@ -546,18 +546,33 @@ All persistent data lives on EBS volume at `/mnt/basny-data/`:
 ### Deployment Commands
 
 #### Standard Deployment
+
+**Docker images are built automatically** by GitHub Actions on push to main branch and pushed to GitHub Container Registry (GHCR).
+
 ```bash
-# Deploy latest code from main branch
-ssh BAP "cd /opt/basny && git pull && sudo docker-compose -f docker-compose.prod.yml up -d --build"
+# Deploy latest image from GHCR
+ssh BAP "cd /opt/basny && git pull && sudo docker-compose -f docker-compose.prod.yml pull && sudo docker-compose -f docker-compose.prod.yml up -d"
 
 # Deploy with local changes (resets uncommitted changes on server)
-ssh BAP "cd /opt/basny && git reset --hard && git pull && sudo docker-compose -f docker-compose.prod.yml up -d --build"
+ssh BAP "cd /opt/basny && git reset --hard && git pull && sudo docker-compose -f docker-compose.prod.yml pull && sudo docker-compose -f docker-compose.prod.yml up -d"
 
 # Verify deployment
 ssh BAP "sudo docker ps"  # Check container status
 ssh BAP "sudo docker logs basny-app --tail 50"  # View app logs
 curl https://bap.basny.org/health  # Test health endpoint
 ```
+
+**How it works:**
+1. Push code to GitHub (main branch)
+2. GitHub Actions automatically builds Docker image
+3. Image is pushed to `ghcr.io/jra3/mulm:latest`
+4. Production server pulls pre-built image (no build needed on server)
+
+**Benefits:**
+- No disk space needed for builds on production server
+- Faster deployments (just pull image)
+- Consistent builds across all environments
+- Version history in GHCR
 
 #### Common Operations
 ```bash
@@ -607,12 +622,12 @@ ssh BAP "top -bn1 | head -20"  # CPU usage
 ssh BAP "cd /opt/basny && sudo docker-compose -f docker-compose.prod.yml logs"  # View all logs
 ssh BAP "sudo docker ps -a"  # Check all containers including stopped
 ssh BAP "sudo docker restart basny-app"  # Restart stuck container
-ssh BAP "cd /opt/basny && sudo docker-compose -f docker-compose.prod.yml down && sudo docker-compose -f docker-compose.prod.yml up -d --build"  # Rebuild from scratch
+ssh BAP "cd /opt/basny && sudo docker-compose -f docker-compose.prod.yml down && sudo docker-compose -f docker-compose.prod.yml pull && sudo docker-compose -f docker-compose.prod.yml up -d"  # Pull fresh image and restart
 
-# Build issues
-ssh BAP "sudo docker builder prune -a"  # Clean build cache
+# Image/disk issues
 ssh BAP "sudo docker system df"  # Check disk usage
 ssh BAP "sudo docker image prune -a"  # Remove old images
+ssh BAP "sudo docker system prune -a"  # Clean all unused Docker resources
 
 # Database issues
 ssh BAP "sqlite3 /mnt/basny-data/app/database/database.db 'PRAGMA integrity_check;'"  # Check integrity
@@ -634,8 +649,11 @@ ssh BAP "cd /opt/basny && git log --oneline -10"
 ssh BAP "cd /opt/basny && git reset --hard <commit-hash>"
 # Or revert to previous commit: ssh BAP "cd /opt/basny && git reset --hard HEAD~1"
 
-# 3. Rebuild previous version
-ssh BAP "cd /opt/basny && sudo docker-compose -f docker-compose.prod.yml up -d --build"
+# 3. Pull and deploy specific version from GHCR (images are tagged with commit SHA)
+# View available tags at: https://github.com/jra3/mulm/pkgs/container/mulm
+ssh BAP "cd /opt/basny && sudo docker pull ghcr.io/jra3/mulm:main-<commit-sha>"
+# Or just pull latest from GHCR
+ssh BAP "cd /opt/basny && sudo docker-compose -f docker-compose.prod.yml pull && sudo docker-compose -f docker-compose.prod.yml up -d"
 
 # 4. Restore database if needed (list backups first)
 ssh BAP "ls -lh /tmp/backup_*.db"
