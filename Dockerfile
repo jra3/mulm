@@ -12,6 +12,9 @@ COPY postcss.config.mjs ./
 COPY src ./src
 COPY public ./public
 
+# Create config.json from sample for build (production uses mounted config)
+RUN cp src/config.sample.json src/config.json
+
 # Build the application
 RUN npm run build
 

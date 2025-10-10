@@ -1,0 +1,18 @@
+{
+  "databaseFile": "db/database.db",
+  "domain": "localhost:4200",
+  "googleClientId": "",
+  "googleClientSecret": "",
+  "adminsEmail": "admin@example.com",
+  "bugReportEmail": "bugs@example.com",
+  "fromEmail": "noreply@example.com",
+  "smtpPassword": "",
+  "smtpHost": "",
+  "smtpPort": 465,
+  "smtpSecure": true,
+  "s3AccessKeyId": "",
+  "s3Secret": "",
+  "s3Url": "",
+  "s3Bucket": "",
+  "r2PublicUrl": ""
+}
