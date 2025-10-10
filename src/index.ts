@@ -180,7 +180,7 @@ router.post("/auth/reset-password", auth.resetPassword);
 // OAuth (external dependency - redirect_uri registered with Google)
 router.get("/oauth/google", oauthRateLimiter, auth.googleOAuth);
 
-router.get("/dialog/auth/signin", async (req, res) => {
+router.get("/dialog/auth/signin", (req, res) => {
   // Generate OAuth state for CSRF protection (stored in cookie)
   const oauthState = setOAuthStateCookie(res);
 

@@ -5,7 +5,7 @@ import { MulmRequest } from '../sessions';
  * Demo route to preview all email templates
  * Only accessible in development or to admins
  */
-export const emailDemoPage = async (req: MulmRequest, res: Response) => {
+export const emailDemoPage = (req: MulmRequest, res: Response) => {
   const { viewer } = req;
 
   // Only allow in development or for admins

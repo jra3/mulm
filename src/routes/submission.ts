@@ -480,7 +480,7 @@ export const videoPreview = async (req: MulmRequest, res: Response) => {
     res.render('bapForm/videoPreview', {
       metadata
     });
-  } catch (error) {
+  } catch {
     res.render('bapForm/videoPreviewError', {
       error: 'Failed to load video preview. The link may be invalid or the video may be private.'
     });

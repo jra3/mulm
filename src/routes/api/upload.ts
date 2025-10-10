@@ -72,7 +72,7 @@ async function cleanupUploadedFiles(keys: string[]): Promise<void> {
   logger.info('Cleaning up uploaded files', { count: keys.length });
 
   const deletePromises = keys.map(key =>
-    deleteImage(key).catch(err => {
+    deleteImage(key).catch((err: unknown) => {
       logger.error('Failed to cleanup file during batch delete', { key, error: err });
       // Don't throw - best effort cleanup
     })

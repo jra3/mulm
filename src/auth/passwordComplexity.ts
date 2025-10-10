@@ -44,6 +44,7 @@ export function validatePasswordComplexity(password: string): PasswordValidation
 
   if (PASSWORD_COMPLEXITY_LEVEL >= 3) {
     // Level 3: Special character requirement
+    // eslint-disable-next-line no-useless-escape
     if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
       errors.push("Password must contain at least one special character");
     }
