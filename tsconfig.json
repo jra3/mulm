@@ -9,6 +9,9 @@
 		"allowSyntheticDefaultImports": true,
 		"moduleResolution": "node",
 		"strict": true,
+		"sourceMap": false,
+		"inlineSourceMap": false,
+		"inlineSources": false,
 
 		"forceConsistentCasingInFileNames": true,
 		"noImplicitAny": true,
