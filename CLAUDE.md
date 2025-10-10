@@ -647,6 +647,31 @@ curl https://bap.basny.org/health
 ssh BAP "cd /opt/basny && git log --oneline -1"  # Check current commit
 ```
 
+### Database Backup System
+
+**📖 Full Documentation**: See [Backup & Recovery Guide](https://github.com/jra3/mulm/wiki/Backup-Recovery) for comprehensive backup and recovery procedures.
+
+**Quick Reference**:
+- **Scripts**: `scripts/backup-database.sh`, `scripts/restore-database.sh`, `scripts/backup-status.sh`
+- **Backup Location**: `/mnt/basny-data/backups/` (on EBS volume)
+- **Retention**: Hourly (4), Daily (7), Weekly (4), Monthly (12)
+- **Cron Schedule**: Setup documented in wiki
+
+**Common Commands**:
+```bash
+# Manual backup
+ssh BAP "/opt/basny/scripts/backup-database.sh hourly"
+
+# Check backup status
+ssh BAP "/opt/basny/scripts/backup-status.sh"
+
+# Restore from backup (interactive)
+ssh BAP "/opt/basny/scripts/restore-database.sh"
+
+# View backup logs
+ssh BAP "tail -f /mnt/basny-data/backups/backup.log"
+```
+
 ## Configuration Management
 
 ### Development
