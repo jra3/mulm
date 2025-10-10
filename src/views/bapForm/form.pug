@@ -197,6 +197,23 @@ mixin CRUDForm()
     //- Image Upload Section
     +imageUploadSection()
 
+    //- Video Link Section
+    section.bg-gray-100.py-4(aria-labelledby="video-section")
+        div.max-w-4xl.mx-auto.text-left.px-4
+            h2#video-section(class="text-xl sm:text-2xl font-bold mb-4") Video Link (Optional)
+            p.text-sm.text-gray-600.mb-4 Add a YouTube or Vimeo link to showcase your breeding success
+            div.grid.gap-2
+                label.input-label(for="video_url") Video URL
+                input.text-input(
+                    type="url"
+                    id="video_url"
+                    name="video_url"
+                    value=form.video_url || ""
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    aria-describedby="video-url-hint"
+                )
+                span#video-url-hint.text-xs.text-gray-500 Paste a link from YouTube or Vimeo
+
     unless form.submitted_on || editing
         section.bg-blue-50.py-4.border-l-4.border-blue-400(aria-labelledby="witness-info")
             div.max-w-4xl.mx-auto.px-4

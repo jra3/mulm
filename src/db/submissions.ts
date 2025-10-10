@@ -44,6 +44,9 @@ export type Submission = {
 	supplement_type: string;
 	supplement_regimen: string;
 
+	images: string | null;
+	video_url: string | null;
+
 	submitted_on: string | null;
 	approved_on: string | null;
 	approved_by: number | null;

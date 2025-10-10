@@ -85,6 +85,7 @@ export const bapFields = z.object({
   co2_description: z.string().max(1000, "Description too long (max 1000 characters)").optional(),
 
   images: z.string().optional(), // JSON string of image metadata
+  video_url: z.string().url("Must be a valid URL").max(500, "URL too long (max 500 characters)").optional().or(z.literal("")),
 })
 
 export const bapDraftForm = bapFields.partial()
