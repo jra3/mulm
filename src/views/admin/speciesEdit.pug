@@ -110,7 +110,7 @@ html
           .bg-white.rounded-lg.shadow-md.p-6.mb-6
             .flex.justify-between.items-center.mb-4
               h3.text-lg.font-bold.text-gray-900 Name Variants (#{species.synonyms.length})
-              button.outline.text-sm.px-3.py-1(
+              button.outline(
                 type="button"
                 hx-get=`/admin/species/${species.group_id}/synonyms/new`
                 hx-target="#synonym-list"
@@ -128,7 +128,7 @@ html
                       div
                         .text-gray-500.text-xs.mb-1 Scientific Name:
                         .font-medium.italic= synonym.scientific_name
-                    button.destructive.text-sm.px-3.py-1(
+                    button.destructive(
                       type="button"
                       hx-delete=`/admin/species/${species.group_id}/synonyms/${synonym.name_id}`
                       hx-confirm="Delete this synonym?"
@@ -140,8 +140,8 @@ html
 
           //- Actions
           .flex.gap-3.justify-center
-            button.primary.px-6(type="submit" hx-disabled-elt="this") Save Changes
-            a.outline.px-6.py-2(href="/admin/species") Cancel
+            button.primary(type="submit" hx-disabled-elt="this") Save Changes
+            a.outline(href="/admin/species") Cancel
 
           //- Danger Zone
           .mt-6.pt-6.border-t.border-gray-300
