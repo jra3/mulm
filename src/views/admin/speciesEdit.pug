@@ -65,17 +65,19 @@ html
           .bg-white.rounded-lg.shadow-md.p-6.mb-6
             h3.text-lg.font-bold.text-gray-900.mb-4 Classification
 
-            div
-              label.input-label(for="program_class") Program Class
-              input.text-input(
-                type="text"
-                id="program_class"
-                name="program_class"
-                value=species.program_class
-                required
-                placeholder="e.g., Cichlids, Livebearers, Cryptocoryne"
-              )
-              p.text-xs.text-gray-500.mt-1 BAP/HAP/CAP program class
+            .grid.gap-4(class="md:grid-cols-2")
+              div
+                label.input-label(for="species_type") Species Type
+                .text-sm.px-3.py-2.bg-gray-100.rounded.text-gray-700= species.species_type
+                p.text-xs.text-gray-500.mt-1 Cannot be changed (affects form fields)
+
+              div
+                label.input-label(for="program_class") Program Class
+                .select-wrapper
+                  select#program_class(name="program_class" required)
+                    each cls in classOptions
+                      option(value=cls selected=(species.program_class === cls))= cls
+                p.text-xs.text-gray-500.mt-1 BAP/HAP/CAP program class
 
           //- Points & Status
           .bg-white.rounded-lg.shadow-md.p-6.mb-6

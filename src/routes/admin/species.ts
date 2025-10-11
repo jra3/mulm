@@ -101,9 +101,15 @@ export const editSpeciesSidebar = async (req: MulmRequest, res: Response) => {
   // Get full species group data (getSpeciesDetail doesn't return all fields)
   const fullData = await getSynonymsForGroup(groupId);
 
+  // Get class options for this species type
+  const { speciesTypesAndClasses } = await import('@/forms/submission');
+  const classOptions = speciesTypesAndClasses[speciesDetail.species_type || 'Fish'] || [];
+
   res.render('admin/speciesEdit', {
     title: 'Edit Species',
     species: speciesDetail,
+    classOptions,
+    speciesTypes: ['Fish', 'Plant', 'Invert', 'Coral'],
     errors: new Map()
   });
 };
