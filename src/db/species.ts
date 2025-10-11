@@ -756,3 +756,251 @@ export async function getSpeciesForAdmin(
     total_count
   };
 }
+
+/**
+ * Update a species group's metadata
+ * @param groupId - Species group ID to update
+ * @param updates - Fields to update (at least one required)
+ * @returns Number of rows updated (0 if not found, 1 if successful)
+ * @throws Error if no fields provided, empty values, or canonical name conflict
+ */
+export async function updateSpeciesGroup(
+  groupId: number,
+  updates: {
+    canonicalGenus?: string;
+    canonicalSpeciesName?: string;
+    speciesType?: string;
+    programClass?: string;
+    basePoints?: number | null;
+    isCaresSpecies?: boolean;
+    externalReferences?: string[];
+    imageLinks?: string[];
+  }
+): Promise<number> {
+  const {
+    canonicalGenus,
+    canonicalSpeciesName,
+    speciesType,
+    programClass,
+    basePoints,
+    isCaresSpecies,
+    externalReferences,
+    imageLinks
+  } = updates;
+
+  // At least one field must be provided
+  if (Object.keys(updates).length === 0) {
+    throw new Error('At least one field must be provided');
+  }
+
+  const fields: string[] = [];
+  const values: unknown[] = [];
+
+  if (canonicalGenus !== undefined) {
+    const trimmed = canonicalGenus.trim();
+    if (!trimmed) {
+      throw new Error('Canonical genus cannot be empty');
+    }
+    fields.push('canonical_genus = ?');
+    values.push(trimmed);
+  }
+
+  if (canonicalSpeciesName !== undefined) {
+    const trimmed = canonicalSpeciesName.trim();
+    if (!trimmed) {
+      throw new Error('Canonical species name cannot be empty');
+    }
+    fields.push('canonical_species_name = ?');
+    values.push(trimmed);
+  }
+
+  if (speciesType !== undefined) {
+    if (!['Fish', 'Plant', 'Invert', 'Coral'].includes(speciesType)) {
+      throw new Error('Species type must be Fish, Plant, Invert, or Coral');
+    }
+    fields.push('species_type = ?');
+    values.push(speciesType);
+  }
+
+  if (programClass !== undefined) {
+    const trimmed = programClass.trim();
+    if (!trimmed) {
+      throw new Error('Program class cannot be empty');
+    }
+    fields.push('program_class = ?');
+    values.push(trimmed);
+  }
+
+  if (basePoints !== undefined) {
+    if (basePoints !== null && (basePoints < 0 || basePoints > 100)) {
+      throw new Error('Base points must be between 0 and 100, or null');
+    }
+    fields.push('base_points = ?');
+    values.push(basePoints);
+  }
+
+  if (isCaresSpecies !== undefined) {
+    fields.push('is_cares_species = ?');
+    values.push(isCaresSpecies ? 1 : 0);
+  }
+
+  if (externalReferences !== undefined) {
+    fields.push('external_references = ?');
+    values.push(externalReferences.length > 0 ? JSON.stringify(externalReferences) : null);
+  }
+
+  if (imageLinks !== undefined) {
+    fields.push('image_links = ?');
+    values.push(imageLinks.length > 0 ? JSON.stringify(imageLinks) : null);
+  }
+
+  if (fields.length === 0) {
+    throw new Error('No valid fields to update');
+  }
+
+  values.push(groupId);
+
+  try {
+    const conn = writeConn;
+    const stmt = await conn.prepare(`
+      UPDATE species_name_group
+      SET ${fields.join(', ')}
+      WHERE group_id = ?
+    `);
+
+    try {
+      const result = await stmt.run(...values);
+      return result.changes || 0;
+    } finally {
+      await stmt.finalize();
+    }
+  } catch (err) {
+    // Check for unique constraint on canonical_genus + canonical_species_name
+    if (err instanceof Error && err.message.includes('UNIQUE constraint')) {
+      throw new Error('A species with this canonical name already exists');
+    }
+    logger.error('Failed to update species group', err);
+    throw new Error('Failed to update species group');
+  }
+}
+
+/**
+ * Delete a species group and all its synonyms
+ * @param groupId - Species group ID to delete
+ * @param force - If true, allows deleting species with approved submissions (default: false)
+ * @returns Number of rows deleted (0 if not found, 1 if successful)
+ * @throws Error if species has approved submissions without force flag
+ */
+export async function deleteSpeciesGroup(groupId: number, force = false): Promise<number> {
+  // Verify species group exists
+  const groups = await query<{ group_id: number; canonical_genus: string; canonical_species_name: string }>(
+    'SELECT group_id, canonical_genus, canonical_species_name FROM species_name_group WHERE group_id = ?',
+    [groupId]
+  );
+
+  if (groups.length === 0) {
+    throw new Error(`Species group ${groupId} not found`);
+  }
+
+  // Check for approved submissions
+  const submissions = await query<{ count: number }>(
+    `SELECT COUNT(*) as count
+     FROM submissions s
+     JOIN species_name sn ON s.species_name_id = sn.name_id
+     WHERE sn.group_id = ? AND s.approved_on IS NOT NULL`,
+    [groupId]
+  );
+
+  const submissionCount = submissions[0]?.count || 0;
+
+  if (submissionCount > 0 && !force) {
+    throw new Error(
+      `Species has ${submissionCount} approved submissions. Use force=true to delete anyway.`
+    );
+  }
+
+  // Get synonym count before delete (for logging)
+  const synonyms = await query<{ count: number }>(
+    'SELECT COUNT(*) as count FROM species_name WHERE group_id = ?',
+    [groupId]
+  );
+
+  const synonymCount = synonyms[0]?.count || 0;
+
+  try {
+    const conn = writeConn;
+    const stmt = await conn.prepare('DELETE FROM species_name_group WHERE group_id = ?');
+
+    try {
+      const result = await stmt.run(groupId);
+
+      if (result.changes > 0) {
+        logger.info('Deleted species group', {
+          groupId,
+          canonicalName: `${groups[0].canonical_genus} ${groups[0].canonical_species_name}`,
+          synonymCount,
+          submissionCount,
+          forced: force
+        });
+
+        if (submissionCount > 0) {
+          logger.warn('Deleted species with approved submissions', {
+            groupId,
+            submissionCount
+          });
+        }
+      }
+
+      return result.changes || 0;
+    } finally {
+      await stmt.finalize();
+    }
+  } catch (err) {
+    logger.error('Failed to delete species group', err);
+    throw new Error('Failed to delete species group');
+  }
+}
+
+/**
+ * Update base_points for multiple species groups at once
+ * @param groupIds - Array of species group IDs to update
+ * @param points - Point value to set (0-100 or null to clear)
+ * @returns Number of species updated
+ * @throws Error if invalid point value or no group IDs provided
+ */
+export async function bulkSetPoints(groupIds: number[], points: number | null): Promise<number> {
+  if (!groupIds || groupIds.length === 0) {
+    throw new Error('At least one group ID must be provided');
+  }
+
+  if (points !== null && (points < 0 || points > 100)) {
+    throw new Error('Points must be between 0 and 100, or null');
+  }
+
+  try {
+    const conn = writeConn;
+    const placeholders = groupIds.map(() => '?').join(', ');
+    const stmt = await conn.prepare(`
+      UPDATE species_name_group
+      SET base_points = ?
+      WHERE group_id IN (${placeholders})
+    `);
+
+    try {
+      const result = await stmt.run(points, ...groupIds);
+
+      logger.info('Bulk updated species points', {
+        groupIds,
+        points,
+        updatedCount: result.changes || 0
+      });
+
+      return result.changes || 0;
+    } finally {
+      await stmt.finalize();
+    }
+  } catch (err) {
+    logger.error('Failed to bulk set points', err);
+    throw new Error('Failed to bulk set points');
+  }
+}
