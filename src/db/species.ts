@@ -449,6 +449,15 @@ export type SpeciesBreeder = {
 	}>;
 };
 
+/**
+ * Get breeders who have bred a specific species - Split schema compatible
+ *
+ * **Migration Note**: Updated to check all three FK columns in submissions table:
+ * legacy species_name_id, common_name_id, and scientific_name_id.
+ *
+ * @param groupId - Species group ID
+ * @returns Array of breeders with their breeding statistics for this species
+ */
 export async function getBreedersForSpecies(groupId: number) {
   return query<SpeciesBreeder>(`
 		SELECT
@@ -466,11 +475,14 @@ export async function getBreedersForSpecies(groupId: number) {
 			) as submissions_concat
 		FROM members m
 		JOIN submissions s ON m.id = s.member_id
-		JOIN species_name sn ON s.species_name_id = sn.name_id
-		WHERE sn.group_id = ? AND s.approved_on IS NOT NULL
+		LEFT JOIN species_name sn ON s.species_name_id = sn.name_id
+		LEFT JOIN species_common_name cn ON s.common_name_id = cn.common_name_id
+		LEFT JOIN species_scientific_name scin ON s.scientific_name_id = scin.scientific_name_id
+		WHERE (sn.group_id = ? OR cn.group_id = ? OR scin.group_id = ?)
+		  AND s.approved_on IS NOT NULL
 		GROUP BY m.id, m.display_name
 		ORDER BY breed_count DESC, latest_breed_date DESC
-	`, [groupId]).then(rows => {
+	`, [groupId, groupId, groupId]).then(rows => {
     return rows.map(row => ({
       ...row,
       submissions: row.submissions_concat ? row.submissions_concat.split(',').map((sub: string) => {
