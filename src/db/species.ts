@@ -1375,13 +1375,17 @@ export async function deleteSpeciesGroup(groupId: number, force = false): Promis
     throw new Error(`Species group ${groupId} not found`);
   }
 
-  // Check for approved submissions
+  // Check for approved submissions - Split schema compatible
+  // Checks all three possible FK columns: legacy species_name_id, common_name_id, scientific_name_id
   const submissions = await query<{ count: number }>(
-    `SELECT COUNT(*) as count
+    `SELECT COUNT(DISTINCT s.id) as count
      FROM submissions s
-     JOIN species_name sn ON s.species_name_id = sn.name_id
-     WHERE sn.group_id = ? AND s.approved_on IS NOT NULL`,
-    [groupId]
+     LEFT JOIN species_name sn ON s.species_name_id = sn.name_id
+     LEFT JOIN species_common_name cn ON s.common_name_id = cn.common_name_id
+     LEFT JOIN species_scientific_name scin ON s.scientific_name_id = scin.scientific_name_id
+     WHERE (sn.group_id = ? OR cn.group_id = ? OR scin.group_id = ?)
+       AND s.approved_on IS NOT NULL`,
+    [groupId, groupId, groupId]
   );
 
   const submissionCount = submissions[0]?.count || 0;
@@ -1392,13 +1396,21 @@ export async function deleteSpeciesGroup(groupId: number, force = false): Promis
     );
   }
 
-  // Get synonym count before delete (for logging)
-  const synonyms = await query<{ count: number }>(
+  // Get synonym count before delete (for logging) - count from both split tables
+  const commonCount = await query<{ count: number }>(
+    'SELECT COUNT(*) as count FROM species_common_name WHERE group_id = ?',
+    [groupId]
+  );
+  const scientificCount = await query<{ count: number }>(
+    'SELECT COUNT(*) as count FROM species_scientific_name WHERE group_id = ?',
+    [groupId]
+  );
+  const legacyCount = await query<{ count: number }>(
     'SELECT COUNT(*) as count FROM species_name WHERE group_id = ?',
     [groupId]
   );
 
-  const synonymCount = synonyms[0]?.count || 0;
+  const synonymCount = (commonCount[0]?.count || 0) + (scientificCount[0]?.count || 0) + (legacyCount[0]?.count || 0);
 
   try {
     const conn = writeConn;
