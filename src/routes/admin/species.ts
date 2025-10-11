@@ -200,3 +200,145 @@ export const updateSpecies = async (req: MulmRequest, res: Response) => {
     });
   }
 };
+
+/**
+ * DELETE /admin/species/:groupId
+ * Delete species group and all synonyms
+ */
+export const deleteSpecies = async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+
+  if (!viewer?.is_admin) {
+    res.status(403).send('Admin access required');
+    return;
+  }
+
+  const groupId = parseInt(req.params.groupId);
+  if (!groupId) {
+    res.status(400).send('Invalid species ID');
+    return;
+  }
+
+  const { deleteSpeciesGroup } = await import('@/db/species');
+
+  try {
+    // Check query param for force flag
+    const force = req.query.force === 'true';
+    const changes = await deleteSpeciesGroup(groupId, force);
+
+    if (changes === 0) {
+      res.status(404).send('Species not found');
+      return;
+    }
+
+    res.status(200).send('Species deleted');
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('approved submissions')) {
+      res.status(400).send(err.message);
+    } else {
+      res.status(500).send('Failed to delete species');
+    }
+  }
+};
+
+/**
+ * DELETE /admin/species/:groupId/synonyms/:nameId
+ * Delete a synonym
+ */
+export const deleteSynonym = async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+
+  if (!viewer?.is_admin) {
+    res.status(403).send('Admin access required');
+    return;
+  }
+
+  const nameId = parseInt(req.params.nameId);
+  if (!nameId) {
+    res.status(400).send('Invalid synonym ID');
+    return;
+  }
+
+  const { deleteSynonym } = await import('@/db/species');
+
+  try {
+    const force = req.query.force === 'true';
+    const changes = await deleteSynonym(nameId, force);
+
+    if (changes === 0) {
+      res.status(404).send('Synonym not found');
+      return;
+    }
+
+    res.status(200).send('Synonym deleted');
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('last synonym')) {
+      res.status(400).send(err.message);
+    } else {
+      res.status(500).send('Failed to delete synonym');
+    }
+  }
+};
+
+/**
+ * POST /admin/species/:groupId/synonyms
+ * Add a new synonym
+ */
+export const addSynonymRoute = async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+
+  if (!viewer?.is_admin) {
+    res.status(403).send('Admin access required');
+    return;
+  }
+
+  const groupId = parseInt(req.params.groupId);
+  if (!groupId) {
+    res.status(400).send('Invalid species ID');
+    return;
+  }
+
+  const { common_name, scientific_name } = req.body;
+
+  const { addSynonym } = await import('@/db/species');
+
+  try {
+    const nameId = await addSynonym(groupId, common_name, scientific_name);
+
+    // Return the new synonym HTML to be appended
+    res.render('admin/synonymRow', {
+      synonym: {
+        name_id: nameId,
+        common_name: common_name.trim(),
+        scientific_name: scientific_name.trim()
+      },
+      groupId
+    });
+  } catch (err) {
+    if (err instanceof Error) {
+      res.status(400).send(err.message);
+    } else {
+      res.status(500).send('Failed to add synonym');
+    }
+  }
+};
+
+/**
+ * GET /admin/species/:groupId/synonyms/new
+ * Render add synonym form (HTMX partial)
+ */
+export const addSynonymForm = async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+
+  if (!viewer?.is_admin) {
+    res.status(403).send('Admin access required');
+    return;
+  }
+
+  const groupId = parseInt(req.params.groupId);
+
+  res.render('admin/addSynonymForm', {
+    groupId,
+    errors: new Map()
+  });
+};

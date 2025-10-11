@@ -11,6 +11,10 @@ adminRouter.use(requireAdmin);
 adminRouter.get("/species", speciesAdmin.listSpecies);
 adminRouter.get("/species/:groupId/edit", speciesAdmin.editSpeciesSidebar);
 adminRouter.patch("/species/:groupId", speciesAdmin.updateSpecies);
+adminRouter.delete("/species/:groupId", speciesAdmin.deleteSpecies);
+adminRouter.get("/species/:groupId/synonyms/new", speciesAdmin.addSynonymForm);
+adminRouter.post("/species/:groupId/synonyms", speciesAdmin.addSynonymRoute);
+adminRouter.delete("/species/:groupId/synonyms/:nameId", speciesAdmin.deleteSynonym);
 
 adminRouter.get("/queue{/:program}", admin.showQueue);
 adminRouter.get("/witness-queue{/:program}", admin.showWitnessQueue);

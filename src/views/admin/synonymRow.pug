@@ -1,0 +1,16 @@
+//- HTMX partial for a synonym row
+.flex.items-center.gap-3.p-3.bg-gray-50.rounded.border.border-gray-200
+  .flex-1.grid.gap-3(class="md:grid-cols-2")
+    div
+      .text-gray-500.text-xs.mb-1 Common Name:
+      .font-medium= synonym.common_name
+    div
+      .text-gray-500.text-xs.mb-1 Scientific Name:
+      .font-medium.italic= synonym.scientific_name
+  button.destructive(
+    type="button"
+    hx-delete=`/admin/species/${groupId}/synonyms/${synonym.name_id}`
+    hx-confirm="Delete this synonym?"
+    hx-target="closest .flex.items-center"
+    hx-swap="outerHTML swap:0.5s"
+  ) Delete
