@@ -141,7 +141,10 @@ html
           //- Actions
           .flex.gap-3.justify-center
             button.primary(type="submit" hx-disabled-elt="this") Save Changes
-            a(class="outline inline-block text-center" href="/admin/species") Cancel
+            a.outline(
+              href="/admin/species"
+              class="rounded-2xl text-sm font-medium h-9 px-4 py-2 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 flex items-center justify-center gap-2 border-gray-500 hover:bg-gray-200 no-underline"
+            ) Cancel
 
           //- Danger Zone
           .mt-6.pt-6.border-t.border-gray-300
