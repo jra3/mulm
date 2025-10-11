@@ -1,10 +1,14 @@
 import { Router } from "express";
 import { requireAdmin } from "./admin";
 import * as admin from "./admin";
+import * as speciesAdmin from "./admin/species";
 
 const adminRouter = Router();
 
 adminRouter.use(requireAdmin);
+
+// Species management
+adminRouter.get("/species", speciesAdmin.listSpecies);
 
 adminRouter.get("/queue{/:program}", admin.showQueue);
 adminRouter.get("/witness-queue{/:program}", admin.showWitnessQueue);

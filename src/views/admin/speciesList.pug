@@ -1,0 +1,194 @@
+include ../header.pug
+include adminNav.pug
+
+- const stringCell = ['p-3', 'text-left', 'border-b', 'border-gray-200'];
+- const heading = ['p-3', 'text-left', 'font-bold', 'text-gray-900', 'border-b-2', 'border-gray-300', 'bg-gray-50', 'cursor-pointer', 'select-none', 'hover:bg-gray-100'];
+- const numberHeading = ['p-3', 'text-right', 'font-bold', 'text-gray-900', 'border-b-2', 'border-gray-300', 'bg-gray-50', 'cursor-pointer', 'select-none', 'hover:bg-gray-100'];
+- const nonSortableHeading = ['p-3', 'text-left', 'font-bold', 'text-gray-900', 'border-b-2', 'border-gray-300', 'bg-gray-50', 'no-sort'];
+
+mixin speciesTable(speciesList)
+  .overflow-x-auto.w-full
+    table(data-sortable class="w-full bg-white shadow-sm rounded-lg")
+      thead
+        tr
+          th(class=heading) Canonical Name
+          th(class=heading) Type
+          th(class=heading) Class
+          th(class=numberHeading data-sort-method="number") Synonyms
+          th(class=numberHeading data-sort-method="number") Points
+          th(class=heading) CARES
+          th(class=nonSortableHeading) Actions
+
+      tbody
+        each item in speciesList
+          tr(class="hover:bg-gray-50")
+            td(class=stringCell)
+              a.link.font-semibold(
+                href="#"
+                hx-get=`/admin/species/${item.group_id}/edit`
+                hx-target="body"
+                hx-swap="beforeend"
+              )
+                = `${item.canonical_genus} ${item.canonical_species_name}`
+
+            td(class=stringCell)
+              span.inline-block.px-2.py-1.text-xs.font-medium.bg-blue-100.text-blue-800.rounded-full
+                = item.species_type
+
+            td(class=stringCell)
+              span.inline-block.px-2.py-1.text-xs.font-medium.bg-gray-100.text-gray-800.rounded-full
+                = item.program_class
+
+            td(class=stringCell + ' text-right')
+              span.text-gray-600= item.synonym_count
+
+            td(class=stringCell + ' text-right')
+              if item.base_points !== null
+                span.inline-block.px-2.py-1.text-sm.font-medium.bg-green-100.text-green-800.rounded-full
+                  = item.base_points
+              else
+                span.text-gray-400 —
+
+            td(class=stringCell + ' text-center')
+              if item.is_cares_species
+                span.text-yellow-500(title="CARES Conservation Species") ⭐
+              else
+                span.text-gray-300 ☆
+
+            td(class=stringCell)
+              button.outline.text-xs.px-2.py-1(
+                type="button"
+                hx-get=`/admin/species/${item.group_id}/edit`
+                hx-target="body"
+                hx-swap="beforeend"
+              ) Edit
+
+doctype html
+html
+  +headTag(title)
+    script(src='/tablesort.min.js')
+    script(src='/tablesort.number.min.js')
+    script.
+      document.addEventListener('DOMContentLoaded', function() {
+        const tables = document.querySelectorAll('table[data-sortable]');
+        tables.forEach(table => {
+          new Tablesort(table);
+        });
+      });
+
+  body.bg-white.text-gray-800
+    +pageHeader(true, title)
+
+    section.bg-gray-100.py-6
+      div(class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8")
+
+        //- Filters Section
+        .bg-white.rounded-lg.shadow-md.p-6.mb-6
+          form(method="GET" action="/admin/species")
+            .grid.grid-cols-1.gap-4(class="md:grid-cols-2 lg:grid-cols-5")
+
+              //- Species Type Filter
+              .space-y-2
+                label.block.text-sm.font-medium.text-gray-700(for="species_type") Type
+                .select-wrapper
+                  select#species_type(name="species_type" onchange="this.form.submit()")
+                    option(value="" selected=!filters.species_type) All Types
+                    each type in speciesTypes
+                      option(value=type selected=(filters.species_type === type))= type
+
+              //- Program Class Filter
+              .space-y-2
+                label.block.text-sm.font-medium.text-gray-700(for="species_class") Class
+                .select-wrapper
+                  select#species_class(name="species_class" onchange="this.form.submit()")
+                    option(value="" selected=!filters.program_class) All Classes
+                    each cls in classOptions
+                      option(value=cls.value selected=(filters.program_class === cls.value))= cls.text
+
+              //- Points Filter
+              .space-y-2
+                label.block.text-sm.font-medium.text-gray-700(for="has_points") Points Status
+                .select-wrapper
+                  select#has_points(name="has_points" onchange="this.form.submit()")
+                    option(value="" selected=(filters.has_base_points === undefined)) All Species
+                    option(value="true" selected=(filters.has_base_points === true)) With Points
+                    option(value="false" selected=(filters.has_base_points === false)) Without Points
+
+              //- CARES Filter
+              .space-y-2
+                label.block.text-sm.font-medium.text-gray-700(for="is_cares") Conservation
+                .select-wrapper
+                  select#is_cares(name="is_cares" onchange="this.form.submit()")
+                    option(value="" selected=(filters.is_cares_species === undefined)) All Species
+                    option(value="true" selected=(filters.is_cares_species === true)) CARES Only
+                    option(value="false" selected=(filters.is_cares_species === false)) Non-CARES
+
+              //- Search Input
+              .space-y-2
+                label.block.text-sm.font-medium.text-gray-700(for="search") Search
+                input(
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  type="text"
+                  id="search"
+                  name="search"
+                  placeholder="Name or synonym..."
+                  value=(filters.search || "")
+                )
+
+            .flex.justify-between.items-center.mt-4
+              .flex.gap-2
+                button.primary(type="submit") Apply Filters
+                if filters.species_type || filters.program_class || filters.has_base_points !== undefined || filters.is_cares_species !== undefined || filters.search
+                  a.link(href="/admin/species") Clear Filters
+
+              .text-sm.text-gray-600
+                strong= pagination.totalCount
+                |  total species
+
+        //- Results Table
+        if species && species.length > 0
+          +speciesTable(species)
+
+          //- Pagination
+          if pagination.totalPages > 1
+            .mt-6.flex.justify-center.gap-2
+              if pagination.currentPage > 1
+                a.outline.px-3.py-2(href=`/admin/species?page=${pagination.currentPage - 1}${buildQueryString()}`) Previous
+
+              .flex.gap-1
+                - const startPage = Math.max(1, pagination.currentPage - 2);
+                - const endPage = Math.min(pagination.totalPages, pagination.currentPage + 2);
+
+                if startPage > 1
+                  a.outline.px-3.py-2(href=`/admin/species?page=1${buildQueryString()}`) 1
+                  if startPage > 2
+                    span.px-3.py-2.text-gray-400 ...
+
+                - for (let i = startPage; i <= endPage; i++)
+                  if i === pagination.currentPage
+                    span.primary.px-3.py-2= i
+                  else
+                    a.outline.px-3.py-2(href=`/admin/species?page=${i}${buildQueryString()}`)= i
+
+                if endPage < pagination.totalPages
+                  if endPage < pagination.totalPages - 1
+                    span.px-3.py-2.text-gray-400 ...
+                  a.outline.px-3.py-2(href=`/admin/species?page=${pagination.totalPages}${buildQueryString()}`)= pagination.totalPages
+
+              if pagination.currentPage < pagination.totalPages
+                a.outline.px-3.py-2(href=`/admin/species?page=${pagination.currentPage + 1}${buildQueryString()}`) Next
+
+        else
+          .bg-white.rounded-lg.shadow-md.p-8.text-center
+            p.text-gray-500.text-lg No species found matching your criteria.
+            if filters.species_type || filters.program_class || filters.has_base_points !== undefined || filters.is_cares_species !== undefined || filters.search
+              a.link.mt-2(href="/admin/species") Clear filters to see all species
+
+    script.
+      // Helper to preserve query params for pagination
+      function buildQueryString() {
+        const params = new URLSearchParams(window.location.search);
+        params.delete('page'); // Remove page param, will be added by link
+        const qs = params.toString();
+        return qs ? '&' + qs : '';
+      }
