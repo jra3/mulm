@@ -631,3 +631,128 @@ export async function deleteSynonym(nameId: number, force = false): Promise<numb
     throw new Error('Failed to delete synonym');
   }
 }
+
+/**
+ * Species group management for admin interface
+ */
+
+export type SpeciesAdminFilters = {
+  species_type?: string;
+  program_class?: string;
+  has_base_points?: boolean;
+  is_cares_species?: boolean;
+  search?: string;
+};
+
+export type SpeciesAdminListItem = {
+  group_id: number;
+  canonical_genus: string;
+  canonical_species_name: string;
+  species_type: string;
+  program_class: string;
+  base_points: number | null;
+  is_cares_species: number;
+  synonym_count: number;
+};
+
+export type SpeciesAdminListResult = {
+  species: SpeciesAdminListItem[];
+  total_count: number;
+};
+
+/**
+ * Get species list for admin interface with filters and pagination
+ * Unlike the public explorer, this returns ALL species (not just those with breeding reports)
+ * @param filters - Filter criteria for species
+ * @param sort - Sort order: 'name', 'points', or 'class' (default: 'name')
+ * @param limit - Maximum results per page (default: 50)
+ * @param offset - Number of results to skip for pagination (default: 0)
+ * @returns Object with species array and total count for pagination
+ */
+export async function getSpeciesForAdmin(
+  filters: SpeciesAdminFilters = {},
+  sort: 'name' | 'points' | 'class' = 'name',
+  limit = 50,
+  offset = 0
+): Promise<SpeciesAdminListResult> {
+  const { species_type, program_class, has_base_points, is_cares_species, search } = filters;
+
+  // Build WHERE conditions
+  const conditions: string[] = ['1=1'];
+  const params: unknown[] = [];
+
+  if (species_type) {
+    conditions.push('AND sng.species_type = ?');
+    params.push(species_type);
+  }
+
+  if (program_class) {
+    conditions.push('AND sng.program_class = ?');
+    params.push(program_class);
+  }
+
+  if (has_base_points !== undefined) {
+    conditions.push(has_base_points ? 'AND sng.base_points IS NOT NULL' : 'AND sng.base_points IS NULL');
+  }
+
+  if (is_cares_species !== undefined) {
+    conditions.push('AND sng.is_cares_species = ?');
+    params.push(is_cares_species ? 1 : 0);
+  }
+
+  if (search && search.trim().length >= 2) {
+    const searchPattern = `%${search.trim().toLowerCase()}%`;
+    conditions.push(`AND (
+      LOWER(sng.canonical_genus) LIKE ? OR
+      LOWER(sng.canonical_species_name) LIKE ? OR
+      LOWER(sn.common_name) LIKE ? OR
+      LOWER(sn.scientific_name) LIKE ?
+    )`);
+    params.push(searchPattern, searchPattern, searchPattern, searchPattern);
+  }
+
+  // Build ORDER BY clause
+  let orderBy = 'sng.canonical_genus, sng.canonical_species_name';
+  if (sort === 'points') {
+    orderBy = 'sng.base_points DESC NULLS LAST, sng.canonical_genus, sng.canonical_species_name';
+  } else if (sort === 'class') {
+    orderBy = 'sng.program_class, sng.canonical_genus, sng.canonical_species_name';
+  }
+
+  // Get total count
+  const countSql = `
+    SELECT COUNT(DISTINCT sng.group_id) as count
+    FROM species_name_group sng
+    LEFT JOIN species_name sn ON sng.group_id = sn.group_id
+    WHERE ${conditions.join(' ')}
+  `;
+  const countResult = await query<{ count: number }>(countSql, params);
+  const total_count = countResult[0]?.count || 0;
+
+  // Get paginated results
+  const dataSql = `
+    SELECT
+      sng.group_id,
+      sng.canonical_genus,
+      sng.canonical_species_name,
+      sng.species_type,
+      sng.program_class,
+      sng.base_points,
+      sng.is_cares_species,
+      COUNT(sn.name_id) as synonym_count
+    FROM species_name_group sng
+    LEFT JOIN species_name sn ON sng.group_id = sn.group_id
+    WHERE ${conditions.join(' ')}
+    GROUP BY sng.group_id
+    ORDER BY ${orderBy}
+    LIMIT ? OFFSET ?
+  `;
+
+  const dataParams = [...params, limit, offset];
+  const species = await query<SpeciesAdminListItem>(dataSql, dataParams);
+
+  return {
+    species,
+    total_count
+  };
+}
