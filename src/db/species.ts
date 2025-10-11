@@ -466,19 +466,21 @@ export async function addSynonym(
         RETURNING name_id
       `);
 
-      const result = await stmt.get<{ name_id: number }>(
-        groupId,
-        trimmedCommon,
-        trimmedScientific
-      );
+      try {
+        const result = await stmt.get<{ name_id: number }>(
+          groupId,
+          trimmedCommon,
+          trimmedScientific
+        );
 
-      await stmt.finalize();
+        if (!result || !result.name_id) {
+          throw new Error('Failed to insert synonym');
+        }
 
-      if (!result || !result.name_id) {
-        throw new Error('Failed to insert synonym');
+        return result.name_id;
+      } finally {
+        await stmt.finalize();
       }
-
-      return result.name_id;
     });
   } catch (err) {
     // Check for duplicate constraint error
@@ -539,11 +541,14 @@ export async function updateSynonym(
         WHERE name_id = ?
       `);
 
-      const result = await stmt.run(...values);
-      await stmt.finalize();
+      try {
+        const result = await stmt.run(...values);
 
-      if (result.changes === 0) {
-        throw new Error(`Synonym ${nameId} not found`);
+        if (result.changes === 0) {
+          throw new Error(`Synonym ${nameId} not found`);
+        }
+      } finally {
+        await stmt.finalize();
       }
     });
   } catch (err) {
