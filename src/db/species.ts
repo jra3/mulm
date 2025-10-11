@@ -419,9 +419,27 @@ export async function getFilterOptions() {
 }
 
 /**
- * Admin synonym management functions
+ * Admin synonym management functions - NEW SPLIT SCHEMA
  */
 
+export type CommonName = {
+  common_name_id: number;
+  group_id: number;
+  common_name: string;
+};
+
+export type ScientificName = {
+  scientific_name_id: number;
+  group_id: number;
+  scientific_name: string;
+};
+
+export type SpeciesNames = {
+  common_names: CommonName[];
+  scientific_names: ScientificName[];
+};
+
+// DEPRECATED: Old paired synonym type (for backwards compatibility)
 export type SpeciesSynonym = {
   name_id: number;
   group_id: number;
@@ -430,9 +448,53 @@ export type SpeciesSynonym = {
 };
 
 /**
- * Get all name variants (synonyms) for a species group
+ * Get all common names for a species group
  * @param groupId - Species group ID
- * @returns Array of synonyms ordered by common_name, scientific_name
+ * @returns Array of common names ordered alphabetically
+ */
+export async function getCommonNamesForGroup(groupId: number): Promise<CommonName[]> {
+  return query<CommonName>(`
+    SELECT common_name_id, group_id, common_name
+    FROM species_common_name
+    WHERE group_id = ?
+    ORDER BY common_name
+  `, [groupId]);
+}
+
+/**
+ * Get all scientific names for a species group
+ * @param groupId - Species group ID
+ * @returns Array of scientific names ordered alphabetically
+ */
+export async function getScientificNamesForGroup(groupId: number): Promise<ScientificName[]> {
+  return query<ScientificName>(`
+    SELECT scientific_name_id, group_id, scientific_name
+    FROM species_scientific_name
+    WHERE group_id = ?
+    ORDER BY scientific_name
+  `, [groupId]);
+}
+
+/**
+ * Get all names (both common and scientific) for a species group
+ * @param groupId - Species group ID
+ * @returns Object with arrays of common and scientific names
+ */
+export async function getNamesForGroup(groupId: number): Promise<SpeciesNames> {
+  const [common_names, scientific_names] = await Promise.all([
+    getCommonNamesForGroup(groupId),
+    getScientificNamesForGroup(groupId)
+  ]);
+
+  return {
+    common_names,
+    scientific_names
+  };
+}
+
+/**
+ * DEPRECATED: Get synonyms from old paired table (for backwards compatibility)
+ * Use getNamesForGroup() for new code
  */
 export async function getSynonymsForGroup(groupId: number): Promise<SpeciesSynonym[]> {
   return query<SpeciesSynonym>(`
@@ -444,12 +506,112 @@ export async function getSynonymsForGroup(groupId: number): Promise<SpeciesSynon
 }
 
 /**
- * Add a new name variant (synonym) to a species group
+ * Add a common name to a species group
  * @param groupId - Species group ID
- * @param commonName - Common name variant
- * @param scientificName - Scientific name variant
- * @returns The name_id of the newly created synonym
- * @throws Error if inputs are invalid, species group doesn't exist, or duplicate name exists
+ * @param commonName - Common name to add
+ * @returns The common_name_id of the newly created name
+ * @throws Error if inputs are invalid, species group doesn't exist, or duplicate name
+ */
+export async function addCommonName(groupId: number, commonName: string): Promise<number> {
+  const trimmed = commonName.trim();
+
+  if (!trimmed) {
+    throw new Error('Common name cannot be empty');
+  }
+
+  // Verify species group exists
+  const groups = await query<{ group_id: number }>(
+    'SELECT group_id FROM species_name_group WHERE group_id = ?',
+    [groupId]
+  );
+
+  if (groups.length === 0) {
+    throw new Error(`Species group ${groupId} not found`);
+  }
+
+  try {
+    const conn = writeConn;
+    const stmt = await conn.prepare(`
+      INSERT INTO species_common_name (group_id, common_name)
+      VALUES (?, ?)
+      RETURNING common_name_id
+    `);
+
+    try {
+      const result = await stmt.get<{ common_name_id: number }>(groupId, trimmed);
+
+      if (!result || !result.common_name_id) {
+        throw new Error('Failed to insert common name');
+      }
+
+      return result.common_name_id;
+    } finally {
+      await stmt.finalize();
+    }
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('UNIQUE constraint')) {
+      throw new Error(`Common name "${trimmed}" already exists for this species`);
+    }
+    logger.error('Failed to add common name', err);
+    throw new Error('Failed to add common name');
+  }
+}
+
+/**
+ * Add a scientific name to a species group
+ * @param groupId - Species group ID
+ * @param scientificName - Scientific name to add
+ * @returns The scientific_name_id of the newly created name
+ * @throws Error if inputs are invalid, species group doesn't exist, or duplicate name
+ */
+export async function addScientificName(groupId: number, scientificName: string): Promise<number> {
+  const trimmed = scientificName.trim();
+
+  if (!trimmed) {
+    throw new Error('Scientific name cannot be empty');
+  }
+
+  // Verify species group exists
+  const groups = await query<{ group_id: number }>(
+    'SELECT group_id FROM species_name_group WHERE group_id = ?',
+    [groupId]
+  );
+
+  if (groups.length === 0) {
+    throw new Error(`Species group ${groupId} not found`);
+  }
+
+  try {
+    const conn = writeConn;
+    const stmt = await conn.prepare(`
+      INSERT INTO species_scientific_name (group_id, scientific_name)
+      VALUES (?, ?)
+      RETURNING scientific_name_id
+    `);
+
+    try {
+      const result = await stmt.get<{ scientific_name_id: number }>(groupId, trimmed);
+
+      if (!result || !result.scientific_name_id) {
+        throw new Error('Failed to insert scientific name');
+      }
+
+      return result.scientific_name_id;
+    } finally {
+      await stmt.finalize();
+    }
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('UNIQUE constraint')) {
+      throw new Error(`Scientific name "${trimmed}" already exists for this species`);
+    }
+    logger.error('Failed to add scientific name', err);
+    throw new Error('Failed to add scientific name');
+  }
+}
+
+/**
+ * DEPRECATED: Add a paired synonym to old table (for backwards compatibility)
+ * Use addCommonName() and addScientificName() separately for new code
  */
 export async function addSynonym(
   groupId: number,
