@@ -18,6 +18,7 @@ import {
 import { query, withTransaction } from '../db/conn.js';
 import { logger } from '../utils/logger.js';
 import {
+  createSpeciesGroup,
   addSynonym,
   updateSynonym,
   deleteSynonym,
@@ -579,30 +580,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 async function handleCreateSpeciesGroup(args: any) {
   const { program_class, canonical_genus, canonical_species_name, species_type, base_points, is_cares_species } = args;
 
-  // Validation
-  if (!canonical_genus?.trim() || !canonical_species_name?.trim()) {
-    throw new Error('Canonical genus and species name cannot be empty');
-  }
-
-  const result = await withTransaction(async (db) => {
-    const stmt = await db.prepare(`
-      INSERT INTO species_name_group (
-        program_class, canonical_genus, canonical_species_name, species_type, base_points, is_cares_species
-      ) VALUES (?, ?, ?, ?, ?, ?)
-      RETURNING group_id
-    `);
-
-    const row = await stmt.get<{ group_id: number }>(
-      program_class,
-      canonical_genus.trim(),
-      canonical_species_name.trim(),
-      species_type,
-      base_points || null,
-      is_cares_species ? 1 : 0
-    );
-
-    await stmt.finalize();
-    return row;
+  const group_id = await createSpeciesGroup({
+    programClass: program_class,
+    speciesType: species_type,
+    canonicalGenus: canonical_genus,
+    canonicalSpeciesName: canonical_species_name,
+    basePoints: base_points,
+    isCaresSpecies: is_cares_species
   });
 
   return {
@@ -611,7 +595,7 @@ async function handleCreateSpeciesGroup(args: any) {
         type: 'text' as const,
         text: JSON.stringify({
           success: true,
-          group_id: result?.group_id,
+          group_id,
           message: 'Species group created successfully',
         }, null, 2),
       },
@@ -999,23 +983,8 @@ async function handleSetBasePoints(args: any) {
 async function handleToggleCaresStatus(args: any) {
   const { group_id, is_cares_species } = args;
 
-  const groups = await query<SpeciesNameGroup>(
-    'SELECT * FROM species_name_group WHERE group_id = ?',
-    [group_id]
-  );
-
-  if (groups.length === 0) {
-    throw new Error(`Species group ${group_id} not found`);
-  }
-
-  await withTransaction(async (db) => {
-    const stmt = await db.prepare(`
-      UPDATE species_name_group
-      SET is_cares_species = ?
-      WHERE group_id = ?
-    `);
-    await stmt.run(is_cares_species ? 1 : 0, group_id);
-    await stmt.finalize();
+  const changes = await updateSpeciesGroup(group_id, {
+    isCaresSpecies: is_cares_species
   });
 
   return {
@@ -1025,9 +994,9 @@ async function handleToggleCaresStatus(args: any) {
         text: JSON.stringify({
           success: true,
           group_id,
-          canonical_name: `${groups[0].canonical_genus} ${groups[0].canonical_species_name}`,
+          changes,
           is_cares_species,
-          message: 'CARES status updated',
+          message: changes > 0 ? 'CARES status updated' : 'Species group not found',
         }, null, 2),
       },
     ],

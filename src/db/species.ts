@@ -758,6 +758,94 @@ export async function getSpeciesForAdmin(
 }
 
 /**
+ * Create a new species group
+ * @param data - Species group data
+ * @returns The group_id of the newly created species group
+ * @throws Error if validation fails or duplicate canonical name exists
+ */
+export async function createSpeciesGroup(data: {
+  programClass: string;
+  speciesType: string;
+  canonicalGenus: string;
+  canonicalSpeciesName: string;
+  basePoints?: number | null;
+  isCaresSpecies?: boolean;
+}): Promise<number> {
+  const {
+    programClass,
+    speciesType,
+    canonicalGenus,
+    canonicalSpeciesName,
+    basePoints,
+    isCaresSpecies
+  } = data;
+
+  // Validate inputs
+  const trimmedGenus = canonicalGenus.trim();
+  const trimmedSpecies = canonicalSpeciesName.trim();
+  const trimmedClass = programClass.trim();
+
+  if (!trimmedGenus || !trimmedSpecies) {
+    throw new Error('Canonical genus and species name cannot be empty');
+  }
+
+  if (!trimmedClass) {
+    throw new Error('Program class cannot be empty');
+  }
+
+  if (!['Fish', 'Plant', 'Invert', 'Coral'].includes(speciesType)) {
+    throw new Error('Species type must be Fish, Plant, Invert, or Coral');
+  }
+
+  if (basePoints !== undefined && basePoints !== null && (basePoints < 0 || basePoints > 100)) {
+    throw new Error('Base points must be between 0 and 100, or null');
+  }
+
+  try {
+    const conn = writeConn;
+    const stmt = await conn.prepare(`
+      INSERT INTO species_name_group (
+        program_class, species_type, canonical_genus, canonical_species_name,
+        base_points, is_cares_species
+      ) VALUES (?, ?, ?, ?, ?, ?)
+      RETURNING group_id
+    `);
+
+    try {
+      const result = await stmt.get<{ group_id: number }>(
+        trimmedClass,
+        speciesType,
+        trimmedGenus,
+        trimmedSpecies,
+        basePoints ?? null,
+        isCaresSpecies ? 1 : 0
+      );
+
+      if (!result || !result.group_id) {
+        throw new Error('Failed to create species group');
+      }
+
+      logger.info('Created species group', {
+        groupId: result.group_id,
+        canonicalName: `${trimmedGenus} ${trimmedSpecies}`,
+        speciesType,
+        programClass: trimmedClass
+      });
+
+      return result.group_id;
+    } finally {
+      await stmt.finalize();
+    }
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('UNIQUE constraint')) {
+      throw new Error(`Species "${trimmedGenus} ${trimmedSpecies}" already exists`);
+    }
+    logger.error('Failed to create species group', err);
+    throw new Error('Failed to create species group');
+  }
+}
+
+/**
  * Update a species group's metadata
  * @param groupId - Species group ID to update
  * @param updates - Fields to update (at least one required)

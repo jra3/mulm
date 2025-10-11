@@ -4,6 +4,7 @@ import { Database, open } from 'sqlite';
 import sqlite3 from 'sqlite3';
 import { overrideConnection } from '../db/conn';
 import {
+  createSpeciesGroup,
   updateSpeciesGroup,
   deleteSpeciesGroup,
   bulkSetPoints,
@@ -41,6 +42,217 @@ describe('Species Group CRUD Operations', () => {
     if (db) {
       await db.close();
     }
+  });
+
+  describe('createSpeciesGroup', () => {
+    test('should create a new species group and return group_id', async () => {
+      const groupId = await createSpeciesGroup({
+        programClass: 'Characins',
+        speciesType: 'Fish',
+        canonicalGenus: 'Newgenus',
+        canonicalSpeciesName: 'newspecies',
+        basePoints: 15,
+        isCaresSpecies: true
+      });
+
+      assert.ok(groupId > 0, 'Should return positive group_id');
+
+      const created = await db.get(
+        'SELECT * FROM species_name_group WHERE group_id = ?',
+        [groupId]
+      );
+
+      assert.strictEqual(created.canonical_genus, 'Newgenus');
+      assert.strictEqual(created.canonical_species_name, 'newspecies');
+      assert.strictEqual(created.species_type, 'Fish');
+      assert.strictEqual(created.program_class, 'Characins');
+      assert.strictEqual(created.base_points, 15);
+      assert.strictEqual(created.is_cares_species, 1);
+    });
+
+    test('should create with minimal required fields', async () => {
+      const groupId = await createSpeciesGroup({
+        programClass: 'Killifish',
+        speciesType: 'Fish',
+        canonicalGenus: 'Minimal',
+        canonicalSpeciesName: 'species'
+      });
+
+      const created = await db.get(
+        'SELECT * FROM species_name_group WHERE group_id = ?',
+        [groupId]
+      );
+
+      assert.ok(created);
+      assert.strictEqual(created.base_points, null);
+      assert.strictEqual(created.is_cares_species, 0);
+    });
+
+    test('should trim whitespace from inputs', async () => {
+      const groupId = await createSpeciesGroup({
+        programClass: '  Trimmed  ',
+        speciesType: 'Plant',
+        canonicalGenus: '  Genus  ',
+        canonicalSpeciesName: '  species  '
+      });
+
+      const created = await db.get(
+        'SELECT * FROM species_name_group WHERE group_id = ?',
+        [groupId]
+      );
+
+      assert.strictEqual(created.canonical_genus, 'Genus');
+      assert.strictEqual(created.canonical_species_name, 'species');
+      assert.strictEqual(created.program_class, 'Trimmed');
+    });
+
+    test('should throw error for empty canonical genus', async () => {
+      await assert.rejects(
+        async () => await createSpeciesGroup({
+          programClass: 'Test',
+          speciesType: 'Fish',
+          canonicalGenus: '',
+          canonicalSpeciesName: 'species'
+        }),
+        { message: /cannot be empty/ }
+      );
+    });
+
+    test('should throw error for empty canonical species name', async () => {
+      await assert.rejects(
+        async () => await createSpeciesGroup({
+          programClass: 'Test',
+          speciesType: 'Fish',
+          canonicalGenus: 'Genus',
+          canonicalSpeciesName: '   '
+        }),
+        { message: /cannot be empty/ }
+      );
+    });
+
+    test('should throw error for empty program class', async () => {
+      await assert.rejects(
+        async () => await createSpeciesGroup({
+          programClass: '',
+          speciesType: 'Fish',
+          canonicalGenus: 'Genus',
+          canonicalSpeciesName: 'species'
+        }),
+        { message: /cannot be empty/ }
+      );
+    });
+
+    test('should throw error for invalid species type', async () => {
+      await assert.rejects(
+        async () => await createSpeciesGroup({
+          programClass: 'Test',
+          speciesType: 'Invalid' as any,
+          canonicalGenus: 'Genus',
+          canonicalSpeciesName: 'species'
+        }),
+        { message: /must be Fish, Plant, Invert, or Coral/ }
+      );
+    });
+
+    test('should throw error for points out of range', async () => {
+      await assert.rejects(
+        async () => await createSpeciesGroup({
+          programClass: 'Test',
+          speciesType: 'Fish',
+          canonicalGenus: 'Genus',
+          canonicalSpeciesName: 'species',
+          basePoints: 101
+        }),
+        { message: /between 0 and 100/ }
+      );
+    });
+
+    test('should throw error for duplicate canonical name', async () => {
+      await createSpeciesGroup({
+        programClass: 'Cichlids',
+        speciesType: 'Fish',
+        canonicalGenus: 'Duplicate',
+        canonicalSpeciesName: 'test'
+      });
+
+      await assert.rejects(
+        async () => await createSpeciesGroup({
+          programClass: 'Livebearers',
+          speciesType: 'Fish',
+          canonicalGenus: 'Duplicate',
+          canonicalSpeciesName: 'test'
+        }),
+        { message: /already exists/ }
+      );
+    });
+
+    test('should allow same genus with different species', async () => {
+      const id1 = await createSpeciesGroup({
+        programClass: 'Cichlids',
+        speciesType: 'Fish',
+        canonicalGenus: 'Samegenus',
+        canonicalSpeciesName: 'species1'
+      });
+
+      const id2 = await createSpeciesGroup({
+        programClass: 'Cichlids',
+        speciesType: 'Fish',
+        canonicalGenus: 'Samegenus',
+        canonicalSpeciesName: 'species2'
+      });
+
+      assert.ok(id1 !== id2, 'Should create two different species');
+    });
+
+    test('should allow same species name with different genus', async () => {
+      const id1 = await createSpeciesGroup({
+        programClass: 'Cichlids',
+        speciesType: 'Fish',
+        canonicalGenus: 'Genus1',
+        canonicalSpeciesName: 'samespecies'
+      });
+
+      const id2 = await createSpeciesGroup({
+        programClass: 'Cichlids',
+        speciesType: 'Fish',
+        canonicalGenus: 'Genus2',
+        canonicalSpeciesName: 'samespecies'
+      });
+
+      assert.ok(id1 !== id2);
+    });
+
+    test('should accept all valid species types', async () => {
+      const fish = await createSpeciesGroup({
+        programClass: 'Cichlids',
+        speciesType: 'Fish',
+        canonicalGenus: 'TypeTest',
+        canonicalSpeciesName: 'fish'
+      });
+
+      const plant = await createSpeciesGroup({
+        programClass: 'Stem Plants',
+        speciesType: 'Plant',
+        canonicalGenus: 'TypeTest',
+        canonicalSpeciesName: 'plant'
+      });
+
+      const invert = await createSpeciesGroup({
+        programClass: 'Shrimp',
+        speciesType: 'Invert',
+        canonicalGenus: 'TypeTest',
+        canonicalSpeciesName: 'invert'
+      });
+
+      const coral = await createSpeciesGroup({
+        programClass: 'Hard',
+        speciesType: 'Coral',
+        canonicalGenus: 'TypeTest',
+        canonicalSpeciesName: 'coral'
+      });
+
+      assert.ok(fish && plant && invert && coral, 'All species types should work');
+    });
   });
 
   describe('updateSpeciesGroup', () => {
