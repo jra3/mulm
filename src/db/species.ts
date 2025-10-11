@@ -300,6 +300,8 @@ export type SpeciesDetail = {
 	canonical_species_name: string;
 	base_points: number | null;
 	is_cares_species: number;
+	external_references: string | null;
+	image_links: string | null;
 	synonyms: Array<{
 		name_id: number;
 		common_name: string;
@@ -316,8 +318,10 @@ export async function getSpeciesDetail(groupId: number) {
 		canonical_species_name: string;
 		base_points: number | null;
 		is_cares_species: number;
+		external_references: string | null;
+		image_links: string | null;
 	}>(`
-		SELECT group_id, program_class, species_type, canonical_genus, canonical_species_name, base_points, is_cares_species
+		SELECT group_id, program_class, species_type, canonical_genus, canonical_species_name, base_points, is_cares_species, external_references, image_links
 		FROM species_name_group
 		WHERE group_id = ?
 	`, [groupId]);

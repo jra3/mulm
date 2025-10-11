@@ -159,7 +159,7 @@ export const updateSpecies = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const { canonical_genus, canonical_species_name, program_class, base_points, is_cares_species } = parsed.data;
+  const { canonical_genus, canonical_species_name, program_class, base_points, is_cares_species, external_references, image_links } = parsed.data;
 
   // Update species group
   const { updateSpeciesGroup } = await import('@/db/species');
@@ -170,7 +170,9 @@ export const updateSpecies = async (req: MulmRequest, res: Response) => {
       canonicalSpeciesName: canonical_species_name,
       programClass: program_class,
       basePoints: base_points,
-      isCaresSpecies: is_cares_species
+      isCaresSpecies: is_cares_species,
+      externalReferences: external_references,
+      imageLinks: image_links
     });
 
     if (changes === 0) {

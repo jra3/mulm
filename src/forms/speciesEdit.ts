@@ -15,7 +15,15 @@ export const speciesEditForm = z.object({
     }
     return num;
   }),
-  is_cares_species: z.string().optional().transform(val => val === 'on')
+  is_cares_species: z.string().optional().transform(val => val === 'on'),
+  external_references: z.string().optional().transform(val => {
+    if (!val || val.trim() === '') return [];
+    return val.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+  }),
+  image_links: z.string().optional().transform(val => {
+    if (!val || val.trim() === '') return [];
+    return val.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+  })
 });
 
 export type SpeciesEditFormValues = z.infer<typeof speciesEditForm>;

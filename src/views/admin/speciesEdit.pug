@@ -108,6 +108,31 @@ html
                   span.text-sm.font-medium.text-gray-700 CARES Conservation Species
                 p.text-xs.text-gray-500.mt-1 Conservation, Awareness, Recognition, Encouragement, Support
 
+          //- External Links
+          .bg-white.rounded-lg.shadow-md.p-6.mb-6
+            h3.text-lg.font-bold.text-gray-900.mb-4 External Resources
+
+            .grid.gap-4(class="md:grid-cols-2")
+              div
+                label.input-label(for="external_references") Reference URLs
+                textarea.text-input(
+                  id="external_references"
+                  name="external_references"
+                  rows="4"
+                  placeholder="One URL per line (e.g., https://fishbase.org/...)"
+                )= species.external_references ? JSON.parse(species.external_references).join('\n') : ''
+                p.text-xs.text-gray-500.mt-1 External reference links (one per line)
+
+              div
+                label.input-label(for="image_links") Image URLs
+                textarea.text-input(
+                  id="image_links"
+                  name="image_links"
+                  rows="4"
+                  placeholder="One URL per line (e.g., https://example.com/image.jpg)"
+                )= species.image_links ? JSON.parse(species.image_links).join('\n') : ''
+                p.text-xs.text-gray-500.mt-1 Image links (one per line)
+
           //- Synonyms List
           .bg-white.rounded-lg.shadow-md.p-6.mb-6
             .flex.justify-between.items-center.mb-4
