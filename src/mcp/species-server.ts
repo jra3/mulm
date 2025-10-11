@@ -17,6 +17,14 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { query, withTransaction } from '../db/conn.js';
 import { logger } from '../utils/logger.js';
+import {
+  addSynonym,
+  updateSynonym,
+  deleteSynonym,
+  getSynonymsForGroup,
+  getSpeciesForAdmin,
+  getSpeciesDetail
+} from '../db/species.js';
 
 // Type definitions for database tables
 type SpeciesNameGroup = {
@@ -269,10 +277,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
     const namesByGroupMatch = uri.match(/^species:\/\/names\/by-group\/(\d+)$/);
     if (namesByGroupMatch) {
       const groupId = parseInt(namesByGroupMatch[1]);
-      const names = await query<SpeciesName>(
-        'SELECT * FROM species_name WHERE group_id = ? ORDER BY common_name, scientific_name',
-        [groupId]
-      );
+      const names = await getSynonymsForGroup(groupId);
       return {
         contents: [
           {
@@ -712,26 +717,7 @@ async function handleDeleteSpeciesGroup(args: any) {
 async function handleAddSpeciesSynonym(args: any) {
   const { group_id, common_name, scientific_name } = args;
 
-  if (!common_name?.trim() || !scientific_name?.trim()) {
-    throw new Error('Common name and scientific name cannot be empty');
-  }
-
-  const result = await withTransaction(async (db) => {
-    const stmt = await db.prepare(`
-      INSERT INTO species_name (group_id, common_name, scientific_name)
-      VALUES (?, ?, ?)
-      RETURNING name_id
-    `);
-
-    const row = await stmt.get<{ name_id: number }>(
-      group_id,
-      common_name.trim(),
-      scientific_name.trim()
-    );
-
-    await stmt.finalize();
-    return row;
-  });
+  const name_id = await addSynonym(group_id, common_name, scientific_name);
 
   return {
     content: [
@@ -739,7 +725,7 @@ async function handleAddSpeciesSynonym(args: any) {
         type: 'text' as const,
         text: JSON.stringify({
           success: true,
-          name_id: result?.name_id,
+          name_id,
           group_id,
           message: 'Synonym added successfully',
         }, null, 2),
@@ -751,32 +737,9 @@ async function handleAddSpeciesSynonym(args: any) {
 async function handleUpdateSpeciesSynonym(args: any) {
   const { name_id, common_name, scientific_name } = args;
 
-  const updates: string[] = [];
-  const values: any[] = [];
-
-  if (common_name !== undefined) {
-    updates.push('common_name = ?');
-    values.push(common_name.trim());
-  }
-  if (scientific_name !== undefined) {
-    updates.push('scientific_name = ?');
-    values.push(scientific_name.trim());
-  }
-
-  if (updates.length === 0) {
-    throw new Error('At least one field must be provided');
-  }
-
-  values.push(name_id);
-
-  await withTransaction(async (db) => {
-    const stmt = await db.prepare(`
-      UPDATE species_name
-      SET ${updates.join(', ')}
-      WHERE name_id = ?
-    `);
-    await stmt.run(...values);
-    await stmt.finalize();
+  const changes = await updateSynonym(name_id, {
+    commonName: common_name,
+    scientificName: scientific_name
   });
 
   return {
@@ -786,7 +749,8 @@ async function handleUpdateSpeciesSynonym(args: any) {
         text: JSON.stringify({
           success: true,
           name_id,
-          message: 'Synonym updated successfully',
+          changes,
+          message: changes > 0 ? 'Synonym updated successfully' : 'Synonym not found',
         }, null, 2),
       },
     ],
@@ -796,38 +760,7 @@ async function handleUpdateSpeciesSynonym(args: any) {
 async function handleDeleteSpeciesSynonym(args: any) {
   const { name_id, force } = args;
 
-  // Check if this is the last synonym
-  const name = await query<{ group_id: number }>(
-    'SELECT group_id FROM species_name WHERE name_id = ?',
-    [name_id]
-  );
-
-  if (name.length === 0) {
-    throw new Error(`Name ${name_id} not found`);
-  }
-
-  const synonyms = await query<{ count: number }>(
-    'SELECT COUNT(*) as count FROM species_name WHERE group_id = ?',
-    [name[0].group_id]
-  );
-
-  if (synonyms[0].count <= 1 && !force) {
-    throw new Error('Cannot delete last synonym for species. Use force: true to delete anyway.');
-  }
-
-  // Check for submissions using this name
-  const submissions = await query<{ count: number }>(
-    'SELECT COUNT(*) as count FROM submissions WHERE species_name_id = ? AND approved_on IS NOT NULL',
-    [name_id]
-  );
-
-  const submissionCount = submissions[0]?.count || 0;
-
-  await withTransaction(async (db) => {
-    const stmt = await db.prepare('DELETE FROM species_name WHERE name_id = ?');
-    await stmt.run(name_id);
-    await stmt.finalize();
-  });
+  const changes = await deleteSynonym(name_id, force);
 
   return {
     content: [
@@ -836,8 +769,8 @@ async function handleDeleteSpeciesSynonym(args: any) {
         text: JSON.stringify({
           success: true,
           name_id,
-          warning: submissionCount > 0 ? `${submissionCount} submissions used this name` : undefined,
-          message: 'Synonym deleted successfully',
+          changes,
+          message: changes > 0 ? 'Synonym deleted successfully' : 'Synonym not found',
         }, null, 2),
       },
     ],
@@ -954,45 +887,15 @@ async function handleSearchSpecies(args: any) {
     count_only = false,
   } = args;
 
-  const conditions: string[] = ['1=1'];
-  const params: any[] = [];
+  const filters = {
+    species_type,
+    program_class,
+    has_base_points,
+    is_cares_species,
+    search: searchQuery
+  };
 
-  if (species_type) {
-    conditions.push('species_type = ?');
-    params.push(species_type);
-  }
-
-  if (program_class) {
-    conditions.push('program_class = ?');
-    params.push(program_class);
-  }
-
-  if (has_base_points !== undefined) {
-    conditions.push(has_base_points ? 'base_points IS NOT NULL' : 'base_points IS NULL');
-  }
-
-  if (is_cares_species !== undefined) {
-    conditions.push('is_cares_species = ?');
-    params.push(is_cares_species ? 1 : 0);
-  }
-
-  if (searchQuery && searchQuery.trim().length >= 2) {
-    const searchPattern = `%${searchQuery.trim().toLowerCase()}%`;
-    conditions.push(`(
-      LOWER(canonical_genus) LIKE ? OR
-      LOWER(canonical_species_name) LIKE ? OR
-      LOWER(program_class) LIKE ?
-    )`);
-    params.push(searchPattern, searchPattern, searchPattern);
-  }
-
-  // Get total count
-  const countSql = `
-    SELECT COUNT(DISTINCT sng.group_id) as count
-    FROM species_name_group sng
-    WHERE ${conditions.join(' AND ')}
-  `;
-  const totalCount = await query<{ count: number }>(countSql, params);
+  const result = await getSpeciesForAdmin(filters, sort_by, limit, offset);
 
   // If count_only is true, return just the count
   if (count_only) {
@@ -1002,7 +905,7 @@ async function handleSearchSpecies(args: any) {
           type: 'text' as const,
           text: JSON.stringify({
             success: true,
-            total_count: totalCount[0]?.count || 0,
+            total_count: result.total_count,
             count_only: true,
           }, null, 2),
         },
@@ -1010,38 +913,23 @@ async function handleSearchSpecies(args: any) {
     };
   }
 
-  let orderBy = 'canonical_genus, canonical_species_name';
-  if (sort_by === 'points') {
-    orderBy = 'base_points DESC NULLS LAST, canonical_genus, canonical_species_name';
-  } else if (sort_by === 'class') {
-    orderBy = 'program_class, canonical_genus, canonical_species_name';
-  }
-
-  const sql = `
-    SELECT sng.*, COUNT(sn.name_id) as synonym_count
-    FROM species_name_group sng
-    LEFT JOIN species_name sn ON sng.group_id = sn.group_id
-    WHERE ${conditions.join(' AND ')}
-    GROUP BY sng.group_id
-    ORDER BY ${orderBy}
-    LIMIT ? OFFSET ?
-  `;
-
-  params.push(limit, offset);
-
-  const results = await query<SpeciesNameGroup & { synonym_count: number }>(sql, params);
-
   return {
     content: [
       {
         type: 'text' as const,
         text: JSON.stringify({
           success: true,
-          total_count: totalCount[0]?.count || 0,
-          returned_count: results.length,
-          results: results.map(r => ({
-            ...formatSpeciesGroup(r),
-            synonym_count: r.synonym_count,
+          total_count: result.total_count,
+          returned_count: result.species.length,
+          results: result.species.map(s => ({
+            group_id: s.group_id,
+            program_class: s.program_class,
+            canonical_genus: s.canonical_genus,
+            canonical_species_name: s.canonical_species_name,
+            species_type: s.species_type,
+            base_points: s.base_points,
+            is_cares_species: Boolean(s.is_cares_species),
+            synonym_count: s.synonym_count,
           })),
         }, null, 2),
       },
@@ -1052,19 +940,11 @@ async function handleSearchSpecies(args: any) {
 async function handleGetSpeciesDetail(args: any) {
   const { group_id } = args;
 
-  const groups = await query<SpeciesNameGroup>(
-    'SELECT * FROM species_name_group WHERE group_id = ?',
-    [group_id]
-  );
+  const speciesDetail = await getSpeciesDetail(group_id);
 
-  if (groups.length === 0) {
+  if (!speciesDetail) {
     throw new Error(`Species group ${group_id} not found`);
   }
-
-  const synonyms = await query<SpeciesName>(
-    'SELECT * FROM species_name WHERE group_id = ? ORDER BY common_name, scientific_name',
-    [group_id]
-  );
 
   return {
     content: [
@@ -1072,10 +952,7 @@ async function handleGetSpeciesDetail(args: any) {
         type: 'text' as const,
         text: JSON.stringify({
           success: true,
-          species: {
-            ...formatSpeciesGroup(groups[0]),
-            synonyms,
-          },
+          species: speciesDetail,
         }, null, 2),
       },
     ],
