@@ -150,17 +150,26 @@ html
           +speciesTable(species)
 
           //- Pagination
+          - const queryParams = [];
+          - if (filters.species_type) queryParams.push(`species_type=${encodeURIComponent(filters.species_type)}`);
+          - if (filters.program_class) queryParams.push(`species_class=${encodeURIComponent(filters.program_class)}`);
+          - if (filters.has_base_points !== undefined) queryParams.push(`has_points=${filters.has_base_points}`);
+          - if (filters.is_cares_species !== undefined) queryParams.push(`is_cares=${filters.is_cares_species}`);
+          - if (filters.search) queryParams.push(`search=${encodeURIComponent(filters.search)}`);
+          - if (sort !== 'name') queryParams.push(`sort=${sort}`);
+          - const baseQuery = queryParams.length > 0 ? '&' + queryParams.join('&') : '';
+
           if pagination.totalPages > 1
             .mt-6.flex.justify-center.gap-2
               if pagination.currentPage > 1
-                a.outline.px-3.py-2(href=`/admin/species?page=${pagination.currentPage - 1}${buildQueryString()}`) Previous
+                a.outline.px-3.py-2(href=`/admin/species?page=${pagination.currentPage - 1}${baseQuery}`) Previous
 
               .flex.gap-1
                 - const startPage = Math.max(1, pagination.currentPage - 2);
                 - const endPage = Math.min(pagination.totalPages, pagination.currentPage + 2);
 
                 if startPage > 1
-                  a.outline.px-3.py-2(href=`/admin/species?page=1${buildQueryString()}`) 1
+                  a.outline.px-3.py-2(href=`/admin/species?page=1${baseQuery}`) 1
                   if startPage > 2
                     span.px-3.py-2.text-gray-400 ...
 
@@ -168,27 +177,18 @@ html
                   if i === pagination.currentPage
                     span.primary.px-3.py-2= i
                   else
-                    a.outline.px-3.py-2(href=`/admin/species?page=${i}${buildQueryString()}`)= i
+                    a.outline.px-3.py-2(href=`/admin/species?page=${i}${baseQuery}`)= i
 
                 if endPage < pagination.totalPages
                   if endPage < pagination.totalPages - 1
                     span.px-3.py-2.text-gray-400 ...
-                  a.outline.px-3.py-2(href=`/admin/species?page=${pagination.totalPages}${buildQueryString()}`)= pagination.totalPages
+                  a.outline.px-3.py-2(href=`/admin/species?page=${pagination.totalPages}${baseQuery}`)= pagination.totalPages
 
               if pagination.currentPage < pagination.totalPages
-                a.outline.px-3.py-2(href=`/admin/species?page=${pagination.currentPage + 1}${buildQueryString()}`) Next
+                a.outline.px-3.py-2(href=`/admin/species?page=${pagination.currentPage + 1}${baseQuery}`) Next
 
         else
           .bg-white.rounded-lg.shadow-md.p-8.text-center
             p.text-gray-500.text-lg No species found matching your criteria.
             if filters.species_type || filters.program_class || filters.has_base_points !== undefined || filters.is_cares_species !== undefined || filters.search
               a.link.mt-2(href="/admin/species") Clear filters to see all species
-
-    script.
-      // Helper to preserve query params for pagination
-      function buildQueryString() {
-        const params = new URLSearchParams(window.location.search);
-        params.delete('page'); // Remove page param, will be added by link
-        const qs = params.toString();
-        return qs ? '&' + qs : '';
-      }
