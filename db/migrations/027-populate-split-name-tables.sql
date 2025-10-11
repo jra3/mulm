@@ -2,17 +2,15 @@
 
 -- Populate species_common_name from existing species_name data
 -- Extract unique common names per group
-INSERT INTO species_common_name (group_id, common_name)
+INSERT OR IGNORE INTO species_common_name (group_id, common_name)
 SELECT DISTINCT group_id, common_name
-FROM species_name
-ON CONFLICT (group_id, common_name) DO NOTHING;
+FROM species_name;
 
 -- Populate species_scientific_name from existing species_name data
 -- Extract unique scientific names per group
-INSERT INTO species_scientific_name (group_id, scientific_name)
+INSERT OR IGNORE INTO species_scientific_name (group_id, scientific_name)
 SELECT DISTINCT group_id, scientific_name
-FROM species_name
-ON CONFLICT (group_id, scientific_name) DO NOTHING;
+FROM species_name;
 
 -- Down
 
