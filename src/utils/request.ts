@@ -26,6 +26,24 @@ export function getQueryString(req: Request, key: string, defaultValue = ''): st
   return defaultValue;
 }
 
+// Safe access to query parameter as number
+export function getQueryNumber(req: Request, key: string, defaultValue?: number): number | undefined {
+  const value = req.query[key];
+  if (typeof value === 'string') {
+    const parsed = parseInt(value, 10);
+    if (!isNaN(parsed)) return parsed;
+  }
+  return defaultValue;
+}
+
+// Safe access to query parameter as boolean
+export function getQueryBoolean(req: Request, key: string): boolean | undefined {
+  const value = req.query[key];
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  return undefined;
+}
+
 // Type-safe body extraction with validation
 export function safeParseBody<T>(req: Request, validator: (data: unknown) => data is T): T | null {
   if (!req.body || typeof req.body !== 'object') return null;
