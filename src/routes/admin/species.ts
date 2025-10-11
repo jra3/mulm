@@ -101,7 +101,8 @@ export const editSpeciesSidebar = async (req: MulmRequest, res: Response) => {
   // Get full species group data (getSpeciesDetail doesn't return all fields)
   const fullData = await getSynonymsForGroup(groupId);
 
-  res.render('admin/speciesEditSidebar', {
+  res.render('admin/speciesEdit', {
+    title: 'Edit Species',
     species: speciesDetail,
     errors: new Map()
   });

@@ -25,10 +25,7 @@ mixin speciesTable(speciesList)
             td(class=stringCell)
               - const synonymList = item.synonyms ? item.synonyms.map(s => `${s.common_name} (${s.scientific_name})`).join('\n') : '';
               a.link.font-semibold(
-                href="#"
-                hx-get=`/admin/species/${item.group_id}/edit`
-                hx-target="body"
-                hx-swap="beforeend"
+                href=`/admin/species/${item.group_id}/edit`
                 title=synonymList
               )
                 = `${item.canonical_genus} ${item.canonical_species_name}`
@@ -60,11 +57,8 @@ mixin speciesTable(speciesList)
                 span.text-gray-300 ☆
 
             td(class=stringCell)
-              button.outline.text-xs.px-2.py-1(
-                type="button"
-                hx-get=`/admin/species/${item.group_id}/edit`
-                hx-target="body"
-                hx-swap="beforeend"
+              a.outline.text-xs.px-3.py-1.inline-block(
+                href=`/admin/species/${item.group_id}/edit`
               ) Edit
 
 doctype html
