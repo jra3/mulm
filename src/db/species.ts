@@ -610,6 +610,124 @@ export async function addScientificName(groupId: number, scientificName: string)
 }
 
 /**
+ * Update a common name
+ * @param commonNameId - Common name ID to update
+ * @param newName - New common name value
+ * @returns Number of rows updated (0 if not found, 1 if successful)
+ * @throws Error if empty name or duplicate
+ */
+export async function updateCommonName(commonNameId: number, newName: string): Promise<number> {
+  const trimmed = newName.trim();
+
+  if (!trimmed) {
+    throw new Error('Common name cannot be empty');
+  }
+
+  try {
+    const conn = writeConn;
+    const stmt = await conn.prepare(`
+      UPDATE species_common_name
+      SET common_name = ?
+      WHERE common_name_id = ?
+    `);
+
+    try {
+      const result = await stmt.run(trimmed, commonNameId);
+      return result.changes || 0;
+    } finally {
+      await stmt.finalize();
+    }
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('UNIQUE constraint')) {
+      throw new Error('This common name already exists for this species');
+    }
+    logger.error('Failed to update common name', err);
+    throw new Error('Failed to update common name');
+  }
+}
+
+/**
+ * Update a scientific name
+ * @param scientificNameId - Scientific name ID to update
+ * @param newName - New scientific name value
+ * @returns Number of rows updated (0 if not found, 1 if successful)
+ * @throws Error if empty name or duplicate
+ */
+export async function updateScientificName(scientificNameId: number, newName: string): Promise<number> {
+  const trimmed = newName.trim();
+
+  if (!trimmed) {
+    throw new Error('Scientific name cannot be empty');
+  }
+
+  try {
+    const conn = writeConn;
+    const stmt = await conn.prepare(`
+      UPDATE species_scientific_name
+      SET scientific_name = ?
+      WHERE scientific_name_id = ?
+    `);
+
+    try {
+      const result = await stmt.run(trimmed, scientificNameId);
+      return result.changes || 0;
+    } finally {
+      await stmt.finalize();
+    }
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('UNIQUE constraint')) {
+      throw new Error('This scientific name already exists for this species');
+    }
+    logger.error('Failed to update scientific name', err);
+    throw new Error('Failed to update scientific name');
+  }
+}
+
+/**
+ * Delete a common name
+ * @param commonNameId - Common name ID to delete
+ * @returns Number of rows deleted (0 if not found, 1 if successful)
+ */
+export async function deleteCommonName(commonNameId: number): Promise<number> {
+  try {
+    const conn = writeConn;
+    const stmt = await conn.prepare('DELETE FROM species_common_name WHERE common_name_id = ?');
+
+    try {
+      const result = await stmt.run(commonNameId);
+      return result.changes || 0;
+    } finally {
+      await stmt.finalize();
+    }
+  } catch (err) {
+    logger.error('Failed to delete common name', err);
+    throw new Error('Failed to delete common name');
+  }
+}
+
+/**
+ * Delete a scientific name
+ * @param scientificNameId - Scientific name ID to delete
+ * @returns Number of rows deleted (0 if not found, 1 if successful)
+ */
+export async function deleteScientificName(scientificNameId: number): Promise<number> {
+  try {
+    const conn = writeConn;
+    const stmt = await conn.prepare('DELETE FROM species_scientific_name WHERE scientific_name_id = ?');
+
+    try {
+      const result = await stmt.run(scientificNameId);
+      return result.changes || 0;
+    } finally {
+      await stmt.finalize();
+    }
+  } catch (err) {
+    logger.error('Failed to delete scientific name', err);
+    throw new Error('Failed to delete scientific name');
+  }
+}
+
+/**
  * DEPRECATED: Add a paired synonym to old table (for backwards compatibility)
  * Use addCommonName() and addScientificName() separately for new code
  */
