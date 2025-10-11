@@ -71,7 +71,6 @@ html
 								.select-wrapper
 									select#sort(name="sort" onchange="this.form.submit()")
 										option(value="reports" selected=(filters.sort === 'reports')) Most Reports
-										option(value="breeders" selected=(filters.sort === 'breeders')) Most Breeders
 										option(value="name" selected=(filters.sort === 'name')) Name A-Z
 
 						.flex.justify-between.items-center.mt-4
@@ -115,15 +114,6 @@ html
 												| Reports
 												if filters.sort === 'reports'
 													span.ml-1 ↓
-										th.p-3.text-center.font-semibold.text-gray-700.bg-gray-50.border-r.border-gray-300
-											- let breedersUrl = `/species?sort=breeders`;
-											- if (filters.species_type) breedersUrl += `&species_type=${filters.species_type}`;
-											- if (filters.species_class) breedersUrl += `&species_class=${filters.species_class}`;
-											- if (filters.search) breedersUrl += `&search=${encodeURIComponent(filters.search)}`;
-											a(class="text-gray-700 hover:text-gray-900 no-underline" + (filters.sort === 'breeders' ? ' font-bold' : '') href=breedersUrl)
-												| Breeders
-												if filters.sort === 'breeders'
-													span.ml-1 ↓
 										th.p-3.text-center.font-semibold.text-gray-700.bg-gray-50.border-gray-300 Latest Report
 
 								tbody.bg-white.divide-y.divide-gray-200
@@ -156,10 +146,6 @@ html
 											td.p-3.text-center.border-r.border-gray-300
 												span.inline-block.px-2.py-1.text-sm.font-medium.bg-green-100.text-green-800.rounded-full
 													= item.total_breeds
-
-											td.p-3.text-center.border-r.border-gray-300
-												span.inline-block.px-2.py-1.text-sm.font-medium.bg-purple-100.text-purple-800.rounded-full
-													= item.total_breeders
 
 											td.p-3.text-center.border-gray-300
 												+shortDate(item.latest_breed_date, "Latest breeding date")
