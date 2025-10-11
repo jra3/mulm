@@ -225,8 +225,16 @@ function buildSpeciesSearchQuery(
 }
 
 /**
- * Search species names for typeahead/autocomplete
- * Returns individual name records (not grouped) with name_id for foreign key reference
+ * Search species names for typeahead/autocomplete using split schema
+ * Returns individual name records (not grouped) matching either common or scientific names
+ *
+ * **Migration Note**: Updated to query species_common_name and species_scientific_name tables
+ * separately via UNION. Each result includes matched name and group metadata.
+ *
+ * @param searchQuery - Search term (minimum 2 characters)
+ * @param filters - Optional filters for species_type and species_class
+ * @param limit - Maximum number of results (default: 10)
+ * @returns Array of species name records with group metadata
  */
 export async function searchSpeciesTypeahead(
   searchQuery: string,
@@ -247,35 +255,54 @@ export async function searchSpeciesTypeahead(
   }
 
   if (filters.species_class) {
-    // Note: species_class filter would need to be stored somewhere to work here
-    // For now, we filter by program_class (species_type) only
+    conditions.push('AND sng.program_class = ?');
+    params.push(filters.species_class);
   }
 
-  conditions.push(`AND (
-    LOWER(sn.common_name) LIKE ? OR
-    LOWER(sn.scientific_name) LIKE ?
-  )`);
-  params.push(searchPattern, searchPattern);
-  params.push(limit);
+  // Build WHERE clause for both queries
+  const whereClause = conditions.join(' ');
 
+  // UNION query: search both common names and scientific names
+  // Each subquery joins with species_name_group for metadata
   const sql = `
     SELECT
-      sn.name_id,
+      cn.common_name_id as name_id,
+      cn.group_id,
+      cn.common_name,
+      '' as scientific_name,
+      sng.program_class,
+      sng.species_type,
+      sng.canonical_genus,
+      sng.canonical_species_name,
+      1 as is_common_name
+    FROM species_common_name cn
+    JOIN species_name_group sng ON cn.group_id = sng.group_id
+    WHERE ${whereClause} AND LOWER(cn.common_name) LIKE ?
+
+    UNION ALL
+
+    SELECT
+      sn.scientific_name_id as name_id,
       sn.group_id,
-      sn.common_name,
+      '' as common_name,
       sn.scientific_name,
       sng.program_class,
       sng.species_type,
       sng.canonical_genus,
-      sng.canonical_species_name
-    FROM species_name sn
+      sng.canonical_species_name,
+      0 as is_common_name
+    FROM species_scientific_name sn
     JOIN species_name_group sng ON sn.group_id = sng.group_id
-    WHERE ${conditions.join(' ')}
-    ORDER BY sn.common_name, sn.scientific_name
+    WHERE ${whereClause} AND LOWER(sn.scientific_name) LIKE ?
+
+    ORDER BY is_common_name DESC, common_name, scientific_name
     LIMIT ?
   `;
 
-  return query(sql, params);
+  // Build params array: conditions params twice (for each subquery) + search pattern twice + limit
+  const queryParams = [...params, searchPattern, ...params, searchPattern, limit];
+
+  return query(sql, queryParams);
 }
 
 export async function getSpeciesForExplorer(filters: SpeciesFilters = {}): Promise<SpeciesExplorerItem[]> {
