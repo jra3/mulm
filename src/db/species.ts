@@ -978,8 +978,12 @@ export type SpeciesAdminListResult = {
 };
 
 /**
- * Get species list for admin interface with filters and pagination
+ * Get species list for admin interface with filters and pagination - Split schema
  * Unlike the public explorer, this returns ALL species (not just those with breeding reports)
+ *
+ * **Migration Note**: Updated to query species_common_name and species_scientific_name tables
+ * for search and name counting. Synonym count now includes both common and scientific names.
+ *
  * @param filters - Filter criteria for species
  * @param sort - Sort order: 'name', 'points', or 'class' (default: 'name')
  * @param limit - Maximum results per page (default: 50)
@@ -1022,8 +1026,14 @@ export async function getSpeciesForAdmin(
     conditions.push(`AND (
       LOWER(sng.canonical_genus) LIKE ? OR
       LOWER(sng.canonical_species_name) LIKE ? OR
-      LOWER(sn.common_name) LIKE ? OR
-      LOWER(sn.scientific_name) LIKE ?
+      EXISTS (
+        SELECT 1 FROM species_common_name cn
+        WHERE cn.group_id = sng.group_id AND LOWER(cn.common_name) LIKE ?
+      ) OR
+      EXISTS (
+        SELECT 1 FROM species_scientific_name sn
+        WHERE sn.group_id = sng.group_id AND LOWER(sn.scientific_name) LIKE ?
+      )
     )`);
     params.push(searchPattern, searchPattern, searchPattern, searchPattern);
   }
@@ -1040,13 +1050,12 @@ export async function getSpeciesForAdmin(
   const countSql = `
     SELECT COUNT(DISTINCT sng.group_id) as count
     FROM species_name_group sng
-    LEFT JOIN species_name sn ON sng.group_id = sn.group_id
     WHERE ${conditions.join(' ')}
   `;
   const countResult = await query<{ count: number }>(countSql, params);
   const total_count = countResult[0]?.count || 0;
 
-  // Get paginated results
+  // Get paginated results with synonym count from both tables
   const dataSql = `
     SELECT
       sng.group_id,
@@ -1056,11 +1065,13 @@ export async function getSpeciesForAdmin(
       sng.program_class,
       sng.base_points,
       sng.is_cares_species,
-      COUNT(sn.name_id) as synonym_count
+      (
+        SELECT COUNT(*) FROM species_common_name cn WHERE cn.group_id = sng.group_id
+      ) + (
+        SELECT COUNT(*) FROM species_scientific_name sn WHERE sn.group_id = sng.group_id
+      ) as synonym_count
     FROM species_name_group sng
-    LEFT JOIN species_name sn ON sng.group_id = sn.group_id
     WHERE ${conditions.join(' ')}
-    GROUP BY sng.group_id
     ORDER BY ${orderBy}
     LIMIT ? OFFSET ?
   `;

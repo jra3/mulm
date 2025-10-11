@@ -1,11 +1,18 @@
+/**
+ * Test suite for getSpeciesForAdmin - Split schema migration
+ *
+ * Tests the migrated admin list function that uses species_common_name and
+ * species_scientific_name tables instead of the old paired species_name table.
+ */
+
 import { describe, test, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert';
 import { Database, open } from 'sqlite';
 import sqlite3 from 'sqlite3';
 import { overrideConnection } from '../db/conn';
-import { getSpeciesForAdmin, addSynonym } from '../db/species';
+import { getSpeciesForAdmin, addCommonName, addScientificName } from '../db/species';
 
-describe('getSpeciesForAdmin - Admin Species List', () => {
+describe('getSpeciesForAdmin - Admin Species List (Split Schema)', () => {
   let db: Database;
   let fishGroupId1: number;
   let fishGroupId2: number;
@@ -29,8 +36,9 @@ describe('getSpeciesForAdmin - Admin Species List', () => {
       VALUES ('Livebearers', 'Fish', 'Testicus', 'guppyus', 10, 1)
     `);
     fishGroupId1 = fish1.lastID as number;
-    await addSynonym(fishGroupId1, 'Test Guppy', 'Testicus guppyus');
-    await addSynonym(fishGroupId1, 'Fancy Test Guppy', 'Testicus guppyus');
+    await addCommonName(fishGroupId1, 'Test Guppy');
+    await addCommonName(fishGroupId1, 'Fancy Test Guppy');
+    await addScientificName(fishGroupId1, 'Testicus guppyus');
 
     // Fish 2: Cichlids, no points, not CARES
     const fish2 = await db.run(`
@@ -38,7 +46,8 @@ describe('getSpeciesForAdmin - Admin Species List', () => {
       VALUES ('Cichlids', 'Fish', 'Testicus', 'cichlidus', NULL, 0)
     `);
     fishGroupId2 = fish2.lastID as number;
-    await addSynonym(fishGroupId2, 'Test Cichlid', 'Testicus cichlidus');
+    await addCommonName(fishGroupId2, 'Test Cichlid');
+    await addScientificName(fishGroupId2, 'Testicus cichlidus');
 
     // Plant: Cryptocoryne, 15 points, CARES
     const plant = await db.run(`
@@ -46,9 +55,10 @@ describe('getSpeciesForAdmin - Admin Species List', () => {
       VALUES ('Cryptocoryne', 'Plant', 'Testicus', 'plantus', 15, 1)
     `);
     plantGroupId = plant.lastID as number;
-    await addSynonym(plantGroupId, 'Test Crypt', 'Testicus plantus');
-    await addSynonym(plantGroupId, 'Test Plant', 'Testicus plantus');
-    await addSynonym(plantGroupId, 'Another Test Plant', 'Testicus plantus');
+    await addCommonName(plantGroupId, 'Test Crypt');
+    await addCommonName(plantGroupId, 'Test Plant');
+    await addCommonName(plantGroupId, 'Another Test Plant');
+    await addScientificName(plantGroupId, 'Testicus plantus');
   });
 
   afterEach(async () => {
@@ -81,7 +91,7 @@ describe('getSpeciesForAdmin - Admin Species List', () => {
       assert.ok(typeof species.synonym_count === 'number');
     });
 
-    test('should count synonyms correctly', async () => {
+    test('should count synonyms correctly (split schema)', async () => {
       // Search for test species to ensure they're in results
       const result = await getSpeciesForAdmin({ search: 'Testicus' });
 
@@ -90,9 +100,12 @@ describe('getSpeciesForAdmin - Admin Species List', () => {
       const plant = result.species.find(s => s.canonical_species_name === 'plantus');
 
       assert.ok(guppy && cichlid && plant, 'All test species should be found');
-      assert.strictEqual(guppy.synonym_count, 2, 'Guppy should have 2 synonyms');
-      assert.strictEqual(cichlid.synonym_count, 1, 'Cichlid should have 1 synonym');
-      assert.strictEqual(plant.synonym_count, 3, 'Plant should have 3 synonyms');
+      // Fish 1: 2 common + 1 scientific = 3 total
+      assert.strictEqual(guppy.synonym_count, 3, 'Guppy should have 3 names (2 common + 1 scientific)');
+      // Fish 2: 1 common + 1 scientific = 2 total
+      assert.strictEqual(cichlid.synonym_count, 2, 'Cichlid should have 2 names (1 common + 1 scientific)');
+      // Plant: 3 common + 1 scientific = 4 total
+      assert.strictEqual(plant.synonym_count, 4, 'Plant should have 4 names (3 common + 1 scientific)');
     });
   });
 
@@ -360,7 +373,8 @@ describe('getSpeciesForAdmin - Admin Species List', () => {
         VALUES ('Characins', 'Fish', 'Spec-ial', 'char&acters', 20, 0)
       `);
       const specialGroupId = specialResult.lastID as number;
-      await addSynonym(specialGroupId, "Fish's Name", 'Spec-ial char&acters');
+      await addCommonName(specialGroupId, "Fish's Name");
+      await addScientificName(specialGroupId, 'Spec-ial char&acters');
 
       const result = await getSpeciesForAdmin({ search: 'Spec-ial' });
 
