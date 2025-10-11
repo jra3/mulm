@@ -98,8 +98,9 @@ export const editSpeciesSidebar = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  // Get full species group data (getSpeciesDetail doesn't return all fields)
-  const fullData = await getSynonymsForGroup(groupId);
+  // Get split names (common and scientific separately)
+  const { getNamesForGroup } = await import('@/db/species');
+  const names = await getNamesForGroup(groupId);
 
   // Get class options for this species type
   const { speciesTypesAndClasses } = await import('@/forms/submission');
@@ -108,6 +109,8 @@ export const editSpeciesSidebar = async (req: MulmRequest, res: Response) => {
   res.render('admin/speciesEdit', {
     title: 'Edit Species',
     species: speciesDetail,
+    commonNames: names.common_names,
+    scientificNames: names.scientific_names,
     classOptions,
     speciesTypes: ['Fish', 'Plant', 'Invert', 'Coral'],
     errors: new Map()
@@ -242,8 +245,76 @@ export const deleteSpecies = async (req: MulmRequest, res: Response) => {
 };
 
 /**
- * DELETE /admin/species/:groupId/synonyms/:nameId
- * Delete a synonym
+ * DELETE /admin/species/:groupId/common-names/:commonNameId
+ * Delete a common name
+ */
+export const deleteCommonNameRoute = async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+
+  if (!viewer?.is_admin) {
+    res.status(403).send('Admin access required');
+    return;
+  }
+
+  const commonNameId = parseInt(req.params.commonNameId);
+  if (!commonNameId) {
+    res.status(400).send('Invalid common name ID');
+    return;
+  }
+
+  const { deleteCommonName } = await import('@/db/species');
+
+  try {
+    const changes = await deleteCommonName(commonNameId);
+
+    if (changes === 0) {
+      res.status(404).send('Common name not found');
+      return;
+    }
+
+    res.status(200).send('Common name deleted');
+  } catch (err) {
+    res.status(500).send('Failed to delete common name');
+  }
+};
+
+/**
+ * DELETE /admin/species/:groupId/scientific-names/:scientificNameId
+ * Delete a scientific name
+ */
+export const deleteScientificNameRoute = async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+
+  if (!viewer?.is_admin) {
+    res.status(403).send('Admin access required');
+    return;
+  }
+
+  const scientificNameId = parseInt(req.params.scientificNameId);
+  if (!scientificNameId) {
+    res.status(400).send('Invalid scientific name ID');
+    return;
+  }
+
+  const { deleteScientificName } = await import('@/db/species');
+
+  try {
+    const changes = await deleteScientificName(scientificNameId);
+
+    if (changes === 0) {
+      res.status(404).send('Scientific name not found');
+      return;
+    }
+
+    res.status(200).send('Scientific name deleted');
+  } catch (err) {
+    res.status(500).send('Failed to delete scientific name');
+  }
+};
+
+/**
+ * DEPRECATED: DELETE /admin/species/:groupId/synonyms/:nameId
+ * Delete a synonym (old paired table)
  */
 export const deleteSynonym = async (req: MulmRequest, res: Response) => {
   const { viewer } = req;
@@ -281,8 +352,126 @@ export const deleteSynonym = async (req: MulmRequest, res: Response) => {
 };
 
 /**
- * POST /admin/species/:groupId/synonyms
- * Add a new synonym
+ * POST /admin/species/:groupId/common-names
+ * Add a new common name
+ */
+export const addCommonNameRoute = async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+
+  if (!viewer?.is_admin) {
+    res.status(403).send('Admin access required');
+    return;
+  }
+
+  const groupId = parseInt(req.params.groupId);
+  if (!groupId) {
+    res.status(400).send('Invalid species ID');
+    return;
+  }
+
+  const { common_name } = req.body;
+
+  const { addCommonName } = await import('@/db/species');
+
+  try {
+    const commonNameId = await addCommonName(groupId, common_name);
+
+    // Return HTML for new common name row
+    res.render('admin/commonNameRow', {
+      name: {
+        common_name_id: commonNameId,
+        common_name: common_name.trim()
+      },
+      groupId
+    });
+  } catch (err) {
+    if (err instanceof Error) {
+      res.status(400).send(err.message);
+    } else {
+      res.status(500).send('Failed to add common name');
+    }
+  }
+};
+
+/**
+ * POST /admin/species/:groupId/scientific-names
+ * Add a new scientific name
+ */
+export const addScientificNameRoute = async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+
+  if (!viewer?.is_admin) {
+    res.status(403).send('Admin access required');
+    return;
+  }
+
+  const groupId = parseInt(req.params.groupId);
+  if (!groupId) {
+    res.status(400).send('Invalid species ID');
+    return;
+  }
+
+  const { scientific_name } = req.body;
+
+  const { addScientificName } = await import('@/db/species');
+
+  try {
+    const scientificNameId = await addScientificName(groupId, scientific_name);
+
+    // Return HTML for new scientific name row
+    res.render('admin/scientificNameRow', {
+      name: {
+        scientific_name_id: scientificNameId,
+        scientific_name: scientific_name.trim()
+      },
+      groupId
+    });
+  } catch (err) {
+    if (err instanceof Error) {
+      res.status(400).send(err.message);
+    } else {
+      res.status(500).send('Failed to add scientific name');
+    }
+  }
+};
+
+/**
+ * GET /admin/species/:groupId/common-names/new
+ * Render add common name form (HTMX partial)
+ */
+export const addCommonNameForm = async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+
+  if (!viewer?.is_admin) {
+    res.status(403).send('Admin access required');
+    return;
+  }
+
+  const groupId = parseInt(req.params.groupId);
+
+  res.render('admin/addCommonNameForm', { groupId });
+};
+
+/**
+ * GET /admin/species/:groupId/scientific-names/new
+ * Render add scientific name form (HTMX partial)
+ */
+export const addScientificNameForm = async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+
+  if (!viewer?.is_admin) {
+    res.status(403).send('Admin access required');
+    return;
+  }
+
+  const groupId = parseInt(req.params.groupId);
+
+  res.render('admin/addScientificNameForm', { groupId });
+};
+
+/**
+ * DEPRECATED: POST /admin/species/:groupId/synonyms
+ * Add a new paired synonym (old schema)
  */
 export const addSynonymRoute = async (req: MulmRequest, res: Response) => {
   const { viewer } = req;

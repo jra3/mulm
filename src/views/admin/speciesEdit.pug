@@ -133,37 +133,61 @@ html
                 )= species.image_links ? JSON.parse(species.image_links).join('\n') : ''
                 p.text-xs.text-gray-500.mt-1 Image links (one per line)
 
-          //- Synonyms List
+          //- Name Variants - Split Lists
           .bg-white.rounded-lg.shadow-md.p-6.mb-6
-            .flex.justify-between.items-center.mb-4
-              h3.text-lg.font-bold.text-gray-900 Name Variants (#{species.synonyms.length})
-              button.outline(
-                type="button"
-                hx-get=`/admin/species/${species.group_id}/synonyms/new`
-                hx-target="#synonym-list"
-                hx-swap="beforeend"
-              ) + Add Synonym
+            .grid.gap-6(class="md:grid-cols-2")
 
-            #synonym-list.space-y-2
-              if species.synonyms && species.synonyms.length > 0
-                each synonym in species.synonyms
-                  .flex.items-center.gap-3.p-3.bg-gray-50.rounded.border.border-gray-200
-                    .flex-1.grid.gap-3(class="md:grid-cols-2")
-                      div
-                        .text-gray-500.text-xs.mb-1 Common Name:
-                        .font-medium= synonym.common_name
-                      div
-                        .text-gray-500.text-xs.mb-1 Scientific Name:
-                        .font-medium.italic= synonym.scientific_name
-                    button.destructive(
-                      type="button"
-                      hx-delete=`/admin/species/${species.group_id}/synonyms/${synonym.name_id}`
-                      hx-confirm="Delete this synonym?"
-                      hx-target="closest .flex.items-center"
-                      hx-swap="outerHTML swap:0.5s"
-                    ) Delete
-              else
-                .text-sm.text-gray-500.italic.text-center.py-4 No synonyms added yet
+              //- Common Names
+              div
+                .flex.justify-between.items-center.mb-3
+                  h3.text-base.font-bold.text-gray-900 Common Names (#{commonNames.length})
+                  button.outline.text-sm(
+                    type="button"
+                    hx-get=`/admin/species/${species.group_id}/common-names/new`
+                    hx-target="#common-name-list"
+                    hx-swap="beforeend"
+                  ) + Add
+
+                #common-name-list.space-y-2
+                  if commonNames && commonNames.length > 0
+                    each name in commonNames
+                      .flex.items-center.gap-2.p-2.bg-gray-50.rounded.border.border-gray-200
+                        .flex-1.font-medium.text-sm= name.common_name
+                        button.destructive.text-xs.px-2.py-1(
+                          type="button"
+                          hx-delete=`/admin/species/${species.group_id}/common-names/${name.common_name_id}`
+                          hx-confirm="Delete this common name?"
+                          hx-target="closest .flex.items-center"
+                          hx-swap="outerHTML swap:0.5s"
+                        ) ×
+                  else
+                    .text-xs.text-gray-500.italic.text-center.py-3 No common names
+
+              //- Scientific Names
+              div
+                .flex.justify-between.items-center.mb-3
+                  h3.text-base.font-bold.text-gray-900 Scientific Names (#{scientificNames.length})
+                  button.outline.text-sm(
+                    type="button"
+                    hx-get=`/admin/species/${species.group_id}/scientific-names/new`
+                    hx-target="#scientific-name-list"
+                    hx-swap="beforeend"
+                  ) + Add
+
+                #scientific-name-list.space-y-2
+                  if scientificNames && scientificNames.length > 0
+                    each name in scientificNames
+                      .flex.items-center.gap-2.p-2.bg-gray-50.rounded.border.border-gray-200
+                        .flex-1.font-medium.text-sm.italic= name.scientific_name
+                        button.destructive.text-xs.px-2.py-1(
+                          type="button"
+                          hx-delete=`/admin/species/${species.group_id}/scientific-names/${name.scientific_name_id}`
+                          hx-confirm="Delete this scientific name?"
+                          hx-target="closest .flex.items-center"
+                          hx-swap="outerHTML swap:0.5s"
+                        ) ×
+                  else
+                    .text-xs.text-gray-500.italic.text-center.py-3 No scientific names
 
           //- Actions
           .flex.gap-3.justify-center

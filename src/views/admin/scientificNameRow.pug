@@ -1,0 +1,10 @@
+//- HTMX partial for a scientific name row
+.flex.items-center.gap-2.p-2.bg-gray-50.rounded.border.border-gray-200
+  .flex-1.font-medium.text-sm.italic= name.scientific_name
+  button.destructive.text-xs.px-2.py-1(
+    type="button"
+    hx-delete=`/admin/species/${groupId}/scientific-names/${name.scientific_name_id}`
+    hx-confirm="Delete this scientific name?"
+    hx-target="closest .flex.items-center"
+    hx-swap="outerHTML swap:0.5s"
+  ) ×

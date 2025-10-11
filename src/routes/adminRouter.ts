@@ -12,6 +12,16 @@ adminRouter.get("/species", speciesAdmin.listSpecies);
 adminRouter.get("/species/:groupId/edit", speciesAdmin.editSpeciesSidebar);
 adminRouter.patch("/species/:groupId", speciesAdmin.updateSpecies);
 adminRouter.delete("/species/:groupId", speciesAdmin.deleteSpecies);
+
+// Split name management (new schema)
+adminRouter.get("/species/:groupId/common-names/new", speciesAdmin.addCommonNameForm);
+adminRouter.post("/species/:groupId/common-names", speciesAdmin.addCommonNameRoute);
+adminRouter.delete("/species/:groupId/common-names/:commonNameId", speciesAdmin.deleteCommonNameRoute);
+adminRouter.get("/species/:groupId/scientific-names/new", speciesAdmin.addScientificNameForm);
+adminRouter.post("/species/:groupId/scientific-names", speciesAdmin.addScientificNameRoute);
+adminRouter.delete("/species/:groupId/scientific-names/:scientificNameId", speciesAdmin.deleteScientificNameRoute);
+
+// Deprecated synonym routes (old paired schema - keep for backwards compatibility)
 adminRouter.get("/species/:groupId/synonyms/new", speciesAdmin.addSynonymForm);
 adminRouter.post("/species/:groupId/synonyms", speciesAdmin.addSynonymRoute);
 adminRouter.delete("/species/:groupId/synonyms/:nameId", speciesAdmin.deleteSynonym);

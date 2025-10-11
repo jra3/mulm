@@ -1,0 +1,23 @@
+//- HTMX partial for adding a common name
+.flex.items-center.gap-2.p-2.bg-blue-50.rounded.border.border-blue-200
+  form.flex-1(
+    hx-post=`/admin/species/${groupId}/common-names`
+    hx-target="this"
+    hx-swap="outerHTML"
+  )
+    input.text-input.text-sm(
+      type="text"
+      name="common_name"
+      placeholder="Enter common name..."
+      required
+      autofocus
+    )
+  .flex.gap-1
+    button.primary.text-xs.px-2.py-1(
+      type="button"
+      onclick="this.closest('form').requestSubmit()"
+    ) Save
+    button.outline.text-xs.px-2.py-1(
+      type="button"
+      onclick="this.closest('.flex.items-center').remove()"
+    ) Cancel
