@@ -10,6 +10,7 @@ adminRouter.use(requireAdmin);
 // Species management
 adminRouter.get("/species", speciesAdmin.listSpecies);
 adminRouter.get("/species/:groupId/edit", speciesAdmin.editSpeciesSidebar);
+adminRouter.patch("/species/:groupId", speciesAdmin.updateSpecies);
 
 adminRouter.get("/queue{/:program}", admin.showQueue);
 adminRouter.get("/witness-queue{/:program}", admin.showWitnessQueue);
