@@ -407,3 +407,214 @@ export async function getFilterOptions() {
     species_types: speciesTypes.map(s => s.species_type)
   };
 }
+
+/**
+ * Admin synonym management functions
+ */
+
+export type SpeciesSynonym = {
+  name_id: number;
+  group_id: number;
+  common_name: string;
+  scientific_name: string;
+};
+
+/**
+ * Get all synonyms for a species group
+ */
+export async function getSynonymsForGroup(groupId: number): Promise<SpeciesSynonym[]> {
+  return query<SpeciesSynonym>(`
+    SELECT name_id, group_id, common_name, scientific_name
+    FROM species_name
+    WHERE group_id = ?
+    ORDER BY common_name, scientific_name
+  `, [groupId]);
+}
+
+/**
+ * Add a new synonym (name variant) to a species group
+ * @throws Error if inputs are invalid or species group doesn't exist
+ */
+export async function addSynonym(
+  groupId: number,
+  commonName: string,
+  scientificName: string
+): Promise<number> {
+  // Validate inputs
+  const trimmedCommon = commonName.trim();
+  const trimmedScientific = scientificName.trim();
+
+  if (!trimmedCommon || !trimmedScientific) {
+    throw new Error('Common name and scientific name cannot be empty');
+  }
+
+  // Verify species group exists
+  const groups = await query<{ group_id: number }>(
+    'SELECT group_id FROM species_name_group WHERE group_id = ?',
+    [groupId]
+  );
+
+  if (groups.length === 0) {
+    throw new Error(`Species group ${groupId} not found`);
+  }
+
+  try {
+    return await withTransaction(async (db) => {
+      const stmt = await db.prepare(`
+        INSERT INTO species_name (group_id, common_name, scientific_name)
+        VALUES (?, ?, ?)
+        RETURNING name_id
+      `);
+
+      const result = await stmt.get<{ name_id: number }>(
+        groupId,
+        trimmedCommon,
+        trimmedScientific
+      );
+
+      await stmt.finalize();
+
+      if (!result || !result.name_id) {
+        throw new Error('Failed to insert synonym');
+      }
+
+      return result.name_id;
+    });
+  } catch (err) {
+    // Check for duplicate constraint error
+    if (err instanceof Error && err.message.includes('UNIQUE constraint')) {
+      throw new Error(`Synonym "${trimmedCommon} (${trimmedScientific})" already exists`);
+    }
+    logger.error('Failed to add synonym', err);
+    throw new Error('Failed to add synonym');
+  }
+}
+
+/**
+ * Update an existing synonym
+ * @throws Error if no fields provided or name not found
+ */
+export async function updateSynonym(
+  nameId: number,
+  updates: {
+    commonName?: string;
+    scientificName?: string;
+  }
+): Promise<void> {
+  const { commonName, scientificName } = updates;
+
+  // At least one field must be provided
+  if (commonName === undefined && scientificName === undefined) {
+    throw new Error('At least one field (commonName or scientificName) must be provided');
+  }
+
+  const fields: string[] = [];
+  const values: unknown[] = [];
+
+  if (commonName !== undefined) {
+    const trimmed = commonName.trim();
+    if (!trimmed) {
+      throw new Error('Common name cannot be empty');
+    }
+    fields.push('common_name = ?');
+    values.push(trimmed);
+  }
+
+  if (scientificName !== undefined) {
+    const trimmed = scientificName.trim();
+    if (!trimmed) {
+      throw new Error('Scientific name cannot be empty');
+    }
+    fields.push('scientific_name = ?');
+    values.push(trimmed);
+  }
+
+  values.push(nameId);
+
+  try {
+    await withTransaction(async (db) => {
+      const stmt = await db.prepare(`
+        UPDATE species_name
+        SET ${fields.join(', ')}
+        WHERE name_id = ?
+      `);
+
+      const result = await stmt.run(...values);
+      await stmt.finalize();
+
+      if (result.changes === 0) {
+        throw new Error(`Synonym ${nameId} not found`);
+      }
+    });
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('UNIQUE constraint')) {
+      throw new Error('This name combination already exists');
+    }
+    if (err instanceof Error && err.message.includes('not found')) {
+      throw err;
+    }
+    logger.error('Failed to update synonym', err);
+    throw new Error('Failed to update synonym');
+  }
+}
+
+/**
+ * Delete a synonym from a species group
+ * @param force - If true, allows deleting the last synonym for a species
+ * @throws Error if trying to delete last synonym without force flag
+ */
+export async function deleteSynonym(nameId: number, force = false): Promise<void> {
+  // Get the synonym to check its group
+  const synonyms = await query<{ group_id: number; common_name: string; scientific_name: string }>(
+    'SELECT group_id, common_name, scientific_name FROM species_name WHERE name_id = ?',
+    [nameId]
+  );
+
+  if (synonyms.length === 0) {
+    throw new Error(`Synonym ${nameId} not found`);
+  }
+
+  const synonym = synonyms[0];
+
+  // Check if this is the last synonym for the group
+  const groupSynonyms = await query<{ count: number }>(
+    'SELECT COUNT(*) as count FROM species_name WHERE group_id = ?',
+    [synonym.group_id]
+  );
+
+  const synonymCount = groupSynonyms[0]?.count || 0;
+
+  if (synonymCount <= 1 && !force) {
+    throw new Error(
+      'Cannot delete the last synonym for a species. Each species must have at least one name. Use force=true to delete anyway.'
+    );
+  }
+
+  // Check if any submissions use this specific name_id
+  const submissions = await query<{ count: number }>(
+    'SELECT COUNT(*) as count FROM submissions WHERE species_name_id = ?',
+    [nameId]
+  );
+
+  const submissionCount = submissions[0]?.count || 0;
+
+  try {
+    await withTransaction(async (db) => {
+      const stmt = await db.prepare('DELETE FROM species_name WHERE name_id = ?');
+      await stmt.run(nameId);
+      await stmt.finalize();
+    });
+
+    if (submissionCount > 0) {
+      logger.warn('Deleted synonym used by submissions', {
+        nameId,
+        commonName: synonym.common_name,
+        scientificName: synonym.scientific_name,
+        submissionCount
+      });
+    }
+  } catch (err) {
+    logger.error('Failed to delete synonym', err);
+    throw new Error('Failed to delete synonym');
+  }
+}
