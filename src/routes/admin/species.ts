@@ -30,8 +30,20 @@ export const listSpecies = async (req: MulmRequest, res: Response) => {
   const limit = 50;
   const offset = (page - 1) * limit;
 
-  // Get species data
+  // Get species data with synonyms
   const result = await getSpeciesForAdmin(filters, sort, limit, offset);
+
+  // For each species, fetch their synonyms for the hovercard
+  const { getSynonymsForGroup } = await import('@/db/species');
+  const speciesWithSynonyms = await Promise.all(
+    result.species.map(async (species) => {
+      const synonyms = await getSynonymsForGroup(species.group_id);
+      return {
+        ...species,
+        synonyms
+      };
+    })
+  );
 
   // Calculate pagination
   const totalPages = Math.ceil(result.total_count / limit);
@@ -42,7 +54,7 @@ export const listSpecies = async (req: MulmRequest, res: Response) => {
 
   res.render('admin/speciesList', {
     title: 'Species Management',
-    species: result.species,
+    species: speciesWithSynonyms,
     filters,
     sort,
     classOptions,

@@ -23,13 +23,25 @@ mixin speciesTable(speciesList)
         each item in speciesList
           tr(class="hover:bg-gray-50")
             td(class=stringCell)
-              a.link.font-semibold(
-                href="#"
-                hx-get=`/admin/species/${item.group_id}/edit`
-                hx-target="body"
-                hx-swap="beforeend"
-              )
-                = `${item.canonical_genus} ${item.canonical_species_name}`
+              .relative.inline-block.group
+                a.link.font-semibold(
+                  href="#"
+                  hx-get=`/admin/species/${item.group_id}/edit`
+                  hx-target="body"
+                  hx-swap="beforeend"
+                )
+                  = `${item.canonical_genus} ${item.canonical_species_name}`
+
+                if item.synonyms && item.synonyms.length > 0
+                  .absolute.left-0.top-full.mt-1.z-50.w-max.max-w-md(
+                    class="hidden group-hover:block bg-gray-800 text-white text-sm rounded-lg shadow-lg p-3"
+                  )
+                    .font-semibold.text-xs.text-gray-300.mb-2 Known Names (#{item.synonyms.length}):
+                    .space-y-1
+                      each synonym in item.synonyms
+                        .flex.justify-between.gap-4
+                          span.text-gray-200= synonym.common_name
+                          span.text-gray-400.italic.text-xs= synonym.scientific_name
 
             td(class=stringCell)
               span.inline-block.px-2.py-1.text-xs.font-medium.bg-blue-100.text-blue-800.rounded-full
