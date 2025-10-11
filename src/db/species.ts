@@ -933,8 +933,9 @@ export async function deleteSpeciesGroup(groupId: number, force = false): Promis
 
     try {
       const result = await stmt.run(groupId);
+      const changes = result.changes || 0;
 
-      if (result.changes > 0) {
+      if (changes > 0) {
         logger.info('Deleted species group', {
           groupId,
           canonicalName: `${groups[0].canonical_genus} ${groups[0].canonical_species_name}`,
@@ -951,7 +952,7 @@ export async function deleteSpeciesGroup(groupId: number, force = false): Promis
         }
       }
 
-      return result.changes || 0;
+      return changes;
     } finally {
       await stmt.finalize();
     }
