@@ -1,4 +1,4 @@
-import { query, withTransaction } from "./conn";
+import { query, writeConn, withTransaction } from "./conn";
 import { logger } from "@/utils/logger";
 
 type NameSynonym = {
@@ -420,7 +420,9 @@ export type SpeciesSynonym = {
 };
 
 /**
- * Get all synonyms for a species group
+ * Get all name variants (synonyms) for a species group
+ * @param groupId - Species group ID
+ * @returns Array of synonyms ordered by common_name, scientific_name
  */
 export async function getSynonymsForGroup(groupId: number): Promise<SpeciesSynonym[]> {
   return query<SpeciesSynonym>(`
@@ -432,8 +434,12 @@ export async function getSynonymsForGroup(groupId: number): Promise<SpeciesSynon
 }
 
 /**
- * Add a new synonym (name variant) to a species group
- * @throws Error if inputs are invalid or species group doesn't exist
+ * Add a new name variant (synonym) to a species group
+ * @param groupId - Species group ID
+ * @param commonName - Common name variant
+ * @param scientificName - Scientific name variant
+ * @returns The name_id of the newly created synonym
+ * @throws Error if inputs are invalid, species group doesn't exist, or duplicate name exists
  */
 export async function addSynonym(
   groupId: number,
@@ -459,29 +465,28 @@ export async function addSynonym(
   }
 
   try {
-    return await withTransaction(async (db) => {
-      const stmt = await db.prepare(`
-        INSERT INTO species_name (group_id, common_name, scientific_name)
-        VALUES (?, ?, ?)
-        RETURNING name_id
-      `);
+    const conn = writeConn;
+    const stmt = await conn.prepare(`
+      INSERT INTO species_name (group_id, common_name, scientific_name)
+      VALUES (?, ?, ?)
+      RETURNING name_id
+    `);
 
-      try {
-        const result = await stmt.get<{ name_id: number }>(
-          groupId,
-          trimmedCommon,
-          trimmedScientific
-        );
+    try {
+      const result = await stmt.get<{ name_id: number }>(
+        groupId,
+        trimmedCommon,
+        trimmedScientific
+      );
 
-        if (!result || !result.name_id) {
-          throw new Error('Failed to insert synonym');
-        }
-
-        return result.name_id;
-      } finally {
-        await stmt.finalize();
+      if (!result || !result.name_id) {
+        throw new Error('Failed to insert synonym');
       }
-    });
+
+      return result.name_id;
+    } finally {
+      await stmt.finalize();
+    }
   } catch (err) {
     // Check for duplicate constraint error
     if (err instanceof Error && err.message.includes('UNIQUE constraint')) {
@@ -493,8 +498,11 @@ export async function addSynonym(
 }
 
 /**
- * Update an existing synonym
- * @throws Error if no fields provided or name not found
+ * Update an existing name variant (synonym)
+ * @param nameId - Name variant ID
+ * @param updates - Fields to update (at least one required)
+ * @returns Number of rows updated (0 if not found, 1 if successful)
+ * @throws Error if no fields provided, empty values, or duplicate name
  */
 export async function updateSynonym(
   nameId: number,
@@ -502,7 +510,7 @@ export async function updateSynonym(
     commonName?: string;
     scientificName?: string;
   }
-): Promise<void> {
+): Promise<number> {
   const { commonName, scientificName } = updates;
 
   // At least one field must be provided
@@ -534,29 +542,22 @@ export async function updateSynonym(
   values.push(nameId);
 
   try {
-    await withTransaction(async (db) => {
-      const stmt = await db.prepare(`
-        UPDATE species_name
-        SET ${fields.join(', ')}
-        WHERE name_id = ?
-      `);
+    const conn = writeConn;
+    const stmt = await conn.prepare(`
+      UPDATE species_name
+      SET ${fields.join(', ')}
+      WHERE name_id = ?
+    `);
 
-      try {
-        const result = await stmt.run(...values);
-
-        if (result.changes === 0) {
-          throw new Error(`Synonym ${nameId} not found`);
-        }
-      } finally {
-        await stmt.finalize();
-      }
-    });
+    try {
+      const result = await stmt.run(...values);
+      return result.changes || 0;
+    } finally {
+      await stmt.finalize();
+    }
   } catch (err) {
     if (err instanceof Error && err.message.includes('UNIQUE constraint')) {
       throw new Error('This name combination already exists');
-    }
-    if (err instanceof Error && err.message.includes('not found')) {
-      throw err;
     }
     logger.error('Failed to update synonym', err);
     throw new Error('Failed to update synonym');
@@ -564,11 +565,13 @@ export async function updateSynonym(
 }
 
 /**
- * Delete a synonym from a species group
- * @param force - If true, allows deleting the last synonym for a species
+ * Delete a name variant (synonym) from a species group
+ * @param nameId - Name variant ID to delete
+ * @param force - If true, allows deleting the last synonym for a species (default: false)
+ * @returns Number of rows deleted (0 if not found, 1 if successful)
  * @throws Error if trying to delete last synonym without force flag
  */
-export async function deleteSynonym(nameId: number, force = false): Promise<void> {
+export async function deleteSynonym(nameId: number, force = false): Promise<number> {
   // Get the synonym to check its group
   const synonyms = await query<{ group_id: number; common_name: string; scientific_name: string }>(
     'SELECT group_id, common_name, scientific_name FROM species_name WHERE name_id = ?',
@@ -604,19 +607,24 @@ export async function deleteSynonym(nameId: number, force = false): Promise<void
   const submissionCount = submissions[0]?.count || 0;
 
   try {
-    await withTransaction(async (db) => {
-      const stmt = await db.prepare('DELETE FROM species_name WHERE name_id = ?');
-      await stmt.run(nameId);
-      await stmt.finalize();
-    });
+    const conn = writeConn;
+    const stmt = await conn.prepare('DELETE FROM species_name WHERE name_id = ?');
 
-    if (submissionCount > 0) {
-      logger.warn('Deleted synonym used by submissions', {
-        nameId,
-        commonName: synonym.common_name,
-        scientificName: synonym.scientific_name,
-        submissionCount
-      });
+    try {
+      const result = await stmt.run(nameId);
+
+      if (submissionCount > 0) {
+        logger.warn('Deleted synonym used by submissions', {
+          nameId,
+          commonName: synonym.common_name,
+          scientificName: synonym.scientific_name,
+          submissionCount
+        });
+      }
+
+      return result.changes || 0;
+    } finally {
+      await stmt.finalize();
     }
   } catch (err) {
     logger.error('Failed to delete synonym', err);

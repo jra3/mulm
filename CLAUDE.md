@@ -215,23 +215,94 @@ GET    /api/species/search     - Typeahead search for species
 ## Key Patterns
 
 ### Database Operations
+
+**Connection Pattern**:
+- `query()` - Read-only SELECT queries (uses read connection)
+- `writeConn` - Direct write connection for INSERT/UPDATE/DELETE
+- `withTransaction()` - Multi-statement atomic operations
+- `insertOne()`, `updateOne()`, `deleteOne()` - Helper functions for single-row operations
+
+**Simple Patterns**:
 ```typescript
-// Simple queries
+// Read operations (use query helper)
 const results = await query<Type>('SELECT * FROM table WHERE id = ?', [id]);
+return results.pop(); // Get single result
 
-// Transactions
-await withTransaction(async (db) => {
-  // Multiple operations atomically
-  await db.run('INSERT ...');
-  await db.run('UPDATE ...');
-});
-
-// Always finalize prepared statements
-const stmt = await db.prepare('...');
+// Single-statement writes (use writeConn directly)
+const conn = writeConn;
+const stmt = await conn.prepare('INSERT INTO table (field) VALUES (?)');
 try {
-  await stmt.run(...);
+  const result = await stmt.run(value);
+  return result.lastID; // For INSERT
+  // OR return result.changes; // For UPDATE/DELETE
 } finally {
-  await stmt.finalize();
+  await stmt.finalize(); // ALWAYS finalize in finally block
+}
+
+// Multi-statement operations (use withTransaction)
+await withTransaction(async (db) => {
+  const stmt1 = await db.prepare('INSERT ...');
+  const stmt2 = await db.prepare('UPDATE ...');
+  try {
+    await stmt1.run(...);
+    await stmt2.run(...);
+  } finally {
+    await stmt1.finalize();
+    await stmt2.finalize();
+  }
+});
+```
+
+**Best Practices**:
+- ✅ **Always finalize statements** in `try/finally` blocks - prevents SQLITE_BUSY errors
+- ✅ **Return meaningful values**: `lastID` for INSERT, `changes` for UPDATE/DELETE
+- ✅ **Validate inputs** before database operations (trim strings, check non-empty, verify FK references)
+- ✅ **Error handling**: Catch, log with `logger.error()`, rethrow with user-friendly message
+- ✅ **Check constraint errors**: Test for `UNIQUE constraint`, `FOREIGN KEY`, etc. in error messages
+- ✅ **JSDoc comments**: Document params, return values, and @throws conditions
+- ❌ **Don't use withTransaction()** for simple single-statement operations (unnecessary overhead)
+- ❌ **Don't finalize outside finally** - Can be skipped if error thrown
+
+**Example Pattern** (from `src/db/species.ts` synonym CRUD):
+```typescript
+export async function addSynonym(
+  groupId: number,
+  commonName: string,
+  scientificName: string
+): Promise<number> {
+  // 1. Validate inputs
+  const trimmed = commonName.trim();
+  if (!trimmed) {
+    throw new Error('Name cannot be empty');
+  }
+
+  // 2. Verify foreign key references exist
+  const groups = await query<{ group_id: number }>(
+    'SELECT group_id FROM species_name_group WHERE group_id = ?',
+    [groupId]
+  );
+  if (groups.length === 0) {
+    throw new Error('Species group not found');
+  }
+
+  // 3. Execute write operation
+  try {
+    const conn = writeConn;
+    const stmt = await conn.prepare('INSERT INTO ... RETURNING id');
+    try {
+      const result = await stmt.get<{ id: number }>(...);
+      return result.id;
+    } finally {
+      await stmt.finalize();
+    }
+  } catch (err) {
+    // 4. Handle specific errors
+    if (err instanceof Error && err.message.includes('UNIQUE constraint')) {
+      throw new Error('Duplicate entry');
+    }
+    logger.error('Operation failed', err);
+    throw new Error('Failed to ...');
+  }
 }
 ```
 

@@ -244,11 +244,9 @@ describe('Species Synonym CRUD Operations', () => {
       );
     });
 
-    test('should throw error for non-existent name_id', async () => {
-      await assert.rejects(
-        async () => await updateSynonym(99999, { commonName: 'Test' }),
-        { message: /not found/ }
-      );
+    test('should return 0 changes for non-existent name_id', async () => {
+      const changes = await updateSynonym(99999, { commonName: 'Test' });
+      assert.strictEqual(changes, 0, 'Should return 0 changes for non-existent name_id');
     });
 
     test('should throw error for duplicate name combination', async () => {
