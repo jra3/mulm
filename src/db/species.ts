@@ -100,8 +100,64 @@ export async function mergeSpecies(canonicalGroupId: number, defunctGroupId: num
   }
 }
 
+/**
+ * Get canonical species group data from a name ID - Split schema compatible
+ *
+ * **Migration Note**: Updated to check BOTH species_common_name and species_scientific_name
+ * tables since name IDs can come from either table in the split schema.
+ *
+ * @param speciesNameId - Name ID from either common_name_id or scientific_name_id (or legacy name_id)
+ * @returns Species group data or undefined if not found
+ */
 export async function getCanonicalSpeciesName(speciesNameId: number) {
-  const rows = await query<{
+  // Try common name table first
+  const commonNameRows = await query<{
+		group_id: number;
+		program_class: string;
+		species_type: string;
+		canonical_genus: string;
+		canonical_species_name: string;
+		base_points: number | null;
+		is_cares_species: number;
+		external_references: string | null;
+		image_links: string | null;
+	}>(`
+		SELECT species_name_group.*
+		FROM species_common_name cn
+		JOIN species_name_group ON cn.group_id = species_name_group.group_id
+		WHERE cn.common_name_id = ?`,
+	[speciesNameId]
+	);
+
+  if (commonNameRows.length > 0) {
+    return commonNameRows[0];
+  }
+
+  // Try scientific name table
+  const scientificNameRows = await query<{
+		group_id: number;
+		program_class: string;
+		species_type: string;
+		canonical_genus: string;
+		canonical_species_name: string;
+		base_points: number | null;
+		is_cares_species: number;
+		external_references: string | null;
+		image_links: string | null;
+	}>(`
+		SELECT species_name_group.*
+		FROM species_scientific_name sn
+		JOIN species_name_group ON sn.group_id = species_name_group.group_id
+		WHERE sn.scientific_name_id = ?`,
+	[speciesNameId]
+	);
+
+  if (scientificNameRows.length > 0) {
+    return scientificNameRows[0];
+  }
+
+  // Fall back to old species_name table for backwards compatibility
+  const legacyRows = await query<{
 		group_id: number;
 		program_class: string;
 		species_type: string;
@@ -118,7 +174,8 @@ export async function getCanonicalSpeciesName(speciesNameId: number) {
 		WHERE species_name.name_id = ?`,
 	[speciesNameId]
 	);
-  return rows.pop();
+
+  return legacyRows.pop();
 }
 
 export type SpeciesFilters = {
