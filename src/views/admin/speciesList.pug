@@ -14,7 +14,6 @@ mixin speciesTable(speciesList)
           th(class=heading) Canonical Name
           th(class=heading) Type
           th(class=heading) Class
-          th(class=numberHeading data-sort-method="number") Synonyms
           th(class=numberHeading data-sort-method="number") Points
           th(class=heading) CARES
           th(class=nonSortableHeading) Actions
@@ -39,9 +38,6 @@ mixin speciesTable(speciesList)
             td(class=stringCell)
               span.inline-block.px-2.py-1.text-xs.font-medium.bg-gray-100.text-gray-800.rounded-full
                 = item.program_class
-
-            td(class=stringCell + ' text-right')
-              span.text-gray-600= item.synonym_count
 
             td(class=stringCell + ' text-right')
               if item.base_points !== null
