@@ -23,7 +23,10 @@ import {
   deleteSynonym,
   getSynonymsForGroup,
   getSpeciesForAdmin,
-  getSpeciesDetail
+  getSpeciesDetail,
+  updateSpeciesGroup,
+  deleteSpeciesGroup,
+  bulkSetPoints
 } from '../db/species.js';
 
 // Type definitions for database tables
@@ -619,40 +622,11 @@ async function handleCreateSpeciesGroup(args: any) {
 async function handleUpdateSpeciesGroup(args: any) {
   const { group_id, base_points, is_cares_species, external_references, image_links } = args;
 
-  const updates: string[] = [];
-  const values: any[] = [];
-
-  if (base_points !== undefined) {
-    updates.push('base_points = ?');
-    values.push(base_points);
-  }
-  if (is_cares_species !== undefined) {
-    updates.push('is_cares_species = ?');
-    values.push(is_cares_species ? 1 : 0);
-  }
-  if (external_references !== undefined) {
-    updates.push('external_references = ?');
-    values.push(JSON.stringify(external_references));
-  }
-  if (image_links !== undefined) {
-    updates.push('image_links = ?');
-    values.push(JSON.stringify(image_links));
-  }
-
-  if (updates.length === 0) {
-    throw new Error('No fields to update');
-  }
-
-  values.push(group_id);
-
-  await withTransaction(async (db) => {
-    const stmt = await db.prepare(`
-      UPDATE species_name_group
-      SET ${updates.join(', ')}
-      WHERE group_id = ?
-    `);
-    await stmt.run(...values);
-    await stmt.finalize();
+  const changes = await updateSpeciesGroup(group_id, {
+    basePoints: base_points,
+    isCaresSpecies: is_cares_species,
+    externalReferences: external_references,
+    imageLinks: image_links
   });
 
   return {
@@ -662,8 +636,9 @@ async function handleUpdateSpeciesGroup(args: any) {
         text: JSON.stringify({
           success: true,
           group_id,
+          changes,
           updated_fields: Object.keys(args).filter(k => k !== 'group_id'),
-          message: 'Species group updated successfully',
+          message: changes > 0 ? 'Species group updated successfully' : 'Species group not found',
         }, null, 2),
       },
     ],
@@ -673,30 +648,7 @@ async function handleUpdateSpeciesGroup(args: any) {
 async function handleDeleteSpeciesGroup(args: any) {
   const { group_id, force } = args;
 
-  // Check for submissions
-  const submissions = await query<{ count: number }>(
-    'SELECT COUNT(*) as count FROM submissions s JOIN species_name sn ON s.species_name_id = sn.name_id WHERE sn.group_id = ? AND s.approved_on IS NOT NULL',
-    [group_id]
-  );
-
-  const submissionCount = submissions[0]?.count || 0;
-
-  if (submissionCount > 0 && !force) {
-    throw new Error(`Species has ${submissionCount} approved submissions. Use force: true to delete anyway.`);
-  }
-
-  // Get synonym count before delete
-  const synonyms = await query<{ count: number }>(
-    'SELECT COUNT(*) as count FROM species_name WHERE group_id = ?',
-    [group_id]
-  );
-  const synonymCount = synonyms[0]?.count || 0;
-
-  await withTransaction(async (db) => {
-    const stmt = await db.prepare('DELETE FROM species_name_group WHERE group_id = ?');
-    await stmt.run(group_id);
-    await stmt.finalize();
-  });
+  const changes = await deleteSpeciesGroup(group_id, force);
 
   return {
     content: [
@@ -705,9 +657,8 @@ async function handleDeleteSpeciesGroup(args: any) {
         text: JSON.stringify({
           success: true,
           group_id,
-          deleted_synonyms_count: synonymCount,
-          warning: submissionCount > 0 ? `This species had ${submissionCount} approved submissions` : undefined,
-          message: 'Species group deleted successfully',
+          changes,
+          message: changes > 0 ? 'Species group deleted successfully' : 'Species group not found',
         }, null, 2),
       },
     ],
@@ -962,33 +913,44 @@ async function handleGetSpeciesDetail(args: any) {
 async function handleSetBasePoints(args: any) {
   const { group_id, group_ids, species_type, program_class, base_points, preview } = args;
 
-  const conditions: string[] = ['1=1'];
-  const params: any[] = [];
+  // Determine which species to update
+  let targetGroupIds: number[] = [];
 
   if (group_id) {
-    conditions.push('group_id = ?');
-    params.push(group_id);
+    targetGroupIds = [group_id];
   } else if (group_ids && group_ids.length > 0) {
-    conditions.push(`group_id IN (${group_ids.map(() => '?').join(', ')})`);
-    params.push(...group_ids);
+    targetGroupIds = group_ids;
+  } else if (species_type || program_class) {
+    // Query to get group_ids matching filters
+    const filters: any = { species_type, program_class };
+    const result = await getSpeciesForAdmin(filters, 'name', 10000, 0);
+    targetGroupIds = result.species.map(s => s.group_id);
   } else {
-    if (species_type) {
-      conditions.push('species_type = ?');
-      params.push(species_type);
-    }
-    if (program_class) {
-      conditions.push('program_class = ?');
-      params.push(program_class);
-    }
+    throw new Error('Must provide group_id, group_ids, or species_type/program_class filter');
   }
 
-  const sql = `
-    SELECT group_id, canonical_genus, canonical_species_name, base_points as old_points
-    FROM species_name_group
-    WHERE ${conditions.join(' AND ')}
-  `;
+  if (targetGroupIds.length === 0) {
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: JSON.stringify({
+            success: true,
+            updated_count: 0,
+            message: 'No species matched the criteria',
+          }, null, 2),
+        },
+      ],
+    };
+  }
 
-  const affected = await query<{ group_id: number; canonical_genus: string; canonical_species_name: string; old_points: number | null }>(sql, params);
+  // Get preview data
+  const affected = await query<{ group_id: number; canonical_genus: string; canonical_species_name: string; base_points: number | null }>(
+    `SELECT group_id, canonical_genus, canonical_species_name, base_points
+     FROM species_name_group
+     WHERE group_id IN (${targetGroupIds.map(() => '?').join(', ')})`,
+    targetGroupIds
+  );
 
   if (preview) {
     return {
@@ -1002,7 +964,7 @@ async function handleSetBasePoints(args: any) {
             updated_species: affected.map(s => ({
               group_id: s.group_id,
               canonical_name: `${s.canonical_genus} ${s.canonical_species_name}`,
-              old_points: s.old_points,
+              old_points: s.base_points,
               new_points: base_points,
             })),
             message: 'Preview of base points update (no changes made)',
@@ -1012,16 +974,7 @@ async function handleSetBasePoints(args: any) {
     };
   }
 
-  await withTransaction(async (db) => {
-    const updateSql = `
-      UPDATE species_name_group
-      SET base_points = ?
-      WHERE ${conditions.join(' AND ')}
-    `;
-    const stmt = await db.prepare(updateSql);
-    await stmt.run(base_points, ...params);
-    await stmt.finalize();
-  });
+  const changes = await bulkSetPoints(targetGroupIds, base_points);
 
   return {
     content: [
@@ -1029,14 +982,14 @@ async function handleSetBasePoints(args: any) {
         type: 'text' as const,
         text: JSON.stringify({
           success: true,
-          updated_count: affected.length,
+          updated_count: changes,
           updated_species: affected.map(s => ({
             group_id: s.group_id,
             canonical_name: `${s.canonical_genus} ${s.canonical_species_name}`,
-            old_points: s.old_points,
+            old_points: s.base_points,
             new_points: base_points,
           })),
-          message: `Base points updated for ${affected.length} species`,
+          message: `Base points updated for ${changes} species`,
         }, null, 2),
       },
     ],
