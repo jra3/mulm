@@ -110,11 +110,11 @@ describe('Submission Status Calculation', () => {
       const status = getSubmissionStatus(submission);
 
       assert.strictEqual(status.status, 'pending-witness');
-      assert.strictEqual(status.label, 'Needs Witness');
+      assert.strictEqual(status.label, 'Pending Screening');
       assert.strictEqual(status.color, 'text-purple-800');
       assert.strictEqual(status.bgColor, 'bg-purple-100');
       assert.strictEqual(status.rowColor, 'bg-purple-50');
-      assert.strictEqual(status.description, 'Awaiting witness verification');
+      assert.strictEqual(status.description, 'Awaiting admin screening');
     });
   });
 
@@ -136,7 +136,7 @@ describe('Submission Status Calculation', () => {
       const status = getSubmissionStatus(submission);
 
       assert.strictEqual(status.status, 'waiting-period');
-      assert.strictEqual(status.label, 'Waiting Period');
+      assert.strictEqual(status.label, 'Awaiting Auction');
       assert.strictEqual(status.color, 'text-orange-800');
       assert.strictEqual(status.bgColor, 'bg-orange-100');
       assert.strictEqual(status.rowColor, 'bg-orange-50');

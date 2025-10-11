@@ -37,47 +37,48 @@ describe('Species Typeahead Search Tests', () => {
   });
 
   async function setupTestSpecies() {
-    // Create species groups
-    const guppyGroupResult = await db.run(`
-      INSERT INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-      VALUES ('Fish', 'Poecilia', 'reticulata')
+    // Use unique test species that won't conflict with migration data
+    // Using "Testicus" genus to ensure uniqueness
+    const testFishGroupResult = await db.run(`
+      INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name)
+      VALUES ('Livebearers', 'Fish', 'Testicus', 'fishus')
     `);
-    const guppyGroupId = guppyGroupResult.lastID as number;
+    const testFishGroupId = testFishGroupResult.lastID as number;
 
-    const tetraGroupResult = await db.run(`
-      INSERT INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-      VALUES ('Fish', 'Nematobrycon', 'palmeri')
+    const testFish2GroupResult = await db.run(`
+      INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name)
+      VALUES ('Characins', 'Fish', 'Testicus', 'characterus')
     `);
-    const tetraGroupId = tetraGroupResult.lastID as number;
+    const testFish2GroupId = testFish2GroupResult.lastID as number;
 
-    const cryptGroupResult = await db.run(`
-      INSERT INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-      VALUES ('Plant', 'Cryptocoryne', 'wendtii')
+    const testPlantGroupResult = await db.run(`
+      INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name)
+      VALUES ('Cryptocoryne', 'Plant', 'Testicus', 'plantus')
     `);
-    const cryptGroupId = cryptGroupResult.lastID as number;
+    const testPlantGroupId = testPlantGroupResult.lastID as number;
 
     // Insert species name synonyms
-    // Guppy with multiple common names
+    // Test fish with multiple common names
     await db.run(`
       INSERT INTO species_name (group_id, common_name, scientific_name)
       VALUES
-        (?, 'Guppy', 'Poecilia reticulata'),
-        (?, 'Fancy Guppy', 'Poecilia reticulata')
-    `, [guppyGroupId, guppyGroupId]);
+        (?, 'Test Guppy', 'Testicus fishus'),
+        (?, 'Fancy Test Guppy', 'Testicus fishus')
+    `, [testFishGroupId, testFishGroupId]);
 
-    // Emperor Tetra
+    // Test Emperor
     await db.run(`
       INSERT INTO species_name (group_id, common_name, scientific_name)
-      VALUES (?, 'Emperor Tetra', 'Nematobrycon palmeri')
-    `, [tetraGroupId]);
+      VALUES (?, 'Test Emperor Tetra', 'Testicus characterus')
+    `, [testFish2GroupId]);
 
-    // Cryptocoryne wendtii (plant)
+    // Test Crypt (plant)
     await db.run(`
       INSERT INTO species_name (group_id, common_name, scientific_name)
       VALUES
-        (?, 'Wendts Water Trumpet', 'Cryptocoryne wendtii'),
-        (?, 'Wendt Crypt', 'Cryptocoryne wendtii')
-    `, [cryptGroupId, cryptGroupId]);
+        (?, 'Test Crypt', 'Testicus plantus'),
+        (?, 'Test Wendt Crypt', 'Testicus plantus')
+    `, [testPlantGroupId, testPlantGroupId]);
   }
 
   test('should return empty array for queries shorter than 2 characters', async () => {
@@ -89,60 +90,60 @@ describe('Species Typeahead Search Tests', () => {
   });
 
   test('should search by common name', async () => {
-    const results = await searchSpeciesTypeahead('guppy');
+    const results = await searchSpeciesTypeahead('Test Guppy');
 
-    assert.ok(results.length > 0, 'Should find guppy results');
+    assert.ok(results.length > 0, 'Should find test guppy results');
 
-    // Should find all guppy variants
+    // Should find all test guppy variants
     const guppyNames = results.map(r => r.common_name);
-    assert.ok(guppyNames.includes('Guppy'), 'Should include standard Guppy');
-    assert.ok(guppyNames.includes('Fancy Guppy'), 'Should include Fancy Guppy');
+    assert.ok(guppyNames.includes('Test Guppy'), 'Should include Test Guppy');
+    assert.ok(guppyNames.includes('Fancy Test Guppy'), 'Should include Fancy Test Guppy');
 
     // All results should have the same scientific name
     results.forEach(result => {
-      assert.strictEqual(result.scientific_name, 'Poecilia reticulata');
+      assert.strictEqual(result.scientific_name, 'Testicus fishus');
     });
   });
 
   test('should search by scientific name', async () => {
-    const results = await searchSpeciesTypeahead('Nematobrycon');
+    const results = await searchSpeciesTypeahead('Testicus characterus');
 
     assert.strictEqual(results.length, 1, 'Should find exactly one result');
-    assert.strictEqual(results[0].common_name, 'Emperor Tetra');
-    assert.strictEqual(results[0].scientific_name, 'Nematobrycon palmeri');
+    assert.strictEqual(results[0].common_name, 'Test Emperor Tetra');
+    assert.strictEqual(results[0].scientific_name, 'Testicus characterus');
   });
 
   test('should be case-insensitive', async () => {
-    const lowerResults = await searchSpeciesTypeahead('guppy');
-    const upperResults = await searchSpeciesTypeahead('GUPPY');
-    const mixedResults = await searchSpeciesTypeahead('GuPpY');
+    const lowerResults = await searchSpeciesTypeahead('test guppy');
+    const upperResults = await searchSpeciesTypeahead('TEST GUPPY');
+    const mixedResults = await searchSpeciesTypeahead('TeSt GuPpY');
 
     assert.strictEqual(lowerResults.length, upperResults.length, 'Case should not matter');
     assert.strictEqual(lowerResults.length, mixedResults.length, 'Mixed case should work');
   });
 
   test('should filter by species_type (program_class)', async () => {
-    const fishResults = await searchSpeciesTypeahead('crypt', { species_type: 'Fish' });
+    const fishResults = await searchSpeciesTypeahead('Test Crypt', { species_type: 'Fish' });
     assert.strictEqual(fishResults.length, 0, 'Should not find plants when filtering for fish');
 
-    const plantResults = await searchSpeciesTypeahead('crypt', { species_type: 'Plant' });
+    const plantResults = await searchSpeciesTypeahead('Test Crypt', { species_type: 'Plant' });
     assert.ok(plantResults.length > 0, 'Should find plants when filtering for plants');
 
     plantResults.forEach(result => {
-      assert.strictEqual(result.program_class, 'Plant');
+      assert.strictEqual(result.program_class, 'Cryptocoryne');
     });
   });
 
   test('should respect limit parameter', async () => {
-    const limit2Results = await searchSpeciesTypeahead('gu', {}, 2);
+    const limit2Results = await searchSpeciesTypeahead('Test', {}, 2);
     assert.ok(limit2Results.length <= 2, 'Should respect limit of 2');
 
-    const limit1Results = await searchSpeciesTypeahead('gu', {}, 1);
+    const limit1Results = await searchSpeciesTypeahead('Test', {}, 1);
     assert.strictEqual(limit1Results.length, 1, 'Should respect limit of 1');
   });
 
   test('should include name_id for each result', async () => {
-    const results = await searchSpeciesTypeahead('guppy');
+    const results = await searchSpeciesTypeahead('Test Guppy');
 
     assert.ok(results.length > 0, 'Should have results');
 
@@ -159,28 +160,28 @@ describe('Species Typeahead Search Tests', () => {
   });
 
   test('should include group_id for grouping synonyms', async () => {
-    const results = await searchSpeciesTypeahead('guppy');
+    const results = await searchSpeciesTypeahead('Test Guppy');
 
     assert.ok(results.length > 0, 'Should have results');
 
-    // All guppy variants should have the same group_id
+    // All test guppy variants should have the same group_id
     const groupIds = [...new Set(results.map(r => r.group_id))];
-    assert.strictEqual(groupIds.length, 1, 'All guppy variants should share the same group_id');
+    assert.strictEqual(groupIds.length, 1, 'All test guppy variants should share the same group_id');
   });
 
   test('should include canonical names for reference', async () => {
-    const results = await searchSpeciesTypeahead('emperor');
+    const results = await searchSpeciesTypeahead('Test Emperor');
 
     assert.strictEqual(results.length, 1);
     const result = results[0];
 
-    assert.strictEqual(result.canonical_genus, 'Nematobrycon');
-    assert.strictEqual(result.canonical_species_name, 'palmeri');
-    assert.strictEqual(result.program_class, 'Fish');
+    assert.strictEqual(result.canonical_genus, 'Testicus');
+    assert.strictEqual(result.canonical_species_name, 'characterus');
+    assert.strictEqual(result.program_class, 'Characins');
   });
 
   test('should order results alphabetically by common_name', async () => {
-    const results = await searchSpeciesTypeahead('gu');
+    const results = await searchSpeciesTypeahead('Test');
 
     if (results.length > 1) {
       for (let i = 1; i < results.length; i++) {
@@ -192,17 +193,17 @@ describe('Species Typeahead Search Tests', () => {
   });
 
   test('should match partial words', async () => {
-    const results = await searchSpeciesTypeahead('emp');
+    const results = await searchSpeciesTypeahead('Test Emp');
 
-    assert.ok(results.length > 0, 'Should find "Emperor Tetra" with partial match "emp"');
+    assert.ok(results.length > 0, 'Should find "Test Emperor Tetra" with partial match');
     assert.ok(
       results.some(r => r.common_name.includes('Emperor')),
-      'Should match "Emperor" with "emp"'
+      'Should match "Emperor" in name'
     );
   });
 
   test('should return complete SpeciesNameRecord objects', async () => {
-    const results = await searchSpeciesTypeahead('guppy');
+    const results = await searchSpeciesTypeahead('Test Guppy');
 
     assert.ok(results.length > 0);
 
@@ -219,16 +220,16 @@ describe('Species Typeahead Search Tests', () => {
   });
 
   test('should not match across different species types when filtered', async () => {
-    // Search for something that exists in both fish and plants
-    const fishResults = await searchSpeciesTypeahead('te', { species_type: 'Fish' });
-    const plantResults = await searchSpeciesTypeahead('crypt', { species_type: 'Plant' });
+    // Search for test species with different types
+    const fishResults = await searchSpeciesTypeahead('Test', { species_type: 'Fish' });
+    const plantResults = await searchSpeciesTypeahead('Test Crypt', { species_type: 'Plant' });
 
     fishResults.forEach(result => {
-      assert.strictEqual(result.program_class, 'Fish', 'Fish filter should only return fish');
+      assert.strictEqual(result.species_type, 'Fish', 'Fish filter should only return fish');
     });
 
     plantResults.forEach(result => {
-      assert.strictEqual(result.program_class, 'Plant', 'Plant filter should only return plants');
+      assert.strictEqual(result.species_type, 'Plant', 'Plant filter should only return plants');
     });
   });
 });
