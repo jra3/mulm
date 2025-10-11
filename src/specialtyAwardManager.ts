@@ -5,6 +5,10 @@ import { logger } from './utils/logger';
 
 /**
  * Get approved submissions for a member with genus information for specialty award checking
+ *
+ * **Migration Note**: Updated to check all three FK columns in submissions table
+ * (species_name_id, common_name_id, scientific_name_id) to get canonical_genus
+ * from species_name_group via the split schema.
  */
 async function getSubmissionsWithGenus(memberId: number): Promise<SubmissionForAward[]> {
   const submissions = await query<{
@@ -15,18 +19,26 @@ async function getSubmissionsWithGenus(memberId: number): Promise<SubmissionForA
 		spawn_locations: string;
 		canonical_genus: string | null;
 	}>(`
-		SELECT 
+		SELECT
 			s.species_class,
 			s.species_latin_name,
 			s.species_type,
 			s.water_type,
 			s.spawn_locations,
-			sng.canonical_genus
+			COALESCE(
+				sng_legacy.canonical_genus,
+				sng_common.canonical_genus,
+				sng_scientific.canonical_genus
+			) as canonical_genus
 		FROM submissions s
 		LEFT JOIN species_name sn ON s.species_name_id = sn.name_id
-		LEFT JOIN species_name_group sng ON sn.group_id = sng.group_id
-		WHERE s.member_id = ? 
-			AND s.submitted_on IS NOT NULL 
+		LEFT JOIN species_name_group sng_legacy ON sn.group_id = sng_legacy.group_id
+		LEFT JOIN species_common_name cn ON s.common_name_id = cn.common_name_id
+		LEFT JOIN species_name_group sng_common ON cn.group_id = sng_common.group_id
+		LEFT JOIN species_scientific_name scin ON s.scientific_name_id = scin.scientific_name_id
+		LEFT JOIN species_name_group sng_scientific ON scin.group_id = sng_scientific.group_id
+		WHERE s.member_id = ?
+			AND s.submitted_on IS NOT NULL
 			AND s.approved_on IS NOT NULL
 	`, [memberId]);
 
