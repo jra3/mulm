@@ -295,8 +295,11 @@ export async function getSpeciesForExplorer(filters: SpeciesFilters = {}): Promi
 export type SpeciesDetail = {
 	group_id: number;
 	program_class: string;
+	species_type: string;
 	canonical_genus: string;
 	canonical_species_name: string;
+	base_points: number | null;
+	is_cares_species: number;
 	synonyms: Array<{
 		name_id: number;
 		common_name: string;
@@ -308,10 +311,13 @@ export async function getSpeciesDetail(groupId: number) {
   const groupRows = await query<{
 		group_id: number;
 		program_class: string;
+		species_type: string;
 		canonical_genus: string;
 		canonical_species_name: string;
+		base_points: number | null;
+		is_cares_species: number;
 	}>(`
-		SELECT group_id, program_class, canonical_genus, canonical_species_name
+		SELECT group_id, program_class, species_type, canonical_genus, canonical_species_name, base_points, is_cares_species
 		FROM species_name_group
 		WHERE group_id = ?
 	`, [groupId]);
