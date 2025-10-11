@@ -1,6 +1,11 @@
 import { Response } from 'express';
 import { MulmRequest } from '@/sessions';
-import { getSpeciesForAdmin, SpeciesAdminFilters } from '@/db/species';
+import {
+  getSpeciesForAdmin,
+  SpeciesAdminFilters,
+  getSpeciesDetail,
+  getSynonymsForGroup
+} from '@/db/species';
 import { getQueryString, getQueryNumber, getQueryBoolean } from '@/utils/request';
 import { getClassOptions } from '@/forms/submission';
 
@@ -65,5 +70,39 @@ export const listSpecies = async (req: MulmRequest, res: Response) => {
       totalCount: result.total_count,
       limit
     }
+  });
+};
+
+/**
+ * GET /admin/species/:groupId/edit
+ * Render edit sidebar for species (HTMX partial)
+ */
+export const editSpeciesSidebar = async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+
+  if (!viewer?.is_admin) {
+    res.status(403).send('Admin access required');
+    return;
+  }
+
+  const groupId = parseInt(req.params.groupId);
+  if (!groupId) {
+    res.status(400).send('Invalid species ID');
+    return;
+  }
+
+  const speciesDetail = await getSpeciesDetail(groupId);
+
+  if (!speciesDetail) {
+    res.status(404).send('Species not found');
+    return;
+  }
+
+  // Get full species group data (getSpeciesDetail doesn't return all fields)
+  const fullData = await getSynonymsForGroup(groupId);
+
+  res.render('admin/speciesEditSidebar', {
+    species: speciesDetail,
+    errors: new Map()
   });
 };
