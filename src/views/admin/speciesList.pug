@@ -33,8 +33,8 @@ mixin speciesTable(speciesList)
                   = `${item.canonical_genus} ${item.canonical_species_name}`
 
                 if item.synonyms && item.synonyms.length > 0
-                  .absolute.left-0.top-full.mt-1.z-50.w-max.max-w-md(
-                    class="hidden group-hover:block bg-gray-800 text-white text-sm rounded-lg shadow-lg p-3"
+                  .absolute.left-0.bottom-full.mb-1.z-50.w-max.max-w-md(
+                    class="hidden group-hover:block bg-gray-800 text-white text-sm rounded-lg shadow-lg p-3 pointer-events-none"
                   )
                     .font-semibold.text-xs.text-gray-300.mb-2 Known Names (#{item.synonyms.length}):
                     .space-y-1
