@@ -534,3 +534,37 @@ export async function approveSubmission(
     throw new Error("Failed to update submission");
   }
 }
+
+/**
+ * Get all submissions approved today (in local time)
+ * @returns Array of approved submissions from today with member names and total points
+ */
+export function getTodayApprovedSubmissions() {
+  return query<
+    Submission &
+      Required<
+        Pick<
+          Submission,
+          "submitted_on" | "approved_on" | "points" | "total_points"
+        >
+      >
+  >(
+    `
+		SELECT
+			submissions.*,
+			submissions.points +
+				IFNULL(submissions.article_points, 0) +
+				(IFNULL(submissions.first_time_species, 0) * 5) +
+				(IFNULL(submissions.flowered, 0) * submissions.points) +
+				(IFNULL(submissions.sexual_reproduction, 0) * submissions.points)
+				as total_points,
+			members.display_name as member_name
+		FROM submissions JOIN members
+		ON submissions.member_id == members.id
+		WHERE DATE(approved_on) = DATE('now', 'localtime')
+		AND approved_on IS NOT NULL
+		AND points IS NOT NULL
+		ORDER BY approved_on DESC`,
+    [],
+  );
+}

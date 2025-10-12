@@ -10,6 +10,7 @@ import cookieParser from "cookie-parser";
 import * as account from "@/routes/account";
 import adminRouter from "@/routes/adminRouter";
 import * as auth from "@/routes/auth";
+import displayRouter from "@/routes/display";
 import * as member from "@/routes/member";
 import * as submission from "@/routes/submission";
 import * as standings from "@/routes/standings";
@@ -59,6 +60,7 @@ app.use(sessionMiddleware);
 // Make config available to all templates via res.locals
 app.use((_req, res, next) => {
   res.locals.bugReportEmail = config.bugReportEmail;
+  res.locals.domain = config.domain;
   next();
 });
 
@@ -166,6 +168,9 @@ router.patch("/account", account.updateAccountSettings);
 router.delete("/account/google", account.unlinkGoogleAccount);
 
 router.use("/admin", adminRouter);
+
+// Display screen for club meetings (public, no auth required)
+router.use("/", displayRouter);
 
 // Auth routes ///////////////////////////////////////////
 

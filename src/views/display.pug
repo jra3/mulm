@@ -1,0 +1,144 @@
+include header.pug
+
+doctype html
+html
+    +headTag("Today's Awards - BAS BAP")
+
+    style.
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+        }
+
+        .submission-card {
+            animation-duration: 0.8s;
+            animation-fill-mode: both;
+        }
+
+        .submission-card.fade-in {
+            animation-name: fadeIn;
+        }
+
+        .submission-card.fade-out {
+            animation-name: fadeOut;
+        }
+
+        .submission-card.hidden {
+            display: none;
+        }
+
+    body.bg-gradient-to-b.from-gray-100.to-gray-200.text-gray-900.min-h-screen
+
+        // Header bar
+        header.bg-white.shadow-lg
+            div.max-w-full.mx-auto.px-12.py-4.flex.justify-between.items-center
+                h1.text-4xl.font-extrabold.text-gray-900.px-4 Tonight's Submissions
+                div.text-right
+                    p.text-6xl.font-extrabold.text-blue-600.px-4= domain
+
+        // Main content area with auto-refresh (full height minus header)
+        main.p-8(style="height: calc(100vh - 96px);")
+            #submissions-feed.h-full(
+                hx-get="/live/feed"
+                hx-trigger="every 90s"
+                hx-swap="innerHTML"
+            )
+                // Initial content (will be replaced by partial)
+                include partials/display-feed.pug
+
+        // Slideshow script
+        script.
+            (function() {
+                let currentIndex = 0;
+                let submissions = [];
+                let isTransitioning = false;
+
+                function updateSubmissions() {
+                    const cards = document.querySelectorAll('.submission-card');
+                    submissions = Array.from(cards);
+                    if (submissions.length > 0) {
+                        // Hide all cards initially
+                        submissions.forEach((card, i) => {
+                            if (i !== currentIndex) {
+                                card.classList.add('hidden');
+                                card.classList.remove('fade-in', 'fade-out');
+                            }
+                        });
+                        // Show first card with fade-in
+                        showSubmission(currentIndex, false);
+                    }
+                }
+
+                function showSubmission(index, animate = true) {
+                    const nextCard = submissions[index];
+
+                    if (animate && submissions.length > 1) {
+                        // Fade out current card
+                        const currentCard = submissions.find(card => !card.classList.contains('hidden'));
+                        if (currentCard && currentCard !== nextCard) {
+                            currentCard.classList.remove('fade-in');
+                            currentCard.classList.add('fade-out');
+
+                            // Wait for fade out, then switch
+                            setTimeout(() => {
+                                currentCard.classList.add('hidden');
+                                currentCard.classList.remove('fade-out');
+
+                                // Fade in next card
+                                nextCard.classList.remove('hidden');
+                                nextCard.classList.add('fade-in');
+                            }, 800); // Match animation duration
+                        }
+                    } else {
+                        // Immediate show (initial load)
+                        nextCard.classList.remove('hidden');
+                        nextCard.classList.add('fade-in');
+                    }
+                }
+
+                function nextSubmission() {
+                    if (submissions.length === 0 || isTransitioning) return;
+
+                    isTransitioning = true;
+                    const nextIndex = (currentIndex + 1) % submissions.length;
+                    showSubmission(nextIndex, true);
+                    currentIndex = nextIndex;
+
+                    // Allow next transition after animation completes
+                    setTimeout(() => {
+                        isTransitioning = false;
+                    }, 1000);
+                }
+
+                // Initial setup
+                updateSubmissions();
+
+                // Rotate every 10 seconds
+                setInterval(nextSubmission, 10000);
+
+                // Re-initialize when HTMX updates the content
+                document.body.addEventListener('htmx:afterSwap', function(evt) {
+                    if (evt.detail.target.id === 'submissions-feed') {
+                        currentIndex = 0;
+                        isTransitioning = false;
+                        updateSubmissions();
+                    }
+                });
+            })();

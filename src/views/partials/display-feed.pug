@@ -1,0 +1,51 @@
+include ../mixins/submissionImages.pug
+
+if submissions && submissions.length > 0
+    // Slideshow container - cards will be shown one at a time
+    .h-full.flex.items-center.justify-center
+        each submission in submissions
+            // Individual submission card (controlled by JavaScript slideshow - fills available space)
+            .submission-card.bg-white.rounded-xl.shadow-xl.p-8.border-4.border-gray-200.flex.flex-col.w-full.max-h-full.overflow-hidden
+                // Compact header: Species Names | Breeder | Points
+                .flex.items-start.justify-between.gap-8.mb-6.border-b-4.border-gray-200.pb-4.flex-shrink-0
+
+                    // Left: Species names
+                    .flex-grow.text-left
+                        h2.text-5xl.font-bold.text-gray-900.leading-tight= submission.species_common_name
+                        p.text-3xl.text-gray-600.italic.leading-tight= submission.species_latin_name
+
+                    // Right: Breeder and Points with aligned labels
+                    .flex.gap-8.flex-shrink-0
+                        .text-center
+                            p.text-2xl.text-gray-600.mb-2 Breeder
+                            p.text-4xl.font-bold.text-blue-700= submission.member_name
+
+                        .text-center
+                            p.text-2xl.text-gray-600.mb-2 Points
+                            p.text-4xl.font-extrabold.text-green-600= submission.total_points
+
+                // Images gallery (single row, no wrapping, evenly sized)
+                if submission.images
+                    - let images = [];
+                    - try { images = typeof submission.images === 'string' ? JSON.parse(submission.images) : submission.images; } catch(e) { images = []; }
+                    if images && images.length > 0
+                        - const photoCount = Math.min(images.length, 5);
+                        - const photoWidth = photoCount === 1 ? 400 : photoCount === 2 ? 300 : photoCount === 3 ? 250 : photoCount === 4 ? 220 : 180;
+                        .flex.flex-grow.mt-4.items-center.justify-center.overflow-hidden
+                            .flex.gap-3.justify-center.items-center
+                                each image, index in images.slice(0, 5)
+                                    - const imageUrl = image.url.includes('-original') ? image.url.replace('-original', '-medium') : image.url;
+                                    .rounded-lg.shadow-lg.overflow-hidden.bg-gray-100.flex-shrink-0
+                                        img.object-contain(
+                                            src=imageUrl
+                                            alt=`Photo ${index + 1}`
+                                            style=`height: 320px; width: auto; max-width: ${photoWidth}px;`
+                                        )
+
+else
+    // No submissions today
+    .flex.items-center.justify-center.min-h-96
+        .text-center.bg-white.rounded-xl.shadow-lg.p-12.max-w-2xl
+            p.text-6xl.mb-6 🐠
+            h2.text-4xl.font-bold.text-gray-700.mb-4 No awards yet tonight!
+            p.text-2xl.text-gray-500 Submissions will appear here as they are approved
