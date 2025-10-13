@@ -103,14 +103,39 @@ export async function mergeSpecies(canonicalGroupId: number, defunctGroupId: num
 /**
  * Get canonical species group data from a name ID - Split schema compatible
  *
- * **Migration Note**: Updated to check BOTH species_common_name and species_scientific_name
- * tables since name IDs can come from either table in the split schema.
+ * **IMPORTANT**: Checks legacy table FIRST to avoid ID collisions between old and new schemas.
+ * The split schema migration created new tables with overlapping IDs (1-5026), causing
+ * legacy species_name_id values to incorrectly match new common_name_id/scientific_name_id values.
  *
  * @param speciesNameId - Name ID from either common_name_id or scientific_name_id (or legacy name_id)
  * @returns Species group data or undefined if not found
  */
 export async function getCanonicalSpeciesName(speciesNameId: number) {
-  // Try common name table first
+  // Check legacy table FIRST to avoid ID collisions with new tables
+  // (migration 027-029 created overlapping IDs 1-5026 in new tables)
+  const legacyRows = await query<{
+		group_id: number;
+		program_class: string;
+		species_type: string;
+		canonical_genus: string;
+		canonical_species_name: string;
+		base_points: number | null;
+		is_cares_species: number;
+		external_references: string | null;
+		image_links: string | null;
+	}>(`
+		SELECT species_name_group.*
+		FROM species_name JOIN species_name_group
+		ON species_name.group_id = species_name_group.group_id
+		WHERE species_name.name_id = ?`,
+	[speciesNameId]
+	);
+
+  if (legacyRows.length > 0) {
+    return legacyRows[0];
+  }
+
+  // Try new common name table
   const commonNameRows = await query<{
 		group_id: number;
 		program_class: string;
@@ -133,7 +158,7 @@ export async function getCanonicalSpeciesName(speciesNameId: number) {
     return commonNameRows[0];
   }
 
-  // Try scientific name table
+  // Try new scientific name table
   const scientificNameRows = await query<{
 		group_id: number;
 		program_class: string;
@@ -152,30 +177,7 @@ export async function getCanonicalSpeciesName(speciesNameId: number) {
 	[speciesNameId]
 	);
 
-  if (scientificNameRows.length > 0) {
-    return scientificNameRows[0];
-  }
-
-  // Fall back to old species_name table for backwards compatibility
-  const legacyRows = await query<{
-		group_id: number;
-		program_class: string;
-		species_type: string;
-		canonical_genus: string;
-		canonical_species_name: string;
-		base_points: number | null;
-		is_cares_species: number;
-		external_references: string | null;
-		image_links: string | null;
-	}>(`
-		SELECT species_name_group.*
-		FROM species_name JOIN species_name_group
-		ON species_name.group_id = species_name_group.group_id
-		WHERE species_name.name_id = ?`,
-	[speciesNameId]
-	);
-
-  return legacyRows.pop();
+  return scientificNameRows.pop();
 }
 
 export type SpeciesFilters = {
