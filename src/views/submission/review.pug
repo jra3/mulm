@@ -118,7 +118,7 @@ html
 										hx-swap="beforeend") Request More Info
 
 				// Show auction eligibility status for screened submissions
-				if submission.witness_verification_status === 'confirmed' && submission.approved_on == null
+				if submission.witness_verification_status === 'confirmed' && !isApproved
 					if !waitingPeriodStatus.eligible
 						// Show auction eligibility countdown
 						.status-panel.status-panel-pending
