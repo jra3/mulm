@@ -8,7 +8,4 @@
 
 mixin countBadge(count)
 	if count && count > 0
-		span(
-			class="inline-flex items-center justify-center bg-red-500 text-white text-xs font-bold rounded-full"
-			style="min-width: 1.5rem; width: 1.5rem; height: 1.5rem;"
-		)= count
+		span.inline-flex.items-center.justify-center.bg-red-500.text-white.text-xs.font-bold.rounded-full.min-w-6.w-6.h-6= count

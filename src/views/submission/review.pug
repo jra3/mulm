@@ -77,7 +77,7 @@ html
 						a(href=`/admin/submissions/${submission.id}/edit`)
 							button.primary(type="button") Edit Submission as Admin
 					else if isSelf && !isApproved
-						form(hx-patch=`/submissions/${submission.id}` style="display: inline;")
+						form.inline(hx-patch=`/submissions/${submission.id}`)
 							button.primary(name="unsubmit" type="submit") Edit Submission
 
 					// Delete button - smaller, de-emphasized
