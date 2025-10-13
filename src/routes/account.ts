@@ -157,6 +157,9 @@ export const createTankPresetRoute = async (req: MulmRequest, res: Response) => 
   } catch (err) {
     logger.error('Failed to create tank preset', err);
     errors.set('preset_name', 'A preset with this name already exists');
+    // Retarget to replace the form instead of adding to the list
+    res.set('HX-Retarget', '#newPresetForm');
+    res.set('HX-Reswap', 'outerHTML');
     res.render("account/tankPresetForm", {
       preset: req.body as Record<string, unknown>,
       editing: false,
