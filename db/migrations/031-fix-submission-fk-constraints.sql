@@ -5,6 +5,11 @@
 
 -- SQLite doesn't support ALTER TABLE MODIFY CONSTRAINT, so we need to recreate the table
 
+-- Step 0: Normalize legacy program values before adding CHECK constraint
+UPDATE submissions SET program = 'fish' WHERE program IN ('BAP', 'bap', 'Fish', 'FISH');
+UPDATE submissions SET program = 'plant' WHERE program IN ('HAP', 'hap', 'Plant', 'PLANT');
+UPDATE submissions SET program = 'coral' WHERE program IN ('CAP', 'cap', 'Coral', 'CORAL');
+
 -- Step 1: Create new table with proper FK constraints
 CREATE TABLE submissions_new (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
