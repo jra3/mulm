@@ -6,7 +6,7 @@ import { MulmRequest } from "@/sessions";
 import { MemberRecord, getMember, getMemberByEmail } from "@/db/members";
 import { onSubmissionSend } from "@/notifications";
 import * as db from "@/db/submissions";
-import { getCanonicalSpeciesName, recordName } from "@/db/species";
+import { getSpeciesGroup, getGroupIdFromNameId } from "@/db/species";
 import { getWaitingPeriodStatus } from "@/utils/waitingPeriod";
 import { getNotesForSubmission } from "@/db/submission_notes";
 import { formatShortDate } from "@/utils/dateFormat";
@@ -107,12 +107,24 @@ export const view = async (req: MulmRequest, res: Response) => {
   }
 
   const nameGroup = await (async () => {
-    if (submission.species_name_id) {
-      const name = await getCanonicalSpeciesName(submission.species_name_id);
-      if (name) {
-        return name;
+    // Try new split schema FK columns first
+    if (submission.common_name_id) {
+      const groupId = await getGroupIdFromNameId(submission.common_name_id, true);
+      if (groupId) {
+        const group = await getSpeciesGroup(groupId);
+        if (group) return group;
       }
     }
+
+    if (submission.scientific_name_id) {
+      const groupId = await getGroupIdFromNameId(submission.scientific_name_id, false);
+      if (groupId) {
+        const group = await getSpeciesGroup(groupId);
+        if (group) return group;
+      }
+    }
+
+    // Fall back to parsing from submission data if no species group linked
     const [genus, ...parts] = submission.species_latin_name.split(" ");
     return {
       canonical_genus: genus,
@@ -257,44 +269,6 @@ export const create = async (req: MulmRequest, res: Response) => {
 
   const memberId = member.id;
 
-  // Ensure species_name_id is set and validate it matches the expected species type
-  if (form.species_name_id) {
-    // Validate that the species_name_id references a species with matching species_type
-    const canonical = await getCanonicalSpeciesName(form.species_name_id);
-    if (!canonical || canonical.species_type !== form.species_type) {
-      const errors = new Map<string, string>();
-      errors.set('species_type', `Species name does not match selected species type. This species is classified as "${canonical?.species_type}", but you selected "${form.species_type}".`);
-      const selectedType = form.species_type || 'Fish';
-      res.render('submit', {
-        title: getBapFormTitle(selectedType),
-        form,
-        errors,
-        classOptions: getClassOptions(selectedType),
-        waterTypes,
-        speciesTypes,
-        foodTypes,
-        spawnLocations,
-        isLivestock: isLivestock(selectedType),
-        hasFoods: hasFoods(selectedType),
-        hasSpawnLocations: hasSpawnLocations(selectedType),
-        hasLighting: hasLighting(selectedType),
-        hasSupplements: hasSupplements(selectedType),
-        isAdmin: Boolean(viewer.is_admin),
-      });
-      return;
-    }
-  } else if (form.species_common_name && form.species_latin_name) {
-    // Create or find the species name record
-    const nameId = await recordName({
-      program_class: form.species_type!,
-      canonical_genus: form.species_latin_name.split(' ')[0],
-      canonical_species_name: form.species_latin_name.split(' ').slice(1).join(' ') || 'sp.',
-      common_name: form.species_common_name,
-      latin_name: form.species_latin_name,
-    });
-    form.species_name_id = nameId;
-  }
-
   // TODO figure out how to avoid read after write
   const subId = await db.createSubmission(memberId, form, !draft);
   const sub = await db.getSubmissionById(subId);
@@ -362,44 +336,6 @@ export const update = async (req: MulmRequest, res: Response) => {
       isAdmin: Boolean(viewer.is_admin),
     });
     return;
-  }
-
-  // Ensure species_name_id is set and validate it matches the expected species type
-  if (form.species_name_id) {
-    // Validate that the species_name_id references a species with matching species_type
-    const canonical = await getCanonicalSpeciesName(form.species_name_id);
-    if (!canonical || canonical.species_type !== form.species_type) {
-      const errors = new Map<string, string>();
-      errors.set('species_type', `Species name does not match selected species type. This species is classified as "${canonical?.species_type}", but you selected "${form.species_type}".`);
-      const selectedType = form.species_type || 'Fish';
-      res.render('submit', {
-        title: getBapFormTitle(selectedType),
-        form,
-        errors,
-        classOptions: getClassOptions(selectedType),
-        waterTypes,
-        speciesTypes,
-        foodTypes,
-        spawnLocations,
-        isLivestock: isLivestock(selectedType),
-        hasFoods: hasFoods(selectedType),
-        hasSpawnLocations: hasSpawnLocations(selectedType),
-        hasLighting: hasLighting(selectedType),
-        hasSupplements: hasSupplements(selectedType),
-        isAdmin: Boolean(viewer.is_admin),
-      });
-      return;
-    }
-  } else if (form.species_common_name && form.species_latin_name) {
-    // Create or find the species name record
-    const nameId = await recordName({
-      program_class: form.species_type!,
-      canonical_genus: form.species_latin_name.split(' ')[0],
-      canonical_species_name: form.species_latin_name.split(' ').slice(1).join(' ') || 'sp.',
-      common_name: form.species_common_name,
-      latin_name: form.species_latin_name,
-    });
-    form.species_name_id = nameId;
   }
 
   // TODO fix silly serial queries at some point

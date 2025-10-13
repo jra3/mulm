@@ -577,7 +577,7 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
 
   const updates = parsed.data;
 
-  const speciesGroupId = await recordName({
+  const speciesIds = await recordName({
     program_class: submission.species_class,
     common_name: submission.species_common_name,
     latin_name: submission.species_latin_name,
@@ -585,7 +585,7 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
     canonical_species_name: parsed.data.canonical_species_name,
   });
 
-  await approve(viewer!.id, id, speciesGroupId, updates);
+  await approve(viewer!.id, id, speciesIds, updates);
   const member = await getMember(submission.member_id);
   if (member) {
     // member should always exist...

@@ -12,20 +12,43 @@ type NameSynonym = {
 }
 
 export async function querySpeciesNames() {
-  return query<NameSynonym>(`
-		SELECT
-			species_name_group.group_id as name_group_id,
-			species_name_group.program_class as program_class,
-			species_name_group.canonical_genus as canonical_genus,
-			species_name_group.canonical_species_name as canonical_species_name,
-			species_name.common_name as common_name,
-			species_name.scientific_name as scientific_name
-		FROM species_name_group LEFT JOIN species_name
-		ON species_name_group.group_id = species_name.group_id
-	`);
+  // Query split schema tables and create paired records
+  const groups = await query<{
+    group_id: number;
+    program_class: string;
+    canonical_genus: string;
+    canonical_species_name: string;
+  }>('SELECT group_id, program_class, canonical_genus, canonical_species_name FROM species_name_group');
+
+  const results: NameSynonym[] = [];
+
+  for (const group of groups) {
+    const [commonNames, scientificNames] = await Promise.all([
+      query<{ common_name: string }>('SELECT common_name FROM species_common_name WHERE group_id = ? ORDER BY common_name', [group.group_id]),
+      query<{ scientific_name: string }>('SELECT scientific_name FROM species_scientific_name WHERE group_id = ? ORDER BY scientific_name', [group.group_id])
+    ]);
+
+    // Pair common names with scientific names
+    const maxLength = Math.max(commonNames.length, scientificNames.length);
+    for (let i = 0; i < maxLength; i++) {
+      results.push({
+        program_class: group.program_class,
+        canonical_genus: group.canonical_genus,
+        canonical_species_name: group.canonical_species_name,
+        common_name: commonNames[i]?.common_name || commonNames[0]?.common_name || '',
+        latin_name: scientificNames[i]?.scientific_name || scientificNames[0]?.scientific_name || ''
+      });
+    }
+  }
+
+  return results;
 }
 
-export async function recordName(data: NameSynonym): Promise<number> {
+export async function recordName(data: NameSynonym): Promise<{
+  group_id: number;
+  common_name_id: number;
+  scientific_name_id: number;
+}> {
   try {
     return await withTransaction(async (db) => {
       const groupStmt = await db.prepare(`
@@ -51,21 +74,41 @@ export async function recordName(data: NameSynonym): Promise<number> {
       }
       const group_id = result.group_id;
 
-      // Insert or update the species name synonym
-      const nameStmt = await db.prepare(`
-				INSERT INTO species_name(
-					group_id,
-					common_name,
-					scientific_name
-				)
-				VALUES (?, ?, ?)
-				ON CONFLICT(common_name, scientific_name)
-				DO UPDATE SET group_id = group_id;
+      // Insert common name and get ID
+      const commonNameStmt = await db.prepare(`
+				INSERT INTO species_common_name(group_id, common_name)
+				VALUES (?, ?)
+				ON CONFLICT(group_id, common_name)
+				DO UPDATE SET common_name = common_name
+				RETURNING common_name_id;
 			`);
-      await nameStmt.run(group_id, data.common_name, data.latin_name);
-      await nameStmt.finalize();
+      const commonResult = await commonNameStmt.get<{ common_name_id: number }>(group_id, data.common_name);
+      await commonNameStmt.finalize();
 
-      return group_id;
+      if (!commonResult || !commonResult.common_name_id) {
+        throw new Error("Failed to insert common name");
+      }
+
+      // Insert scientific name and get ID
+      const scientificNameStmt = await db.prepare(`
+				INSERT INTO species_scientific_name(group_id, scientific_name)
+				VALUES (?, ?)
+				ON CONFLICT(group_id, scientific_name)
+				DO UPDATE SET scientific_name = scientific_name
+				RETURNING scientific_name_id;
+			`);
+      const scientificResult = await scientificNameStmt.get<{ scientific_name_id: number }>(group_id, data.latin_name);
+      await scientificNameStmt.finalize();
+
+      if (!scientificResult || !scientificResult.scientific_name_id) {
+        throw new Error("Failed to insert scientific name");
+      }
+
+      return {
+        group_id,
+        common_name_id: commonResult.common_name_id,
+        scientific_name_id: scientificResult.scientific_name_id
+      };
     });
   } catch (err) {
     logger.error('Failed to record species name', err);
@@ -76,14 +119,23 @@ export async function recordName(data: NameSynonym): Promise<number> {
 export async function mergeSpecies(canonicalGroupId: number, defunctGroupId: number): Promise<void> {
   try {
     await withTransaction(async (db) => {
-      // Update all species names to point to the canonical group
-      const updateStmt = await db.prepare(`
-				UPDATE species_name
+      // Update common names to point to the canonical group
+      const updateCommonStmt = await db.prepare(`
+				UPDATE species_common_name
 				SET group_id = ?
 				WHERE group_id = ?
 			`);
-      await updateStmt.run(canonicalGroupId, defunctGroupId);
-      await updateStmt.finalize();
+      await updateCommonStmt.run(canonicalGroupId, defunctGroupId);
+      await updateCommonStmt.finalize();
+
+      // Update scientific names to point to the canonical group
+      const updateScientificStmt = await db.prepare(`
+				UPDATE species_scientific_name
+				SET group_id = ?
+				WHERE group_id = ?
+			`);
+      await updateScientificStmt.run(canonicalGroupId, defunctGroupId);
+      await updateScientificStmt.finalize();
 
       // Delete the defunct species group
       const deleteStmt = await db.prepare(`
@@ -94,20 +146,64 @@ export async function mergeSpecies(canonicalGroupId: number, defunctGroupId: num
       await deleteStmt.finalize();
     });
   } catch (err) {
-    logger.error('Failed to record species name', err);
     logger.error('Failed to merge species groups', err);
     throw new Error("Failed to merge species groups");
   }
 }
 
 /**
- * Get canonical species group data from a name ID - Split schema compatible
+ * Get species group data directly by group_id
+ * @param groupId - Species group ID
+ * @returns Species group data or undefined if not found
+ */
+export async function getSpeciesGroup(groupId: number) {
+  const rows = await query<{
+		group_id: number;
+		program_class: string;
+		species_type: string;
+		canonical_genus: string;
+		canonical_species_name: string;
+		base_points: number | null;
+		is_cares_species: number;
+		external_references: string | null;
+		image_links: string | null;
+	}>(`
+		SELECT * FROM species_name_group WHERE group_id = ?`,
+	[groupId]
+	);
+
+  return rows.pop();
+}
+
+/**
+ * Get species group_id from a common_name_id or scientific_name_id
+ * @param nameId - Either a common_name_id or scientific_name_id
+ * @param isCommonName - If true, treats nameId as common_name_id; if false, as scientific_name_id
+ * @returns group_id or undefined if not found
+ */
+export async function getGroupIdFromNameId(nameId: number, isCommonName: boolean): Promise<number | undefined> {
+  if (isCommonName) {
+    const rows = await query<{ group_id: number }>(
+      'SELECT group_id FROM species_common_name WHERE common_name_id = ?',
+      [nameId]
+    );
+    return rows.pop()?.group_id;
+  } else {
+    const rows = await query<{ group_id: number }>(
+      'SELECT group_id FROM species_scientific_name WHERE scientific_name_id = ?',
+      [nameId]
+    );
+    return rows.pop()?.group_id;
+  }
+}
+
+/**
+ * DEPRECATED: Get canonical species group data from a legacy name ID
  *
- * **IMPORTANT**: Checks legacy table FIRST to avoid ID collisions between old and new schemas.
- * The split schema migration created new tables with overlapping IDs (1-5026), causing
- * legacy species_name_id values to incorrectly match new common_name_id/scientific_name_id values.
+ * **This function is deprecated and will be removed.** Use getSpeciesGroup(groupId) instead.
+ * For submissions, get group_id from common_name_id or scientific_name_id first.
  *
- * @param speciesNameId - Name ID from either common_name_id or scientific_name_id (or legacy name_id)
+ * @param speciesNameId - Legacy name_id from species_name table
  * @returns Species group data or undefined if not found
  */
 export async function getCanonicalSpeciesName(speciesNameId: number) {
@@ -249,8 +345,8 @@ function buildSpeciesSearchQuery(
   if (search && search.trim().length >= 2) {
     const searchPattern = `%${search.trim().toLowerCase()}%`;
     conditions.push(`AND (
-			LOWER(sn.common_name) LIKE ? OR
-			LOWER(sn.scientific_name) LIKE ?
+			LOWER(cn.common_name) LIKE ? OR
+			LOWER(scin.scientific_name) LIKE ?
 		)`);
     params.push(searchPattern, searchPattern);
   }
@@ -263,12 +359,13 @@ function buildSpeciesSearchQuery(
 			sng.canonical_species_name,
 			COALESCE(COUNT(DISTINCT s.id), 0) as total_breeds,
 			COALESCE(COUNT(DISTINCT s.member_id), 0) as total_breeders,
-			COALESCE(GROUP_CONCAT(DISTINCT sn.common_name), '') as common_names,
-			COALESCE(GROUP_CONCAT(DISTINCT sn.scientific_name), '') as scientific_names,
+			COALESCE(GROUP_CONCAT(DISTINCT cn.common_name), '') as common_names,
+			COALESCE(GROUP_CONCAT(DISTINCT scin.scientific_name), '') as scientific_names,
 			MAX(s.approved_on) as latest_breed_date
 		FROM species_name_group sng
-		LEFT JOIN species_name sn ON sng.group_id = sn.group_id
-		LEFT JOIN submissions s ON s.species_name_id = sn.name_id AND s.approved_on IS NOT NULL
+		LEFT JOIN species_common_name cn ON sng.group_id = cn.group_id
+		LEFT JOIN species_scientific_name scin ON sng.group_id = scin.group_id
+		LEFT JOIN submissions s ON (s.common_name_id = cn.common_name_id OR s.scientific_name_id = scin.scientific_name_id) AND s.approved_on IS NOT NULL
 		WHERE ${conditions.join(' ')}
 		GROUP BY sng.group_id, sng.program_class, sng.canonical_genus, sng.canonical_species_name
 		HAVING total_breeds > 0
@@ -416,16 +513,25 @@ export async function getSpeciesDetail(groupId: number) {
     return null;
   }
 
-  const synonymRows = await query<{
-		name_id: number;
-		common_name: string;
-		scientific_name: string;
-	}>(`
-		SELECT name_id, common_name, scientific_name
-		FROM species_name
-		WHERE group_id = ?
-		ORDER BY common_name, scientific_name
-	`, [groupId]);
+  // Get all names from split schema tables
+  const [commonNames, scientificNames] = await Promise.all([
+    query<{ common_name_id: number; common_name: string }>(
+      'SELECT common_name_id, common_name FROM species_common_name WHERE group_id = ? ORDER BY common_name',
+      [groupId]
+    ),
+    query<{ scientific_name_id: number; scientific_name: string }>(
+      'SELECT scientific_name_id, scientific_name FROM species_scientific_name WHERE group_id = ? ORDER BY scientific_name',
+      [groupId]
+    )
+  ]);
+
+  // Create paired synonyms for backward compatibility with existing views
+  // Each common name is paired with the first scientific name
+  const synonymRows = commonNames.map((cn, idx) => ({
+    name_id: cn.common_name_id,
+    common_name: cn.common_name,
+    scientific_name: scientificNames[idx]?.scientific_name || scientificNames[0]?.scientific_name || ''
+  }));
 
   const detail: SpeciesDetail = {
     ...groupRows[0],
@@ -452,10 +558,7 @@ export type SpeciesBreeder = {
 };
 
 /**
- * Get breeders who have bred a specific species - Split schema compatible
- *
- * **Migration Note**: Updated to check all three FK columns in submissions table:
- * legacy species_name_id, common_name_id, and scientific_name_id.
+ * Get breeders who have bred a specific species
  *
  * @param groupId - Species group ID
  * @returns Array of breeders with their breeding statistics for this species
@@ -477,14 +580,13 @@ export async function getBreedersForSpecies(groupId: number) {
 			) as submissions_concat
 		FROM members m
 		JOIN submissions s ON m.id = s.member_id
-		LEFT JOIN species_name sn ON s.species_name_id = sn.name_id
 		LEFT JOIN species_common_name cn ON s.common_name_id = cn.common_name_id
 		LEFT JOIN species_scientific_name scin ON s.scientific_name_id = scin.scientific_name_id
-		WHERE (sn.group_id = ? OR cn.group_id = ? OR scin.group_id = ?)
+		WHERE (cn.group_id = ? OR scin.group_id = ?)
 		  AND s.approved_on IS NOT NULL
 		GROUP BY m.id, m.display_name
 		ORDER BY breed_count DESC, latest_breed_date DESC
-	`, [groupId, groupId, groupId]).then(rows => {
+	`, [groupId, groupId]).then(rows => {
     return rows.map(row => ({
       ...row,
       submissions: row.submissions_concat ? row.submissions_concat.split(',').map((sub: string) => {
@@ -1389,17 +1491,15 @@ export async function deleteSpeciesGroup(groupId: number, force = false): Promis
     throw new Error(`Species group ${groupId} not found`);
   }
 
-  // Check for approved submissions - Split schema compatible
-  // Checks all three possible FK columns: legacy species_name_id, common_name_id, scientific_name_id
+  // Check for approved submissions using new FK columns
   const submissions = await query<{ count: number }>(
     `SELECT COUNT(DISTINCT s.id) as count
      FROM submissions s
-     LEFT JOIN species_name sn ON s.species_name_id = sn.name_id
      LEFT JOIN species_common_name cn ON s.common_name_id = cn.common_name_id
      LEFT JOIN species_scientific_name scin ON s.scientific_name_id = scin.scientific_name_id
-     WHERE (sn.group_id = ? OR cn.group_id = ? OR scin.group_id = ?)
+     WHERE (cn.group_id = ? OR scin.group_id = ?)
        AND s.approved_on IS NOT NULL`,
-    [groupId, groupId, groupId]
+    [groupId, groupId]
   );
 
   const submissionCount = submissions[0]?.count || 0;
@@ -1410,7 +1510,7 @@ export async function deleteSpeciesGroup(groupId: number, force = false): Promis
     );
   }
 
-  // Get synonym count before delete (for logging) - count from both split tables
+  // Get synonym count before delete (for logging)
   const commonCount = await query<{ count: number }>(
     'SELECT COUNT(*) as count FROM species_common_name WHERE group_id = ?',
     [groupId]
@@ -1419,12 +1519,8 @@ export async function deleteSpeciesGroup(groupId: number, force = false): Promis
     'SELECT COUNT(*) as count FROM species_scientific_name WHERE group_id = ?',
     [groupId]
   );
-  const legacyCount = await query<{ count: number }>(
-    'SELECT COUNT(*) as count FROM species_name WHERE group_id = ?',
-    [groupId]
-  );
 
-  const synonymCount = (commonCount[0]?.count || 0) + (scientificCount[0]?.count || 0) + (legacyCount[0]?.count || 0);
+  const synonymCount = (commonCount[0]?.count || 0) + (scientificCount[0]?.count || 0);
 
   try {
     const conn = writeConn;

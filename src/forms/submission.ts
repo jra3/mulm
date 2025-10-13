@@ -55,7 +55,7 @@ export const bapFields = z.object({
   species_class: z.string().min(1, "Required").max(100, "Class too long (max 100 characters)"),
   species_latin_name: z.string().min(1, "Required").max(200, "Species name too long (max 200 characters)"),
   species_common_name: z.string().min(1, "Required").max(200, "Common name too long (max 200 characters)"),
-  species_name_id: z.string().optional().transform((val) => (val ? parseInt(val) : undefined)),
+  // species_name_id removed - submissions now use common_name_id/scientific_name_id set during approval
 
   count: z.string().max(20, "Count too long (max 20 characters)").optional(),
   foods: multiSelect.optional(),
