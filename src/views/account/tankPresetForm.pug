@@ -15,6 +15,10 @@
 					hx-swap="outerHTML"
 				) Cancel
 
+		//- General form error (if any)
+		if errors.has('form')
+			.bg-red-50.border.border-red-200.text-red-800.px-4.py-3.rounded.mb-3= errors.get('form')
+
 		//- Preset Name (read-only when editing)
 		.mb-3
 			label.block.text-sm.font-medium.text-gray-700.mb-1(for="preset_name") Tank Name *
@@ -26,16 +30,18 @@
 				)
 				input(type="hidden" name="preset_name" value=preset.preset_name)
 			else
-				input.w-full.px-3.py-2.border.border-gray-300.rounded(
+				input(
+					class=errors.has('preset_name') ? 'w-full px-3 py-2 border-2 border-red-500 rounded' : 'w-full px-3 py-2 border border-gray-300 rounded'
 					type="text"
 					name="preset_name"
 					id="preset_name"
 					placeholder="e.g., Community Tank, Breeding Tank"
 					value=preset.preset_name || ''
 					required
+					aria-invalid=errors.has('preset_name') ? 'true' : 'false'
 				)
 			if errors.has('preset_name')
-				p.text-red-600.text-sm.mt-1= errors.get('preset_name')
+				p.text-red-600.text-sm.mt-1.font-medium= errors.get('preset_name')
 
 		//- Tank parameters grid
 		.grid.grid-cols-1.gap-3(class="sm:grid-cols-2")
