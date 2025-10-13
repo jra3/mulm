@@ -441,25 +441,6 @@ export function getApprovedSubmissions(program: string) {
 	);
 }
 
-export function getAllSubmissions(program: string) {
-  return query<Submission>(
-    `
-		SELECT
-			submissions.*,
-			submissions.points +
-				IFNULL(submissions.article_points, 0) +
-				(IFNULL(submissions.first_time_species, 0) * 5) +
-				(IFNULL(submissions.flowered, 0) * submissions.points) +
-				(IFNULL(submissions.sexual_reproduction, 0) * submissions.points)
-				as total_points,
-			members.display_name as member_name
-		FROM submissions JOIN members
-		ON submissions.member_id == members.id
-		WHERE program = ? `,
-    [program],
-  );
-}
-
 type UpdateFor<T> = Partial<{
 	[K in keyof T]: T[K] | null | undefined;
 }>;

@@ -70,36 +70,3 @@ export async function getRecentActivity(limit: number = 10): Promise<ActivityFee
     
   return activities;
 }
-
-export async function getActivityByType(
-  activityType: 'submission_approved' | 'award_granted',
-  limit: number = 10
-): Promise<ActivityFeedItem[]> {
-  const activities = await query<ActivityFeedItem>(`
-        SELECT 
-            af.*,
-            m.display_name as member_name
-        FROM activity_feed af
-        JOIN members m ON af.member_id = m.id
-        WHERE af.activity_type = ?
-        ORDER BY af.created_at DESC
-        LIMIT ?
-    `, [activityType, limit]);
-    
-  return activities;
-}
-
-export async function getActivityForMember(memberId: number, limit: number = 10): Promise<ActivityFeedItem[]> {
-  const activities = await query<ActivityFeedItem>(`
-        SELECT 
-            af.*,
-            m.display_name as member_name
-        FROM activity_feed af
-        JOIN members m ON af.member_id = m.id
-        WHERE af.member_id = ?
-        ORDER BY af.created_at DESC
-        LIMIT ?
-    `, [memberId, limit]);
-    
-  return activities;
-}

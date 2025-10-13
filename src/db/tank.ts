@@ -43,14 +43,6 @@ export async function queryTankPresets(memberId: number) {
   );
 }
 
-export async function getTankPreset(memberId: number, presetName: string) {
-  const rows = await query<Tank>(
-    `SELECT * FROM ${tableName} WHERE member_id = ? AND preset_name = ?`,
-    [memberId, presetName],
-  );
-  return rows.pop();
-}
-
 export async function deleteTankPreset(memberId: number, name: string) {
   return deleteOne(tableName, { member_id: memberId, preset_name: name });
 }

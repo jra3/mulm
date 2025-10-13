@@ -77,17 +77,6 @@ export async function onSubmissionApprove(
   });
 }
 
-
-export async function sendVerificationEmail(email: string, url: string) {
-  return transporter.sendMail({
-    from: fromEmail,
-    to: email,
-    subject: "Verify your email",
-    text: `Click the link to verify your account and log in: ${url}`,
-  });
-}
-
-
 const renderResetEmail = pug.compileFile("src/views/email/onForgotPassword.pug");
 export async function sendResetEmail(email: string, display_name: string, code: string) {
   return transporter.sendMail({

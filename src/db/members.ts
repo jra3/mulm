@@ -155,10 +155,6 @@ export async function getMembersList(): Promise<MemberRecord[]> {
   return query<MemberRecord>("SELECT id, display_name, fish_level, plant_level, coral_level FROM members");
 }
 
-export async function getRoster() {
-  return query<MemberRecord>(`SELECT * FROM members`);
-}
-
 export async function getRosterWithPoints() {
   return query<MemberRecord & { fishTotalPoints: number; plantTotalPoints: number; coralTotalPoints: number; hasPassword: number; hasGoogleAccount: number }>(`
 		SELECT

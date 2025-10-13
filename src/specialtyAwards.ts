@@ -203,10 +203,3 @@ export function checkSpecialtyAwards(
 	
   return earnedAwards;
 }
-
-/**
- * Get all specialty awards
- */
-export function getAllSpecialtyAwards(): SpecialtyAward[] {
-  return specialtyAwards;
-}
