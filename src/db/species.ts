@@ -1541,6 +1541,8 @@ export async function deleteSpeciesGroup(groupId: number, force = false): Promis
 
   try {
     const conn = writeConn;
+    // Migration 031 added ON DELETE SET NULL to FK constraints,
+    // so species names will be automatically nullified when deleted
     const stmt = await conn.prepare('DELETE FROM species_name_group WHERE group_id = ?');
 
     try {

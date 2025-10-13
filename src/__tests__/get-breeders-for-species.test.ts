@@ -69,9 +69,10 @@ describe('getBreedersForSpecies - Split Schema', () => {
       // Create submission using common_name FK
       await db.run(`
         INSERT INTO submissions (
-          member_id, common_name_id, species_common_name, species_latin_name,
+          member_id, common_name_id, species_type, species_class,
+          species_common_name, species_latin_name,
           approved_on, points, program
-        ) VALUES (?, ?, 'Test Common Fish', 'Breederus testicus', datetime('now'), 10, 'BAP')
+        ) VALUES (?, ?, 'Fish', 'Test Class', 'Test Common Fish', 'Breederus testicus', datetime('now'), 10, 'fish')
       `, [member1Id, commonNameId]);
 
       const breeders = await getBreedersForSpecies(testGroupId);
@@ -89,9 +90,10 @@ describe('getBreedersForSpecies - Split Schema', () => {
       // Create submission using scientific_name FK
       await db.run(`
         INSERT INTO submissions (
-          member_id, scientific_name_id, species_common_name, species_latin_name,
+          member_id, scientific_name_id, species_type, species_class,
+          species_common_name, species_latin_name,
           approved_on, points, program
-        ) VALUES (?, ?, 'Test Fish', 'Breederus testicus', datetime('now'), 10, 'BAP')
+        ) VALUES (?, ?, 'Fish', 'Test Class', 'Test Fish', 'Breederus testicus', datetime('now'), 10, 'fish')
       `, [member1Id, scientificNameId]);
 
       const breeders = await getBreedersForSpecies(testGroupId);
@@ -110,17 +112,19 @@ describe('getBreedersForSpecies - Split Schema', () => {
       // Member 1: common_name submission
       await db.run(`
         INSERT INTO submissions (
-          member_id, common_name_id, species_common_name, species_latin_name,
+          member_id, common_name_id, species_type, species_class,
+          species_common_name, species_latin_name,
           approved_on, points, program
-        ) VALUES (?, ?, 'Common Name', 'Breederus testicus', datetime('now', '-15 days'), 10, 'fish')
+        ) VALUES (?, ?, 'Fish', 'Test Class', 'Common Name', 'Breederus testicus', datetime('now', '-15 days'), 10, 'fish')
       `, [member1Id, commonNameId]);
 
       // Member 2: scientific_name submission
       await db.run(`
         INSERT INTO submissions (
-          member_id, scientific_name_id, species_common_name, species_latin_name,
+          member_id, scientific_name_id, species_type, species_class,
+          species_common_name, species_latin_name,
           approved_on, points, program
-        ) VALUES (?, ?, 'Test Fish', 'Scientific Name', datetime('now'), 10, 'fish')
+        ) VALUES (?, ?, 'Fish', 'Test Class', 'Test Fish', 'Scientific Name', datetime('now'), 10, 'fish')
       `, [member2Id, scientificNameId]);
 
       const breeders = await getBreedersForSpecies(testGroupId);
@@ -143,17 +147,19 @@ describe('getBreedersForSpecies - Split Schema', () => {
       // Approved submission
       await db.run(`
         INSERT INTO submissions (
-          member_id, common_name_id, species_common_name, species_latin_name,
+          member_id, common_name_id, species_type, species_class,
+          species_common_name, species_latin_name,
           approved_on, points, program
-        ) VALUES (?, ?, 'Test Fish', 'Breederus testicus', datetime('now'), 10, 'fish')
+        ) VALUES (?, ?, 'Fish', 'Test Class', 'Test Fish', 'Breederus testicus', datetime('now'), 10, 'fish')
       `, [member1Id, commonNameId]);
 
       // Draft submission (not approved)
       await db.run(`
         INSERT INTO submissions (
-          member_id, common_name_id, species_common_name, species_latin_name,
+          member_id, common_name_id, species_type, species_class,
+          species_common_name, species_latin_name,
           submitted_on, program
-        ) VALUES (?, ?, 'Test Fish', 'Breederus testicus', NULL, 'fish')
+        ) VALUES (?, ?, 'Fish', 'Test Class', 'Test Fish', 'Breederus testicus', NULL, 'fish')
       `, [member1Id, commonNameId]);
 
       const breeders = await getBreedersForSpecies(testGroupId);
@@ -174,19 +180,21 @@ describe('getBreedersForSpecies - Split Schema', () => {
       // Member 1: 1 breed
       await db.run(`
         INSERT INTO submissions (
-          member_id, common_name_id, species_common_name, species_latin_name,
+          member_id, common_name_id, species_type, species_class,
+          species_common_name, species_latin_name,
           approved_on, points, program
-        ) VALUES (?, ?, 'Test Fish', 'Breederus testicus', datetime('now'), 10, 'fish')
+        ) VALUES (?, ?, 'Fish', 'Test Class', 'Test Fish', 'Breederus testicus', datetime('now'), 10, 'fish')
       `, [member1Id, commonNameId]);
 
       // Member 2: 2 breeds
       await db.run(`
         INSERT INTO submissions (
-          member_id, common_name_id, species_common_name, species_latin_name,
+          member_id, common_name_id, species_type, species_class,
+          species_common_name, species_latin_name,
           approved_on, points, program
         ) VALUES
-          (?, ?, 'Test Fish', 'Breederus testicus', datetime('now', '-10 days'), 10, 'fish'),
-          (?, ?, 'Test Fish', 'Breederus testicus', datetime('now'), 10, 'fish')
+          (?, ?, 'Fish', 'Test Class', 'Test Fish', 'Breederus testicus', datetime('now', '-10 days'), 10, 'fish'),
+          (?, ?, 'Fish', 'Test Class', 'Test Fish', 'Breederus testicus', datetime('now'), 10, 'fish')
       `, [member2Id, commonNameId, member2Id, commonNameId]);
 
       const breeders = await getBreedersForSpecies(testGroupId);
@@ -204,9 +212,10 @@ describe('getBreedersForSpecies - Split Schema', () => {
 
       await db.run(`
         INSERT INTO submissions (
-          member_id, common_name_id, species_common_name, species_latin_name,
+          member_id, common_name_id, species_type, species_class,
+          species_common_name, species_latin_name,
           approved_on, points, program
-        ) VALUES (?, ?, 'Test Fish', 'Breederus testicus', '2025-01-15', 10, 'fish')
+        ) VALUES (?, ?, 'Fish', 'Test Class', 'Test Fish', 'Breederus testicus', '2025-01-15', 10, 'fish')
       `, [member1Id, commonNameId]);
 
       const breeders = await getBreedersForSpecies(testGroupId);
@@ -232,9 +241,10 @@ describe('getBreedersForSpecies - Split Schema', () => {
 
       const submissionResult = await db.run(`
         INSERT INTO submissions (
-          member_id, common_name_id, species_common_name, species_latin_name,
+          member_id, common_name_id, species_type, species_class,
+          species_common_name, species_latin_name,
           approved_on, points, program
-        ) VALUES (?, ?, 'Test Fish', 'Breederus testicus', '2025-01-15', 10, 'fish')
+        ) VALUES (?, ?, 'Fish', 'Test Class', 'Test Fish', 'Breederus testicus', '2025-01-15', 10, 'fish')
       `, [member1Id, commonNameId]);
       const submissionId = submissionResult.lastID as number;
 
@@ -257,11 +267,12 @@ describe('getBreedersForSpecies - Split Schema', () => {
 
       await db.run(`
         INSERT INTO submissions (
-          member_id, common_name_id, species_common_name, species_latin_name,
+          member_id, common_name_id, species_type, species_class,
+          species_common_name, species_latin_name,
           approved_on, points, program
         ) VALUES
-          (?, ?, 'Test Fish', 'Breederus testicus', '2025-01-01', 10, 'fish'),
-          (?, ?, 'Test Fish', 'Breederus testicus', '2025-06-15', 10, 'fish')
+          (?, ?, 'Fish', 'Test Class', 'Test Fish', 'Breederus testicus', '2025-01-01', 10, 'fish'),
+          (?, ?, 'Fish', 'Test Class', 'Test Fish', 'Breederus testicus', '2025-06-15', 10, 'fish')
       `, [member1Id, commonNameId, member1Id, commonNameId]);
 
       const breeders = await getBreedersForSpecies(testGroupId);

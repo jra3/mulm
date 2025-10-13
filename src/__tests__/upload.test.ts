@@ -86,7 +86,7 @@ describe('Upload Transaction Tests', () => {
     `, [
       memberId, 'New World', 'Fish', 'Test Fish', 'Testus fishus',
       new Date().toISOString(), '75', '7.0', '10', '1.000', 'Fresh',
-      'pending', 'bap', new Date().toISOString()
+      'pending', 'fish', new Date().toISOString()
     ]);
 
     return result.lastID as number;

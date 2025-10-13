@@ -64,6 +64,15 @@ describe('Pug Template Rendering', () => {
     
     // Member data
     member: createMockMember(),
+    witness: {
+      id: 2,
+      display_name: faker.person.fullName(),
+      contact_email: faker.internet.email()
+    },
+    award: {
+      award_name: 'Breeder Award Level 2',
+      date_awarded: new Date().toISOString()
+    },
     fishSubs: Array.from({ length: 3 }, createMockSubmission),
     plantSubs: Array.from({ length: 2 }, createMockSubmission),
     coralSubs: Array.from({ length: 1 }, createMockSubmission),
@@ -184,10 +193,86 @@ describe('Pug Template Rendering', () => {
     // Names lookup for standings
     names: {
       1: 'John Doe',
-      2: 'Jane Smith', 
+      2: 'Jane Smith',
       3: 'Bob Johnson'
     },
-    
+
+    // Split schema name data for admin templates
+    name: {
+      common_name_id: 1,
+      common_name: 'Test Common Name',
+      scientific_name_id: 1,
+      scientific_name: 'Testus scientificus',
+      name_id: 1 // For legacy synonym row
+    },
+    groupId: 1,
+
+    // Common and scientific names for species edit
+    commonNames: [
+      { common_name_id: 1, common_name: 'Common Name 1' },
+      { common_name_id: 2, common_name: 'Common Name 2' }
+    ],
+    scientificNames: [
+      { scientific_name_id: 1, scientific_name: 'Scientificus name1' },
+      { scientific_name_id: 2, scientific_name: 'Scientificus name2' }
+    ],
+
+    // Synonym for legacy synonym row
+    synonym: {
+      name_id: 1,
+      common_name: 'Legacy Common',
+      scientific_name: 'Legacy scientificus'
+    },
+
+    // Note data for submission notes
+    note: {
+      id: 1,
+      note_text: 'Test note content',
+      admin_name: 'Admin User',
+      created_at: new Date().toISOString()
+    },
+
+    // Video data
+    video_url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+    videoMetadata: {
+      title: 'Test Video',
+      thumbnail_url: 'https://example.com/thumb.jpg',
+      thumbnailUrl: 'https://example.com/thumb.jpg',
+      author_name: 'Test Author',
+      author: 'Test Author',
+      platform: 'youtube'
+    },
+    metadata: {
+      title: 'Test Video',
+      thumbnailUrl: 'https://example.com/thumb.jpg',
+      author: 'Test Author',
+      platform: 'youtube'
+    },
+
+    // Count for countBadge mixin
+    count: 5,
+
+    // Filters for species list and explorer
+    filters: {
+      species_type: '',
+      program_class: '',
+      species_class: '',
+      has_base_points: undefined,
+      is_cares_species: undefined,
+      search: ''
+    },
+
+    // Sort order
+    sort: 'name',
+
+    // Pagination for species list
+    pagination: {
+      currentPage: 1,
+      totalPages: 3,
+      totalCount: 150,
+      limit: 50
+    },
+
     // Program data
     program: 'fish',
     year: new Date().getFullYear(),
@@ -208,6 +293,11 @@ describe('Pug Template Rendering', () => {
     resetLink: 'https://example.com/reset/token123',
     memberName: faker.person.fullName(),
     speciesName: faker.animal.fish(),
+    domain: 'https://example.com',
+    canonicalName: 'Apistogramma cacatuoides',
+    sampleData: {
+      reason: 'Additional documentation needed for verification'
+    },
     
     // Error states
     error: null,
@@ -272,10 +362,13 @@ describe('Pug Template Rendering', () => {
       /^typeahead-examples\.pug$/,  // Uses undefined mixins
       /^account\/field\.pug$/,  // Mixin-only template
       /^mixins\/date\.pug$/,  // Date formatting mixins only
+      /^mixins\/countBadge\.pug$/,  // Mixin-only template
+      /^mixins\/submissionVideo\.pug$/,  // Mixin-only template
       /^activity\/activity-item\.pug$/,  // Mixin-only template
       /^activity\/award-granted\.pug$/,  // Include-only template
       /^activity\/submission-approved\.pug$/,  // Include-only template
       /^admin\/adminNav\.pug$/,  // Mixin-only template
+      /^admin\/adminActionsPanel\.pug$/,  // Mixin-only template
       /^admin\/memberRow\.pug$/,  // Mixin-only template
       /^admin\/queueButton\.pug$/,  // Mixin-only template
       /^bapForm\/style\.pug$/,  // Style-only template

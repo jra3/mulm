@@ -64,7 +64,7 @@ describe('SpecialtyAwardManager - Split Schema', () => {
           member_id, common_name_id, species_class, species_common_name, species_latin_name,
           species_type, water_type, spawn_locations, submitted_on, approved_on, program
         ) VALUES (?, ?, 'Anabantoids', 'Common Test Fish', 'Testgenus testspecies',
-                  'Fish', 'Freshwater', 'substrate', datetime('now'), datetime('now'), 'BAP')
+                  'Fish', 'Freshwater', 'substrate', datetime('now'), datetime('now'), 'fish')
       `, [memberId, commonNameId]);
 
       const result = await checkAndGrantSpecialtyAwards(memberId);
@@ -83,7 +83,7 @@ describe('SpecialtyAwardManager - Split Schema', () => {
           member_id, scientific_name_id, species_class, species_common_name, species_latin_name,
           species_type, water_type, spawn_locations, submitted_on, approved_on, program
         ) VALUES (?, ?, 'Anabantoids', 'Test Fish', 'Testgenus testspecies',
-                  'Fish', 'Freshwater', 'substrate', datetime('now'), datetime('now'), 'BAP')
+                  'Fish', 'Freshwater', 'substrate', datetime('now'), datetime('now'), 'fish')
       `, [memberId, scientificNameId]);
 
       const result = await checkAndGrantSpecialtyAwards(memberId);
@@ -174,7 +174,7 @@ describe('SpecialtyAwardManager - Split Schema', () => {
           member_id, species_class, species_common_name, species_latin_name,
           species_type, water_type, spawn_locations, submitted_on, approved_on, program
         ) VALUES (?, 'Anabantoids', 'Orphan Fish', 'Orphan species',
-                  'Fish', 'Freshwater', 'substrate', datetime('now'), datetime('now'), 'BAP')
+                  'Fish', 'Freshwater', 'substrate', datetime('now'), datetime('now'), 'fish')
       `, [memberId]);
 
       const result = await checkAndGrantSpecialtyAwards(memberId);
