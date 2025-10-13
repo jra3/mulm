@@ -71,7 +71,7 @@ export async function createTestMembers(count: number = 1): Promise<TestMember[]
 }
 
 /**
- * Creates a test species name and returns the name_id
+ * Creates a test species with split schema and returns both name IDs
  * This is needed for proper foreign key relationships in tests
  */
 export async function createTestSpeciesName(
@@ -81,29 +81,39 @@ export async function createTestSpeciesName(
   genus: string = 'Testus',
   species: string = 'fishus',
   programClass: string = 'Freshwater'
-): Promise<number> {
+): Promise<{ common_name_id: number; scientific_name_id: number; group_id: number }> {
   // First create or get the species name group
   await db.run(`
-    INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name)
-    VALUES (?, ?, ?)
+    INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name, species_type)
+    VALUES (?, ?, ?, 'Fish')
   `, [programClass, genus, species]);
-  
+
   const group = await db.get<{ group_id: number }>(`
-    SELECT group_id FROM species_name_group 
+    SELECT group_id FROM species_name_group
     WHERE canonical_genus = ? AND canonical_species_name = ?
   `, [genus, species]);
-  
+
   if (!group) {
     throw new Error('Failed to create or find species name group');
   }
-  
-  // Now create the species name
-  const nameResult = await db.run(`
-    INSERT INTO species_name (group_id, common_name, scientific_name)
-    VALUES (?, ?, ?)
-  `, [group.group_id, commonName, scientificName]);
-  
-  return nameResult.lastID as number;
+
+  // Create the common name
+  const commonResult = await db.run(`
+    INSERT INTO species_common_name (group_id, common_name)
+    VALUES (?, ?)
+  `, [group.group_id, commonName]);
+
+  // Create the scientific name
+  const scientificResult = await db.run(`
+    INSERT INTO species_scientific_name (group_id, scientific_name)
+    VALUES (?, ?)
+  `, [group.group_id, scientificName]);
+
+  return {
+    common_name_id: commonResult.lastID as number,
+    scientific_name_id: scientificResult.lastID as number,
+    group_id: group.group_id
+  };
 }
 
 /**
@@ -112,24 +122,29 @@ export async function createTestSpeciesName(
  */
 export async function createTestSubmission(
   db: Database,
-  memberId: number, 
-  speciesType: string = 'Fish', 
+  memberId: number,
+  speciesType: string = 'Fish',
   speciesClass: string = 'New World',
   status: string = 'pending'
 ): Promise<number> {
+  // Create test species with split schema
+  const speciesIds = await createTestSpeciesName(db);
+
   const result = await db.run(`
     INSERT INTO submissions (
       member_id, species_class, species_type, species_common_name,
-      species_latin_name, reproduction_date, temperature, ph, gh,
+      species_latin_name, common_name_id, scientific_name_id,
+      reproduction_date, temperature, ph, gh,
       specific_gravity, water_type, witness_verification_status,
       program, submitted_on
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [
     memberId, speciesClass, speciesType, 'Test Fish', 'Testus fishus',
+    speciesIds.common_name_id, speciesIds.scientific_name_id,
     new Date().toISOString(), '75', '7.0', '10', '1.000', 'Fresh',
     status, speciesType.toLowerCase(), new Date().toISOString()
   ]);
-  
+
   return result.lastID as number;
 }
 

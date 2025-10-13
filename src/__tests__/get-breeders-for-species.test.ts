@@ -14,8 +14,7 @@ import {
   getBreedersForSpecies,
   createSpeciesGroup,
   addCommonName,
-  addScientificName,
-  addSynonym
+  addScientificName
 } from '../db/species';
 
 describe('getBreedersForSpecies - Split Schema', () => {
@@ -63,27 +62,7 @@ describe('getBreedersForSpecies - Split Schema', () => {
     }
   });
 
-  describe('Legacy species_name FK', () => {
-    test('should find breeders via legacy species_name_id', async () => {
-      const legacyNameId = await addSynonym(testGroupId, 'Test Fish', 'Breederus testicus');
-
-      // Create submission using legacy FK
-      await db.run(`
-        INSERT INTO submissions (
-          member_id, species_name_id, species_common_name, species_latin_name,
-          approved_on, points, program
-        ) VALUES (?, ?, 'Test Fish', 'Breederus testicus', datetime('now'), 10, 'BAP')
-      `, [member1Id, legacyNameId]);
-
-      const breeders = await getBreedersForSpecies(testGroupId);
-
-      assert.strictEqual(breeders.length, 1);
-      assert.strictEqual(breeders[0].member_id, member1Id);
-      assert.strictEqual(breeders[0].breed_count, 1);
-    });
-  });
-
-  describe('Split schema - common_name FK', () => {
+  describe('Common name FK', () => {
     test('should find breeders via common_name_id', async () => {
       const commonNameId = await addCommonName(testGroupId, 'Test Common Fish');
 
@@ -103,7 +82,7 @@ describe('getBreedersForSpecies - Split Schema', () => {
     });
   });
 
-  describe('Split schema - scientific_name FK', () => {
+  describe('Scientific name FK', () => {
     test('should find breeders via scientific_name_id', async () => {
       const scientificNameId = await addScientificName(testGroupId, 'Breederus testicus');
 
@@ -125,24 +104,15 @@ describe('getBreedersForSpecies - Split Schema', () => {
 
   describe('Mixed FK scenarios', () => {
     test('should find breeders with submissions via different FK types', async () => {
-      const legacyNameId = await addSynonym(testGroupId, 'Legacy Name', 'Breederus testicus');
       const commonNameId = await addCommonName(testGroupId, 'Common Name');
       const scientificNameId = await addScientificName(testGroupId, 'Scientific Name');
-
-      // Member 1: legacy submission
-      await db.run(`
-        INSERT INTO submissions (
-          member_id, species_name_id, species_common_name, species_latin_name,
-          approved_on, points, program
-        ) VALUES (?, ?, 'Legacy Name', 'Breederus testicus', datetime('now', '-30 days'), 10, 'BAP')
-      `, [member1Id, legacyNameId]);
 
       // Member 1: common_name submission
       await db.run(`
         INSERT INTO submissions (
           member_id, common_name_id, species_common_name, species_latin_name,
           approved_on, points, program
-        ) VALUES (?, ?, 'Common Name', 'Breederus testicus', datetime('now', '-15 days'), 10, 'BAP')
+        ) VALUES (?, ?, 'Common Name', 'Breederus testicus', datetime('now', '-15 days'), 10, 'fish')
       `, [member1Id, commonNameId]);
 
       // Member 2: scientific_name submission
@@ -150,7 +120,7 @@ describe('getBreedersForSpecies - Split Schema', () => {
         INSERT INTO submissions (
           member_id, scientific_name_id, species_common_name, species_latin_name,
           approved_on, points, program
-        ) VALUES (?, ?, 'Test Fish', 'Scientific Name', datetime('now'), 10, 'BAP')
+        ) VALUES (?, ?, 'Test Fish', 'Scientific Name', datetime('now'), 10, 'fish')
       `, [member2Id, scientificNameId]);
 
       const breeders = await getBreedersForSpecies(testGroupId);
@@ -161,30 +131,30 @@ describe('getBreedersForSpecies - Split Schema', () => {
       const breeder2 = breeders.find(b => b.member_id === member2Id);
 
       assert.ok(breeder1 && breeder2, 'Both breeders should be found');
-      assert.strictEqual(breeder1.breed_count, 2, 'Member 1 should have 2 breeds');
+      assert.strictEqual(breeder1.breed_count, 1, 'Member 1 should have 1 breed');
       assert.strictEqual(breeder2.breed_count, 1, 'Member 2 should have 1 breed');
     });
   });
 
   describe('Filtering and aggregation', () => {
     test('should only count approved submissions', async () => {
-      const nameId = await addSynonym(testGroupId, 'Test Fish', 'Breederus testicus');
+      const commonNameId = await addCommonName(testGroupId, 'Test Fish');
 
       // Approved submission
       await db.run(`
         INSERT INTO submissions (
-          member_id, species_name_id, species_common_name, species_latin_name,
+          member_id, common_name_id, species_common_name, species_latin_name,
           approved_on, points, program
-        ) VALUES (?, ?, 'Test Fish', 'Breederus testicus', datetime('now'), 10, 'BAP')
-      `, [member1Id, nameId]);
+        ) VALUES (?, ?, 'Test Fish', 'Breederus testicus', datetime('now'), 10, 'fish')
+      `, [member1Id, commonNameId]);
 
       // Draft submission (not approved)
       await db.run(`
         INSERT INTO submissions (
-          member_id, species_name_id, species_common_name, species_latin_name,
+          member_id, common_name_id, species_common_name, species_latin_name,
           submitted_on, program
-        ) VALUES (?, ?, 'Test Fish', 'Breederus testicus', NULL, 'BAP')
-      `, [member1Id, nameId]);
+        ) VALUES (?, ?, 'Test Fish', 'Breederus testicus', NULL, 'fish')
+      `, [member1Id, commonNameId]);
 
       const breeders = await getBreedersForSpecies(testGroupId);
 
@@ -199,25 +169,25 @@ describe('getBreedersForSpecies - Split Schema', () => {
     });
 
     test('should sort by breed_count DESC', async () => {
-      const nameId = await addSynonym(testGroupId, 'Test Fish', 'Breederus testicus');
+      const commonNameId = await addCommonName(testGroupId, 'Test Fish');
 
       // Member 1: 1 breed
       await db.run(`
         INSERT INTO submissions (
-          member_id, species_name_id, species_common_name, species_latin_name,
+          member_id, common_name_id, species_common_name, species_latin_name,
           approved_on, points, program
-        ) VALUES (?, ?, 'Test Fish', 'Breederus testicus', datetime('now'), 10, 'BAP')
-      `, [member1Id, nameId]);
+        ) VALUES (?, ?, 'Test Fish', 'Breederus testicus', datetime('now'), 10, 'fish')
+      `, [member1Id, commonNameId]);
 
       // Member 2: 2 breeds
       await db.run(`
         INSERT INTO submissions (
-          member_id, species_name_id, species_common_name, species_latin_name,
+          member_id, common_name_id, species_common_name, species_latin_name,
           approved_on, points, program
         ) VALUES
-          (?, ?, 'Test Fish', 'Breederus testicus', datetime('now', '-10 days'), 10, 'BAP'),
-          (?, ?, 'Test Fish', 'Breederus testicus', datetime('now'), 10, 'BAP')
-      `, [member2Id, nameId, member2Id, nameId]);
+          (?, ?, 'Test Fish', 'Breederus testicus', datetime('now', '-10 days'), 10, 'fish'),
+          (?, ?, 'Test Fish', 'Breederus testicus', datetime('now'), 10, 'fish')
+      `, [member2Id, commonNameId, member2Id, commonNameId]);
 
       const breeders = await getBreedersForSpecies(testGroupId);
 
@@ -230,14 +200,14 @@ describe('getBreedersForSpecies - Split Schema', () => {
 
   describe('Return value structure', () => {
     test('should include all required fields', async () => {
-      const nameId = await addSynonym(testGroupId, 'Test Fish', 'Breederus testicus');
+      const commonNameId = await addCommonName(testGroupId, 'Test Fish');
 
       await db.run(`
         INSERT INTO submissions (
-          member_id, species_name_id, species_common_name, species_latin_name,
+          member_id, common_name_id, species_common_name, species_latin_name,
           approved_on, points, program
-        ) VALUES (?, ?, 'Test Fish', 'Breederus testicus', '2025-01-15', 10, 'BAP')
-      `, [member1Id, nameId]);
+        ) VALUES (?, ?, 'Test Fish', 'Breederus testicus', '2025-01-15', 10, 'fish')
+      `, [member1Id, commonNameId]);
 
       const breeders = await getBreedersForSpecies(testGroupId);
 
@@ -258,14 +228,14 @@ describe('getBreedersForSpecies - Split Schema', () => {
     });
 
     test('should parse submissions array correctly', async () => {
-      const nameId = await addSynonym(testGroupId, 'Test Fish', 'Breederus testicus');
+      const commonNameId = await addCommonName(testGroupId, 'Test Fish');
 
       const submissionResult = await db.run(`
         INSERT INTO submissions (
-          member_id, species_name_id, species_common_name, species_latin_name,
+          member_id, common_name_id, species_common_name, species_latin_name,
           approved_on, points, program
-        ) VALUES (?, ?, 'Test Fish', 'Breederus testicus', '2025-01-15', 10, 'BAP')
-      `, [member1Id, nameId]);
+        ) VALUES (?, ?, 'Test Fish', 'Breederus testicus', '2025-01-15', 10, 'fish')
+      `, [member1Id, commonNameId]);
       const submissionId = submissionResult.lastID as number;
 
       const breeders = await getBreedersForSpecies(testGroupId);
@@ -283,16 +253,16 @@ describe('getBreedersForSpecies - Split Schema', () => {
 
   describe('Date tracking', () => {
     test('should track first and latest breed dates correctly', async () => {
-      const nameId = await addSynonym(testGroupId, 'Test Fish', 'Breederus testicus');
+      const commonNameId = await addCommonName(testGroupId, 'Test Fish');
 
       await db.run(`
         INSERT INTO submissions (
-          member_id, species_name_id, species_common_name, species_latin_name,
+          member_id, common_name_id, species_common_name, species_latin_name,
           approved_on, points, program
         ) VALUES
-          (?, ?, 'Test Fish', 'Breederus testicus', '2025-01-01', 10, 'BAP'),
-          (?, ?, 'Test Fish', 'Breederus testicus', '2025-06-15', 10, 'BAP')
-      `, [member1Id, nameId, member1Id, nameId]);
+          (?, ?, 'Test Fish', 'Breederus testicus', '2025-01-01', 10, 'fish'),
+          (?, ?, 'Test Fish', 'Breederus testicus', '2025-06-15', 10, 'fish')
+      `, [member1Id, commonNameId, member1Id, commonNameId]);
 
       const breeders = await getBreedersForSpecies(testGroupId);
 

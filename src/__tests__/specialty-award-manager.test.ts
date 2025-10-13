@@ -13,8 +13,7 @@ import { overrideConnection } from '../db/conn';
 import {
   createSpeciesGroup,
   addCommonName,
-  addScientificName,
-  addSynonym
+  addScientificName
 } from '../db/species';
 import { checkAndGrantSpecialtyAwards } from '../specialtyAwardManager';
 
@@ -56,26 +55,7 @@ describe('SpecialtyAwardManager - Split Schema', () => {
     }
   });
 
-  describe('getSubmissionsWithGenus - Legacy FK', () => {
-    test('should get canonical_genus via legacy species_name_id', async () => {
-      const legacyNameId = await addSynonym(testGroupId, 'Test Fish', 'Testgenus testspecies');
-
-      await db.run(`
-        INSERT INTO submissions (
-          member_id, species_name_id, species_class, species_common_name, species_latin_name,
-          species_type, water_type, spawn_locations, submitted_on, approved_on, program
-        ) VALUES (?, ?, 'Anabantoids', 'Test Fish', 'Testgenus testspecies',
-                  'Fish', 'Freshwater', 'substrate', datetime('now'), datetime('now'), 'BAP')
-      `, [memberId, legacyNameId]);
-
-      const result = await checkAndGrantSpecialtyAwards(memberId);
-
-      // Verify function ran without errors (even if no awards granted)
-      assert.ok(Array.isArray(result));
-    });
-  });
-
-  describe('getSubmissionsWithGenus - Split schema common_name FK', () => {
+  describe('getSubmissionsWithGenus - Common name FK', () => {
     test('should get canonical_genus via common_name_id', async () => {
       const commonNameId = await addCommonName(testGroupId, 'Common Test Fish');
 
@@ -94,7 +74,7 @@ describe('SpecialtyAwardManager - Split Schema', () => {
     });
   });
 
-  describe('getSubmissionsWithGenus - Split schema scientific_name FK', () => {
+  describe('getSubmissionsWithGenus - Scientific name FK', () => {
     test('should get canonical_genus via scientific_name_id', async () => {
       const scientificNameId = await addScientificName(testGroupId, 'Testgenus testspecies');
 
@@ -115,25 +95,16 @@ describe('SpecialtyAwardManager - Split Schema', () => {
 
   describe('Mixed FK scenarios', () => {
     test('should handle submissions with different FK types', async () => {
-      const legacyNameId = await addSynonym(testGroupId, 'Legacy Fish', 'Testgenus testspecies');
       const commonNameId = await addCommonName(testGroupId, 'Common Fish');
       const scientificNameId = await addScientificName(testGroupId, 'Testgenus testspecies var. blue');
 
-      // Three submissions with different FK types
-      await db.run(`
-        INSERT INTO submissions (
-          member_id, species_name_id, species_class, species_common_name, species_latin_name,
-          species_type, water_type, spawn_locations, submitted_on, approved_on, program
-        ) VALUES (?, ?, 'Anabantoids', 'Legacy Fish', 'Testgenus testspecies',
-                  'Fish', 'Freshwater', 'substrate', datetime('now'), datetime('now'), 'BAP')
-      `, [memberId, legacyNameId]);
-
+      // Two submissions with different FK types
       await db.run(`
         INSERT INTO submissions (
           member_id, common_name_id, species_class, species_common_name, species_latin_name,
           species_type, water_type, spawn_locations, submitted_on, approved_on, program
         ) VALUES (?, ?, 'Anabantoids', 'Common Fish', 'Testgenus testspecies',
-                  'Fish', 'Freshwater', 'substrate', datetime('now'), datetime('now'), 'BAP')
+                  'Fish', 'Freshwater', 'substrate', datetime('now'), datetime('now'), 'fish')
       `, [memberId, commonNameId]);
 
       await db.run(`
@@ -141,7 +112,7 @@ describe('SpecialtyAwardManager - Split Schema', () => {
           member_id, scientific_name_id, species_class, species_common_name, species_latin_name,
           species_type, water_type, spawn_locations, submitted_on, approved_on, program
         ) VALUES (?, ?, 'Anabantoids', 'Test Fish', 'Testgenus testspecies var. blue',
-                  'Fish', 'Freshwater', 'substrate', datetime('now'), datetime('now'), 'BAP')
+                  'Fish', 'Freshwater', 'substrate', datetime('now'), datetime('now'), 'fish')
       `, [memberId, scientificNameId]);
 
       const result = await checkAndGrantSpecialtyAwards(memberId);
@@ -153,16 +124,16 @@ describe('SpecialtyAwardManager - Split Schema', () => {
 
   describe('Filtering', () => {
     test('should only include approved submissions', async () => {
-      const nameId = await addSynonym(testGroupId, 'Test Fish', 'Testgenus testspecies');
+      const commonNameId = await addCommonName(testGroupId, 'Test Fish');
 
       // Draft submission (not approved)
       await db.run(`
         INSERT INTO submissions (
-          member_id, species_name_id, species_class, species_common_name, species_latin_name,
+          member_id, common_name_id, species_class, species_common_name, species_latin_name,
           species_type, water_type, spawn_locations, submitted_on, program
         ) VALUES (?, ?, 'Anabantoids', 'Test Fish', 'Testgenus testspecies',
-                  'Fish', 'Freshwater', 'substrate', NULL, 'BAP')
-      `, [memberId, nameId]);
+                  'Fish', 'Freshwater', 'substrate', NULL, 'fish')
+      `, [memberId, commonNameId]);
 
       const result = await checkAndGrantSpecialtyAwards(memberId);
 
@@ -171,16 +142,16 @@ describe('SpecialtyAwardManager - Split Schema', () => {
     });
 
     test('should only include submissions that are submitted', async () => {
-      const nameId = await addSynonym(testGroupId, 'Test Fish', 'Testgenus testspecies');
+      const commonNameId = await addCommonName(testGroupId, 'Test Fish');
 
       // Unsubmitted submission
       await db.run(`
         INSERT INTO submissions (
-          member_id, species_name_id, species_class, species_common_name, species_latin_name,
+          member_id, common_name_id, species_class, species_common_name, species_latin_name,
           species_type, water_type, spawn_locations, program
         ) VALUES (?, ?, 'Anabantoids', 'Test Fish', 'Testgenus testspecies',
-                  'Fish', 'Freshwater', 'substrate', 'BAP')
-      `, [memberId, nameId]);
+                  'Fish', 'Freshwater', 'substrate', 'fish')
+      `, [memberId, commonNameId]);
 
       const result = await checkAndGrantSpecialtyAwards(memberId);
 

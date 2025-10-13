@@ -207,28 +207,32 @@ export async function getGroupIdFromNameId(nameId: number, isCommonName: boolean
  * @returns Species group data or undefined if not found
  */
 export async function getCanonicalSpeciesName(speciesNameId: number) {
-  // Check legacy table FIRST to avoid ID collisions with new tables
-  // (migration 027-029 created overlapping IDs 1-5026 in new tables)
-  const legacyRows = await query<{
-		group_id: number;
-		program_class: string;
-		species_type: string;
-		canonical_genus: string;
-		canonical_species_name: string;
-		base_points: number | null;
-		is_cares_species: number;
-		external_references: string | null;
-		image_links: string | null;
-	}>(`
-		SELECT species_name_group.*
-		FROM species_name JOIN species_name_group
-		ON species_name.group_id = species_name_group.group_id
-		WHERE species_name.name_id = ?`,
-	[speciesNameId]
-	);
+  // Try legacy table first (if it exists) to avoid ID collisions
+  // After migration 030, this will fail gracefully and fall through to new tables
+  try {
+    const legacyRows = await query<{
+      group_id: number;
+      program_class: string;
+      species_type: string;
+      canonical_genus: string;
+      canonical_species_name: string;
+      base_points: number | null;
+      is_cares_species: number;
+      external_references: string | null;
+      image_links: string | null;
+    }>(`
+      SELECT species_name_group.*
+      FROM species_name JOIN species_name_group
+      ON species_name.group_id = species_name_group.group_id
+      WHERE species_name.name_id = ?`,
+    [speciesNameId]
+    );
 
-  if (legacyRows.length > 0) {
-    return legacyRows[0];
+    if (legacyRows.length > 0) {
+      return legacyRows[0];
+    }
+  } catch {
+    // Table doesn't exist (post-migration 030) - fall through to new schema
   }
 
   // Try new common name table
@@ -695,14 +699,21 @@ export async function getNamesForGroup(groupId: number): Promise<SpeciesNames> {
 /**
  * DEPRECATED: Get synonyms from old paired table (for backwards compatibility)
  * Use getNamesForGroup() for new code
+ *
+ * After migration 030, returns empty array since species_name table no longer exists
  */
 export async function getSynonymsForGroup(groupId: number): Promise<SpeciesSynonym[]> {
-  return query<SpeciesSynonym>(`
-    SELECT name_id, group_id, common_name, scientific_name
-    FROM species_name
-    WHERE group_id = ?
-    ORDER BY common_name, scientific_name
-  `, [groupId]);
+  try {
+    return await query<SpeciesSynonym>(`
+      SELECT name_id, group_id, common_name, scientific_name
+      FROM species_name
+      WHERE group_id = ?
+      ORDER BY common_name, scientific_name
+    `, [groupId]);
+  } catch {
+    // Table doesn't exist (post-migration 030)
+    return [];
+  }
 }
 
 /**
@@ -930,6 +941,8 @@ export async function deleteScientificName(scientificNameId: number): Promise<nu
 /**
  * DEPRECATED: Add a paired synonym to old table (for backwards compatibility)
  * Use addCommonName() and addScientificName() separately for new code
+ *
+ * After migration 030, throws error since species_name table no longer exists
  */
 export async function addSynonym(
   groupId: number,
@@ -981,6 +994,10 @@ export async function addSynonym(
     // Check for duplicate constraint error
     if (err instanceof Error && err.message.includes('UNIQUE constraint')) {
       throw new Error(`Synonym "${trimmedCommon} (${trimmedScientific})" already exists`);
+    }
+    // After migration 030, table won't exist
+    if (err instanceof Error && (err.message.includes('no such table') || err.message.includes('SQLITE_ERROR'))) {
+      throw new Error('Legacy species_name table has been removed. Use addCommonName() and addScientificName() instead.');
     }
     logger.error('Failed to add synonym', err);
     throw new Error('Failed to add synonym');

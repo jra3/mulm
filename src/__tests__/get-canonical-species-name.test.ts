@@ -14,8 +14,7 @@ import {
   getCanonicalSpeciesName,
   createSpeciesGroup,
   addCommonName,
-  addScientificName,
-  addSynonym
+  addScientificName
 } from '../db/species';
 
 describe('getCanonicalSpeciesName - Split Schema', () => {
@@ -109,43 +108,6 @@ describe('getCanonicalSpeciesName - Split Schema', () => {
       assert.ok(result2.group_id);
       assert.ok(result1.canonical_genus);
       assert.ok(result2.canonical_genus);
-    });
-  });
-
-  describe('Backwards compatibility - Legacy species_name table', () => {
-    test('should still work with old paired species_name.name_id', async () => {
-      const legacyNameId = await addSynonym(testGroupId, 'Legacy Common', 'Legacy Scientific');
-
-      const result = await getCanonicalSpeciesName(legacyNameId);
-
-      assert.ok(result);
-      assert.strictEqual(result.group_id, testGroupId);
-      assert.strictEqual(result.canonical_genus, 'Testicus');
-      assert.strictEqual(result.canonical_species_name, 'canonicalus');
-    });
-  });
-
-  describe('Priority and fallback behavior', () => {
-    test('should work with IDs from all three tables', async () => {
-      // Add names to all three tables with different IDs
-      const commonNameId = await addCommonName(testGroupId, 'ZZTEST Common');
-      const scientificNameId = await addScientificName(testGroupId, 'ZZTEST Scientific');
-      const legacyNameId = await addSynonym(testGroupId, 'ZZTEST Legacy Common', 'ZZTEST Legacy Scientific');
-
-      // All three should return valid species group data
-      const resultCommon = await getCanonicalSpeciesName(commonNameId);
-      const resultScientific = await getCanonicalSpeciesName(scientificNameId);
-      const resultLegacy = await getCanonicalSpeciesName(legacyNameId);
-
-      // All should return results (may be different groups due to ID collisions with migration data)
-      assert.ok(resultCommon, 'Should find result for common name ID');
-      assert.ok(resultScientific, 'Should find result for scientific name ID');
-      assert.ok(resultLegacy, 'Should find result for legacy ID');
-
-      // All results should have valid structure
-      assert.ok(resultCommon.canonical_genus);
-      assert.ok(resultScientific.canonical_genus);
-      assert.ok(resultLegacy.canonical_genus);
     });
   });
 

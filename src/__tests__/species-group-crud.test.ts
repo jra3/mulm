@@ -8,8 +8,9 @@ import {
   updateSpeciesGroup,
   deleteSpeciesGroup,
   bulkSetPoints,
-  addSynonym,
-  getSynonymsForGroup
+  addCommonName,
+  addScientificName,
+  getNamesForGroup
 } from '../db/species';
 
 describe('Species Group CRUD Operations', () => {
@@ -35,7 +36,9 @@ describe('Species Group CRUD Operations', () => {
     `);
     testGroupId = result.lastID as number;
 
-    await addSynonym(testGroupId, 'Test Fish', 'Testicus groupus');
+    // Add a common and scientific name
+    await addCommonName(testGroupId, 'Test Fish');
+    await addScientificName(testGroupId, 'Testicus groupus');
   });
 
   afterEach(async () => {
@@ -505,15 +508,16 @@ describe('Species Group CRUD Operations', () => {
     });
 
     test('should cascade delete all synonyms (FK constraint)', async () => {
-      await addSynonym(testGroupId, 'Second Name', 'Testicus groupus variant');
+      await addCommonName(testGroupId, 'Second Name');
+      await addScientificName(testGroupId, 'Testicus groupus variant');
 
-      const beforeSynonyms = await getSynonymsForGroup(testGroupId);
-      assert.strictEqual(beforeSynonyms.length, 2);
+      const beforeNames = await getNamesForGroup(testGroupId);
+      assert.strictEqual(beforeNames.common_names.length + beforeNames.scientific_names.length, 4);
 
       await deleteSpeciesGroup(testGroupId);
 
-      const afterSynonyms = await getSynonymsForGroup(testGroupId);
-      assert.strictEqual(afterSynonyms.length, 0, 'All synonyms should be deleted');
+      const afterNames = await getNamesForGroup(testGroupId);
+      assert.strictEqual(afterNames.common_names.length + afterNames.scientific_names.length, 0, 'All names should be deleted');
     });
 
     test('should throw error for non-existent group_id', async () => {
@@ -532,18 +536,22 @@ describe('Species Group CRUD Operations', () => {
       `);
       const memberId = memberResult.lastID as number;
 
-      // Create approved submission
+      // Get the common and scientific name IDs we created in beforeEach
+      const names = await getNamesForGroup(testGroupId);
+      const commonNameId = names.common_names[0]?.common_name_id;
+      const scientificNameId = names.scientific_names[0]?.scientific_name_id;
+
+      // Create approved submission using split schema FKs
       await db.run(`
         INSERT INTO submissions (
-          member_id, species_name_id, species_type, species_class,
+          member_id, common_name_id, scientific_name_id, species_type, species_class,
           species_common_name, species_latin_name, program,
           water_type, tank_size, filter_type, temperature, ph, gh,
           reproduction_date, submitted_on, approved_on, points
-        ) VALUES (?, (SELECT name_id FROM species_name WHERE group_id = ? LIMIT 1),
-                  'Fish', 'Livebearers', 'Test', 'Testicus test', 'fish',
+        ) VALUES (?, ?, ?, 'Fish', 'Livebearers', 'Test', 'Testicus test', 'fish',
                   'Fresh', '10g', 'Sponge', '75', '7.0', '200ppm',
                   '2024-01-01', '2024-01-01', '2024-01-15', 10)
-      `, [memberId, testGroupId]);
+      `, [memberId, commonNameId, scientificNameId]);
 
       await assert.rejects(
         async () => await deleteSpeciesGroup(testGroupId, false),
@@ -566,17 +574,21 @@ describe('Species Group CRUD Operations', () => {
       `);
       const memberId = memberResult.lastID as number;
 
+      // Get the name IDs for split schema FKs
+      const names = await getNamesForGroup(testGroupId);
+      const commonNameId = names.common_names[0]?.common_name_id;
+      const scientificNameId = names.scientific_names[0]?.scientific_name_id;
+
       await db.run(`
         INSERT INTO submissions (
-          member_id, species_name_id, species_type, species_class,
+          member_id, common_name_id, scientific_name_id, species_type, species_class,
           species_common_name, species_latin_name, program,
           water_type, tank_size, filter_type, temperature, ph, gh,
           reproduction_date, submitted_on, approved_on, points
-        ) VALUES (?, (SELECT name_id FROM species_name WHERE group_id = ? LIMIT 1),
-                  'Fish', 'Livebearers', 'Test', 'Testicus test', 'fish',
+        ) VALUES (?, ?, ?, 'Fish', 'Livebearers', 'Test', 'Testicus test', 'fish',
                   'Fresh', '10g', 'Sponge', '75', '7.0', '200ppm',
                   '2024-01-01', '2024-01-01', '2024-01-15', 10)
-      `, [memberId, testGroupId]);
+      `, [memberId, commonNameId, scientificNameId]);
 
       // Should succeed with force=true
       const changes = await deleteSpeciesGroup(testGroupId, true);
@@ -762,21 +774,25 @@ describe('Species Group CRUD Operations', () => {
     });
 
     test('canonical name change preserves synonyms', async () => {
-      await addSynonym(testGroupId, 'Old Name', 'Testicus oldname');
+      await addCommonName(testGroupId, 'Old Name');
+      await addScientificName(testGroupId, 'Testicus oldname');
 
-      const beforeSynonyms = await getSynonymsForGroup(testGroupId);
-      assert.strictEqual(beforeSynonyms.length, 2);
+      const beforeNames = await getNamesForGroup(testGroupId);
+      const beforeCount = beforeNames.common_names.length + beforeNames.scientific_names.length;
+      assert.strictEqual(beforeCount, 4); // 2 common + 2 scientific
 
       await updateSpeciesGroup(testGroupId, {
         canonicalGenus: 'Renamed',
         canonicalSpeciesName: 'newname'
       });
 
-      const afterSynonyms = await getSynonymsForGroup(testGroupId);
-      assert.strictEqual(afterSynonyms.length, 2, 'Synonyms should be preserved');
+      const afterNames = await getNamesForGroup(testGroupId);
+      const afterCount = afterNames.common_names.length + afterNames.scientific_names.length;
+      assert.strictEqual(afterCount, 4, 'Names should be preserved');
 
-      // Verify synonyms are still linked to the same group
-      assert.ok(afterSynonyms.every(s => s.group_id === testGroupId));
+      // Verify names are still linked to the same group
+      assert.ok(afterNames.common_names.every(n => n.group_id === testGroupId));
+      assert.ok(afterNames.scientific_names.every(n => n.group_id === testGroupId));
     });
   });
 });

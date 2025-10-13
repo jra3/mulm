@@ -39,11 +39,12 @@ export function formatShortDate(date: string | Date | null | undefined): string 
   }
 
   const d = new Date(date!);
-  // Use Intl.DateTimeFormat for consistent formatting (local timezone)
+  // Use Intl.DateTimeFormat with UTC timezone to avoid timezone-based date shifts
   return new Intl.DateTimeFormat('en-US', {
     month: '2-digit',
     day: '2-digit',
-    year: 'numeric'
+    year: 'numeric',
+    timeZone: 'UTC'
   }).format(d);
 }
 
@@ -64,11 +65,12 @@ export function formatLongDate(date: string | Date | null | undefined): string {
   }
 
   const d = new Date(date!);
-  // Use Intl.DateTimeFormat for consistent formatting (local timezone)
+  // Use Intl.DateTimeFormat with UTC timezone to avoid timezone-based date shifts
   return new Intl.DateTimeFormat('en-US', {
     month: 'long',
     day: 'numeric',
-    year: 'numeric'
+    year: 'numeric',
+    timeZone: 'UTC'
   }).format(d);
 }
 
