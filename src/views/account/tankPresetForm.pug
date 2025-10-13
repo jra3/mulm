@@ -157,7 +157,5 @@
 			if !editing
 				button.secondary(
 					type="button"
-					hx-get="/account"
-					hx-target="#newPresetForm"
-					hx-swap="outerHTML swap:0.3s"
+					onclick="this.closest('.bg-white').remove()"
 				) Cancel
