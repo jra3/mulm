@@ -3,10 +3,9 @@ import { MulmRequest } from '@/sessions';
 import {
   getSpeciesForAdmin,
   SpeciesAdminFilters,
-  getSpeciesDetail,
-  getSynonymsForGroup
+  getSpeciesDetail
 } from '@/db/species';
-import { getQueryString, getQueryNumber, getQueryBoolean } from '@/utils/request';
+import { getQueryString, getQueryNumber, getQueryBoolean, getBodyString } from '@/utils/request';
 import { getClassOptions } from '@/forms/submission';
 
 /**
@@ -156,7 +155,7 @@ export const updateSpecies = async (req: MulmRequest, res: Response) => {
 
     res.render('admin/speciesEdit', {
       title: 'Edit Species',
-      species: { ...speciesDetail, ...req.body },
+      species: { ...speciesDetail, ...req.body as Record<string, unknown> },
       errors
     });
     return;
@@ -198,7 +197,7 @@ export const updateSpecies = async (req: MulmRequest, res: Response) => {
 
     res.render('admin/speciesEdit', {
       title: 'Edit Species',
-      species: { ...speciesDetail, ...req.body },
+      species: { ...speciesDetail, ...req.body as Record<string, unknown> },
       errors
     });
   }
@@ -273,7 +272,7 @@ export const deleteCommonNameRoute = async (req: MulmRequest, res: Response) => 
     }
 
     res.status(200).send('Common name deleted');
-  } catch (err) {
+  } catch {
     res.status(500).send('Failed to delete common name');
   }
 };
@@ -307,7 +306,7 @@ export const deleteScientificNameRoute = async (req: MulmRequest, res: Response)
     }
 
     res.status(200).send('Scientific name deleted');
-  } catch (err) {
+  } catch {
     res.status(500).send('Failed to delete scientific name');
   }
 };
@@ -369,7 +368,7 @@ export const addCommonNameRoute = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const { common_name } = req.body;
+  const common_name = getBodyString(req, 'common_name');
 
   const { addCommonName } = await import('@/db/species');
 
@@ -411,7 +410,7 @@ export const addScientificNameRoute = async (req: MulmRequest, res: Response) =>
     return;
   }
 
-  const { scientific_name } = req.body;
+  const scientific_name = getBodyString(req, 'scientific_name');
 
   const { addScientificName } = await import('@/db/species');
 
@@ -439,7 +438,7 @@ export const addScientificNameRoute = async (req: MulmRequest, res: Response) =>
  * GET /admin/species/:groupId/common-names/new
  * Render add common name form (HTMX partial)
  */
-export const addCommonNameForm = async (req: MulmRequest, res: Response) => {
+export const addCommonNameForm = (req: MulmRequest, res: Response) => {
   const { viewer } = req;
 
   if (!viewer?.is_admin) {
@@ -456,7 +455,7 @@ export const addCommonNameForm = async (req: MulmRequest, res: Response) => {
  * GET /admin/species/:groupId/scientific-names/new
  * Render add scientific name form (HTMX partial)
  */
-export const addScientificNameForm = async (req: MulmRequest, res: Response) => {
+export const addScientificNameForm = (req: MulmRequest, res: Response) => {
   const { viewer } = req;
 
   if (!viewer?.is_admin) {
@@ -487,7 +486,8 @@ export const addSynonymRoute = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const { common_name, scientific_name } = req.body;
+  const common_name = getBodyString(req, 'common_name');
+  const scientific_name = getBodyString(req, 'scientific_name');
 
   const { addSynonym } = await import('@/db/species');
 
@@ -516,7 +516,7 @@ export const addSynonymRoute = async (req: MulmRequest, res: Response) => {
  * GET /admin/species/:groupId/synonyms/new
  * Render add synonym form (HTMX partial)
  */
-export const addSynonymForm = async (req: MulmRequest, res: Response) => {
+export const addSynonymForm = (req: MulmRequest, res: Response) => {
   const { viewer } = req;
 
   if (!viewer?.is_admin) {
