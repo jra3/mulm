@@ -5,6 +5,9 @@ import { getGoogleOAuthURL, setOAuthStateCookie } from "@/oauth";
 import { MulmRequest } from "@/sessions";
 import { Response } from "express";
 import { logger } from "@/utils/logger";
+import { queryTankPresets, createTankPreset, updateTankPreset, deleteTankPreset } from "@/db/tank";
+import { tankSettingsSchema } from "@/forms/tank";
+import { validateFormResult } from "@/forms/utils";
 
 export const viewAccountSettings = async (req: MulmRequest, res: Response) => {
   const { viewer } = req;
@@ -18,10 +21,12 @@ export const viewAccountSettings = async (req: MulmRequest, res: Response) => {
 
   const [
     googleURL,
-    googleAccount
+    googleAccount,
+    presets
   ] = await Promise.all([
     Promise.resolve(getGoogleOAuthURL(oauthState)),
     getGoogleAccountByMemberId(viewer.id),
+    queryTankPresets(viewer.id),
   ]);
 
   res.render("account/page", {
@@ -29,6 +34,7 @@ export const viewAccountSettings = async (req: MulmRequest, res: Response) => {
     viewer,
     googleURL,
     googleAccount,
+    presets,
     errors: new Map(),
   });
 };
@@ -104,4 +110,144 @@ export const unlinkGoogleAccount = async (req: MulmRequest, res: Response) => {
   await deleteGoogleAccount(googleAccount.google_sub, viewer.id);
   res.send("Unlinked Google account");
 }
+
+// Tank Preset Management Routes
+
+export const newTankPresetForm = (req: MulmRequest, res: Response) => {
+  res.render("account/tankPresetForm", {
+    preset: {},
+    editing: false,
+    errors: new Map()
+  });
+};
+
+export const createTankPresetRoute = async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+  if (!viewer) {
+    res.status(401).send();
+    return;
+  }
+
+  const errors = new Map<string, string>();
+  const parsed = tankSettingsSchema.safeParse(req.body);
+
+  if (!validateFormResult(parsed, errors, () => {
+    res.render("account/tankPresetForm", {
+      preset: req.body as Record<string, unknown>,
+      editing: false,
+      errors
+    });
+  })) {
+    return;
+  }
+
+  try {
+    await createTankPreset({
+      ...parsed.data,
+      member_id: viewer.id,
+    });
+
+    // Return the new preset card
+    const presets = await queryTankPresets(viewer.id);
+    const newPreset = presets.find(p => p.preset_name === parsed.data.preset_name);
+
+    res.render("account/tankPresetCard", {
+      preset: newPreset
+    });
+  } catch (err) {
+    logger.error('Failed to create tank preset', err);
+    errors.set('preset_name', 'A preset with this name already exists');
+    res.render("account/tankPresetForm", {
+      preset: req.body as Record<string, unknown>,
+      editing: false,
+      errors
+    });
+  }
+};
+
+export const editTankPresetForm = async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+  if (!viewer) {
+    res.status(401).send();
+    return;
+  }
+
+  const presetName = decodeURIComponent(req.params.name);
+  const presets = await queryTankPresets(viewer.id);
+  const preset = presets.find(p => p.preset_name === presetName);
+
+  if (!preset) {
+    res.status(404).send("Preset not found");
+    return;
+  }
+
+  res.render("account/tankPresetForm", {
+    preset,
+    editing: true,
+    errors: new Map()
+  });
+};
+
+export const updateTankPresetRoute = async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+  if (!viewer) {
+    res.status(401).send();
+    return;
+  }
+
+  const presetName = decodeURIComponent(req.params.name);
+  const errors = new Map<string, string>();
+  const parsed = tankSettingsSchema.safeParse(req.body);
+
+  if (!validateFormResult(parsed, errors, () => {
+    res.render("account/tankPresetForm", {
+      preset: { ...(req.body as Record<string, unknown>), preset_name: presetName },
+      editing: true,
+      errors
+    });
+  })) {
+    return;
+  }
+
+  try {
+    await updateTankPreset({
+      ...parsed.data,
+      member_id: viewer.id,
+    });
+
+    // Return updated preset card
+    const presets = await queryTankPresets(viewer.id);
+    const updatedPreset = presets.find(p => p.preset_name === parsed.data.preset_name);
+
+    res.render("account/tankPresetCard", {
+      preset: updatedPreset
+    });
+  } catch (err) {
+    logger.error('Failed to update tank preset', err);
+    errors.set('form', 'Failed to update preset');
+    res.render("account/tankPresetForm", {
+      preset: { ...(req.body as Record<string, unknown>), preset_name: presetName },
+      editing: true,
+      errors
+    });
+  }
+};
+
+export const deleteTankPresetRoute = async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+  if (!viewer) {
+    res.status(401).send();
+    return;
+  }
+
+  const presetName = decodeURIComponent(req.params.name);
+
+  try {
+    await deleteTankPreset(viewer.id, presetName);
+    res.status(200).send(); // Empty response causes HTMX to remove the element
+  } catch (err) {
+    logger.error('Failed to delete tank preset', err);
+    res.status(500).send('Failed to delete preset');
+  }
+};
 

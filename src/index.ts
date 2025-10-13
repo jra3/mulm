@@ -167,6 +167,13 @@ router.get("/account", account.viewAccountSettings);
 router.patch("/account", account.updateAccountSettings);
 router.delete("/account/google", account.unlinkGoogleAccount);
 
+// Account tank preset management
+router.get("/account/tanks/new", account.newTankPresetForm);
+router.post("/account/tanks", account.createTankPresetRoute);
+router.get("/account/tanks/:name/edit", account.editTankPresetForm);
+router.post("/account/tanks/:name", account.updateTankPresetRoute);
+router.delete("/account/tanks/:name", account.deleteTankPresetRoute);
+
 router.use("/admin", adminRouter);
 
 // Display screen for club meetings (public, no auth required)

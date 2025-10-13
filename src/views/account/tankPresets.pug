@@ -1,0 +1,81 @@
+#tankPresets
+	h2(class="text-xl sm:text-2xl font-bold mb-4") My Tank Presets
+
+	//- Add new preset button
+	button.primary.mb-4(
+		type="button"
+		hx-get="/account/tanks/new"
+		hx-target="#tankPresetsContent"
+		hx-swap="afterbegin"
+	) + Add New Tank Preset
+
+	//- Tank presets list
+	#tankPresetsContent
+		if presets && presets.length > 0
+			each preset in presets
+				.bg-white.border.border-gray-300.rounded-lg.p-4.mb-3(id=`preset-${preset.preset_name}`)
+					.flex.justify-between.items-start.mb-2
+						h3.font-bold.text-lg= preset.preset_name
+						.flex.gap-2
+							button.secondary.text-sm.px-2.py-1(
+								type="button"
+								hx-get=`/account/tanks/${encodeURIComponent(preset.preset_name)}/edit`
+								hx-target=`#preset-${preset.preset_name}`
+								hx-swap="outerHTML"
+							) Edit
+							button.destructive.text-sm.px-2.py-1(
+								type="button"
+								hx-delete=`/account/tanks/${encodeURIComponent(preset.preset_name)}`
+								hx-target=`#preset-${preset.preset_name}`
+								hx-swap="outerHTML swap:0.5s"
+								hx-confirm=`Delete tank preset "${preset.preset_name}"?`
+							) Delete
+
+					//- Tank details in a grid
+					.grid.grid-cols-2.gap-x-4.gap-y-2.text-sm(class="sm:grid-cols-3")
+						if preset.tank_size
+							div
+								span.text-gray-600 Tank Size:
+								span.font-medium= preset.tank_size
+						if preset.filter_type
+							div
+								span.text-gray-600 Filter:
+								span.font-medium= preset.filter_type
+						if preset.temperature
+							div
+								span.text-gray-600 Temperature:
+								span.font-medium= preset.temperature
+						if preset.ph
+							div
+								span.text-gray-600 pH:
+								span.font-medium= preset.ph
+						if preset.gh
+							div
+								span.text-gray-600 GH:
+								span.font-medium= preset.gh
+						if preset.specific_gravity
+							div
+								span.text-gray-600 Specific Gravity:
+								span.font-medium= preset.specific_gravity
+						if preset.water_change_volume
+							div
+								span.text-gray-600 Water Change Volume:
+								span.font-medium= preset.water_change_volume
+						if preset.water_change_frequency
+							div
+								span.text-gray-600 Frequency:
+								span.font-medium= preset.water_change_frequency
+						if preset.substrate_type
+							div
+								span.text-gray-600 Substrate:
+								span.font-medium= preset.substrate_type
+						if preset.substrate_depth
+							div
+								span.text-gray-600 Substrate Depth:
+								span.font-medium= preset.substrate_depth
+						if preset.substrate_color
+							div
+								span.text-gray-600 Substrate Color:
+								span.font-medium= preset.substrate_color
+		else
+			p.text-gray-500.italic No tank presets saved yet. Click "Add New Tank Preset" to get started.

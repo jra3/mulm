@@ -252,6 +252,23 @@ describe('Pug Template Rendering', () => {
     // Count for countBadge mixin
     count: 5,
 
+    // Tank preset data
+    preset: {
+      preset_name: 'Community Tank',
+      tank_size: '55 gallon',
+      filter_type: 'Canister',
+      temperature: '76°F',
+      ph: '7.2',
+      gh: '150 ppm',
+      specific_gravity: null,
+      water_change_volume: '25%',
+      water_change_frequency: 'Weekly',
+      substrate_type: 'Gravel',
+      substrate_depth: '2 inches',
+      substrate_color: 'Natural'
+    },
+    editing: false,
+
     // Filters for species list and explorer
     filters: {
       species_type: '',

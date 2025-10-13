@@ -1,0 +1,163 @@
+//- Tank Preset Form (for both create and edit)
+.bg-white.border.border-gray-300.rounded-lg.p-4.mb-3(id=editing ? `preset-${preset.preset_name}` : 'newPresetForm')
+	form(
+		hx-post=editing ? `/account/tanks/${encodeURIComponent(preset.preset_name)}` : '/account/tanks'
+		hx-target=editing ? `#preset-${preset.preset_name}` : '#tankPresetsContent'
+		hx-swap=editing ? 'outerHTML' : 'afterbegin'
+	)
+		.flex.justify-between.items-center.mb-4
+			h3.font-bold.text-lg= editing ? `Edit: ${preset.preset_name}` : 'New Tank Preset'
+			if editing
+				button.secondary.text-sm.px-2.py-1(
+					type="button"
+					hx-get=`/account/tanks/${encodeURIComponent(preset.preset_name)}`
+					hx-target=`#preset-${preset.preset_name}`
+					hx-swap="outerHTML"
+				) Cancel
+
+		//- Preset Name (read-only when editing)
+		.mb-3
+			label.block.text-sm.font-medium.text-gray-700.mb-1(for="preset_name") Tank Name *
+			if editing
+				input.w-full.px-3.py-2.border.border-gray-300.rounded.bg-gray-100(
+					type="text"
+					value=preset.preset_name
+					disabled
+				)
+				input(type="hidden" name="preset_name" value=preset.preset_name)
+			else
+				input.w-full.px-3.py-2.border.border-gray-300.rounded(
+					type="text"
+					name="preset_name"
+					id="preset_name"
+					placeholder="e.g., Community Tank, Breeding Tank"
+					value=preset.preset_name || ''
+					required
+				)
+			if errors.has('preset_name')
+				p.text-red-600.text-sm.mt-1= errors.get('preset_name')
+
+		//- Tank parameters grid
+		.grid.grid-cols-1.gap-3(class="sm:grid-cols-2")
+			div
+				label.block.text-sm.font-medium.text-gray-700.mb-1(for="tank_size") Tank Size
+				input.w-full.px-3.py-2.border.border-gray-300.rounded(
+					type="text"
+					name="tank_size"
+					id="tank_size"
+					placeholder="e.g., 20 gallons, 75L"
+					value=preset.tank_size || ''
+				)
+
+			div
+				label.block.text-sm.font-medium.text-gray-700.mb-1(for="filter_type") Filter Type
+				input.w-full.px-3.py-2.border.border-gray-300.rounded(
+					type="text"
+					name="filter_type"
+					id="filter_type"
+					placeholder="e.g., Sponge, HOB, Canister"
+					value=preset.filter_type || ''
+				)
+
+			div
+				label.block.text-sm.font-medium.text-gray-700.mb-1(for="temperature") Temperature
+				input.w-full.px-3.py-2.border.border-gray-300.rounded(
+					type="text"
+					name="temperature"
+					id="temperature"
+					placeholder="e.g., 78°F, 25°C"
+					value=preset.temperature || ''
+				)
+
+			div
+				label.block.text-sm.font-medium.text-gray-700.mb-1(for="ph") pH
+				input.w-full.px-3.py-2.border.border-gray-300.rounded(
+					type="text"
+					name="ph"
+					id="ph"
+					placeholder="e.g., 7.0"
+					value=preset.ph || ''
+				)
+
+			div
+				label.block.text-sm.font-medium.text-gray-700.mb-1(for="gh") General Hardness (GH)
+				input.w-full.px-3.py-2.border.border-gray-300.rounded(
+					type="text"
+					name="gh"
+					id="gh"
+					placeholder="e.g., 150 ppm"
+					value=preset.gh || ''
+				)
+
+			div
+				label.block.text-sm.font-medium.text-gray-700.mb-1(for="specific_gravity") Specific Gravity
+				input.w-full.px-3.py-2.border.border-gray-300.rounded(
+					type="text"
+					name="specific_gravity"
+					id="specific_gravity"
+					placeholder="e.g., 1.025 (for marine)"
+					value=preset.specific_gravity || ''
+				)
+
+			div
+				label.block.text-sm.font-medium.text-gray-700.mb-1(for="water_change_volume") Water Change Volume
+				input.w-full.px-3.py-2.border.border-gray-300.rounded(
+					type="text"
+					name="water_change_volume"
+					id="water_change_volume"
+					placeholder="e.g., 25%, 10 gallons"
+					value=preset.water_change_volume || ''
+				)
+
+			div
+				label.block.text-sm.font-medium.text-gray-700.mb-1(for="water_change_frequency") Change Frequency
+				input.w-full.px-3.py-2.border.border-gray-300.rounded(
+					type="text"
+					name="water_change_frequency"
+					id="water_change_frequency"
+					placeholder="e.g., Weekly, Every 3 days"
+					value=preset.water_change_frequency || ''
+				)
+
+			div
+				label.block.text-sm.font-medium.text-gray-700.mb-1(for="substrate_type") Substrate Type
+				input.w-full.px-3.py-2.border.border-gray-300.rounded(
+					type="text"
+					name="substrate_type"
+					id="substrate_type"
+					placeholder="e.g., Gravel, Sand"
+					value=preset.substrate_type || ''
+				)
+
+			div
+				label.block.text-sm.font-medium.text-gray-700.mb-1(for="substrate_depth") Substrate Depth
+				input.w-full.px-3.py-2.border.border-gray-300.rounded(
+					type="text"
+					name="substrate_depth"
+					id="substrate_depth"
+					placeholder="e.g., 2 inches"
+					value=preset.substrate_depth || ''
+				)
+
+			div
+				label.block.text-sm.font-medium.text-gray-700.mb-1(for="substrate_color") Substrate Color
+				input.w-full.px-3.py-2.border.border-gray-300.rounded(
+					type="text"
+					name="substrate_color"
+					id="substrate_color"
+					placeholder="e.g., Black, Natural"
+					value=preset.substrate_color || ''
+				)
+
+		//- Submit button
+		.mt-4.flex.gap-2
+			button.primary(type="submit" hx-disabled-elt="this")
+				span= editing ? 'Update Preset' : 'Create Preset'
+				span.htmx-indicator.spinner
+			if !editing
+				button.secondary(
+					type="button"
+					hx-get="/account"
+					hx-target="#newPresetForm"
+					hx-swap="outerHTML swap:0.3s"
+				) Cancel
