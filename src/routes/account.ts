@@ -128,7 +128,8 @@ export const viewTankPresetCard = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const presetName = (req.body as { preset_name?: string }).preset_name;
+  // HTMX sends hx-vals as JSON in request body for GET requests too
+  const presetName = (req.body as { preset_name?: string })?.preset_name;
   const presets = await queryTankPresets(viewer.id);
   const preset = presets.find(p => p.preset_name === presetName);
 
@@ -149,7 +150,8 @@ export const editTankPresetForm = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const presetName = (req.body as { preset_name?: string }).preset_name;
+  // HTMX sends hx-vals as JSON in request body
+  const presetName = (req.body as { preset_name?: string })?.preset_name;
   const presets = await queryTankPresets(viewer.id);
   const preset = presets.find(p => p.preset_name === presetName);
 
