@@ -10,13 +10,16 @@
 				hx-target="closest .tank-preset-card"
 				hx-swap="outerHTML"
 			) Edit
-			button.destructive.text-sm.px-2.py-1(
-				type="button"
-				hx-delete=`/account/tanks/${preset.preset_name}`
-				hx-target="closest .tank-preset-card"
-				hx-swap="outerHTML swap:0.5s"
-				hx-confirm=`Delete tank preset "${preset.preset_name}"?`
-			) Delete
+			form.inline(style="display: inline;")
+				input(type="hidden" name="preset_name" value=preset.preset_name)
+				button.destructive.text-sm.px-2.py-1(
+					type="button"
+					hx-delete="/account/tanks"
+					hx-include="closest form"
+					hx-target="closest .tank-preset-card"
+					hx-swap="outerHTML swap:0.5s"
+					hx-confirm=`Delete tank preset "${preset.preset_name}"?`
+				) Delete
 
 	//- Tank details in a grid
 	.grid.grid-cols-2.gap-x-4.gap-y-2.text-sm(class="sm:grid-cols-3")

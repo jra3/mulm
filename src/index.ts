@@ -172,7 +172,7 @@ router.get("/account/tanks/new", account.newTankPresetForm);
 router.post("/account/tanks", account.createTankPresetRoute);
 router.get("/account/tanks/:name/edit", account.editTankPresetForm);
 router.post("/account/tanks/:name", account.updateTankPresetRoute);
-router.delete("/account/tanks/:name", account.deleteTankPresetRoute);
+router.delete("/account/tanks", account.deleteTankPresetRoute);
 
 router.use("/admin", adminRouter);
 

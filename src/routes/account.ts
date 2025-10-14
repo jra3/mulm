@@ -243,7 +243,12 @@ export const deleteTankPresetRoute = async (req: MulmRequest, res: Response) => 
     return;
   }
 
-  const presetName = decodeURIComponent(req.params.name);
+  const presetName = req.body.preset_name as string;
+
+  if (!presetName) {
+    res.status(400).send('Preset name required');
+    return;
+  }
 
   try {
     await deleteTankPreset(viewer.id, presetName);
