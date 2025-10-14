@@ -7,17 +7,17 @@
 			button.secondary.text-sm.px-2.py-1(
 				type="button"
 				hx-get="/account/tanks/edit"
-				hx-vals=`{"preset_name": "${preset.preset_name}"}`
+				hx-vals=`js:{"preset_name": "${preset.preset_name.replace(/"/g, '\\"')}"}`
 				hx-target="closest .tank-preset-card"
 				hx-swap="outerHTML"
 			) Edit
 			button.destructive.text-sm.px-2.py-1(
 				type="button"
 				hx-delete="/account/tanks"
-				hx-vals=`{"preset_name": "${preset.preset_name}"}`
+				hx-vals=`js:{"preset_name": "${preset.preset_name.replace(/"/g, '\\"')}"}`
 				hx-target="closest .tank-preset-card"
 				hx-swap="outerHTML swap:0.5s"
-				hx-confirm=`Delete tank preset "${preset.preset_name}"?`
+				hx-confirm=`Delete tank preset "${preset.preset_name.replace(/"/g, '\\"')}"?`
 			) Delete
 
 	//- Tank details in a grid

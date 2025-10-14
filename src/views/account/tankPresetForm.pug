@@ -11,7 +11,7 @@
 				button.secondary.text-sm.px-2.py-1(
 					type="button"
 					hx-get="/account/tanks/view"
-					hx-vals=`{"preset_name": "${preset.preset_name}"}`
+					hx-vals=`js:{"preset_name": "${preset.preset_name.replace(/"/g, '\\"')}"}`
 					hx-target="closest .tank-preset-card"
 					hx-swap="outerHTML"
 				) Cancel
