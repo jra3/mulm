@@ -17,14 +17,10 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-
 const renderOnSubmission = pug.compileFile("src/views/email/onSubmission.pug");
 const renderOnScreeningApproved = pug.compileFile("src/views/email/onScreeningApproved.pug");
 const renderOnScreeningRejected = pug.compileFile("src/views/email/onScreeningRejected.pug");
-export async function onSubmissionSend(
-  sub: Submission,
-  member: MemberRecord,
-) {
+export async function onSubmissionSend(sub: Submission, member: MemberRecord) {
   const admins = await getAdminEmails();
 
   return transporter.sendMail({
@@ -41,12 +37,7 @@ export async function onSubmissionSend(
   });
 }
 
-
-export async function sendChangesRequest(
-  sub: Submission,
-  contact_email: string,
-  content: string,
-) {
+export async function sendChangesRequest(sub: Submission, contact_email: string, content: string) {
   const admins = await getAdminEmails();
 
   return transporter.sendMail({
@@ -60,10 +51,7 @@ export async function sendChangesRequest(
 }
 
 const renderOnApprove = pug.compileFile("src/views/email/onApproval.pug");
-export async function onSubmissionApprove(
-  sub: Submission,
-  member: MemberRecord,
-) {
+export async function onSubmissionApprove(sub: Submission, member: MemberRecord) {
   return transporter.sendMail({
     from: fromEmail,
     to: member.contact_email,
@@ -92,9 +80,14 @@ export async function sendResetEmail(email: string, display_name: string, code: 
   });
 }
 
-
 const renderInviteEmail = pug.compileFile("src/views/email/invite.pug");
-export async function sendInviteEmail(email: string, display_name: string, code: string, member?: MemberRecord, submissions?: Submission[]) {
+export async function sendInviteEmail(
+  email: string,
+  display_name: string,
+  code: string,
+  member?: MemberRecord,
+  submissions?: Submission[]
+) {
   return transporter.sendMail({
     from: fromEmail,
     to: email,
@@ -117,12 +110,12 @@ export async function onLevelUpgrade(
   member: MemberRecord,
   program: Program,
   newLevel: string,
-  totalPoints?: number,
+  totalPoints?: number
 ) {
   const programNames = {
-    fish: 'Breeder Awards Program (BAP)',
-    plant: 'Horticultural Awards Program (HAP)', 
-    coral: 'Coral Awards Program (CAP)',
+    fish: "Breeder Awards Program (BAP)",
+    plant: "Horticultural Awards Program (HAP)",
+    coral: "Coral Awards Program (CAP)",
   };
 
   return transporter.sendMail({
@@ -143,7 +136,7 @@ export async function onLevelUpgrade(
 export async function onScreeningApproved(
   submission: Submission,
   member: MemberRecord,
-  witness: MemberRecord,
+  witness: MemberRecord
 ) {
   return transporter.sendMail({
     from: fromEmail,
@@ -162,7 +155,7 @@ export async function onScreeningApproved(
 export async function onScreeningRejected(
   submission: Submission,
   member: MemberRecord,
-  reason: string,
+  reason: string
 ) {
   return transporter.sendMail({
     from: fromEmail,

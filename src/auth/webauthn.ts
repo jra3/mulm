@@ -10,7 +10,7 @@ import {
   type PublicKeyCredentialCreationOptionsJSON,
   type PublicKeyCredentialRequestOptionsJSON,
   type AuthenticatorTransportFuture,
-} from '@simplewebauthn/server';
+} from "@simplewebauthn/server";
 import {
   saveCredential,
   getCredentialById,
@@ -18,8 +18,8 @@ import {
   updateCredentialCounter,
   saveChallenge,
   getChallenge,
-} from '@/db/webauthn';
-import configData from '@/config.json';
+} from "@/db/webauthn";
+import configData from "@/config.json";
 
 // Type the config properly
 const config = configData as typeof configData & {
@@ -53,20 +53,22 @@ export async function generateRegistrationOptionsForMember(
     userDisplayName: userName,
     // Use member ID as user ID (stable identifier)
     userID: Buffer.from(String(memberId)),
-    attestationType: 'none', // We don't need attestation for this use case
-    excludeCredentials: existingCredentials.map(cred => ({
+    attestationType: "none", // We don't need attestation for this use case
+    excludeCredentials: existingCredentials.map((cred) => ({
       id: cred.credential_id,
-      transports: cred.transports ? (JSON.parse(cred.transports) as AuthenticatorTransportFuture[]) : undefined,
+      transports: cred.transports
+        ? (JSON.parse(cred.transports) as AuthenticatorTransportFuture[])
+        : undefined,
     })),
     authenticatorSelection: {
-      residentKey: 'preferred', // Discoverable credentials preferred
-      userVerification: 'preferred',
-      authenticatorAttachment: 'platform', // Prefer platform authenticators (Touch ID, Face ID)
+      residentKey: "preferred", // Discoverable credentials preferred
+      userVerification: "preferred",
+      authenticatorAttachment: "platform", // Prefer platform authenticators (Touch ID, Face ID)
     },
   });
 
   // Save challenge for verification
-  await saveChallenge(options.challenge, 'registration', memberId);
+  await saveChallenge(options.challenge, "registration", memberId);
 
   return options;
 }
@@ -80,11 +82,15 @@ export async function verifyAndSaveCredential(
   deviceName?: string
 ): Promise<{ verified: boolean; credentialId?: string }> {
   // Retrieve and validate challenge
-  const clientDataJSON: string = Buffer.from(response.response.clientDataJSON, 'base64').toString();
+  const clientDataJSON: string = Buffer.from(response.response.clientDataJSON, "base64").toString();
   const clientData = JSON.parse(clientDataJSON) as { challenge: string };
   const challengeData = await getChallenge(clientData.challenge);
 
-  if (!challengeData || challengeData.member_id !== memberId || challengeData.purpose !== 'registration') {
+  if (
+    !challengeData ||
+    challengeData.member_id !== memberId ||
+    challengeData.purpose !== "registration"
+  ) {
     return { verified: false };
   }
 
@@ -108,7 +114,9 @@ export async function verifyAndSaveCredential(
   const { credential } = verification.registrationInfo;
 
   // Save credential to database
-  const transportsStr: string | undefined = response.response.transports ? JSON.stringify(response.response.transports) : undefined;
+  const transportsStr: string | undefined = response.response.transports
+    ? JSON.stringify(response.response.transports)
+    : undefined;
   await saveCredential({
     member_id: memberId,
     credential_id: credential.id,
@@ -130,12 +138,12 @@ export async function verifyAndSaveCredential(
 export async function generateAuthenticationOptionsForLogin(): Promise<PublicKeyCredentialRequestOptionsJSON> {
   const options = await generateAuthenticationOptions({
     rpID,
-    userVerification: 'preferred',
+    userVerification: "preferred",
     // Don't specify allowCredentials - allow any registered passkey (discoverable)
   });
 
   // Save challenge for verification
-  await saveChallenge(options.challenge, 'authentication');
+  await saveChallenge(options.challenge, "authentication");
 
   return options;
 }
@@ -147,7 +155,7 @@ export async function verifyCredentialAndAuthenticate(
   response: AuthenticationResponseJSON
 ): Promise<{ verified: boolean; memberId?: number }> {
   // Get credential from database
-  const credentialIdBase64 = Buffer.from(response.id, 'base64url').toString('base64url');
+  const credentialIdBase64 = Buffer.from(response.id, "base64url").toString("base64url");
   const credential = await getCredentialById(credentialIdBase64);
 
   if (!credential) {
@@ -155,11 +163,11 @@ export async function verifyCredentialAndAuthenticate(
   }
 
   // Retrieve and validate challenge
-  const clientDataJSON: string = Buffer.from(response.response.clientDataJSON, 'base64').toString();
+  const clientDataJSON: string = Buffer.from(response.response.clientDataJSON, "base64").toString();
   const clientData = JSON.parse(clientDataJSON) as { challenge: string };
   const challengeData = await getChallenge(clientData.challenge);
 
-  if (!challengeData || challengeData.purpose !== 'authentication') {
+  if (!challengeData || challengeData.purpose !== "authentication") {
     return { verified: false };
   }
 
@@ -186,7 +194,10 @@ export async function verifyCredentialAndAuthenticate(
   }
 
   // Update counter for replay attack prevention
-  await updateCredentialCounter(credential.credential_id, verification.authenticationInfo.newCounter);
+  await updateCredentialCounter(
+    credential.credential_id,
+    verification.authenticationInfo.newCounter
+  );
 
   return {
     verified: true,

@@ -4,18 +4,18 @@ const kKeyLen = 32;
 
 type AuthCodePurpose = "email_verification" | "password_reset";
 export type AuthCode = {
-	code: string;
-	member_id: number;
-	purpose: AuthCodePurpose;
-	expires_on: Date;
+  code: string;
+  member_id: number;
+  purpose: AuthCodePurpose;
+  expires_on: Date;
 };
 
 export type ScryptPassword = {
-	N: number;
-	r: number;
-	p: number;
-	salt: string;
-	hash: string;
+  N: number;
+  r: number;
+  p: number;
+  salt: string;
+  hash: string;
 };
 
 /**
@@ -23,9 +23,7 @@ export type ScryptPassword = {
  * explicit than `util.promisify`.
  */
 function withNodeCallback<Type = void>(
-  fn: (
-		callback: (error: Error | null | undefined, result: Type) => void,
-	) => void,
+  fn: (callback: (error: Error | null | undefined, result: Type) => void) => void
 ): Promise<Type> {
   return new Promise<Type>((resolve, reject) => {
     fn((error, result) => {
@@ -38,9 +36,7 @@ function withNodeCallback<Type = void>(
   });
 }
 
-export async function makePasswordEntry(
-  password: string,
-): Promise<ScryptPassword> {
+export async function makePasswordEntry(password: string): Promise<ScryptPassword> {
   const salt = randomBytes(16);
   const scryptOptions = {
     N: 16384,
@@ -48,7 +44,7 @@ export async function makePasswordEntry(
     p: 1,
   };
   const hash = await withNodeCallback<Buffer>((callback) =>
-    scrypt(password, salt, kKeyLen, scryptOptions, callback),
+    scrypt(password, salt, kKeyLen, scryptOptions, callback)
   );
   const passwordEntry: ScryptPassword = {
     ...scryptOptions,
@@ -64,7 +60,7 @@ export async function makePasswordEntry(
  */
 export async function checkPassword(
   passwordEntry: ScryptPassword | undefined,
-  clearPassword: string,
+  clearPassword: string
 ) {
   if (passwordEntry === undefined) {
     return false;
@@ -80,8 +76,8 @@ export async function checkPassword(
         r: passwordEntry.r,
         p: passwordEntry.p,
       },
-      callback,
-    ),
+      callback
+    )
   );
   return result.toString("base64") === passwordEntry.hash;
 }

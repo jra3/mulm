@@ -1,10 +1,10 @@
-import { describe, test, beforeEach, afterEach, mock } from 'node:test';
-import assert from 'node:assert';
-import { Database, open } from 'sqlite';
-import sqlite3 from 'sqlite3';
-import { overrideConnection } from '../db/conn';
-import { S3Client } from '@aws-sdk/client-s3';
-import { overrideR2Client, ImageMetadata } from '../utils/r2-client';
+import { describe, test, beforeEach, afterEach, mock } from "node:test";
+import assert from "node:assert";
+import { Database, open } from "sqlite";
+import sqlite3 from "sqlite3";
+import { overrideConnection } from "../db/conn";
+import { S3Client } from "@aws-sdk/client-s3";
+import { overrideR2Client, ImageMetadata } from "../utils/r2-client";
 
 interface TestMember {
   id: number;
@@ -18,28 +18,28 @@ interface TestSubmission {
   images: string | null;
 }
 
-describe('Upload Transaction Tests', () => {
+describe("Upload Transaction Tests", () => {
   let db: Database;
   let testMember: TestMember;
 
   // Mock S3 client
   const mockS3Client = {
-    send: mock.fn(async () => ({ $metadata: { httpStatusCode: 200 } }))
+    send: mock.fn(async () => ({ $metadata: { httpStatusCode: 200 } })),
   } as unknown as S3Client;
 
   beforeEach(async () => {
     // Create fresh in-memory database for each test
     db = await open({
-      filename: ':memory:',
+      filename: ":memory:",
       driver: sqlite3.Database,
     });
 
     // Enable foreign key constraints
-    await db.exec('PRAGMA foreign_keys = ON;');
+    await db.exec("PRAGMA foreign_keys = ON;");
 
     // Run migrations
     await db.migrate({
-      migrationsPath: './db/migrations',
+      migrationsPath: "./db/migrations",
     });
 
     // Override the global connection
@@ -47,24 +47,24 @@ describe('Upload Transaction Tests', () => {
 
     // Override R2 client with mock
     overrideR2Client(mockS3Client, {
-      endpoint: 'https://test.r2.cloudflarestorage.com',
-      accessKeyId: 'test-key',
-      secretAccessKey: 'test-secret',
-      bucketName: 'test-bucket',
-      publicUrl: 'https://test.example.com'
+      endpoint: "https://test.r2.cloudflarestorage.com",
+      accessKeyId: "test-key",
+      secretAccessKey: "test-secret",
+      bucketName: "test-bucket",
+      publicUrl: "https://test.example.com",
     });
 
     // Create test member
     const memberEmail = `member-${Date.now()}@test.com`;
-    const result = await db.run(
-      'INSERT INTO members (contact_email, display_name) VALUES (?, ?)',
-      [memberEmail, 'Test Member']
-    );
+    const result = await db.run("INSERT INTO members (contact_email, display_name) VALUES (?, ?)", [
+      memberEmail,
+      "Test Member",
+    ]);
 
     testMember = {
       id: result.lastID as number,
-      display_name: 'Test Member',
-      contact_email: memberEmail
+      display_name: "Test Member",
+      contact_email: memberEmail,
     };
   });
 
@@ -76,42 +76,58 @@ describe('Upload Transaction Tests', () => {
 
   // Helper function to create a test submission
   async function createTestSubmission(memberId: number): Promise<number> {
-    const result = await db.run(`
+    const result = await db.run(
+      `
       INSERT INTO submissions (
         member_id, species_class, species_type, species_common_name,
         species_latin_name, reproduction_date, temperature, ph, gh,
         specific_gravity, water_type, witness_verification_status,
         program, submitted_on
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      memberId, 'New World', 'Fish', 'Test Fish', 'Testus fishus',
-      new Date().toISOString(), '75', '7.0', '10', '1.000', 'Fresh',
-      'pending', 'fish', new Date().toISOString()
-    ]);
+    `,
+      [
+        memberId,
+        "New World",
+        "Fish",
+        "Test Fish",
+        "Testus fishus",
+        new Date().toISOString(),
+        "75",
+        "7.0",
+        "10",
+        "1.000",
+        "Fresh",
+        "pending",
+        "fish",
+        new Date().toISOString(),
+      ]
+    );
 
     return result.lastID as number;
   }
 
-  test('should maintain database consistency on transaction failure', async () => {
+  test("should maintain database consistency on transaction failure", async () => {
     const submissionId = await createTestSubmission(testMember.id);
 
     // Add initial images to submission
-    const initialImages: ImageMetadata[] = [{
-      key: 'submissions/1/1/initial.jpg',
-      url: 'https://test.example.com/initial.jpg',
-      size: 1000,
-      uploadedAt: new Date().toISOString(),
-      contentType: 'image/jpeg'
-    }];
+    const initialImages: ImageMetadata[] = [
+      {
+        key: "submissions/1/1/initial.jpg",
+        url: "https://test.example.com/initial.jpg",
+        size: 1000,
+        uploadedAt: new Date().toISOString(),
+        contentType: "image/jpeg",
+      },
+    ];
 
-    await db.run(
-      'UPDATE submissions SET images = ? WHERE id = ?',
-      [JSON.stringify(initialImages), submissionId]
-    );
+    await db.run("UPDATE submissions SET images = ? WHERE id = ?", [
+      JSON.stringify(initialImages),
+      submissionId,
+    ]);
 
     // Verify initial state
     const beforeUpdate = await db.get<TestSubmission>(
-      'SELECT id, member_id, images FROM submissions WHERE id = ?',
+      "SELECT id, member_id, images FROM submissions WHERE id = ?",
       submissionId
     );
     assert.ok(beforeUpdate);
@@ -120,136 +136,143 @@ describe('Upload Transaction Tests', () => {
     // Simulate a transaction that should fail
     // In a real scenario, this would be triggered by database constraints or errors
     try {
-      await db.exec('BEGIN TRANSACTION;');
+      await db.exec("BEGIN TRANSACTION;");
 
       // Try to update with invalid data that violates constraints
-      await db.run('UPDATE submissions SET images = ? WHERE id = ?', [
-        JSON.stringify([...initialImages, { key: 'new.jpg', url: 'test', size: 2000, uploadedAt: new Date().toISOString() }]),
-        submissionId
+      await db.run("UPDATE submissions SET images = ? WHERE id = ?", [
+        JSON.stringify([
+          ...initialImages,
+          { key: "new.jpg", url: "test", size: 2000, uploadedAt: new Date().toISOString() },
+        ]),
+        submissionId,
       ]);
 
       // Force a failure by trying to insert duplicate or invalid data
-      await db.run('INSERT INTO submissions (id) VALUES (?)', [submissionId]); // This should fail
+      await db.run("INSERT INTO submissions (id) VALUES (?)", [submissionId]); // This should fail
 
-      await db.exec('COMMIT;');
-      assert.fail('Transaction should have failed');
+      await db.exec("COMMIT;");
+      assert.fail("Transaction should have failed");
     } catch (error) {
       // Transaction should fail and rollback
-      await db.exec('ROLLBACK;').catch(() => {});
+      await db.exec("ROLLBACK;").catch(() => {});
     }
 
     // Verify that database state was rolled back
     const afterFailedUpdate = await db.get<TestSubmission>(
-      'SELECT id, member_id, images FROM submissions WHERE id = ?',
+      "SELECT id, member_id, images FROM submissions WHERE id = ?",
       submissionId
     );
     assert.ok(afterFailedUpdate);
     assert.strictEqual(afterFailedUpdate.images, JSON.stringify(initialImages));
   });
 
-  test('should atomically update images in transaction', async () => {
+  test("should atomically update images in transaction", async () => {
     const submissionId = await createTestSubmission(testMember.id);
 
     const newImages: ImageMetadata[] = [
       {
-        key: 'submissions/1/1/image1.jpg',
-        url: 'https://test.example.com/image1.jpg',
+        key: "submissions/1/1/image1.jpg",
+        url: "https://test.example.com/image1.jpg",
         size: 1000,
         uploadedAt: new Date().toISOString(),
-        contentType: 'image/jpeg'
+        contentType: "image/jpeg",
       },
       {
-        key: 'submissions/1/1/image2.jpg',
-        url: 'https://test.example.com/image2.jpg',
+        key: "submissions/1/1/image2.jpg",
+        url: "https://test.example.com/image2.jpg",
         size: 2000,
         uploadedAt: new Date().toISOString(),
-        contentType: 'image/jpeg'
-      }
+        contentType: "image/jpeg",
+      },
     ];
 
     // Update images in a transaction
-    await db.exec('BEGIN TRANSACTION;');
+    await db.exec("BEGIN TRANSACTION;");
     try {
-      await db.run(
-        'UPDATE submissions SET images = ? WHERE id = ?',
-        [JSON.stringify(newImages), submissionId]
-      );
-      await db.exec('COMMIT;');
+      await db.run("UPDATE submissions SET images = ? WHERE id = ?", [
+        JSON.stringify(newImages),
+        submissionId,
+      ]);
+      await db.exec("COMMIT;");
     } catch (error) {
-      await db.exec('ROLLBACK;').catch(() => {});
+      await db.exec("ROLLBACK;").catch(() => {});
       throw error;
     }
 
     // Verify images were updated atomically
     const submission = await db.get<TestSubmission>(
-      'SELECT images FROM submissions WHERE id = ?',
+      "SELECT images FROM submissions WHERE id = ?",
       submissionId
     );
 
     assert.ok(submission);
     const storedImages = JSON.parse(submission.images as string) as ImageMetadata[];
     assert.strictEqual(storedImages.length, 2);
-    assert.strictEqual(storedImages[0].key, 'submissions/1/1/image1.jpg');
-    assert.strictEqual(storedImages[1].key, 'submissions/1/1/image2.jpg');
+    assert.strictEqual(storedImages[0].key, "submissions/1/1/image1.jpg");
+    assert.strictEqual(storedImages[1].key, "submissions/1/1/image2.jpg");
   });
 
-  test('should handle concurrent image updates correctly', async () => {
+  test("should handle concurrent image updates correctly", async () => {
     const submissionId = await createTestSubmission(testMember.id);
 
     const image1: ImageMetadata = {
-      key: 'submissions/1/1/concurrent1.jpg',
-      url: 'https://test.example.com/concurrent1.jpg',
+      key: "submissions/1/1/concurrent1.jpg",
+      url: "https://test.example.com/concurrent1.jpg",
       size: 1000,
       uploadedAt: new Date().toISOString(),
-      contentType: 'image/jpeg'
+      contentType: "image/jpeg",
     };
 
     const image2: ImageMetadata = {
-      key: 'submissions/1/1/concurrent2.jpg',
-      url: 'https://test.example.com/concurrent2.jpg',
+      key: "submissions/1/1/concurrent2.jpg",
+      url: "https://test.example.com/concurrent2.jpg",
       size: 2000,
       uploadedAt: new Date().toISOString(),
-      contentType: 'image/jpeg'
+      contentType: "image/jpeg",
     };
 
     // Simulate two sequential updates (SQLite serializes writes)
-    await db.exec('BEGIN TRANSACTION;');
+    await db.exec("BEGIN TRANSACTION;");
     try {
-      const stmt1 = await db.prepare('SELECT images FROM submissions WHERE id = ?');
+      const stmt1 = await db.prepare("SELECT images FROM submissions WHERE id = ?");
       const existing1 = await stmt1.get<TestSubmission>(submissionId);
       await stmt1.finalize();
 
-      const existingImages1 = existing1?.images ? JSON.parse(existing1.images) as ImageMetadata[] : [];
-      await db.run(
-        'UPDATE submissions SET images = ? WHERE id = ?',
-        [JSON.stringify([...existingImages1, image1]), submissionId]
-      );
-      await db.exec('COMMIT;');
+      const existingImages1 = existing1?.images
+        ? (JSON.parse(existing1.images) as ImageMetadata[])
+        : [];
+      await db.run("UPDATE submissions SET images = ? WHERE id = ?", [
+        JSON.stringify([...existingImages1, image1]),
+        submissionId,
+      ]);
+      await db.exec("COMMIT;");
     } catch (error) {
-      await db.exec('ROLLBACK;').catch(() => {});
+      await db.exec("ROLLBACK;").catch(() => {});
       throw error;
     }
 
-    await db.exec('BEGIN TRANSACTION;');
+    await db.exec("BEGIN TRANSACTION;");
     try {
-      const stmt2 = await db.prepare('SELECT images FROM submissions WHERE id = ?');
+      const stmt2 = await db.prepare("SELECT images FROM submissions WHERE id = ?");
       const existing2 = await stmt2.get<TestSubmission>(submissionId);
       await stmt2.finalize();
 
-      const existingImages2 = existing2?.images ? JSON.parse(existing2.images) as ImageMetadata[] : [];
-      await db.run(
-        'UPDATE submissions SET images = ? WHERE id = ?',
-        [JSON.stringify([...existingImages2, image2]), submissionId]
-      );
-      await db.exec('COMMIT;');
+      const existingImages2 = existing2?.images
+        ? (JSON.parse(existing2.images) as ImageMetadata[])
+        : [];
+      await db.run("UPDATE submissions SET images = ? WHERE id = ?", [
+        JSON.stringify([...existingImages2, image2]),
+        submissionId,
+      ]);
+      await db.exec("COMMIT;");
     } catch (error) {
-      await db.exec('ROLLBACK;').catch(() => {});
+      await db.exec("ROLLBACK;").catch(() => {});
       throw error;
     }
 
     // Verify both images are present
     const submission = await db.get<TestSubmission>(
-      'SELECT images FROM submissions WHERE id = ?',
+      "SELECT images FROM submissions WHERE id = ?",
       submissionId
     );
 
@@ -258,93 +281,97 @@ describe('Upload Transaction Tests', () => {
     assert.strictEqual(storedImages.length, 2);
   });
 
-  test('should handle deletion with transaction', async () => {
+  test("should handle deletion with transaction", async () => {
     const submissionId = await createTestSubmission(testMember.id);
 
     const images: ImageMetadata[] = [
       {
-        key: 'submissions/1/1/delete1.jpg',
-        url: 'https://test.example.com/delete1.jpg',
+        key: "submissions/1/1/delete1.jpg",
+        url: "https://test.example.com/delete1.jpg",
         size: 1000,
         uploadedAt: new Date().toISOString(),
-        contentType: 'image/jpeg'
+        contentType: "image/jpeg",
       },
       {
-        key: 'submissions/1/1/delete2.jpg',
-        url: 'https://test.example.com/delete2.jpg',
+        key: "submissions/1/1/delete2.jpg",
+        url: "https://test.example.com/delete2.jpg",
         size: 2000,
         uploadedAt: new Date().toISOString(),
-        contentType: 'image/jpeg'
-      }
+        contentType: "image/jpeg",
+      },
     ];
 
-    await db.run(
-      'UPDATE submissions SET images = ? WHERE id = ?',
-      [JSON.stringify(images), submissionId]
-    );
+    await db.run("UPDATE submissions SET images = ? WHERE id = ?", [
+      JSON.stringify(images),
+      submissionId,
+    ]);
 
     // Delete one image in a transaction
-    const keyToDelete = 'submissions/1/1/delete1.jpg';
-    await db.exec('BEGIN TRANSACTION;');
+    const keyToDelete = "submissions/1/1/delete1.jpg";
+    await db.exec("BEGIN TRANSACTION;");
     try {
-      const stmt = await db.prepare('SELECT images FROM submissions WHERE id = ?');
+      const stmt = await db.prepare("SELECT images FROM submissions WHERE id = ?");
       const submission = await stmt.get<TestSubmission>(submissionId);
       await stmt.finalize();
 
-      const existingImages = submission?.images ? JSON.parse(submission.images) as ImageMetadata[] : [];
-      const updatedImages = existingImages.filter(img => img.key !== keyToDelete);
+      const existingImages = submission?.images
+        ? (JSON.parse(submission.images) as ImageMetadata[])
+        : [];
+      const updatedImages = existingImages.filter((img) => img.key !== keyToDelete);
 
-      await db.run(
-        'UPDATE submissions SET images = ? WHERE id = ?',
-        [JSON.stringify(updatedImages), submissionId]
-      );
-      await db.exec('COMMIT;');
+      await db.run("UPDATE submissions SET images = ? WHERE id = ?", [
+        JSON.stringify(updatedImages),
+        submissionId,
+      ]);
+      await db.exec("COMMIT;");
     } catch (error) {
-      await db.exec('ROLLBACK;').catch(() => {});
+      await db.exec("ROLLBACK;").catch(() => {});
       throw error;
     }
 
     // Verify only one image remains
     const submission = await db.get<TestSubmission>(
-      'SELECT images FROM submissions WHERE id = ?',
+      "SELECT images FROM submissions WHERE id = ?",
       submissionId
     );
 
     assert.ok(submission);
     const storedImages = JSON.parse(submission.images as string) as ImageMetadata[];
     assert.strictEqual(storedImages.length, 1);
-    assert.strictEqual(storedImages[0].key, 'submissions/1/1/delete2.jpg');
+    assert.strictEqual(storedImages[0].key, "submissions/1/1/delete2.jpg");
   });
 
-  test('should verify ownership before deletion', async () => {
+  test("should verify ownership before deletion", async () => {
     const submissionId = await createTestSubmission(testMember.id);
 
     // Create another member
-    const result = await db.run(
-      'INSERT INTO members (contact_email, display_name) VALUES (?, ?)',
-      ['other@test.com', 'Other Member']
-    );
+    const result = await db.run("INSERT INTO members (contact_email, display_name) VALUES (?, ?)", [
+      "other@test.com",
+      "Other Member",
+    ]);
     const otherMemberId = result.lastID as number;
 
-    const images: ImageMetadata[] = [{
-      key: 'submissions/1/1/protected.jpg',
-      url: 'https://test.example.com/protected.jpg',
-      size: 1000,
-      uploadedAt: new Date().toISOString(),
-      contentType: 'image/jpeg'
-    }];
+    const images: ImageMetadata[] = [
+      {
+        key: "submissions/1/1/protected.jpg",
+        url: "https://test.example.com/protected.jpg",
+        size: 1000,
+        uploadedAt: new Date().toISOString(),
+        contentType: "image/jpeg",
+      },
+    ];
 
-    await db.run(
-      'UPDATE submissions SET images = ? WHERE id = ?',
-      [JSON.stringify(images), submissionId]
-    );
+    await db.run("UPDATE submissions SET images = ? WHERE id = ?", [
+      JSON.stringify(images),
+      submissionId,
+    ]);
 
     // Try to access image as wrong user
     const stmt = await db.prepare(`
       SELECT id, images FROM submissions
       WHERE member_id = ? AND images LIKE ?
     `);
-    const wrongUserSubmission = await stmt.get<TestSubmission>(otherMemberId, '%protected.jpg%');
+    const wrongUserSubmission = await stmt.get<TestSubmission>(otherMemberId, "%protected.jpg%");
     await stmt.finalize();
 
     // Should not find submission owned by other user
@@ -355,30 +382,30 @@ describe('Upload Transaction Tests', () => {
       SELECT id, images FROM submissions
       WHERE member_id = ? AND images LIKE ?
     `);
-    const correctUserSubmission = await stmt2.get<TestSubmission>(testMember.id, '%protected.jpg%');
+    const correctUserSubmission = await stmt2.get<TestSubmission>(testMember.id, "%protected.jpg%");
     await stmt2.finalize();
 
     assert.ok(correctUserSubmission);
     assert.strictEqual(correctUserSubmission.id, submissionId);
   });
 
-  test('should cleanup R2 files on database transaction failure', async () => {
+  test("should cleanup R2 files on database transaction failure", async () => {
     const submissionId = await createTestSubmission(testMember.id);
 
     // Track S3 delete calls
     const deletedKeys: string[] = [];
     mockS3Client.send = mock.fn(async (command: any) => {
       // Track delete operations
-      if (command.constructor.name === 'DeleteObjectCommand') {
+      if (command.constructor.name === "DeleteObjectCommand") {
         deletedKeys.push(command.input.Key);
       }
       return { $metadata: { httpStatusCode: 200 } };
     }) as any;
 
     const uploadedKeys = [
-      'submissions/1/1/fail-original.jpg',
-      'submissions/1/1/fail-medium.jpg',
-      'submissions/1/1/fail-thumb.jpg'
+      "submissions/1/1/fail-original.jpg",
+      "submissions/1/1/fail-medium.jpg",
+      "submissions/1/1/fail-thumb.jpg",
     ];
 
     // Simulate upload then database failure
@@ -386,25 +413,27 @@ describe('Upload Transaction Tests', () => {
     // Here we verify the cleanup mechanism works
 
     try {
-      await db.exec('BEGIN TRANSACTION;');
+      await db.exec("BEGIN TRANSACTION;");
 
       // Simulate trying to update with invalid constraint
-      await db.run('UPDATE submissions SET images = ? WHERE id = ?', [
-        JSON.stringify([{ key: uploadedKeys[0], url: 'test', size: 1000, uploadedAt: new Date().toISOString() }]),
-        submissionId
+      await db.run("UPDATE submissions SET images = ? WHERE id = ?", [
+        JSON.stringify([
+          { key: uploadedKeys[0], url: "test", size: 1000, uploadedAt: new Date().toISOString() },
+        ]),
+        submissionId,
       ]);
 
       // Force failure
-      await db.run('INSERT INTO submissions (id) VALUES (?)', [submissionId]);
+      await db.run("INSERT INTO submissions (id) VALUES (?)", [submissionId]);
 
-      await db.exec('COMMIT;');
-      assert.fail('Transaction should have failed');
+      await db.exec("COMMIT;");
+      assert.fail("Transaction should have failed");
     } catch (error) {
-      await db.exec('ROLLBACK;').catch(() => {});
+      await db.exec("ROLLBACK;").catch(() => {});
 
       // In real code, cleanup would happen here
       // We're verifying the mechanism exists
-      const { deleteImage } = await import('../utils/r2-client');
+      const { deleteImage } = await import("../utils/r2-client");
 
       // Simulate cleanup
       for (const key of uploadedKeys) {
@@ -413,6 +442,6 @@ describe('Upload Transaction Tests', () => {
     }
 
     // Verify cleanup was attempted for all keys
-    assert.ok(deletedKeys.length >= 3, 'Should attempt to delete all uploaded files');
+    assert.ok(deletedKeys.length >= 3, "Should attempt to delete all uploaded files");
   });
 });

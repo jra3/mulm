@@ -52,7 +52,7 @@ export function validatePasswordComplexity(password: string): PasswordValidation
 
   return {
     valid: errors.length === 0,
-    errors
+    errors,
   };
 }
 
@@ -78,22 +78,18 @@ export function getPasswordRequirementsMessage(): string {
  * Get detailed password requirements for UI
  */
 export function getPasswordRequirements(): Array<{ requirement: string; met?: boolean }> {
-  const requirements = [
-    { requirement: `At least ${MIN_LENGTH} characters` }
-  ];
+  const requirements = [{ requirement: `At least ${MIN_LENGTH} characters` }];
 
   if (PASSWORD_COMPLEXITY_LEVEL >= 2) {
     requirements.push(
-      { requirement: 'One lowercase letter (a-z)' },
-      { requirement: 'One uppercase letter (A-Z)' },
-      { requirement: 'One number (0-9)' }
+      { requirement: "One lowercase letter (a-z)" },
+      { requirement: "One uppercase letter (A-Z)" },
+      { requirement: "One number (0-9)" }
     );
   }
 
   if (PASSWORD_COMPLEXITY_LEVEL >= 3) {
-    requirements.push(
-      { requirement: 'One special character (!@#$...)' }
-    );
+    requirements.push({ requirement: "One special character (!@#$...)" });
   }
 
   return requirements;

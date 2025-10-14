@@ -49,10 +49,10 @@ export interface ApiErrorResponse {
 /**
  * Union type representing all possible species search API responses
  */
-export type SpeciesSearchApiResponse = 
-  | SpeciesTypeaheadItem[]  // When using 'q' parameter
-  | SpeciesExplorerResponse  // When using 'search' parameter
-  | ApiErrorResponse;        // Error case
+export type SpeciesSearchApiResponse =
+  | SpeciesTypeaheadItem[] // When using 'q' parameter
+  | SpeciesExplorerResponse // When using 'search' parameter
+  | ApiErrorResponse; // Error case
 
 // Member Search API Response Types
 
@@ -71,6 +71,4 @@ export interface MemberTypeaheadItem {
 /**
  * Union type for member search API responses
  */
-export type MemberSearchApiResponse = 
-  | MemberTypeaheadItem[]
-  | ApiErrorResponse;
+export type MemberSearchApiResponse = MemberTypeaheadItem[] | ApiErrorResponse;

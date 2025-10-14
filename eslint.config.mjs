@@ -1,6 +1,7 @@
 import globals from "globals";
 import pluginJs from "@eslint/js";
 import tseslint from "typescript-eslint";
+import prettier from "eslint-config-prettier";
 
 
 /** @type {import('eslint').Linter.Config[]} */
@@ -20,9 +21,9 @@ export default [
 		},
 	},
 	{rules: {
-		"indent": ["error", 2, { "SwitchCase": 1 }],
 		"@typescript-eslint/no-explicit-any": "warn",
 		"@typescript-eslint/no-floating-promises": "error",
 		"@typescript-eslint/no-misused-promises": "error"
-	}}
+	}},
+	prettier, // Must be last to disable conflicting formatting rules
 ];

@@ -9,10 +9,7 @@ const ATTEMPT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
  * Record a failed login attempt and lock account if threshold exceeded
  * @returns true if account is now locked, false otherwise
  */
-export async function recordFailedAttempt(
-  memberId: number,
-  ipAddress: string
-): Promise<boolean> {
+export async function recordFailedAttempt(memberId: number, ipAddress: string): Promise<boolean> {
   return await withTransaction(async (db) => {
     // Record the failed attempt
     const insertStmt = await db.prepare(`
@@ -43,13 +40,13 @@ export async function recordFailedAttempt(
     // Lock account if threshold exceeded
     if (attemptCount >= MAX_FAILED_ATTEMPTS) {
       const lockedUntil = new Date(Date.now() + LOCKOUT_DURATION_MS).toISOString();
-      const updateStmt = await db.prepare('UPDATE members SET locked_until = ? WHERE id = ?');
+      const updateStmt = await db.prepare("UPDATE members SET locked_until = ? WHERE id = ?");
       try {
         await updateStmt.run(lockedUntil, memberId);
-        logger.warn('Account locked due to failed login attempts', {
+        logger.warn("Account locked due to failed login attempts", {
           memberId,
           attemptCount,
-          lockedUntil
+          lockedUntil,
         });
       } finally {
         await updateStmt.finalize();
@@ -66,7 +63,7 @@ export async function recordFailedAttempt(
  */
 export async function isAccountLocked(memberId: number): Promise<boolean> {
   const [member] = await query<{ locked_until: string | null }>(
-    'SELECT locked_until FROM members WHERE id = ?',
+    "SELECT locked_until FROM members WHERE id = ?",
     [memberId]
   );
 
@@ -93,7 +90,7 @@ export async function isAccountLocked(memberId: number): Promise<boolean> {
 export async function clearFailedAttempts(memberId: number): Promise<void> {
   await withTransaction(async (db) => {
     // Delete failed attempts
-    const deleteStmt = await db.prepare('DELETE FROM failed_login_attempts WHERE member_id = ?');
+    const deleteStmt = await db.prepare("DELETE FROM failed_login_attempts WHERE member_id = ?");
     try {
       await deleteStmt.run(memberId);
     } finally {
@@ -101,7 +98,7 @@ export async function clearFailedAttempts(memberId: number): Promise<void> {
     }
 
     // Clear lockout
-    const updateStmt = await db.prepare('UPDATE members SET locked_until = NULL WHERE id = ?');
+    const updateStmt = await db.prepare("UPDATE members SET locked_until = NULL WHERE id = ?");
     try {
       await updateStmt.run(memberId);
     } finally {
@@ -109,7 +106,7 @@ export async function clearFailedAttempts(memberId: number): Promise<void> {
     }
   });
 
-  logger.info('Cleared failed login attempts', { memberId });
+  logger.info("Cleared failed login attempts", { memberId });
 }
 
 /**
@@ -118,7 +115,7 @@ export async function clearFailedAttempts(memberId: number): Promise<void> {
  */
 async function clearLockout(memberId: number): Promise<void> {
   await withTransaction(async (db) => {
-    const stmt = await db.prepare('UPDATE members SET locked_until = NULL WHERE id = ?');
+    const stmt = await db.prepare("UPDATE members SET locked_until = NULL WHERE id = ?");
     try {
       await stmt.run(memberId);
     } finally {
@@ -133,7 +130,7 @@ async function clearLockout(memberId: number): Promise<void> {
  */
 export async function getRemainingLockoutTime(memberId: number): Promise<number> {
   const [member] = await query<{ locked_until: string | null }>(
-    'SELECT locked_until FROM members WHERE id = ?',
+    "SELECT locked_until FROM members WHERE id = ?",
     [memberId]
   );
 

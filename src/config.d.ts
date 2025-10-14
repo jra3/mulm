@@ -1,5 +1,5 @@
 // Type definition for config.json
-declare module '@/config.json' {
+declare module "@/config.json" {
   interface Config {
     databaseFile: string;
     domain: string;
@@ -23,12 +23,12 @@ declare module '@/config.json' {
   export default config;
 }
 
-declare module './config.json' {
-  import type config from '@/config.json';
+declare module "./config.json" {
+  import type config from "@/config.json";
   export default config;
 }
 
-declare module '../config.json' {
-  import type config from '@/config.json';
+declare module "../config.json" {
+  import type config from "@/config.json";
   export default config;
 }

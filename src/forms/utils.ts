@@ -1,9 +1,9 @@
-import * as z from "zod"
+import * as z from "zod";
 
-export function validateFormResult<T> (
+export function validateFormResult<T>(
   parsed: z.SafeParseReturnType<unknown, T>,
   errors: Map<string, string>,
-  onError?: () => void,
+  onError?: () => void
 ): parsed is z.SafeParseSuccess<T> {
   if (parsed.success) {
     return true;
@@ -23,9 +23,10 @@ export function extractValid<T extends z.ZodRawShape>(
 
   for (const key in schema.shape) {
     const subSchema = schema.shape[key];
-    const value = data && typeof data === 'object' && key in data
-      ? (data as Record<string, unknown>)[key]
-      : undefined;
+    const value =
+      data && typeof data === "object" && key in data
+        ? (data as Record<string, unknown>)[key]
+        : undefined;
     const parsed = subSchema.safeParse(value);
     if (parsed.success) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -35,20 +36,16 @@ export function extractValid<T extends z.ZodRawShape>(
   return result;
 }
 
-
-export const multiSelect = z
-  .union([z.string(), z.array(z.string())])
-  .transform((val) => {
-    const arr = typeof val === "string" ? [val] : val;
-    return arr;
-  });
-
+export const multiSelect = z.union([z.string(), z.array(z.string())]).transform((val) => {
+  const arr = typeof val === "string" ? [val] : val;
+  return arr;
+});
 
 // Reusable schema helpers for common patterns
 export const trimmedString = (maxLength?: number, message?: string) => {
   const baseSchema = z
     .any()
-    .transform((val) => val != null ? String(val).trim() : undefined)
+    .transform((val) => (val != null ? String(val).trim() : undefined))
     .transform((val) => val || undefined);
 
   if (maxLength) {
@@ -117,7 +114,7 @@ export function validateQueryWithFallback<T extends z.ZodRawShape>(
       success: true,
       data: validation.data,
       errors: [],
-      isPartial: false
+      isPartial: false,
     };
   }
 
@@ -129,12 +126,12 @@ export function validateQueryWithFallback<T extends z.ZodRawShape>(
   const dataWithDefaults = schema.parse({});
   const finalData = { ...dataWithDefaults, ...partialData };
 
-  const errors = validation.error.issues.map(issue => issue.message);
+  const errors = validation.error.issues.map((issue) => issue.message);
 
   return {
     success: false,
     data: finalData,
     errors,
-    isPartial: true
+    isPartial: true,
   };
 }

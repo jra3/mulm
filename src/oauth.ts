@@ -9,11 +9,11 @@ import { generateRandomCode } from "./auth";
  */
 export function setOAuthStateCookie(res: Response): string {
   const state = generateRandomCode(32);
-  res.cookie('oauth_state', state, {
+  res.cookie("oauth_state", state, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/oauth/google', // Only sent to OAuth callback
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/oauth/google", // Only sent to OAuth callback
     maxAge: 10 * 60 * 1000, // 10 minutes
   });
   return state;
@@ -46,10 +46,10 @@ export async function translateGoogleOAuthCode(code: string) {
 }
 
 export async function getGoogleUser(
-  accessToken: string,
+  accessToken: string
 ): Promise<{ sub: string; name: string; email: string }> {
   const resp = await fetch(
-    `https://www.googleapis.com/oauth2/v3/userinfo?access_token=${accessToken}`,
+    `https://www.googleapis.com/oauth2/v3/userinfo?access_token=${accessToken}`
   );
   if (!resp.ok) {
     throw new Error("Failed to fetch user from Google");

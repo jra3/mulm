@@ -1,17 +1,13 @@
 export const minYear = 2015;
 
 export const programs = ["fish", "plant", "coral"];
-type LevelRules = [
-	name: string,
-	points: number,
-	extraRules?: (tally: PointsTally) => boolean,
-];
+type LevelRules = [name: string, points: number, extraRules?: (tally: PointsTally) => boolean];
 type PointsTally = {
-	total: number;
-	5: number;
-	10: number;
-	15: number;
-	20: number;
+  total: number;
+  5: number;
+  10: number;
+  15: number;
+  20: number;
 };
 
 /**
@@ -67,12 +63,7 @@ export const levelRules: Record<string, LevelRules[]> = {
         // At least 30 points must be from each of the 5, 10, 15 point
         // categories, 40 points must be from a 20 point category.
         // The remaining points could be obtained from any category.
-        return (
-          tally[5] >= 30 &&
-					tally[10] >= 30 &&
-					tally[15] >= 30 &&
-					tally[20] >= 40
-        );
+        return tally[5] >= 30 && tally[10] >= 30 && tally[15] >= 30 && tally[20] >= 40;
       },
     ],
     ["Grand Master Breeder", 500],
@@ -124,12 +115,7 @@ export const levelRules: Record<string, LevelRules[]> = {
       (tally) => {
         // At least 30 points must be from each of the 5, 10, 15 point categories; a minimum of
         // 40 points must be from a 20 point category. The remaining points can be from any category.
-        return (
-          tally[5] >= 30 &&
-					tally[10] >= 30 &&
-					tally[15] >= 30 &&
-					tally[20] >= 40
-        );
+        return tally[5] >= 30 && tally[10] >= 30 && tally[15] >= 30 && tally[20] >= 40;
       },
     ],
     ["Master Aquatic Horticulturist", 500],

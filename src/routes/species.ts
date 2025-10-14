@@ -5,7 +5,7 @@ import {
   getSpeciesDetail,
   getBreedersForSpecies,
   getFilterOptions,
-  SpeciesFilters
+  SpeciesFilters,
 } from "@/db/species";
 import { getClassOptions } from "@/forms/submission";
 import { speciesExplorerQuerySchema } from "@/forms/species-explorer";
@@ -17,22 +17,22 @@ export async function explorer(req: MulmRequest, res: Response) {
   const isLoggedIn = Boolean(viewer);
 
   const validation = validateQueryWithFallback(
-    speciesExplorerQuerySchema, 
-    req.query, 
-    'Species explorer query'
+    speciesExplorerQuerySchema,
+    req.query,
+    "Species explorer query"
   );
-	
+
   const filters: SpeciesFilters = {
     species_type: validation.data.species_type,
     species_class: validation.data.species_class,
     search: validation.data.search,
-    sort: validation.data.sort
+    sort: validation.data.sort,
   };
 
   try {
     const [species, filterOptions] = await Promise.all([
       getSpeciesForExplorer(filters),
-      getFilterOptions()
+      getFilterOptions(),
     ]);
 
     const classOptions = filters.species_type ? getClassOptions(filters.species_type) : [];
@@ -45,14 +45,14 @@ export async function explorer(req: MulmRequest, res: Response) {
       filterOptions,
       classOptions,
       totalSpecies: species.length,
-      validationErrors: validation.errors
+      validationErrors: validation.errors,
     });
   } catch (error) {
     logger.error("Error loading species explorer", error);
     res.status(500).render("error", {
       title: "Error - BAS BAP/HAP Portal",
       isLoggedIn,
-      message: "Unable to load species data"
+      message: "Unable to load species data",
     });
   }
 }
@@ -66,7 +66,7 @@ export async function detail(req: MulmRequest, res: Response) {
     res.status(404).render("error", {
       title: "Species Not Found - BAS BAP/HAP Portal",
       isLoggedIn,
-      message: "Species not found"
+      message: "Species not found",
     });
     return;
   }
@@ -74,20 +74,20 @@ export async function detail(req: MulmRequest, res: Response) {
   try {
     const [speciesDetail, breeders] = await Promise.all([
       getSpeciesDetail(groupId),
-      getBreedersForSpecies(groupId)
+      getBreedersForSpecies(groupId),
     ]);
 
     if (!speciesDetail) {
       res.status(404).render("error", {
         title: "Species Not Found - BAS BAP/HAP Portal",
         isLoggedIn,
-        message: "Species not found"
+        message: "Species not found",
       });
       return;
     }
 
     const displayName = `${speciesDetail.canonical_genus} ${speciesDetail.canonical_species_name}`;
-		
+
     res.render("species/detail", {
       title: `${displayName} - Species Explorer`,
       isLoggedIn,
@@ -95,15 +95,14 @@ export async function detail(req: MulmRequest, res: Response) {
       breeders,
       displayName,
       totalBreeds: breeders.reduce((sum, breeder) => sum + breeder.breed_count, 0),
-      totalBreeders: breeders.length
+      totalBreeders: breeders.length,
     });
   } catch (error) {
     logger.error("Error loading species detail", error);
     res.status(500).render("error", {
       title: "Error - BAS BAP/HAP Portal",
       isLoggedIn,
-      message: "Unable to load species data"
+      message: "Unable to load species data",
     });
   }
 }
-

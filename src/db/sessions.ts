@@ -3,11 +3,16 @@ import { withTransaction } from "./conn";
 /**
  * Regenerate session (delete old, create new) - for session fixation protection
  */
-export async function regenerateSessionInDB(oldSessionId: string | undefined, newSessionId: string, memberId: number, expiresOn: string): Promise<void> {
+export async function regenerateSessionInDB(
+  oldSessionId: string | undefined,
+  newSessionId: string,
+  memberId: number,
+  expiresOn: string
+): Promise<void> {
   await withTransaction(async (db) => {
     // Delete old session if it exists
-    if (oldSessionId && oldSessionId !== 'undefined') {
-      const deleteStmt = await db.prepare('DELETE FROM sessions WHERE session_id = ?');
+    if (oldSessionId && oldSessionId !== "undefined") {
+      const deleteStmt = await db.prepare("DELETE FROM sessions WHERE session_id = ?");
       try {
         await deleteStmt.run(oldSessionId);
       } finally {

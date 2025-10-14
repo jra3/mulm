@@ -9,12 +9,12 @@
  * Output: all_species_export.csv
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
-import Papa from 'papaparse';
-import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
-import config from '../src/config.json';
+import * as fs from "fs";
+import * as path from "path";
+import Papa from "papaparse";
+import sqlite3 from "sqlite3";
+import { open } from "sqlite";
+import config from "../src/config.json";
 
 interface SpeciesRow {
   group_id: number;
@@ -46,7 +46,7 @@ interface ExportRow {
 }
 
 async function main() {
-  console.log('Opening database...');
+  console.log("Opening database...");
 
   // Open database connection
   const db = await open({
@@ -55,7 +55,7 @@ async function main() {
     mode: sqlite3.OPEN_READONLY,
   });
 
-  console.log('Querying species database...');
+  console.log("Querying species database...");
 
   // Query all species with their synonyms
   const stmt = await db.prepare(`
@@ -90,11 +90,11 @@ async function main() {
   // Transform to export format
   const exportRows: ExportRow[] = species.map((row) => {
     // Parse external references JSON
-    let externalRefs = '';
+    let externalRefs = "";
     if (row.external_references) {
       try {
         const refs = JSON.parse(row.external_references) as string[];
-        externalRefs = refs.join(', ');
+        externalRefs = refs.join(", ");
       } catch {
         // Ignore parse errors
       }
@@ -107,10 +107,10 @@ async function main() {
       canonical_genus: row.canonical_genus,
       canonical_species_name: row.canonical_species_name,
       scientific_name: `${row.canonical_genus} ${row.canonical_species_name}`,
-      common_names: row.common_names || '',
-      scientific_names: row.scientific_names || '',
-      base_points: row.base_points !== null ? String(row.base_points) : '',
-      is_cares_species: row.is_cares_species === 1 ? 'YES' : 'NO',
+      common_names: row.common_names || "",
+      scientific_names: row.scientific_names || "",
+      base_points: row.base_points !== null ? String(row.base_points) : "",
+      is_cares_species: row.is_cares_species === 1 ? "YES" : "NO",
       external_references: externalRefs,
       synonym_count: row.synonym_count,
     };
@@ -120,24 +120,24 @@ async function main() {
   const csv = Papa.unparse(exportRows, {
     header: true,
     columns: [
-      'group_id',
-      'species_type',
-      'program_class',
-      'canonical_genus',
-      'canonical_species_name',
-      'scientific_name',
-      'common_names',
-      'scientific_names',
-      'base_points',
-      'is_cares_species',
-      'external_references',
-      'synonym_count',
+      "group_id",
+      "species_type",
+      "program_class",
+      "canonical_genus",
+      "canonical_species_name",
+      "scientific_name",
+      "common_names",
+      "scientific_names",
+      "base_points",
+      "is_cares_species",
+      "external_references",
+      "synonym_count",
     ],
   });
 
   // Write to file
-  const outputPath = path.join(process.cwd(), 'all_species_export.csv');
-  fs.writeFileSync(outputPath, csv, 'utf-8');
+  const outputPath = path.join(process.cwd(), "all_species_export.csv");
+  fs.writeFileSync(outputPath, csv, "utf-8");
 
   console.log(`\n✓ CSV exported to: ${outputPath}`);
   console.log(`\nStatistics:`);
@@ -152,10 +152,7 @@ async function main() {
     byType.set(row.species_type, (byType.get(row.species_type) || 0) + 1);
 
     if (row.base_points !== null) {
-      byTypeWithPoints.set(
-        row.species_type,
-        (byTypeWithPoints.get(row.species_type) || 0) + 1
-      );
+      byTypeWithPoints.set(row.species_type, (byTypeWithPoints.get(row.species_type) || 0) + 1);
     }
 
     if (row.is_cares_species === 1) {
@@ -163,13 +160,11 @@ async function main() {
     }
   }
 
-  console.log('\nBy Species Type:');
+  console.log("\nBy Species Type:");
   for (const [type, count] of Array.from(byType.entries()).sort((a, b) => b[1] - a[1])) {
     const withPoints = byTypeWithPoints.get(type) || 0;
     const caresCount = byTypeCares.get(type) || 0;
-    console.log(
-      `  ${type}: ${count} total, ${withPoints} with points, ${caresCount} CARES`
-    );
+    console.log(`  ${type}: ${count} total, ${withPoints} with points, ${caresCount} CARES`);
   }
 
   // Count by program class (top 10)
@@ -178,7 +173,7 @@ async function main() {
     byClass.set(row.program_class, (byClass.get(row.program_class) || 0) + 1);
   }
 
-  console.log('\nTop 10 Program Classes:');
+  console.log("\nTop 10 Program Classes:");
   const sortedClasses = Array.from(byClass.entries()).sort((a, b) => b[1] - a[1]);
   for (const [programClass, count] of sortedClasses.slice(0, 10)) {
     console.log(`  ${programClass}: ${count}`);
@@ -191,8 +186,12 @@ async function main() {
   const totalSynonyms = species.reduce((sum, s) => sum + s.synonym_count, 0);
 
   console.log(`\nOverall Statistics:`);
-  console.log(`  Species with points: ${withPoints} (${((withPoints / species.length) * 100).toFixed(1)}%)`);
-  console.log(`  Species without points: ${withoutPoints} (${((withoutPoints / species.length) * 100).toFixed(1)}%)`);
+  console.log(
+    `  Species with points: ${withPoints} (${((withPoints / species.length) * 100).toFixed(1)}%)`
+  );
+  console.log(
+    `  Species without points: ${withoutPoints} (${((withoutPoints / species.length) * 100).toFixed(1)}%)`
+  );
   console.log(`  CARES species: ${caresTotal}`);
   console.log(`  Total name variants: ${totalSynonyms}`);
   console.log(`  Average variants per species: ${(totalSynonyms / species.length).toFixed(1)}`);
@@ -201,6 +200,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error('Error:', error);
+  console.error("Error:", error);
   process.exit(1);
 });

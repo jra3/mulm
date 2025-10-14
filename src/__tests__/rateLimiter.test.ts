@@ -1,20 +1,20 @@
-import { describe, test, beforeEach } from 'node:test';
-import assert from 'node:assert';
-import express, { Request, Response } from 'express';
-import request from 'supertest';
-import rateLimit, { Options } from 'express-rate-limit';
-import { MulmRequest } from '../sessions';
+import { describe, test, beforeEach } from "node:test";
+import assert from "node:assert";
+import express, { Request, Response } from "express";
+import request from "supertest";
+import rateLimit, { Options } from "express-rate-limit";
+import { MulmRequest } from "../sessions";
 
 // Create rate limiters with test configuration
 const createTestRateLimiter = (options: Partial<Options>) => {
   return rateLimit({
     store: undefined, // Use default memory store
     validate: false, // Disable validation in tests to avoid IPv6 warnings
-    ...options as Options // Spread options last so they can override defaults
+    ...(options as Options), // Spread options last so they can override defaults
   });
 };
 
-describe('Rate Limiting Middleware', () => {
+describe("Rate Limiting Middleware", () => {
   let app: express.Application;
   let uploadRateLimiter: express.RequestHandler;
   let deleteRateLimiter: express.RequestHandler;
@@ -23,7 +23,7 @@ describe('Rate Limiting Middleware', () => {
 
   beforeEach(() => {
     app = express();
-    app.set('trust proxy', true); // Trust x-forwarded-for headers
+    app.set("trust proxy", true); // Trust x-forwarded-for headers
 
     // Create fresh rate limiters for each test
     uploadRateLimiter = createTestRateLimiter({
@@ -32,15 +32,16 @@ describe('Rate Limiting Middleware', () => {
       standardHeaders: true,
       legacyHeaders: false,
       keyGenerator: (req: MulmRequest) => {
-        return req.viewer?.id?.toString() || req.ip || 'test';
+        return req.viewer?.id?.toString() || req.ip || "test";
       },
       handler: (_req: Request, res: Response) => {
         res.status(429).json({
-          error: 'Too many upload requests',
-          message: 'Please wait a moment before uploading more images. You can upload up to 10 images per minute.',
-          retryAfter: res.getHeader('Retry-After')
+          error: "Too many upload requests",
+          message:
+            "Please wait a moment before uploading more images. You can upload up to 10 images per minute.",
+          retryAfter: res.getHeader("Retry-After"),
         });
-      }
+      },
     });
 
     deleteRateLimiter = createTestRateLimiter({
@@ -49,15 +50,15 @@ describe('Rate Limiting Middleware', () => {
       standardHeaders: true,
       legacyHeaders: false,
       keyGenerator: (req: MulmRequest) => {
-        return req.viewer?.id?.toString() || req.ip || 'test';
+        return req.viewer?.id?.toString() || req.ip || "test";
       },
       handler: (_req: Request, res: Response) => {
         res.status(429).json({
-          error: 'Too many delete requests',
-          message: 'Please wait before deleting more images.',
-          retryAfter: res.getHeader('Retry-After')
+          error: "Too many delete requests",
+          message: "Please wait before deleting more images.",
+          retryAfter: res.getHeader("Retry-After"),
         });
-      }
+      },
     });
 
     progressRateLimiter = createTestRateLimiter({
@@ -67,12 +68,12 @@ describe('Rate Limiting Middleware', () => {
       legacyHeaders: false,
       keyGenerator: (req: MulmRequest) => {
         const uploadId = req.params.uploadId;
-        const userKey = req.viewer?.id?.toString() || req.ip || 'test';
+        const userKey = req.viewer?.id?.toString() || req.ip || "test";
         return `${uploadId}:${userKey}`;
       },
       handler: (_req: Request, res: Response) => {
         res.status(429).end();
-      }
+      },
     });
 
     strictUploadLimiter = createTestRateLimiter({
@@ -80,285 +81,252 @@ describe('Rate Limiting Middleware', () => {
       max: 3,
       standardHeaders: true,
       legacyHeaders: false,
-      keyGenerator: (req: Request) => req.ip || 'test',
+      keyGenerator: (req: Request) => req.ip || "test",
       handler: (_req: Request, res: Response) => {
         res.status(429).json({
-          error: 'Too many requests',
-          message: 'Please sign in to upload more images.'
+          error: "Too many requests",
+          message: "Please sign in to upload more images.",
         });
       },
-      skip: (req: MulmRequest) => !!req.viewer
+      skip: (req: MulmRequest) => !!req.viewer,
     });
-    
+
     // Mock viewer middleware
     app.use((req: MulmRequest, res, next) => {
       // Simulate authenticated user for some tests
-      if (req.headers['x-auth'] === 'true') {
+      if (req.headers["x-auth"] === "true") {
         // Generate unique user ID based on IP to isolate rate limit counters
-        const forwardedFor = req.headers['x-forwarded-for'] as string;
-        const ip = forwardedFor || req.ip || '127.0.0.1';
-        const userId = parseInt(ip.split('.').join('').replace(/[^0-9]/g, '')) || 1;
-        req.viewer = { id: userId, display_name: 'Test User', contact_email: 'test@example.com' };
+        const forwardedFor = req.headers["x-forwarded-for"] as string;
+        const ip = forwardedFor || req.ip || "127.0.0.1";
+        const userId =
+          parseInt(
+            ip
+              .split(".")
+              .join("")
+              .replace(/[^0-9]/g, "")
+          ) || 1;
+        req.viewer = { id: userId, display_name: "Test User", contact_email: "test@example.com" };
       }
       next();
     });
   });
 
-  describe('Upload Rate Limiter', () => {
+  describe("Upload Rate Limiter", () => {
     beforeEach(() => {
-      app.post('/upload', uploadRateLimiter, (req, res) => {
+      app.post("/upload", uploadRateLimiter, (req, res) => {
         res.json({ success: true });
       });
     });
 
-    test('should allow uploads within rate limit', async () => {
+    test("should allow uploads within rate limit", async () => {
       // First 10 requests should succeed
       for (let i = 0; i < 10; i++) {
-        const response = await request(app)
-          .post('/upload')
-          .set('x-auth', 'true')
-          .expect(200);
-        
+        const response = await request(app).post("/upload").set("x-auth", "true").expect(200);
+
         assert.deepStrictEqual(response.body, { success: true });
       }
     });
 
-    test('should block uploads exceeding rate limit', async () => {
+    test("should block uploads exceeding rate limit", async () => {
       // Make 10 successful requests
       for (let i = 0; i < 10; i++) {
-        await request(app)
-          .post('/upload')
-          .set('x-auth', 'true')
-          .expect(200);
+        await request(app).post("/upload").set("x-auth", "true").expect(200);
       }
 
       // 11th request should be rate limited
-      const response = await request(app)
-        .post('/upload')
-        .set('x-auth', 'true')
-        .expect(429);
+      const response = await request(app).post("/upload").set("x-auth", "true").expect(429);
 
-      assert.strictEqual((response.body as { error: string }).error, 'Too many upload requests');
-      assert.ok((response.body as { message: string }).message.includes('10 images per minute'));
+      assert.strictEqual((response.body as { error: string }).error, "Too many upload requests");
+      assert.ok((response.body as { message: string }).message.includes("10 images per minute"));
     });
 
-    test('should track rate limits per user', async () => {
+    test("should track rate limits per user", async () => {
       // User 1 makes 10 requests
       for (let i = 0; i < 10; i++) {
         await request(app)
-          .post('/upload')
-          .set('x-auth', 'true')
-          .set('x-forwarded-for', '1.1.1.1')
+          .post("/upload")
+          .set("x-auth", "true")
+          .set("x-forwarded-for", "1.1.1.1")
           .expect(200);
       }
 
       // User 1's 11th request should fail
       await request(app)
-        .post('/upload')
-        .set('x-auth', 'true')
-        .set('x-forwarded-for', '1.1.1.1')
+        .post("/upload")
+        .set("x-auth", "true")
+        .set("x-forwarded-for", "1.1.1.1")
         .expect(429);
 
       // Different IP (unauthenticated) should still work
-      await request(app)
-        .post('/upload')
-        .set('x-forwarded-for', '2.2.2.2')
-        .expect(200);
+      await request(app).post("/upload").set("x-forwarded-for", "2.2.2.2").expect(200);
     });
   });
 
-  describe('Delete Rate Limiter', () => {
+  describe("Delete Rate Limiter", () => {
     beforeEach(() => {
-      app.delete('/delete', deleteRateLimiter, (req, res) => {
+      app.delete("/delete", deleteRateLimiter, (req, res) => {
         res.json({ success: true });
       });
     });
 
-    test('should allow 20 deletes per minute', async () => {
+    test("should allow 20 deletes per minute", async () => {
       // First 20 requests should succeed
       for (let i = 0; i < 20; i++) {
-        const response = await request(app)
-          .delete('/delete')
-          .set('x-auth', 'true')
-          .expect(200);
-        
+        const response = await request(app).delete("/delete").set("x-auth", "true").expect(200);
+
         assert.deepStrictEqual(response.body, { success: true });
       }
 
       // 21st request should be rate limited
-      const response = await request(app)
-        .delete('/delete')
-        .set('x-auth', 'true')
-        .expect(429);
+      const response = await request(app).delete("/delete").set("x-auth", "true").expect(429);
 
-      assert.strictEqual((response.body as { error: string }).error, 'Too many delete requests');
+      assert.strictEqual((response.body as { error: string }).error, "Too many delete requests");
     });
   });
 
-  describe('Progress Rate Limiter', () => {
+  describe("Progress Rate Limiter", () => {
     beforeEach(() => {
-      app.get('/progress/:uploadId', progressRateLimiter, (req, res) => {
+      app.get("/progress/:uploadId", progressRateLimiter, (req, res) => {
         res.json({ uploadId: req.params.uploadId });
       });
     });
 
-    test('should allow 60 progress checks per minute per upload', async () => {
-      const uploadId = 'upload_123';
-      
+    test("should allow 60 progress checks per minute per upload", async () => {
+      const uploadId = "upload_123";
+
       // First 60 requests should succeed
       for (let i = 0; i < 60; i++) {
         const response = await request(app)
           .get(`/progress/${uploadId}`)
-          .set('x-auth', 'true')
+          .set("x-auth", "true")
           .expect(200);
 
         assert.strictEqual((response.body as { uploadId: string }).uploadId, uploadId);
       }
 
       // 61st request should be rate limited
-      await request(app)
-        .get(`/progress/${uploadId}`)
-        .set('x-auth', 'true')
-        .expect(429);
+      await request(app).get(`/progress/${uploadId}`).set("x-auth", "true").expect(429);
     });
 
-    test('should track progress limits per upload ID', async () => {
+    test("should track progress limits per upload ID", async () => {
       // Upload 1 can make 60 requests
       for (let i = 0; i < 60; i++) {
-        await request(app)
-          .get('/progress/upload_1')
-          .set('x-auth', 'true')
-          .expect(200);
+        await request(app).get("/progress/upload_1").set("x-auth", "true").expect(200);
       }
 
       // Upload 2 should still work
-      await request(app)
-        .get('/progress/upload_2')
-        .set('x-auth', 'true')
-        .expect(200);
+      await request(app).get("/progress/upload_2").set("x-auth", "true").expect(200);
     });
   });
 
-  describe('Strict Upload Limiter', () => {
+  describe("Strict Upload Limiter", () => {
     beforeEach(() => {
-      app.post('/strict', strictUploadLimiter, (req, res) => {
+      app.post("/strict", strictUploadLimiter, (req, res) => {
         res.json({ success: true });
       });
     });
 
-    test('should limit unauthenticated users to 3 uploads', async () => {
+    test("should limit unauthenticated users to 3 uploads", async () => {
       // First 3 requests should succeed
       for (let i = 0; i < 3; i++) {
-        await request(app)
-          .post('/strict')
-          .set('x-forwarded-for', '8.8.8.8')
-          .expect(200);
+        await request(app).post("/strict").set("x-forwarded-for", "8.8.8.8").expect(200);
       }
 
       // 4th request should be rate limited
       const response = await request(app)
-        .post('/strict')
-        .set('x-forwarded-for', '8.8.8.8')
+        .post("/strict")
+        .set("x-forwarded-for", "8.8.8.8")
         .expect(429);
 
-      assert.strictEqual((response.body as { error: string }).error, 'Too many requests');
-      assert.ok((response.body as { message: string }).message.includes('sign in'));
+      assert.strictEqual((response.body as { error: string }).error, "Too many requests");
+      assert.ok((response.body as { message: string }).message.includes("sign in"));
     });
 
-    test('should not limit authenticated users', async () => {
+    test("should not limit authenticated users", async () => {
       // Authenticated users can make more than 3 requests
       for (let i = 0; i < 10; i++) {
         await request(app)
-          .post('/strict')
-          .set('x-auth', 'true')
-          .set('x-forwarded-for', '5.5.5.5')
+          .post("/strict")
+          .set("x-auth", "true")
+          .set("x-forwarded-for", "5.5.5.5")
           .expect(200);
       }
     });
   });
 
-  describe('Combined Rate Limiters', () => {
+  describe("Combined Rate Limiters", () => {
     beforeEach(() => {
       // Apply limiters in order: strict first, then regular upload limiter
-      app.post('/combined', strictUploadLimiter, uploadRateLimiter, (req, res) => {
+      app.post("/combined", strictUploadLimiter, uploadRateLimiter, (req, res) => {
         res.json({ success: true });
       });
     });
 
-    test('should apply all rate limiters in order', async () => {
+    test("should apply all rate limiters in order", async () => {
       // Unauthenticated user hits strict limit first (3 requests)
       for (let i = 0; i < 3; i++) {
-        await request(app)
-          .post('/combined')
-          .set('x-forwarded-for', '9.9.9.9')
-          .expect(200);
+        await request(app).post("/combined").set("x-forwarded-for", "9.9.9.9").expect(200);
       }
 
       // 4th unauthenticated request should fail
-      await request(app)
-        .post('/combined')
-        .set('x-forwarded-for', '9.9.9.9')
-        .expect(429);
+      await request(app).post("/combined").set("x-forwarded-for", "9.9.9.9").expect(429);
 
       // Authenticated user can make 10 requests
       for (let i = 0; i < 10; i++) {
         await request(app)
-          .post('/combined')
-          .set('x-auth', 'true')
-          .set('x-forwarded-for', '4.4.4.4')
+          .post("/combined")
+          .set("x-auth", "true")
+          .set("x-forwarded-for", "4.4.4.4")
           .expect(200);
       }
 
       // 11th authenticated request should fail
       await request(app)
-        .post('/combined')
-        .set('x-auth', 'true')
-        .set('x-forwarded-for', '4.4.4.4')
+        .post("/combined")
+        .set("x-auth", "true")
+        .set("x-forwarded-for", "4.4.4.4")
         .expect(429);
     });
   });
 
-  describe('Rate Limiter Headers', () => {
+  describe("Rate Limiter Headers", () => {
     beforeEach(() => {
-      app.post('/headers', uploadRateLimiter, (req, res) => {
+      app.post("/headers", uploadRateLimiter, (req, res) => {
         res.json({ success: true });
       });
     });
 
-    test('should include rate limit headers', async () => {
+    test("should include rate limit headers", async () => {
       const response = await request(app)
-        .post('/headers')
-        .set('x-auth', 'true')
-        .set('x-forwarded-for', '6.6.6.6')
+        .post("/headers")
+        .set("x-auth", "true")
+        .set("x-forwarded-for", "6.6.6.6")
         .expect(200);
 
       // standardHeaders: true uses RateLimit-* headers (draft-7 format)
-      assert.strictEqual(response.headers['ratelimit-limit'], '10');
-      assert.ok(response.headers['ratelimit-remaining'] !== undefined);
-      assert.ok(response.headers['ratelimit-reset'] !== undefined);
+      assert.strictEqual(response.headers["ratelimit-limit"], "10");
+      assert.ok(response.headers["ratelimit-remaining"] !== undefined);
+      assert.ok(response.headers["ratelimit-reset"] !== undefined);
     });
 
-    test('should include retry-after header when rate limited', async () => {
+    test("should include retry-after header when rate limited", async () => {
       // Exhaust rate limit
       for (let i = 0; i < 10; i++) {
-        await request(app)
-          .post('/headers')
-          .set('x-auth', 'true')
-          .set('x-forwarded-for', '7.7.7.7');
+        await request(app).post("/headers").set("x-auth", "true").set("x-forwarded-for", "7.7.7.7");
       }
 
       const response = await request(app)
-        .post('/headers')
-        .set('x-auth', 'true')
-        .set('x-forwarded-for', '7.7.7.7')
+        .post("/headers")
+        .set("x-auth", "true")
+        .set("x-forwarded-for", "7.7.7.7")
         .expect(429);
 
-      assert.ok(response.headers['retry-after'] !== undefined);
+      assert.ok(response.headers["retry-after"] !== undefined);
       assert.ok((response.body as { retryAfter?: string }).retryAfter !== undefined);
     });
   });
 
-  describe('Login Rate Limiter', () => {
+  describe("Login Rate Limiter", () => {
     let loginLimiter: express.RequestHandler;
 
     beforeEach(() => {
@@ -366,156 +334,156 @@ describe('Rate Limiting Middleware', () => {
         windowMs: 15 * 60 * 1000,
         max: 5,
         keyGenerator: (req) => {
-          const email = (req.body as { email?: string }).email || 'unknown';
-          const ip = req.ip || 'test';
+          const email = (req.body as { email?: string }).email || "unknown";
+          const ip = req.ip || "test";
           return `${ip}:${email}`;
         },
         handler: (_req, res) => {
-          res.status(429).send('Too many login attempts. Please wait 15 minutes before trying again.');
-        }
+          res
+            .status(429)
+            .send("Too many login attempts. Please wait 15 minutes before trying again.");
+        },
       });
 
       app.use(express.json());
-      app.post('/auth/login', loginLimiter, (req, res) => {
+      app.post("/auth/login", loginLimiter, (req, res) => {
         res.json({ success: true });
       });
     });
 
-    test('should allow 5 login attempts within rate limit', async () => {
+    test("should allow 5 login attempts within rate limit", async () => {
       for (let i = 0; i < 5; i++) {
         await request(app)
-          .post('/auth/login')
-          .send({ email: 'test@test.com', password: 'pass' })
+          .post("/auth/login")
+          .send({ email: "test@test.com", password: "pass" })
           .expect(200);
       }
     });
 
-    test('should block 6th login attempt', async () => {
+    test("should block 6th login attempt", async () => {
       // First 5 succeed
       for (let i = 0; i < 5; i++) {
         await request(app)
-          .post('/auth/login')
-          .send({ email: 'test@test.com', password: 'pass' })
+          .post("/auth/login")
+          .send({ email: "test@test.com", password: "pass" })
           .expect(200);
       }
 
       // 6th fails
       const response = await request(app)
-        .post('/auth/login')
-        .send({ email: 'test@test.com', password: 'pass' })
+        .post("/auth/login")
+        .send({ email: "test@test.com", password: "pass" })
         .expect(429);
 
-      assert.ok(response.text.includes('Too many login attempts'));
+      assert.ok(response.text.includes("Too many login attempts"));
     });
 
-    test('should rate limit per IP+email combination', async () => {
+    test("should rate limit per IP+email combination", async () => {
       // 5 attempts for email1
       for (let i = 0; i < 5; i++) {
         await request(app)
-          .post('/auth/login')
-          .send({ email: 'email1@test.com', password: 'pass' })
+          .post("/auth/login")
+          .send({ email: "email1@test.com", password: "pass" })
           .expect(200);
       }
 
       // email1 is rate limited
       await request(app)
-        .post('/auth/login')
-        .send({ email: 'email1@test.com', password: 'pass' })
+        .post("/auth/login")
+        .send({ email: "email1@test.com", password: "pass" })
         .expect(429);
 
       // But email2 from same IP still works
       await request(app)
-        .post('/auth/login')
-        .send({ email: 'email2@test.com', password: 'pass' })
+        .post("/auth/login")
+        .send({ email: "email2@test.com", password: "pass" })
         .expect(200);
     });
   });
 
-  describe('Signup Rate Limiter', () => {
+  describe("Signup Rate Limiter", () => {
     let signupLimiter: express.RequestHandler;
 
     beforeEach(() => {
       signupLimiter = createTestRateLimiter({
         windowMs: 60 * 60 * 1000,
         max: 3,
-        keyGenerator: (req) => req.ip || 'test',
+        keyGenerator: (req) => req.ip || "test",
         handler: (_req, res) => {
-          res.status(429).send('Too many signup attempts. Please wait an hour before trying again.');
-        }
+          res
+            .status(429)
+            .send("Too many signup attempts. Please wait an hour before trying again.");
+        },
       });
 
       app.use(express.json());
-      app.post('/auth/signup', signupLimiter, (req, res) => {
+      app.post("/auth/signup", signupLimiter, (req, res) => {
         res.json({ success: true });
       });
     });
 
-    test('should allow 3 signups per hour', async () => {
+    test("should allow 3 signups per hour", async () => {
       for (let i = 0; i < 3; i++) {
         await request(app)
-          .post('/auth/signup')
+          .post("/auth/signup")
           .send({ email: `user${i}@test.com` })
           .expect(200);
       }
     });
 
-    test('should block 4th signup from same IP', async () => {
+    test("should block 4th signup from same IP", async () => {
       // First 3 succeed
       for (let i = 0; i < 3; i++) {
         await request(app)
-          .post('/auth/signup')
+          .post("/auth/signup")
           .send({ email: `user${i}@test.com` })
           .expect(200);
       }
 
       // 4th fails
-      await request(app)
-        .post('/auth/signup')
-        .send({ email: 'user4@test.com' })
-        .expect(429);
+      await request(app).post("/auth/signup").send({ email: "user4@test.com" }).expect(429);
     });
   });
 
-  describe('Forgot Password Rate Limiter', () => {
+  describe("Forgot Password Rate Limiter", () => {
     let forgotLimiter: express.RequestHandler;
 
     beforeEach(() => {
       forgotLimiter = createTestRateLimiter({
         windowMs: 60 * 60 * 1000,
         max: 3,
-        keyGenerator: (req) => req.ip || 'test',
+        keyGenerator: (req) => req.ip || "test",
         handler: (_req, res) => {
-          res.status(429).send('Too many password reset requests. Please wait an hour before trying again.');
-        }
+          res
+            .status(429)
+            .send("Too many password reset requests. Please wait an hour before trying again.");
+        },
       });
 
       app.use(express.json());
-      app.post('/auth/forgot-password', forgotLimiter, (req, res) => {
+      app.post("/auth/forgot-password", forgotLimiter, (req, res) => {
         res.json({ success: true });
       });
     });
 
-    test('should allow 3 password reset requests per hour', async () => {
+    test("should allow 3 password reset requests per hour", async () => {
       for (let i = 0; i < 3; i++) {
         await request(app)
-          .post('/auth/forgot-password')
-          .send({ email: 'test@test.com' })
+          .post("/auth/forgot-password")
+          .send({ email: "test@test.com" })
           .expect(200);
       }
     });
 
-    test('should block 4th password reset request', async () => {
+    test("should block 4th password reset request", async () => {
       for (let i = 0; i < 3; i++) {
         await request(app)
-          .post('/auth/forgot-password')
-          .send({ email: 'test@test.com' })
+          .post("/auth/forgot-password")
+          .send({ email: "test@test.com" })
           .expect(200);
       }
 
-      await request(app)
-        .post('/auth/forgot-password')
-        .send({ email: 'test@test.com' })
-        .expect(429);
+      await request(app).post("/auth/forgot-password").send({ email: "test@test.com" }).expect(429);
     });
   });
 });

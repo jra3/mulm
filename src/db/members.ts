@@ -5,44 +5,49 @@ import { createActivity } from "./activity";
 
 // type as represented in the database
 export type MemberRecord = {
-	id: number;
-	display_name: string;
-	contact_email: string;
-	is_admin: number;
-	fish_level?: string;
-	plant_level?: string;
-	coral_level?: string;
+  id: number;
+  display_name: string;
+  contact_email: string;
+  is_admin: number;
+  fish_level?: string;
+  plant_level?: string;
+  coral_level?: string;
 };
 
 export type Member = MemberRecord & {
-	points?: number;
+  points?: number;
 };
 
 type AwardRecord = {
-	member_id: number;
-	award_name: string;
-	date_awarded: string;
-	award_type?: 'species' | 'meta_species' | 'manual';
+  member_id: number;
+  award_name: string;
+  date_awarded: string;
+  award_type?: "species" | "meta_species" | "manual";
 };
 
 const googleAccountTableName = "google_account";
 
 export async function getGoogleAccount(sub: string) {
   const members = await query<{
-		google_sub: string,
-		member_id: number,
-		google_email: string,
-	}>(`SELECT google_sub, member_id, google_email FROM ${googleAccountTableName} WHERE google_sub = ?`, [sub]);
+    google_sub: string;
+    member_id: number;
+    google_email: string;
+  }>(
+    `SELECT google_sub, member_id, google_email FROM ${googleAccountTableName} WHERE google_sub = ?`,
+    [sub]
+  );
   return members.pop();
 }
 
 export async function getGoogleAccountByMemberId(member_id: number) {
   const members = await query<{
-		google_sub: string,
-		member_id: number,
-		google_email: string,
-	}>(`SELECT google_sub, member_id, google_email FROM google_account WHERE member_id = ?`, [member_id]);
-  return members.pop()
+    google_sub: string;
+    member_id: number;
+    google_email: string;
+  }>(`SELECT google_sub, member_id, google_email FROM google_account WHERE member_id = ?`, [
+    member_id,
+  ]);
+  return members.pop();
 }
 
 export async function createGoogleAccount(memberId: number, sub: string, email: string) {
@@ -50,7 +55,7 @@ export async function createGoogleAccount(memberId: number, sub: string, email: 
     member_id: memberId,
     google_sub: sub,
     google_email: email,
-  })
+  });
 }
 
 export async function deleteGoogleAccount(sub: string, memberId: number) {
@@ -76,13 +81,16 @@ export async function createOrUpdatePassword(memberId: number, passwordEntry: Sc
       await stmt.finalize();
     }
   } catch (err) {
-    logger.error('Failed to set password', err);
+    logger.error("Failed to set password", err);
     throw new Error("Failed to set password");
   }
 }
 
 export async function getMemberPassword(memberId: number) {
-  const members = await query<ScryptPassword>(`SELECT * FROM password_account WHERE member_id = ?`, [memberId]);
+  const members = await query<ScryptPassword>(
+    `SELECT * FROM password_account WHERE member_id = ?`,
+    [memberId]
+  );
   return members.pop();
 }
 
@@ -90,16 +98,18 @@ export async function createMember(
   email: string,
   name: string,
   credentials: {
-		password?: string,
-		google_sub?: string
-	} = {},
-  isAdmin: boolean = false,
+    password?: string;
+    google_sub?: string;
+  } = {},
+  isAdmin: boolean = false
 ) {
   const conn = db(true);
-  await conn.exec('BEGIN TRANSACTION;');
+  await conn.exec("BEGIN TRANSACTION;");
 
   try {
-    const userStmt = await conn.prepare('INSERT INTO members (display_name, contact_email, is_admin) VALUES (?, ?, ?)');
+    const userStmt = await conn.prepare(
+      "INSERT INTO members (display_name, contact_email, is_admin) VALUES (?, ?, ?)"
+    );
     // is this a bug... we should return the data, not the lastID
     let memberId;
     try {
@@ -109,7 +119,9 @@ export async function createMember(
     }
 
     if (credentials.google_sub) {
-      const googleStmt = await conn.prepare('INSERT INTO google_account (google_sub, member_id, google_email) VALUES (?, ?, ?)');
+      const googleStmt = await conn.prepare(
+        "INSERT INTO google_account (google_sub, member_id, google_email) VALUES (?, ?, ?)"
+      );
       try {
         await googleStmt.run(credentials.google_sub, memberId, email);
       } finally {
@@ -118,8 +130,10 @@ export async function createMember(
     }
 
     if (credentials.password) {
-      const { N, r, p, salt, hash	} = await makePasswordEntry(credentials.password);
-      const passwordStmt = await conn.prepare('INSERT INTO password_account (member_id, N, r, p, salt, hash) VALUES (?, ?, ?, ?, ?, ?)');
+      const { N, r, p, salt, hash } = await makePasswordEntry(credentials.password);
+      const passwordStmt = await conn.prepare(
+        "INSERT INTO password_account (member_id, N, r, p, salt, hash) VALUES (?, ?, ?, ?, ?, ?)"
+      );
       try {
         await passwordStmt.run(memberId, N, r, p, salt, hash);
       } finally {
@@ -127,18 +141,17 @@ export async function createMember(
       }
     }
 
-    await conn.exec('COMMIT;');
+    await conn.exec("COMMIT;");
     return memberId as number;
-
   } catch (err) {
-    logger.error('Failed to create member', err);
-    await conn.exec('ROLLBACK;');
+    logger.error("Failed to create member", err);
+    await conn.exec("ROLLBACK;");
     throw new Error("Failed to create member");
   }
 }
 
 export async function getMember(id: number) {
-  const members = await query<MemberRecord>("SELECT * FROM members WHERE id = ?",	[id]);
+  const members = await query<MemberRecord>("SELECT * FROM members WHERE id = ?", [id]);
   return members.pop();
 }
 
@@ -147,16 +160,28 @@ export async function updateMember(memberId: number, updates: Partial<MemberReco
 }
 
 export async function getMemberByEmail(email: string) {
-  const members = await query<MemberRecord>("SELECT * FROM members WHERE contact_email = ?", [email]);
+  const members = await query<MemberRecord>("SELECT * FROM members WHERE contact_email = ?", [
+    email,
+  ]);
   return members.pop();
 }
 
 export async function getMembersList(): Promise<MemberRecord[]> {
-  return query<MemberRecord>("SELECT id, display_name, fish_level, plant_level, coral_level FROM members");
+  return query<MemberRecord>(
+    "SELECT id, display_name, fish_level, plant_level, coral_level FROM members"
+  );
 }
 
 export async function getRosterWithPoints() {
-  return query<MemberRecord & { fishTotalPoints: number; plantTotalPoints: number; coralTotalPoints: number; hasPassword: number; hasGoogleAccount: number }>(`
+  return query<
+    MemberRecord & {
+      fishTotalPoints: number;
+      plantTotalPoints: number;
+      coralTotalPoints: number;
+      hasPassword: number;
+      hasGoogleAccount: number;
+    }
+  >(`
 		SELECT
 			m.*,
 			COALESCE(fish_points.total, 0) as fishTotalPoints,
@@ -221,20 +246,26 @@ export async function getRosterWithPoints() {
  * @param limit - Maximum number of results to return (default: 10)
  * @returns Array of matching member records
  */
-export async function searchMembers(searchQuery: string, limit: number = 10): Promise<MemberRecord[]> {
+export async function searchMembers(
+  searchQuery: string,
+  limit: number = 10
+): Promise<MemberRecord[]> {
   if (!searchQuery || searchQuery.trim().length < 2) {
     return [];
   }
 
   const searchPattern = `%${searchQuery.trim().toLowerCase()}%`;
 
-  return query<MemberRecord>(`
+  return query<MemberRecord>(
+    `
 		SELECT * FROM members
 		WHERE LOWER(display_name) LIKE ?
 		   OR LOWER(contact_email) LIKE ?
 		ORDER BY display_name
 		LIMIT ?
-	`, [searchPattern, searchPattern, limit]);
+	`,
+    [searchPattern, searchPattern, limit]
+  );
 }
 
 export async function getMemberWithAwards(memberId: string) {
@@ -250,11 +281,13 @@ export async function grantAward(
   memberId: number,
   awardName: string,
   dateAwarded: Date,
-  awardType: 'species' | 'meta_species' | 'manual' = 'species'
+  awardType: "species" | "meta_species" | "manual" = "species"
 ) {
   try {
     const conn = db(true);
-    const stmt = await conn.prepare("INSERT INTO awards (member_id, award_name, date_awarded, award_type) VALUES (?, ?, ?, ?)");
+    const stmt = await conn.prepare(
+      "INSERT INTO awards (member_id, award_name, date_awarded, award_type) VALUES (?, ?, ?, ?)"
+    );
     try {
       await stmt.run(memberId, awardName, dateAwarded.toISOString(), awardType);
     } finally {
@@ -264,29 +297,27 @@ export async function grantAward(
     // Create activity feed entry for award grant
     try {
       // Determine award type based on name
-      const isMetaAward = awardName.includes('Senior Specialist') || awardName.includes('Expert Specialist');
+      const isMetaAward =
+        awardName.includes("Senior Specialist") || awardName.includes("Expert Specialist");
 
-      await createActivity(
-        'award_granted',
-        memberId,
-        awardName,
-        {
-          award_name: awardName,
-          award_type: isMetaAward ? 'meta' : 'specialty'
-        }
-      );
+      await createActivity("award_granted", memberId, awardName, {
+        award_name: awardName,
+        award_type: isMetaAward ? "meta" : "specialty",
+      });
     } catch (activityError) {
-      logger.error('Failed to create activity feed entry for award', activityError);
+      logger.error("Failed to create activity feed entry for award", activityError);
       // Don't fail the award grant if activity creation fails
     }
   } catch (err) {
-    logger.error('Failed to grant award', err);
+    logger.error("Failed to grant award", err);
     throw new Error("Failed to grant award");
   }
 }
 
 // Currently this is a full table scan. Oh well.
 export async function getAdminEmails(): Promise<string[]> {
-  const rows = await query<{ contact_email: string }>(`SELECT contact_email FROM members where is_admin = 1`);
+  const rows = await query<{ contact_email: string }>(
+    `SELECT contact_email FROM members where is_admin = 1`
+  );
   return rows.map((row) => row.contact_email);
 }

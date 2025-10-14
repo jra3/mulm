@@ -15,7 +15,7 @@ export type WebAuthnCredential = {
 export type WebAuthnChallenge = {
   challenge: string;
   member_id: number | null;
-  purpose: 'registration' | 'authentication';
+  purpose: "registration" | "authentication";
   expires_on: string;
   created_on: string;
 };
@@ -52,7 +52,7 @@ export async function saveCredential(data: {
     );
 
     if (!result) {
-      throw new Error('Failed to insert credential');
+      throw new Error("Failed to insert credential");
     }
 
     return result.id;
@@ -66,7 +66,7 @@ export async function saveCredential(data: {
  */
 export async function getCredentialById(credentialId: string): Promise<WebAuthnCredential | null> {
   const rows = await query<WebAuthnCredential>(
-    'SELECT * FROM webauthn_credentials WHERE credential_id = ?',
+    "SELECT * FROM webauthn_credentials WHERE credential_id = ?",
     [credentialId]
   );
   return rows[0] || null;
@@ -77,7 +77,7 @@ export async function getCredentialById(credentialId: string): Promise<WebAuthnC
  */
 export async function getCredentialsByMember(memberId: number): Promise<WebAuthnCredential[]> {
   return query<WebAuthnCredential>(
-    'SELECT * FROM webauthn_credentials WHERE member_id = ? ORDER BY created_on DESC',
+    "SELECT * FROM webauthn_credentials WHERE member_id = ? ORDER BY created_on DESC",
     [memberId]
   );
 }
@@ -85,25 +85,32 @@ export async function getCredentialsByMember(memberId: number): Promise<WebAuthn
 /**
  * Update credential counter (for replay attack prevention)
  */
-export async function updateCredentialCounter(credentialId: string, newCounter: number): Promise<void> {
-  await updateOne('webauthn_credentials', { credential_id: credentialId }, {
-    counter: newCounter,
-    last_used_on: new Date().toISOString()
-  });
+export async function updateCredentialCounter(
+  credentialId: string,
+  newCounter: number
+): Promise<void> {
+  await updateOne(
+    "webauthn_credentials",
+    { credential_id: credentialId },
+    {
+      counter: newCounter,
+      last_used_on: new Date().toISOString(),
+    }
+  );
 }
 
 /**
  * Update device name for a credential
  */
 export async function updateCredentialDeviceName(id: number, deviceName: string): Promise<void> {
-  await updateOne('webauthn_credentials', { id }, { device_name: deviceName });
+  await updateOne("webauthn_credentials", { id }, { device_name: deviceName });
 }
 
 /**
  * Delete a credential by ID
  */
 export async function deleteCredential(id: number): Promise<void> {
-  await deleteOne('webauthn_credentials', { id });
+  await deleteOne("webauthn_credentials", { id });
 }
 
 // ==================== Challenge Management ====================
@@ -113,16 +120,16 @@ export async function deleteCredential(id: number): Promise<void> {
  */
 export async function saveChallenge(
   challenge: string,
-  purpose: 'registration' | 'authentication',
+  purpose: "registration" | "authentication",
   memberId?: number
 ): Promise<void> {
   const expiresOn = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
-  await insertOne('webauthn_challenges', {
+  await insertOne("webauthn_challenges", {
     challenge,
     member_id: memberId || null,
     purpose,
-    expires_on: expiresOn.toISOString()
+    expires_on: expiresOn.toISOString(),
   });
 }
 
@@ -139,7 +146,7 @@ export async function getChallenge(challenge: string): Promise<WebAuthnChallenge
 
   // Delete challenge after retrieval (single-use)
   if (challengeData) {
-    await deleteOne('webauthn_challenges', { challenge });
+    await deleteOne("webauthn_challenges", { challenge });
   }
 
   return challengeData;

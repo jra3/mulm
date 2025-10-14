@@ -4,68 +4,68 @@ import { writeConn, query, withTransaction } from "./conn";
 import { logger } from "@/utils/logger";
 
 export type Submission = {
-	id: number;
-	program: string;
+  id: number;
+  program: string;
 
-	created_on: Date;
-	updated_on: Date;
+  created_on: Date;
+  updated_on: Date;
 
-	member_id: number;
-	member_name: string;
+  member_id: number;
+  member_name: string;
 
-	species_type: string;
-	species_class: string;
-	species_common_name: string;
-	species_latin_name: string;
-	common_name_id: number | null;
-	scientific_name_id: number | null;
-	water_type: string;
-	count: string;
-	reproduction_date: string;
+  species_type: string;
+  species_class: string;
+  species_common_name: string;
+  species_latin_name: string;
+  common_name_id: number | null;
+  scientific_name_id: number | null;
+  water_type: string;
+  count: string;
+  reproduction_date: string;
 
-	foods: string;
-	spawn_locations: string;
-	propagation_method: string | null;
-	tank_size: string | null;
-	filter_type: string | null;
-	water_change_volume: string | null;
-	water_change_frequency: string | null;
-	temperature: string | null;
-	ph: string | null;
-	gh: string | null;
-	specific_gravity: string | null;
-	substrate_type: string | null;
-	substrate_depth: string | null;
-	substrate_color: string | null;
-	light_type: string | null;
-	light_strength: string | null;
-	light_hours: string | null;
-	co2: string | null;
-	co2_description: string | null;
-	supplement_type: string;
-	supplement_regimen: string;
+  foods: string;
+  spawn_locations: string;
+  propagation_method: string | null;
+  tank_size: string | null;
+  filter_type: string | null;
+  water_change_volume: string | null;
+  water_change_frequency: string | null;
+  temperature: string | null;
+  ph: string | null;
+  gh: string | null;
+  specific_gravity: string | null;
+  substrate_type: string | null;
+  substrate_depth: string | null;
+  substrate_color: string | null;
+  light_type: string | null;
+  light_strength: string | null;
+  light_hours: string | null;
+  co2: string | null;
+  co2_description: string | null;
+  supplement_type: string;
+  supplement_regimen: string;
 
-	images: string | null;
-	video_url: string | null;
+  images: string | null;
+  video_url: string | null;
 
-	submitted_on: string | null;
-	approved_on: string | null;
-	approved_by: number | null;
-	points: number | null;
-	total_points?: number;
-	
-	article_points?: number | null;
-	first_time_species?: boolean | null;
-	flowered?: boolean | null;
-	sexual_reproduction?: boolean | null;
-	
-	witnessed_by: number | null;
-	witnessed_on: string | null;
-	witness_verification_status: 'pending' | 'confirmed' | 'declined';
+  submitted_on: string | null;
+  approved_on: string | null;
+  approved_by: number | null;
+  points: number | null;
+  total_points?: number;
 
-	denied_on: string | null;
-	denied_by: number | null;
-	denied_reason: string | null;
+  article_points?: number | null;
+  first_time_species?: boolean | null;
+  flowered?: boolean | null;
+  sexual_reproduction?: boolean | null;
+
+  witnessed_by: number | null;
+  witnessed_on: string | null;
+  witness_verification_status: "pending" | "confirmed" | "declined";
+
+  denied_on: string | null;
+  denied_by: number | null;
+  denied_reason: string | null;
 };
 
 export function formToDB(memberId: number, form: FormValues, submit: boolean) {
@@ -81,7 +81,7 @@ export function formToDB(memberId: number, form: FormValues, submit: boolean) {
       case undefined:
         return undefined;
       default:
-        logger.warn('Unknown species type', form.species_type);
+        logger.warn("Unknown species type", form.species_type);
         throw new Error("Unknown species type");
     }
   })();
@@ -97,7 +97,7 @@ export function formToDB(memberId: number, form: FormValues, submit: boolean) {
     member_id: memberId,
     program,
     submitted_on: submit ? new Date().toISOString() : undefined,
-    witness_verification_status: submit ? 'pending' as const : undefined,
+    witness_verification_status: submit ? ("pending" as const) : undefined,
     ...form,
     member_name: undefined,
     member_email: undefined,
@@ -108,11 +108,7 @@ export function formToDB(memberId: number, form: FormValues, submit: boolean) {
   };
 }
 
-export async function createSubmission(
-  memberId: number,
-  form: FormValues,
-  submit: boolean,
-) {
+export async function createSubmission(memberId: number, form: FormValues, submit: boolean) {
   try {
     const conn = writeConn;
     const entries = formToDB(memberId, form, submit);
@@ -142,7 +138,7 @@ export async function createSubmission(
       await stmt.finalize();
     }
   } catch (err) {
-    logger.error('Failed to add submission', err);
+    logger.error("Failed to add submission", err);
     throw new Error("Failed to add submission");
   }
 }
@@ -150,7 +146,7 @@ export async function createSubmission(
 export function getSubmissionsByMember(
   memberId: string,
   includeUnsubmitted: boolean,
-  includeUnapproved: boolean,
+  includeUnapproved: boolean
 ) {
   let expr = `
 		SELECT
@@ -180,7 +176,8 @@ export function getSubmissionsByMember(
 }
 
 export async function getSubmissionById(id: number) {
-  const result = await query<Submission>(`
+  const result = await query<Submission>(
+    `
 		SELECT
 			submissions.*,
 			submissions.points +
@@ -193,7 +190,7 @@ export async function getSubmissionById(id: number) {
 		FROM submissions LEFT JOIN members
 		ON submissions.member_id == members.id
 		WHERE submissions.id = ?`,
-  [id],
+    [id]
   );
   return result.pop();
 }
@@ -208,16 +205,12 @@ export async function deleteSubmission(id: number) {
       await deleteRow.finalize();
     }
   } catch (err) {
-    logger.error('Failed to delete submission', err);
+    logger.error("Failed to delete submission", err);
     throw new Error("Failed to delete submission");
   }
 }
 
-export function getApprovedSubmissionsInDateRange(
-  startDate: Date,
-  endDate: Date,
-  program: string,
-) {
+export function getApprovedSubmissionsInDateRange(startDate: Date, endDate: Date, program: string) {
   return query<Submission>(
     `
 		SELECT
@@ -235,13 +228,13 @@ export function getApprovedSubmissionsInDateRange(
 		AND approved_on IS NOT NULL AND points IS NOT NULL
 		AND program = ?
 	`,
-    [startDate.toISOString(), endDate.toISOString(), program],
+    [startDate.toISOString(), endDate.toISOString(), program]
   );
 }
 
 export async function getOutstandingSubmissions(program: string) {
   const { filterEligibleSubmissions } = await import("@/utils/waitingPeriod");
-	
+
   const allWitnessed = await query<Submission>(
     `
 		SELECT
@@ -259,9 +252,9 @@ export async function getOutstandingSubmissions(program: string) {
 		AND approved_on IS NULL
 		AND witness_verification_status = 'confirmed'
 		AND program = ?`,
-    [program],
+    [program]
   );
-	
+
   return filterEligibleSubmissions(allWitnessed);
 }
 
@@ -277,7 +270,7 @@ export function getWitnessQueue(program: string) {
 		AND witness_verification_status = 'pending'
 		AND program = ?
 		ORDER BY submitted_on ASC`,
-    [program],
+    [program]
   );
 }
 
@@ -296,7 +289,7 @@ export function getWaitingPeriodSubmissions(program: string) {
 		AND approved_on IS NULL
 		AND program = ?
 		ORDER BY witnessed_on ASC`,
-    [program],
+    [program]
   );
 }
 
@@ -332,17 +325,17 @@ export async function confirmWitness(submissionId: number, witnessAdminId: numbe
 				FROM submissions WHERE id = ?`);
       const current: Submission[] = await stmt.all(submissionId);
       await stmt.finalize();
-			
+
       if (!current[0]) {
-        throw new Error('Submission not found');
+        throw new Error("Submission not found");
       }
-			
+
       if (current[0].member_id === witnessAdminId) {
-        throw new Error('Cannot witness your own submission');
+        throw new Error("Cannot witness your own submission");
       }
-			
-      if (current[0].witness_verification_status !== 'pending') {
-        throw new Error('Submission not in pending witness state');
+
+      if (current[0].witness_verification_status !== "pending") {
+        throw new Error("Submission not in pending witness state");
       }
 
       const updateStmt = await db.prepare(`
@@ -351,18 +344,18 @@ export async function confirmWitness(submissionId: number, witnessAdminId: numbe
 					witnessed_on = ?,
 					witness_verification_status = 'confirmed'
 				WHERE id = ? AND witness_verification_status = 'pending'`);
-			
+
       const result = await updateStmt.run(witnessAdminId, new Date().toISOString(), submissionId);
       await updateStmt.finalize();
-			
+
       if (result.changes === 0) {
-        throw new Error('Submission state changed during operation');
+        throw new Error("Submission state changed during operation");
       }
-			
+
       logger.info(`Witness confirmed for submission ${submissionId} by admin ${witnessAdminId}`);
     });
   } catch (err) {
-    logger.error('Failed to confirm witness', err);
+    logger.error("Failed to confirm witness", err);
     throw err;
   }
 }
@@ -376,17 +369,17 @@ export async function declineWitness(submissionId: number, witnessAdminId: numbe
 				FROM submissions WHERE id = ?`);
       const current: Submission[] = await stmt.all(submissionId);
       await stmt.finalize();
-			
+
       if (!current[0]) {
-        throw new Error('Submission not found');
+        throw new Error("Submission not found");
       }
-			
+
       if (current[0].member_id === witnessAdminId) {
-        throw new Error('Cannot witness your own submission');
+        throw new Error("Cannot witness your own submission");
       }
-			
-      if (current[0].witness_verification_status !== 'pending') {
-        throw new Error('Submission not in pending witness state');
+
+      if (current[0].witness_verification_status !== "pending") {
+        throw new Error("Submission not in pending witness state");
       }
 
       const updateStmt = await db.prepare(`
@@ -395,33 +388,28 @@ export async function declineWitness(submissionId: number, witnessAdminId: numbe
 					witnessed_on = ?,
 					witness_verification_status = 'declined'
 				WHERE id = ? AND witness_verification_status = 'pending'`);
-			
+
       const result = await updateStmt.run(witnessAdminId, new Date().toISOString(), submissionId);
       await updateStmt.finalize();
-			
+
       if (result.changes === 0) {
-        throw new Error('Submission state changed during operation');
+        throw new Error("Submission state changed during operation");
       }
-			
+
       logger.info(`Witness declined for submission ${submissionId} by admin ${witnessAdminId}`);
     });
   } catch (err) {
-    logger.error('Failed to decline witness', err);
+    logger.error("Failed to decline witness", err);
     throw err;
   }
 }
 
 export function getApprovedSubmissions(program: string) {
   return query<
-		Submission &
-			Required<
-				Pick<
-					Submission,
-					"submitted_on" | "approved_on" | "points" | "total_points"
-				>
-			>
-	>(
-	  `
+    Submission &
+      Required<Pick<Submission, "submitted_on" | "approved_on" | "points" | "total_points">>
+  >(
+    `
 		SELECT
 			submissions.*,
 			submissions.points +
@@ -437,17 +425,17 @@ export function getApprovedSubmissions(program: string) {
 		AND approved_on IS NOT NULL
 		AND points IS NOT NULL
 		AND program = ?`,
-	  [program],
-	);
+    [program]
+  );
 }
 
 type UpdateFor<T> = Partial<{
-	[K in keyof T]: T[K] | null | undefined;
+  [K in keyof T]: T[K] | null | undefined;
 }>;
 
 export async function updateSubmission(id: number, updates: UpdateFor<Submission>) {
   const entries = Object.fromEntries(
-    Object.entries(updates).filter(([, value]) => value !== undefined),
+    Object.entries(updates).filter(([, value]) => value !== undefined)
   );
   const fields = Object.keys(entries);
   const values = Object.values(entries);
@@ -455,9 +443,7 @@ export async function updateSubmission(id: number, updates: UpdateFor<Submission
 
   try {
     const conn = writeConn;
-    const stmt = await conn.prepare(
-      `UPDATE submissions SET ${setClause} WHERE id = ?`,
-    );
+    const stmt = await conn.prepare(`UPDATE submissions SET ${setClause} WHERE id = ?`);
     try {
       const result = await stmt.run(...values, id);
       return result.changes;
@@ -465,7 +451,7 @@ export async function updateSubmission(id: number, updates: UpdateFor<Submission
       await stmt.finalize();
     }
   } catch (err) {
-    logger.error('Failed to update submission', err);
+    logger.error("Failed to update submission", err);
     throw new Error("Failed to update submission");
   }
 }
@@ -474,17 +460,11 @@ export async function approveSubmission(
   approvedBy: number,
   id: number,
   speciesIds: { common_name_id: number; scientific_name_id: number },
-  updates: ApprovalFormValues,
+  updates: ApprovalFormValues
 ) {
   try {
     const conn = writeConn;
-    const {
-      points,
-      article_points,
-      first_time_species,
-      flowered,
-      sexual_reproduction,
-    } = updates;
+    const { points, article_points, first_time_species, flowered, sexual_reproduction } = updates;
     const stmt = await conn.prepare(`
 			UPDATE submissions SET
 			  common_name_id = ?,
@@ -508,13 +488,13 @@ export async function approveSubmission(
         sexual_reproduction ? 1 : 0,
         approvedBy,
         new Date().toISOString(),
-        id,
+        id
       );
     } finally {
       await stmt.finalize();
     }
   } catch (err) {
-    logger.error('Failed to update submission', err);
+    logger.error("Failed to update submission", err);
     throw new Error("Failed to update submission");
   }
 }
@@ -526,12 +506,7 @@ export async function approveSubmission(
 export function getTodayApprovedSubmissions() {
   return query<
     Submission &
-      Required<
-        Pick<
-          Submission,
-          "submitted_on" | "approved_on" | "points" | "total_points"
-        >
-      >
+      Required<Pick<Submission, "submitted_on" | "approved_on" | "points" | "total_points">>
   >(
     `
 		SELECT
@@ -549,6 +524,6 @@ export function getTodayApprovedSubmissions() {
 		AND approved_on IS NOT NULL
 		AND points IS NOT NULL
 		ORDER BY approved_on DESC`,
-    [],
+    []
   );
 }

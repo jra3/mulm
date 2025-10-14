@@ -1,20 +1,20 @@
-import { Request } from 'express';
-import rateLimit from 'express-rate-limit';
-import { MulmRequest } from '../sessions';
-import { logger } from '../utils/logger';
+import { Request } from "express";
+import rateLimit from "express-rate-limit";
+import { MulmRequest } from "../sessions";
+import { logger } from "../utils/logger";
 
 // Helper function to properly handle IPv6 addresses
 const getIpKey = (req: Request): string => {
   // For IPv6, we need to handle the address properly to prevent bypass
   const socket = req.socket as { remoteAddress?: string };
-  const ip = req.ip || socket?.remoteAddress || 'unknown';
+  const ip = req.ip || socket?.remoteAddress || "unknown";
   // Normalize IPv6 addresses (e.g., ::1 becomes 127.0.0.1)
-  if (ip && typeof ip === 'string' && ip.includes(':')) {
+  if (ip && typeof ip === "string" && ip.includes(":")) {
     // For IPv6, use the first 64 bits (4 groups) to group by subnet
-    const parts = ip.split(':').slice(0, 4);
-    return parts.join(':');
+    const parts = ip.split(":").slice(0, 4);
+    return parts.join(":");
   }
-  return ip || 'unknown';
+  return ip || "unknown";
 };
 
 /**
@@ -32,21 +32,22 @@ export const uploadRateLimiter = rateLimit({
   },
   handler: (_req, res) => {
     const mulmReq = _req as MulmRequest;
-    logger.warn('Rate limit exceeded for upload', {
+    logger.warn("Rate limit exceeded for upload", {
       viewer: mulmReq.viewer?.id,
       ip: _req.ip,
-      path: _req.path
+      path: _req.path,
     });
     res.status(429).json({
-      error: 'Too many upload requests',
-      message: 'Please wait a moment before uploading more images. You can upload up to 10 images per minute.',
-      retryAfter: res.getHeader('Retry-After')
+      error: "Too many upload requests",
+      message:
+        "Please wait a moment before uploading more images. You can upload up to 10 images per minute.",
+      retryAfter: res.getHeader("Retry-After"),
     });
   },
   skip: () => {
     // Skip rate limiting in test environment
-    return process.env.NODE_ENV === 'test';
-  }
+    return process.env.NODE_ENV === "test";
+  },
 });
 
 /**
@@ -63,20 +64,20 @@ export const deleteRateLimiter = rateLimit({
   },
   handler: (_req, res) => {
     const mulmReq = _req as MulmRequest;
-    logger.warn('Rate limit exceeded for delete', {
+    logger.warn("Rate limit exceeded for delete", {
       viewer: mulmReq.viewer?.id,
       ip: _req.ip,
-      path: _req.path
+      path: _req.path,
     });
     res.status(429).json({
-      error: 'Too many delete requests',
-      message: 'Please wait before deleting more images.',
-      retryAfter: res.getHeader('Retry-After')
+      error: "Too many delete requests",
+      message: "Please wait before deleting more images.",
+      retryAfter: res.getHeader("Retry-After"),
     });
   },
   skip: () => {
-    return process.env.NODE_ENV === 'test';
-  }
+    return process.env.NODE_ENV === "test";
+  },
 });
 
 /**
@@ -96,17 +97,17 @@ export const progressRateLimiter = rateLimit({
   },
   handler: (_req, res) => {
     const mulmReq = _req as MulmRequest;
-    logger.warn('Rate limit exceeded for progress polling', {
+    logger.warn("Rate limit exceeded for progress polling", {
       viewer: mulmReq.viewer?.id,
       ip: _req.ip,
-      uploadId: _req.params.uploadId
+      uploadId: _req.params.uploadId,
     });
     // For SSE, just close the connection
     res.status(429).end();
   },
   skip: () => {
-    return process.env.NODE_ENV === 'test';
-  }
+    return process.env.NODE_ENV === "test";
+  },
 });
 
 /**
@@ -120,19 +121,19 @@ export const strictUploadLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator: (req) => getIpKey(req),
   handler: (_req, res) => {
-    logger.warn('Unauthenticated rate limit exceeded', {
+    logger.warn("Unauthenticated rate limit exceeded", {
       ip: _req.ip,
-      path: _req.path
+      path: _req.path,
     });
     res.status(429).json({
-      error: 'Too many requests',
-      message: 'Please sign in to upload more images.'
+      error: "Too many requests",
+      message: "Please sign in to upload more images.",
     });
   },
   skip: (req: MulmRequest) => {
     // Skip for authenticated users or in test environment
-    return !!req.viewer || process.env.NODE_ENV === 'test';
-  }
+    return !!req.viewer || process.env.NODE_ENV === "test";
+  },
 });
 
 /**
@@ -149,20 +150,20 @@ export const dailyUploadLimiter = rateLimit({
   },
   handler: (_req, res) => {
     const mulmReq = _req as MulmRequest;
-    logger.warn('Daily rate limit exceeded', {
+    logger.warn("Daily rate limit exceeded", {
       viewer: mulmReq.viewer?.id,
-      ip: _req.ip
+      ip: _req.ip,
     });
     res.status(429).json({
-      error: 'Daily upload limit exceeded',
-      message: 'You have reached your daily upload limit of 500 images. Please try again tomorrow.',
-      retryAfter: res.getHeader('Retry-After')
+      error: "Daily upload limit exceeded",
+      message: "You have reached your daily upload limit of 500 images. Please try again tomorrow.",
+      retryAfter: res.getHeader("Retry-After"),
     });
   },
   skip: (req: MulmRequest) => {
     // Only apply to authenticated users, skip in test
-    return !req.viewer || process.env.NODE_ENV === 'test';
-  }
+    return !req.viewer || process.env.NODE_ENV === "test";
+  },
 });
 
 /**
@@ -171,9 +172,9 @@ export const dailyUploadLimiter = rateLimit({
  */
 export function getUploadRateLimiters() {
   return [
-    strictUploadLimiter,   // First check unauthenticated limits
-    uploadRateLimiter,      // Then check per-minute limits
-    dailyUploadLimiter      // Finally check daily limits
+    strictUploadLimiter, // First check unauthenticated limits
+    uploadRateLimiter, // Then check per-minute limits
+    dailyUploadLimiter, // Finally check daily limits
   ];
 }
 
@@ -188,26 +189,26 @@ export const loginRateLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator: (req) => {
     // For passkey login endpoints, only use IP (no email in body)
-    if (req.path && req.path.includes('/passkey/')) {
+    if (req.path && req.path.includes("/passkey/")) {
       return getIpKey(req);
     }
     // Rate limit by IP + email to prevent targeted attacks
-    const email = (req.body as { email?: string })?.email || 'unknown';
+    const email = (req.body as { email?: string })?.email || "unknown";
     return `${getIpKey(req)}:${email}`;
   },
   handler: (_req, res) => {
     // Don't log email for passkey endpoints (no email in body)
     const logData: { ip?: string; email?: string } = { ip: _req.ip };
-    if (!_req.path || !_req.path.includes('/passkey/')) {
+    if (!_req.path || !_req.path.includes("/passkey/")) {
       logData.email = (_req.body as { email?: string })?.email;
     }
-    logger.warn('Login rate limit exceeded', logData);
-    res.status(429).send('Too many login attempts. Please wait 15 minutes before trying again.');
+    logger.warn("Login rate limit exceeded", logData);
+    res.status(429).send("Too many login attempts. Please wait 15 minutes before trying again.");
   },
   skip: (req) => {
     // Skip in test environment or for localhost
-    return process.env.NODE_ENV === 'test' || req.ip === '::1' || req.ip === '127.0.0.1';
-  }
+    return process.env.NODE_ENV === "test" || req.ip === "::1" || req.ip === "127.0.0.1";
+  },
 });
 
 /**
@@ -221,12 +222,12 @@ export const signupRateLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator: (req) => getIpKey(req),
   handler: (_req, res) => {
-    logger.warn('Signup rate limit exceeded', {
-      ip: _req.ip
+    logger.warn("Signup rate limit exceeded", {
+      ip: _req.ip,
     });
-    res.status(429).send('Too many signup attempts. Please wait an hour before trying again.');
+    res.status(429).send("Too many signup attempts. Please wait an hour before trying again.");
   },
-  skip: () => process.env.NODE_ENV === 'test'
+  skip: () => process.env.NODE_ENV === "test",
 });
 
 /**
@@ -240,12 +241,14 @@ export const forgotPasswordRateLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator: (req) => getIpKey(req),
   handler: (_req, res) => {
-    logger.warn('Forgot password rate limit exceeded', {
-      ip: _req.ip
+    logger.warn("Forgot password rate limit exceeded", {
+      ip: _req.ip,
     });
-    res.status(429).send('Too many password reset requests. Please wait an hour before trying again.');
+    res
+      .status(429)
+      .send("Too many password reset requests. Please wait an hour before trying again.");
   },
-  skip: () => process.env.NODE_ENV === 'test'
+  skip: () => process.env.NODE_ENV === "test",
 });
 
 /**
@@ -259,10 +262,10 @@ export const oauthRateLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator: (req) => getIpKey(req),
   handler: (_req, res) => {
-    logger.warn('OAuth rate limit exceeded', {
-      ip: _req.ip
+    logger.warn("OAuth rate limit exceeded", {
+      ip: _req.ip,
     });
-    res.status(429).send('Too many OAuth attempts. Please wait a few minutes before trying again.');
+    res.status(429).send("Too many OAuth attempts. Please wait a few minutes before trying again.");
   },
-  skip: () => process.env.NODE_ENV === 'test'
+  skip: () => process.env.NODE_ENV === "test",
 });

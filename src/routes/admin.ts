@@ -1,8 +1,35 @@
-import { createMember, getMember, getMemberByEmail, getRosterWithPoints, updateMember, type MemberRecord, getMemberPassword, getGoogleAccountByMemberId } from "@/db/members";
-import { getOutstandingSubmissions, getOutstandingSubmissionsCounts, getSubmissionById, updateSubmission, getSubmissionsByMember, getWitnessQueue, getWitnessQueueCounts, getWaitingPeriodSubmissions, confirmWitness, declineWitness, type Submission } from "@/db/submissions";
+import {
+  createMember,
+  getMember,
+  getMemberByEmail,
+  getRosterWithPoints,
+  updateMember,
+  type MemberRecord,
+  getMemberPassword,
+  getGoogleAccountByMemberId,
+} from "@/db/members";
+import {
+  getOutstandingSubmissions,
+  getOutstandingSubmissionsCounts,
+  getSubmissionById,
+  updateSubmission,
+  getSubmissionsByMember,
+  getWitnessQueue,
+  getWitnessQueueCounts,
+  getWaitingPeriodSubmissions,
+  confirmWitness,
+  declineWitness,
+  type Submission,
+} from "@/db/submissions";
 import { approvalSchema } from "@/forms/approval";
 import { inviteSchema } from "@/forms/member";
-import { onSubmissionApprove, sendChangesRequest, sendInviteEmail, onScreeningApproved, onScreeningRejected } from "@/notifications";
+import {
+  onSubmissionApprove,
+  sendChangesRequest,
+  sendInviteEmail,
+  onScreeningApproved,
+  onScreeningRejected,
+} from "@/notifications";
 import { programs } from "@/programs";
 import { MulmRequest } from "@/sessions";
 import { Response, NextFunction } from "express";
@@ -11,7 +38,14 @@ import { createAuthCode } from "@/db/auth";
 import { AuthCode, generateRandomCode } from "@/auth";
 import { validateFormResult } from "@/forms/utils";
 import { validateSubmission } from "./submission";
-import { isLivestock, foodTypes, getClassOptions, spawnLocations, speciesTypes, waterTypes } from "@/forms/submission";
+import {
+  isLivestock,
+  foodTypes,
+  getClassOptions,
+  spawnLocations,
+  speciesTypes,
+  waterTypes,
+} from "@/forms/submission";
 import { recordName } from "@/db/species";
 import { getBodyParam, getBodyString } from "@/utils/request";
 import { checkAndUpdateMemberLevel, checkAllMemberLevels, Program } from "@/levelManager";
@@ -19,42 +53,58 @@ import { checkAndGrantSpecialtyAwards, checkAllSpecialtyAwards } from "@/special
 import { createActivity } from "@/db/activity";
 import { logger } from "@/utils/logger";
 import { getSubmissionStatus } from "@/utils/submissionStatus";
-import { addNote, getNotesForSubmission, updateNote, deleteNote, getNoteById } from "@/db/submission_notes";
+import {
+  addNote,
+  getNotesForSubmission,
+  updateNote,
+  deleteNote,
+  getNoteById,
+} from "@/db/submission_notes";
 import { submissionNoteForm } from "@/forms/submissionNote";
 
 // Helper function to calculate total points for a member
-async function getMemberWithPoints(member: MemberRecord | null): Promise<MemberRecord & { fishTotalPoints: number; plantTotalPoints: number; coralTotalPoints: number } | null> {
+async function getMemberWithPoints(
+  member: MemberRecord | null
+): Promise<
+  | (MemberRecord & { fishTotalPoints: number; plantTotalPoints: number; coralTotalPoints: number })
+  | null
+> {
   if (!member) return null;
 
   const submissions: Submission[] = await getSubmissionsByMember(
     member.id.toString(),
     false, // don't include unsubmitted
-    false  // don't include unapproved
+    false // don't include unapproved
   );
 
-  const fishSubmissions = submissions.filter((sub: Submission) =>
-    sub.species_type === "Fish" || sub.species_type === "Invert"
+  const fishSubmissions = submissions.filter(
+    (sub: Submission) => sub.species_type === "Fish" || sub.species_type === "Invert"
   );
   const plantSubmissions = submissions.filter((sub: Submission) => sub.species_type === "Plant");
   const coralSubmissions = submissions.filter((sub: Submission) => sub.species_type === "Coral");
 
-  const fishTotalPoints = fishSubmissions.reduce((sum: number, sub: Submission) => sum + (sub.total_points || 0), 0);
-  const plantTotalPoints = plantSubmissions.reduce((sum: number, sub: Submission) => sum + (sub.total_points || 0), 0);
-  const coralTotalPoints = coralSubmissions.reduce((sum: number, sub: Submission) => sum + (sub.total_points || 0), 0);
+  const fishTotalPoints = fishSubmissions.reduce(
+    (sum: number, sub: Submission) => sum + (sub.total_points || 0),
+    0
+  );
+  const plantTotalPoints = plantSubmissions.reduce(
+    (sum: number, sub: Submission) => sum + (sub.total_points || 0),
+    0
+  );
+  const coralTotalPoints = coralSubmissions.reduce(
+    (sum: number, sub: Submission) => sum + (sub.total_points || 0),
+    0
+  );
 
   return {
     ...member,
     fishTotalPoints,
     plantTotalPoints,
-    coralTotalPoints
+    coralTotalPoints,
   };
 }
 
-export function requireAdmin(
-  req: MulmRequest,
-  res: Response,
-  next: NextFunction) {
-
+export function requireAdmin(req: MulmRequest, res: Response, next: NextFunction) {
   if (!req.viewer) {
     res.status(401).send();
     return;
@@ -73,7 +123,7 @@ export const viewMembers = async (req: MulmRequest, res: Response) => {
     title: "Member Roster",
     members,
   });
-}
+};
 
 export const viewEditSubmission = async (req: MulmRequest, res: Response) => {
   const submission = await validateSubmission(req, res);
@@ -82,7 +132,7 @@ export const viewEditSubmission = async (req: MulmRequest, res: Response) => {
   }
   const submissionMember = await getMember(submission.member_id);
 
-  res.render('submit', {
+  res.render("submit", {
     title: `Edit Submission`,
     subtitle: "Editing as admin",
     submissionId: submission.id,
@@ -102,7 +152,7 @@ export const viewEditSubmission = async (req: MulmRequest, res: Response) => {
     editing: true,
   });
   return;
-}
+};
 
 export const viewMemberUpdate = async (req: MulmRequest, res: Response) => {
   const { memberId } = req.params;
@@ -116,9 +166,9 @@ export const viewMemberUpdate = async (req: MulmRequest, res: Response) => {
 
   // Render one table row for editing
   res.render("admin/editMember", {
-    member: memberWithPoints
+    member: memberWithPoints,
   });
-}
+};
 
 export const viewMemberRow = async (req: MulmRequest, res: Response) => {
   const { memberId } = req.params;
@@ -131,9 +181,9 @@ export const viewMemberRow = async (req: MulmRequest, res: Response) => {
   const memberWithPoints = await getMemberWithPoints(member || null);
 
   res.render("admin/singleMemberRow", {
-    member: memberWithPoints
+    member: memberWithPoints,
   });
-}
+};
 
 export const updateMemberFields = async (req: MulmRequest, res: Response) => {
   const { memberId } = req.params;
@@ -144,7 +194,11 @@ export const updateMemberFields = async (req: MulmRequest, res: Response) => {
   }
 
   // Parse only the editable fields (name, email, admin status)
-  const { display_name, contact_email, is_admin } = req.body as { display_name: string; contact_email: string; is_admin?: string };
+  const { display_name, contact_email, is_admin } = req.body as {
+    display_name: string;
+    contact_email: string;
+    is_admin?: string;
+  };
   await updateMember(id, {
     display_name,
     contact_email,
@@ -156,9 +210,9 @@ export const updateMemberFields = async (req: MulmRequest, res: Response) => {
   const memberWithPoints = await getMemberWithPoints(member || null);
 
   res.render("admin/singleMemberRow", {
-    member: memberWithPoints
+    member: memberWithPoints,
   });
-}
+};
 
 export const showQueue = async (req: MulmRequest, res: Response) => {
   const { program = "fish" } = req.params;
@@ -174,9 +228,9 @@ export const showQueue = async (req: MulmRequest, res: Response) => {
   ]);
 
   // Add status info to each submission
-  const submissionsWithStatus = submissions.map(sub => ({
+  const submissionsWithStatus = submissions.map((sub) => ({
     ...sub,
-    statusInfo: getSubmissionStatus(sub)
+    statusInfo: getSubmissionStatus(sub),
   }));
 
   const subtitle = (() => {
@@ -199,7 +253,7 @@ export const showQueue = async (req: MulmRequest, res: Response) => {
     programCounts,
     witnessCounts,
   });
-}
+};
 
 export const showWitnessQueue = async (req: MulmRequest, res: Response) => {
   const { program = "fish" } = req.params;
@@ -214,9 +268,9 @@ export const showWitnessQueue = async (req: MulmRequest, res: Response) => {
   ]);
 
   // Add status info to each submission
-  const submissionsWithStatus = submissions.map(sub => ({
+  const submissionsWithStatus = submissions.map((sub) => ({
     ...sub,
-    statusInfo: getSubmissionStatus(sub)
+    statusInfo: getSubmissionStatus(sub),
   }));
 
   const subtitle = (() => {
@@ -238,7 +292,7 @@ export const showWitnessQueue = async (req: MulmRequest, res: Response) => {
     program,
     programCounts,
   });
-}
+};
 
 export const showWaitingPeriod = async (req: MulmRequest, res: Response) => {
   const { program = "fish" } = req.params;
@@ -279,44 +333,40 @@ export const showWaitingPeriod = async (req: MulmRequest, res: Response) => {
     programCounts,
     witnessCounts,
   });
-}
+};
 
 export const sendRequestChanges = async (req: MulmRequest, res: Response) => {
   try {
- 		const submission = await validateSubmission(req, res);
+    const submission = await validateSubmission(req, res);
     if (!submission) {
-      res.status(400).send('Submission not found');
+      res.status(400).send("Submission not found");
       return;
     }
 
     const member = await getMember(submission.member_id);
     if (!member) {
-      res.status(400).send('Member not found');
+      res.status(400).send("Member not found");
       return;
     }
 
     const content = getBodyString(req, "content");
     if (!content || content.trim().length === 0) {
-      res.status(400).send('Please provide feedback message');
+      res.status(400).send("Please provide feedback message");
       return;
     }
 
     await Promise.all([
       updateSubmission(submission.id, { submitted_on: null }),
-      sendChangesRequest(
-        submission,
-        member?.contact_email,
-        content,
-      )
+      sendChangesRequest(submission, member?.contact_email, content),
     ]);
 
     // Redirect to approval queue for the submission's program
-    res.set('HX-Redirect', `/admin/queue/${submission.program}`).send();
- 	} catch (error) {
-    logger.error('Error sending request changes:', error);
-    res.status(500).send('Failed to send feedback. Please try again.');
+    res.set("HX-Redirect", `/admin/queue/${submission.program}`).send();
+  } catch (error) {
+    logger.error("Error sending request changes:", error);
+    res.status(500).send("Failed to send feedback. Please try again.");
   }
-}
+};
 
 export const requestChangesForm = async (req: MulmRequest, res: Response) => {
   const submission = await validateSubmission(req, res);
@@ -352,12 +402,12 @@ Substrate:
 	- Type: ${submission.substrate_type}
 	- Depth: ${submission.substrate_depth}
 	- Color: ${submission.substrate_color}
-`
+`;
   res.render("admin/requestChanges", {
     submission,
     contents,
   });
-}
+};
 
 export const confirmWitnessAction = async (req: MulmRequest, res: Response) => {
   const submission = await validateSubmission(req, res);
@@ -382,8 +432,8 @@ export const confirmWitnessAction = async (req: MulmRequest, res: Response) => {
   ]);
 
   // Redirect to witness queue for the submission's program
-  res.set('HX-Redirect', `/admin/witness-queue/${submission.program}`).send();
-}
+  res.set("HX-Redirect", `/admin/witness-queue/${submission.program}`).send();
+};
 
 export const declineWitnessForm = async (req: MulmRequest, res: Response) => {
   const submission = await validateSubmission(req, res);
@@ -392,18 +442,21 @@ export const declineWitnessForm = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const reproductionTerm = submission.species_type === 'Plant' || submission.species_type === 'Coral' ? 'propagation' : 'spawn';
+  const reproductionTerm =
+    submission.species_type === "Plant" || submission.species_type === "Coral"
+      ? "propagation"
+      : "spawn";
   const offspringTerm = (() => {
     switch (submission.species_type) {
-      case 'Fish':
-        return 'fry (and eggs if applicable)';
-      case 'Plant':
-        return 'plantlets';
-      case 'Coral':
-        return 'frags';
+      case "Fish":
+        return "fry (and eggs if applicable)";
+      case "Plant":
+        return "plantlets";
+      case "Coral":
+        return "frags";
       default:
-      case 'Invert':
-        return 'offspring';
+      case "Invert":
+        return "offspring";
     }
   })();
 
@@ -424,19 +477,19 @@ export const declineWitnessAction = async (req: MulmRequest, res: Response) => {
   try {
     const submission = await validateSubmission(req, res);
     if (!submission) {
-      res.status(400).send('Submission not found');
+      res.status(400).send("Submission not found");
       return;
     }
 
     const member = await getMember(submission.member_id);
     if (!member) {
-      res.status(400).send('Member not found');
+      res.status(400).send("Member not found");
       return;
     }
 
     const reason = getBodyString(req, "reason");
     if (!reason || reason.trim().length === 0) {
-      res.status(400).send('Please provide a reason for requesting more documentation');
+      res.status(400).send("Please provide a reason for requesting more documentation");
       return;
     }
 
@@ -446,21 +499,21 @@ export const declineWitnessAction = async (req: MulmRequest, res: Response) => {
     ]);
 
     // Redirect to witness queue for the submission's program
-    res.set('HX-Redirect', `/admin/witness-queue/${submission.program}`).send();
+    res.set("HX-Redirect", `/admin/witness-queue/${submission.program}`).send();
   } catch (error) {
-    logger.error('Error declining witness:', error);
-    res.status(500).send('Failed to send request. Please try again.');
+    logger.error("Error declining witness:", error);
+    res.status(500).send("Failed to send request. Please try again.");
   }
-}
+};
 
 export const inviteMember = async (req: MulmRequest, res: Response) => {
   const errors = new Map<string, string>();
   const renderDialog = () => {
     res.render("admin/inviteUser", {
-      ...req.body as object,
+      ...(req.body as object),
       errors,
     });
-  }
+  };
 
   const parsed = inviteSchema.safeParse(req.body);
   if (!validateFormResult(parsed, errors, renderDialog)) {
@@ -492,7 +545,7 @@ export const inviteMember = async (req: MulmRequest, res: Response) => {
   await createAuthCode(codeEntry);
   await sendInviteEmail(contact_email, member.display_name, codeEntry.code);
   res.send("Invite sent");
-}
+};
 
 export const sendWelcomeEmail = async (req: MulmRequest, res: Response) => {
   const { memberId } = req.params;
@@ -531,27 +584,33 @@ export const sendWelcomeEmail = async (req: MulmRequest, res: Response) => {
     const submissions = await getSubmissionsByMember(
       member.id.toString(),
       false, // don't include unsubmitted
-      false  // don't include unapproved
+      false // don't include unapproved
     );
 
     await createAuthCode(codeEntry);
-    await sendInviteEmail(member.contact_email, member.display_name, codeEntry.code, member, submissions);
+    await sendInviteEmail(
+      member.contact_email,
+      member.display_name,
+      codeEntry.code,
+      member,
+      submissions
+    );
 
     // Return updated member row
     const memberWithPoints = await getMemberWithPoints(member);
     res.render("admin/singleMemberRow", {
-      member: memberWithPoints
+      member: memberWithPoints,
     });
   } catch (error) {
-    logger.error('Error sending welcome email:', error);
-    res.status(500).send('Failed to send welcome email. Please try again.');
+    logger.error("Error sending welcome email:", error);
+    res.status(500).send("Failed to send welcome email. Please try again.");
   }
-}
+};
 
 export const approveSubmission = async (req: MulmRequest, res: Response) => {
   const { viewer } = req;
 
-  const id = getBodyParam(req, 'id') as number;
+  const id = getBodyParam(req, "id") as number;
   const submission = (await getSubmissionById(id))!;
 
   const errors = new Map<string, string>();
@@ -564,8 +623,8 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
       },
       errors,
       name: {
-        canonical_genus: getBodyString(req, 'canonical_genus'),
-        canonical_species_name: getBodyString(req, 'canonical_species_name'),
+        canonical_genus: getBodyString(req, "canonical_genus"),
+        canonical_species_name: getBodyString(req, "canonical_species_name"),
       },
     });
   };
@@ -596,48 +655,40 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
 
       // Create activity feed entry for submission approval
       try {
-        await createActivity(
-          'submission_approved',
-          member.id,
-          updatedSubmission.id.toString(),
-          {
-            species_common_name: updatedSubmission.species_common_name,
-            species_type: updatedSubmission.species_type,
-            points: updatedSubmission.points || 0,
-            first_time_species: Boolean(updatedSubmission.first_time_species),
-            article_points: updatedSubmission.article_points || undefined
-          }
-        );
+        await createActivity("submission_approved", member.id, updatedSubmission.id.toString(), {
+          species_common_name: updatedSubmission.species_common_name,
+          species_type: updatedSubmission.species_type,
+          points: updatedSubmission.points || 0,
+          first_time_species: Boolean(updatedSubmission.first_time_species),
+          article_points: updatedSubmission.article_points || undefined,
+        });
       } catch (error) {
-        logger.error('Error creating activity feed entry', error);
+        logger.error("Error creating activity feed entry", error);
       }
 
       // Check for level upgrades after approval
       if (updatedSubmission.program) {
         try {
-          await checkAndUpdateMemberLevel(
-            member.id,
-						updatedSubmission.program as Program
-          );
+          await checkAndUpdateMemberLevel(member.id, updatedSubmission.program as Program);
 
           // Check for specialty awards after approval
           await checkAndGrantSpecialtyAwards(member.id);
         } catch (error) {
           // Log error but don't fail the approval process
-          logger.error('Error checking level upgrade and specialty awards', error);
+          logger.error("Error checking level upgrade and specialty awards", error);
         }
       }
     }
   }
 
   // Redirect to approval queue for the submission's program
-  res.set('HX-Redirect', `/admin/queue/${submission.program}`).send();
-}
+  res.set("HX-Redirect", `/admin/queue/${submission.program}`).send();
+};
 
 export const checkMemberLevels = async (req: MulmRequest, res: Response) => {
   const memberId = parseInt(req.params.memberId);
   if (!memberId) {
-    res.status(400).json({ error: 'Invalid member ID' });
+    res.status(400).json({ error: "Invalid member ID" });
     return;
   }
 
@@ -648,29 +699,30 @@ export const checkMemberLevels = async (req: MulmRequest, res: Response) => {
       .map(([program, result]) => ({
         program,
         oldLevel: result.oldLevel,
-        newLevel: result.newLevel
+        newLevel: result.newLevel,
       }));
 
     res.json({
       success: true,
       memberId,
       levelChanges,
-      message: levelChanges.length > 0
-        ? `Updated ${levelChanges.length} level(s) for member ${memberId}`
-        : `No level changes needed for member ${memberId}`
+      message:
+        levelChanges.length > 0
+          ? `Updated ${levelChanges.length} level(s) for member ${memberId}`
+          : `No level changes needed for member ${memberId}`,
     });
   } catch (error) {
     res.status(500).json({
-      error: 'Failed to check member levels',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: "Failed to check member levels",
+      details: error instanceof Error ? error.message : "Unknown error",
     });
   }
-}
+};
 
 export const checkMemberSpecialtyAwards = async (req: MulmRequest, res: Response) => {
   const memberId = parseInt(req.params.memberId);
   if (!memberId) {
-    res.status(400).json({ error: 'Invalid member ID' });
+    res.status(400).json({ error: "Invalid member ID" });
     return;
   }
 
@@ -682,17 +734,18 @@ export const checkMemberSpecialtyAwards = async (req: MulmRequest, res: Response
       memberId,
       newAwards,
       totalNewAwards: newAwards.length,
-      message: newAwards.length > 0
-        ? `Granted ${newAwards.length} new specialty award(s) for member ${memberId}: ${newAwards.join(', ')}`
-        : `No new specialty awards for member ${memberId}`
+      message:
+        newAwards.length > 0
+          ? `Granted ${newAwards.length} new specialty award(s) for member ${memberId}: ${newAwards.join(", ")}`
+          : `No new specialty awards for member ${memberId}`,
     });
   } catch (error) {
     res.status(500).json({
-      error: 'Failed to check member specialty awards',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: "Failed to check member specialty awards",
+      details: error instanceof Error ? error.message : "Unknown error",
     });
   }
-}
+};
 
 /**
  * POST /admin/submissions/:id/notes
@@ -704,14 +757,14 @@ export async function addSubmissionNote(req: MulmRequest, res: Response) {
   const submissionId = parseInt(req.params.id);
 
   if (!submissionId) {
-    res.status(400).send('Invalid submission ID');
+    res.status(400).send("Invalid submission ID");
     return;
   }
 
   // Validate form
   const parsed = submissionNoteForm.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).send('Invalid note: ' + parsed.error.issues[0].message);
+    res.status(400).send("Invalid note: " + parsed.error.issues[0].message);
     return;
   }
 
@@ -721,20 +774,20 @@ export async function addSubmissionNote(req: MulmRequest, res: Response) {
 
     // Fetch the newly created note with admin details
     const notes = await getNotesForSubmission(submissionId);
-    const newNote = notes.find(n => n.id === noteId);
+    const newNote = notes.find((n) => n.id === noteId);
 
     if (!newNote) {
-      res.status(500).send('Note created but could not be retrieved');
+      res.status(500).send("Note created but could not be retrieved");
       return;
     }
 
     // Render just the new note HTML for HTMX to insert
-    res.render('admin/submissionNote', {
-      note: newNote
+    res.render("admin/submissionNote", {
+      note: newNote,
     });
   } catch (error) {
-    logger.error('Failed to add submission note', error);
-    res.status(500).send('Failed to add note');
+    logger.error("Failed to add submission note", error);
+    res.status(500).send("Failed to add note");
   }
 }
 
@@ -746,21 +799,21 @@ export async function updateSubmissionNote(req: MulmRequest, res: Response) {
   const noteId = parseInt(req.params.noteId);
 
   if (!noteId) {
-    res.status(400).send('Invalid note ID');
+    res.status(400).send("Invalid note ID");
     return;
   }
 
   // Verify the note exists
   const note = await getNoteById(noteId);
   if (!note) {
-    res.status(404).send('Note not found');
+    res.status(404).send("Note not found");
     return;
   }
 
   // Validate form
   const parsed = submissionNoteForm.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).send('Invalid note: ' + parsed.error.issues[0].message);
+    res.status(400).send("Invalid note: " + parsed.error.issues[0].message);
     return;
   }
 
@@ -771,17 +824,17 @@ export async function updateSubmissionNote(req: MulmRequest, res: Response) {
     // Fetch the updated note
     const updatedNote = await getNoteById(noteId);
     if (!updatedNote) {
-      res.status(500).send('Note updated but could not be retrieved');
+      res.status(500).send("Note updated but could not be retrieved");
       return;
     }
 
     // Render the updated note HTML
-    res.render('admin/submissionNote', {
-      note: updatedNote
+    res.render("admin/submissionNote", {
+      note: updatedNote,
     });
   } catch (error) {
-    logger.error('Failed to update submission note', error);
-    res.status(500).send('Failed to update note');
+    logger.error("Failed to update submission note", error);
+    res.status(500).send("Failed to update note");
   }
 }
 
@@ -793,23 +846,23 @@ export async function deleteSubmissionNote(req: MulmRequest, res: Response) {
   const noteId = parseInt(req.params.noteId);
 
   if (!noteId) {
-    res.status(400).send('Invalid note ID');
+    res.status(400).send("Invalid note ID");
     return;
   }
 
   // Verify the note exists
   const note = await getNoteById(noteId);
   if (!note) {
-    res.status(404).send('Note not found');
+    res.status(404).send("Note not found");
     return;
   }
 
   try {
     await deleteNote(noteId);
-    res.status(200).send(''); // Return empty response for HTMX to remove the element
+    res.status(200).send(""); // Return empty response for HTMX to remove the element
   } catch (error) {
-    logger.error('Failed to delete submission note', error);
-    res.status(500).send('Failed to delete note');
+    logger.error("Failed to delete submission note", error);
+    res.status(500).send("Failed to delete note");
   }
 }
 
@@ -820,18 +873,18 @@ export async function deleteSubmissionNote(req: MulmRequest, res: Response) {
 export async function editSubmissionNoteForm(req: MulmRequest, res: Response) {
   const noteId = parseInt(req.params.noteId);
   if (!noteId) {
-    res.status(400).send('Invalid note ID');
+    res.status(400).send("Invalid note ID");
     return;
   }
 
   const note = await getNoteById(noteId);
   if (!note) {
-    res.status(404).send('Note not found');
+    res.status(404).send("Note not found");
     return;
   }
 
-  res.render('admin/submissionNoteEdit', {
-    note
+  res.render("admin/submissionNoteEdit", {
+    note,
   });
 }
 
@@ -842,18 +895,17 @@ export async function editSubmissionNoteForm(req: MulmRequest, res: Response) {
 export async function cancelEditSubmissionNote(req: MulmRequest, res: Response) {
   const noteId = parseInt(req.params.noteId);
   if (!noteId) {
-    res.status(400).send('Invalid note ID');
+    res.status(400).send("Invalid note ID");
     return;
   }
 
   const note = await getNoteById(noteId);
   if (!note) {
-    res.status(404).send('Note not found');
+    res.status(404).send("Note not found");
     return;
   }
 
-  res.render('admin/submissionNote', {
-    note
+  res.render("admin/submissionNote", {
+    note,
   });
 }
-

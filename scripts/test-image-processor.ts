@@ -5,14 +5,18 @@
  * Usage: npm run script scripts/test-image-processor.ts [path-to-image]
  */
 
-import { processImage, validateImageBuffer, generatePreviewDataUrl } from '../src/utils/image-processor';
-import sharp from 'sharp';
-import fs from 'fs/promises';
-import path from 'path';
+import {
+  processImage,
+  validateImageBuffer,
+  generatePreviewDataUrl,
+} from "../src/utils/image-processor";
+import sharp from "sharp";
+import fs from "fs/promises";
+import path from "path";
 
 async function createTestImage(outputPath: string) {
-  console.log('Creating test image...');
-  
+  console.log("Creating test image...");
+
   // Create a test image with text
   const svg = `
     <svg width="1200" height="800" xmlns="http://www.w3.org/2000/svg">
@@ -25,11 +29,9 @@ async function createTestImage(outputPath: string) {
       </text>
     </svg>
   `;
-  
-  const buffer = await sharp(Buffer.from(svg))
-    .jpeg()
-    .toBuffer();
-  
+
+  const buffer = await sharp(Buffer.from(svg)).jpeg().toBuffer();
+
   await fs.writeFile(outputPath, buffer);
   console.log(`Test image created at: ${outputPath}`);
   return outputPath;
@@ -37,71 +39,87 @@ async function createTestImage(outputPath: string) {
 
 async function testImageProcessing(imagePath: string) {
   console.log(`\n=== Testing image: ${imagePath} ===\n`);
-  
+
   try {
     // Read the image
     const buffer = await fs.readFile(imagePath);
     console.log(`✓ Read image (${buffer.length} bytes)`);
-    
+
     // Get original metadata
     const originalMetadata = await sharp(buffer).metadata();
-    console.log(`✓ Original: ${originalMetadata.width}x${originalMetadata.height}, format: ${originalMetadata.format}`);
-    
+    console.log(
+      `✓ Original: ${originalMetadata.width}x${originalMetadata.height}, format: ${originalMetadata.format}`
+    );
+
     // Validate the image
-    console.log('\n--- Validation ---');
+    console.log("\n--- Validation ---");
     try {
       await validateImageBuffer(buffer);
-      console.log('✓ Image validation passed');
+      console.log("✓ Image validation passed");
     } catch (error) {
       console.log(`✗ Validation failed: ${error.message}`);
       return;
     }
-    
+
     // Process the image
-    console.log('\n--- Processing ---');
+    console.log("\n--- Processing ---");
     const startTime = Date.now();
     const result = await processImage(buffer, { preferWebP: false });
     const processingTime = Date.now() - startTime;
-    
+
     console.log(`✓ Processing completed in ${processingTime}ms`);
-    console.log(`  Original: ${result.original.width}x${result.original.height}, ${result.original.size} bytes`);
-    console.log(`  Medium: ${result.medium.width}x${result.medium.height}, ${result.medium.size} bytes`);
-    console.log(`  Thumbnail: ${result.thumbnail.width}x${result.thumbnail.height}, ${result.thumbnail.size} bytes`);
-    
+    console.log(
+      `  Original: ${result.original.width}x${result.original.height}, ${result.original.size} bytes`
+    );
+    console.log(
+      `  Medium: ${result.medium.width}x${result.medium.height}, ${result.medium.size} bytes`
+    );
+    console.log(
+      `  Thumbnail: ${result.thumbnail.width}x${result.thumbnail.height}, ${result.thumbnail.size} bytes`
+    );
+
     // Calculate compression ratios
     const originalSize = buffer.length;
-    const compressionRatio = ((originalSize - result.original.size) / originalSize * 100).toFixed(1);
+    const compressionRatio = (((originalSize - result.original.size) / originalSize) * 100).toFixed(
+      1
+    );
     console.log(`\n--- Compression ---`);
     console.log(`  Original file: ${originalSize} bytes`);
-    console.log(`  Processed original: ${result.original.size} bytes (${compressionRatio}% reduction)`);
-    
+    console.log(
+      `  Processed original: ${result.original.size} bytes (${compressionRatio}% reduction)`
+    );
+
     // Save processed images
-    const outputDir = path.join(path.dirname(imagePath), 'processed');
+    const outputDir = path.join(path.dirname(imagePath), "processed");
     await fs.mkdir(outputDir, { recursive: true });
-    
+
     const baseName = path.basename(imagePath, path.extname(imagePath));
     await fs.writeFile(path.join(outputDir, `${baseName}-original.jpg`), result.original.buffer);
     await fs.writeFile(path.join(outputDir, `${baseName}-medium.jpg`), result.medium.buffer);
     await fs.writeFile(path.join(outputDir, `${baseName}-thumb.jpg`), result.thumbnail.buffer);
-    
+
     console.log(`\n✓ Saved processed images to: ${outputDir}`);
-    
+
     // Test preview generation
-    console.log('\n--- Preview Generation ---');
+    console.log("\n--- Preview Generation ---");
     const previewDataUrl = await generatePreviewDataUrl(buffer);
     console.log(`✓ Generated preview data URL (${previewDataUrl.length} characters)`);
-    
+
     // Test WebP processing
-    console.log('\n--- WebP Processing ---');
+    console.log("\n--- WebP Processing ---");
     const webpResult = await processImage(buffer, { preferWebP: true });
     console.log(`✓ WebP processing completed`);
     console.log(`  Original: ${webpResult.original.size} bytes (WebP)`);
-    console.log(`  JPEG vs WebP size: ${result.original.size} vs ${webpResult.original.size} bytes`);
-    
-    await fs.writeFile(path.join(outputDir, `${baseName}-original.webp`), webpResult.original.buffer);
-    
+    console.log(
+      `  JPEG vs WebP size: ${result.original.size} vs ${webpResult.original.size} bytes`
+    );
+
+    await fs.writeFile(
+      path.join(outputDir, `${baseName}-original.webp`),
+      webpResult.original.buffer
+    );
   } catch (error) {
-    console.error('\n✗ Error:', error.message);
+    console.error("\n✗ Error:", error.message);
     if (error.stack) {
       console.error(error.stack);
     }
@@ -109,22 +127,22 @@ async function testImageProcessing(imagePath: string) {
 }
 
 async function testMultipleImages() {
-  const testDir = path.join(process.cwd(), 'test-images');
+  const testDir = path.join(process.cwd(), "test-images");
   await fs.mkdir(testDir, { recursive: true });
-  
-  console.log('=== Creating test images of various sizes ===\n');
-  
+
+  console.log("=== Creating test images of various sizes ===\n");
+
   // Create test images of different sizes
   const testCases = [
-    { width: 800, height: 600, name: 'landscape-small' },
-    { width: 1920, height: 1080, name: 'landscape-hd' },
-    { width: 3000, height: 2000, name: 'landscape-large' },
-    { width: 600, height: 800, name: 'portrait-small' },
-    { width: 1080, height: 1920, name: 'portrait-hd' },
-    { width: 500, height: 500, name: 'square-small' },
-    { width: 2000, height: 2000, name: 'square-large' },
+    { width: 800, height: 600, name: "landscape-small" },
+    { width: 1920, height: 1080, name: "landscape-hd" },
+    { width: 3000, height: 2000, name: "landscape-large" },
+    { width: 600, height: 800, name: "portrait-small" },
+    { width: 1080, height: 1920, name: "portrait-hd" },
+    { width: 500, height: 500, name: "square-small" },
+    { width: 2000, height: 2000, name: "square-large" },
   ];
-  
+
   for (const testCase of testCases) {
     const svg = `
       <svg width="${testCase.width}" height="${testCase.height}" xmlns="http://www.w3.org/2000/svg">
@@ -143,11 +161,11 @@ async function testMultipleImages() {
         </text>
       </svg>
     `;
-    
+
     const buffer = await sharp(Buffer.from(svg)).jpeg({ quality: 90 }).toBuffer();
     const imagePath = path.join(testDir, `${testCase.name}.jpg`);
     await fs.writeFile(imagePath, buffer);
-    
+
     await testImageProcessing(imagePath);
   }
 }
@@ -155,7 +173,7 @@ async function testMultipleImages() {
 // Main execution
 async function main() {
   const args = process.argv.slice(2);
-  
+
   if (args.length > 0) {
     // Test with provided image
     const imagePath = path.resolve(args[0]);
@@ -168,11 +186,11 @@ async function main() {
     }
   } else {
     // Run automated tests with generated images
-    console.log('No image path provided. Running automated tests with generated images.\n');
+    console.log("No image path provided. Running automated tests with generated images.\n");
     await testMultipleImages();
   }
-  
-  console.log('\n=== All tests completed ===');
+
+  console.log("\n=== All tests completed ===");
 }
 
 main().catch(console.error);

@@ -20,26 +20,17 @@ export const annual = async (req: MulmRequest, res: Response) => {
   const startDate = new Date(year - 1, 7, 1);
   const endDate = new Date(year, 6, 31);
 
-  const submissions = await getApprovedSubmissionsInDateRange(
-    startDate,
-    endDate,
-    program,
-  );
+  const submissions = await getApprovedSubmissionsInDateRange(startDate, endDate, program);
   const names: Record<string, string> = {};
   // Collate approved submissions into standings
   const standings = new Map<number, number>();
   submissions.forEach((submission) => {
     const currentPoints = standings.get(submission.member_id) ?? 0;
-    standings.set(
-      submission.member_id,
-      currentPoints + submission.total_points!,
-    );
+    standings.set(submission.member_id, currentPoints + submission.total_points!);
     names[submission.member_id] = submission.member_name;
   });
 
-  const sortedStandings = Array.from(standings.entries()).sort(
-    (a, b) => b[1] - a[1],
-  );
+  const sortedStandings = Array.from(standings.entries()).sort((a, b) => b[1] - a[1]);
 
   const title = (() => {
     switch (program) {
@@ -76,26 +67,23 @@ export const lifetime = async (req: MulmRequest, res: Response) => {
   const allSubmissions = await getApprovedSubmissions(program);
   const totals = new Map<number, number>();
   for (const record of allSubmissions) {
-    totals.set(
-      record.member_id,
-      (totals.get(record.member_id) || 0) + record.total_points,
-    );
+    totals.set(record.member_id, (totals.get(record.member_id) || 0) + record.total_points);
   }
 
   const members = await getMembersList();
   for (const member of members) {
     const memberLevel =
-			(() => {
-			  switch (program) {
-			    default:
-			    case "fish":
-			      return member.fish_level;
-			    case "plant":
-			      return member.plant_level;
-			    case "coral":
-			      return member.coral_level;
-			  }
-			})() ?? "Participant";
+      (() => {
+        switch (program) {
+          default:
+          case "fish":
+            return member.fish_level;
+          case "plant":
+            return member.plant_level;
+          case "coral":
+            return member.coral_level;
+        }
+      })() ?? "Participant";
 
     if (!levels[memberLevel]) {
       levels[memberLevel] = [];
@@ -116,9 +104,7 @@ export const lifetime = async (req: MulmRequest, res: Response) => {
   const finalLevels = levelsOrder
     .map((name) => [
       name,
-      (levels[name] ?? [])
-        .sort(sortMembers)
-        .filter((member) => member.points! > 0),
+      (levels[name] ?? []).sort(sortMembers).filter((member) => member.points! > 0),
     ])
     .filter(([, members]) => members.length > 0);
 

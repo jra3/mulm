@@ -7,16 +7,16 @@
  * members in the BAP/HAP application.
  */
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
   CallToolRequestSchema,
   ListResourcesRequestSchema,
   ListToolsRequestSchema,
   ReadResourceRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js';
-import { query, withTransaction } from '../db/conn.js';
-import { logger } from '../utils/logger.js';
+} from "@modelcontextprotocol/sdk/types.js";
+import { query, withTransaction } from "../db/conn.js";
+import { logger } from "../utils/logger.js";
 
 // Type definitions
 type Member = {
@@ -42,8 +42,8 @@ type MemberDetail = Member & {
 // Create MCP server
 const server = new Server(
   {
-    name: 'member-management',
-    version: '1.0.0',
+    name: "member-management",
+    version: "1.0.0",
   },
   {
     capabilities: {
@@ -60,22 +60,22 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
   return {
     resources: [
       {
-        uri: 'members://list',
-        name: 'All Members',
-        description: 'List all members with basic information',
-        mimeType: 'application/json',
+        uri: "members://list",
+        name: "All Members",
+        description: "List all members with basic information",
+        mimeType: "application/json",
       },
       {
-        uri: 'members://admins',
-        name: 'Admin Members',
-        description: 'List all admin members',
-        mimeType: 'application/json',
+        uri: "members://admins",
+        name: "Admin Members",
+        description: "List all admin members",
+        mimeType: "application/json",
       },
       {
-        uri: 'members://statistics',
-        name: 'Member Statistics',
-        description: 'Get aggregate statistics about members',
-        mimeType: 'application/json',
+        uri: "members://statistics",
+        name: "Member Statistics",
+        description: "Get aggregate statistics about members",
+        mimeType: "application/json",
       },
     ],
   };
@@ -89,7 +89,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
 
   try {
     // members://list
-    if (uri === 'members://list') {
+    if (uri === "members://list") {
       const members = await query<Member & { submission_count: number }>(`
         SELECT m.*, COUNT(s.id) as submission_count
         FROM members m
@@ -101,7 +101,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
         contents: [
           {
             uri,
-            mimeType: 'application/json',
+            mimeType: "application/json",
             text: JSON.stringify(members, null, 2),
           },
         ],
@@ -109,7 +109,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
     }
 
     // members://admins
-    if (uri === 'members://admins') {
+    if (uri === "members://admins") {
       const admins = await query<Member>(`
         SELECT * FROM members
         WHERE is_admin = 1
@@ -119,7 +119,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
         contents: [
           {
             uri,
-            mimeType: 'application/json',
+            mimeType: "application/json",
             text: JSON.stringify(admins, null, 2),
           },
         ],
@@ -130,10 +130,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
     const memberMatch = uri.match(/^members:\/\/(\d+)$/);
     if (memberMatch) {
       const memberId = parseInt(memberMatch[1]);
-      const members = await query<Member>(
-        'SELECT * FROM members WHERE id = ?',
-        [memberId]
-      );
+      const members = await query<Member>("SELECT * FROM members WHERE id = ?", [memberId]);
       if (members.length === 0) {
         throw new Error(`Member ${memberId} not found`);
       }
@@ -141,7 +138,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
         contents: [
           {
             uri,
-            mimeType: 'application/json',
+            mimeType: "application/json",
             text: JSON.stringify(members[0], null, 2),
           },
         ],
@@ -149,11 +146,17 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
     }
 
     // members://statistics
-    if (uri === 'members://statistics') {
-      const totalCount = await query<{ count: number }>('SELECT COUNT(*) as count FROM members');
-      const adminCount = await query<{ count: number }>('SELECT COUNT(*) as count FROM members WHERE is_admin = 1');
-      const withPassword = await query<{ count: number }>('SELECT COUNT(*) as count FROM password_account');
-      const withGoogle = await query<{ count: number }>('SELECT COUNT(*) as count FROM google_account');
+    if (uri === "members://statistics") {
+      const totalCount = await query<{ count: number }>("SELECT COUNT(*) as count FROM members");
+      const adminCount = await query<{ count: number }>(
+        "SELECT COUNT(*) as count FROM members WHERE is_admin = 1"
+      );
+      const withPassword = await query<{ count: number }>(
+        "SELECT COUNT(*) as count FROM password_account"
+      );
+      const withGoogle = await query<{ count: number }>(
+        "SELECT COUNT(*) as count FROM google_account"
+      );
       const activeMembers = await query<{ count: number }>(`
         SELECT COUNT(DISTINCT member_id) as count FROM submissions WHERE approved_on IS NOT NULL
       `);
@@ -170,7 +173,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
         contents: [
           {
             uri,
-            mimeType: 'application/json',
+            mimeType: "application/json",
             text: JSON.stringify(statistics, null, 2),
           },
         ],
@@ -179,7 +182,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
 
     throw new Error(`Unknown resource URI: ${uri}`);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = error instanceof Error ? error.message : "Unknown error";
     throw new Error(`Failed to read resource ${uri}: ${message}`);
   }
 });
@@ -191,78 +194,85 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
       {
-        name: 'list_members',
-        description: 'Search and list members with optional filters',
+        name: "list_members",
+        description: "Search and list members with optional filters",
         inputSchema: {
-          type: 'object',
+          type: "object",
           properties: {
-            query: { type: 'string', description: 'Search text (searches name and email)' },
-            is_admin: { type: 'boolean', description: 'Filter by admin status' },
-            has_submissions: { type: 'boolean', description: 'Filter members with submissions' },
-            limit: { type: 'number', description: 'Max results (default: 100)' },
-            offset: { type: 'number', description: 'Skip results (default: 0)' },
+            query: { type: "string", description: "Search text (searches name and email)" },
+            is_admin: { type: "boolean", description: "Filter by admin status" },
+            has_submissions: { type: "boolean", description: "Filter members with submissions" },
+            limit: { type: "number", description: "Max results (default: 100)" },
+            offset: { type: "number", description: "Skip results (default: 0)" },
           },
         },
       },
       {
-        name: 'get_member_detail',
-        description: 'Get comprehensive details for a member including submissions, awards, and credentials',
+        name: "get_member_detail",
+        description:
+          "Get comprehensive details for a member including submissions, awards, and credentials",
         inputSchema: {
-          type: 'object',
+          type: "object",
           properties: {
-            member_id: { type: 'number', description: 'Member ID' },
+            member_id: { type: "number", description: "Member ID" },
           },
-          required: ['member_id'],
+          required: ["member_id"],
         },
       },
       {
-        name: 'merge_members',
-        description: 'Merge two member accounts (moves all data from one member to another)',
+        name: "merge_members",
+        description: "Merge two member accounts (moves all data from one member to another)",
         inputSchema: {
-          type: 'object',
+          type: "object",
           properties: {
-            from_member_id: { type: 'number', description: 'Member to delete (source)' },
-            to_member_id: { type: 'number', description: 'Member to keep (destination)' },
-            preview: { type: 'boolean', description: 'Preview changes without executing (default: false)' },
+            from_member_id: { type: "number", description: "Member to delete (source)" },
+            to_member_id: { type: "number", description: "Member to keep (destination)" },
+            preview: {
+              type: "boolean",
+              description: "Preview changes without executing (default: false)",
+            },
           },
-          required: ['from_member_id', 'to_member_id'],
+          required: ["from_member_id", "to_member_id"],
         },
       },
       {
-        name: 'update_member',
-        description: 'Update member information (email, display name)',
+        name: "update_member",
+        description: "Update member information (email, display name)",
         inputSchema: {
-          type: 'object',
+          type: "object",
           properties: {
-            member_id: { type: 'number', description: 'Member ID' },
-            contact_email: { type: 'string', description: 'New email address (optional)' },
-            display_name: { type: 'string', description: 'New display name (optional)' },
+            member_id: { type: "number", description: "Member ID" },
+            contact_email: { type: "string", description: "New email address (optional)" },
+            display_name: { type: "string", description: "New display name (optional)" },
           },
-          required: ['member_id'],
+          required: ["member_id"],
         },
       },
       {
-        name: 'delete_member',
-        description: 'Delete a member account with safety checks',
+        name: "delete_member",
+        description: "Delete a member account with safety checks",
         inputSchema: {
-          type: 'object',
+          type: "object",
           properties: {
-            member_id: { type: 'number', description: 'Member ID' },
-            force: { type: 'boolean', description: 'Force delete even if member has approved submissions (default: false)' },
+            member_id: { type: "number", description: "Member ID" },
+            force: {
+              type: "boolean",
+              description: "Force delete even if member has approved submissions (default: false)",
+            },
           },
-          required: ['member_id'],
+          required: ["member_id"],
         },
       },
       {
-        name: 'set_admin_status',
-        description: 'Grant or revoke admin privileges',
+        name: "set_admin_status",
+        description: "Grant or revoke admin privileges",
         inputSchema: {
-          type: 'object',
+          type: "object",
           properties: {
-            member_id: { type: 'number', description: 'Member ID' },
-            is_admin: { type: 'boolean', description: 'Admin status' },
+            member_id: { type: "number", description: "Member ID" },
+            is_admin: { type: "boolean", description: "Admin status" },
           },
-          required: ['member_id', 'is_admin'],
+          required: ["member_id", "is_admin"],
         },
       },
     ],
@@ -277,32 +287,36 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   try {
     switch (name) {
-      case 'list_members':
+      case "list_members":
         return await handleListMembers(args);
-      case 'get_member_detail':
+      case "get_member_detail":
         return await handleGetMemberDetail(args);
-      case 'merge_members':
+      case "merge_members":
         return await handleMergeMembers(args);
-      case 'update_member':
+      case "update_member":
         return await handleUpdateMember(args);
-      case 'delete_member':
+      case "delete_member":
         return await handleDeleteMember(args);
-      case 'set_admin_status':
+      case "set_admin_status":
         return await handleSetAdminStatus(args);
       default:
         throw new Error(`Unknown tool: ${name}`);
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = error instanceof Error ? error.message : "Unknown error";
     return {
       content: [
         {
-          type: 'text' as const,
-          text: JSON.stringify({
-            success: false,
-            error: message,
-            error_code: 'TOOL_EXECUTION_ERROR',
-          }, null, 2),
+          type: "text" as const,
+          text: JSON.stringify(
+            {
+              success: false,
+              error: message,
+              error_code: "TOOL_EXECUTION_ERROR",
+            },
+            null,
+            2
+          ),
         },
       ],
     };
@@ -314,25 +328,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
  */
 
 async function handleListMembers(args: any) {
-  const {
-    query: searchQuery,
-    is_admin,
-    has_submissions,
-    limit = 100,
-    offset = 0,
-  } = args;
+  const { query: searchQuery, is_admin, has_submissions, limit = 100, offset = 0 } = args;
 
-  const conditions: string[] = ['1=1'];
+  const conditions: string[] = ["1=1"];
   const params: any[] = [];
 
   if (is_admin !== undefined) {
-    conditions.push('m.is_admin = ?');
+    conditions.push("m.is_admin = ?");
     params.push(is_admin ? 1 : 0);
   }
 
   if (searchQuery && searchQuery.trim().length >= 2) {
     const searchPattern = `%${searchQuery.trim().toLowerCase()}%`;
-    conditions.push('(LOWER(m.display_name) LIKE ? OR LOWER(m.contact_email) LIKE ?)');
+    conditions.push("(LOWER(m.display_name) LIKE ? OR LOWER(m.contact_email) LIKE ?)");
     params.push(searchPattern, searchPattern);
   }
 
@@ -340,12 +348,12 @@ async function handleListMembers(args: any) {
     SELECT m.*, COUNT(s.id) as submission_count
     FROM members m
     LEFT JOIN submissions s ON m.id = s.member_id AND s.approved_on IS NOT NULL
-    WHERE ${conditions.join(' AND ')}
+    WHERE ${conditions.join(" AND ")}
     GROUP BY m.id
   `;
 
   if (has_submissions !== undefined) {
-    sql += has_submissions ? ' HAVING submission_count > 0' : ' HAVING submission_count = 0';
+    sql += has_submissions ? " HAVING submission_count > 0" : " HAVING submission_count = 0";
   }
 
   sql += ` ORDER BY m.display_name LIMIT ? OFFSET ?`;
@@ -356,21 +364,25 @@ async function handleListMembers(args: any) {
   return {
     content: [
       {
-        type: 'text' as const,
-        text: JSON.stringify({
-          success: true,
-          count: results.length,
-          members: results.map(m => ({
-            id: m.id,
-            email: m.contact_email,
-            display_name: m.display_name,
-            is_admin: Boolean(m.is_admin),
-            submission_count: m.submission_count,
-            fish_level: m.fish_level,
-            plant_level: m.plant_level,
-            coral_level: m.coral_level,
-          })),
-        }, null, 2),
+        type: "text" as const,
+        text: JSON.stringify(
+          {
+            success: true,
+            count: results.length,
+            members: results.map((m) => ({
+              id: m.id,
+              email: m.contact_email,
+              display_name: m.display_name,
+              is_admin: Boolean(m.is_admin),
+              submission_count: m.submission_count,
+              fish_level: m.fish_level,
+              plant_level: m.plant_level,
+              coral_level: m.coral_level,
+            })),
+          },
+          null,
+          2
+        ),
       },
     ],
   };
@@ -379,10 +391,7 @@ async function handleListMembers(args: any) {
 async function handleGetMemberDetail(args: any) {
   const { member_id } = args;
 
-  const members = await query<Member>(
-    'SELECT * FROM members WHERE id = ?',
-    [member_id]
-  );
+  const members = await query<Member>("SELECT * FROM members WHERE id = ?", [member_id]);
 
   if (members.length === 0) {
     throw new Error(`Member ${member_id} not found`);
@@ -392,16 +401,17 @@ async function handleGetMemberDetail(args: any) {
 
   // Get submission counts
   const submissions = await query<{ count: number }>(
-    'SELECT COUNT(*) as count FROM submissions WHERE member_id = ?',
+    "SELECT COUNT(*) as count FROM submissions WHERE member_id = ?",
     [member_id]
   );
 
   const approvedSubmissions = await query<{ count: number }>(
-    'SELECT COUNT(*) as count FROM submissions WHERE member_id = ? AND approved_on IS NOT NULL',
+    "SELECT COUNT(*) as count FROM submissions WHERE member_id = ? AND approved_on IS NOT NULL",
     [member_id]
   );
 
-  const totalPoints = await query<{ total: number }>(`
+  const totalPoints = await query<{ total: number }>(
+    `
     SELECT SUM(
       points +
       IFNULL(article_points, 0) +
@@ -411,28 +421,30 @@ async function handleGetMemberDetail(args: any) {
     ) as total
     FROM submissions
     WHERE member_id = ? AND approved_on IS NOT NULL
-  `, [member_id]);
-
-  // Check credentials
-  const hasPassword = await query<{ member_id: number }>(
-    'SELECT member_id FROM password_account WHERE member_id = ?',
+  `,
     [member_id]
   );
 
-  const hasGoogle = await query<{ member_id: number, google_email: string }>(
-    'SELECT member_id, google_email FROM google_account WHERE member_id = ?',
+  // Check credentials
+  const hasPassword = await query<{ member_id: number }>(
+    "SELECT member_id FROM password_account WHERE member_id = ?",
+    [member_id]
+  );
+
+  const hasGoogle = await query<{ member_id: number; google_email: string }>(
+    "SELECT member_id, google_email FROM google_account WHERE member_id = ?",
     [member_id]
   );
 
   // Get awards
   const awards = await query<{ award_name: string; date_awarded: string }>(
-    'SELECT award_name, date_awarded FROM awards WHERE member_id = ? ORDER BY date_awarded DESC',
+    "SELECT award_name, date_awarded FROM awards WHERE member_id = ? ORDER BY date_awarded DESC",
     [member_id]
   );
 
   // Get tank presets
   const tankPresets = await query<{ preset_name: string }>(
-    'SELECT preset_name FROM tank_presets WHERE member_id = ? ORDER BY preset_name',
+    "SELECT preset_name FROM tank_presets WHERE member_id = ? ORDER BY preset_name",
     [member_id]
   );
 
@@ -450,17 +462,21 @@ async function handleGetMemberDetail(args: any) {
   return {
     content: [
       {
-        type: 'text' as const,
-        text: JSON.stringify({
-          success: true,
-          member: {
-            ...detail,
-            is_admin: Boolean(detail.is_admin),
-            google_email: hasGoogle[0]?.google_email,
-            awards: awards.map(a => a.award_name),
-            tank_presets: tankPresets.map(t => t.preset_name),
+        type: "text" as const,
+        text: JSON.stringify(
+          {
+            success: true,
+            member: {
+              ...detail,
+              is_admin: Boolean(detail.is_admin),
+              google_email: hasGoogle[0]?.google_email,
+              awards: awards.map((a) => a.award_name),
+              tank_presets: tankPresets.map((t) => t.preset_name),
+            },
           },
-        }, null, 2),
+          null,
+          2
+        ),
       },
     ],
   };
@@ -470,12 +486,12 @@ async function handleMergeMembers(args: any) {
   const { from_member_id, to_member_id, preview } = args;
 
   if (from_member_id === to_member_id) {
-    throw new Error('Cannot merge a member into itself');
+    throw new Error("Cannot merge a member into itself");
   }
 
   // Get both members
-  const fromMembers = await query<Member>('SELECT * FROM members WHERE id = ?', [from_member_id]);
-  const toMembers = await query<Member>('SELECT * FROM members WHERE id = ?', [to_member_id]);
+  const fromMembers = await query<Member>("SELECT * FROM members WHERE id = ?", [from_member_id]);
+  const toMembers = await query<Member>("SELECT * FROM members WHERE id = ?", [to_member_id]);
 
   if (fromMembers.length === 0) {
     throw new Error(`Source member ${from_member_id} not found`);
@@ -489,17 +505,17 @@ async function handleMergeMembers(args: any) {
 
   // Get counts for preview
   const submissionCount = await query<{ count: number }>(
-    'SELECT COUNT(*) as count FROM submissions WHERE member_id = ?',
+    "SELECT COUNT(*) as count FROM submissions WHERE member_id = ?",
     [from_member_id]
   );
 
   const awardCount = await query<{ count: number }>(
-    'SELECT COUNT(*) as count FROM awards WHERE member_id = ?',
+    "SELECT COUNT(*) as count FROM awards WHERE member_id = ?",
     [from_member_id]
   );
 
   const tankPresetCount = await query<{ count: number }>(
-    'SELECT COUNT(*) as count FROM tank_presets WHERE member_id = ?',
+    "SELECT COUNT(*) as count FROM tank_presets WHERE member_id = ?",
     [from_member_id]
   );
 
@@ -529,13 +545,17 @@ async function handleMergeMembers(args: any) {
     return {
       content: [
         {
-          type: 'text' as const,
-          text: JSON.stringify({
-            success: true,
-            preview: true,
-            preview_data: previewData,
-            message: 'Preview of merge operation (no changes made)',
-          }, null, 2),
+          type: "text" as const,
+          text: JSON.stringify(
+            {
+              success: true,
+              preview: true,
+              preview_data: previewData,
+              message: "Preview of merge operation (no changes made)",
+            },
+            null,
+            2
+          ),
         },
       ],
     };
@@ -544,22 +564,22 @@ async function handleMergeMembers(args: any) {
   // Execute merge
   const results = await withTransaction(async (db) => {
     // Migrate submissions
-    const subStmt = await db.prepare('UPDATE submissions SET member_id = ? WHERE member_id = ?');
+    const subStmt = await db.prepare("UPDATE submissions SET member_id = ? WHERE member_id = ?");
     const subResult = await subStmt.run(to_member_id, from_member_id);
     await subStmt.finalize();
 
     // Migrate awards
-    const awardStmt = await db.prepare('UPDATE awards SET member_id = ? WHERE member_id = ?');
+    const awardStmt = await db.prepare("UPDATE awards SET member_id = ? WHERE member_id = ?");
     const awardResult = await awardStmt.run(to_member_id, from_member_id);
     await awardStmt.finalize();
 
     // Migrate tank presets
-    const tankStmt = await db.prepare('UPDATE tank_presets SET member_id = ? WHERE member_id = ?');
+    const tankStmt = await db.prepare("UPDATE tank_presets SET member_id = ? WHERE member_id = ?");
     const tankResult = await tankStmt.run(to_member_id, from_member_id);
     await tankStmt.finalize();
 
     // Delete source member (cascades to password_account, google_account, sessions, auth_codes)
-    const deleteStmt = await db.prepare('DELETE FROM members WHERE id = ?');
+    const deleteStmt = await db.prepare("DELETE FROM members WHERE id = ?");
     await deleteStmt.run(from_member_id);
     await deleteStmt.finalize();
 
@@ -573,15 +593,19 @@ async function handleMergeMembers(args: any) {
   return {
     content: [
       {
-        type: 'text' as const,
-        text: JSON.stringify({
-          success: true,
-          from_member_id,
-          to_member_id,
-          ...results,
-          preview_data: previewData,
-          message: `Member ${from_member_id} merged into ${to_member_id} successfully`,
-        }, null, 2),
+        type: "text" as const,
+        text: JSON.stringify(
+          {
+            success: true,
+            from_member_id,
+            to_member_id,
+            ...results,
+            preview_data: previewData,
+            message: `Member ${from_member_id} merged into ${to_member_id} successfully`,
+          },
+          null,
+          2
+        ),
       },
     ],
   };
@@ -594,16 +618,16 @@ async function handleUpdateMember(args: any) {
   const values: any[] = [];
 
   if (contact_email !== undefined) {
-    updates.push('contact_email = ?');
+    updates.push("contact_email = ?");
     values.push(contact_email.trim());
   }
   if (display_name !== undefined) {
-    updates.push('display_name = ?');
+    updates.push("display_name = ?");
     values.push(display_name.trim());
   }
 
   if (updates.length === 0) {
-    throw new Error('No fields to update');
+    throw new Error("No fields to update");
   }
 
   values.push(member_id);
@@ -611,7 +635,7 @@ async function handleUpdateMember(args: any) {
   await withTransaction(async (db) => {
     const stmt = await db.prepare(`
       UPDATE members
-      SET ${updates.join(', ')}
+      SET ${updates.join(", ")}
       WHERE id = ?
     `);
     await stmt.run(...values);
@@ -619,17 +643,21 @@ async function handleUpdateMember(args: any) {
   });
 
   // Fetch updated member
-  const updated = await query<Member>('SELECT * FROM members WHERE id = ?', [member_id]);
+  const updated = await query<Member>("SELECT * FROM members WHERE id = ?", [member_id]);
 
   return {
     content: [
       {
-        type: 'text' as const,
-        text: JSON.stringify({
-          success: true,
-          member: updated[0],
-          message: 'Member updated successfully',
-        }, null, 2),
+        type: "text" as const,
+        text: JSON.stringify(
+          {
+            success: true,
+            member: updated[0],
+            message: "Member updated successfully",
+          },
+          null,
+          2
+        ),
       },
     ],
   };
@@ -639,33 +667,35 @@ async function handleDeleteMember(args: any) {
   const { member_id, force } = args;
 
   // Check if member exists
-  const members = await query<Member>('SELECT * FROM members WHERE id = ?', [member_id]);
+  const members = await query<Member>("SELECT * FROM members WHERE id = ?", [member_id]);
   if (members.length === 0) {
     throw new Error(`Member ${member_id} not found`);
   }
 
   // Check for approved submissions
   const approvedSubmissions = await query<{ count: number }>(
-    'SELECT COUNT(*) as count FROM submissions WHERE member_id = ? AND approved_on IS NOT NULL',
+    "SELECT COUNT(*) as count FROM submissions WHERE member_id = ? AND approved_on IS NOT NULL",
     [member_id]
   );
 
   const approvedCount = approvedSubmissions[0]?.count || 0;
 
   if (approvedCount > 0 && !force) {
-    throw new Error(`Member has ${approvedCount} approved submissions. Use force: true to delete anyway.`);
+    throw new Error(
+      `Member has ${approvedCount} approved submissions. Use force: true to delete anyway.`
+    );
   }
 
   // Get submission count before delete
   const allSubmissions = await query<{ count: number }>(
-    'SELECT COUNT(*) as count FROM submissions WHERE member_id = ?',
+    "SELECT COUNT(*) as count FROM submissions WHERE member_id = ?",
     [member_id]
   );
 
   const submissionCount = allSubmissions[0]?.count || 0;
 
   await withTransaction(async (db) => {
-    const stmt = await db.prepare('DELETE FROM members WHERE id = ?');
+    const stmt = await db.prepare("DELETE FROM members WHERE id = ?");
     await stmt.run(member_id);
     await stmt.finalize();
   });
@@ -673,14 +703,21 @@ async function handleDeleteMember(args: any) {
   return {
     content: [
       {
-        type: 'text' as const,
-        text: JSON.stringify({
-          success: true,
-          member_id,
-          deleted_member: members[0].display_name,
-          warning: submissionCount > 0 ? `Member had ${submissionCount} submissions (${approvedCount} approved)` : undefined,
-          message: 'Member deleted successfully',
-        }, null, 2),
+        type: "text" as const,
+        text: JSON.stringify(
+          {
+            success: true,
+            member_id,
+            deleted_member: members[0].display_name,
+            warning:
+              submissionCount > 0
+                ? `Member had ${submissionCount} submissions (${approvedCount} approved)`
+                : undefined,
+            message: "Member deleted successfully",
+          },
+          null,
+          2
+        ),
       },
     ],
   };
@@ -689,13 +726,13 @@ async function handleDeleteMember(args: any) {
 async function handleSetAdminStatus(args: any) {
   const { member_id, is_admin } = args;
 
-  const members = await query<Member>('SELECT * FROM members WHERE id = ?', [member_id]);
+  const members = await query<Member>("SELECT * FROM members WHERE id = ?", [member_id]);
   if (members.length === 0) {
     throw new Error(`Member ${member_id} not found`);
   }
 
   await withTransaction(async (db) => {
-    const stmt = await db.prepare('UPDATE members SET is_admin = ? WHERE id = ?');
+    const stmt = await db.prepare("UPDATE members SET is_admin = ? WHERE id = ?");
     await stmt.run(is_admin ? 1 : 0, member_id);
     await stmt.finalize();
   });
@@ -703,14 +740,18 @@ async function handleSetAdminStatus(args: any) {
   return {
     content: [
       {
-        type: 'text' as const,
-        text: JSON.stringify({
-          success: true,
-          member_id,
-          display_name: members[0].display_name,
-          is_admin,
-          message: `Admin status ${is_admin ? 'granted' : 'revoked'}`,
-        }, null, 2),
+        type: "text" as const,
+        text: JSON.stringify(
+          {
+            success: true,
+            member_id,
+            display_name: members[0].display_name,
+            is_admin,
+            message: `Admin status ${is_admin ? "granted" : "revoked"}`,
+          },
+          null,
+          2
+        ),
       },
     ],
   };
@@ -722,10 +763,10 @@ async function handleSetAdminStatus(args: any) {
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  logger.info('Member Management MCP Server running on stdio');
+  logger.info("Member Management MCP Server running on stdio");
 }
 
 main().catch((error) => {
-  logger.error('Server error:', error);
+  logger.error("Server error:", error);
   process.exit(1);
 });

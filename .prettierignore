@@ -1,0 +1,11 @@
+node_modules
+dist
+infrastructure/node_modules
+infrastructure/cdk.out
+*.min.js
+*.min.css
+coverage
+package-lock.json
+public
+db/database.db
+.git

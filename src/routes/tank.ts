@@ -1,17 +1,15 @@
-import { Response } from 'express';
+import { Response } from "express";
 import { validateFormResult } from "@/forms/utils";
 import { MulmRequest } from "@/sessions";
 import { createTankPreset, deleteTankPreset, queryTankPresets, updateTankPreset } from "@/db/tank";
 import { tankSettingsSchema } from "@/forms/tank";
-
 
 export const view = (req: MulmRequest, res: Response) => {
   return res.render("bapForm/tank", {
     form: req.query,
     errors: new Map<string, string>(),
   });
-}
-
+};
 
 export const create = async (req: MulmRequest, res: Response) => {
   const { viewer } = req;
@@ -36,8 +34,7 @@ export const create = async (req: MulmRequest, res: Response) => {
   });
 
   res.send("Saved!");
-}
-
+};
 
 export const update = async (req: MulmRequest, res: Response) => {
   const { viewer } = req;
@@ -60,8 +57,7 @@ export const update = async (req: MulmRequest, res: Response) => {
   });
 
   res.send("Saved!");
-}
-
+};
 
 export const remove = async (req: MulmRequest, res: Response) => {
   const { viewer } = req;
@@ -74,8 +70,7 @@ export const remove = async (req: MulmRequest, res: Response) => {
   const name = req.params.name;
   await deleteTankPreset(memberId, name);
   res.send();
-}
-
+};
 
 export function saveTankForm(req: MulmRequest, res: Response) {
   res.render("bapForm/saveTankForm", {
@@ -83,7 +78,6 @@ export function saveTankForm(req: MulmRequest, res: Response) {
     form: {},
   });
 }
-
 
 export async function loadTankList(req: MulmRequest, res: Response) {
   const { viewer } = req;
@@ -94,15 +88,11 @@ export async function loadTankList(req: MulmRequest, res: Response) {
   const memberId = viewer.id;
   const presets = await queryTankPresets(memberId);
 
-
-  const filtered = presets.map(
-    preset => Object.fromEntries(
-      Object.entries(preset)
-        .filter(([, v]) => v !== null))
+  const filtered = presets.map((preset) =>
+    Object.fromEntries(Object.entries(preset).filter(([, v]) => v !== null))
   );
 
   res.render("bapForm/loadTankList", {
     presets: filtered,
   });
 }
-

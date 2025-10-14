@@ -1,12 +1,12 @@
 import { query, writeConn } from "./conn";
 
 export type SubmissionNote = {
-	id: number;
-	submission_id: number;
-	admin_id: number | null;
-	admin_name: string | null;
-	note_text: string;
-	created_at: string;
+  id: number;
+  submission_id: number;
+  admin_id: number | null;
+  admin_name: string | null;
+  note_text: string;
+  created_at: string;
 };
 
 /**
@@ -55,10 +55,7 @@ export async function addNote(
 /**
  * Update an existing note
  */
-export async function updateNote(
-  noteId: number,
-  noteText: string
-): Promise<void> {
+export async function updateNote(noteId: number, noteText: string): Promise<void> {
   const stmt = await writeConn.prepare(`
 		UPDATE submission_notes
 		SET note_text = ?

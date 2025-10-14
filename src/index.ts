@@ -19,23 +19,25 @@ import * as species from "@/routes/species";
 import * as typeahead from "@/routes/typeahead";
 import uploadRouter from "@/routes/api/upload";
 
-import {
-  getOutstandingSubmissionsCounts,
-  getWitnessQueueCounts,
-} from "./db/submissions";
+import { getOutstandingSubmissionsCounts, getWitnessQueueCounts } from "./db/submissions";
 import { getRecentActivity } from "./db/activity";
 
 import { MulmRequest, sessionMiddleware } from "./sessions";
 import { getGoogleOAuthURL, setOAuthStateCookie } from "./oauth";
 import { getQueryString } from "./utils/request";
 import { initR2 } from "./utils/r2-client";
-import { loginRateLimiter, signupRateLimiter, forgotPasswordRateLimiter, oauthRateLimiter } from "./middleware/rateLimiter";
+import {
+  loginRateLimiter,
+  signupRateLimiter,
+  forgotPasswordRateLimiter,
+  oauthRateLimiter,
+} from "./middleware/rateLimiter";
 import * as emailDemo from "./routes/emailDemo";
 
 const app = express();
 
 // Security: Hide Express version from X-Powered-By header
-app.disable('x-powered-by');
+app.disable("x-powered-by");
 
 // Initialize R2 client for image uploads
 initR2();
@@ -67,7 +69,7 @@ app.use((_req, res, next) => {
 const router = express.Router();
 
 router.get("/annual", (req, res) => {
-  const year = getQueryString(req, 'year');
+  const year = getQueryString(req, "year");
   res.set("HX-Redirect", `/annual/${year}`).send();
 });
 router.get("/annual/:stringYear{/:program}", standings.annual);
@@ -89,9 +91,9 @@ router.get("/", async (req: MulmRequest, res) => {
     isAdmin,
   };
 
-  let approvalsProgram = 'fish'; // Default to fish
+  let approvalsProgram = "fish"; // Default to fish
   let approvalsCount = 0;
-  let witnessProgram = 'fish'; // Default to fish
+  let witnessProgram = "fish"; // Default to fish
   let witnessCount = 0;
   if (isAdmin) {
     const [counts, witnessCounts] = await Promise.all([
@@ -235,17 +237,17 @@ router.use("/api/upload", uploadRouter);
 ////////////////////////////////////////////////////////////
 
 // Health check endpoint for Docker and monitoring
-app.get('/health', (_req, res) => {
-  res.status(200).json({ 
-    status: 'healthy',
-    timestamp: new Date().toISOString()
+app.get("/health", (_req, res) => {
+  res.status(200).json({
+    status: "healthy",
+    timestamp: new Date().toISOString(),
   });
 });
 
 app.use(router);
 
 const PORT = parseInt(process.env.PORT || "4200");
-const HOST = '0.0.0.0'; // Listen on all interfaces
+const HOST = "0.0.0.0"; // Listen on all interfaces
 app.listen(PORT, HOST, () => {
   console.log(`Server running at http://localhost:${PORT}`);
   console.log(`Server running at https://${config.domain}`);

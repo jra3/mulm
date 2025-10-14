@@ -5,10 +5,7 @@ import { logger } from "@/utils/logger";
 const tableName = "auth_codes";
 
 export async function createAuthCode(codeEntry: AuthCode) {
-  return insertOne(
-    tableName,
-    { ...codeEntry, expires_on: codeEntry.expires_on.toISOString() },
-  )
+  return insertOne(tableName, { ...codeEntry, expires_on: codeEntry.expires_on.toISOString() });
 }
 
 export async function getAuthCode(code: string) {
@@ -30,7 +27,7 @@ export async function deleteExpiredAuthCodes(cutoff: Date) {
       await deleteRow.finalize();
     }
   } catch (err) {
-    logger.error('Failed to delete auth codes', err);
+    logger.error("Failed to delete auth codes", err);
     throw new Error("Failed to delete auth codes");
   }
 }

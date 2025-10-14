@@ -1,8 +1,13 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import crypto from 'crypto';
-import { logger } from './logger';
-import configFile from '../config.json';
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import crypto from "crypto";
+import { logger } from "./logger";
+import configFile from "../config.json";
 
 export interface R2Config {
   endpoint: string;
@@ -21,7 +26,7 @@ export interface ImageMetadata {
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const PRESIGNED_URL_EXPIRY = 300; // 5 minutes
 
 let client: S3Client | null = null;
@@ -36,7 +41,7 @@ export function initR2() {
   const publicUrl = process.env.R2_PUBLIC_URL || configFile.r2PublicUrl;
 
   if (!endpoint || !accessKeyId || !secretAccessKey || !bucketName) {
-    logger.warn('R2 configuration not found. Image uploads will be disabled.');
+    logger.warn("R2 configuration not found. Image uploads will be disabled.");
     return false;
   }
 
@@ -49,7 +54,7 @@ export function initR2() {
   };
 
   client = new S3Client({
-    region: 'auto',
+    region: "auto",
     endpoint: config.endpoint,
     credentials: {
       accessKeyId: config.accessKeyId,
@@ -57,7 +62,7 @@ export function initR2() {
     },
   });
 
-  logger.info('R2 client initialized');
+  logger.info("R2 client initialized");
   return true;
 }
 
@@ -71,22 +76,22 @@ export function overrideR2Client(mockClient: S3Client, mockConfig: R2Config) {
 
 function ensureInitialized(): S3Client {
   if (!client || !config) {
-    throw new Error('R2 client not initialized. Call initR2() first.');
+    throw new Error("R2 client not initialized. Call initR2() first.");
   }
   return client;
 }
 
 function getBucketName(): string {
   if (!config) {
-    throw new Error('R2 client not initialized');
+    throw new Error("R2 client not initialized");
   }
   return config.bucketName;
 }
 
 export function generateImageKey(memberId: number, submissionId: number, filename: string): string {
   const timestamp = Date.now();
-  const hash = crypto.randomBytes(8).toString('hex');
-  const extension = filename.split('.').pop()?.toLowerCase() || 'jpg';
+  const hash = crypto.randomBytes(8).toString("hex");
+  const extension = filename.split(".").pop()?.toLowerCase() || "jpg";
   return `submissions/${memberId}/${submissionId}/${timestamp}-${hash}.${extension}`;
 }
 
@@ -96,13 +101,17 @@ export async function getPresignedUploadUrl(
   contentLength?: number
 ): Promise<string> {
   const s3Client = ensureInitialized();
-  
+
   if (!ALLOWED_MIME_TYPES.includes(contentType)) {
-    throw new Error(`Invalid content type: ${contentType}. Allowed types: ${ALLOWED_MIME_TYPES.join(', ')}`);
+    throw new Error(
+      `Invalid content type: ${contentType}. Allowed types: ${ALLOWED_MIME_TYPES.join(", ")}`
+    );
   }
 
   if (contentLength && contentLength > MAX_FILE_SIZE) {
-    throw new Error(`File size ${contentLength} exceeds maximum allowed size of ${MAX_FILE_SIZE} bytes`);
+    throw new Error(
+      `File size ${contentLength} exceeds maximum allowed size of ${MAX_FILE_SIZE} bytes`
+    );
   }
 
   const command = new PutObjectCommand({
@@ -118,7 +127,7 @@ export async function getPresignedUploadUrl(
 
 export async function getPresignedDownloadUrl(key: string): Promise<string> {
   const s3Client = ensureInitialized();
-  
+
   const command = new GetObjectCommand({
     Bucket: getBucketName(),
     Key: key,
@@ -130,34 +139,34 @@ export async function getPresignedDownloadUrl(key: string): Promise<string> {
 
 export async function deleteImage(key: string): Promise<void> {
   const s3Client = ensureInitialized();
-  
+
   try {
     const command = new DeleteObjectCommand({
       Bucket: getBucketName(),
       Key: key,
     });
-    
+
     await s3Client.send(command);
     logger.info(`Deleted image from R2: ${key}`);
   } catch (error) {
-    logger.error('Failed to delete image from R2:', error);
+    logger.error("Failed to delete image from R2:", error);
     throw error;
   }
 }
 
 export async function deleteImages(keys: string[]): Promise<void> {
-  await Promise.all(keys.map(key => deleteImage(key)));
+  await Promise.all(keys.map((key) => deleteImage(key)));
 }
 
 export function getPublicUrl(key: string): string {
   if (!config) {
-    throw new Error('R2 client not initialized');
+    throw new Error("R2 client not initialized");
   }
-  
+
   if (config.publicUrl) {
     return `${config.publicUrl}/${key}`;
   }
-  
+
   // Fallback to endpoint URL if no custom domain configured
   return `${config.endpoint}/${config.bucketName}/${key}`;
 }
@@ -179,14 +188,14 @@ export function isR2Enabled(): boolean {
  */
 export async function uploadToR2(key: string, buffer: Buffer, contentType: string): Promise<void> {
   const s3Client = ensureInitialized();
-  
+
   const command = new PutObjectCommand({
     Bucket: getBucketName(),
     Key: key,
     Body: buffer,
     ContentType: contentType,
   });
-  
+
   await s3Client.send(command);
   logger.info(`Uploaded to R2: ${key}`);
 }

@@ -1,7 +1,7 @@
-import { getMember, grantAward } from './db/members';
-import { checkSpecialtyAwards, checkMetaAwards, SubmissionForAward } from './specialtyAwards';
-import { query } from './db/conn';
-import { logger } from './utils/logger';
+import { getMember, grantAward } from "./db/members";
+import { checkSpecialtyAwards, checkMetaAwards, SubmissionForAward } from "./specialtyAwards";
+import { query } from "./db/conn";
+import { logger } from "./utils/logger";
 
 /**
  * Get approved submissions for a member with genus information for specialty award checking
@@ -11,13 +11,14 @@ import { logger } from './utils/logger';
  */
 async function getSubmissionsWithGenus(memberId: number): Promise<SubmissionForAward[]> {
   const submissions = await query<{
-		species_class: string;
-		species_latin_name: string;
-		species_type: string;
-		water_type: string;
-		spawn_locations: string;
-		canonical_genus: string | null;
-	}>(`
+    species_class: string;
+    species_latin_name: string;
+    species_type: string;
+    water_type: string;
+    spawn_locations: string;
+    canonical_genus: string | null;
+  }>(
+    `
 		SELECT
 			s.species_class,
 			s.species_latin_name,
@@ -36,15 +37,17 @@ async function getSubmissionsWithGenus(memberId: number): Promise<SubmissionForA
 		WHERE s.member_id = ?
 			AND s.submitted_on IS NOT NULL
 			AND s.approved_on IS NOT NULL
-	`, [memberId]);
+	`,
+    [memberId]
+  );
 
-  return submissions.map(sub => ({
+  return submissions.map((sub) => ({
     species_class: sub.species_class,
     species_latin_name: sub.species_latin_name,
     species_type: sub.species_type,
     water_type: sub.water_type,
     spawn_locations: sub.spawn_locations,
-    canonical_genus: sub.canonical_genus || undefined
+    canonical_genus: sub.canonical_genus || undefined,
   }));
 }
 
@@ -67,36 +70,45 @@ export async function checkAndGrantSpecialtyAwards(
 
     // Check what specialty awards they've earned
     const earnedSpecialtyAwards = checkSpecialtyAwards(allSubmissions);
-		
+
     // Get existing awards to avoid duplicates
     const existingAwards = await getExistingSpecialtyAwards(memberId);
-		
+
     // Find new specialty awards
-    const newSpecialtyAwards = earnedSpecialtyAwards.filter(award => !existingAwards.includes(award));
-		
+    const newSpecialtyAwards = earnedSpecialtyAwards.filter(
+      (award) => !existingAwards.includes(award)
+    );
+
     // Grant new specialty awards
     const grantedAwards: string[] = [];
-		
+
     for (const awardName of newSpecialtyAwards) {
       try {
-        await grantAward(memberId, awardName, new Date(), 'species');
+        await grantAward(memberId, awardName, new Date(), "species");
         grantedAwards.push(awardName);
-        logger.info(`Granted specialty award "${awardName}" to member ${memberId} (${member.display_name})`);
+        logger.info(
+          `Granted specialty award "${awardName}" to member ${memberId} (${member.display_name})`
+        );
       } catch (error) {
-        logger.error(`Failed to grant specialty award "${awardName}" to member ${memberId}:`, error);
+        logger.error(
+          `Failed to grant specialty award "${awardName}" to member ${memberId}:`,
+          error
+        );
       }
     }
-		
+
     // Check for meta-awards after granting new specialty awards
     const updatedExistingAwards = [...existingAwards, ...grantedAwards];
     const earnedMetaAwards = checkMetaAwards(updatedExistingAwards);
-		
+
     // Grant new meta-awards
     for (const awardName of earnedMetaAwards) {
       try {
-        await grantAward(memberId, awardName, new Date(), 'meta_species');
+        await grantAward(memberId, awardName, new Date(), "meta_species");
         grantedAwards.push(awardName);
-        logger.info(`Granted meta-award "${awardName}" to member ${memberId} (${member.display_name}) - achieved through ${updatedExistingAwards.filter(a => !a.includes('Specialist Award')).length} specialty awards`);
+        logger.info(
+          `Granted meta-award "${awardName}" to member ${memberId} (${member.display_name}) - achieved through ${updatedExistingAwards.filter((a) => !a.includes("Specialist Award")).length} specialty awards`
+        );
       } catch (error) {
         logger.error(`Failed to grant meta-award "${awardName}" to member ${memberId}:`, error);
       }
@@ -110,7 +122,6 @@ export async function checkAndGrantSpecialtyAwards(
     // }
 
     return grantedAwards;
-
   } catch (error) {
     logger.error(`Error checking specialty awards for member ${memberId}:`, error);
     throw error;
@@ -122,12 +133,12 @@ export async function checkAndGrantSpecialtyAwards(
  */
 async function getExistingSpecialtyAwards(memberId: number): Promise<string[]> {
   try {
-    const { query } = await import('./db/conn');
+    const { query } = await import("./db/conn");
     const awards = await query<{ award_name: string }>(
       "SELECT award_name FROM awards WHERE member_id = ?",
       [memberId]
     );
-    return awards.map(award => award.award_name);
+    return awards.map((award) => award.award_name);
   } catch (error) {
     logger.error(`Failed to get existing awards for member ${memberId}:`, error);
     return [];

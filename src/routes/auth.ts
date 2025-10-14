@@ -1,9 +1,4 @@
-import {
-  AuthCode,
-  checkPassword,
-  generateRandomCode,
-  makePasswordEntry,
-} from "@/auth";
+import { AuthCode, checkPassword, generateRandomCode, makePasswordEntry } from "@/auth";
 import { createAuthCode, deleteAuthCode, getAuthCode } from "@/db/auth";
 import {
   createGoogleAccount,
@@ -14,12 +9,7 @@ import {
   getMemberByEmail,
   getMemberPassword,
 } from "@/db/members";
-import {
-  forgotSchema,
-  loginSchema,
-  resetSchema,
-  signupSchema,
-} from "@/forms/login";
+import { forgotSchema, loginSchema, resetSchema, signupSchema } from "@/forms/login";
 import { validateFormResult } from "@/forms/utils";
 import { getBodyParam } from "@/utils/request";
 import { sendResetEmail } from "@/notifications";
@@ -27,7 +17,12 @@ import { getGoogleUser, translateGoogleOAuthCode } from "@/oauth";
 import { regenerateSession, destroyUserSession, MulmRequest } from "@/sessions";
 import { Response } from "express";
 import { logger } from "@/utils/logger";
-import { recordFailedAttempt, isAccountLocked, clearFailedAttempts, getRemainingLockoutTime } from "@/services/accountLockout";
+import {
+  recordFailedAttempt,
+  isAccountLocked,
+  clearFailedAttempts,
+  getRemainingLockoutTime,
+} from "@/services/accountLockout";
 
 export const signup = async (req: MulmRequest, res: Response) => {
   const errors = new Map<string, string>();
@@ -67,17 +62,19 @@ export const passwordLogin = async (req: MulmRequest, res: Response) => {
   const member = await getMemberByEmail(data.email);
 
   // Check if account is locked (before attempting password check)
-  if (member && await isAccountLocked(member.id)) {
+  if (member && (await isAccountLocked(member.id))) {
     const remainingSeconds = await getRemainingLockoutTime(member.id);
     const remainingMinutes = Math.ceil(remainingSeconds / 60);
-    logger.warn('Login attempt on locked account', {
+    logger.warn("Login attempt on locked account", {
       memberId: member.id,
-      ip: req.ip
+      ip: req.ip,
     });
-    res.status(403).send(
-      `Account temporarily locked due to multiple failed login attempts. ` +
-      `Please try again in ${remainingMinutes} minute${remainingMinutes !== 1 ? 's' : ''}.`
-    );
+    res
+      .status(403)
+      .send(
+        `Account temporarily locked due to multiple failed login attempts. ` +
+          `Please try again in ${remainingMinutes} minute${remainingMinutes !== 1 ? "s" : ""}.`
+      );
     return;
   }
 
@@ -91,7 +88,7 @@ export const passwordLogin = async (req: MulmRequest, res: Response) => {
       r: 8,
       p: 1,
       salt: "dGltaW5nQXR0YWNrTWl0aWdhdGlvblNhbHQxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY=", // Base64 dummy
-      hash: "dGltaW5nQXR0YWNrTWl0aWdhdGlvbkhhc2gxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY=" // Base64 dummy
+      hash: "dGltaW5nQXR0YWNrTWl0aWdhdGlvbkhhc2gxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY=", // Base64 dummy
     },
     data.password
   );
@@ -106,17 +103,19 @@ export const passwordLogin = async (req: MulmRequest, res: Response) => {
 
   // Failed login - record attempt if member exists
   if (member) {
-    const locked = await recordFailedAttempt(member.id, req.ip || 'unknown');
+    const locked = await recordFailedAttempt(member.id, req.ip || "unknown");
     if (locked) {
       const remainingMinutes = 15; // Lockout duration
-      logger.warn('Account locked after failed attempts', {
+      logger.warn("Account locked after failed attempts", {
         memberId: member.id,
-        ip: req.ip
+        ip: req.ip,
       });
-      res.status(403).send(
-        `Account locked due to too many failed login attempts. ` +
-        `Please wait ${remainingMinutes} minutes or reset your password.`
-      );
+      res
+        .status(403)
+        .send(
+          `Account locked due to too many failed login attempts. ` +
+            `Please wait ${remainingMinutes} minutes or reset your password.`
+        );
       return;
     }
   }
@@ -132,10 +131,7 @@ export const logout = async (req: MulmRequest, res: Response) => {
   res.set("HX-Redirect", "/").send();
 };
 
-export const validateForgotPassword = async (
-  req: MulmRequest,
-  res: Response,
-) => {
+export const validateForgotPassword = async (req: MulmRequest, res: Response) => {
   const code = req.query.code;
   if (code == undefined) {
     res.redirect("/");
@@ -145,9 +141,7 @@ export const validateForgotPassword = async (
   const now = new Date(Date.now());
   const codeEntry = await getAuthCode(code as string);
   const invalidCode =
-    codeEntry == undefined ||
-    codeEntry.purpose != "password_reset" ||
-    codeEntry.expires_on < now;
+    codeEntry == undefined || codeEntry.purpose != "password_reset" || codeEntry.expires_on < now;
   const member = codeEntry && (await getMember(codeEntry.member_id));
 
   if (invalidCode || !member) {
@@ -192,11 +186,11 @@ export const sendForgotPassword = async (req: MulmRequest, res: Response) => {
     // Actually save code and send email
     await Promise.all([
       createAuthCode(code),
-      sendResetEmail(member.contact_email, member.display_name, code.code)
+      sendResetEmail(member.contact_email, member.display_name, code.code),
     ]);
   } else {
     // Simulate same operations for timing (300ms ~ DB write + email send)
-    await new Promise(resolve => setTimeout(resolve, 300));
+    await new Promise((resolve) => setTimeout(resolve, 300));
   }
 
   // Always show success message (prevents email enumeration)
@@ -254,8 +248,8 @@ export const googleOAuth = async (req: MulmRequest, res: Response) => {
   const { code, state } = req.query;
 
   // Validate state parameter for CSRF protection
-  if (!state || typeof state !== 'string') {
-    logger.warn('Missing OAuth state parameter');
+  if (!state || typeof state !== "string") {
+    logger.warn("Missing OAuth state parameter");
     res.status(400).send("Invalid OAuth request. Please try logging in again.");
     return;
   }
@@ -264,26 +258,24 @@ export const googleOAuth = async (req: MulmRequest, res: Response) => {
   const storedState = String(req.cookies.oauth_state);
 
   if (!storedState || storedState !== state) {
-    logger.warn('Invalid OAuth state parameter', {
-      storedState: storedState?.substring(0, 10) + '...',
-      receivedState: state?.substring(0, 10) + '...'
+    logger.warn("Invalid OAuth state parameter", {
+      storedState: storedState?.substring(0, 10) + "...",
+      receivedState: state?.substring(0, 10) + "...",
     });
-    res.status(403).send("Invalid OAuth state. This may be a CSRF attack. Please try logging in again.");
+    res
+      .status(403)
+      .send("Invalid OAuth state. This may be a CSRF attack. Please try logging in again.");
     return;
   }
 
   // Clear the state cookie (one-time use)
-  res.clearCookie('oauth_state');
+  res.clearCookie("oauth_state");
 
   const resp = await translateGoogleOAuthCode(code as string);
   const payload: unknown = await resp.json();
 
   // Type narrowing with runtime checks
-  if (
-    typeof payload !== "object" ||
-    payload === null ||
-    !("access_token" in payload)
-  ) {
+  if (typeof payload !== "object" || payload === null || !("access_token" in payload)) {
     logger.error("OAuth token exchange failed", payload);
     res.status(401).send("Login Failed!");
     return;
@@ -336,11 +328,7 @@ import {
   generateAuthenticationOptionsForLogin,
   verifyCredentialAndAuthenticate,
 } from "@/auth/webauthn";
-import {
-  getCredentialById,
-  deleteCredential,
-  updateCredentialDeviceName,
-} from "@/db/webauthn";
+import { getCredentialById, deleteCredential, updateCredentialDeviceName } from "@/db/webauthn";
 
 /**
  * POST /auth/passkey/register/options
@@ -349,7 +337,7 @@ import {
  */
 export const passkeyRegisterOptions = async (req: MulmRequest, res: Response) => {
   if (!req.viewer) {
-    res.status(401).json({ error: 'Not authenticated' });
+    res.status(401).json({ error: "Not authenticated" });
     return;
   }
 
@@ -361,8 +349,8 @@ export const passkeyRegisterOptions = async (req: MulmRequest, res: Response) =>
     );
     res.json(options);
   } catch (err) {
-    logger.error('Failed to generate registration options', err);
-    res.status(500).json({ error: 'Failed to generate registration options' });
+    logger.error("Failed to generate registration options", err);
+    res.status(500).json({ error: "Failed to generate registration options" });
   }
 };
 
@@ -373,7 +361,7 @@ export const passkeyRegisterOptions = async (req: MulmRequest, res: Response) =>
  */
 export const passkeyRegisterVerify = async (req: MulmRequest, res: Response) => {
   if (!req.viewer) {
-    res.status(401).json({ error: 'Not authenticated' });
+    res.status(401).json({ error: "Not authenticated" });
     return;
   }
 
@@ -388,11 +376,11 @@ export const passkeyRegisterVerify = async (req: MulmRequest, res: Response) => 
     if (result.verified) {
       res.json({ verified: true, credentialId: result.credentialId });
     } else {
-      res.status(400).json({ error: 'Verification failed' });
+      res.status(400).json({ error: "Verification failed" });
     }
   } catch (err) {
-    logger.error('Failed to verify registration', err);
-    res.status(500).json({ error: 'Failed to verify registration' });
+    logger.error("Failed to verify registration", err);
+    res.status(500).json({ error: "Failed to verify registration" });
   }
 };
 
@@ -405,8 +393,8 @@ export const passkeyLoginOptions = async (req: MulmRequest, res: Response) => {
     const options = await generateAuthenticationOptionsForLogin();
     res.json(options);
   } catch (err) {
-    logger.error('Failed to generate authentication options', err);
-    res.status(500).json({ error: 'Failed to generate authentication options' });
+    logger.error("Failed to generate authentication options", err);
+    res.status(500).json({ error: "Failed to generate authentication options" });
   }
 };
 
@@ -423,11 +411,11 @@ export const passkeyLoginVerify = async (req: MulmRequest, res: Response) => {
       await regenerateSession(req, res, result.memberId);
       res.json({ verified: true });
     } else {
-      res.status(401).json({ error: 'Authentication failed' });
+      res.status(401).json({ error: "Authentication failed" });
     }
   } catch (err) {
-    logger.error('Failed to verify authentication', err);
-    res.status(500).json({ error: 'Failed to verify authentication' });
+    logger.error("Failed to verify authentication", err);
+    res.status(500).json({ error: "Failed to verify authentication" });
   }
 };
 
@@ -438,7 +426,7 @@ export const passkeyLoginVerify = async (req: MulmRequest, res: Response) => {
  */
 export const deletePasskey = async (req: MulmRequest, res: Response) => {
   if (!req.viewer) {
-    res.status(401).send('Not authenticated');
+    res.status(401).send("Not authenticated");
     return;
   }
 
@@ -447,7 +435,7 @@ export const deletePasskey = async (req: MulmRequest, res: Response) => {
 
   // Verify ownership
   if (!credential || credential.member_id !== req.viewer.id) {
-    res.status(404).send('Passkey not found');
+    res.status(404).send("Passkey not found");
     return;
   }
 
@@ -462,7 +450,7 @@ export const deletePasskey = async (req: MulmRequest, res: Response) => {
  */
 export const renamePasskey = async (req: MulmRequest, res: Response) => {
   if (!req.viewer) {
-    res.status(401).send('Not authenticated');
+    res.status(401).send("Not authenticated");
     return;
   }
 
@@ -473,7 +461,7 @@ export const renamePasskey = async (req: MulmRequest, res: Response) => {
 
   // Verify ownership
   if (!credential || credential.member_id !== req.viewer.id) {
-    res.status(404).send('Passkey not found');
+    res.status(404).send("Passkey not found");
     return;
   }
 

@@ -2,14 +2,14 @@ import { query, writeConn, withTransaction } from "./conn";
 import { logger } from "@/utils/logger";
 
 type NameSynonym = {
-	/** Not a phylogenetic class. The species class for the BAP program */
-	program_class: string;
-	canonical_genus: string;
-	canonical_species_name: string;
-	common_name: string;
-	/** Typically a simple combination of genus and species */
-	latin_name: string;
-}
+  /** Not a phylogenetic class. The species class for the BAP program */
+  program_class: string;
+  canonical_genus: string;
+  canonical_species_name: string;
+  common_name: string;
+  /** Typically a simple combination of genus and species */
+  latin_name: string;
+};
 
 export async function querySpeciesNames() {
   // Query split schema tables and create paired records
@@ -18,14 +18,22 @@ export async function querySpeciesNames() {
     program_class: string;
     canonical_genus: string;
     canonical_species_name: string;
-  }>('SELECT group_id, program_class, canonical_genus, canonical_species_name FROM species_name_group');
+  }>(
+    "SELECT group_id, program_class, canonical_genus, canonical_species_name FROM species_name_group"
+  );
 
   const results: NameSynonym[] = [];
 
   for (const group of groups) {
     const [commonNames, scientificNames] = await Promise.all([
-      query<{ common_name: string }>('SELECT common_name FROM species_common_name WHERE group_id = ? ORDER BY common_name', [group.group_id]),
-      query<{ scientific_name: string }>('SELECT scientific_name FROM species_scientific_name WHERE group_id = ? ORDER BY scientific_name', [group.group_id])
+      query<{ common_name: string }>(
+        "SELECT common_name FROM species_common_name WHERE group_id = ? ORDER BY common_name",
+        [group.group_id]
+      ),
+      query<{ scientific_name: string }>(
+        "SELECT scientific_name FROM species_scientific_name WHERE group_id = ? ORDER BY scientific_name",
+        [group.group_id]
+      ),
     ]);
 
     // Pair common names with scientific names
@@ -35,8 +43,9 @@ export async function querySpeciesNames() {
         program_class: group.program_class,
         canonical_genus: group.canonical_genus,
         canonical_species_name: group.canonical_species_name,
-        common_name: commonNames[i]?.common_name || commonNames[0]?.common_name || '',
-        latin_name: scientificNames[i]?.scientific_name || scientificNames[0]?.scientific_name || ''
+        common_name: commonNames[i]?.common_name || commonNames[0]?.common_name || "",
+        latin_name:
+          scientificNames[i]?.scientific_name || scientificNames[0]?.scientific_name || "",
       });
     }
   }
@@ -82,7 +91,10 @@ export async function recordName(data: NameSynonym): Promise<{
 				DO UPDATE SET common_name = common_name
 				RETURNING common_name_id;
 			`);
-      const commonResult = await commonNameStmt.get<{ common_name_id: number }>(group_id, data.common_name);
+      const commonResult = await commonNameStmt.get<{ common_name_id: number }>(
+        group_id,
+        data.common_name
+      );
       await commonNameStmt.finalize();
 
       if (!commonResult || !commonResult.common_name_id) {
@@ -97,7 +109,10 @@ export async function recordName(data: NameSynonym): Promise<{
 				DO UPDATE SET scientific_name = scientific_name
 				RETURNING scientific_name_id;
 			`);
-      const scientificResult = await scientificNameStmt.get<{ scientific_name_id: number }>(group_id, data.latin_name);
+      const scientificResult = await scientificNameStmt.get<{ scientific_name_id: number }>(
+        group_id,
+        data.latin_name
+      );
       await scientificNameStmt.finalize();
 
       if (!scientificResult || !scientificResult.scientific_name_id) {
@@ -107,16 +122,19 @@ export async function recordName(data: NameSynonym): Promise<{
       return {
         group_id,
         common_name_id: commonResult.common_name_id,
-        scientific_name_id: scientificResult.scientific_name_id
+        scientific_name_id: scientificResult.scientific_name_id,
       };
     });
   } catch (err) {
-    logger.error('Failed to record species name', err);
+    logger.error("Failed to record species name", err);
     throw new Error("Failed to record species name");
   }
 }
 
-export async function mergeSpecies(canonicalGroupId: number, defunctGroupId: number): Promise<void> {
+export async function mergeSpecies(
+  canonicalGroupId: number,
+  defunctGroupId: number
+): Promise<void> {
   try {
     await withTransaction(async (db) => {
       // Update common names to point to the canonical group
@@ -146,7 +164,7 @@ export async function mergeSpecies(canonicalGroupId: number, defunctGroupId: num
       await deleteStmt.finalize();
     });
   } catch (err) {
-    logger.error('Failed to merge species groups', err);
+    logger.error("Failed to merge species groups", err);
     throw new Error("Failed to merge species groups");
   }
 }
@@ -158,19 +176,20 @@ export async function mergeSpecies(canonicalGroupId: number, defunctGroupId: num
  */
 export async function getSpeciesGroup(groupId: number) {
   const rows = await query<{
-		group_id: number;
-		program_class: string;
-		species_type: string;
-		canonical_genus: string;
-		canonical_species_name: string;
-		base_points: number | null;
-		is_cares_species: number;
-		external_references: string | null;
-		image_links: string | null;
-	}>(`
+    group_id: number;
+    program_class: string;
+    species_type: string;
+    canonical_genus: string;
+    canonical_species_name: string;
+    base_points: number | null;
+    is_cares_species: number;
+    external_references: string | null;
+    image_links: string | null;
+  }>(
+    `
 		SELECT * FROM species_name_group WHERE group_id = ?`,
-	[groupId]
-	);
+    [groupId]
+  );
 
   return rows.pop();
 }
@@ -181,16 +200,19 @@ export async function getSpeciesGroup(groupId: number) {
  * @param isCommonName - If true, treats nameId as common_name_id; if false, as scientific_name_id
  * @returns group_id or undefined if not found
  */
-export async function getGroupIdFromNameId(nameId: number, isCommonName: boolean): Promise<number | undefined> {
+export async function getGroupIdFromNameId(
+  nameId: number,
+  isCommonName: boolean
+): Promise<number | undefined> {
   if (isCommonName) {
     const rows = await query<{ group_id: number }>(
-      'SELECT group_id FROM species_common_name WHERE common_name_id = ?',
+      "SELECT group_id FROM species_common_name WHERE common_name_id = ?",
       [nameId]
     );
     return rows.pop()?.group_id;
   } else {
     const rows = await query<{ group_id: number }>(
-      'SELECT group_id FROM species_scientific_name WHERE scientific_name_id = ?',
+      "SELECT group_id FROM species_scientific_name WHERE scientific_name_id = ?",
       [nameId]
     );
     return rows.pop()?.group_id;
@@ -220,12 +242,13 @@ export async function getCanonicalSpeciesName(speciesNameId: number) {
       is_cares_species: number;
       external_references: string | null;
       image_links: string | null;
-    }>(`
+    }>(
+      `
       SELECT species_name_group.*
       FROM species_name JOIN species_name_group
       ON species_name.group_id = species_name_group.group_id
       WHERE species_name.name_id = ?`,
-    [speciesNameId]
+      [speciesNameId]
     );
 
     if (legacyRows.length > 0) {
@@ -237,22 +260,23 @@ export async function getCanonicalSpeciesName(speciesNameId: number) {
 
   // Try new common name table
   const commonNameRows = await query<{
-		group_id: number;
-		program_class: string;
-		species_type: string;
-		canonical_genus: string;
-		canonical_species_name: string;
-		base_points: number | null;
-		is_cares_species: number;
-		external_references: string | null;
-		image_links: string | null;
-	}>(`
+    group_id: number;
+    program_class: string;
+    species_type: string;
+    canonical_genus: string;
+    canonical_species_name: string;
+    base_points: number | null;
+    is_cares_species: number;
+    external_references: string | null;
+    image_links: string | null;
+  }>(
+    `
 		SELECT species_name_group.*
 		FROM species_common_name cn
 		JOIN species_name_group ON cn.group_id = species_name_group.group_id
 		WHERE cn.common_name_id = ?`,
-	[speciesNameId]
-	);
+    [speciesNameId]
+  );
 
   if (commonNameRows.length > 0) {
     return commonNameRows[0];
@@ -260,43 +284,44 @@ export async function getCanonicalSpeciesName(speciesNameId: number) {
 
   // Try new scientific name table
   const scientificNameRows = await query<{
-		group_id: number;
-		program_class: string;
-		species_type: string;
-		canonical_genus: string;
-		canonical_species_name: string;
-		base_points: number | null;
-		is_cares_species: number;
-		external_references: string | null;
-		image_links: string | null;
-	}>(`
+    group_id: number;
+    program_class: string;
+    species_type: string;
+    canonical_genus: string;
+    canonical_species_name: string;
+    base_points: number | null;
+    is_cares_species: number;
+    external_references: string | null;
+    image_links: string | null;
+  }>(
+    `
 		SELECT species_name_group.*
 		FROM species_scientific_name sn
 		JOIN species_name_group ON sn.group_id = species_name_group.group_id
 		WHERE sn.scientific_name_id = ?`,
-	[speciesNameId]
-	);
+    [speciesNameId]
+  );
 
   return scientificNameRows.pop();
 }
 
 export type SpeciesFilters = {
-	species_type?: string;
-	species_class?: string;
-	search?: string;
-	sort?: 'name' | 'reports' | 'breeders';
+  species_type?: string;
+  species_class?: string;
+  search?: string;
+  sort?: "name" | "reports" | "breeders";
 };
 
 export type SpeciesExplorerItem = {
-	group_id: number;
-	program_class: string;
-	canonical_genus: string;
-	canonical_species_name: string;
-	total_breeds: number;
-	total_breeders: number;
-	common_names: string;
-	scientific_names: string;
-	latest_breed_date: string | null;
+  group_id: number;
+  program_class: string;
+  canonical_genus: string;
+  canonical_species_name: string;
+  total_breeds: number;
+  total_breeders: number;
+  common_names: string;
+  scientific_names: string;
+  latest_breed_date: string | null;
 };
 
 /**
@@ -304,13 +329,13 @@ export type SpeciesExplorerItem = {
  * Represents a single name variant (synonym) for a species
  */
 export type SpeciesNameRecord = {
-	name_id: number;
-	group_id: number;
-	common_name: string;
-	scientific_name: string;
-	program_class: string;
-	canonical_genus: string;
-	canonical_species_name: string;
+  name_id: number;
+  group_id: number;
+  common_name: string;
+  scientific_name: string;
+  program_class: string;
+  canonical_genus: string;
+  canonical_species_name: string;
 };
 
 /**
@@ -321,28 +346,28 @@ function buildSpeciesSearchQuery(
   search?: string,
   species_type?: string,
   species_class?: string,
-  sort: 'name' | 'reports' | 'breeders' = 'reports',
+  sort: "name" | "reports" | "breeders" = "reports",
   limit?: number
 ): { sql: string; params: unknown[] } {
   // Build ORDER BY clause
-  let orderBy = 'total_breeds DESC, total_breeders DESC';
-  if (sort === 'name') {
-    orderBy = 'sng.canonical_genus, sng.canonical_species_name';
-  } else if (sort === 'breeders') {
-    orderBy = 'total_breeders DESC, total_breeds DESC';
+  let orderBy = "total_breeds DESC, total_breeders DESC";
+  if (sort === "name") {
+    orderBy = "sng.canonical_genus, sng.canonical_species_name";
+  } else if (sort === "breeders") {
+    orderBy = "total_breeders DESC, total_breeds DESC";
   }
 
   // Build WHERE conditions and parameters
-  const conditions: string[] = ['1=1'];
+  const conditions: string[] = ["1=1"];
   const params: unknown[] = [];
 
   if (species_type) {
-    conditions.push('AND s.species_type = ?');
+    conditions.push("AND s.species_type = ?");
     params.push(species_type);
   }
 
   if (species_class) {
-    conditions.push('AND s.species_class = ?');
+    conditions.push("AND s.species_class = ?");
     params.push(species_class);
   }
 
@@ -370,11 +395,11 @@ function buildSpeciesSearchQuery(
 		LEFT JOIN species_common_name cn ON sng.group_id = cn.group_id
 		LEFT JOIN species_scientific_name scin ON sng.group_id = scin.group_id
 		LEFT JOIN submissions s ON (s.common_name_id = cn.common_name_id OR s.scientific_name_id = scin.scientific_name_id) AND s.approved_on IS NOT NULL
-		WHERE ${conditions.join(' ')}
+		WHERE ${conditions.join(" ")}
 		GROUP BY sng.group_id, sng.program_class, sng.canonical_genus, sng.canonical_species_name
 		HAVING total_breeds > 0
 		ORDER BY ${orderBy}
-		${limit ? 'LIMIT ?' : ''}
+		${limit ? "LIMIT ?" : ""}
 	`;
 
   if (limit) {
@@ -398,7 +423,7 @@ function buildSpeciesSearchQuery(
  */
 export async function searchSpeciesTypeahead(
   searchQuery: string,
-  filters: Omit<SpeciesFilters, 'search' | 'sort'> = {},
+  filters: Omit<SpeciesFilters, "search" | "sort"> = {},
   limit: number = 10
 ): Promise<SpeciesNameRecord[]> {
   if (!searchQuery || searchQuery.trim().length < 2) {
@@ -406,21 +431,21 @@ export async function searchSpeciesTypeahead(
   }
 
   const searchPattern = `%${searchQuery.trim().toLowerCase()}%`;
-  const conditions: string[] = ['1=1'];
+  const conditions: string[] = ["1=1"];
   const params: unknown[] = [];
 
   if (filters.species_type) {
-    conditions.push('AND sng.species_type = ?');
+    conditions.push("AND sng.species_type = ?");
     params.push(filters.species_type);
   }
 
   if (filters.species_class) {
-    conditions.push('AND sng.program_class = ?');
+    conditions.push("AND sng.program_class = ?");
     params.push(filters.species_class);
   }
 
   // Build WHERE clause for both queries
-  const whereClause = conditions.join(' ');
+  const whereClause = conditions.join(" ");
 
   // UNION query: search both common names and scientific names
   // Each subquery joins with species_name_group for metadata
@@ -465,8 +490,10 @@ export async function searchSpeciesTypeahead(
   return query(sql, queryParams);
 }
 
-export async function getSpeciesForExplorer(filters: SpeciesFilters = {}): Promise<SpeciesExplorerItem[]> {
-  const { species_type, species_class, search, sort = 'reports' } = filters;
+export async function getSpeciesForExplorer(
+  filters: SpeciesFilters = {}
+): Promise<SpeciesExplorerItem[]> {
+  const { species_type, species_class, search, sort = "reports" } = filters;
 
   const { sql, params } = buildSpeciesSearchQuery(
     search,
@@ -480,38 +507,41 @@ export async function getSpeciesForExplorer(filters: SpeciesFilters = {}): Promi
 }
 
 export type SpeciesDetail = {
-	group_id: number;
-	program_class: string;
-	species_type: string;
-	canonical_genus: string;
-	canonical_species_name: string;
-	base_points: number | null;
-	is_cares_species: number;
-	external_references: string | null;
-	image_links: string | null;
-	synonyms: Array<{
-		name_id: number;
-		common_name: string;
-		scientific_name: string;
-	}>;
+  group_id: number;
+  program_class: string;
+  species_type: string;
+  canonical_genus: string;
+  canonical_species_name: string;
+  base_points: number | null;
+  is_cares_species: number;
+  external_references: string | null;
+  image_links: string | null;
+  synonyms: Array<{
+    name_id: number;
+    common_name: string;
+    scientific_name: string;
+  }>;
 };
 
 export async function getSpeciesDetail(groupId: number) {
   const groupRows = await query<{
-		group_id: number;
-		program_class: string;
-		species_type: string;
-		canonical_genus: string;
-		canonical_species_name: string;
-		base_points: number | null;
-		is_cares_species: number;
-		external_references: string | null;
-		image_links: string | null;
-	}>(`
+    group_id: number;
+    program_class: string;
+    species_type: string;
+    canonical_genus: string;
+    canonical_species_name: string;
+    base_points: number | null;
+    is_cares_species: number;
+    external_references: string | null;
+    image_links: string | null;
+  }>(
+    `
 		SELECT group_id, program_class, species_type, canonical_genus, canonical_species_name, base_points, is_cares_species, external_references, image_links
 		FROM species_name_group
 		WHERE group_id = ?
-	`, [groupId]);
+	`,
+    [groupId]
+  );
 
   if (groupRows.length === 0) {
     return null;
@@ -520,13 +550,13 @@ export async function getSpeciesDetail(groupId: number) {
   // Get all names from split schema tables
   const [commonNames, scientificNames] = await Promise.all([
     query<{ common_name_id: number; common_name: string }>(
-      'SELECT common_name_id, common_name FROM species_common_name WHERE group_id = ? ORDER BY common_name',
+      "SELECT common_name_id, common_name FROM species_common_name WHERE group_id = ? ORDER BY common_name",
       [groupId]
     ),
     query<{ scientific_name_id: number; scientific_name: string }>(
-      'SELECT scientific_name_id, scientific_name FROM species_scientific_name WHERE group_id = ? ORDER BY scientific_name',
+      "SELECT scientific_name_id, scientific_name FROM species_scientific_name WHERE group_id = ? ORDER BY scientific_name",
       [groupId]
-    )
+    ),
   ]);
 
   // Create paired synonyms for backward compatibility with existing views
@@ -534,31 +564,32 @@ export async function getSpeciesDetail(groupId: number) {
   const synonymRows = commonNames.map((cn, idx) => ({
     name_id: cn.common_name_id,
     common_name: cn.common_name,
-    scientific_name: scientificNames[idx]?.scientific_name || scientificNames[0]?.scientific_name || ''
+    scientific_name:
+      scientificNames[idx]?.scientific_name || scientificNames[0]?.scientific_name || "",
   }));
 
   const detail: SpeciesDetail = {
     ...groupRows[0],
-    synonyms: synonymRows
+    synonyms: synonymRows,
   };
 
   return detail;
 }
 
 export type SpeciesBreeder = {
-	member_id: number;
-	member_name: string;
-	breed_count: number;
-	first_breed_date: string;
-	latest_breed_date: string;
-	submissions_concat?: string;
-	submissions: Array<{
-		id: number;
-		species_common_name: string;
-		species_latin_name: string;
-		approved_on: string;
-		points: number;
-	}>;
+  member_id: number;
+  member_name: string;
+  breed_count: number;
+  first_breed_date: string;
+  latest_breed_date: string;
+  submissions_concat?: string;
+  submissions: Array<{
+    id: number;
+    species_common_name: string;
+    species_latin_name: string;
+    approved_on: string;
+    points: number;
+  }>;
 };
 
 /**
@@ -568,7 +599,8 @@ export type SpeciesBreeder = {
  * @returns Array of breeders with their breeding statistics for this species
  */
 export async function getBreedersForSpecies(groupId: number) {
-  return query<SpeciesBreeder>(`
+  return query<SpeciesBreeder>(
+    `
 		SELECT
 			m.id as member_id,
 			m.display_name as member_name,
@@ -590,24 +622,26 @@ export async function getBreedersForSpecies(groupId: number) {
 		  AND s.approved_on IS NOT NULL
 		GROUP BY m.id, m.display_name
 		ORDER BY breed_count DESC, latest_breed_date DESC
-	`, [groupId, groupId]).then(rows => {
-    return rows.map(row => ({
+	`,
+    [groupId, groupId]
+  ).then((rows) => {
+    return rows.map((row) => ({
       ...row,
-      submissions: row.submissions_concat ? row.submissions_concat.split(',').map((sub: string) => {
-        const [id, common_name, latin_name, approved_on, points] = sub.split('|');
-        return {
-          id: parseInt(id),
-          species_common_name: common_name,
-          species_latin_name: latin_name,
-          approved_on,
-          points: parseInt(points)
-        };
-      }) : []
+      submissions: row.submissions_concat
+        ? row.submissions_concat.split(",").map((sub: string) => {
+            const [id, common_name, latin_name, approved_on, points] = sub.split("|");
+            return {
+              id: parseInt(id),
+              species_common_name: common_name,
+              species_latin_name: latin_name,
+              approved_on,
+              points: parseInt(points),
+            };
+          })
+        : [],
     }));
   });
 }
-
-
 
 export async function getFilterOptions() {
   const speciesTypes = await query<{ species_type: string }>(`
@@ -618,7 +652,7 @@ export async function getFilterOptions() {
 	`);
 
   return {
-    species_types: speciesTypes.map(s => s.species_type)
+    species_types: speciesTypes.map((s) => s.species_type),
   };
 }
 
@@ -657,12 +691,15 @@ export type SpeciesSynonym = {
  * @returns Array of common names ordered alphabetically
  */
 export async function getCommonNamesForGroup(groupId: number): Promise<CommonName[]> {
-  return query<CommonName>(`
+  return query<CommonName>(
+    `
     SELECT common_name_id, group_id, common_name
     FROM species_common_name
     WHERE group_id = ?
     ORDER BY common_name
-  `, [groupId]);
+  `,
+    [groupId]
+  );
 }
 
 /**
@@ -671,12 +708,15 @@ export async function getCommonNamesForGroup(groupId: number): Promise<CommonNam
  * @returns Array of scientific names ordered alphabetically
  */
 export async function getScientificNamesForGroup(groupId: number): Promise<ScientificName[]> {
-  return query<ScientificName>(`
+  return query<ScientificName>(
+    `
     SELECT scientific_name_id, group_id, scientific_name
     FROM species_scientific_name
     WHERE group_id = ?
     ORDER BY scientific_name
-  `, [groupId]);
+  `,
+    [groupId]
+  );
 }
 
 /**
@@ -687,12 +727,12 @@ export async function getScientificNamesForGroup(groupId: number): Promise<Scien
 export async function getNamesForGroup(groupId: number): Promise<SpeciesNames> {
   const [common_names, scientific_names] = await Promise.all([
     getCommonNamesForGroup(groupId),
-    getScientificNamesForGroup(groupId)
+    getScientificNamesForGroup(groupId),
   ]);
 
   return {
     common_names,
-    scientific_names
+    scientific_names,
   };
 }
 
@@ -704,12 +744,15 @@ export async function getNamesForGroup(groupId: number): Promise<SpeciesNames> {
  */
 export async function getSynonymsForGroup(groupId: number): Promise<SpeciesSynonym[]> {
   try {
-    return await query<SpeciesSynonym>(`
+    return await query<SpeciesSynonym>(
+      `
       SELECT name_id, group_id, common_name, scientific_name
       FROM species_name
       WHERE group_id = ?
       ORDER BY common_name, scientific_name
-    `, [groupId]);
+    `,
+      [groupId]
+    );
   } catch {
     // Table doesn't exist (post-migration 030)
     return [];
@@ -727,12 +770,12 @@ export async function addCommonName(groupId: number, commonName: string): Promis
   const trimmed = commonName.trim();
 
   if (!trimmed) {
-    throw new Error('Common name cannot be empty');
+    throw new Error("Common name cannot be empty");
   }
 
   // Verify species group exists
   const groups = await query<{ group_id: number }>(
-    'SELECT group_id FROM species_name_group WHERE group_id = ?',
+    "SELECT group_id FROM species_name_group WHERE group_id = ?",
     [groupId]
   );
 
@@ -752,7 +795,7 @@ export async function addCommonName(groupId: number, commonName: string): Promis
       const result = await stmt.get<{ common_name_id: number }>(groupId, trimmed);
 
       if (!result || !result.common_name_id) {
-        throw new Error('Failed to insert common name');
+        throw new Error("Failed to insert common name");
       }
 
       return result.common_name_id;
@@ -760,11 +803,11 @@ export async function addCommonName(groupId: number, commonName: string): Promis
       await stmt.finalize();
     }
   } catch (err) {
-    if (err instanceof Error && err.message.includes('UNIQUE constraint')) {
+    if (err instanceof Error && err.message.includes("UNIQUE constraint")) {
       throw new Error(`Common name "${trimmed}" already exists for this species`);
     }
-    logger.error('Failed to add common name', err);
-    throw new Error('Failed to add common name');
+    logger.error("Failed to add common name", err);
+    throw new Error("Failed to add common name");
   }
 }
 
@@ -779,12 +822,12 @@ export async function addScientificName(groupId: number, scientificName: string)
   const trimmed = scientificName.trim();
 
   if (!trimmed) {
-    throw new Error('Scientific name cannot be empty');
+    throw new Error("Scientific name cannot be empty");
   }
 
   // Verify species group exists
   const groups = await query<{ group_id: number }>(
-    'SELECT group_id FROM species_name_group WHERE group_id = ?',
+    "SELECT group_id FROM species_name_group WHERE group_id = ?",
     [groupId]
   );
 
@@ -804,7 +847,7 @@ export async function addScientificName(groupId: number, scientificName: string)
       const result = await stmt.get<{ scientific_name_id: number }>(groupId, trimmed);
 
       if (!result || !result.scientific_name_id) {
-        throw new Error('Failed to insert scientific name');
+        throw new Error("Failed to insert scientific name");
       }
 
       return result.scientific_name_id;
@@ -812,11 +855,11 @@ export async function addScientificName(groupId: number, scientificName: string)
       await stmt.finalize();
     }
   } catch (err) {
-    if (err instanceof Error && err.message.includes('UNIQUE constraint')) {
+    if (err instanceof Error && err.message.includes("UNIQUE constraint")) {
       throw new Error(`Scientific name "${trimmed}" already exists for this species`);
     }
-    logger.error('Failed to add scientific name', err);
-    throw new Error('Failed to add scientific name');
+    logger.error("Failed to add scientific name", err);
+    throw new Error("Failed to add scientific name");
   }
 }
 
@@ -831,7 +874,7 @@ export async function updateCommonName(commonNameId: number, newName: string): P
   const trimmed = newName.trim();
 
   if (!trimmed) {
-    throw new Error('Common name cannot be empty');
+    throw new Error("Common name cannot be empty");
   }
 
   try {
@@ -849,11 +892,11 @@ export async function updateCommonName(commonNameId: number, newName: string): P
       await stmt.finalize();
     }
   } catch (err) {
-    if (err instanceof Error && err.message.includes('UNIQUE constraint')) {
-      throw new Error('This common name already exists for this species');
+    if (err instanceof Error && err.message.includes("UNIQUE constraint")) {
+      throw new Error("This common name already exists for this species");
     }
-    logger.error('Failed to update common name', err);
-    throw new Error('Failed to update common name');
+    logger.error("Failed to update common name", err);
+    throw new Error("Failed to update common name");
   }
 }
 
@@ -864,11 +907,14 @@ export async function updateCommonName(commonNameId: number, newName: string): P
  * @returns Number of rows updated (0 if not found, 1 if successful)
  * @throws Error if empty name or duplicate
  */
-export async function updateScientificName(scientificNameId: number, newName: string): Promise<number> {
+export async function updateScientificName(
+  scientificNameId: number,
+  newName: string
+): Promise<number> {
   const trimmed = newName.trim();
 
   if (!trimmed) {
-    throw new Error('Scientific name cannot be empty');
+    throw new Error("Scientific name cannot be empty");
   }
 
   try {
@@ -886,11 +932,11 @@ export async function updateScientificName(scientificNameId: number, newName: st
       await stmt.finalize();
     }
   } catch (err) {
-    if (err instanceof Error && err.message.includes('UNIQUE constraint')) {
-      throw new Error('This scientific name already exists for this species');
+    if (err instanceof Error && err.message.includes("UNIQUE constraint")) {
+      throw new Error("This scientific name already exists for this species");
     }
-    logger.error('Failed to update scientific name', err);
-    throw new Error('Failed to update scientific name');
+    logger.error("Failed to update scientific name", err);
+    throw new Error("Failed to update scientific name");
   }
 }
 
@@ -902,7 +948,7 @@ export async function updateScientificName(scientificNameId: number, newName: st
 export async function deleteCommonName(commonNameId: number): Promise<number> {
   try {
     const conn = writeConn;
-    const stmt = await conn.prepare('DELETE FROM species_common_name WHERE common_name_id = ?');
+    const stmt = await conn.prepare("DELETE FROM species_common_name WHERE common_name_id = ?");
 
     try {
       const result = await stmt.run(commonNameId);
@@ -911,8 +957,8 @@ export async function deleteCommonName(commonNameId: number): Promise<number> {
       await stmt.finalize();
     }
   } catch (err) {
-    logger.error('Failed to delete common name', err);
-    throw new Error('Failed to delete common name');
+    logger.error("Failed to delete common name", err);
+    throw new Error("Failed to delete common name");
   }
 }
 
@@ -924,7 +970,9 @@ export async function deleteCommonName(commonNameId: number): Promise<number> {
 export async function deleteScientificName(scientificNameId: number): Promise<number> {
   try {
     const conn = writeConn;
-    const stmt = await conn.prepare('DELETE FROM species_scientific_name WHERE scientific_name_id = ?');
+    const stmt = await conn.prepare(
+      "DELETE FROM species_scientific_name WHERE scientific_name_id = ?"
+    );
 
     try {
       const result = await stmt.run(scientificNameId);
@@ -933,8 +981,8 @@ export async function deleteScientificName(scientificNameId: number): Promise<nu
       await stmt.finalize();
     }
   } catch (err) {
-    logger.error('Failed to delete scientific name', err);
-    throw new Error('Failed to delete scientific name');
+    logger.error("Failed to delete scientific name", err);
+    throw new Error("Failed to delete scientific name");
   }
 }
 
@@ -954,12 +1002,12 @@ export async function addSynonym(
   const trimmedScientific = scientificName.trim();
 
   if (!trimmedCommon || !trimmedScientific) {
-    throw new Error('Common name and scientific name cannot be empty');
+    throw new Error("Common name and scientific name cannot be empty");
   }
 
   // Verify species group exists
   const groups = await query<{ group_id: number }>(
-    'SELECT group_id FROM species_name_group WHERE group_id = ?',
+    "SELECT group_id FROM species_name_group WHERE group_id = ?",
     [groupId]
   );
 
@@ -976,14 +1024,10 @@ export async function addSynonym(
     `);
 
     try {
-      const result = await stmt.get<{ name_id: number }>(
-        groupId,
-        trimmedCommon,
-        trimmedScientific
-      );
+      const result = await stmt.get<{ name_id: number }>(groupId, trimmedCommon, trimmedScientific);
 
       if (!result || !result.name_id) {
-        throw new Error('Failed to insert synonym');
+        throw new Error("Failed to insert synonym");
       }
 
       return result.name_id;
@@ -992,15 +1036,20 @@ export async function addSynonym(
     }
   } catch (err) {
     // Check for duplicate constraint error
-    if (err instanceof Error && err.message.includes('UNIQUE constraint')) {
+    if (err instanceof Error && err.message.includes("UNIQUE constraint")) {
       throw new Error(`Synonym "${trimmedCommon} (${trimmedScientific})" already exists`);
     }
     // After migration 030, table won't exist
-    if (err instanceof Error && (err.message.includes('no such table') || err.message.includes('SQLITE_ERROR'))) {
-      throw new Error('Legacy species_name table has been removed. Use addCommonName() and addScientificName() instead.');
+    if (
+      err instanceof Error &&
+      (err.message.includes("no such table") || err.message.includes("SQLITE_ERROR"))
+    ) {
+      throw new Error(
+        "Legacy species_name table has been removed. Use addCommonName() and addScientificName() instead."
+      );
     }
-    logger.error('Failed to add synonym', err);
-    throw new Error('Failed to add synonym');
+    logger.error("Failed to add synonym", err);
+    throw new Error("Failed to add synonym");
   }
 }
 
@@ -1022,7 +1071,7 @@ export async function updateSynonym(
 
   // At least one field must be provided
   if (commonName === undefined && scientificName === undefined) {
-    throw new Error('At least one field (commonName or scientificName) must be provided');
+    throw new Error("At least one field (commonName or scientificName) must be provided");
   }
 
   const fields: string[] = [];
@@ -1031,18 +1080,18 @@ export async function updateSynonym(
   if (commonName !== undefined) {
     const trimmed = commonName.trim();
     if (!trimmed) {
-      throw new Error('Common name cannot be empty');
+      throw new Error("Common name cannot be empty");
     }
-    fields.push('common_name = ?');
+    fields.push("common_name = ?");
     values.push(trimmed);
   }
 
   if (scientificName !== undefined) {
     const trimmed = scientificName.trim();
     if (!trimmed) {
-      throw new Error('Scientific name cannot be empty');
+      throw new Error("Scientific name cannot be empty");
     }
-    fields.push('scientific_name = ?');
+    fields.push("scientific_name = ?");
     values.push(trimmed);
   }
 
@@ -1052,7 +1101,7 @@ export async function updateSynonym(
     const conn = writeConn;
     const stmt = await conn.prepare(`
       UPDATE species_name
-      SET ${fields.join(', ')}
+      SET ${fields.join(", ")}
       WHERE name_id = ?
     `);
 
@@ -1063,11 +1112,11 @@ export async function updateSynonym(
       await stmt.finalize();
     }
   } catch (err) {
-    if (err instanceof Error && err.message.includes('UNIQUE constraint')) {
-      throw new Error('This name combination already exists');
+    if (err instanceof Error && err.message.includes("UNIQUE constraint")) {
+      throw new Error("This name combination already exists");
     }
-    logger.error('Failed to update synonym', err);
-    throw new Error('Failed to update synonym');
+    logger.error("Failed to update synonym", err);
+    throw new Error("Failed to update synonym");
   }
 }
 
@@ -1081,7 +1130,7 @@ export async function updateSynonym(
 export async function deleteSynonym(nameId: number, force = false): Promise<number> {
   // Get the synonym to check its group
   const synonyms = await query<{ group_id: number; common_name: string; scientific_name: string }>(
-    'SELECT group_id, common_name, scientific_name FROM species_name WHERE name_id = ?',
+    "SELECT group_id, common_name, scientific_name FROM species_name WHERE name_id = ?",
     [nameId]
   );
 
@@ -1093,7 +1142,7 @@ export async function deleteSynonym(nameId: number, force = false): Promise<numb
 
   // Check if this is the last synonym for the group
   const groupSynonyms = await query<{ count: number }>(
-    'SELECT COUNT(*) as count FROM species_name WHERE group_id = ?',
+    "SELECT COUNT(*) as count FROM species_name WHERE group_id = ?",
     [synonym.group_id]
   );
 
@@ -1101,13 +1150,13 @@ export async function deleteSynonym(nameId: number, force = false): Promise<numb
 
   if (synonymCount <= 1 && !force) {
     throw new Error(
-      'Cannot delete the last synonym for a species. Each species must have at least one name. Use force=true to delete anyway.'
+      "Cannot delete the last synonym for a species. Each species must have at least one name. Use force=true to delete anyway."
     );
   }
 
   // Check if any submissions use this specific name_id
   const submissions = await query<{ count: number }>(
-    'SELECT COUNT(*) as count FROM submissions WHERE species_name_id = ?',
+    "SELECT COUNT(*) as count FROM submissions WHERE species_name_id = ?",
     [nameId]
   );
 
@@ -1115,17 +1164,17 @@ export async function deleteSynonym(nameId: number, force = false): Promise<numb
 
   try {
     const conn = writeConn;
-    const stmt = await conn.prepare('DELETE FROM species_name WHERE name_id = ?');
+    const stmt = await conn.prepare("DELETE FROM species_name WHERE name_id = ?");
 
     try {
       const result = await stmt.run(nameId);
 
       if (submissionCount > 0) {
-        logger.warn('Deleted synonym used by submissions', {
+        logger.warn("Deleted synonym used by submissions", {
           nameId,
           commonName: synonym.common_name,
           scientificName: synonym.scientific_name,
-          submissionCount
+          submissionCount,
         });
       }
 
@@ -1134,8 +1183,8 @@ export async function deleteSynonym(nameId: number, force = false): Promise<numb
       await stmt.finalize();
     }
   } catch (err) {
-    logger.error('Failed to delete synonym', err);
-    throw new Error('Failed to delete synonym');
+    logger.error("Failed to delete synonym", err);
+    throw new Error("Failed to delete synonym");
   }
 }
 
@@ -1182,32 +1231,34 @@ export type SpeciesAdminListResult = {
  */
 export async function getSpeciesForAdmin(
   filters: SpeciesAdminFilters = {},
-  sort: 'name' | 'points' | 'class' = 'name',
+  sort: "name" | "points" | "class" = "name",
   limit = 50,
   offset = 0
 ): Promise<SpeciesAdminListResult> {
   const { species_type, program_class, has_base_points, is_cares_species, search } = filters;
 
   // Build WHERE conditions
-  const conditions: string[] = ['1=1'];
+  const conditions: string[] = ["1=1"];
   const params: unknown[] = [];
 
   if (species_type) {
-    conditions.push('AND sng.species_type = ?');
+    conditions.push("AND sng.species_type = ?");
     params.push(species_type);
   }
 
   if (program_class) {
-    conditions.push('AND sng.program_class = ?');
+    conditions.push("AND sng.program_class = ?");
     params.push(program_class);
   }
 
   if (has_base_points !== undefined) {
-    conditions.push(has_base_points ? 'AND sng.base_points IS NOT NULL' : 'AND sng.base_points IS NULL');
+    conditions.push(
+      has_base_points ? "AND sng.base_points IS NOT NULL" : "AND sng.base_points IS NULL"
+    );
   }
 
   if (is_cares_species !== undefined) {
-    conditions.push('AND sng.is_cares_species = ?');
+    conditions.push("AND sng.is_cares_species = ?");
     params.push(is_cares_species ? 1 : 0);
   }
 
@@ -1229,18 +1280,18 @@ export async function getSpeciesForAdmin(
   }
 
   // Build ORDER BY clause
-  let orderBy = 'sng.canonical_genus, sng.canonical_species_name';
-  if (sort === 'points') {
-    orderBy = 'sng.base_points DESC NULLS LAST, sng.canonical_genus, sng.canonical_species_name';
-  } else if (sort === 'class') {
-    orderBy = 'sng.program_class, sng.canonical_genus, sng.canonical_species_name';
+  let orderBy = "sng.canonical_genus, sng.canonical_species_name";
+  if (sort === "points") {
+    orderBy = "sng.base_points DESC NULLS LAST, sng.canonical_genus, sng.canonical_species_name";
+  } else if (sort === "class") {
+    orderBy = "sng.program_class, sng.canonical_genus, sng.canonical_species_name";
   }
 
   // Get total count
   const countSql = `
     SELECT COUNT(DISTINCT sng.group_id) as count
     FROM species_name_group sng
-    WHERE ${conditions.join(' ')}
+    WHERE ${conditions.join(" ")}
   `;
   const countResult = await query<{ count: number }>(countSql, params);
   const total_count = countResult[0]?.count || 0;
@@ -1261,7 +1312,7 @@ export async function getSpeciesForAdmin(
         SELECT COUNT(*) FROM species_scientific_name sn WHERE sn.group_id = sng.group_id
       ) as synonym_count
     FROM species_name_group sng
-    WHERE ${conditions.join(' ')}
+    WHERE ${conditions.join(" ")}
     ORDER BY ${orderBy}
     LIMIT ? OFFSET ?
   `;
@@ -1271,7 +1322,7 @@ export async function getSpeciesForAdmin(
 
   return {
     species,
-    total_count
+    total_count,
   };
 }
 
@@ -1295,7 +1346,7 @@ export async function createSpeciesGroup(data: {
     canonicalGenus,
     canonicalSpeciesName,
     basePoints,
-    isCaresSpecies
+    isCaresSpecies,
   } = data;
 
   // Validate inputs
@@ -1304,19 +1355,19 @@ export async function createSpeciesGroup(data: {
   const trimmedClass = programClass.trim();
 
   if (!trimmedGenus || !trimmedSpecies) {
-    throw new Error('Canonical genus and species name cannot be empty');
+    throw new Error("Canonical genus and species name cannot be empty");
   }
 
   if (!trimmedClass) {
-    throw new Error('Program class cannot be empty');
+    throw new Error("Program class cannot be empty");
   }
 
-  if (!['Fish', 'Plant', 'Invert', 'Coral'].includes(speciesType)) {
-    throw new Error('Species type must be Fish, Plant, Invert, or Coral');
+  if (!["Fish", "Plant", "Invert", "Coral"].includes(speciesType)) {
+    throw new Error("Species type must be Fish, Plant, Invert, or Coral");
   }
 
   if (basePoints !== undefined && basePoints !== null && (basePoints < 0 || basePoints > 100)) {
-    throw new Error('Base points must be between 0 and 100, or null');
+    throw new Error("Base points must be between 0 and 100, or null");
   }
 
   try {
@@ -1340,14 +1391,14 @@ export async function createSpeciesGroup(data: {
       );
 
       if (!result || !result.group_id) {
-        throw new Error('Failed to create species group');
+        throw new Error("Failed to create species group");
       }
 
-      logger.info('Created species group', {
+      logger.info("Created species group", {
         groupId: result.group_id,
         canonicalName: `${trimmedGenus} ${trimmedSpecies}`,
         speciesType,
-        programClass: trimmedClass
+        programClass: trimmedClass,
       });
 
       return result.group_id;
@@ -1355,11 +1406,11 @@ export async function createSpeciesGroup(data: {
       await stmt.finalize();
     }
   } catch (err) {
-    if (err instanceof Error && err.message.includes('UNIQUE constraint')) {
+    if (err instanceof Error && err.message.includes("UNIQUE constraint")) {
       throw new Error(`Species "${trimmedGenus} ${trimmedSpecies}" already exists`);
     }
-    logger.error('Failed to create species group', err);
-    throw new Error('Failed to create species group');
+    logger.error("Failed to create species group", err);
+    throw new Error("Failed to create species group");
   }
 }
 
@@ -1391,12 +1442,12 @@ export async function updateSpeciesGroup(
     basePoints,
     isCaresSpecies,
     externalReferences,
-    imageLinks
+    imageLinks,
   } = updates;
 
   // At least one field must be provided
   if (Object.keys(updates).length === 0) {
-    throw new Error('At least one field must be provided');
+    throw new Error("At least one field must be provided");
   }
 
   const fields: string[] = [];
@@ -1405,63 +1456,63 @@ export async function updateSpeciesGroup(
   if (canonicalGenus !== undefined) {
     const trimmed = canonicalGenus.trim();
     if (!trimmed) {
-      throw new Error('Canonical genus cannot be empty');
+      throw new Error("Canonical genus cannot be empty");
     }
-    fields.push('canonical_genus = ?');
+    fields.push("canonical_genus = ?");
     values.push(trimmed);
   }
 
   if (canonicalSpeciesName !== undefined) {
     const trimmed = canonicalSpeciesName.trim();
     if (!trimmed) {
-      throw new Error('Canonical species name cannot be empty');
+      throw new Error("Canonical species name cannot be empty");
     }
-    fields.push('canonical_species_name = ?');
+    fields.push("canonical_species_name = ?");
     values.push(trimmed);
   }
 
   if (speciesType !== undefined) {
-    if (!['Fish', 'Plant', 'Invert', 'Coral'].includes(speciesType)) {
-      throw new Error('Species type must be Fish, Plant, Invert, or Coral');
+    if (!["Fish", "Plant", "Invert", "Coral"].includes(speciesType)) {
+      throw new Error("Species type must be Fish, Plant, Invert, or Coral");
     }
-    fields.push('species_type = ?');
+    fields.push("species_type = ?");
     values.push(speciesType);
   }
 
   if (programClass !== undefined) {
     const trimmed = programClass.trim();
     if (!trimmed) {
-      throw new Error('Program class cannot be empty');
+      throw new Error("Program class cannot be empty");
     }
-    fields.push('program_class = ?');
+    fields.push("program_class = ?");
     values.push(trimmed);
   }
 
   if (basePoints !== undefined) {
     if (basePoints !== null && (basePoints < 0 || basePoints > 100)) {
-      throw new Error('Base points must be between 0 and 100, or null');
+      throw new Error("Base points must be between 0 and 100, or null");
     }
-    fields.push('base_points = ?');
+    fields.push("base_points = ?");
     values.push(basePoints);
   }
 
   if (isCaresSpecies !== undefined) {
-    fields.push('is_cares_species = ?');
+    fields.push("is_cares_species = ?");
     values.push(isCaresSpecies ? 1 : 0);
   }
 
   if (externalReferences !== undefined) {
-    fields.push('external_references = ?');
+    fields.push("external_references = ?");
     values.push(externalReferences.length > 0 ? JSON.stringify(externalReferences) : null);
   }
 
   if (imageLinks !== undefined) {
-    fields.push('image_links = ?');
+    fields.push("image_links = ?");
     values.push(imageLinks.length > 0 ? JSON.stringify(imageLinks) : null);
   }
 
   if (fields.length === 0) {
-    throw new Error('No valid fields to update');
+    throw new Error("No valid fields to update");
   }
 
   values.push(groupId);
@@ -1470,7 +1521,7 @@ export async function updateSpeciesGroup(
     const conn = writeConn;
     const stmt = await conn.prepare(`
       UPDATE species_name_group
-      SET ${fields.join(', ')}
+      SET ${fields.join(", ")}
       WHERE group_id = ?
     `);
 
@@ -1482,11 +1533,11 @@ export async function updateSpeciesGroup(
     }
   } catch (err) {
     // Check for unique constraint on canonical_genus + canonical_species_name
-    if (err instanceof Error && err.message.includes('UNIQUE constraint')) {
-      throw new Error('A species with this canonical name already exists');
+    if (err instanceof Error && err.message.includes("UNIQUE constraint")) {
+      throw new Error("A species with this canonical name already exists");
     }
-    logger.error('Failed to update species group', err);
-    throw new Error('Failed to update species group');
+    logger.error("Failed to update species group", err);
+    throw new Error("Failed to update species group");
   }
 }
 
@@ -1499,8 +1550,12 @@ export async function updateSpeciesGroup(
  */
 export async function deleteSpeciesGroup(groupId: number, force = false): Promise<number> {
   // Verify species group exists
-  const groups = await query<{ group_id: number; canonical_genus: string; canonical_species_name: string }>(
-    'SELECT group_id, canonical_genus, canonical_species_name FROM species_name_group WHERE group_id = ?',
+  const groups = await query<{
+    group_id: number;
+    canonical_genus: string;
+    canonical_species_name: string;
+  }>(
+    "SELECT group_id, canonical_genus, canonical_species_name FROM species_name_group WHERE group_id = ?",
     [groupId]
   );
 
@@ -1529,11 +1584,11 @@ export async function deleteSpeciesGroup(groupId: number, force = false): Promis
 
   // Get synonym count before delete (for logging)
   const commonCount = await query<{ count: number }>(
-    'SELECT COUNT(*) as count FROM species_common_name WHERE group_id = ?',
+    "SELECT COUNT(*) as count FROM species_common_name WHERE group_id = ?",
     [groupId]
   );
   const scientificCount = await query<{ count: number }>(
-    'SELECT COUNT(*) as count FROM species_scientific_name WHERE group_id = ?',
+    "SELECT COUNT(*) as count FROM species_scientific_name WHERE group_id = ?",
     [groupId]
   );
 
@@ -1543,25 +1598,25 @@ export async function deleteSpeciesGroup(groupId: number, force = false): Promis
     const conn = writeConn;
     // Migration 031 added ON DELETE SET NULL to FK constraints,
     // so species names will be automatically nullified when deleted
-    const stmt = await conn.prepare('DELETE FROM species_name_group WHERE group_id = ?');
+    const stmt = await conn.prepare("DELETE FROM species_name_group WHERE group_id = ?");
 
     try {
       const result = await stmt.run(groupId);
       const changes = result.changes || 0;
 
       if (changes > 0) {
-        logger.info('Deleted species group', {
+        logger.info("Deleted species group", {
           groupId,
           canonicalName: `${groups[0].canonical_genus} ${groups[0].canonical_species_name}`,
           synonymCount,
           submissionCount,
-          forced: force
+          forced: force,
         });
 
         if (submissionCount > 0) {
-          logger.warn('Deleted species with approved submissions', {
+          logger.warn("Deleted species with approved submissions", {
             groupId,
-            submissionCount
+            submissionCount,
           });
         }
       }
@@ -1571,8 +1626,8 @@ export async function deleteSpeciesGroup(groupId: number, force = false): Promis
       await stmt.finalize();
     }
   } catch (err) {
-    logger.error('Failed to delete species group', err);
-    throw new Error('Failed to delete species group');
+    logger.error("Failed to delete species group", err);
+    throw new Error("Failed to delete species group");
   }
 }
 
@@ -1585,16 +1640,16 @@ export async function deleteSpeciesGroup(groupId: number, force = false): Promis
  */
 export async function bulkSetPoints(groupIds: number[], points: number | null): Promise<number> {
   if (!groupIds || groupIds.length === 0) {
-    throw new Error('At least one group ID must be provided');
+    throw new Error("At least one group ID must be provided");
   }
 
   if (points !== null && (points < 0 || points > 100)) {
-    throw new Error('Points must be between 0 and 100, or null');
+    throw new Error("Points must be between 0 and 100, or null");
   }
 
   try {
     const conn = writeConn;
-    const placeholders = groupIds.map(() => '?').join(', ');
+    const placeholders = groupIds.map(() => "?").join(", ");
     const stmt = await conn.prepare(`
       UPDATE species_name_group
       SET base_points = ?
@@ -1604,10 +1659,10 @@ export async function bulkSetPoints(groupIds: number[], points: number | null): 
     try {
       const result = await stmt.run(points, ...groupIds);
 
-      logger.info('Bulk updated species points', {
+      logger.info("Bulk updated species points", {
         groupIds,
         points,
-        updatedCount: result.changes || 0
+        updatedCount: result.changes || 0,
       });
 
       return result.changes || 0;
@@ -1615,7 +1670,7 @@ export async function bulkSetPoints(groupIds: number[], points: number | null): 
       await stmt.finalize();
     }
   } catch (err) {
-    logger.error('Failed to bulk set points', err);
-    throw new Error('Failed to bulk set points');
+    logger.error("Failed to bulk set points", err);
+    throw new Error("Failed to bulk set points");
   }
 }

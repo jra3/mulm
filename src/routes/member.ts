@@ -17,20 +17,16 @@ export const view = async (req: MulmRequest, res: Response) => {
   const isSelf = Boolean(viewer?.id == member.id);
   const isAdmin = Boolean(viewer?.is_admin);
 
-  const submissions = await getSubmissionsByMember(
-    memberId,
-    isSelf,
-    isSelf || isAdmin,
-  );
+  const submissions = await getSubmissionsByMember(memberId, isSelf, isSelf || isAdmin);
 
   // Add status info to each submission
-  const submissionsWithStatus = submissions.map(sub => ({
+  const submissionsWithStatus = submissions.map((sub) => ({
     ...sub,
-    statusInfo: getSubmissionStatus(sub)
+    statusInfo: getSubmissionStatus(sub),
   }));
 
   const fishSubs = submissionsWithStatus.filter(
-    (sub) => sub.species_type === "Fish" || sub.species_type === "Invert",
+    (sub) => sub.species_type === "Fish" || sub.species_type === "Invert"
   );
   const plantSubs = submissionsWithStatus.filter((sub) => sub.species_type === "Plant");
   const coralSubs = submissionsWithStatus.filter((sub) => sub.species_type === "Coral");
@@ -59,4 +55,4 @@ export const view = async (req: MulmRequest, res: Response) => {
     isSelf,
     isAdmin,
   });
-}
+};

@@ -1,5 +1,11 @@
 import { checkPassword, makePasswordEntry } from "@/auth";
-import { getMemberPassword, createOrUpdatePassword, updateMember, getGoogleAccountByMemberId, deleteGoogleAccount } from "@/db/members";
+import {
+  getMemberPassword,
+  createOrUpdatePassword,
+  updateMember,
+  getGoogleAccountByMemberId,
+  deleteGoogleAccount,
+} from "@/db/members";
 import { updateSchema } from "@/forms/login";
 import { getGoogleOAuthURL, setOAuthStateCookie } from "@/oauth";
 import { MulmRequest } from "@/sessions";
@@ -22,12 +28,7 @@ export const viewAccountSettings = async (req: MulmRequest, res: Response) => {
   // Generate OAuth state for CSRF protection (stored in cookie)
   const oauthState = setOAuthStateCookie(res);
 
-  const [
-    googleURL,
-    googleAccount,
-    presets,
-    credentials
-  ] = await Promise.all([
+  const [googleURL, googleAccount, presets, credentials] = await Promise.all([
     Promise.resolve(getGoogleOAuthURL(oauthState)),
     getGoogleAccountByMemberId(viewer.id),
     queryTankPresets(viewer.id),
@@ -73,9 +74,12 @@ export const updateAccountSettings = async (req: MulmRequest, res: Response) => 
       const currentPasswordEntry = await getMemberPassword(viewer.id);
       // Not set, or we have correct password
       // Need better logic here...
-      if (!currentPasswordEntry || await checkPassword(currentPasswordEntry, form.current_password)) {
-        const passwordEntry = await makePasswordEntry(form.password)
-        await createOrUpdatePassword(viewer.id, passwordEntry)
+      if (
+        !currentPasswordEntry ||
+        (await checkPassword(currentPasswordEntry, form.current_password))
+      ) {
+        const passwordEntry = await makePasswordEntry(form.password);
+        await createOrUpdatePassword(viewer.id, passwordEntry);
         // Updated password!
       } else {
         errors.set("password", "Password incorrect");
@@ -98,7 +102,7 @@ export const updateAccountSettings = async (req: MulmRequest, res: Response) => 
     },
     errors,
   });
-}
+};
 
 export const unlinkGoogleAccount = async (req: MulmRequest, res: Response) => {
   const { viewer } = req;
@@ -115,7 +119,7 @@ export const unlinkGoogleAccount = async (req: MulmRequest, res: Response) => {
 
   await deleteGoogleAccount(googleAccount.google_sub, viewer.id);
   res.send("Unlinked Google account");
-}
+};
 
 // Tank Preset Management Routes
 
@@ -131,7 +135,7 @@ export const viewTankPresetCard = async (req: MulmRequest, res: Response) => {
   // RESTful GET - preset name from URL parameter
   const presetName = decodeURIComponent(req.params.name);
   const presets = await queryTankPresets(viewer.id);
-  const preset = presets.find(p => p.preset_name === presetName);
+  const preset = presets.find((p) => p.preset_name === presetName);
 
   if (!preset) {
     res.status(404).send("Preset not found");
@@ -139,7 +143,7 @@ export const viewTankPresetCard = async (req: MulmRequest, res: Response) => {
   }
 
   res.render("account/tankPresetCard", {
-    preset
+    preset,
   });
 };
 
@@ -153,7 +157,7 @@ export const editTankPresetForm = async (req: MulmRequest, res: Response) => {
   // RESTful GET - preset name from URL parameter
   const presetName = decodeURIComponent(req.params.name);
   const presets = await queryTankPresets(viewer.id);
-  const preset = presets.find(p => p.preset_name === presetName);
+  const preset = presets.find((p) => p.preset_name === presetName);
 
   if (!preset) {
     res.status(404).send("Preset not found");
@@ -163,7 +167,7 @@ export const editTankPresetForm = async (req: MulmRequest, res: Response) => {
   res.render("account/tankPresetForm", {
     preset,
     editing: true,
-    errors: new Map()
+    errors: new Map(),
   });
 };
 
@@ -174,17 +178,19 @@ export const saveTankPresetRoute = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const isEditing = getBodyString(req, 'editing') === 'true';
+  const isEditing = getBodyString(req, "editing") === "true";
   const errors = new Map<string, string>();
   const parsed = tankSettingsSchema.safeParse(req.body);
 
-  if (!validateFormResult(parsed, errors, () => {
-    res.render("account/tankPresetForm", {
-      preset: req.body as Record<string, unknown>,
-      editing: isEditing,
-      errors
-    });
-  })) {
+  if (
+    !validateFormResult(parsed, errors, () => {
+      res.render("account/tankPresetForm", {
+        preset: req.body as Record<string, unknown>,
+        editing: isEditing,
+        errors,
+      });
+    })
+  ) {
     return;
   }
 
@@ -203,11 +209,11 @@ export const saveTankPresetRoute = async (req: MulmRequest, res: Response) => {
 
     // Return the preset card (new or updated)
     const presets = await queryTankPresets(viewer.id);
-    const preset = presets.find(p => p.preset_name === parsed.data.preset_name);
+    const preset = presets.find((p) => p.preset_name === parsed.data.preset_name);
 
     if (isEditing) {
       res.render("account/tankPresetCard", {
-        preset
+        preset,
       });
     } else {
       // For new presets, return card + hide form + reset form using out-of-band
@@ -215,24 +221,29 @@ export const saveTankPresetRoute = async (req: MulmRequest, res: Response) => {
       const formHtml = pug.renderFile("src/views/account/tankPresetForm.pug", {
         preset: {},
         editing: false,
-        errors: new Map()
+        errors: new Map(),
       });
-      res.send(`${cardHtml}<div id="newPresetForm" class="hidden" hx-swap-oob="outerHTML">${formHtml}</div>`.trim());
+      res.send(
+        `${cardHtml}<div id="newPresetForm" class="hidden" hx-swap-oob="outerHTML">${formHtml}</div>`.trim()
+      );
     }
   } catch (err) {
-    logger.error('Failed to save tank preset', err);
-    errors.set('preset_name', isEditing ? 'Failed to update preset' : 'A preset with this name already exists');
+    logger.error("Failed to save tank preset", err);
+    errors.set(
+      "preset_name",
+      isEditing ? "Failed to update preset" : "A preset with this name already exists"
+    );
 
     // Retarget for create, normal target for edit
     if (!isEditing) {
-      res.set('HX-Retarget', '#newPresetForm');
-      res.set('HX-Reswap', 'outerHTML');
+      res.set("HX-Retarget", "#newPresetForm");
+      res.set("HX-Reswap", "outerHTML");
     }
 
     res.render("account/tankPresetForm", {
       preset: req.body as Record<string, unknown>,
       editing: isEditing,
-      errors
+      errors,
     });
   }
 };
@@ -251,8 +262,7 @@ export const deleteTankPresetRoute = async (req: MulmRequest, res: Response) => 
     await deleteTankPreset(viewer.id, presetName);
     res.status(200).send(); // Empty response causes HTMX to remove the element
   } catch (err) {
-    logger.error('Failed to delete tank preset', err);
-    res.status(500).send('Failed to delete preset');
+    logger.error("Failed to delete tank preset", err);
+    res.status(500).send("Failed to delete preset");
   }
 };
-

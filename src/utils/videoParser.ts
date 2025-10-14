@@ -5,11 +5,11 @@
  * Supports YouTube and Vimeo with optional oEmbed enrichment.
  */
 
-import { fetchOEmbed } from './oembed';
-import { logger } from './logger';
+import { fetchOEmbed } from "./oembed";
+import { logger } from "./logger";
 
 export interface VideoMetadata {
-  platform: 'youtube' | 'vimeo' | 'unknown';
+  platform: "youtube" | "vimeo" | "unknown";
   videoId: string | null;
   thumbnailUrl: string | null;
   embedUrl: string | null;
@@ -24,9 +24,9 @@ export interface VideoMetadata {
  * Parse a video URL and extract metadata
  */
 export function parseVideoUrl(url: string): VideoMetadata {
-  if (!url || typeof url !== 'string') {
+  if (!url || typeof url !== "string") {
     return {
-      platform: 'unknown',
+      platform: "unknown",
       videoId: null,
       thumbnailUrl: null,
       embedUrl: null,
@@ -50,7 +50,7 @@ export function parseVideoUrl(url: string): VideoMetadata {
 
   // Unknown platform
   return {
-    platform: 'unknown',
+    platform: "unknown",
     videoId: null,
     thumbnailUrl: null,
     embedUrl: null,
@@ -80,7 +80,7 @@ function parseYouTubeUrl(url: string): VideoMetadata {
     if (match && match[1]) {
       const videoId = match[1];
       return {
-        platform: 'youtube',
+        platform: "youtube",
         videoId,
         // Use mqdefault for medium quality thumbnail (320x180)
         thumbnailUrl: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
@@ -91,7 +91,7 @@ function parseYouTubeUrl(url: string): VideoMetadata {
   }
 
   return {
-    platform: 'unknown',
+    platform: "unknown",
     videoId: null,
     thumbnailUrl: null,
     embedUrl: null,
@@ -118,7 +118,7 @@ function parseVimeoUrl(url: string): VideoMetadata {
     if (match && match[1]) {
       const videoId = match[1];
       return {
-        platform: 'vimeo',
+        platform: "vimeo",
         videoId,
         // Vimeo thumbnails require API call, so we'll use a placeholder approach
         // In production, you'd fetch from: https://vimeo.com/api/v2/video/{videoId}.json
@@ -131,7 +131,7 @@ function parseVimeoUrl(url: string): VideoMetadata {
   }
 
   return {
-    platform: 'unknown',
+    platform: "unknown",
     videoId: null,
     thumbnailUrl: null,
     embedUrl: null,
@@ -148,7 +148,7 @@ export async function parseVideoUrlWithOEmbed(url: string): Promise<VideoMetadat
   const basic = parseVideoUrl(url);
 
   // If platform is unknown, return immediately
-  if (basic.platform === 'unknown' || !basic.videoId) {
+  if (basic.platform === "unknown" || !basic.videoId) {
     return basic;
   }
 
@@ -179,10 +179,10 @@ export async function parseVideoUrlWithOEmbed(url: string): Promise<VideoMetadat
  * Validate if a string looks like a video URL
  */
 export function isValidVideoUrl(url: string): boolean {
-  if (!url || typeof url !== 'string') {
+  if (!url || typeof url !== "string") {
     return false;
   }
 
   const metadata = parseVideoUrl(url);
-  return metadata.platform !== 'unknown' && metadata.videoId !== null;
+  return metadata.platform !== "unknown" && metadata.videoId !== null;
 }

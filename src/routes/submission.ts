@@ -1,5 +1,21 @@
-import { Response } from 'express';
-import { getBapFormTitle, getClassOptions, waterTypes, speciesTypes, foodTypes, spawnLocations, bapDraftForm, bapFields, bapForm, FormValues, hasFoods, hasSpawnLocations, hasLighting, hasSupplements, isLivestock } from "@/forms/submission";
+import { Response } from "express";
+import {
+  getBapFormTitle,
+  getClassOptions,
+  waterTypes,
+  speciesTypes,
+  foodTypes,
+  spawnLocations,
+  bapDraftForm,
+  bapFields,
+  bapForm,
+  FormValues,
+  hasFoods,
+  hasSpawnLocations,
+  hasLighting,
+  hasSupplements,
+  isLivestock,
+} from "@/forms/submission";
 import { extractValid } from "@/forms/utils";
 import { getQueryString } from "@/utils/request";
 import { MulmRequest } from "@/sessions";
@@ -21,7 +37,7 @@ export const renderSubmissionForm = (req: MulmRequest, res: Response) => {
     ...req.query,
   };
 
-  const selectedType = getQueryString(req, 'species_type', 'Fish');
+  const selectedType = getQueryString(req, "species_type", "Fish");
   res.render("submit", {
     title: getBapFormTitle(selectedType),
     form,
@@ -51,14 +67,14 @@ export const view = async (req: MulmRequest, res: Response) => {
   const parseStringArray = (jsonString: string): string[] => {
     try {
       const parsed: unknown = JSON.parse(jsonString);
-      if (Array.isArray(parsed) && parsed.every(item => typeof item === 'string')) {
+      if (Array.isArray(parsed) && parsed.every((item) => typeof item === "string")) {
         return parsed;
       }
     } catch {
       // JSON parse failed, return empty array
     }
     return [];
-  }
+  };
 
   let approver: MemberRecord | undefined;
   if (submission.approved_by != null) {
@@ -79,7 +95,7 @@ export const view = async (req: MulmRequest, res: Response) => {
   };
 
   if (viewer && aspect.isSelf && !aspect.isSubmitted) {
-    res.render('submit', {
+    res.render("submit", {
       title: `Edit ${getBapFormTitle(submission.program)}`,
       form: {
         ...submission,
@@ -146,7 +162,7 @@ export const view = async (req: MulmRequest, res: Response) => {
     videoMetadata = await parseVideoUrlWithOEmbed(submission.video_url);
   }
 
-  res.render('submission/review', {
+  res.render("submission/review", {
     submission: {
       ...submission,
       reproduction_date: formatShortDate(submission.reproduction_date),
@@ -154,8 +170,14 @@ export const view = async (req: MulmRequest, res: Response) => {
       witnessed_on: formatShortDate(submission.witnessed_on),
       approved_on: formatShortDate(submission.approved_on),
       approved_by: approver?.display_name,
-      witnessed: witness && submission.witnessed_on ? `${witness.display_name} - ${formatShortDate(submission.witnessed_on)}` : undefined,
-      approved: approver && submission.approved_on ? `${approver.display_name} - ${formatShortDate(submission.approved_on)}` : undefined,
+      witnessed:
+        witness && submission.witnessed_on
+          ? `${witness.display_name} - ${formatShortDate(submission.witnessed_on)}`
+          : undefined,
+      approved:
+        approver && submission.approved_on
+          ? `${approver.display_name} - ${formatShortDate(submission.approved_on)}`
+          : undefined,
 
       foods: parseStringArray(submission.foods).join(","),
       spawn_locations: parseStringArray(submission.spawn_locations).join(","),
@@ -167,7 +189,7 @@ export const view = async (req: MulmRequest, res: Response) => {
     videoMetadata,
     ...aspect,
   });
-}
+};
 
 export async function validateSubmission(req: MulmRequest, res: Response) {
   // Support both :id and :subId for backward compatibility
@@ -187,9 +209,9 @@ export async function validateSubmission(req: MulmRequest, res: Response) {
 }
 
 function parseAndValidateForm(req: MulmRequest): {
-	form: FormValues,
-	draft: boolean,
-	errors?: Map<string, string>,
+  form: FormValues;
+  draft: boolean;
+  errors?: Map<string, string>;
 } {
   let draft = false;
   let form: FormValues;
@@ -232,8 +254,8 @@ export const create = async (req: MulmRequest, res: Response) => {
   const { form, draft, errors } = parseAndValidateForm(req);
 
   if (errors) {
-    const selectedType = form.species_type || 'Fish';
-    res.render('bapForm/form', {
+    const selectedType = form.species_type || "Fish";
+    res.render("bapForm/form", {
       title: getBapFormTitle(selectedType),
       form,
       errors,
@@ -283,8 +305,8 @@ export const create = async (req: MulmRequest, res: Response) => {
   }
 
   // Redirect to the submission view page after successful creation
-  res.set('HX-Redirect', `/submissions/${subId}`).status(200).send();
-}
+  res.set("HX-Redirect", `/submissions/${subId}`).status(200).send();
+};
 
 export const update = async (req: MulmRequest, res: Response) => {
   const { viewer } = req;
@@ -312,14 +334,14 @@ export const update = async (req: MulmRequest, res: Response) => {
 
   if ("unsubmit" in req.body) {
     await db.updateSubmission(submission.id, { submitted_on: null });
-    res.set('HX-Redirect', '/submissions/' + submission.id).send();
+    res.set("HX-Redirect", "/submissions/" + submission.id).send();
     return;
   }
 
   const { form, draft, errors } = parseAndValidateForm(req);
   if (errors) {
-    const selectedType = form.species_type || 'Fish';
-    res.render('bapForm/form', {
+    const selectedType = form.species_type || "Fish";
+    res.render("bapForm/form", {
       title: `Edit ${getBapFormTitle(selectedType)}`,
       form,
       errors,
@@ -347,8 +369,8 @@ export const update = async (req: MulmRequest, res: Response) => {
   }
 
   // Redirect to the submission view page after successful update
-  res.set('HX-Redirect', `/submissions/${submission.id}`).status(200).send();
-}
+  res.set("HX-Redirect", `/submissions/${submission.id}`).status(200).send();
+};
 
 export const remove = async (req: MulmRequest, res: Response) => {
   const submission = await validateSubmission(req, res);
@@ -365,20 +387,20 @@ export const remove = async (req: MulmRequest, res: Response) => {
   // Admin can always delete
   if (viewer.is_admin) {
     await db.deleteSubmission(submission.id);
-    res.set('HX-Redirect', '/').send();
+    res.set("HX-Redirect", "/").send();
     return;
   }
 
   // Owner can delete if not approved (no points awarded yet)
   if (viewer.id === submission.member_id && submission.approved_on === null) {
     await db.deleteSubmission(submission.id);
-    res.set('HX-Redirect', '/').send();
+    res.set("HX-Redirect", "/").send();
     return;
   }
 
   // Not authorized
-  res.status(403).send('Cannot delete approved submissions');
-}
+  res.status(403).send("Cannot delete approved submissions");
+};
 
 /**
  * GET /api/video/preview?url=VIDEO_URL
@@ -388,15 +410,15 @@ export const videoPreview = async (req: MulmRequest, res: Response) => {
   const url = req.query.url as string;
 
   // Validate URL
-  if (!url || typeof url !== 'string') {
-    res.status(400).send('');
+  if (!url || typeof url !== "string") {
+    res.status(400).send("");
     return;
   }
 
   // Check if it's a valid video URL
   if (!isValidVideoUrl(url)) {
-    res.render('bapForm/videoPreviewError', {
-      error: 'Please enter a valid YouTube or Vimeo URL'
+    res.render("bapForm/videoPreviewError", {
+      error: "Please enter a valid YouTube or Vimeo URL",
     });
     return;
   }
@@ -405,20 +427,20 @@ export const videoPreview = async (req: MulmRequest, res: Response) => {
     // Fetch video metadata with oEmbed
     const metadata = await parseVideoUrlWithOEmbed(url);
 
-    if (metadata.platform === 'unknown' || !metadata.videoId) {
-      res.render('bapForm/videoPreviewError', {
-        error: 'Could not parse video URL. Please check the link and try again.'
+    if (metadata.platform === "unknown" || !metadata.videoId) {
+      res.render("bapForm/videoPreviewError", {
+        error: "Could not parse video URL. Please check the link and try again.",
       });
       return;
     }
 
     // Render preview card
-    res.render('bapForm/videoPreview', {
-      metadata
+    res.render("bapForm/videoPreview", {
+      metadata,
     });
   } catch {
-    res.render('bapForm/videoPreviewError', {
-      error: 'Failed to load video preview. The link may be invalid or the video may be private.'
+    res.render("bapForm/videoPreviewError", {
+      error: "Failed to load video preview. The link may be invalid or the video may be private.",
     });
   }
-}
+};

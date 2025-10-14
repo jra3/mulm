@@ -35,16 +35,16 @@ export function isValidDate(date: string | Date | null | undefined): boolean {
  */
 export function formatShortDate(date: string | Date | null | undefined): string {
   if (!isValidDate(date)) {
-    return '';
+    return "";
   }
 
   const d = new Date(date!);
   // Use Intl.DateTimeFormat with UTC timezone to avoid timezone-based date shifts
-  return new Intl.DateTimeFormat('en-US', {
-    month: '2-digit',
-    day: '2-digit',
-    year: 'numeric',
-    timeZone: 'UTC'
+  return new Intl.DateTimeFormat("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric",
+    timeZone: "UTC",
   }).format(d);
 }
 
@@ -61,16 +61,16 @@ export function formatShortDate(date: string | Date | null | undefined): string 
  */
 export function formatLongDate(date: string | Date | null | undefined): string {
   if (!isValidDate(date)) {
-    return '';
+    return "";
   }
 
   const d = new Date(date!);
   // Use Intl.DateTimeFormat with UTC timezone to avoid timezone-based date shifts
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'UTC'
+  return new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
   }).format(d);
 }
 
@@ -88,7 +88,7 @@ export function formatLongDate(date: string | Date | null | undefined): string {
  */
 export function formatRelativeDate(date: string | Date | null | undefined): string {
   if (!isValidDate(date)) {
-    return '';
+    return "";
   }
 
   const d = new Date(date!);
@@ -104,41 +104,41 @@ export function formatRelativeDate(date: string | Date | null | undefined): stri
 
   // Future dates
   if (diffMs < 0) {
-    return 'in the future';
+    return "in the future";
   }
 
   // Less than 1 minute
   if (diffMin < 1) {
-    return 'just now';
+    return "just now";
   }
 
   // Less than 1 hour
   if (diffHour < 1) {
-    return diffMin === 1 ? '1 minute ago' : `${diffMin} minutes ago`;
+    return diffMin === 1 ? "1 minute ago" : `${diffMin} minutes ago`;
   }
 
   // Less than 1 day
   if (diffDay < 1) {
-    return diffHour === 1 ? '1 hour ago' : `${diffHour} hours ago`;
+    return diffHour === 1 ? "1 hour ago" : `${diffHour} hours ago`;
   }
 
   // Less than 1 week
   if (diffWeek < 1) {
-    return diffDay === 1 ? '1 day ago' : `${diffDay} days ago`;
+    return diffDay === 1 ? "1 day ago" : `${diffDay} days ago`;
   }
 
   // Less than 1 month
   if (diffMonth < 1) {
-    return diffWeek === 1 ? '1 week ago' : `${diffWeek} weeks ago`;
+    return diffWeek === 1 ? "1 week ago" : `${diffWeek} weeks ago`;
   }
 
   // Less than 1 year
   if (diffYear < 1) {
-    return diffMonth === 1 ? '1 month ago' : `${diffMonth} months ago`;
+    return diffMonth === 1 ? "1 month ago" : `${diffMonth} months ago`;
   }
 
   // 1 year or more
-  return diffYear === 1 ? '1 year ago' : `${diffYear} years ago`;
+  return diffYear === 1 ? "1 year ago" : `${diffYear} years ago`;
 }
 
 /**
@@ -154,7 +154,7 @@ export function formatRelativeDate(date: string | Date | null | undefined): stri
  */
 export function formatISODate(date: string | Date | null | undefined): string {
   if (!isValidDate(date)) {
-    return '';
+    return "";
   }
 
   return new Date(date!).toISOString();

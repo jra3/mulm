@@ -5,10 +5,10 @@
  * Includes in-memory caching to avoid repeated API calls.
  */
 
-import { logger } from './logger';
+import { logger } from "./logger";
 
 export interface OEmbedData {
-  type: 'video' | 'photo' | 'link' | 'rich';
+  type: "video" | "photo" | "link" | "rich";
   version: string;
   title?: string;
   author_name?: string;
@@ -35,11 +35,11 @@ const CACHE_TTL = 60 * 60 * 1000; // 1 hour in milliseconds
 /**
  * Get oEmbed endpoint URL for a video platform
  */
-function getOEmbedEndpoint(platform: 'youtube' | 'vimeo', videoUrl: string): string | null {
+function getOEmbedEndpoint(platform: "youtube" | "vimeo", videoUrl: string): string | null {
   switch (platform) {
-    case 'youtube':
+    case "youtube":
       return `https://www.youtube.com/oembed?url=${encodeURIComponent(videoUrl)}&format=json`;
-    case 'vimeo':
+    case "vimeo":
       return `https://vimeo.com/api/oembed.json?url=${encodeURIComponent(videoUrl)}`;
     default:
       return null;
@@ -50,7 +50,7 @@ function getOEmbedEndpoint(platform: 'youtube' | 'vimeo', videoUrl: string): str
  * Fetch oEmbed data from a video URL
  */
 export async function fetchOEmbed(
-  platform: 'youtube' | 'vimeo',
+  platform: "youtube" | "vimeo",
   videoUrl: string
 ): Promise<OEmbedData | null> {
   const cacheKey = `${platform}:${videoUrl}`;
@@ -72,7 +72,7 @@ export async function fetchOEmbed(
     logger.info(`Fetching oEmbed data from ${platform} for: ${videoUrl}`);
     const response = await fetch(endpoint, {
       headers: {
-        'User-Agent': 'Mulm-BAP/1.0',
+        "User-Agent": "Mulm-BAP/1.0",
       },
     });
 
@@ -86,14 +86,14 @@ export async function fetchOEmbed(
 
     // Validate required fields
     if (!data.type || !data.version) {
-      logger.warn('Invalid oEmbed response: missing required fields');
+      logger.warn("Invalid oEmbed response: missing required fields");
       cache.set(cacheKey, { data: null, timestamp: Date.now() });
       return null;
     }
 
     // Cache the result
     cache.set(cacheKey, { data, timestamp: Date.now() });
-    logger.info(`oEmbed data cached for ${platform}: ${data.title || 'untitled'}`);
+    logger.info(`oEmbed data cached for ${platform}: ${data.title || "untitled"}`);
 
     return data;
   } catch (error) {

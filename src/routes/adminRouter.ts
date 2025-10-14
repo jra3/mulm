@@ -16,10 +16,16 @@ adminRouter.delete("/species/:groupId", speciesAdmin.deleteSpecies);
 // Split name management (new schema)
 adminRouter.get("/species/:groupId/common-names/new", speciesAdmin.addCommonNameForm);
 adminRouter.post("/species/:groupId/common-names", speciesAdmin.addCommonNameRoute);
-adminRouter.delete("/species/:groupId/common-names/:commonNameId", speciesAdmin.deleteCommonNameRoute);
+adminRouter.delete(
+  "/species/:groupId/common-names/:commonNameId",
+  speciesAdmin.deleteCommonNameRoute
+);
 adminRouter.get("/species/:groupId/scientific-names/new", speciesAdmin.addScientificNameForm);
 adminRouter.post("/species/:groupId/scientific-names", speciesAdmin.addScientificNameRoute);
-adminRouter.delete("/species/:groupId/scientific-names/:scientificNameId", speciesAdmin.deleteScientificNameRoute);
+adminRouter.delete(
+  "/species/:groupId/scientific-names/:scientificNameId",
+  speciesAdmin.deleteScientificNameRoute
+);
 
 // Deprecated synonym routes (old paired schema - keep for backwards compatibility)
 adminRouter.get("/species/:groupId/synonyms/new", speciesAdmin.addSynonymForm);
