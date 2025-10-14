@@ -244,7 +244,7 @@ export const deleteTankPresetRoute = async (req: MulmRequest, res: Response) => 
   const presetName = (req.body as { preset_name?: string })?.preset_name;
 
   if (!presetName) {
-    logger.error('Delete tank preset: no preset_name in request', { body: req.body });
+    logger.error('Delete tank preset: no preset_name in request');
     res.status(400).send('Preset name required');
     return;
   }
