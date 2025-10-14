@@ -3,7 +3,7 @@ import assert from "node:assert";
 import { getSubmissionStatus } from "../utils/submissionStatus";
 import { Submission } from "../db/submissions";
 
-describe("Submission Status Calculation", () => {
+void describe("Submission Status Calculation", () => {
   const baseSubmission: Partial<Submission> = {
     id: 1,
     species_type: "Fish",
@@ -20,8 +20,8 @@ describe("Submission Status Calculation", () => {
     denied_reason: null,
   };
 
-  describe("Draft Status", () => {
-    test("should return draft status for unsubmitted submissions", () => {
+  void describe("Draft Status", () => {
+    void test("should return draft status for unsubmitted submissions", () => {
       const submission = { ...baseSubmission, submitted_on: null };
       const status = getSubmissionStatus(submission);
 
@@ -34,8 +34,8 @@ describe("Submission Status Calculation", () => {
     });
   });
 
-  describe("Approved Status", () => {
-    test("should return approved status for approved submissions", () => {
+  void describe("Approved Status", () => {
+    void test("should return approved status for approved submissions", () => {
       const submission = {
         ...baseSubmission,
         submitted_on: "2024-01-01",
@@ -53,7 +53,7 @@ describe("Submission Status Calculation", () => {
       assert.strictEqual(status.description, "10 points awarded");
     });
 
-    test("should handle approved submissions with 0 points", () => {
+    void test("should handle approved submissions with 0 points", () => {
       const submission = {
         ...baseSubmission,
         submitted_on: "2024-01-01",
@@ -67,8 +67,8 @@ describe("Submission Status Calculation", () => {
     });
   });
 
-  describe("Denied Status", () => {
-    test("should return denied status for denied submissions", () => {
+  void describe("Denied Status", () => {
+    void test("should return denied status for denied submissions", () => {
       const submission = {
         ...baseSubmission,
         submitted_on: "2024-01-01",
@@ -86,7 +86,7 @@ describe("Submission Status Calculation", () => {
       assert.strictEqual(status.description, "Incorrect species identification");
     });
 
-    test("should handle denied submissions without reason", () => {
+    void test("should handle denied submissions without reason", () => {
       const submission = {
         ...baseSubmission,
         submitted_on: "2024-01-01",
@@ -100,8 +100,8 @@ describe("Submission Status Calculation", () => {
     });
   });
 
-  describe("Pending Witness Status", () => {
-    test("should return pending-witness status for submissions awaiting witness", () => {
+  void describe("Pending Witness Status", () => {
+    void test("should return pending-witness status for submissions awaiting witness", () => {
       const submission = {
         ...baseSubmission,
         submitted_on: "2024-01-01",
@@ -118,8 +118,8 @@ describe("Submission Status Calculation", () => {
     });
   });
 
-  describe("Waiting Period Status", () => {
-    test("should return waiting-period status for witnessed submissions in waiting period", () => {
+  void describe("Waiting Period Status", () => {
+    void test("should return waiting-period status for witnessed submissions in waiting period", () => {
       // Mock a submission that's been witnessed but is still in waiting period
       const witnessedDate = new Date();
       witnessedDate.setDate(witnessedDate.getDate() - 30); // 30 days ago
@@ -146,8 +146,8 @@ describe("Submission Status Calculation", () => {
     });
   });
 
-  describe("Pending Approval Status", () => {
-    test("should return pending-approval for witnessed submissions past waiting period", () => {
+  void describe("Pending Approval Status", () => {
+    void test("should return pending-approval for witnessed submissions past waiting period", () => {
       // Mock a submission that's been witnessed and past waiting period
       const witnessedDate = new Date();
       witnessedDate.setDate(witnessedDate.getDate() - 65); // 65 days ago (past 60-day waiting period)
@@ -171,7 +171,7 @@ describe("Submission Status Calculation", () => {
       assert.strictEqual(status.description, "Ready for admin approval");
     });
 
-    test("should return pending-approval for declined witness verification", () => {
+    void test("should return pending-approval for declined witness verification", () => {
       const submission = {
         ...baseSubmission,
         submitted_on: "2024-01-01",
@@ -184,8 +184,8 @@ describe("Submission Status Calculation", () => {
     });
   });
 
-  describe("Priority Order", () => {
-    test("should prioritize denied status over all others", () => {
+  void describe("Priority Order", () => {
+    void test("should prioritize denied status over all others", () => {
       const submission = {
         ...baseSubmission,
         submitted_on: "2024-01-01",
@@ -198,7 +198,7 @@ describe("Submission Status Calculation", () => {
       assert.strictEqual(status.status, "denied");
     });
 
-    test("should prioritize approved status over pending statuses", () => {
+    void test("should prioritize approved status over pending statuses", () => {
       const submission = {
         ...baseSubmission,
         submitted_on: "2024-01-01",

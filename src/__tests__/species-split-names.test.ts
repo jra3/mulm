@@ -15,7 +15,7 @@ import {
   deleteScientificName,
 } from "../db/species";
 
-describe("Species Split Name Schema CRUD", () => {
+void describe("Species Split Name Schema CRUD", () => {
   let db: Database;
   let testGroupId: number;
 
@@ -60,8 +60,8 @@ describe("Species Split Name Schema CRUD", () => {
     }
   });
 
-  describe("getCommonNamesForGroup", () => {
-    test("should return all common names for a species", async () => {
+  void describe("getCommonNamesForGroup", () => {
+    void test("should return all common names for a species", async () => {
       const names = await getCommonNamesForGroup(testGroupId);
 
       assert.strictEqual(names.length, 2);
@@ -72,7 +72,7 @@ describe("Species Split Name Schema CRUD", () => {
       assert.deepStrictEqual(nameStrings, ["Fancy Test Fish", "Test Fish"]);
     });
 
-    test("should return empty array for group with no common names", async () => {
+    void test("should return empty array for group with no common names", async () => {
       const emptyGroup = await db.run(`
         INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name)
         VALUES ('Cichlids', 'Fish', 'Empty', 'nonames')
@@ -82,7 +82,7 @@ describe("Species Split Name Schema CRUD", () => {
       assert.strictEqual(names.length, 0);
     });
 
-    test("should order results alphabetically", async () => {
+    void test("should order results alphabetically", async () => {
       const names = await getCommonNamesForGroup(testGroupId);
 
       for (let i = 1; i < names.length; i++) {
@@ -91,8 +91,8 @@ describe("Species Split Name Schema CRUD", () => {
     });
   });
 
-  describe("getScientificNamesForGroup", () => {
-    test("should return all scientific names for a species", async () => {
+  void describe("getScientificNamesForGroup", () => {
+    void test("should return all scientific names for a species", async () => {
       const names = await getScientificNamesForGroup(testGroupId);
 
       assert.strictEqual(names.length, 2);
@@ -103,7 +103,7 @@ describe("Species Split Name Schema CRUD", () => {
       assert.deepStrictEqual(nameStrings, ["Testicus splitus", "Testicus splitus variant"]);
     });
 
-    test("should return empty array for group with no scientific names", async () => {
+    void test("should return empty array for group with no scientific names", async () => {
       const emptyGroup = await db.run(`
         INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name)
         VALUES ('Cichlids', 'Fish', 'Empty', 'noscinames')
@@ -113,7 +113,7 @@ describe("Species Split Name Schema CRUD", () => {
       assert.strictEqual(names.length, 0);
     });
 
-    test("should order results alphabetically", async () => {
+    void test("should order results alphabetically", async () => {
       const names = await getScientificNamesForGroup(testGroupId);
 
       for (let i = 1; i < names.length; i++) {
@@ -122,15 +122,15 @@ describe("Species Split Name Schema CRUD", () => {
     });
   });
 
-  describe("getNamesForGroup", () => {
-    test("should return both common and scientific names", async () => {
+  void describe("getNamesForGroup", () => {
+    void test("should return both common and scientific names", async () => {
       const result = await getNamesForGroup(testGroupId);
 
       assert.strictEqual(result.common_names.length, 2);
       assert.strictEqual(result.scientific_names.length, 2);
     });
 
-    test("should return empty arrays for group with no names", async () => {
+    void test("should return empty arrays for group with no names", async () => {
       const emptyGroup = await db.run(`
         INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name)
         VALUES ('Cichlids', 'Fish', 'Empty', 'both')
@@ -143,8 +143,8 @@ describe("Species Split Name Schema CRUD", () => {
     });
   });
 
-  describe("addCommonName", () => {
-    test("should add a common name and return ID", async () => {
+  void describe("addCommonName", () => {
+    void test("should add a common name and return ID", async () => {
       const id = await addCommonName(testGroupId, "New Common Name");
 
       assert.ok(id > 0);
@@ -156,7 +156,7 @@ describe("Species Split Name Schema CRUD", () => {
       assert.strictEqual(added?.common_name, "New Common Name");
     });
 
-    test("should trim whitespace", async () => {
+    void test("should trim whitespace", async () => {
       const id = await addCommonName(testGroupId, "  Whitespace Name  ");
 
       const names = await getCommonNamesForGroup(testGroupId);
@@ -164,7 +164,7 @@ describe("Species Split Name Schema CRUD", () => {
       assert.strictEqual(added?.common_name, "Whitespace Name");
     });
 
-    test("should throw error for empty name", async () => {
+    void test("should throw error for empty name", async () => {
       await assert.rejects(async () => await addCommonName(testGroupId, ""), {
         message: /cannot be empty/,
       });
@@ -174,19 +174,19 @@ describe("Species Split Name Schema CRUD", () => {
       });
     });
 
-    test("should throw error for non-existent group", async () => {
+    void test("should throw error for non-existent group", async () => {
       await assert.rejects(async () => await addCommonName(99999, "Test"), {
         message: /not found/,
       });
     });
 
-    test("should throw error for duplicate common name in same group", async () => {
+    void test("should throw error for duplicate common name in same group", async () => {
       await assert.rejects(async () => await addCommonName(testGroupId, "Test Fish"), {
         message: /already exists/,
       });
     });
 
-    test("should allow same common name in different groups", async () => {
+    void test("should allow same common name in different groups", async () => {
       const otherGroup = await db.run(`
         INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name)
         VALUES ('Cichlids', 'Fish', 'Other', 'species')
@@ -197,8 +197,8 @@ describe("Species Split Name Schema CRUD", () => {
     });
   });
 
-  describe("addScientificName", () => {
-    test("should add a scientific name and return ID", async () => {
+  void describe("addScientificName", () => {
+    void test("should add a scientific name and return ID", async () => {
       const id = await addScientificName(testGroupId, "Testicus newscientific");
 
       assert.ok(id > 0);
@@ -210,7 +210,7 @@ describe("Species Split Name Schema CRUD", () => {
       assert.strictEqual(added?.scientific_name, "Testicus newscientific");
     });
 
-    test("should trim whitespace", async () => {
+    void test("should trim whitespace", async () => {
       const id = await addScientificName(testGroupId, "  Testicus whitespace  ");
 
       const names = await getScientificNamesForGroup(testGroupId);
@@ -218,25 +218,25 @@ describe("Species Split Name Schema CRUD", () => {
       assert.strictEqual(added?.scientific_name, "Testicus whitespace");
     });
 
-    test("should throw error for empty name", async () => {
+    void test("should throw error for empty name", async () => {
       await assert.rejects(async () => await addScientificName(testGroupId, ""), {
         message: /cannot be empty/,
       });
     });
 
-    test("should throw error for non-existent group", async () => {
+    void test("should throw error for non-existent group", async () => {
       await assert.rejects(async () => await addScientificName(99999, "Test"), {
         message: /not found/,
       });
     });
 
-    test("should throw error for duplicate scientific name in same group", async () => {
+    void test("should throw error for duplicate scientific name in same group", async () => {
       await assert.rejects(async () => await addScientificName(testGroupId, "Testicus splitus"), {
         message: /already exists/,
       });
     });
 
-    test("should allow same scientific name in different groups", async () => {
+    void test("should allow same scientific name in different groups", async () => {
       const otherGroup = await db.run(`
         INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name)
         VALUES ('Cichlids', 'Fish', 'Other', 'species')
@@ -247,7 +247,7 @@ describe("Species Split Name Schema CRUD", () => {
     });
   });
 
-  describe("updateCommonName", () => {
+  void describe("updateCommonName", () => {
     let testCommonNameId: number;
 
     beforeEach(async () => {
@@ -255,7 +255,7 @@ describe("Species Split Name Schema CRUD", () => {
       testCommonNameId = names[0].common_name_id;
     });
 
-    test("should update common name", async () => {
+    void test("should update common name", async () => {
       const changes = await updateCommonName(testCommonNameId, "Updated Name");
 
       assert.strictEqual(changes, 1);
@@ -265,7 +265,7 @@ describe("Species Split Name Schema CRUD", () => {
       assert.strictEqual(updated?.common_name, "Updated Name");
     });
 
-    test("should trim whitespace", async () => {
+    void test("should trim whitespace", async () => {
       await updateCommonName(testCommonNameId, "  Trimmed  ");
 
       const names = await getCommonNamesForGroup(testGroupId);
@@ -273,18 +273,18 @@ describe("Species Split Name Schema CRUD", () => {
       assert.strictEqual(updated?.common_name, "Trimmed");
     });
 
-    test("should throw error for empty name", async () => {
+    void test("should throw error for empty name", async () => {
       await assert.rejects(async () => await updateCommonName(testCommonNameId, ""), {
         message: /cannot be empty/,
       });
     });
 
-    test("should return 0 for non-existent ID", async () => {
+    void test("should return 0 for non-existent ID", async () => {
       const changes = await updateCommonName(99999, "Test");
       assert.strictEqual(changes, 0);
     });
 
-    test("should throw error for duplicate name in same group", async () => {
+    void test("should throw error for duplicate name in same group", async () => {
       const names = await getCommonNamesForGroup(testGroupId);
       const otherName = names.find((n) => n.common_name_id !== testCommonNameId);
 
@@ -295,7 +295,7 @@ describe("Species Split Name Schema CRUD", () => {
     });
   });
 
-  describe("updateScientificName", () => {
+  void describe("updateScientificName", () => {
     let testScientificNameId: number;
 
     beforeEach(async () => {
@@ -303,7 +303,7 @@ describe("Species Split Name Schema CRUD", () => {
       testScientificNameId = names[0].scientific_name_id;
     });
 
-    test("should update scientific name", async () => {
+    void test("should update scientific name", async () => {
       const changes = await updateScientificName(testScientificNameId, "Testicus updated");
 
       assert.strictEqual(changes, 1);
@@ -313,7 +313,7 @@ describe("Species Split Name Schema CRUD", () => {
       assert.strictEqual(updated?.scientific_name, "Testicus updated");
     });
 
-    test("should trim whitespace", async () => {
+    void test("should trim whitespace", async () => {
       await updateScientificName(testScientificNameId, "  Testicus trimmed  ");
 
       const names = await getScientificNamesForGroup(testGroupId);
@@ -321,18 +321,18 @@ describe("Species Split Name Schema CRUD", () => {
       assert.strictEqual(updated?.scientific_name, "Testicus trimmed");
     });
 
-    test("should throw error for empty name", async () => {
+    void test("should throw error for empty name", async () => {
       await assert.rejects(async () => await updateScientificName(testScientificNameId, ""), {
         message: /cannot be empty/,
       });
     });
 
-    test("should return 0 for non-existent ID", async () => {
+    void test("should return 0 for non-existent ID", async () => {
       const changes = await updateScientificName(99999, "Test");
       assert.strictEqual(changes, 0);
     });
 
-    test("should throw error for duplicate name in same group", async () => {
+    void test("should throw error for duplicate name in same group", async () => {
       const names = await getScientificNamesForGroup(testGroupId);
       const otherName = names.find((n) => n.scientific_name_id !== testScientificNameId);
 
@@ -343,8 +343,8 @@ describe("Species Split Name Schema CRUD", () => {
     });
   });
 
-  describe("deleteCommonName", () => {
-    test("should delete a common name", async () => {
+  void describe("deleteCommonName", () => {
+    void test("should delete a common name", async () => {
       const names = await getCommonNamesForGroup(testGroupId);
       const toDelete = names[0];
 
@@ -357,12 +357,12 @@ describe("Species Split Name Schema CRUD", () => {
       assert.ok(!remaining.some((n) => n.common_name_id === toDelete.common_name_id));
     });
 
-    test("should return 0 for non-existent ID", async () => {
+    void test("should return 0 for non-existent ID", async () => {
       const changes = await deleteCommonName(99999);
       assert.strictEqual(changes, 0);
     });
 
-    test("should allow deleting all common names", async () => {
+    void test("should allow deleting all common names", async () => {
       const names = await getCommonNamesForGroup(testGroupId);
 
       for (const name of names) {
@@ -374,8 +374,8 @@ describe("Species Split Name Schema CRUD", () => {
     });
   });
 
-  describe("deleteScientificName", () => {
-    test("should delete a scientific name", async () => {
+  void describe("deleteScientificName", () => {
+    void test("should delete a scientific name", async () => {
       const names = await getScientificNamesForGroup(testGroupId);
       const toDelete = names[0];
 
@@ -388,12 +388,12 @@ describe("Species Split Name Schema CRUD", () => {
       assert.ok(!remaining.some((n) => n.scientific_name_id === toDelete.scientific_name_id));
     });
 
-    test("should return 0 for non-existent ID", async () => {
+    void test("should return 0 for non-existent ID", async () => {
       const changes = await deleteScientificName(99999);
       assert.strictEqual(changes, 0);
     });
 
-    test("should allow deleting all scientific names", async () => {
+    void test("should allow deleting all scientific names", async () => {
       const names = await getScientificNamesForGroup(testGroupId);
 
       for (const name of names) {
@@ -405,8 +405,8 @@ describe("Species Split Name Schema CRUD", () => {
     });
   });
 
-  describe("Integration - Mix of Common and Scientific Names", () => {
-    test("should allow species with many common names, one scientific", async () => {
+  void describe("Integration - Mix of Common and Scientific Names", () => {
+    void test("should allow species with many common names, one scientific", async () => {
       const group = await db.run(`
         INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name)
         VALUES ('Livebearers', 'Fish', 'Multicus', 'commonis')
@@ -429,7 +429,7 @@ describe("Species Split Name Schema CRUD", () => {
       assert.strictEqual(result.scientific_names.length, 1);
     });
 
-    test("should allow species with one common name, many scientific", async () => {
+    void test("should allow species with one common name, many scientific", async () => {
       const group = await db.run(`
         INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name)
         VALUES ('Cichlids', 'Fish', 'Multicus', 'scientificus')
@@ -450,7 +450,7 @@ describe("Species Split Name Schema CRUD", () => {
       assert.strictEqual(result.scientific_names.length, 3);
     });
 
-    test("should handle species with no names at all", async () => {
+    void test("should handle species with no names at all", async () => {
       const group = await db.run(`
         INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name)
         VALUES ('Cichlids', 'Fish', 'Nonames', 'atall')
@@ -462,7 +462,7 @@ describe("Species Split Name Schema CRUD", () => {
       assert.strictEqual(result.scientific_names.length, 0);
     });
 
-    test("should maintain independence of common and scientific names", async () => {
+    void test("should maintain independence of common and scientific names", async () => {
       // Delete all scientific names but keep common names
       const sciNames = await getScientificNamesForGroup(testGroupId);
       for (const name of sciNames) {
@@ -476,8 +476,8 @@ describe("Species Split Name Schema CRUD", () => {
     });
   });
 
-  describe("Unicode and Special Characters", () => {
-    test("should handle unicode in common names", async () => {
+  void describe("Unicode and Special Characters", () => {
+    void test("should handle unicode in common names", async () => {
       const id = await addCommonName(testGroupId, "Pez León");
 
       const names = await getCommonNamesForGroup(testGroupId);
@@ -485,7 +485,7 @@ describe("Species Split Name Schema CRUD", () => {
       assert.strictEqual(added?.common_name, "Pez León");
     });
 
-    test("should handle unicode in scientific names", async () => {
+    void test("should handle unicode in scientific names", async () => {
       const id = await addScientificName(testGroupId, "Testicus ñame");
 
       const names = await getScientificNamesForGroup(testGroupId);

@@ -17,7 +17,7 @@ import {
   addScientificName,
 } from "../db/species";
 
-describe("getCanonicalSpeciesName - Split Schema", () => {
+void describe("getCanonicalSpeciesName - Split Schema", () => {
   let db: Database;
   let testGroupId: number;
 
@@ -48,8 +48,8 @@ describe("getCanonicalSpeciesName - Split Schema", () => {
     }
   });
 
-  describe("Split schema - Common name lookup", () => {
-    test("should find species group by common_name_id", async () => {
+  void describe("Split schema - Common name lookup", () => {
+    void test("should find species group by common_name_id", async () => {
       const commonNameId = await addCommonName(testGroupId, "Test Common Name");
 
       const result = await getCanonicalSpeciesName(commonNameId);
@@ -64,7 +64,7 @@ describe("getCanonicalSpeciesName - Split Schema", () => {
       assert.strictEqual(result.is_cares_species, 1);
     });
 
-    test("should find species group by different common_name_id from same group", async () => {
+    void test("should find species group by different common_name_id from same group", async () => {
       const commonNameId1 = await addCommonName(testGroupId, "Name One");
       const commonNameId2 = await addCommonName(testGroupId, "Name Two");
 
@@ -77,8 +77,8 @@ describe("getCanonicalSpeciesName - Split Schema", () => {
     });
   });
 
-  describe("Split schema - Scientific name lookup", () => {
-    test("should find species group by scientific_name_id", async () => {
+  void describe("Split schema - Scientific name lookup", () => {
+    void test("should find species group by scientific_name_id", async () => {
       const scientificNameId = await addScientificName(testGroupId, "ZZTEST Testicus canonicalus");
 
       const result = await getCanonicalSpeciesName(scientificNameId);
@@ -95,7 +95,7 @@ describe("getCanonicalSpeciesName - Split Schema", () => {
       assert.ok(["Fish", "Plant", "Invert", "Coral"].includes(result.species_type));
     });
 
-    test("should find species group by different scientific_name_id from same group", async () => {
+    void test("should find species group by different scientific_name_id from same group", async () => {
       const scientificNameId1 = await addScientificName(testGroupId, "ZZTEST variant red");
       const scientificNameId2 = await addScientificName(testGroupId, "ZZTEST variant blue");
 
@@ -111,28 +111,28 @@ describe("getCanonicalSpeciesName - Split Schema", () => {
     });
   });
 
-  describe("Error cases", () => {
-    test("should return undefined for non-existent ID", async () => {
+  void describe("Error cases", () => {
+    void test("should return undefined for non-existent ID", async () => {
       const result = await getCanonicalSpeciesName(99999);
 
       assert.strictEqual(result, undefined);
     });
 
-    test("should return undefined for ID 0", async () => {
+    void test("should return undefined for ID 0", async () => {
       const result = await getCanonicalSpeciesName(0);
 
       assert.strictEqual(result, undefined);
     });
 
-    test("should return undefined for negative ID", async () => {
+    void test("should return undefined for negative ID", async () => {
       const result = await getCanonicalSpeciesName(-1);
 
       assert.strictEqual(result, undefined);
     });
   });
 
-  describe("Return value structure", () => {
-    test("should include all species_name_group fields", async () => {
+  void describe("Return value structure", () => {
+    void test("should include all species_name_group fields", async () => {
       const commonNameId = await addCommonName(testGroupId, "Test Name");
 
       const result = await getCanonicalSpeciesName(commonNameId);
@@ -149,7 +149,7 @@ describe("getCanonicalSpeciesName - Split Schema", () => {
       assert.ok("image_links" in result);
     });
 
-    test("should return null values correctly", async () => {
+    void test("should return null values correctly", async () => {
       const groupIdNoPoints = await createSpeciesGroup({
         programClass: "Test Class",
         speciesType: "Fish",
@@ -171,8 +171,8 @@ describe("getCanonicalSpeciesName - Split Schema", () => {
     });
   });
 
-  describe("Multiple species groups", () => {
-    test("should return correct group for different species", async () => {
+  void describe("Multiple species groups", () => {
+    void test("should return correct group for different species", async () => {
       const group2Id = await createSpeciesGroup({
         programClass: "Other Class",
         speciesType: "Plant",

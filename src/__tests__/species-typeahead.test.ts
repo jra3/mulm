@@ -18,7 +18,7 @@ import {
   type SpeciesNameRecord,
 } from "../db/species";
 
-describe("searchSpeciesTypeahead - Split Schema", () => {
+void describe("searchSpeciesTypeahead - Split Schema", () => {
   let db: Database;
 
   beforeEach(async () => {
@@ -42,23 +42,23 @@ describe("searchSpeciesTypeahead - Split Schema", () => {
     }
   });
 
-  describe("Basic search functionality", () => {
-    test("should return empty array for queries less than 2 characters", async () => {
+  void describe("Basic search functionality", () => {
+    void test("should return empty array for queries less than 2 characters", async () => {
       const results = await searchSpeciesTypeahead("a");
       assert.strictEqual(results.length, 0);
     });
 
-    test("should return empty array for empty query", async () => {
+    void test("should return empty array for empty query", async () => {
       const results = await searchSpeciesTypeahead("");
       assert.strictEqual(results.length, 0);
     });
 
-    test("should return empty array for whitespace-only query", async () => {
+    void test("should return empty array for whitespace-only query", async () => {
       const results = await searchSpeciesTypeahead("  ");
       assert.strictEqual(results.length, 0);
     });
 
-    test("should find species by common name", async () => {
+    void test("should find species by common name", async () => {
       const groupId = await createSpeciesGroup({
         programClass: "Anabantoids",
         speciesType: "Fish",
@@ -75,7 +75,7 @@ describe("searchSpeciesTypeahead - Split Schema", () => {
       assert.strictEqual(results[0].group_id, groupId);
     });
 
-    test("should find species by scientific name", async () => {
+    void test("should find species by scientific name", async () => {
       const groupId = await createSpeciesGroup({
         programClass: "Anabantoids",
         speciesType: "Fish",
@@ -92,7 +92,7 @@ describe("searchSpeciesTypeahead - Split Schema", () => {
       assert.strictEqual(results[0].group_id, groupId);
     });
 
-    test("should be case-insensitive", async () => {
+    void test("should be case-insensitive", async () => {
       const groupId = await createSpeciesGroup({
         programClass: "Livebearers",
         speciesType: "Fish",
@@ -111,7 +111,7 @@ describe("searchSpeciesTypeahead - Split Schema", () => {
       assert.strictEqual(resultsMixed.length, 1);
     });
 
-    test("should support partial matching", async () => {
+    void test("should support partial matching", async () => {
       const groupId = await createSpeciesGroup({
         programClass: "Cichlids",
         speciesType: "Fish",
@@ -127,8 +127,8 @@ describe("searchSpeciesTypeahead - Split Schema", () => {
     });
   });
 
-  describe("UNION behavior - common and scientific names", () => {
-    test("should return both common and scientific name matches", async () => {
+  void describe("UNION behavior - common and scientific names", () => {
+    void test("should return both common and scientific name matches", async () => {
       const groupId = await createSpeciesGroup({
         programClass: "Anabantoids",
         speciesType: "Fish",
@@ -152,7 +152,7 @@ describe("searchSpeciesTypeahead - Split Schema", () => {
       assert.strictEqual(scientificMatch?.scientific_name, "ZZTEST Betta splendens");
     });
 
-    test("should return matches from different species groups", async () => {
+    void test("should return matches from different species groups", async () => {
       const groupId1 = await createSpeciesGroup({
         programClass: "Anabantoids",
         speciesType: "Fish",
@@ -177,7 +177,7 @@ describe("searchSpeciesTypeahead - Split Schema", () => {
       assert.deepStrictEqual(groupIds, [groupId1, groupId2].sort());
     });
 
-    test("should prioritize common names over scientific names in results", async () => {
+    void test("should prioritize common names over scientific names in results", async () => {
       const groupId = await createSpeciesGroup({
         programClass: "Livebearers",
         speciesType: "Fish",
@@ -195,8 +195,8 @@ describe("searchSpeciesTypeahead - Split Schema", () => {
     });
   });
 
-  describe("Multiple names per species", () => {
-    test("should return all matching common names for a species", async () => {
+  void describe("Multiple names per species", () => {
+    void test("should return all matching common names for a species", async () => {
       const groupId = await createSpeciesGroup({
         programClass: "Cichlids",
         speciesType: "Fish",
@@ -213,7 +213,7 @@ describe("searchSpeciesTypeahead - Split Schema", () => {
       assert.ok(results.every((r) => r.group_id === groupId));
     });
 
-    test("should return all matching scientific names for a species", async () => {
+    void test("should return all matching scientific names for a species", async () => {
       const groupId = await createSpeciesGroup({
         programClass: "Anabantoids",
         speciesType: "Fish",
@@ -230,8 +230,8 @@ describe("searchSpeciesTypeahead - Split Schema", () => {
     });
   });
 
-  describe("Filters", () => {
-    test("should filter by species_type", async () => {
+  void describe("Filters", () => {
+    void test("should filter by species_type", async () => {
       const fishGroupId = await createSpeciesGroup({
         programClass: "Livebearers",
         speciesType: "Fish",
@@ -257,7 +257,7 @@ describe("searchSpeciesTypeahead - Split Schema", () => {
       assert.strictEqual(plantResults.length, 0);
     });
 
-    test("should filter by species_class (program_class)", async () => {
+    void test("should filter by species_class (program_class)", async () => {
       const fishGroupId = await createSpeciesGroup({
         programClass: "Livebearers",
         speciesType: "Fish",
@@ -288,7 +288,7 @@ describe("searchSpeciesTypeahead - Split Schema", () => {
       assert.strictEqual(plantResults[0].program_class, "Aquatic Plants");
     });
 
-    test("should support multiple filters", async () => {
+    void test("should support multiple filters", async () => {
       const fishGroupId = await createSpeciesGroup({
         programClass: "Livebearers",
         speciesType: "Fish",
@@ -308,8 +308,8 @@ describe("searchSpeciesTypeahead - Split Schema", () => {
     });
   });
 
-  describe("Limit parameter", () => {
-    test("should default to 10 results", async () => {
+  void describe("Limit parameter", () => {
+    void test("should default to 10 results", async () => {
       const groupId = await createSpeciesGroup({
         programClass: "Cichlids",
         speciesType: "Fish",
@@ -326,7 +326,7 @@ describe("searchSpeciesTypeahead - Split Schema", () => {
       assert.ok(results.length <= 10);
     });
 
-    test("should respect custom limit", async () => {
+    void test("should respect custom limit", async () => {
       const groupId = await createSpeciesGroup({
         programClass: "Cichlids",
         speciesType: "Fish",
@@ -342,7 +342,7 @@ describe("searchSpeciesTypeahead - Split Schema", () => {
       assert.strictEqual(results.length, 5);
     });
 
-    test("should return all results if limit exceeds matches", async () => {
+    void test("should return all results if limit exceeds matches", async () => {
       const groupId = await createSpeciesGroup({
         programClass: "Livebearers",
         speciesType: "Fish",
@@ -358,8 +358,8 @@ describe("searchSpeciesTypeahead - Split Schema", () => {
     });
   });
 
-  describe("Return type and metadata", () => {
-    test("should include all required fields in SpeciesNameRecord", async () => {
+  void describe("Return type and metadata", () => {
+    void test("should include all required fields in SpeciesNameRecord", async () => {
       const groupId = await createSpeciesGroup({
         programClass: "Anabantoids",
         speciesType: "Fish",
@@ -388,7 +388,7 @@ describe("searchSpeciesTypeahead - Split Schema", () => {
       assert.strictEqual(result.canonical_species_name, "testsplendens");
     });
 
-    test("should have correct name_id for common names", async () => {
+    void test("should have correct name_id for common names", async () => {
       const groupId = await createSpeciesGroup({
         programClass: "Livebearers",
         speciesType: "Fish",
@@ -402,7 +402,7 @@ describe("searchSpeciesTypeahead - Split Schema", () => {
       assert.strictEqual(results[0].name_id, commonNameId);
     });
 
-    test("should have correct name_id for scientific names", async () => {
+    void test("should have correct name_id for scientific names", async () => {
       const groupId = await createSpeciesGroup({
         programClass: "Livebearers",
         speciesType: "Fish",
@@ -417,8 +417,8 @@ describe("searchSpeciesTypeahead - Split Schema", () => {
     });
   });
 
-  describe("Edge cases", () => {
-    test("should handle species with no names", async () => {
+  void describe("Edge cases", () => {
+    void test("should handle species with no names", async () => {
       await createSpeciesGroup({
         programClass: "Cichlids",
         speciesType: "Fish",
@@ -430,7 +430,7 @@ describe("searchSpeciesTypeahead - Split Schema", () => {
       assert.strictEqual(results.length, 0);
     });
 
-    test("should handle Unicode characters in search", async () => {
+    void test("should handle Unicode characters in search", async () => {
       const groupId = await createSpeciesGroup({
         programClass: "Cichlids",
         speciesType: "Fish",
@@ -444,7 +444,7 @@ describe("searchSpeciesTypeahead - Split Schema", () => {
       assert.strictEqual(results.length, 1);
     });
 
-    test("should trim whitespace from search query", async () => {
+    void test("should trim whitespace from search query", async () => {
       const groupId = await createSpeciesGroup({
         programClass: "Livebearers",
         speciesType: "Fish",
@@ -459,8 +459,8 @@ describe("searchSpeciesTypeahead - Split Schema", () => {
     });
   });
 
-  describe("Sorting", () => {
-    test("should sort common names alphabetically when all common", async () => {
+  void describe("Sorting", () => {
+    void test("should sort common names alphabetically when all common", async () => {
       const groupId = await createSpeciesGroup({
         programClass: "Cichlids",
         speciesType: "Fish",
@@ -477,7 +477,7 @@ describe("searchSpeciesTypeahead - Split Schema", () => {
       assert.deepStrictEqual(names, ["ZZTEST Angelfish", "ZZTEST Marble", "ZZTEST Zebra"]);
     });
 
-    test("should sort scientific names alphabetically when all scientific", async () => {
+    void test("should sort scientific names alphabetically when all scientific", async () => {
       const groupId = await createSpeciesGroup({
         programClass: "Anabantoids",
         speciesType: "Fish",

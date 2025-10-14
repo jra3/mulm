@@ -17,7 +17,7 @@ import {
   addScientificName,
 } from "../db/species";
 
-describe("getBreedersForSpecies - Split Schema", () => {
+void describe("getBreedersForSpecies - Split Schema", () => {
   let db: Database;
   let testGroupId: number;
   let member1Id: number;
@@ -62,8 +62,8 @@ describe("getBreedersForSpecies - Split Schema", () => {
     }
   });
 
-  describe("Common name FK", () => {
-    test("should find breeders via common_name_id", async () => {
+  void describe("Common name FK", () => {
+    void test("should find breeders via common_name_id", async () => {
       const commonNameId = await addCommonName(testGroupId, "Test Common Fish");
 
       // Create submission using common_name FK
@@ -86,8 +86,8 @@ describe("getBreedersForSpecies - Split Schema", () => {
     });
   });
 
-  describe("Scientific name FK", () => {
-    test("should find breeders via scientific_name_id", async () => {
+  void describe("Scientific name FK", () => {
+    void test("should find breeders via scientific_name_id", async () => {
       const scientificNameId = await addScientificName(testGroupId, "Breederus testicus");
 
       // Create submission using scientific_name FK
@@ -110,8 +110,8 @@ describe("getBreedersForSpecies - Split Schema", () => {
     });
   });
 
-  describe("Mixed FK scenarios", () => {
-    test("should find breeders with submissions via different FK types", async () => {
+  void describe("Mixed FK scenarios", () => {
+    void test("should find breeders with submissions via different FK types", async () => {
       const commonNameId = await addCommonName(testGroupId, "Common Name");
       const scientificNameId = await addScientificName(testGroupId, "Scientific Name");
 
@@ -152,8 +152,8 @@ describe("getBreedersForSpecies - Split Schema", () => {
     });
   });
 
-  describe("Filtering and aggregation", () => {
-    test("should only count approved submissions", async () => {
+  void describe("Filtering and aggregation", () => {
+    void test("should only count approved submissions", async () => {
       const commonNameId = await addCommonName(testGroupId, "Test Fish");
 
       // Approved submission
@@ -186,13 +186,13 @@ describe("getBreedersForSpecies - Split Schema", () => {
       assert.strictEqual(breeders[0].breed_count, 1, "Should only count approved submission");
     });
 
-    test("should return empty array for species with no breeds", async () => {
+    void test("should return empty array for species with no breeds", async () => {
       const breeders = await getBreedersForSpecies(testGroupId);
 
       assert.strictEqual(breeders.length, 0);
     });
 
-    test("should sort by breed_count DESC", async () => {
+    void test("should sort by breed_count DESC", async () => {
       const commonNameId = await addCommonName(testGroupId, "Test Fish");
 
       // Member 1: 1 breed
@@ -234,8 +234,8 @@ describe("getBreedersForSpecies - Split Schema", () => {
     });
   });
 
-  describe("Return value structure", () => {
-    test("should include all required fields", async () => {
+  void describe("Return value structure", () => {
+    void test("should include all required fields", async () => {
       const commonNameId = await addCommonName(testGroupId, "Test Fish");
 
       await db.run(
@@ -267,7 +267,7 @@ describe("getBreedersForSpecies - Split Schema", () => {
       assert.ok(Array.isArray(breeder.submissions));
     });
 
-    test("should parse submissions array correctly", async () => {
+    void test("should parse submissions array correctly", async () => {
       const commonNameId = await addCommonName(testGroupId, "Test Fish");
 
       const submissionResult = await db.run(
@@ -295,8 +295,8 @@ describe("getBreedersForSpecies - Split Schema", () => {
     });
   });
 
-  describe("Date tracking", () => {
-    test("should track first and latest breed dates correctly", async () => {
+  void describe("Date tracking", () => {
+    void test("should track first and latest breed dates correctly", async () => {
       const commonNameId = await addCommonName(testGroupId, "Test Fish");
 
       await db.run(

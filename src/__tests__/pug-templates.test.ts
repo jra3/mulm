@@ -5,7 +5,7 @@ import path from "path";
 import fs from "fs";
 import { faker } from "@faker-js/faker";
 
-describe("Pug Template Rendering", () => {
+void describe("Pug Template Rendering", () => {
   const viewsPath = path.join(__dirname, "../views");
 
   // Mock data generators
@@ -398,9 +398,9 @@ describe("Pug Template Rendering", () => {
     return !skipPatterns.some((pattern) => pattern.test(relativePath));
   });
 
-  describe("Template Syntax Validation", () => {
+  void describe("Template Syntax Validation", () => {
     for (const templatePath of renderableTemplates) {
-      test(`should compile ${templatePath} without syntax errors`, () => {
+      void test(`should compile ${templatePath} without syntax errors`, () => {
         assert.doesNotThrow(() => {
           pug.compileFile(templatePath, {
             basedir: viewsPath,
@@ -411,9 +411,9 @@ describe("Pug Template Rendering", () => {
     }
   });
 
-  describe("Template Rendering", () => {
+  void describe("Template Rendering", () => {
     for (const templatePath of renderableTemplates) {
-      test(`should render ${templatePath} without runtime errors`, () => {
+      void test(`should render ${templatePath} without runtime errors`, () => {
         const relativePath = path.relative(viewsPath, templatePath);
 
         // Create template-specific mock data
@@ -563,8 +563,8 @@ describe("Pug Template Rendering", () => {
     }
   });
 
-  describe("Template Include Dependencies", () => {
-    test("all include statements should reference existing files", () => {
+  void describe("Template Include Dependencies", () => {
+    void test("all include statements should reference existing files", () => {
       const includePattern = /^\s*include\s+(.+\.pug)$/gm;
       const errors: string[] = [];
 
@@ -587,8 +587,8 @@ describe("Pug Template Rendering", () => {
     });
   });
 
-  describe("Template Mixin Usage", () => {
-    test("should identify and validate mixin calls", () => {
+  void describe("Template Mixin Usage", () => {
+    void test("should identify and validate mixin calls", () => {
       const mixinPattern = /^\s*\+(\w+)/gm;
       const definedMixins = new Set<string>();
       const usedMixins = new Set<string>();

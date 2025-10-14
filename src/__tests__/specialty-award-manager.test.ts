@@ -13,7 +13,7 @@ import { overrideConnection } from "../db/conn";
 import { createSpeciesGroup, addCommonName, addScientificName } from "../db/species";
 import { checkAndGrantSpecialtyAwards } from "../specialtyAwardManager";
 
-describe("SpecialtyAwardManager - Split Schema", () => {
+void describe("SpecialtyAwardManager - Split Schema", () => {
   let db: Database;
   let testGroupId: number;
   let memberId: number;
@@ -51,8 +51,8 @@ describe("SpecialtyAwardManager - Split Schema", () => {
     }
   });
 
-  describe("getSubmissionsWithGenus - Common name FK", () => {
-    test("should get canonical_genus via common_name_id", async () => {
+  void describe("getSubmissionsWithGenus - Common name FK", () => {
+    void test("should get canonical_genus via common_name_id", async () => {
       const commonNameId = await addCommonName(testGroupId, "Common Test Fish");
 
       await db.run(
@@ -73,8 +73,8 @@ describe("SpecialtyAwardManager - Split Schema", () => {
     });
   });
 
-  describe("getSubmissionsWithGenus - Scientific name FK", () => {
-    test("should get canonical_genus via scientific_name_id", async () => {
+  void describe("getSubmissionsWithGenus - Scientific name FK", () => {
+    void test("should get canonical_genus via scientific_name_id", async () => {
       const scientificNameId = await addScientificName(testGroupId, "Testgenus testspecies");
 
       await db.run(
@@ -95,8 +95,8 @@ describe("SpecialtyAwardManager - Split Schema", () => {
     });
   });
 
-  describe("Mixed FK scenarios", () => {
-    test("should handle submissions with different FK types", async () => {
+  void describe("Mixed FK scenarios", () => {
+    void test("should handle submissions with different FK types", async () => {
       const commonNameId = await addCommonName(testGroupId, "Common Fish");
       const scientificNameId = await addScientificName(
         testGroupId,
@@ -133,8 +133,8 @@ describe("SpecialtyAwardManager - Split Schema", () => {
     });
   });
 
-  describe("Filtering", () => {
-    test("should only include approved submissions", async () => {
+  void describe("Filtering", () => {
+    void test("should only include approved submissions", async () => {
       const commonNameId = await addCommonName(testGroupId, "Test Fish");
 
       // Draft submission (not approved)
@@ -155,7 +155,7 @@ describe("SpecialtyAwardManager - Split Schema", () => {
       assert.ok(Array.isArray(result));
     });
 
-    test("should only include submissions that are submitted", async () => {
+    void test("should only include submissions that are submitted", async () => {
       const commonNameId = await addCommonName(testGroupId, "Test Fish");
 
       // Unsubmitted submission
@@ -177,14 +177,14 @@ describe("SpecialtyAwardManager - Split Schema", () => {
     });
   });
 
-  describe("Edge cases", () => {
-    test("should handle member with no submissions", async () => {
+  void describe("Edge cases", () => {
+    void test("should handle member with no submissions", async () => {
       const result = await checkAndGrantSpecialtyAwards(memberId);
 
       assert.strictEqual(result.length, 0, "No awards for member with no submissions");
     });
 
-    test("should handle species without canonical_genus (no FK set)", async () => {
+    void test("should handle species without canonical_genus (no FK set)", async () => {
       // Create submission without any species FK (orphaned submission)
       await db.run(
         `

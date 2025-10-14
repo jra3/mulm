@@ -8,7 +8,7 @@ import {
 } from "../utils/image-processor";
 import sharp from "sharp";
 
-describe("Image Processor", () => {
+void describe("Image Processor", () => {
   // Create test images in memory
   const createTestImage = async (
     width: number,
@@ -34,40 +34,40 @@ describe("Image Processor", () => {
     return Buffer.from("This is not an image file");
   };
 
-  describe("validateImageBuffer", () => {
-    test("should accept valid JPEG images", async () => {
+  void describe("validateImageBuffer", () => {
+    void test("should accept valid JPEG images", async () => {
       const buffer = await createTestImage(800, 600, "jpeg");
       await assert.doesNotReject(async () => await validateImageBuffer(buffer));
     });
 
-    test("should accept valid PNG images", async () => {
+    void test("should accept valid PNG images", async () => {
       const buffer = await createTestImage(800, 600, "png");
       await assert.doesNotReject(async () => await validateImageBuffer(buffer));
     });
 
-    test("should accept valid WebP images", async () => {
+    void test("should accept valid WebP images", async () => {
       const buffer = await createTestImage(800, 600, "webp");
       await assert.doesNotReject(async () => await validateImageBuffer(buffer));
     });
 
-    test("should reject non-image buffers", async () => {
+    void test("should reject non-image buffers", async () => {
       const buffer = createInvalidBuffer();
       await assert.rejects(async () => await validateImageBuffer(buffer), ImageValidationError);
     });
 
-    test("should reject images that are too small", async () => {
+    void test("should reject images that are too small", async () => {
       const buffer = await createTestImage(300, 300); // Below 400x400 minimum
       await assert.rejects(async () => await validateImageBuffer(buffer), /Image too small/);
     });
 
-    test("should reject images that are too large", async () => {
+    void test("should reject images that are too large", async () => {
       const buffer = await createTestImage(5000, 5000); // Above 4000x4000 maximum
       await assert.rejects(async () => await validateImageBuffer(buffer), /Image too large/);
     });
   });
 
-  describe("processImage", () => {
-    test("should process a valid image into three sizes", async () => {
+  void describe("processImage", () => {
+    void test("should process a valid image into three sizes", async () => {
       const buffer = await createTestImage(1200, 900);
       const result = await processImage(buffer);
 
@@ -93,7 +93,7 @@ describe("Image Processor", () => {
       assert.ok(result.metadata.processingTimeMs > 0);
     });
 
-    test("should not enlarge small images", async () => {
+    void test("should not enlarge small images", async () => {
       const buffer = await createTestImage(600, 400);
       const result = await processImage(buffer);
 
@@ -106,7 +106,7 @@ describe("Image Processor", () => {
       assert.strictEqual(result.medium.height, 400);
     });
 
-    test("should handle portrait orientation correctly", async () => {
+    void test("should handle portrait orientation correctly", async () => {
       const buffer = await createTestImage(600, 1200);
       const result = await processImage(buffer);
 
@@ -114,7 +114,7 @@ describe("Image Processor", () => {
       assert.ok(result.medium.height > result.medium.width);
     });
 
-    test("should handle landscape orientation correctly", async () => {
+    void test("should handle landscape orientation correctly", async () => {
       const buffer = await createTestImage(1200, 600);
       const result = await processImage(buffer);
 
@@ -122,7 +122,7 @@ describe("Image Processor", () => {
       assert.ok(result.medium.width > result.medium.height);
     });
 
-    test("should strip EXIF data", async () => {
+    void test("should strip EXIF data", async () => {
       // Create an image with EXIF data
       const buffer = await sharp({
         create: {
@@ -150,7 +150,7 @@ describe("Image Processor", () => {
       assert.strictEqual(processedMetadata.exif, undefined);
     });
 
-    test("should produce WebP format when requested", async () => {
+    void test("should produce WebP format when requested", async () => {
       const buffer = await createTestImage(800, 600);
       const result = await processImage(buffer, { preferWebP: true });
 
@@ -159,7 +159,7 @@ describe("Image Processor", () => {
       assert.strictEqual(result.thumbnail.format, "webp");
     });
 
-    test("should produce JPEG format by default", async () => {
+    void test("should produce JPEG format by default", async () => {
       const buffer = await createTestImage(800, 600);
       const result = await processImage(buffer);
 
@@ -168,14 +168,14 @@ describe("Image Processor", () => {
       assert.strictEqual(result.thumbnail.format, "jpeg");
     });
 
-    test("should reject invalid images", async () => {
+    void test("should reject invalid images", async () => {
       const buffer = createInvalidBuffer();
       await assert.rejects(async () => await processImage(buffer), ImageValidationError);
     });
   });
 
-  describe("generatePreviewDataUrl", () => {
-    test("should generate a valid data URL", async () => {
+  void describe("generatePreviewDataUrl", () => {
+    void test("should generate a valid data URL", async () => {
       const buffer = await createTestImage(800, 600);
       const dataUrl = await generatePreviewDataUrl(buffer);
 
@@ -186,7 +186,7 @@ describe("Image Processor", () => {
       assert.doesNotThrow(() => Buffer.from(base64Data, "base64"));
     });
 
-    test("should create a small preview", async () => {
+    void test("should create a small preview", async () => {
       const buffer = await createTestImage(2000, 1500);
       const dataUrl = await generatePreviewDataUrl(buffer);
 
@@ -200,8 +200,8 @@ describe("Image Processor", () => {
     });
   });
 
-  describe("Performance", () => {
-    test("should process images within reasonable time", async () => {
+  void describe("Performance", () => {
+    void test("should process images within reasonable time", async () => {
       const buffer = await createTestImage(2000, 1500);
       const startTime = Date.now();
 

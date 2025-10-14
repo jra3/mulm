@@ -14,7 +14,7 @@ const createTestRateLimiter = (options: Partial<Options>) => {
   });
 };
 
-describe("Rate Limiting Middleware", () => {
+void describe("Rate Limiting Middleware", () => {
   let app: express.Application;
   let uploadRateLimiter: express.RequestHandler;
   let deleteRateLimiter: express.RequestHandler;
@@ -111,14 +111,14 @@ describe("Rate Limiting Middleware", () => {
     });
   });
 
-  describe("Upload Rate Limiter", () => {
+  void describe("Upload Rate Limiter", () => {
     beforeEach(() => {
       app.post("/upload", uploadRateLimiter, (req, res) => {
         res.json({ success: true });
       });
     });
 
-    test("should allow uploads within rate limit", async () => {
+    void test("should allow uploads within rate limit", async () => {
       // First 10 requests should succeed
       for (let i = 0; i < 10; i++) {
         const response = await request(app).post("/upload").set("x-auth", "true").expect(200);
@@ -127,7 +127,7 @@ describe("Rate Limiting Middleware", () => {
       }
     });
 
-    test("should block uploads exceeding rate limit", async () => {
+    void test("should block uploads exceeding rate limit", async () => {
       // Make 10 successful requests
       for (let i = 0; i < 10; i++) {
         await request(app).post("/upload").set("x-auth", "true").expect(200);
@@ -140,7 +140,7 @@ describe("Rate Limiting Middleware", () => {
       assert.ok((response.body as { message: string }).message.includes("10 images per minute"));
     });
 
-    test("should track rate limits per user", async () => {
+    void test("should track rate limits per user", async () => {
       // User 1 makes 10 requests
       for (let i = 0; i < 10; i++) {
         await request(app)
@@ -162,14 +162,14 @@ describe("Rate Limiting Middleware", () => {
     });
   });
 
-  describe("Delete Rate Limiter", () => {
+  void describe("Delete Rate Limiter", () => {
     beforeEach(() => {
       app.delete("/delete", deleteRateLimiter, (req, res) => {
         res.json({ success: true });
       });
     });
 
-    test("should allow 20 deletes per minute", async () => {
+    void test("should allow 20 deletes per minute", async () => {
       // First 20 requests should succeed
       for (let i = 0; i < 20; i++) {
         const response = await request(app).delete("/delete").set("x-auth", "true").expect(200);
@@ -184,14 +184,14 @@ describe("Rate Limiting Middleware", () => {
     });
   });
 
-  describe("Progress Rate Limiter", () => {
+  void describe("Progress Rate Limiter", () => {
     beforeEach(() => {
       app.get("/progress/:uploadId", progressRateLimiter, (req, res) => {
         res.json({ uploadId: req.params.uploadId });
       });
     });
 
-    test("should allow 60 progress checks per minute per upload", async () => {
+    void test("should allow 60 progress checks per minute per upload", async () => {
       const uploadId = "upload_123";
 
       // First 60 requests should succeed
@@ -208,7 +208,7 @@ describe("Rate Limiting Middleware", () => {
       await request(app).get(`/progress/${uploadId}`).set("x-auth", "true").expect(429);
     });
 
-    test("should track progress limits per upload ID", async () => {
+    void test("should track progress limits per upload ID", async () => {
       // Upload 1 can make 60 requests
       for (let i = 0; i < 60; i++) {
         await request(app).get("/progress/upload_1").set("x-auth", "true").expect(200);
@@ -219,14 +219,14 @@ describe("Rate Limiting Middleware", () => {
     });
   });
 
-  describe("Strict Upload Limiter", () => {
+  void describe("Strict Upload Limiter", () => {
     beforeEach(() => {
       app.post("/strict", strictUploadLimiter, (req, res) => {
         res.json({ success: true });
       });
     });
 
-    test("should limit unauthenticated users to 3 uploads", async () => {
+    void test("should limit unauthenticated users to 3 uploads", async () => {
       // First 3 requests should succeed
       for (let i = 0; i < 3; i++) {
         await request(app).post("/strict").set("x-forwarded-for", "8.8.8.8").expect(200);
@@ -242,7 +242,7 @@ describe("Rate Limiting Middleware", () => {
       assert.ok((response.body as { message: string }).message.includes("sign in"));
     });
 
-    test("should not limit authenticated users", async () => {
+    void test("should not limit authenticated users", async () => {
       // Authenticated users can make more than 3 requests
       for (let i = 0; i < 10; i++) {
         await request(app)
@@ -254,7 +254,7 @@ describe("Rate Limiting Middleware", () => {
     });
   });
 
-  describe("Combined Rate Limiters", () => {
+  void describe("Combined Rate Limiters", () => {
     beforeEach(() => {
       // Apply limiters in order: strict first, then regular upload limiter
       app.post("/combined", strictUploadLimiter, uploadRateLimiter, (req, res) => {
@@ -262,7 +262,7 @@ describe("Rate Limiting Middleware", () => {
       });
     });
 
-    test("should apply all rate limiters in order", async () => {
+    void test("should apply all rate limiters in order", async () => {
       // Unauthenticated user hits strict limit first (3 requests)
       for (let i = 0; i < 3; i++) {
         await request(app).post("/combined").set("x-forwarded-for", "9.9.9.9").expect(200);
@@ -289,14 +289,14 @@ describe("Rate Limiting Middleware", () => {
     });
   });
 
-  describe("Rate Limiter Headers", () => {
+  void describe("Rate Limiter Headers", () => {
     beforeEach(() => {
       app.post("/headers", uploadRateLimiter, (req, res) => {
         res.json({ success: true });
       });
     });
 
-    test("should include rate limit headers", async () => {
+    void test("should include rate limit headers", async () => {
       const response = await request(app)
         .post("/headers")
         .set("x-auth", "true")
@@ -309,7 +309,7 @@ describe("Rate Limiting Middleware", () => {
       assert.ok(response.headers["ratelimit-reset"] !== undefined);
     });
 
-    test("should include retry-after header when rate limited", async () => {
+    void test("should include retry-after header when rate limited", async () => {
       // Exhaust rate limit
       for (let i = 0; i < 10; i++) {
         await request(app).post("/headers").set("x-auth", "true").set("x-forwarded-for", "7.7.7.7");
@@ -326,7 +326,7 @@ describe("Rate Limiting Middleware", () => {
     });
   });
 
-  describe("Login Rate Limiter", () => {
+  void describe("Login Rate Limiter", () => {
     let loginLimiter: express.RequestHandler;
 
     beforeEach(() => {
@@ -351,7 +351,7 @@ describe("Rate Limiting Middleware", () => {
       });
     });
 
-    test("should allow 5 login attempts within rate limit", async () => {
+    void test("should allow 5 login attempts within rate limit", async () => {
       for (let i = 0; i < 5; i++) {
         await request(app)
           .post("/auth/login")
@@ -360,7 +360,7 @@ describe("Rate Limiting Middleware", () => {
       }
     });
 
-    test("should block 6th login attempt", async () => {
+    void test("should block 6th login attempt", async () => {
       // First 5 succeed
       for (let i = 0; i < 5; i++) {
         await request(app)
@@ -378,7 +378,7 @@ describe("Rate Limiting Middleware", () => {
       assert.ok(response.text.includes("Too many login attempts"));
     });
 
-    test("should rate limit per IP+email combination", async () => {
+    void test("should rate limit per IP+email combination", async () => {
       // 5 attempts for email1
       for (let i = 0; i < 5; i++) {
         await request(app)
@@ -401,7 +401,7 @@ describe("Rate Limiting Middleware", () => {
     });
   });
 
-  describe("Signup Rate Limiter", () => {
+  void describe("Signup Rate Limiter", () => {
     let signupLimiter: express.RequestHandler;
 
     beforeEach(() => {
@@ -422,7 +422,7 @@ describe("Rate Limiting Middleware", () => {
       });
     });
 
-    test("should allow 3 signups per hour", async () => {
+    void test("should allow 3 signups per hour", async () => {
       for (let i = 0; i < 3; i++) {
         await request(app)
           .post("/auth/signup")
@@ -431,7 +431,7 @@ describe("Rate Limiting Middleware", () => {
       }
     });
 
-    test("should block 4th signup from same IP", async () => {
+    void test("should block 4th signup from same IP", async () => {
       // First 3 succeed
       for (let i = 0; i < 3; i++) {
         await request(app)
@@ -445,7 +445,7 @@ describe("Rate Limiting Middleware", () => {
     });
   });
 
-  describe("Forgot Password Rate Limiter", () => {
+  void describe("Forgot Password Rate Limiter", () => {
     let forgotLimiter: express.RequestHandler;
 
     beforeEach(() => {
@@ -466,7 +466,7 @@ describe("Rate Limiting Middleware", () => {
       });
     });
 
-    test("should allow 3 password reset requests per hour", async () => {
+    void test("should allow 3 password reset requests per hour", async () => {
       for (let i = 0; i < 3; i++) {
         await request(app)
           .post("/auth/forgot-password")
@@ -475,7 +475,7 @@ describe("Rate Limiting Middleware", () => {
       }
     });
 
-    test("should block 4th password reset request", async () => {
+    void test("should block 4th password reset request", async () => {
       for (let i = 0; i < 3; i++) {
         await request(app)
           .post("/auth/forgot-password")

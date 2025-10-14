@@ -12,7 +12,7 @@ import sqlite3 from "sqlite3";
 import { overrideConnection } from "../db/conn";
 import { getSpeciesForAdmin, addCommonName, addScientificName } from "../db/species";
 
-describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
+void describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
   let db: Database;
   let fishGroupId1: number;
   let fishGroupId2: number;
@@ -67,8 +67,8 @@ describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
     }
   });
 
-  describe("Basic Functionality", () => {
-    test("should return paginated species with default parameters", async () => {
+  void describe("Basic Functionality", () => {
+    void test("should return paginated species with default parameters", async () => {
       const result = await getSpeciesForAdmin();
 
       assert.ok(result.species.length <= 50, "Should respect default limit of 50");
@@ -79,7 +79,7 @@ describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
       );
     });
 
-    test("should include all required fields for each species", async () => {
+    void test("should include all required fields for each species", async () => {
       const result = await getSpeciesForAdmin();
       const species = result.species[0];
 
@@ -93,7 +93,7 @@ describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
       assert.ok(typeof species.synonym_count === "number");
     });
 
-    test("should count synonyms correctly (split schema)", async () => {
+    void test("should count synonyms correctly (split schema)", async () => {
       // Search for test species to ensure they're in results
       const result = await getSpeciesForAdmin({ search: "Testicus" });
 
@@ -123,8 +123,8 @@ describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
     });
   });
 
-  describe("Filtering", () => {
-    test("should filter by species_type", async () => {
+  void describe("Filtering", () => {
+    void test("should filter by species_type", async () => {
       const fishOnly = await getSpeciesForAdmin({ species_type: "Fish" });
       const plantOnly = await getSpeciesForAdmin({ species_type: "Plant" });
 
@@ -135,7 +135,7 @@ describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
       assert.ok(plantOnly.species.length >= 1, "Should have at least 1 plant");
     });
 
-    test("should filter by program_class", async () => {
+    void test("should filter by program_class", async () => {
       const livebearers = await getSpeciesForAdmin({ program_class: "Livebearers" });
       const cichlids = await getSpeciesForAdmin({ program_class: "Cichlids" });
 
@@ -143,21 +143,21 @@ describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
       assert.ok(cichlids.species.every((s) => s.program_class === "Cichlids"));
     });
 
-    test("should filter by has_base_points = true", async () => {
+    void test("should filter by has_base_points = true", async () => {
       const withPoints = await getSpeciesForAdmin({ has_base_points: true });
 
       assert.ok(withPoints.species.length >= 2, "Should have at least 2 species with points");
       assert.ok(withPoints.species.every((s) => s.base_points !== null));
     });
 
-    test("should filter by has_base_points = false", async () => {
+    void test("should filter by has_base_points = false", async () => {
       const withoutPoints = await getSpeciesForAdmin({ has_base_points: false });
 
       assert.ok(withoutPoints.species.length >= 1, "Should have at least 1 species without points");
       assert.ok(withoutPoints.species.every((s) => s.base_points === null));
     });
 
-    test("should filter by is_cares_species", async () => {
+    void test("should filter by is_cares_species", async () => {
       const caresOnly = await getSpeciesForAdmin({ is_cares_species: true });
       const nonCaresOnly = await getSpeciesForAdmin({ is_cares_species: false });
 
@@ -168,14 +168,14 @@ describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
       assert.ok(nonCaresOnly.species.length >= 1, "Should have at least 1 non-CARES species");
     });
 
-    test("should search by canonical genus", async () => {
+    void test("should search by canonical genus", async () => {
       const result = await getSpeciesForAdmin({ search: "Testicus" });
 
       assert.ok(result.species.length >= 3, "Should find all Testicus species");
       assert.ok(result.species.every((s) => s.canonical_genus === "Testicus"));
     });
 
-    test("should search by canonical species name", async () => {
+    void test("should search by canonical species name", async () => {
       const result = await getSpeciesForAdmin({ search: "guppyus" });
 
       assert.ok(result.species.length >= 1);
@@ -183,7 +183,7 @@ describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
       assert.ok(found, "Should find guppyus by species name");
     });
 
-    test("should search by synonym common name", async () => {
+    void test("should search by synonym common name", async () => {
       const result = await getSpeciesForAdmin({ search: "Fancy Test Guppy" });
 
       assert.ok(result.species.length >= 1);
@@ -191,7 +191,7 @@ describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
       assert.ok(found, "Should find species by synonym common name");
     });
 
-    test("should search by synonym scientific name", async () => {
+    void test("should search by synonym scientific name", async () => {
       const result = await getSpeciesForAdmin({ search: "Testicus plantus" });
 
       assert.ok(result.species.length >= 1);
@@ -199,7 +199,7 @@ describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
       assert.ok(found, "Should find species by synonym scientific name");
     });
 
-    test("should be case-insensitive in search", async () => {
+    void test("should be case-insensitive in search", async () => {
       const lower = await getSpeciesForAdmin({ search: "testicus" });
       const upper = await getSpeciesForAdmin({ search: "TESTICUS" });
       const mixed = await getSpeciesForAdmin({ search: "TeStiCuS" });
@@ -208,14 +208,14 @@ describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
       assert.strictEqual(lower.total_count, mixed.total_count);
     });
 
-    test("should return empty result for search with < 2 characters", async () => {
+    void test("should return empty result for search with < 2 characters", async () => {
       const result = await getSpeciesForAdmin({ search: "T" });
 
       // Should return all species (search ignored)
       assert.ok(result.species.length >= 3);
     });
 
-    test("should combine multiple filters", async () => {
+    void test("should combine multiple filters", async () => {
       const result = await getSpeciesForAdmin({
         species_type: "Fish",
         has_base_points: true,
@@ -234,8 +234,8 @@ describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
     });
   });
 
-  describe("Sorting", () => {
-    test("should sort by name (default)", async () => {
+  void describe("Sorting", () => {
+    void test("should sort by name (default)", async () => {
       const result = await getSpeciesForAdmin({}, "name");
 
       for (let i = 1; i < result.species.length; i++) {
@@ -248,7 +248,7 @@ describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
       }
     });
 
-    test("should sort by points (high to low, NULL last)", async () => {
+    void test("should sort by points (high to low, NULL last)", async () => {
       // Search for only our test species to avoid migration data
       const result = await getSpeciesForAdmin({ search: "Testicus" }, "points");
 
@@ -272,7 +272,7 @@ describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
       );
     });
 
-    test("should sort by program class", async () => {
+    void test("should sort by program class", async () => {
       const result = await getSpeciesForAdmin({}, "class");
 
       for (let i = 1; i < result.species.length; i++) {
@@ -291,15 +291,15 @@ describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
     });
   });
 
-  describe("Pagination", () => {
-    test("should respect limit parameter", async () => {
+  void describe("Pagination", () => {
+    void test("should respect limit parameter", async () => {
       const page1 = await getSpeciesForAdmin({}, "name", 2, 0);
 
       assert.strictEqual(page1.species.length, 2, "Should return exactly 2 results");
       assert.ok(page1.total_count >= 3, "Total count should show all results");
     });
 
-    test("should respect offset parameter", async () => {
+    void test("should respect offset parameter", async () => {
       const page1 = await getSpeciesForAdmin({}, "name", 2, 0);
       const page2 = await getSpeciesForAdmin({}, "name", 2, 2);
 
@@ -314,7 +314,7 @@ describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
       assert.strictEqual(overlap.length, 0, "Pages should not overlap");
     });
 
-    test("should return consistent total_count across pages", async () => {
+    void test("should return consistent total_count across pages", async () => {
       const page1 = await getSpeciesForAdmin({}, "name", 2, 0);
       const page2 = await getSpeciesForAdmin({}, "name", 2, 2);
 
@@ -325,7 +325,7 @@ describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
       );
     });
 
-    test("should handle offset beyond total results", async () => {
+    void test("should handle offset beyond total results", async () => {
       const result = await getSpeciesForAdmin({}, "name", 50, 9999);
 
       assert.strictEqual(
@@ -337,8 +337,8 @@ describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
     });
   });
 
-  describe("Edge Cases", () => {
-    test("should handle species with no synonyms", async () => {
+  void describe("Edge Cases", () => {
+    void test("should handle species with no synonyms", async () => {
       // Create species without adding synonyms
       const noSynonymResult = await db.run(`
         INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name, base_points, is_cares_species)
@@ -352,7 +352,7 @@ describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
       assert.strictEqual(found?.synonym_count, 0, "Synonym count should be 0");
     });
 
-    test("should return empty result when no species match filters", async () => {
+    void test("should return empty result when no species match filters", async () => {
       const result = await getSpeciesForAdmin({
         species_type: "Coral", // No coral in test data
       });
@@ -361,14 +361,14 @@ describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
       assert.strictEqual(result.total_count, 0);
     });
 
-    test("should handle empty search string", async () => {
+    void test("should handle empty search string", async () => {
       const result = await getSpeciesForAdmin({ search: "" });
 
       // Should return all species (empty search ignored)
       assert.ok(result.species.length >= 3);
     });
 
-    test("should handle whitespace-only search", async () => {
+    void test("should handle whitespace-only search", async () => {
       const result = await getSpeciesForAdmin({ search: "   " });
 
       // Should return all species (whitespace search ignored)
@@ -376,8 +376,8 @@ describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
     });
   });
 
-  describe("Data Integrity", () => {
-    test("should not include duplicate species in results", async () => {
+  void describe("Data Integrity", () => {
+    void test("should not include duplicate species in results", async () => {
       const result = await getSpeciesForAdmin();
 
       const groupIds = result.species.map((s) => s.group_id);
@@ -386,7 +386,7 @@ describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
       assert.strictEqual(groupIds.length, uniqueGroupIds.size, "No duplicate group_ids");
     });
 
-    test("should return species even when search matches multiple synonyms", async () => {
+    void test("should return species even when search matches multiple synonyms", async () => {
       // Plant has 3 synonyms, all containing "Test"
       const result = await getSpeciesForAdmin({ search: "Test" });
 
@@ -399,7 +399,7 @@ describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
       );
     });
 
-    test("should handle species with special characters in names", async () => {
+    void test("should handle species with special characters in names", async () => {
       const specialResult = await db.run(`
         INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name, base_points, is_cares_species)
         VALUES ('Characins', 'Fish', 'Spec-ial', 'char&acters', 20, 0)
@@ -415,8 +415,8 @@ describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
     });
   });
 
-  describe("Performance Considerations", () => {
-    test("should use efficient query with single database round-trip", async () => {
+  void describe("Performance Considerations", () => {
+    void test("should use efficient query with single database round-trip", async () => {
       // This test ensures we get count + data in 2 queries, not N+1
       const result = await getSpeciesForAdmin({ species_type: "Fish" }, "name", 10);
 
@@ -428,8 +428,8 @@ describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
     });
   });
 
-  describe("Real-World Scenarios", () => {
-    test("should support admin workflow: find species without points", async () => {
+  void describe("Real-World Scenarios", () => {
+    void test("should support admin workflow: find species without points", async () => {
       // Search for test species specifically
       const needsPoints = await getSpeciesForAdmin({ has_base_points: false, search: "Testicus" });
 
@@ -440,21 +440,21 @@ describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
       assert.ok(cichlid, "Should find cichlid that needs point assignment");
     });
 
-    test("should support admin workflow: review CARES species", async () => {
+    void test("should support admin workflow: review CARES species", async () => {
       const cares = await getSpeciesForAdmin({ is_cares_species: true });
 
       assert.ok(cares.species.length >= 2, "Should find CARES species");
       assert.ok(cares.species.every((s) => s.is_cares_species === 1));
     });
 
-    test("should support admin workflow: browse by class for point assignment", async () => {
+    void test("should support admin workflow: browse by class for point assignment", async () => {
       const livebearers = await getSpeciesForAdmin({ program_class: "Livebearers" }, "name");
 
       assert.ok(livebearers.species.length >= 1);
       assert.ok(livebearers.species.every((s) => s.program_class === "Livebearers"));
     });
 
-    test("should support admin workflow: paginated review of all species", async () => {
+    void test("should support admin workflow: paginated review of all species", async () => {
       // First page
       const page1 = await getSpeciesForAdmin({}, "name", 2, 0);
       assert.strictEqual(page1.species.length, 2);

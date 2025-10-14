@@ -15,7 +15,7 @@ import {
   deleteExpiredChallenges,
 } from "../db/webauthn";
 
-describe("WebAuthn Database Operations", () => {
+void describe("WebAuthn Database Operations", () => {
   let db: Database;
   let testMemberId: number;
 
@@ -46,8 +46,8 @@ describe("WebAuthn Database Operations", () => {
     await db.close();
   });
 
-  describe("Credential Management", () => {
-    test("should save and retrieve credential", async () => {
+  void describe("Credential Management", () => {
+    void test("should save and retrieve credential", async () => {
       const credentialId = await saveCredential({
         member_id: testMemberId,
         credential_id: "test-credential-123",
@@ -67,7 +67,7 @@ describe("WebAuthn Database Operations", () => {
       assert.strictEqual(retrieved.device_name, "iPhone");
     });
 
-    test("should get all credentials for a member", async () => {
+    void test("should get all credentials for a member", async () => {
       await saveCredential({
         member_id: testMemberId,
         credential_id: "cred-1",
@@ -89,7 +89,7 @@ describe("WebAuthn Database Operations", () => {
       assert.ok(credentials.some((c) => c.credential_id === "cred-2"));
     });
 
-    test("should update credential counter", async () => {
+    void test("should update credential counter", async () => {
       await saveCredential({
         member_id: testMemberId,
         credential_id: "test-cred",
@@ -105,7 +105,7 @@ describe("WebAuthn Database Operations", () => {
       assert.ok(updated.last_used_on); // Should be set
     });
 
-    test("should update device name", async () => {
+    void test("should update device name", async () => {
       const credId = await saveCredential({
         member_id: testMemberId,
         credential_id: "test-cred",
@@ -120,7 +120,7 @@ describe("WebAuthn Database Operations", () => {
       assert.strictEqual(updated.device_name, "My MacBook");
     });
 
-    test("should delete credential", async () => {
+    void test("should delete credential", async () => {
       const credId = await saveCredential({
         member_id: testMemberId,
         credential_id: "test-cred",
@@ -134,7 +134,7 @@ describe("WebAuthn Database Operations", () => {
       assert.strictEqual(deleted, null);
     });
 
-    test("should cascade delete credentials when member deleted", async () => {
+    void test("should cascade delete credentials when member deleted", async () => {
       // Enable FK constraints in test
       await db.run("PRAGMA foreign_keys = ON");
 
@@ -154,8 +154,8 @@ describe("WebAuthn Database Operations", () => {
     });
   });
 
-  describe("Challenge Management", () => {
-    test("should save and retrieve registration challenge", async () => {
+  void describe("Challenge Management", () => {
+    void test("should save and retrieve registration challenge", async () => {
       await saveChallenge("test-challenge-123", "registration", testMemberId);
 
       const retrieved = await getChallenge("test-challenge-123");
@@ -165,7 +165,7 @@ describe("WebAuthn Database Operations", () => {
       assert.strictEqual(retrieved.purpose, "registration");
     });
 
-    test("should save authentication challenge without member_id", async () => {
+    void test("should save authentication challenge without member_id", async () => {
       await saveChallenge("auth-challenge", "authentication");
 
       const retrieved = await getChallenge("auth-challenge");
@@ -174,7 +174,7 @@ describe("WebAuthn Database Operations", () => {
       assert.strictEqual(retrieved.purpose, "authentication");
     });
 
-    test("should be single-use (deleted after retrieval)", async () => {
+    void test("should be single-use (deleted after retrieval)", async () => {
       await saveChallenge("one-time", "registration", testMemberId);
 
       const first = await getChallenge("one-time");
@@ -184,7 +184,7 @@ describe("WebAuthn Database Operations", () => {
       assert.strictEqual(second, null, "Challenge should be deleted after first use");
     });
 
-    test("should not retrieve expired challenges", async () => {
+    void test("should not retrieve expired challenges", async () => {
       // Manually insert expired challenge
       await db.run(`
         INSERT INTO webauthn_challenges (challenge, purpose, expires_on)
@@ -195,7 +195,7 @@ describe("WebAuthn Database Operations", () => {
       assert.strictEqual(expired, null);
     });
 
-    test("should delete expired challenges", async () => {
+    void test("should delete expired challenges", async () => {
       // Create expired challenge
       await db.run(`
         INSERT INTO webauthn_challenges (challenge, purpose, expires_on)

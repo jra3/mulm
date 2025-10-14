@@ -10,7 +10,7 @@ import {
   getRemainingLockoutTime,
 } from "../services/accountLockout";
 
-describe("Account Lockout Service", () => {
+void describe("Account Lockout Service", () => {
   let db: Database;
   let testMemberId: number;
 
@@ -45,14 +45,14 @@ describe("Account Lockout Service", () => {
     }
   });
 
-  test("should not lock account after 1 failed attempt", async () => {
+  void test("should not lock account after 1 failed attempt", async () => {
     await recordFailedAttempt(testMemberId, "1.1.1.1");
 
     const locked = await isAccountLocked(testMemberId);
     assert.strictEqual(locked, false);
   });
 
-  test("should not lock account after 4 failed attempts", async () => {
+  void test("should not lock account after 4 failed attempts", async () => {
     for (let i = 0; i < 4; i++) {
       await recordFailedAttempt(testMemberId, "1.1.1.1");
     }
@@ -61,7 +61,7 @@ describe("Account Lockout Service", () => {
     assert.strictEqual(locked, false);
   });
 
-  test("should lock account after 5 failed attempts", async () => {
+  void test("should lock account after 5 failed attempts", async () => {
     for (let i = 0; i < 5; i++) {
       const wasLocked = await recordFailedAttempt(testMemberId, "1.1.1.1");
       if (i < 4) {
@@ -75,7 +75,7 @@ describe("Account Lockout Service", () => {
     assert.strictEqual(locked, true);
   });
 
-  test("should return remaining lockout time", async () => {
+  void test("should return remaining lockout time", async () => {
     // Lock the account
     for (let i = 0; i < 5; i++) {
       await recordFailedAttempt(testMemberId, "1.1.1.1");
@@ -87,7 +87,7 @@ describe("Account Lockout Service", () => {
     assert.ok(remainingSeconds > 890 && remainingSeconds <= 900);
   });
 
-  test("should clear failed attempts on successful login", async () => {
+  void test("should clear failed attempts on successful login", async () => {
     // Record some failed attempts
     for (let i = 0; i < 3; i++) {
       await recordFailedAttempt(testMemberId, "1.1.1.1");
@@ -115,7 +115,7 @@ describe("Account Lockout Service", () => {
     assert.strictEqual(locked, false);
   });
 
-  test("should clear lockout when clearing failed attempts", async () => {
+  void test("should clear lockout when clearing failed attempts", async () => {
     // Lock the account
     for (let i = 0; i < 5; i++) {
       await recordFailedAttempt(testMemberId, "1.1.1.1");
@@ -138,7 +138,7 @@ describe("Account Lockout Service", () => {
     assert.strictEqual(member?.locked_until, null);
   });
 
-  test("should track failed attempts with IP addresses", async () => {
+  void test("should track failed attempts with IP addresses", async () => {
     await recordFailedAttempt(testMemberId, "1.1.1.1");
     await recordFailedAttempt(testMemberId, "2.2.2.2");
 
@@ -152,7 +152,7 @@ describe("Account Lockout Service", () => {
     assert.strictEqual(attempts[1].ip_address, "2.2.2.2");
   });
 
-  test("should only count attempts within time window", async () => {
+  void test("should only count attempts within time window", async () => {
     // This test verifies that old attempts don't count toward lockout
     // In a real test, we'd manipulate timestamps, but for now we verify
     // the query logic is correct by checking recent attempts
@@ -174,12 +174,12 @@ describe("Account Lockout Service", () => {
     assert.strictEqual(attempts.length, 3);
   });
 
-  test("should return 0 remaining time for unlocked account", async () => {
+  void test("should return 0 remaining time for unlocked account", async () => {
     const remainingSeconds = await getRemainingLockoutTime(testMemberId);
     assert.strictEqual(remainingSeconds, 0);
   });
 
-  test("should handle multiple members independently", async () => {
+  void test("should handle multiple members independently", async () => {
     // Create second member
     const result = await db.run("INSERT INTO members (contact_email, display_name) VALUES (?, ?)", [
       "other@example.com",

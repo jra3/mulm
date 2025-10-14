@@ -18,7 +18,7 @@ interface TestSubmission {
   images: string | null;
 }
 
-describe("Upload Transaction Tests", () => {
+void describe("Upload Transaction Tests", () => {
   let db: Database;
   let testMember: TestMember;
 
@@ -106,7 +106,7 @@ describe("Upload Transaction Tests", () => {
     return result.lastID as number;
   }
 
-  test("should maintain database consistency on transaction failure", async () => {
+  void test("should maintain database consistency on transaction failure", async () => {
     const submissionId = await createTestSubmission(testMember.id);
 
     // Add initial images to submission
@@ -166,7 +166,7 @@ describe("Upload Transaction Tests", () => {
     assert.strictEqual(afterFailedUpdate.images, JSON.stringify(initialImages));
   });
 
-  test("should atomically update images in transaction", async () => {
+  void test("should atomically update images in transaction", async () => {
     const submissionId = await createTestSubmission(testMember.id);
 
     const newImages: ImageMetadata[] = [
@@ -212,7 +212,7 @@ describe("Upload Transaction Tests", () => {
     assert.strictEqual(storedImages[1].key, "submissions/1/1/image2.jpg");
   });
 
-  test("should handle concurrent image updates correctly", async () => {
+  void test("should handle concurrent image updates correctly", async () => {
     const submissionId = await createTestSubmission(testMember.id);
 
     const image1: ImageMetadata = {
@@ -281,7 +281,7 @@ describe("Upload Transaction Tests", () => {
     assert.strictEqual(storedImages.length, 2);
   });
 
-  test("should handle deletion with transaction", async () => {
+  void test("should handle deletion with transaction", async () => {
     const submissionId = await createTestSubmission(testMember.id);
 
     const images: ImageMetadata[] = [
@@ -341,7 +341,7 @@ describe("Upload Transaction Tests", () => {
     assert.strictEqual(storedImages[0].key, "submissions/1/1/delete2.jpg");
   });
 
-  test("should verify ownership before deletion", async () => {
+  void test("should verify ownership before deletion", async () => {
     const submissionId = await createTestSubmission(testMember.id);
 
     // Create another member
@@ -389,7 +389,7 @@ describe("Upload Transaction Tests", () => {
     assert.strictEqual(correctUserSubmission.id, submissionId);
   });
 
-  test("should cleanup R2 files on database transaction failure", async () => {
+  void test("should cleanup R2 files on database transaction failure", async () => {
     const submissionId = await createTestSubmission(testMember.id);
 
     // Track S3 delete calls

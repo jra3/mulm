@@ -24,7 +24,7 @@ interface TestMember {
   contact_email: string;
 }
 
-describe("Witness Workflow Integration Tests", () => {
+void describe("Witness Workflow Integration Tests", () => {
   let db: Database;
   let testMember: TestMember;
   let admin1: TestMember;
@@ -133,8 +133,8 @@ describe("Witness Workflow Integration Tests", () => {
     }
   });
 
-  describe("Basic Witness Operations", () => {
-    test("should successfully confirm witness", async () => {
+  void describe("Basic Witness Operations", () => {
+    void test("should successfully confirm witness", async () => {
       const submissionId = await createTestSubmission(testMember.id);
 
       await confirmWitness(submissionId, admin1.id);
@@ -147,7 +147,7 @@ describe("Witness Workflow Integration Tests", () => {
       assert.ok(fullSubmission?.witnessed_on !== undefined);
     });
 
-    test("should successfully decline witness", async () => {
+    void test("should successfully decline witness", async () => {
       const submissionId = await createTestSubmission(testMember.id);
 
       await declineWitness(submissionId, admin1.id);
@@ -160,7 +160,7 @@ describe("Witness Workflow Integration Tests", () => {
       assert.ok(fullSubmission?.witnessed_on !== undefined);
     });
 
-    test("should prevent self-witnessing on confirm", async () => {
+    void test("should prevent self-witnessing on confirm", async () => {
       const submissionId = await createTestSubmission(testMember.id);
 
       await assert.rejects(
@@ -172,7 +172,7 @@ describe("Witness Workflow Integration Tests", () => {
       assert.strictEqual(submission.witness_verification_status, "pending");
     });
 
-    test("should prevent self-witnessing on decline", async () => {
+    void test("should prevent self-witnessing on decline", async () => {
       const submissionId = await createTestSubmission(testMember.id);
 
       await assert.rejects(
@@ -184,7 +184,7 @@ describe("Witness Workflow Integration Tests", () => {
       assert.strictEqual(submission.witness_verification_status, "pending");
     });
 
-    test("should reject non-existent submission", async () => {
+    void test("should reject non-existent submission", async () => {
       const nonExistentId = 99999;
 
       await assert.rejects(
@@ -198,7 +198,7 @@ describe("Witness Workflow Integration Tests", () => {
       );
     });
 
-    test("should reject non-existent admin", async () => {
+    void test("should reject non-existent admin", async () => {
       const submissionId = await createTestSubmission(testMember.id);
       const nonExistentAdminId = 99999;
 
@@ -209,8 +209,8 @@ describe("Witness Workflow Integration Tests", () => {
     });
   });
 
-  describe("State Transition Validation", () => {
-    test("should prevent confirming already confirmed submission", async () => {
+  void describe("State Transition Validation", () => {
+    void test("should prevent confirming already confirmed submission", async () => {
       const submissionId = await createTestSubmission(testMember.id);
 
       await confirmWitness(submissionId, admin1.id);
@@ -221,7 +221,7 @@ describe("Witness Workflow Integration Tests", () => {
       );
     });
 
-    test("should prevent declining already confirmed submission", async () => {
+    void test("should prevent declining already confirmed submission", async () => {
       const submissionId = await createTestSubmission(testMember.id);
 
       await confirmWitness(submissionId, admin1.id);
@@ -232,7 +232,7 @@ describe("Witness Workflow Integration Tests", () => {
       );
     });
 
-    test("should prevent confirming already declined submission", async () => {
+    void test("should prevent confirming already declined submission", async () => {
       const submissionId = await createTestSubmission(testMember.id);
 
       await declineWitness(submissionId, admin1.id);
@@ -243,7 +243,7 @@ describe("Witness Workflow Integration Tests", () => {
       );
     });
 
-    test("should prevent declining already declined submission", async () => {
+    void test("should prevent declining already declined submission", async () => {
       const submissionId = await createTestSubmission(testMember.id);
 
       await declineWitness(submissionId, admin1.id);
@@ -254,7 +254,7 @@ describe("Witness Workflow Integration Tests", () => {
       );
     });
 
-    test("should only allow witnessing submissions in pending state", async () => {
+    void test("should only allow witnessing submissions in pending state", async () => {
       // Test with pre-confirmed submission
       const confirmedId = await createTestSubmission(
         testMember.id,
@@ -288,8 +288,8 @@ describe("Witness Workflow Integration Tests", () => {
     });
   });
 
-  describe("Race Condition & Concurrency Tests", () => {
-    test("should handle concurrent confirm attempts correctly", async () => {
+  void describe("Race Condition & Concurrency Tests", () => {
+    void test("should handle concurrent confirm attempts correctly", async () => {
       const submissionId = await createTestSubmission(testMember.id);
 
       // Start both operations simultaneously
@@ -313,7 +313,7 @@ describe("Witness Workflow Integration Tests", () => {
       assert.ok([admin1.id, admin2.id].includes(fullSubmission?.witnessed_by));
     });
 
-    test("should handle concurrent decline attempts correctly", async () => {
+    void test("should handle concurrent decline attempts correctly", async () => {
       const submissionId = await createTestSubmission(testMember.id);
 
       const promise1 = declineWitness(submissionId, admin1.id);
@@ -331,7 +331,7 @@ describe("Witness Workflow Integration Tests", () => {
       assert.strictEqual(submission.witness_verification_status, "declined");
     });
 
-    test("should handle mixed concurrent operations (confirm vs decline)", async () => {
+    void test("should handle mixed concurrent operations (confirm vs decline)", async () => {
       const submissionId = await createTestSubmission(testMember.id);
 
       const confirmPromise = confirmWitness(submissionId, admin1.id);
@@ -349,7 +349,7 @@ describe("Witness Workflow Integration Tests", () => {
       assert.ok(["confirmed", "declined"].includes(submission.witness_verification_status));
     });
 
-    test("should handle high concurrency scenarios", async () => {
+    void test("should handle high concurrency scenarios", async () => {
       const submissionId = await createTestSubmission(testMember.id);
 
       // Create 10 concurrent operations
@@ -374,8 +374,8 @@ describe("Witness Workflow Integration Tests", () => {
     });
   });
 
-  describe("Data Integrity & Foreign Key Tests", () => {
-    test("should maintain referential integrity for witnessed_by", async () => {
+  void describe("Data Integrity & Foreign Key Tests", () => {
+    void test("should maintain referential integrity for witnessed_by", async () => {
       const submissionId = await createTestSubmission(testMember.id);
 
       await confirmWitness(submissionId, admin1.id);
@@ -395,7 +395,7 @@ describe("Witness Workflow Integration Tests", () => {
       assert.strictEqual(result?.display_name, admin1.display_name);
     });
 
-    test("should handle member deletion with ON DELETE SET NULL", async () => {
+    void test("should handle member deletion with ON DELETE SET NULL", async () => {
       const submissionId = await createTestSubmission(testMember.id);
 
       await confirmWitness(submissionId, admin1.id);
@@ -408,7 +408,7 @@ describe("Witness Workflow Integration Tests", () => {
       assert.strictEqual(submission?.witness_verification_status, "confirmed"); // Status should remain
     });
 
-    test("should maintain transaction atomicity on failure", async () => {
+    void test("should maintain transaction atomicity on failure", async () => {
       const submissionId = await createTestSubmission(testMember.id);
 
       // Mock a database error during the transaction
@@ -434,8 +434,8 @@ describe("Witness Workflow Integration Tests", () => {
     });
   });
 
-  describe("Waiting Period Integration", () => {
-    test("should integrate with waiting period calculations for freshwater fish", async () => {
+  void describe("Waiting Period Integration", () => {
+    void test("should integrate with waiting period calculations for freshwater fish", async () => {
       const submissionId = await createTestSubmission(testMember.id, "Fish", "New World");
 
       await confirmWitness(submissionId, admin1.id);
@@ -448,7 +448,7 @@ describe("Witness Workflow Integration Tests", () => {
       assert.strictEqual(waitingStatus.eligible, false); // Should not be eligible yet
     });
 
-    test("should integrate with waiting period calculations for marine fish", async () => {
+    void test("should integrate with waiting period calculations for marine fish", async () => {
       const submissionId = await createTestSubmission(testMember.id, "Fish", "Marine");
 
       await confirmWitness(submissionId, admin1.id);
@@ -460,7 +460,7 @@ describe("Witness Workflow Integration Tests", () => {
       assert.strictEqual(waitingStatus.requiredDays, 30); // Marine fish should be 30 days
     });
 
-    test("should integrate with waiting period calculations for plants", async () => {
+    void test("should integrate with waiting period calculations for plants", async () => {
       const submissionId = await createTestSubmission(testMember.id, "Plant", "Anubius");
 
       await confirmWitness(submissionId, admin1.id);
@@ -472,7 +472,7 @@ describe("Witness Workflow Integration Tests", () => {
       assert.strictEqual(waitingStatus.requiredDays, 60); // Plants should be 60 days
     });
 
-    test("should not affect waiting period for declined submissions", async () => {
+    void test("should not affect waiting period for declined submissions", async () => {
       const submissionId = await createTestSubmission(testMember.id, "Fish", "New World");
 
       await declineWitness(submissionId, admin1.id);
@@ -485,14 +485,14 @@ describe("Witness Workflow Integration Tests", () => {
     });
   });
 
-  describe("Bulk Operations & Performance", () => {
+  void describe("Bulk Operations & Performance", () => {
     // Tests removed - SQLite doesn't support concurrent transactions
     // The important concurrency test is "should handle high concurrency scenarios"
     // which tests race conditions using Promise.allSettled
   });
 
-  describe("Error Handling & Edge Cases", () => {
-    test("should handle zero and negative submission IDs gracefully", async () => {
+  void describe("Error Handling & Edge Cases", () => {
+    void test("should handle zero and negative submission IDs gracefully", async () => {
       await assert.rejects(async () => await confirmWitness(0, admin1.id), /Submission not found/);
 
       await assert.rejects(async () => await confirmWitness(-1, admin1.id), /Submission not found/);
@@ -502,7 +502,7 @@ describe("Witness Workflow Integration Tests", () => {
       await assert.rejects(async () => await declineWitness(-1, admin1.id), /Submission not found/);
     });
 
-    test("should handle extremely large IDs gracefully", async () => {
+    void test("should handle extremely large IDs gracefully", async () => {
       const largeId = Number.MAX_SAFE_INTEGER;
 
       await assert.rejects(
@@ -516,7 +516,7 @@ describe("Witness Workflow Integration Tests", () => {
       );
     });
 
-    test("should preserve original error messages", async () => {
+    void test("should preserve original error messages", async () => {
       const submissionId = await createTestSubmission(testMember.id);
 
       // Self-witnessing should preserve specific error message
@@ -539,8 +539,8 @@ describe("Witness Workflow Integration Tests", () => {
     });
   });
 
-  describe("Real-world Workflow Scenarios", () => {
-    test("should handle complete workflow: submission → witness → waiting period", async () => {
+  void describe("Real-world Workflow Scenarios", () => {
+    void test("should handle complete workflow: submission → witness → waiting period", async () => {
       // Create submission
       const submissionId = await createTestSubmission(testMember.id, "Fish", "Marine");
 
@@ -562,7 +562,7 @@ describe("Witness Workflow Integration Tests", () => {
       assert.ok(waitingStatus.elapsedDays >= 0);
     });
 
-    test("should handle admin managing multiple member submissions", async () => {
+    void test("should handle admin managing multiple member submissions", async () => {
       // Create second member
       const member2Id = await createMember("member2@test.com", "Member Two");
 
