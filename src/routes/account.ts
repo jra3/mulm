@@ -124,8 +124,8 @@ export const viewTankPresetCard = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  // HTMX sends hx-vals as JSON in request body for GET requests too
-  const presetName = (req.body as { preset_name?: string })?.preset_name;
+  // RESTful GET - preset name from URL parameter
+  const presetName = decodeURIComponent(req.params.name);
   const presets = await queryTankPresets(viewer.id);
   const preset = presets.find(p => p.preset_name === presetName);
 
@@ -146,8 +146,8 @@ export const editTankPresetForm = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  // HTMX sends hx-vals as JSON in request body
-  const presetName = (req.body as { preset_name?: string })?.preset_name;
+  // RESTful GET - preset name from URL parameter
+  const presetName = decodeURIComponent(req.params.name);
   const presets = await queryTankPresets(viewer.id);
   const preset = presets.find(p => p.preset_name === presetName);
 
@@ -240,14 +240,8 @@ export const deleteTankPresetRoute = async (req: MulmRequest, res: Response) => 
     return;
   }
 
-  // HTMX sends hx-vals as JSON in request body
-  const presetName = (req.body as { preset_name?: string })?.preset_name;
-
-  if (!presetName) {
-    logger.error('Delete tank preset: no preset_name in request');
-    res.status(400).send('Preset name required');
-    return;
-  }
+  // RESTful DELETE - preset name from URL parameter
+  const presetName = decodeURIComponent(req.params.name);
 
   try {
     await deleteTankPreset(viewer.id, presetName);

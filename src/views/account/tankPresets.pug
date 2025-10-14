@@ -4,11 +4,11 @@
 	//- Add new preset button
 	button.primary.mb-4(
 		type="button"
-		onclick="const form = document.getElementById('newPresetForm'); form.classList.remove('hidden'); setTimeout(() => form.classList.remove('opacity-0', 'scale-95'), 10);"
+		onclick="document.getElementById('newPresetForm').classList.remove('hidden');"
 	) + Add New Tank Preset
 
-	//- New preset form (hidden by default with transition)
-	#newPresetForm.hidden.opacity-0.scale-95(class="transition-all duration-300 ease-in-out transform origin-top")
+	//- New preset form (hidden by default)
+	#newPresetForm.hidden
 		.bg-white.border.border-gray-300.rounded-lg.p-4.mb-3
 			form(
 				hx-post="/account/tanks"

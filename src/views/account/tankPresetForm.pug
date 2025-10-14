@@ -5,19 +5,7 @@
 		hx-target=editing ? 'closest .tank-preset-card' : '#tankPresetsContent'
 		hx-swap=editing ? 'outerHTML' : 'afterbegin'
 	)
-		.flex.justify-between.items-center.mb-4
-			h3.font-bold.text-lg= editing ? `Edit: ${preset.preset_name}` : 'New Tank Preset'
-			if editing
-				.inline-block
-					form(style="display: inline;")
-						input(type="hidden" name="preset_name" value=preset.preset_name)
-						button.secondary.text-sm.px-2.py-1(
-							type="button"
-							hx-get="/account/tanks/view"
-							hx-include="closest form"
-							hx-target="closest .tank-preset-card"
-							hx-swap="outerHTML"
-						) Cancel
+		h3.font-bold.text-lg.mb-4= editing ? `Edit: ${preset.preset_name}` : 'New Tank Preset'
 
 		//- General form error (if any)
 		if errors.has('form')
@@ -160,12 +148,19 @@
 					value=preset.substrate_color || ''
 				)
 
-		//- Submit button
+		//- Submit buttons
 		.mt-4.flex.gap-2
 			button.primary(type="submit" hx-disabled-elt="this")
 				span= editing ? 'Update Preset' : 'Create Preset'
 				span.htmx-indicator.spinner
-			if !editing
+			if editing
+				button.secondary(
+					type="button"
+					hx-get=`/account/tanks/${encodeURIComponent(preset.preset_name)}`
+					hx-target="closest .tank-preset-card"
+					hx-swap="outerHTML"
+				) Cancel
+			else
 				button.secondary(
 					type="button"
 					onclick="document.getElementById('newPresetForm').classList.add('hidden'); this.closest('form').reset();"

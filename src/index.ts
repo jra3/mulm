@@ -167,11 +167,11 @@ router.get("/account", account.viewAccountSettings);
 router.patch("/account", account.updateAccountSettings);
 router.delete("/account/google", account.unlinkGoogleAccount);
 
-// Account tank preset management
-router.get("/account/tanks/view", account.viewTankPresetCard);
-router.get("/account/tanks/edit", account.editTankPresetForm);
+// Account tank preset management (RESTful routes)
 router.post("/account/tanks", account.saveTankPresetRoute);
-router.delete("/account/tanks", account.deleteTankPresetRoute);
+router.get("/account/tanks/:name/edit", account.editTankPresetForm);
+router.get("/account/tanks/:name", account.viewTankPresetCard);
+router.delete("/account/tanks/:name", account.deleteTankPresetRoute);
 
 router.use("/admin", adminRouter);
 
