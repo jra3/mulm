@@ -10,8 +10,9 @@
 			if editing
 				button.secondary.text-sm.px-2.py-1(
 					type="button"
+					data-preset-name=preset.preset_name
 					hx-get="/account/tanks/view"
-					hx-vals=`js:{"preset_name": "${preset.preset_name.replace(/"/g, '\\"')}"}`
+					hx-vals="js:{preset_name: this.dataset.presetName}"
 					hx-target="closest .tank-preset-card"
 					hx-swap="outerHTML"
 				) Cancel
