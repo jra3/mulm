@@ -8,6 +8,7 @@ import { logger } from "@/utils/logger";
 import { queryTankPresets, createTankPreset, updateTankPreset, deleteTankPreset } from "@/db/tank";
 import { tankSettingsSchema } from "@/forms/tank";
 import { validateFormResult } from "@/forms/utils";
+import pug from "pug";
 
 export const viewAccountSettings = async (req: MulmRequest, res: Response) => {
   const { viewer } = req;
@@ -211,10 +212,8 @@ export const saveTankPresetRoute = async (req: MulmRequest, res: Response) => {
       });
     } else {
       // For new presets, return card + remove the form using out-of-band swap
-      res.send(`
-        ${res.render("account/tankPresetCard", { preset })}
-        <div id="newPresetForm" hx-swap-oob="outerHTML"></div>
-      `.trim());
+      const cardHtml = pug.renderFile("src/views/account/tankPresetCard.pug", { preset });
+      res.send(`${cardHtml}<div id="newPresetForm" hx-swap-oob="outerHTML"></div>`.trim());
     }
   } catch (err) {
     logger.error('Failed to save tank preset', err);
