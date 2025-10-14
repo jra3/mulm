@@ -231,9 +231,11 @@ export const deleteTankPresetRoute = async (req: MulmRequest, res: Response) => 
     return;
   }
 
-  const presetName = (req.body as { preset_name?: string }).preset_name;
+  // HTMX sends hx-vals as JSON in request body
+  const presetName = (req.body as { preset_name?: string })?.preset_name;
 
   if (!presetName) {
+    logger.error('Delete tank preset: no preset_name in request', { body: req.body });
     res.status(400).send('Preset name required');
     return;
   }
