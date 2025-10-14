@@ -128,11 +128,53 @@ describe('MyModule', () => {
 
 ## Authentication
 
-Authentication logic lives in `src/auth/`:
+Three authentication methods supported:
 
-- **Password auth**: `src/auth/password.ts` (bcrypt hashing, verification)
-- **Token auth**: `src/auth/token.ts` (password reset tokens, email verification)
-- **OAuth**: `src/auth/oauth.ts` (Google OAuth integration)
+- **Password**: `src/auth/` (scrypt hashing)
+- **Google OAuth**: `src/oauth.ts` (OAuth 2.0 flow)
+- **Passkeys**: `src/auth/webauthn.ts` (WebAuthn/FIDO2)
+
+### Passkey Authentication (WebAuthn)
+
+**Files:**
+- `src/auth/webauthn.ts` - Core WebAuthn logic
+- `src/db/webauthn.ts` - Credential storage
+- `db/migrations/031-add-webauthn-support.sql` - Schema
+
+**Routes:**
+```typescript
+// Registration (requires login)
+POST /auth/passkey/register/options   // Get challenge
+POST /auth/passkey/register/verify    // Save credential
+
+// Login (public)
+POST /auth/passkey/login/options      // Get challenge
+POST /auth/passkey/login/verify       // Authenticate
+
+// Management (requires login)
+DELETE /auth/passkey/:id               // Remove passkey
+PATCH /auth/passkey/:id/name           // Rename passkey
+```
+
+**Frontend:**
+- Signin: Conditional UI (passkeys in email autofill)
+- Account Settings: Management interface
+- Uses `@simplewebauthn/browser` from CDN (ES6 modules)
+
+**Configuration (config.json):**
+```json
+{
+  "webauthn": {
+    "rpName": "BAS BAP Portal",
+    "rpID": "localhost",              // or "bap.basny.org"
+    "origin": "http://localhost:4200"  // or "https://bap.basny.org"
+  }
+}
+```
+
+**Database:**
+- `webauthn_credentials` - Registered passkeys per member
+- `webauthn_challenges` - Temporary auth challenges (5min TTL)
 
 ### Password Handling
 
