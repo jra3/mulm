@@ -8,14 +8,16 @@
 		.flex.justify-between.items-center.mb-4
 			h3.font-bold.text-lg= editing ? `Edit: ${preset.preset_name}` : 'New Tank Preset'
 			if editing
-				button.secondary.text-sm.px-2.py-1(
-					type="button"
-					data-preset-name=preset.preset_name
-					hx-get="/account/tanks/view"
-					hx-vals="js:{preset_name: this.dataset.presetName}"
-					hx-target="closest .tank-preset-card"
-					hx-swap="outerHTML"
-				) Cancel
+				.inline-block
+					form(style="display: inline;")
+						input(type="hidden" name="preset_name" value=preset.preset_name)
+						button.secondary.text-sm.px-2.py-1(
+							type="button"
+							hx-get="/account/tanks/view"
+							hx-include="closest form"
+							hx-target="closest .tank-preset-card"
+							hx-swap="outerHTML"
+						) Cancel
 
 		//- General form error (if any)
 		if errors.has('form')
