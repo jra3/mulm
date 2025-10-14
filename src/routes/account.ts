@@ -9,6 +9,7 @@ import { queryTankPresets, createTankPreset, updateTankPreset, deleteTankPreset 
 import { tankSettingsSchema } from "@/forms/tank";
 import { validateFormResult } from "@/forms/utils";
 import pug from "pug";
+import { getBodyString } from "@/utils/request";
 
 export const viewAccountSettings = async (req: MulmRequest, res: Response) => {
   const { viewer } = req;
@@ -114,13 +115,7 @@ export const unlinkGoogleAccount = async (req: MulmRequest, res: Response) => {
 
 // Tank Preset Management Routes
 
-export const newTankPresetForm = (req: MulmRequest, res: Response) => {
-  res.render("account/tankPresetForm", {
-    preset: {},
-    editing: false,
-    errors: new Map()
-  });
-};
+// No longer needed - form is always in DOM
 
 export const viewTankPresetCard = async (req: MulmRequest, res: Response) => {
   const { viewer } = req;
@@ -175,7 +170,7 @@ export const saveTankPresetRoute = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const isEditing = (req.body as { editing?: string }).editing === 'true';
+  const isEditing = getBodyString(req, 'editing') === 'true';
   const errors = new Map<string, string>();
   const parsed = tankSettingsSchema.safeParse(req.body);
 
@@ -211,9 +206,14 @@ export const saveTankPresetRoute = async (req: MulmRequest, res: Response) => {
         preset
       });
     } else {
-      // For new presets, return card + remove the form using out-of-band swap
+      // For new presets, return card + hide form + reset form using out-of-band
       const cardHtml = pug.renderFile("src/views/account/tankPresetCard.pug", { preset });
-      res.send(`${cardHtml}<div id="newPresetForm" hx-swap-oob="outerHTML"></div>`.trim());
+      const formHtml = pug.renderFile("src/views/account/tankPresetForm.pug", {
+        preset: {},
+        editing: false,
+        errors: new Map()
+      });
+      res.send(`${cardHtml}<div id="newPresetForm" class="hidden" hx-swap-oob="outerHTML">${formHtml}</div>`.trim());
     }
   } catch (err) {
     logger.error('Failed to save tank preset', err);

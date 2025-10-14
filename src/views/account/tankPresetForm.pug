@@ -1,5 +1,5 @@
 //- Tank Preset Form (for both create and edit)
-.bg-white.border.border-gray-300.rounded-lg.p-4.mb-3(class=editing ? 'tank-preset-card' : '' id=editing ? '' : 'newPresetForm' data-preset-name=editing ? preset.preset_name : '')
+.bg-white.border.border-gray-300.rounded-lg.p-4.mb-3(class=editing ? 'tank-preset-card' : '')
 	form(
 		hx-post="/account/tanks"
 		hx-target=editing ? 'closest .tank-preset-card' : '#tankPresetsContent'
@@ -168,5 +168,5 @@
 			if !editing
 				button.secondary(
 					type="button"
-					onclick="this.closest('.bg-white').remove()"
+					onclick="document.getElementById('newPresetForm').classList.add('hidden'); this.closest('form').reset();"
 				) Cancel

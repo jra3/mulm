@@ -167,8 +167,7 @@ router.get("/account", account.viewAccountSettings);
 router.patch("/account", account.updateAccountSettings);
 router.delete("/account/google", account.unlinkGoogleAccount);
 
-// Account tank preset management (all use form bodies to avoid URL encoding issues)
-router.get("/account/tanks/new", account.newTankPresetForm);
+// Account tank preset management
 router.get("/account/tanks/view", account.viewTankPresetCard);
 router.get("/account/tanks/edit", account.editTankPresetForm);
 router.post("/account/tanks", account.saveTankPresetRoute);

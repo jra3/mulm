@@ -4,10 +4,12 @@
 	//- Add new preset button
 	button.primary.mb-4(
 		type="button"
-		hx-get="/account/tanks/new"
-		hx-target="#tankPresetsContent"
-		hx-swap="afterbegin"
+		onclick="document.getElementById('newPresetForm').classList.remove('hidden')"
 	) + Add New Tank Preset
+
+	//- New preset form (hidden by default)
+	#newPresetForm.hidden
+		include tankPresetForm.pug
 
 	//- Tank presets list
 	#tankPresetsContent
