@@ -4,11 +4,11 @@
 	//- Add new preset button
 	button.primary.mb-4(
 		type="button"
-		onclick="document.getElementById('newPresetForm').classList.remove('hidden')"
+		onclick="const form = document.getElementById('newPresetForm'); form.classList.remove('hidden'); setTimeout(() => form.classList.remove('opacity-0', 'scale-95'), 10);"
 	) + Add New Tank Preset
 
-	//- New preset form (hidden by default)
-	#newPresetForm.hidden
+	//- New preset form (hidden by default with transition)
+	#newPresetForm.hidden.opacity-0.scale-95(class="transition-all duration-300 ease-in-out transform origin-top")
 		.bg-white.border.border-gray-300.rounded-lg.p-4.mb-3
 			form(
 				hx-post="/account/tanks"
@@ -115,7 +115,7 @@
 						span.htmx-indicator.spinner
 					button.secondary(
 						type="button"
-						onclick="document.getElementById('newPresetForm').classList.add('hidden'); this.closest('form').reset();"
+						onclick="const form = document.getElementById('newPresetForm'); form.classList.add('opacity-0', 'scale-95'); setTimeout(() => { form.classList.add('hidden'); this.closest('form').reset(); }, 300);"
 					) Cancel
 
 	//- Tank presets list
