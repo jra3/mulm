@@ -443,7 +443,7 @@ describe("Witness Workflow Integration Tests", () => {
       const submission = await getSubmissionById(submissionId);
       assert.ok(submission !== undefined);
 
-      const waitingStatus = getWaitingPeriodStatus(submission!);
+      const waitingStatus = getWaitingPeriodStatus(submission);
       assert.strictEqual(waitingStatus.requiredDays, 60); // Non-marine fish should be 60 days
       assert.strictEqual(waitingStatus.eligible, false); // Should not be eligible yet
     });
@@ -456,7 +456,7 @@ describe("Witness Workflow Integration Tests", () => {
       const submission = await getSubmissionById(submissionId);
       assert.ok(submission !== undefined);
 
-      const waitingStatus = getWaitingPeriodStatus(submission!);
+      const waitingStatus = getWaitingPeriodStatus(submission);
       assert.strictEqual(waitingStatus.requiredDays, 30); // Marine fish should be 30 days
     });
 
@@ -468,7 +468,7 @@ describe("Witness Workflow Integration Tests", () => {
       const submission = await getSubmissionById(submissionId);
       assert.ok(submission !== undefined);
 
-      const waitingStatus = getWaitingPeriodStatus(submission!);
+      const waitingStatus = getWaitingPeriodStatus(submission);
       assert.strictEqual(waitingStatus.requiredDays, 60); // Plants should be 60 days
     });
 
@@ -480,7 +480,7 @@ describe("Witness Workflow Integration Tests", () => {
       const submission = await getSubmissionById(submissionId);
       assert.ok(submission !== undefined);
 
-      const waitingStatus = getWaitingPeriodStatus(submission!);
+      const waitingStatus = getWaitingPeriodStatus(submission);
       assert.strictEqual(waitingStatus.eligible, false); // Declined submissions should not be eligible
     });
   });
