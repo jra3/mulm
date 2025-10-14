@@ -21,3 +21,12 @@ public/*test*
 
 .\#*
 *.sqlite
+
+# Database backups and temporary files
+db/database*.db-shm*
+db/database*.db-wal*
+db/database*.before-*
+db/database*.broken-*
+db/database*.fresh-*
+db/database*.old
+db/database*.prod-*

@@ -121,51 +121,25 @@ export const newTankPresetForm = (req: MulmRequest, res: Response) => {
   });
 };
 
-export const createTankPresetRoute = async (req: MulmRequest, res: Response) => {
+export const viewTankPresetCard = async (req: MulmRequest, res: Response) => {
   const { viewer } = req;
   if (!viewer) {
     res.status(401).send();
     return;
   }
 
-  const errors = new Map<string, string>();
-  const parsed = tankSettingsSchema.safeParse(req.body);
+  const presetName = req.body.preset_name as string;
+  const presets = await queryTankPresets(viewer.id);
+  const preset = presets.find(p => p.preset_name === presetName);
 
-  if (!validateFormResult(parsed, errors, () => {
-    res.render("account/tankPresetForm", {
-      preset: req.body as Record<string, unknown>,
-      editing: false,
-      errors
-    });
-  })) {
+  if (!preset) {
+    res.status(404).send("Preset not found");
     return;
   }
 
-  try {
-    await createTankPreset({
-      ...parsed.data,
-      member_id: viewer.id,
-    });
-
-    // Return the new preset card
-    const presets = await queryTankPresets(viewer.id);
-    const newPreset = presets.find(p => p.preset_name === parsed.data.preset_name);
-
-    res.render("account/tankPresetCard", {
-      preset: newPreset
-    });
-  } catch (err) {
-    logger.error('Failed to create tank preset', err);
-    errors.set('preset_name', 'A preset with this name already exists');
-    // Retarget to replace the form instead of adding to the list
-    res.set('HX-Retarget', '#newPresetForm');
-    res.set('HX-Reswap', 'outerHTML');
-    res.render("account/tankPresetForm", {
-      preset: req.body as Record<string, unknown>,
-      editing: false,
-      errors
-    });
-  }
+  res.render("account/tankPresetCard", {
+    preset
+  });
 };
 
 export const editTankPresetForm = async (req: MulmRequest, res: Response) => {
@@ -175,7 +149,7 @@ export const editTankPresetForm = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const presetName = decodeURIComponent(req.params.name);
+  const presetName = req.body.preset_name as string;
   const presets = await queryTankPresets(viewer.id);
   const preset = presets.find(p => p.preset_name === presetName);
 
@@ -191,21 +165,21 @@ export const editTankPresetForm = async (req: MulmRequest, res: Response) => {
   });
 };
 
-export const updateTankPresetRoute = async (req: MulmRequest, res: Response) => {
+export const saveTankPresetRoute = async (req: MulmRequest, res: Response) => {
   const { viewer } = req;
   if (!viewer) {
     res.status(401).send();
     return;
   }
 
-  const presetName = decodeURIComponent(req.params.name);
+  const isEditing = req.body.editing === 'true';
   const errors = new Map<string, string>();
   const parsed = tankSettingsSchema.safeParse(req.body);
 
   if (!validateFormResult(parsed, errors, () => {
     res.render("account/tankPresetForm", {
-      preset: { ...(req.body as Record<string, unknown>), preset_name: presetName },
-      editing: true,
+      preset: req.body as Record<string, unknown>,
+      editing: isEditing,
       errors
     });
   })) {
@@ -213,24 +187,38 @@ export const updateTankPresetRoute = async (req: MulmRequest, res: Response) => 
   }
 
   try {
-    await updateTankPreset({
-      ...parsed.data,
-      member_id: viewer.id,
-    });
+    if (isEditing) {
+      await updateTankPreset({
+        ...parsed.data,
+        member_id: viewer.id,
+      });
+    } else {
+      await createTankPreset({
+        ...parsed.data,
+        member_id: viewer.id,
+      });
+    }
 
-    // Return updated preset card
+    // Return the preset card (new or updated)
     const presets = await queryTankPresets(viewer.id);
-    const updatedPreset = presets.find(p => p.preset_name === parsed.data.preset_name);
+    const preset = presets.find(p => p.preset_name === parsed.data.preset_name);
 
     res.render("account/tankPresetCard", {
-      preset: updatedPreset
+      preset
     });
   } catch (err) {
-    logger.error('Failed to update tank preset', err);
-    errors.set('form', 'Failed to update preset');
+    logger.error('Failed to save tank preset', err);
+    errors.set('preset_name', isEditing ? 'Failed to update preset' : 'A preset with this name already exists');
+
+    // Retarget for create, normal target for edit
+    if (!isEditing) {
+      res.set('HX-Retarget', '#newPresetForm');
+      res.set('HX-Reswap', 'outerHTML');
+    }
+
     res.render("account/tankPresetForm", {
-      preset: { ...(req.body as Record<string, unknown>), preset_name: presetName },
-      editing: true,
+      preset: req.body as Record<string, unknown>,
+      editing: isEditing,
       errors
     });
   }

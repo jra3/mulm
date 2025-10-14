@@ -1,25 +1,28 @@
 //- Tank Preset Form (for both create and edit)
 .bg-white.border.border-gray-300.rounded-lg.p-4.mb-3(class=editing ? 'tank-preset-card' : '' id=editing ? '' : 'newPresetForm' data-preset-name=editing ? preset.preset_name : '')
 	form(
-		hx-post=editing ? `/account/tanks/${preset.preset_name}` : '/account/tanks'
+		hx-post="/account/tanks"
 		hx-target=editing ? 'closest .tank-preset-card' : '#tankPresetsContent'
 		hx-swap=editing ? 'outerHTML' : 'afterbegin'
 	)
 		.flex.justify-between.items-center.mb-4
 			h3.font-bold.text-lg= editing ? `Edit: ${preset.preset_name}` : 'New Tank Preset'
 			if editing
-				button.secondary.text-sm.px-2.py-1(
-					type="button"
-					hx-get=`/account/tanks/${preset.preset_name}`
-					hx-target="closest .tank-preset-card"
-					hx-swap="outerHTML"
-				) Cancel
+				form.inline(style="display: inline;")
+					input(type="hidden" name="preset_name" value=preset.preset_name)
+					button.secondary.text-sm.px-2.py-1(
+						type="button"
+						hx-get="/account/tanks/view"
+						hx-include="closest form"
+						hx-target="closest .tank-preset-card"
+						hx-swap="outerHTML"
+					) Cancel
 
 		//- General form error (if any)
 		if errors.has('form')
 			.bg-red-50.border.border-red-200.text-red-800.px-4.py-3.rounded.mb-3= errors.get('form')
 
-		//- Preset Name (read-only when editing)
+		//- Preset Name (read-only when editing, or editable for new)
 		.mb-3
 			label.block.text-sm.font-medium.text-gray-700.mb-1(for="preset_name") Tank Name *
 			if editing
@@ -29,6 +32,7 @@
 					disabled
 				)
 				input(type="hidden" name="preset_name" value=preset.preset_name)
+				input(type="hidden" name="editing" value="true")
 			else
 				input(
 					class=errors.has('preset_name') ? 'w-full px-3 py-2 border-2 border-red-500 rounded' : 'w-full px-3 py-2 border border-gray-300 rounded'

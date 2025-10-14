@@ -4,12 +4,15 @@
 	.flex.justify-between.items-start.mb-2
 		h3.font-bold.text-lg= preset.preset_name
 		.flex.gap-2
-			button.secondary.text-sm.px-2.py-1(
-				type="button"
-				hx-get=`/account/tanks/${preset.preset_name}/edit`
-				hx-target="closest .tank-preset-card"
-				hx-swap="outerHTML"
-			) Edit
+			form.inline(style="display: inline;")
+				input(type="hidden" name="preset_name" value=preset.preset_name)
+				button.secondary.text-sm.px-2.py-1(
+					type="button"
+					hx-get="/account/tanks/edit"
+					hx-include="closest form"
+					hx-target="closest .tank-preset-card"
+					hx-swap="outerHTML"
+				) Edit
 			form.inline(style="display: inline;")
 				input(type="hidden" name="preset_name" value=preset.preset_name)
 				button.destructive.text-sm.px-2.py-1(
