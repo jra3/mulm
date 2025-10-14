@@ -205,9 +205,17 @@ export const saveTankPresetRoute = async (req: MulmRequest, res: Response) => {
     const presets = await queryTankPresets(viewer.id);
     const preset = presets.find(p => p.preset_name === parsed.data.preset_name);
 
-    res.render("account/tankPresetCard", {
-      preset
-    });
+    if (isEditing) {
+      res.render("account/tankPresetCard", {
+        preset
+      });
+    } else {
+      // For new presets, return card + remove the form using out-of-band swap
+      res.send(`
+        ${res.render("account/tankPresetCard", { preset })}
+        <div id="newPresetForm" hx-swap-oob="outerHTML"></div>
+      `.trim());
+    }
   } catch (err) {
     logger.error('Failed to save tank preset', err);
     errors.set('preset_name', isEditing ? 'Failed to update preset' : 'A preset with this name already exists');
