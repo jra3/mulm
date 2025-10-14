@@ -13,6 +13,18 @@ import {
   getNamesForGroup,
 } from "../db/species";
 
+interface SpeciesGroupRow {
+  group_id: number;
+  program_class: string;
+  species_type: string;
+  canonical_genus: string;
+  canonical_species_name: string;
+  base_points: number | null;
+  is_cares_species: number;
+  external_references: string | null;
+  image_links: string | null;
+}
+
 void describe("Species Group CRUD Operations", () => {
   let db: Database;
   let testGroupId: number;
@@ -60,16 +72,17 @@ void describe("Species Group CRUD Operations", () => {
 
       assert.ok(groupId > 0, "Should return positive group_id");
 
-      const created = await db.get("SELECT * FROM species_name_group WHERE group_id = ?", [
-        groupId,
-      ]);
+      const created = await db.get<SpeciesGroupRow>(
+        "SELECT * FROM species_name_group WHERE group_id = ?",
+        [groupId]
+      );
 
-      assert.strictEqual(created.canonical_genus, "Newgenus");
-      assert.strictEqual(created.canonical_species_name, "newspecies");
-      assert.strictEqual(created.species_type, "Fish");
-      assert.strictEqual(created.program_class, "Characins");
-      assert.strictEqual(created.base_points, 15);
-      assert.strictEqual(created.is_cares_species, 1);
+      assert.strictEqual(created?.canonical_genus, "Newgenus");
+      assert.strictEqual(created?.canonical_species_name, "newspecies");
+      assert.strictEqual(created?.species_type, "Fish");
+      assert.strictEqual(created?.program_class, "Characins");
+      assert.strictEqual(created?.base_points, 15);
+      assert.strictEqual(created?.is_cares_species, 1);
     });
 
     void test("should create with minimal required fields", async () => {
@@ -80,13 +93,13 @@ void describe("Species Group CRUD Operations", () => {
         canonicalSpeciesName: "species",
       });
 
-      const created = await db.get("SELECT * FROM species_name_group WHERE group_id = ?", [
+      const created = await db.get<SpeciesGroupRow>("SELECT * FROM species_name_group WHERE group_id = ?", [
         groupId,
       ]);
 
       assert.ok(created);
-      assert.strictEqual(created.base_points, null);
-      assert.strictEqual(created.is_cares_species, 0);
+      assert.strictEqual(created?.base_points, null);
+      assert.strictEqual(created?.is_cares_species, 0);
     });
 
     void test("should trim whitespace from inputs", async () => {
@@ -97,13 +110,13 @@ void describe("Species Group CRUD Operations", () => {
         canonicalSpeciesName: "  species  ",
       });
 
-      const created = await db.get("SELECT * FROM species_name_group WHERE group_id = ?", [
+      const created = await db.get<SpeciesGroupRow>("SELECT * FROM species_name_group WHERE group_id = ?", [
         groupId,
       ]);
 
-      assert.strictEqual(created.canonical_genus, "Genus");
-      assert.strictEqual(created.canonical_species_name, "species");
-      assert.strictEqual(created.program_class, "Trimmed");
+      assert.strictEqual(created?.canonical_genus, "Genus");
+      assert.strictEqual(created?.canonical_species_name, "species");
+      assert.strictEqual(created?.program_class, "Trimmed");
     });
 
     void test("should throw error for empty canonical genus", async () => {
@@ -150,6 +163,7 @@ void describe("Species Group CRUD Operations", () => {
         async () =>
           await createSpeciesGroup({
             programClass: "Test",
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
             speciesType: "Invalid" as any,
             canonicalGenus: "Genus",
             canonicalSpeciesName: "species",
@@ -269,11 +283,11 @@ void describe("Species Group CRUD Operations", () => {
 
       assert.strictEqual(changes, 1);
 
-      const updated = await db.get("SELECT * FROM species_name_group WHERE group_id = ?", [
+      const updated = await db.get<SpeciesGroupRow>("SELECT * FROM species_name_group WHERE group_id = ?", [
         testGroupId,
       ]);
-      assert.strictEqual(updated.canonical_genus, "Newgenus");
-      assert.strictEqual(updated.canonical_species_name, "groupus"); // Unchanged
+      assert.strictEqual(updated?.canonical_genus, "Newgenus");
+      assert.strictEqual(updated?.canonical_species_name, "groupus"); // Unchanged
     });
 
     void test("should update canonical species name", async () => {
@@ -283,11 +297,11 @@ void describe("Species Group CRUD Operations", () => {
 
       assert.strictEqual(changes, 1);
 
-      const updated = await db.get("SELECT * FROM species_name_group WHERE group_id = ?", [
+      const updated = await db.get<SpeciesGroupRow>("SELECT * FROM species_name_group WHERE group_id = ?", [
         testGroupId,
       ]);
-      assert.strictEqual(updated.canonical_species_name, "newspecies");
-      assert.strictEqual(updated.canonical_genus, "Testicus"); // Unchanged
+      assert.strictEqual(updated?.canonical_species_name, "newspecies");
+      assert.strictEqual(updated?.canonical_genus, "Testicus"); // Unchanged
     });
 
     void test("should update species type", async () => {
@@ -297,10 +311,10 @@ void describe("Species Group CRUD Operations", () => {
 
       assert.strictEqual(changes, 1);
 
-      const updated = await db.get("SELECT * FROM species_name_group WHERE group_id = ?", [
+      const updated = await db.get<SpeciesGroupRow>("SELECT * FROM species_name_group WHERE group_id = ?", [
         testGroupId,
       ]);
-      assert.strictEqual(updated.species_type, "Plant");
+      assert.strictEqual(updated?.species_type, "Plant");
     });
 
     void test("should update program class", async () => {
@@ -310,10 +324,10 @@ void describe("Species Group CRUD Operations", () => {
 
       assert.strictEqual(changes, 1);
 
-      const updated = await db.get("SELECT * FROM species_name_group WHERE group_id = ?", [
+      const updated = await db.get<SpeciesGroupRow>("SELECT * FROM species_name_group WHERE group_id = ?", [
         testGroupId,
       ]);
-      assert.strictEqual(updated.program_class, "Cichlids");
+      assert.strictEqual(updated?.program_class, "Cichlids");
     });
 
     void test("should update base points", async () => {
@@ -323,10 +337,10 @@ void describe("Species Group CRUD Operations", () => {
 
       assert.strictEqual(changes, 1);
 
-      const updated = await db.get("SELECT * FROM species_name_group WHERE group_id = ?", [
+      const updated = await db.get<SpeciesGroupRow>("SELECT * FROM species_name_group WHERE group_id = ?", [
         testGroupId,
       ]);
-      assert.strictEqual(updated.base_points, 25);
+      assert.strictEqual(updated?.base_points, 25);
     });
 
     void test("should set base points to null", async () => {
@@ -336,10 +350,10 @@ void describe("Species Group CRUD Operations", () => {
 
       assert.strictEqual(changes, 1);
 
-      const updated = await db.get("SELECT * FROM species_name_group WHERE group_id = ?", [
+      const updated = await db.get<SpeciesGroupRow>("SELECT * FROM species_name_group WHERE group_id = ?", [
         testGroupId,
       ]);
-      assert.strictEqual(updated.base_points, null);
+      assert.strictEqual(updated?.base_points, null);
     });
 
     void test("should update CARES status", async () => {
@@ -349,10 +363,10 @@ void describe("Species Group CRUD Operations", () => {
 
       assert.strictEqual(changes, 1);
 
-      const updated = await db.get("SELECT * FROM species_name_group WHERE group_id = ?", [
+      const updated = await db.get<SpeciesGroupRow>("SELECT * FROM species_name_group WHERE group_id = ?", [
         testGroupId,
       ]);
-      assert.strictEqual(updated.is_cares_species, 0);
+      assert.strictEqual(updated?.is_cares_species, 0);
     });
 
     void test("should update external references", async () => {
@@ -363,10 +377,10 @@ void describe("Species Group CRUD Operations", () => {
 
       assert.strictEqual(changes, 1);
 
-      const updated = await db.get("SELECT * FROM species_name_group WHERE group_id = ?", [
+      const updated = await db.get<SpeciesGroupRow>("SELECT * FROM species_name_group WHERE group_id = ?", [
         testGroupId,
       ]);
-      assert.deepStrictEqual(JSON.parse(updated.external_references), refs);
+      assert.deepStrictEqual(JSON.parse(updated?.external_references ?? "null"), refs);
     });
 
     void test("should clear external references with empty array", async () => {
@@ -376,10 +390,10 @@ void describe("Species Group CRUD Operations", () => {
 
       assert.strictEqual(changes, 1);
 
-      const updated = await db.get("SELECT * FROM species_name_group WHERE group_id = ?", [
+      const updated = await db.get<SpeciesGroupRow>("SELECT * FROM species_name_group WHERE group_id = ?", [
         testGroupId,
       ]);
-      assert.strictEqual(updated.external_references, null);
+      assert.strictEqual(updated?.external_references, null);
     });
 
     void test("should update multiple fields at once", async () => {
@@ -392,13 +406,13 @@ void describe("Species Group CRUD Operations", () => {
 
       assert.strictEqual(changes, 1);
 
-      const updated = await db.get("SELECT * FROM species_name_group WHERE group_id = ?", [
+      const updated = await db.get<SpeciesGroupRow>("SELECT * FROM species_name_group WHERE group_id = ?", [
         testGroupId,
       ]);
-      assert.strictEqual(updated.canonical_genus, "Multiupdate");
-      assert.strictEqual(updated.base_points, 50);
-      assert.strictEqual(updated.is_cares_species, 0);
-      assert.strictEqual(updated.program_class, "Characins");
+      assert.strictEqual(updated?.canonical_genus, "Multiupdate");
+      assert.strictEqual(updated?.base_points, 50);
+      assert.strictEqual(updated?.is_cares_species, 0);
+      assert.strictEqual(updated?.program_class, "Characins");
     });
 
     void test("should trim whitespace from string fields", async () => {
@@ -409,11 +423,11 @@ void describe("Species Group CRUD Operations", () => {
 
       assert.strictEqual(changes, 1);
 
-      const updated = await db.get("SELECT * FROM species_name_group WHERE group_id = ?", [
+      const updated = await db.get<SpeciesGroupRow>("SELECT * FROM species_name_group WHERE group_id = ?", [
         testGroupId,
       ]);
-      assert.strictEqual(updated.canonical_genus, "Whitespace");
-      assert.strictEqual(updated.program_class, "Trimmed");
+      assert.strictEqual(updated?.canonical_genus, "Whitespace");
+      assert.strictEqual(updated?.program_class, "Trimmed");
     });
 
     void test("should return 0 for non-existent group_id", async () => {
@@ -445,6 +459,7 @@ void describe("Species Group CRUD Operations", () => {
 
     void test("should throw error for invalid species type", async () => {
       await assert.rejects(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
         async () => await updateSpeciesGroup(testGroupId, { speciesType: "InvalidType" as any }),
         { message: /must be Fish, Plant, Invert, or Coral/ }
       );
@@ -468,7 +483,7 @@ void describe("Species Group CRUD Operations", () => {
 
     void test("should throw error for duplicate canonical name", async () => {
       // Create another species
-      const other = await db.run(`
+      await db.run(`
         INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name)
         VALUES ('Cichlids', 'Fish', 'Existing', 'species')
       `);
@@ -490,7 +505,7 @@ void describe("Species Group CRUD Operations", () => {
 
       assert.strictEqual(changes, 1);
 
-      const result = await db.get("SELECT * FROM species_name_group WHERE group_id = ?", [
+      const result = await db.get<SpeciesGroupRow>("SELECT * FROM species_name_group WHERE group_id = ?", [
         testGroupId,
       ]);
       assert.strictEqual(result, undefined, "Species group should be deleted");
@@ -551,7 +566,7 @@ void describe("Species Group CRUD Operations", () => {
       });
 
       // Species should still exist
-      const stillExists = await db.get("SELECT * FROM species_name_group WHERE group_id = ?", [
+      const stillExists = await db.get<SpeciesGroupRow>("SELECT * FROM species_name_group WHERE group_id = ?", [
         testGroupId,
       ]);
       assert.ok(stillExists, "Species should not be deleted");
@@ -588,7 +603,7 @@ void describe("Species Group CRUD Operations", () => {
       const changes = await deleteSpeciesGroup(testGroupId, true);
       assert.strictEqual(changes, 1);
 
-      const result = await db.get("SELECT * FROM species_name_group WHERE group_id = ?", [
+      const result = await db.get<SpeciesGroupRow>("SELECT * FROM species_name_group WHERE group_id = ?", [
         testGroupId,
       ]);
       assert.strictEqual(result, undefined);
@@ -626,12 +641,13 @@ void describe("Species Group CRUD Operations", () => {
 
       assert.strictEqual(changes, 3, "Should update all 3 species");
 
-      const updated = await db.all(
+      const updated = await db.all<{ base_points: number | null }>(
         "SELECT base_points FROM species_name_group WHERE group_id IN (?, ?, ?)",
         [groupId1, groupId2, groupId3]
       );
 
-      assert.ok(updated.every((s) => s.base_points === 15));
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+      assert.ok(updated.every((s: { base_points: number | null }) => s.base_points === 15));
     });
 
     void test("should update single species", async () => {
@@ -639,11 +655,11 @@ void describe("Species Group CRUD Operations", () => {
 
       assert.strictEqual(changes, 1);
 
-      const updated = await db.get(
+      const updated = await db.get<{ base_points: number | null }>(
         "SELECT base_points FROM species_name_group WHERE group_id = ?",
         [groupId1]
       );
-      assert.strictEqual(updated.base_points, 20);
+      assert.strictEqual(updated?.base_points, 20);
     });
 
     void test("should set points to null (clear points)", async () => {
@@ -651,11 +667,12 @@ void describe("Species Group CRUD Operations", () => {
 
       assert.strictEqual(changes, 2);
 
-      const updated = await db.all(
+      const updated = await db.all<{ base_points: number | null }>(
         "SELECT base_points FROM species_name_group WHERE group_id IN (?, ?)",
         [groupId2, groupId3]
       );
-      assert.ok(updated.every((s) => s.base_points === null));
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+      assert.ok(updated.every((s: { base_points: number | null }) => s.base_points === null));
     });
 
     void test("should handle mix of existing and non-existent IDs", async () => {
@@ -663,15 +680,15 @@ void describe("Species Group CRUD Operations", () => {
 
       assert.strictEqual(changes, 2, "Should update only existing species");
 
-      const g1 = await db.get("SELECT base_points FROM species_name_group WHERE group_id = ?", [
+      const g1 = await db.get<{ base_points: number | null }>("SELECT base_points FROM species_name_group WHERE group_id = ?", [
         groupId1,
       ]);
-      const g2 = await db.get("SELECT base_points FROM species_name_group WHERE group_id = ?", [
+      const g2 = await db.get<{ base_points: number | null }>("SELECT base_points FROM species_name_group WHERE group_id = ?", [
         groupId2,
       ]);
 
-      assert.strictEqual(g1.base_points, 30);
-      assert.strictEqual(g2.base_points, 30);
+      assert.strictEqual(g1?.base_points, 30);
+      assert.strictEqual(g2?.base_points, 30);
     });
 
     void test("should return 0 if all IDs are non-existent", async () => {
@@ -704,15 +721,15 @@ void describe("Species Group CRUD Operations", () => {
       assert.strictEqual(changes1, 1);
       assert.strictEqual(changes2, 1);
 
-      const g1 = await db.get("SELECT base_points FROM species_name_group WHERE group_id = ?", [
+      const g1 = await db.get<{ base_points: number | null }>("SELECT base_points FROM species_name_group WHERE group_id = ?", [
         groupId1,
       ]);
-      const g2 = await db.get("SELECT base_points FROM species_name_group WHERE group_id = ?", [
+      const g2 = await db.get<{ base_points: number | null }>("SELECT base_points FROM species_name_group WHERE group_id = ?", [
         groupId2,
       ]);
 
-      assert.strictEqual(g1.base_points, 0);
-      assert.strictEqual(g2.base_points, 100);
+      assert.strictEqual(g1?.base_points, 0);
+      assert.strictEqual(g2?.base_points, 100);
     });
 
     void test("should handle large batch updates efficiently", async () => {
@@ -732,10 +749,10 @@ void describe("Species Group CRUD Operations", () => {
       assert.strictEqual(changes, 23, "Should update all 23 species in one operation");
 
       // Verify a few
-      const sample = await db.get("SELECT base_points FROM species_name_group WHERE group_id = ?", [
+      const sample = await db.get<{ base_points: number | null }>("SELECT base_points FROM species_name_group WHERE group_id = ?", [
         additionalIds[10],
       ]);
-      assert.strictEqual(sample.base_points, 42);
+      assert.strictEqual(sample?.base_points, 42);
     });
   });
 
@@ -756,28 +773,28 @@ void describe("Species Group CRUD Operations", () => {
 
       await bulkSetPoints([testGroupId, otherId], 20);
 
-      const updated1 = await db.get(
+      const updated1 = await db.get<{ base_points: number | null }>(
         "SELECT base_points FROM species_name_group WHERE group_id = ?",
         [testGroupId]
       );
-      const updated2 = await db.get(
+      const updated2 = await db.get<{ base_points: number | null }>(
         "SELECT base_points FROM species_name_group WHERE group_id = ?",
         [otherId]
       );
-      assert.strictEqual(updated1.base_points, 20);
-      assert.strictEqual(updated2.base_points, 20);
+      assert.strictEqual(updated1?.base_points, 20);
+      assert.strictEqual(updated2?.base_points, 20);
 
       // Now individually update one
       await updateSpeciesGroup(testGroupId, { basePoints: 50 });
 
-      const final1 = await db.get("SELECT base_points FROM species_name_group WHERE group_id = ?", [
+      const final1 = await db.get<{ base_points: number | null }>("SELECT base_points FROM species_name_group WHERE group_id = ?", [
         testGroupId,
       ]);
-      const final2 = await db.get("SELECT base_points FROM species_name_group WHERE group_id = ?", [
+      const final2 = await db.get<{ base_points: number | null }>("SELECT base_points FROM species_name_group WHERE group_id = ?", [
         otherId,
       ]);
-      assert.strictEqual(final1.base_points, 50);
-      assert.strictEqual(final2.base_points, 20); // Unchanged
+      assert.strictEqual(final1?.base_points, 50);
+      assert.strictEqual(final2?.base_points, 20); // Unchanged
     });
 
     void test("canonical name change preserves synonyms", async () => {

@@ -15,7 +15,6 @@ import {
   createSpeciesGroup,
   addCommonName,
   addScientificName,
-  type SpeciesNameRecord,
 } from "../db/species";
 
 void describe("searchSpeciesTypeahead - Split Schema", () => {

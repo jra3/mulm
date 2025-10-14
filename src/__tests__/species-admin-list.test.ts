@@ -340,7 +340,7 @@ void describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
   void describe("Edge Cases", () => {
     void test("should handle species with no synonyms", async () => {
       // Create species without adding synonyms
-      const noSynonymResult = await db.run(`
+      await db.run(`
         INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name, base_points, is_cares_species)
         VALUES ('Killifish', 'Fish', 'Orphanus', 'nonames', 5, 0)
       `);
