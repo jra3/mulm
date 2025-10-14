@@ -1,18 +1,19 @@
 //- Tank Preset Card (read-only view)
-.bg-white.border.border-gray-300.rounded-lg.p-4.mb-3(id=`preset-${preset.preset_name}`)
+//- Use data-preset attribute for unique identification instead of ID with spaces
+.bg-white.border.border-gray-300.rounded-lg.p-4.mb-3(class="tank-preset-card" data-preset-name=preset.preset_name)
 	.flex.justify-between.items-start.mb-2
 		h3.font-bold.text-lg= preset.preset_name
 		.flex.gap-2
 			button.secondary.text-sm.px-2.py-1(
 				type="button"
-				hx-get=`/account/tanks/${encodeURIComponent(preset.preset_name)}/edit`
-				hx-target=`#preset-${preset.preset_name}`
+				hx-get=`/account/tanks/${preset.preset_name}/edit`
+				hx-target="closest .tank-preset-card"
 				hx-swap="outerHTML"
 			) Edit
 			button.destructive.text-sm.px-2.py-1(
 				type="button"
-				hx-delete=`/account/tanks/${encodeURIComponent(preset.preset_name)}`
-				hx-target=`#preset-${preset.preset_name}`
+				hx-delete=`/account/tanks/${preset.preset_name}`
+				hx-target="closest .tank-preset-card"
 				hx-swap="outerHTML swap:0.5s"
 				hx-confirm=`Delete tank preset "${preset.preset_name}"?`
 			) Delete

@@ -1,8 +1,8 @@
 //- Tank Preset Form (for both create and edit)
-.bg-white.border.border-gray-300.rounded-lg.p-4.mb-3(id=editing ? `preset-${preset.preset_name}` : 'newPresetForm')
+.bg-white.border.border-gray-300.rounded-lg.p-4.mb-3(class=editing ? 'tank-preset-card' : '' id=editing ? '' : 'newPresetForm' data-preset-name=editing ? preset.preset_name : '')
 	form(
-		hx-post=editing ? `/account/tanks/${encodeURIComponent(preset.preset_name)}` : '/account/tanks'
-		hx-target=editing ? `#preset-${preset.preset_name}` : '#tankPresetsContent'
+		hx-post=editing ? `/account/tanks/${preset.preset_name}` : '/account/tanks'
+		hx-target=editing ? 'closest .tank-preset-card' : '#tankPresetsContent'
 		hx-swap=editing ? 'outerHTML' : 'afterbegin'
 	)
 		.flex.justify-between.items-center.mb-4
@@ -10,8 +10,8 @@
 			if editing
 				button.secondary.text-sm.px-2.py-1(
 					type="button"
-					hx-get=`/account/tanks/${encodeURIComponent(preset.preset_name)}`
-					hx-target=`#preset-${preset.preset_name}`
+					hx-get=`/account/tanks/${preset.preset_name}`
+					hx-target="closest .tank-preset-card"
 					hx-swap="outerHTML"
 				) Cancel
 
