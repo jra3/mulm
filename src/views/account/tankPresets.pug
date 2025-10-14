@@ -10,7 +10,7 @@
 	) + Add New Tank Preset
 
 	//- Tank presets list
-	#tankPresetsContent
+	#tankPresetsContent.grid.grid-cols-1.gap-3(class="md:grid-cols-2")
 		if presets && presets.length > 0
 			each preset in presets
 				include tankPresetCard.pug
