@@ -9,7 +9,114 @@
 
 	//- New preset form (hidden by default)
 	#newPresetForm.hidden
-		include tankPresetForm.pug
+		.bg-white.border.border-gray-300.rounded-lg.p-4.mb-3
+			form(
+				hx-post="/account/tanks"
+				hx-target="#tankPresetsContent"
+				hx-swap="afterbegin"
+			)
+				.flex.justify-between.items-center.mb-4
+					h3.font-bold.text-lg New Tank Preset
+
+				.mb-3
+					label.block.text-sm.font-medium.text-gray-700.mb-1(for="preset_name") Tank Name *
+					input.w-full.px-3.py-2.border.border-gray-300.rounded(
+						type="text"
+						name="preset_name"
+						id="preset_name"
+						placeholder="e.g., Community Tank, Breeding Tank"
+						required
+					)
+
+				//- Tank parameters grid
+				.grid.grid-cols-1.gap-3(class="sm:grid-cols-2")
+					div
+						label.block.text-sm.font-medium.text-gray-700.mb-1(for="tank_size") Tank Size
+						input.w-full.px-3.py-2.border.border-gray-300.rounded(
+							type="text"
+							name="tank_size"
+							placeholder="e.g., 20 gallons, 75L"
+						)
+					div
+						label.block.text-sm.font-medium.text-gray-700.mb-1(for="filter_type") Filter Type
+						input.w-full.px-3.py-2.border.border-gray-300.rounded(
+							type="text"
+							name="filter_type"
+							placeholder="e.g., Sponge, HOB, Canister"
+						)
+					div
+						label.block.text-sm.font-medium.text-gray-700.mb-1(for="temperature") Temperature
+						input.w-full.px-3.py-2.border.border-gray-300.rounded(
+							type="text"
+							name="temperature"
+							placeholder="e.g., 78°F, 25°C"
+						)
+					div
+						label.block.text-sm.font-medium.text-gray-700.mb-1(for="ph") pH
+						input.w-full.px-3.py-2.border.border-gray-300.rounded(
+							type="text"
+							name="ph"
+							placeholder="e.g., 7.0"
+						)
+					div
+						label.block.text-sm.font-medium.text-gray-700.mb-1(for="gh") General Hardness (GH)
+						input.w-full.px-3.py-2.border.border-gray-300.rounded(
+							type="text"
+							name="gh"
+							placeholder="e.g., 150 ppm"
+						)
+					div
+						label.block.text-sm.font-medium.text-gray-700.mb-1(for="specific_gravity") Specific Gravity
+						input.w-full.px-3.py-2.border.border-gray-300.rounded(
+							type="text"
+							name="specific_gravity"
+							placeholder="e.g., 1.025 (for marine)"
+						)
+					div
+						label.block.text-sm.font-medium.text-gray-700.mb-1(for="water_change_volume") Water Change Volume
+						input.w-full.px-3.py-2.border.border-gray-300.rounded(
+							type="text"
+							name="water_change_volume"
+							placeholder="e.g., 25%, 10 gallons"
+						)
+					div
+						label.block.text-sm.font-medium.text-gray-700.mb-1(for="water_change_frequency") Change Frequency
+						input.w-full.px-3.py-2.border.border-gray-300.rounded(
+							type="text"
+							name="water_change_frequency"
+							placeholder="e.g., Weekly, Every 3 days"
+						)
+					div
+						label.block.text-sm.font-medium.text-gray-700.mb-1(for="substrate_type") Substrate Type
+						input.w-full.px-3.py-2.border.border-gray-300.rounded(
+							type="text"
+							name="substrate_type"
+							placeholder="e.g., Gravel, Sand"
+						)
+					div
+						label.block.text-sm.font-medium.text-gray-700.mb-1(for="substrate_depth") Substrate Depth
+						input.w-full.px-3.py-2.border.border-gray-300.rounded(
+							type="text"
+							name="substrate_depth"
+							placeholder="e.g., 2 inches"
+						)
+					div
+						label.block.text-sm.font-medium.text-gray-700.mb-1(for="substrate_color") Substrate Color
+						input.w-full.px-3.py-2.border.border-gray-300.rounded(
+							type="text"
+							name="substrate_color"
+							placeholder="e.g., Black, Natural"
+						)
+
+				//- Submit buttons
+				.mt-4.flex.gap-2
+					button.primary(type="submit" hx-disabled-elt="this")
+						span Create Preset
+						span.htmx-indicator.spinner
+					button.secondary(
+						type="button"
+						onclick="document.getElementById('newPresetForm').classList.add('hidden'); this.closest('form').reset();"
+					) Cancel
 
 	//- Tank presets list
 	#tankPresetsContent
