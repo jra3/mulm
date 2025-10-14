@@ -10,6 +10,7 @@ import { tankSettingsSchema } from "@/forms/tank";
 import { validateFormResult } from "@/forms/utils";
 import pug from "pug";
 import { getBodyString } from "@/utils/request";
+import { getCredentialsByMember } from "@/db/webauthn";
 
 export const viewAccountSettings = async (req: MulmRequest, res: Response) => {
   const { viewer } = req;
@@ -24,11 +25,13 @@ export const viewAccountSettings = async (req: MulmRequest, res: Response) => {
   const [
     googleURL,
     googleAccount,
-    presets
+    presets,
+    credentials
   ] = await Promise.all([
     Promise.resolve(getGoogleOAuthURL(oauthState)),
     getGoogleAccountByMemberId(viewer.id),
     queryTankPresets(viewer.id),
+    getCredentialsByMember(viewer.id),
   ]);
 
   res.render("account/page", {
@@ -37,6 +40,7 @@ export const viewAccountSettings = async (req: MulmRequest, res: Response) => {
     googleURL,
     googleAccount,
     presets,
+    credentials,
     errors: new Map(),
   });
 };

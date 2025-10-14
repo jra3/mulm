@@ -188,6 +188,14 @@ router.get("/auth/set-password", auth.validateForgotPassword);
 router.post("/auth/forgot-password", forgotPasswordRateLimiter, auth.sendForgotPassword);
 router.post("/auth/reset-password", auth.resetPassword);
 
+// Passkey (WebAuthn) authentication
+router.post("/auth/passkey/register/options", auth.passkeyRegisterOptions);
+router.post("/auth/passkey/register/verify", auth.passkeyRegisterVerify);
+router.post("/auth/passkey/login/options", loginRateLimiter, auth.passkeyLoginOptions);
+router.post("/auth/passkey/login/verify", loginRateLimiter, auth.passkeyLoginVerify);
+router.delete("/auth/passkey/:id", auth.deletePasskey);
+router.patch("/auth/passkey/:id/name", auth.renamePasskey);
+
 // OAuth (external dependency - redirect_uri registered with Google)
 router.get("/oauth/google", oauthRateLimiter, auth.googleOAuth);
 

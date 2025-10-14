@@ -53,7 +53,7 @@ export function overrideConnection(conn: typeof readOnlyConn) {
 
 type PartialRow = Record<string, string | number | boolean | null>;
 
-type TableName = 'members' | 'submissions' | 'species' | 'activities' | 'tanks' | 'tank_sections' | 'attachments' | 'sessions' | 'auth_codes' | 'google_account' | 'tank_presets';
+type TableName = 'members' | 'submissions' | 'species' | 'activities' | 'tanks' | 'tank_sections' | 'attachments' | 'sessions' | 'auth_codes' | 'google_account' | 'tank_presets' | 'webauthn_credentials' | 'webauthn_challenges';
 
 export async function insertOne(table: TableName, row: PartialRow) {
   try {

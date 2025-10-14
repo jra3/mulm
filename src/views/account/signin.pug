@@ -9,8 +9,8 @@ include ../header.pug
 			hx-trigger="submit"
 			hx-target="#loginError"
 			hx-swap="innerHTML")
-			+textInput("Email", "email")
-			+passwordInput("Password", "password")
+			+textInput("Email", "email")(autocomplete="username webauthn")
+			+passwordInput("Password", "password")(autocomplete="current-password")
 			.flex.gap-2.items-center
 				button.primary(type="submit" hx-disabled-elt="this")
 					span Log In
@@ -34,3 +34,42 @@ include ../header.pug
 		a.link(
 			hx-get="/dialog/auth/forgot-password"
 			hx-target="#signin") Forgot password...
+
+		script(type="module").
+			// WebAuthn Conditional UI - passkeys appear in email field autofill
+			import { startAuthentication } from 'https://esm.sh/@simplewebauthn/browser@13.2.2';
+
+			(async function() {
+				try {
+					// Check Conditional UI support
+					if (!window.PublicKeyCredential?.isConditionalMediationAvailable) return;
+					if (!await PublicKeyCredential.isConditionalMediationAvailable()) return;
+
+					console.log('Starting conditional passkey UI');
+
+					// Get authentication options
+					const optRes = await fetch('/auth/passkey/login/options', { method: 'POST' });
+					if (!optRes.ok) return;
+					const opts = await optRes.json();
+
+					// Start conditional UI - passkeys appear in email autofill
+					const credential = await startAuthentication(opts, true); // true = conditional
+
+					// Verify with server
+					const verRes = await fetch('/auth/passkey/login/verify', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify(credential)
+					});
+
+					if (verRes.ok) {
+						window.location.href = '/';
+					} else {
+						const err = document.getElementById('loginError');
+						if (err) err.textContent = 'Passkey authentication failed';
+					}
+				} catch (error) {
+					// Conditional UI fails silently - expected behavior
+					console.log('Conditional UI:', error.message || error);
+				}
+			})();

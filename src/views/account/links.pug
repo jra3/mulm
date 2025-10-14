@@ -1,6 +1,8 @@
 #accountLinks
 	h2.text-xl.font-bold.mb-4(class="sm:text-2xl") Linked Accounts
-	.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
+
+	//- Google Account
+	.grid.grid-cols-1.w-full.gap-2.mb-6(class="md:grid-cols-2")
 		if googleAccount
 			.flex.gap-4.items-center#googleAccount
 				span.font-bold Google
@@ -12,3 +14,95 @@
 		else
 			a(href=googleURL alt='Continue with Google')
 				img(src='/google-continue-button.svg')
+
+	//- Passkeys Section
+	h3.text-lg.font-bold.mb-2 Passkeys
+	p.text-sm.text-gray-600.mb-4 Manage your passwordless authentication methods (Touch ID, Face ID, Windows Hello, etc.)
+
+	#passkeysList.space-y-2.mb-4
+		if credentials && credentials.length > 0
+			each cred in credentials
+				.flex.gap-4.items-center.p-3.bg-gray-50.rounded(id=`passkey-${cred.id}`)
+					.flex-grow
+						.font-bold= cred.device_name || 'Unnamed Device'
+						.text-sm.text-gray-500 Added #{new Date(cred.created_on).toLocaleDateString()}
+						if cred.last_used_on
+							.text-xs.text-gray-400 Last used #{new Date(cred.last_used_on).toLocaleDateString()}
+					button.destructive(
+						hx-delete=`/auth/passkey/${cred.id}`
+						hx-target=`#passkey-${cred.id}`
+						hx-swap="outerHTML"
+						hx-confirm="Remove this passkey?"
+					) Remove
+		else
+			.text-gray-500.italic No passkeys registered yet
+
+	button#addPasskeyBtn.primary(type="button") Add New Passkey
+
+	script(type="module").
+		// Use SimpleWebAuthn browser helpers for proper credential encoding
+		import { startRegistration } from 'https://esm.sh/@simplewebauthn/browser@13.2.2';
+
+		const btn = document.getElementById('addPasskeyBtn');
+		if (btn) {
+			// Check WebAuthn support
+			if (!window.PublicKeyCredential) {
+				btn.disabled = true;
+				btn.textContent = 'Passkeys not supported';
+			} else {
+				btn.addEventListener('click', async () => {
+				try {
+					btn.disabled = true;
+					btn.textContent = 'Registering...';
+
+					// Prompt for device name first
+					const deviceName = prompt('Name this passkey (e.g., "iPhone", "MacBook Pro"):');
+					if (!deviceName) {
+						btn.disabled = false;
+						btn.textContent = 'Add New Passkey';
+						return;
+					}
+
+					// Get registration options from server
+					const optRes = await fetch('/auth/passkey/register/options', { method: 'POST' });
+					if (!optRes.ok) throw new Error('Server error');
+					const opts = await optRes.json();
+
+					// Use SimpleWebAuthn helper - handles all encoding automatically
+					const credential = await startRegistration(opts);
+
+					// Verify with server
+					const verRes = await fetch('/auth/passkey/register/verify', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ credential, deviceName })
+					});
+
+					if (verRes.ok) {
+						window.location.reload();
+					} else {
+						const errorText = await verRes.text();
+						throw new Error(errorText || 'Registration failed');
+					}
+				} catch (e) {
+					console.error('Passkey registration error:', e);
+					console.error('Error name:', e.name);
+					console.error('Error message:', e.message);
+					console.error('Full error:', JSON.stringify(e, Object.getOwnPropertyNames(e)));
+
+					// User-friendly error messages
+					let msg = 'Failed to add passkey';
+					if (e.name === 'NotAllowedError') {
+						msg = 'Registration cancelled or timed out';
+					} else if (e.name === 'NotSupportedError') {
+						msg = 'Passkeys not supported in this browser';
+					} else if (e.message) {
+						msg = e.message;
+					}
+					alert(msg);
+					btn.disabled = false;
+					btn.textContent = 'Add New Passkey';
+				}
+				});
+			}
+		}

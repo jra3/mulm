@@ -187,18 +187,27 @@ export const loginRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => {
+    // For passkey login endpoints, only use IP (no email in body)
+    if (req.path && req.path.includes('/passkey/')) {
+      return getIpKey(req);
+    }
     // Rate limit by IP + email to prevent targeted attacks
-    const email = (req.body as { email?: string }).email || 'unknown';
+    const email = (req.body as { email?: string })?.email || 'unknown';
     return `${getIpKey(req)}:${email}`;
   },
   handler: (_req, res) => {
-    logger.warn('Login rate limit exceeded', {
-      ip: _req.ip,
-      email: (_req.body as { email?: string }).email
-    });
+    // Don't log email for passkey endpoints (no email in body)
+    const logData: { ip?: string; email?: string } = { ip: _req.ip };
+    if (!_req.path || !_req.path.includes('/passkey/')) {
+      logData.email = (_req.body as { email?: string })?.email;
+    }
+    logger.warn('Login rate limit exceeded', logData);
     res.status(429).send('Too many login attempts. Please wait 15 minutes before trying again.');
   },
-  skip: () => process.env.NODE_ENV === 'test'
+  skip: (req) => {
+    // Skip in test environment or for localhost
+    return process.env.NODE_ENV === 'test' || req.ip === '::1' || req.ip === '127.0.0.1';
+  }
 });
 
 /**

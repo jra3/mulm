@@ -327,3 +327,156 @@ export const googleOAuth = async (req: MulmRequest, res: Response) => {
   await regenerateSession(req, res, memberId);
   res.redirect("/");
 };
+
+// ==================== Passkey (WebAuthn) Authentication ====================
+
+import {
+  generateRegistrationOptionsForMember,
+  verifyAndSaveCredential,
+  generateAuthenticationOptionsForLogin,
+  verifyCredentialAndAuthenticate,
+} from "@/auth/webauthn";
+import {
+  getCredentialById,
+  deleteCredential,
+  updateCredentialDeviceName,
+} from "@/db/webauthn";
+
+/**
+ * POST /auth/passkey/register/options
+ * Generate options for registering a new passkey
+ * Requires: User must be logged in
+ */
+export const passkeyRegisterOptions = async (req: MulmRequest, res: Response) => {
+  if (!req.viewer) {
+    res.status(401).json({ error: 'Not authenticated' });
+    return;
+  }
+
+  try {
+    const options = await generateRegistrationOptionsForMember(
+      req.viewer.id,
+      req.viewer.contact_email,
+      req.viewer.display_name
+    );
+    res.json(options);
+  } catch (err) {
+    logger.error('Failed to generate registration options', err);
+    res.status(500).json({ error: 'Failed to generate registration options' });
+  }
+};
+
+/**
+ * POST /auth/passkey/register/verify
+ * Verify passkey registration response
+ * Requires: User must be logged in
+ */
+export const passkeyRegisterVerify = async (req: MulmRequest, res: Response) => {
+  if (!req.viewer) {
+    res.status(401).json({ error: 'Not authenticated' });
+    return;
+  }
+
+  try {
+    const { credential, deviceName } = req.body as { credential: unknown; deviceName?: string };
+    const result = await verifyAndSaveCredential(
+      req.viewer.id,
+      credential as Parameters<typeof verifyAndSaveCredential>[1],
+      deviceName
+    );
+
+    if (result.verified) {
+      res.json({ verified: true, credentialId: result.credentialId });
+    } else {
+      res.status(400).json({ error: 'Verification failed' });
+    }
+  } catch (err) {
+    logger.error('Failed to verify registration', err);
+    res.status(500).json({ error: 'Failed to verify registration' });
+  }
+};
+
+/**
+ * POST /auth/passkey/login/options
+ * Generate options for passkey login
+ */
+export const passkeyLoginOptions = async (req: MulmRequest, res: Response) => {
+  try {
+    const options = await generateAuthenticationOptionsForLogin();
+    res.json(options);
+  } catch (err) {
+    logger.error('Failed to generate authentication options', err);
+    res.status(500).json({ error: 'Failed to generate authentication options' });
+  }
+};
+
+/**
+ * POST /auth/passkey/login/verify
+ * Verify passkey authentication and log user in
+ */
+export const passkeyLoginVerify = async (req: MulmRequest, res: Response) => {
+  try {
+    const credential = req.body as Parameters<typeof verifyCredentialAndAuthenticate>[0];
+    const result = await verifyCredentialAndAuthenticate(credential);
+
+    if (result.verified && result.memberId) {
+      await regenerateSession(req, res, result.memberId);
+      res.json({ verified: true });
+    } else {
+      res.status(401).json({ error: 'Authentication failed' });
+    }
+  } catch (err) {
+    logger.error('Failed to verify authentication', err);
+    res.status(500).json({ error: 'Failed to verify authentication' });
+  }
+};
+
+/**
+ * DELETE /auth/passkey/:id
+ * Delete a passkey (account management)
+ * Requires: User must be logged in
+ */
+export const deletePasskey = async (req: MulmRequest, res: Response) => {
+  if (!req.viewer) {
+    res.status(401).send('Not authenticated');
+    return;
+  }
+
+  const credentialId = parseInt(req.params.id);
+  const credential = await getCredentialById(String(credentialId));
+
+  // Verify ownership
+  if (!credential || credential.member_id !== req.viewer.id) {
+    res.status(404).send('Passkey not found');
+    return;
+  }
+
+  await deleteCredential(credentialId);
+  res.status(200).send();
+};
+
+/**
+ * PATCH /auth/passkey/:id/name
+ * Rename a passkey
+ * Requires: User must be logged in
+ */
+export const renamePasskey = async (req: MulmRequest, res: Response) => {
+  if (!req.viewer) {
+    res.status(401).send('Not authenticated');
+    return;
+  }
+
+  const credentialId = parseInt(req.params.id);
+  const { name } = req.body as { name: string };
+
+  const credential = await getCredentialById(String(credentialId));
+
+  // Verify ownership
+  if (!credential || credential.member_id !== req.viewer.id) {
+    res.status(404).send('Passkey not found');
+    return;
+  }
+
+  await updateCredentialDeviceName(credentialId, name);
+  res.status(200).send();
+};
