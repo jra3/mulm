@@ -1,8 +1,24 @@
 import { Response } from "express";
 import { MulmRequest } from "@/sessions";
-import { getSpeciesForAdmin, SpeciesAdminFilters, getSpeciesDetail } from "@/db/species";
+import {
+  getSpeciesForAdmin,
+  SpeciesAdminFilters,
+  getSpeciesDetail,
+  getSynonymsForGroup,
+  getNamesForGroup,
+  updateSpeciesGroup,
+  deleteSpeciesGroup,
+  addCommonName,
+  addScientificName,
+  deleteCommonName,
+  deleteScientificName,
+  addSynonym,
+  deleteSynonym,
+  bulkSetPoints,
+} from "@/db/species";
 import { getQueryString, getQueryNumber, getQueryBoolean, getBodyString } from "@/utils/request";
 import { getClassOptions } from "@/forms/submission";
+import * as z from "zod";
 
 /**
  * GET /admin/species
@@ -34,7 +50,6 @@ export const listSpecies = async (req: MulmRequest, res: Response) => {
   const result = await getSpeciesForAdmin(filters, sort, limit, offset);
 
   // For each species, fetch their synonyms for the hovercard
-  const { getSynonymsForGroup } = await import("@/db/species");
   const speciesWithSynonyms = await Promise.all(
     result.species.map(async (species) => {
       const synonyms = await getSynonymsForGroup(species.group_id);
@@ -94,7 +109,6 @@ export const editSpeciesSidebar = async (req: MulmRequest, res: Response) => {
   }
 
   // Get split names (common and scientific separately)
-  const { getNamesForGroup } = await import("@/db/species");
   const names = await getNamesForGroup(groupId);
 
   // Get class options for this species type
@@ -167,9 +181,6 @@ export const updateSpecies = async (req: MulmRequest, res: Response) => {
     image_links,
   } = parsed.data;
 
-  // Update species group
-  const { updateSpeciesGroup } = await import("@/db/species");
-
   try {
     const changes = await updateSpeciesGroup(groupId, {
       canonicalGenus: canonical_genus,
@@ -225,8 +236,6 @@ export const deleteSpecies = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const { deleteSpeciesGroup } = await import("@/db/species");
-
   try {
     // Check query param for force flag
     const force = req.query.force === "true";
@@ -265,8 +274,6 @@ export const deleteCommonNameRoute = async (req: MulmRequest, res: Response) => 
     return;
   }
 
-  const { deleteCommonName } = await import("@/db/species");
-
   try {
     const changes = await deleteCommonName(commonNameId);
 
@@ -299,8 +306,6 @@ export const deleteScientificNameRoute = async (req: MulmRequest, res: Response)
     return;
   }
 
-  const { deleteScientificName } = await import("@/db/species");
-
   try {
     const changes = await deleteScientificName(scientificNameId);
 
@@ -332,8 +337,6 @@ export const deleteSynonym = async (req: MulmRequest, res: Response) => {
     res.status(400).send("Invalid synonym ID");
     return;
   }
-
-  const { deleteSynonym } = await import("@/db/species");
 
   try {
     const force = req.query.force === "true";
@@ -374,8 +377,6 @@ export const addCommonNameRoute = async (req: MulmRequest, res: Response) => {
 
   const common_name = getBodyString(req, "common_name");
 
-  const { addCommonName } = await import("@/db/species");
-
   try {
     const commonNameId = await addCommonName(groupId, common_name);
 
@@ -415,8 +416,6 @@ export const addScientificNameRoute = async (req: MulmRequest, res: Response) =>
   }
 
   const scientific_name = getBodyString(req, "scientific_name");
-
-  const { addScientificName } = await import("@/db/species");
 
   try {
     const scientificNameId = await addScientificName(groupId, scientific_name);
@@ -493,8 +492,6 @@ export const addSynonymRoute = async (req: MulmRequest, res: Response) => {
   const common_name = getBodyString(req, "common_name");
   const scientific_name = getBodyString(req, "scientific_name");
 
-  const { addSynonym } = await import("@/db/species");
-
   try {
     const nameId = await addSynonym(groupId, common_name, scientific_name);
 
@@ -534,4 +531,60 @@ export const addSynonymForm = (req: MulmRequest, res: Response) => {
     groupId,
     errors: new Map(),
   });
+};
+
+/**
+ * GET /admin/dialog/species/bulk-set-points
+ * Render bulk set points dialog (HTMX partial)
+ */
+export const bulkSetPointsDialog = (req: MulmRequest, res: Response) => {
+  const groupIds = req.query.groupIds as string;
+  const count = groupIds ? groupIds.split(",").length : 0;
+
+  res.render("admin/bulkSetPointsDialog", {
+    count,
+  });
+};
+
+// Schema for bulk set points form
+const bulkSetPointsSchema = z.object({
+  groupIds: z.union([
+    z.string().transform((val) => val.split(",").map((id) => parseInt(id.trim()))),
+    z.array(z.string()).transform((arr) => arr.map((id) => parseInt(id))),
+  ]),
+  base_points: z
+    .string()
+    .transform((val) => (val === "" ? null : parseInt(val)))
+    .refine((val) => val === null || (val >= 0 && val <= 100), {
+      message: "Points must be between 0 and 100",
+    }),
+});
+
+/**
+ * POST /admin/species/bulk-set-points
+ * Bulk update base points for selected species
+ */
+export const bulkSetPointsAction = async (req: MulmRequest, res: Response) => {
+  const parsed = bulkSetPointsSchema.safeParse(req.body);
+
+  if (!parsed.success) {
+    res.status(400).send(parsed.error.issues[0].message);
+    return;
+  }
+
+  const { groupIds, base_points } = parsed.data;
+
+  if (groupIds.length === 0) {
+    res.status(400).send("No species selected");
+    return;
+  }
+
+  try {
+    await bulkSetPoints(groupIds, base_points);
+
+    // Success - close dialog and reload page
+    res.set("HX-Redirect", "/admin/species").status(200).send();
+  } catch {
+    res.status(500).send("Failed to update species points");
+  }
 };

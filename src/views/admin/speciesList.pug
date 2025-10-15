@@ -8,9 +8,11 @@ include adminNav.pug
 
 mixin speciesTable(speciesList)
   .overflow-x-auto.w-full
-    table(data-sortable class="w-full bg-white shadow-sm rounded-lg")
+    table(data-sortable class="w-full bg-white shadow-sm rounded-lg" id="species-table")
       thead
         tr
+          th(class=nonSortableHeading style="width: 40px;")
+            input(type="checkbox" id="select-all" class="cursor-pointer" hx-on:change="document.querySelectorAll('.species-checkbox').forEach(cb => cb.checked = this.checked); this.closest('form').dispatchEvent(new Event('change', {bubbles: true}));")
           th(class=heading) Canonical Name
           th(class=heading) Type
           th(class=heading) Class
@@ -21,6 +23,8 @@ mixin speciesTable(speciesList)
       tbody
         each item in speciesList
           tr(class="hover:bg-gray-50")
+            td(class=stringCell + ' text-center')
+              input(type="checkbox" name="groupIds" value=item.group_id class="species-checkbox cursor-pointer" hx-on:change="this.closest('form').dispatchEvent(new Event('change', {bubbles: true}));")
             td(class=stringCell)
               - const synonymList = item.synonyms ? item.synonyms.map(s => `${s.common_name} (${s.scientific_name})`).join('\n') : '';
               a.link.font-semibold(
@@ -69,6 +73,25 @@ html
         tables.forEach(table => {
           new Tablesort(table);
         });
+      });
+
+      // Update selection count when checkboxes change (minimal JS)
+      document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('bulk-species-form');
+        if (form) {
+          form.addEventListener('change', function() {
+            const checked = document.querySelectorAll('.species-checkbox:checked');
+            const count = checked.length;
+            const toolbar = document.getElementById('bulk-actions-toolbar');
+            const countSpan = document.getElementById('selected-count');
+
+            countSpan.textContent = count;
+            toolbar.style.display = count > 0 ? 'block' : 'none';
+          });
+
+          // Trigger initial check
+          form.dispatchEvent(new Event('change'));
+        }
       });
 
   body.bg-white.text-gray-800
@@ -140,9 +163,29 @@ html
                 strong= pagination.totalCount
                 |  total species
 
-        //- Results Table
+        //- Results Table wrapped in form for bulk actions
         if species && species.length > 0
-          +speciesTable(species)
+          form#bulk-species-form
+            //- Bulk Actions Toolbar (shown when species are selected via CSS)
+            #bulk-actions-toolbar(class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4 rounded-lg shadow-md")
+              .flex.justify-between.items-center
+                .flex.items-center.gap-4
+                  span.text-blue-800.font-semibold
+                    span#selected-count 0
+                    |  species selected
+                  button.primary(
+                    type="button"
+                    hx-get="/admin/dialog/species/bulk-set-points"
+                    hx-target="body"
+                    hx-swap="beforeend"
+                    hx-include="#bulk-species-form"
+                  ) Set Points
+                button.outline(
+                  type="button"
+                  hx-on:click="document.querySelectorAll('.species-checkbox').forEach(cb => cb.checked = false); document.getElementById('select-all').checked = false; this.closest('form').dispatchEvent(new Event('change', {bubbles: true}));"
+                ) Clear Selection
+
+            +speciesTable(species)
 
           //- Pagination
           - const queryParams = [];

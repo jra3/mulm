@@ -1,0 +1,29 @@
++dialog
+	h2.text-2xl.font-bold.mb-4 Set Points for Selected Species
+
+	p.text-gray-700.mb-4
+		| Set base points for
+		strong  #{count}
+		|  selected species
+
+	form(
+		hx-post="/admin/species/bulk-set-points"
+		hx-include="[name='groupIds']:checked"
+	)
+		.flex.flex-col.gap-4
+			.space-y-2
+				label.input-label(for="base_points") Base Points
+				.select-wrapper
+					select#base_points(name="base_points" required)
+						option(value="" disabled selected) Select Points
+						option(value="5") 5 points
+						option(value="10") 10 points
+						option(value="15") 15 points
+						option(value="20") 20 points
+
+			.flex.gap-2.justify-end
+				button.outline(
+					type="button"
+					hx-on:click="document.getElementById('dialog').remove()"
+				) Cancel
+				button.primary(type="submit") Apply to Selected Species

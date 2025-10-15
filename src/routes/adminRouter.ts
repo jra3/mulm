@@ -13,6 +13,10 @@ adminRouter.get("/species/:groupId/edit", speciesAdmin.editSpeciesSidebar);
 adminRouter.patch("/species/:groupId", speciesAdmin.updateSpecies);
 adminRouter.delete("/species/:groupId", speciesAdmin.deleteSpecies);
 
+// Bulk operations
+adminRouter.get("/dialog/species/bulk-set-points", speciesAdmin.bulkSetPointsDialog);
+adminRouter.post("/species/bulk-set-points", speciesAdmin.bulkSetPointsAction);
+
 // Split name management (new schema)
 adminRouter.get("/species/:groupId/common-names/new", speciesAdmin.addCommonNameForm);
 adminRouter.post("/species/:groupId/common-names", speciesAdmin.addCommonNameRoute);

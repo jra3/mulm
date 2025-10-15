@@ -3,231 +3,230 @@ include ../mixins/submissionImages.pug
 include ../mixins/submissionVideo.pug
 
 mixin reviewTextInput(labelText, name, type="text")
-	.grid.gap-2
-		label.input-label(for=name)= labelText
-		input.text-input(
-			disabled
-			id=name
-			value=submission[name]
-			name=name
-			type=type)
+    .grid.gap-2
+        label.input-label(for=name)= labelText
+        input.text-input(
+            disabled
+            id=name
+            value=submission[name]
+            name=name
+            type=type)
 
 doctype html
 html
-	+headTag
+    +headTag
 
-	body.bg-white.text-gray-800
-		+pageHeader(isLoggedIn, canonicalName, submission.member_name)
+    body.bg-white.text-gray-800
+        +pageHeader(isLoggedIn, canonicalName, submission.member_name)
 
-		section.bg-gray-100.py-4
+        section.bg-gray-100.py-4
 
-			div.max-w-4xl.mx-auto.text-left.pt-4.px-4
-				h2(class="text-l font-bold pt-2 mb-4") Member Details
-				div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
-					+reviewTextInput("Member Name", "member_name")
+            div.max-w-4xl.mx-auto.text-left.pt-4.px-4
+                h2(class="text-l font-bold pt-2 mb-4") Member Details
+                div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
+                    +reviewTextInput("Member Name", "member_name")
 
-			div.max-w-4xl.mx-auto.text-left.pt-4.px-4
-				h2(class="text-l font-bold mb-4") Species Details
-				div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
-					+reviewTextInput("Common Name", "species_common_name")
-					+reviewTextInput("Latin Name", "species_latin_name")
-					+reviewTextInput("Spawn Date", "reproduction_date")
-					+reviewTextInput("# of Fry", "count")
+            div.max-w-4xl.mx-auto.text-left.pt-4.px-4
+                h2(class="text-l font-bold mb-4") Species Details
+                div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
+                    +reviewTextInput("Common Name", "species_common_name")
+                    +reviewTextInput("Latin Name", "species_latin_name")
+                    +reviewTextInput("Spawn Date", "reproduction_date")
+                    +reviewTextInput("# of Fry", "count")
 
-					+reviewTextInput("Species Type", "species_type")
-					+reviewTextInput("Species Class", "species_class")
-					+reviewTextInput("Water Type", "water_type")
+                    +reviewTextInput("Species Type", "species_type")
+                    +reviewTextInput("Species Class", "species_class")
+                    +reviewTextInput("Water Type", "water_type")
 
-					+reviewTextInput("Foods", "foods")
-					+reviewTextInput("Spawn Locations", "spawn_locations")
+                    +reviewTextInput("Foods", "foods")
+                    +reviewTextInput("Spawn Locations", "spawn_locations")
 
-			div.max-w-4xl.mx-auto.text-left.pt-4.px-4
-				+submissionImages(submission.images, 'gallery')
-				+submissionVideo(submission.video_url, videoMetadata)
+            div.max-w-4xl.mx-auto.text-left.pt-4.px-4
+                +submissionImages(submission.images, 'gallery')
+                +submissionVideo(submission.video_url, videoMetadata)
 
-			div.max-w-4xl.mx-auto.text-left.pt-4.px-4
-				h2(class="text-l font-bold pt-2 mb-4") Tank Details
-				div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
-					+reviewTextInput("Tank Size", "tank_size")
-					+reviewTextInput("Filter Type", "filter_type")
-					+reviewTextInput("Water Change Volume (%)", "water_change_volume")
-					+reviewTextInput("Water Change Frequency", "water_change_frequency")
-					+reviewTextInput("Temperature", "temperature")
-					+reviewTextInput("pH", "ph")
-					+reviewTextInput("Hardness (GH)", "gh")
-					+reviewTextInput("Specific Gravity", "specific_gravity")
-					+reviewTextInput("Substrate Type", "substrate_type")
-					+reviewTextInput("Substrate Depth", "substrate_depth")
-					+reviewTextInput("Substrate Color", "substrate_color")
+            div.max-w-4xl.mx-auto.text-left.pt-4.px-4
+                h2(class="text-l font-bold pt-2 mb-4") Tank Details
+                div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
+                    +reviewTextInput("Tank Size", "tank_size")
+                    +reviewTextInput("Filter Type", "filter_type")
+                    +reviewTextInput("Water Change Volume (%)", "water_change_volume")
+                    +reviewTextInput("Water Change Frequency", "water_change_frequency")
+                    +reviewTextInput("Temperature", "temperature")
+                    +reviewTextInput("pH", "ph")
+                    +reviewTextInput("Hardness (GH)", "gh")
+                    +reviewTextInput("Specific Gravity", "specific_gravity")
+                    +reviewTextInput("Substrate Type", "substrate_type")
+                    +reviewTextInput("Substrate Depth", "substrate_depth")
+                    +reviewTextInput("Substrate Color", "substrate_color")
 
 
-			div.max-w-4xl.mx-auto.text-left.px-4.pb-6
-				h2(class="text-l font-bold mb-4") Approval Details
-				div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
-					+reviewTextInput("Submitted On", "submitted_on")
-					+reviewTextInput("Witnessed", "witnessed")
-					+reviewTextInput("Approved", "approved")
-					+reviewTextInput("Points", "points")
-					+reviewTextInput("Total Points", "total_points")
+            div.max-w-4xl.mx-auto.text-left.px-4.pb-6
+                h2(class="text-l font-bold mb-4") Approval Details
+                div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
+                    +reviewTextInput("Submitted On", "submitted_on")
+                    +reviewTextInput("Witnessed", "witnessed")
+                    +reviewTextInput("Approved", "approved")
+                    +reviewTextInput("Points", "points")
+                    +reviewTextInput("Total Points", "total_points")
 
-			// Action buttons in single row
-			if (isAdmin && false) || (isSelf && !isApproved)
-				div.flex.justify-center.max-w-4xl.mx-auto.text-center.gap-4
-					if isAdmin && false
-						a(href=`/admin/submissions/${submission.id}/edit`)
-							button.primary(type="button") Edit Submission as Admin
-					else if isSelf && !isApproved
-						form.inline(hx-patch=`/submissions/${submission.id}`)
-							button.primary(name="unsubmit" type="submit") Edit Submission
+            // Action buttons in single row
+            if (isAdmin && false) || (isSelf && !isApproved)
+                div.flex.justify-center.max-w-4xl.mx-auto.text-center.gap-4
+                    if isAdmin && false
+                        a(href=`/admin/submissions/${submission.id}/edit`)
+                            button.primary(type="button") Edit Submission as Admin
+                    else if isSelf && !isApproved
+                        form.inline(hx-patch=`/submissions/${submission.id}`)
+                            button.primary(name="unsubmit" type="submit") Edit Submission
 
-					// Delete button - smaller, de-emphasized
-					if isAdmin || (isSelf && !isApproved)
-						button.destructive(
-							class="px-4 py-2 text-sm"
-							hx-delete=`/submissions/${submission.id}`
-							hx-confirm="Are you sure you want to permanently delete this submission? This cannot be undone."
-							type="button"
-						) Delete
+                    // Delete button - smaller, de-emphasized
+                    if isAdmin || (isSelf && !isApproved)
+                        button.destructive(
+                            class="px-4 py-2 text-sm"
+                            hx-delete=`/submissions/${submission.id}`
+                            hx-confirm="Are you sure you want to permanently delete this submission? This cannot be undone."
+                            type="button"
+                        ) Delete
 
-		// Admin Notes Section - visible only to program admins (shown BEFORE approval panels)
-		if isAdmin
-			section.bg-gray-700.py-6
-				div.max-w-4xl.mx-auto.text-left.px-4
-					h2.text-xl.font-bold.mb-2.text-white Admin Notes
-					p.text-sm.text-gray-300.mb-4 Private notes visible only to program admins
+        // Admin Notes Section - visible only to program admins (shown BEFORE approval panels)
+        if isAdmin
+            section.bg-gray-700.py-6
+                div.max-w-4xl.mx-auto.text-left.px-4
+                    h2.text-xl.font-bold.mb-2.text-white Admin Notes
+                    p.text-sm.text-gray-300.mb-4 Private notes visible only to program admins
 
-					//- Notes feed
-					div#notes-list.mb-6.space-y-3
-						if adminNotes && adminNotes.length > 0
-							each note in adminNotes
-								include ../admin/submissionNote.pug
-						else
-							p.text-gray-500.text-sm.italic No notes yet
+                    //- Notes feed
+                    div#notes-list.mb-6.space-y-3
+                        if adminNotes && adminNotes.length > 0
+                            each note in adminNotes
+                                include ../admin/submissionNote.pug
+                        else
+                            p.text-gray-500.text-sm.italic No notes yet
 
-					//- Note form
-					form#note-form(
-						hx-post=`/admin/submissions/${submission.id}/notes`
-						hx-target="#notes-list"
-						hx-swap="beforeend"
-						hx-on--after-request="this.reset()"
-					)
-						div.mb-2
-							label.input-label(for="note_text") Add Note
-							textarea.text-input(
-								id="note_text"
-								name="note_text"
-								placeholder="Write a note..."
-								rows="3"
-								required
-								maxlength="2000"
-							)
-						button.primary(type="submit") Add Note
+                    //- Note form
+                    form#note-form(
+                        hx-post=`/admin/submissions/${submission.id}/notes`
+                        hx-target="#notes-list"
+                        hx-swap="beforeend"
+                        hx-on--after-request="this.reset()"
+                    )
+                        div.mb-2
+                            textarea.text-input(
+                                id="note_text"
+                                name="note_text"
+                                placeholder="Write a note..."
+                                rows="3"
+                                required
+                                maxlength="2000"
+                            )
+                        button.primary(type="submit") Add Note
 
-		// Admin Action Panels (screening, waiting period, approval)
-		section.bg-gray-100
-			if isAdmin
-				// Screening Actions Panel - only show for pending screening
-				if submission.witness_verification_status === 'pending'
-					if isSelf
-						// Show message for self-screening case
-						.status-panel.status-panel-warning
-							.container.mx-auto.max-w-4xl
-								h3.text-yellow-800.text-lg.font-semibold.mb-2 📋 Admin Screening Needed
-								- const speciesText = submission.species_type === 'Plant' || submission.species_type === 'Coral' ? 'propagation' : 'spawn'
-								p.text-yellow-700.mb-2= `Your ${speciesText} needs to be screened by a different program admin for completeness.`
-								p.text-yellow-600.text-sm You cannot screen your own submissions. Please contact another admin to review this submission.
-					else
-						// Show screening action buttons for other admins
-						.status-panel.status-panel-admin#witnessPanel
-							.container.mx-auto.max-w-4xl
-								h3.text-white.text-lg.font-semibold.mb-4 Admin Screening Required
-								p.text-white.mb-4 Review the submission details above, including any photos/videos (when available), for completeness and credibility.
-								div.flex.justify-center.max-w-4xl.mx-auto.text-center.gap-4
-									form(hx-post=`/admin/submissions/${submission.id}/confirm-witness`)
-										- const actionText = submission.species_type === 'Plant' ? 'Approve for Screening' : 'Approve for Screening'
-										button.primary(type="submit")= actionText
+        // Admin Action Panels (screening, waiting period, approval)
+        section.bg-gray-100
+            if isAdmin
+                // Screening Actions Panel - only show for pending screening
+                if submission.witness_verification_status === 'pending'
+                    if isSelf
+                        // Show message for self-screening case
+                        .status-panel.status-panel-warning
+                            .container.mx-auto.max-w-4xl
+                                h3.text-yellow-800.text-lg.font-semibold.mb-2 📋 Admin Screening Needed
+                                - const speciesText = submission.species_type === 'Plant' || submission.species_type === 'Coral' ? 'propagation' : 'spawn'
+                                p.text-yellow-700.mb-2= `Your ${speciesText} needs to be screened by a different program admin for completeness.`
+                                p.text-yellow-600.text-sm You cannot screen your own submissions. Please contact another admin to review this submission.
+                    else
+                        // Show screening action buttons for other admins
+                        .status-panel.status-panel-admin#witnessPanel
+                            .container.mx-auto.max-w-4xl
+                                h3.text-white.text-lg.font-semibold.mb-4 Admin Screening Required
+                                p.text-white.mb-4 Review the submission details above, including any photos/videos (when available), for completeness and credibility.
+                                div.flex.justify-center.max-w-4xl.mx-auto.text-center.gap-4
+                                    form(hx-post=`/admin/submissions/${submission.id}/confirm-witness`)
+                                        - const actionText = submission.species_type === 'Plant' ? 'Approve for Screening' : 'Approve for Screening'
+                                        button.primary(type="submit")= actionText
 
-									button.destructive(
-										type="button"
-										hx-get=`/admin/dialog/submissions/${submission.id}/decline-witness`
-										hx-target="closest body"
-										hx-swap="beforeend") Request More Info
+                                    button.destructive(
+                                        type="button"
+                                        hx-get=`/admin/dialog/submissions/${submission.id}/decline-witness`
+                                        hx-target="closest body"
+                                        hx-swap="beforeend") Request More Info
 
-				// Show auction eligibility status for screened submissions
-				if submission.witness_verification_status === 'confirmed' && !isApproved
-					if !waitingPeriodStatus.eligible
-						// Show auction eligibility countdown
-						.status-panel.status-panel-pending
-							.container.mx-auto.max-w-4xl
-								h3.text-blue-800.text-lg.font-semibold.mb-2 ⏳ Awaiting Auction Eligibility
-								- const speciesText = submission.species_type === 'Plant' || submission.species_type === 'Coral' ? 'propagation' : 'spawn'
-								- const offspringText = submission.species_type === 'Plant' ? 'plants' : submission.species_type === 'Coral' ? 'corals' : 'fry'
-								p.text-blue-700.mb-2= `This ${speciesText} has been screened. Bring ${offspringText} to a monthly auction after ${waitingPeriodStatus.requiredDays} days.`
-								.bg-blue-100.rounded.p-3.mt-2
-									p.text-blue-800.font-semibold Days until eligible for auction: #{waitingPeriodStatus.daysRemaining}
-									p.text-blue-600.text-sm.mt-1 Elapsed: #{waitingPeriodStatus.elapsedDays} of #{waitingPeriodStatus.requiredDays} days
-					else if isSelf
-						// Show message for self-approval prevention
-						.status-panel.status-panel-warning
-							.container.mx-auto.max-w-4xl
-								h3.text-yellow-800.text-lg.font-semibold.mb-2 ✅ Ready for Points Award
-								- const speciesText = submission.species_type === 'Plant' || submission.species_type === 'Coral' ? 'propagation' : 'spawn'
-								- const offspringText = submission.species_type === 'Plant' ? 'plants' : submission.species_type === 'Coral' ? 'corals' : 'fry'
-								p.text-yellow-700.mb-2= `Your ${speciesText} is auction-eligible. Bring ${offspringText} to the next meeting to receive points!`
-								p.text-yellow-600.text-sm You cannot award points to your own submissions. Please contact another admin at the meeting to complete the award process.
-					else
-						// Show approval panel for other admins
-						.status-panel.status-panel-admin#adminPanel
-							include ../admin/approvalPanel.pug
+                // Show auction eligibility status for screened submissions
+                if submission.witness_verification_status === 'confirmed' && !isApproved
+                    if !waitingPeriodStatus.eligible
+                        // Show auction eligibility countdown
+                        .status-panel.status-panel-pending
+                            .container.mx-auto.max-w-4xl
+                                h3.text-blue-800.text-lg.font-semibold.mb-2 ⏳ Awaiting Auction Eligibility
+                                - const speciesText = submission.species_type === 'Plant' || submission.species_type === 'Coral' ? 'propagation' : 'spawn'
+                                - const offspringText = submission.species_type === 'Plant' ? 'plants' : submission.species_type === 'Coral' ? 'corals' : 'fry'
+                                p.text-blue-700.mb-2= `This ${speciesText} has been screened. Bring ${offspringText} to a monthly auction after ${waitingPeriodStatus.requiredDays} days.`
+                                .bg-blue-100.rounded.p-3.mt-2
+                                    p.text-blue-800.font-semibold Days until eligible for auction: #{waitingPeriodStatus.daysRemaining}
+                                    p.text-blue-600.text-sm.mt-1 Elapsed: #{waitingPeriodStatus.elapsedDays} of #{waitingPeriodStatus.requiredDays} days
+                    else if isSelf
+                        // Show message for self-approval prevention
+                        .status-panel.status-panel-warning
+                            .container.mx-auto.max-w-4xl
+                                h3.text-yellow-800.text-lg.font-semibold.mb-2 ✅ Ready for Points Award
+                                - const speciesText = submission.species_type === 'Plant' || submission.species_type === 'Coral' ? 'propagation' : 'spawn'
+                                - const offspringText = submission.species_type === 'Plant' ? 'plants' : submission.species_type === 'Coral' ? 'corals' : 'fry'
+                                p.text-yellow-700.mb-2= `Your ${speciesText} is auction-eligible. Bring ${offspringText} to the next meeting to receive points!`
+                                p.text-yellow-600.text-sm You cannot award points to your own submissions. Please contact another admin at the meeting to complete the award process.
+                    else
+                        // Show approval panel for other admins
+                        .status-panel.status-panel-admin#adminPanel
+                            include ../admin/approvalPanel.pug
 
-		// Initialize typeahead for species selection in approval panel
-		if isAdmin
-			style.
-				/* Force typeahead to maintain fixed width and handle long text */
-				.ts-wrapper.species-search-wrapper {
-					width: 400px !important;
-					min-width: 400px !important;
-					max-width: 400px !important;
-				}
-				.ts-wrapper.species-search-wrapper .ts-control {
-					width: 100% !important;
-				}
-				/* Handle long text in selected items */
-				.ts-wrapper.species-search-wrapper .ts-control.single-value .item {
-					overflow: hidden !important;
-					text-overflow: ellipsis !important;
-					white-space: nowrap !important;
-					max-width: calc(100% - 40px) !important;
-					display: block !important;
-				}
-				/* Hide input when item is selected (has-items class) */
-				.ts-wrapper.species-search-wrapper.has-items .ts-control input {
-					width: 0 !important;
-					padding: 0 !important;
-					margin: 0 !important;
-					opacity: 0 !important;
-				}
+        // Initialize typeahead for species selection in approval panel
+        if isAdmin
+            style.
+                /* Force typeahead to maintain fixed width and handle long text */
+                .ts-wrapper.species-search-wrapper {
+                    width: 400px !important;
+                    min-width: 400px !important;
+                    max-width: 400px !important;
+                }
+                .ts-wrapper.species-search-wrapper .ts-control {
+                    width: 100% !important;
+                }
+                /* Handle long text in selected items */
+                .ts-wrapper.species-search-wrapper .ts-control.single-value .item {
+                    overflow: hidden !important;
+                    text-overflow: ellipsis !important;
+                    white-space: nowrap !important;
+                    max-width: calc(100% - 40px) !important;
+                    display: block !important;
+                }
+                /* Hide input when item is selected (has-items class) */
+                .ts-wrapper.species-search-wrapper.has-items .ts-control input {
+                    width: 0 !important;
+                    padding: 0 !important;
+                    margin: 0 !important;
+                    opacity: 0 !important;
+                }
 
-			script.
-				function initializeTypeaheads() {
-					const typeaheadElements = document.querySelectorAll('select.tom-select-typeahead:not(.tomselected)');
-					typeaheadElements.forEach(function(element) {
-						const config = getTypeaheadConfig(element);
-						const tomSelectOptions = buildTomSelectOptions(element, config);
-						const tomSelect = new TomSelect(element, tomSelectOptions);
-						element.tomSelectInstance = tomSelect;
+            script.
+                function initializeTypeaheads() {
+                    const typeaheadElements = document.querySelectorAll('select.tom-select-typeahead:not(.tomselected)');
+                    typeaheadElements.forEach(function(element) {
+                        const config = getTypeaheadConfig(element);
+                        const tomSelectOptions = buildTomSelectOptions(element, config);
+                        const tomSelect = new TomSelect(element, tomSelectOptions);
+                        element.tomSelectInstance = tomSelect;
 
-						if (config.maxItems === 1) {
-							tomSelect.control.classList.add('single-value');
-						}
+                        if (config.maxItems === 1) {
+                            tomSelect.control.classList.add('single-value');
+                        }
 
-						// Add wrapper class for species search to maintain fixed width
-						if (element.id === 'species-search') {
-							tomSelect.wrapper.classList.add('species-search-wrapper');
-						}
-					});
-				}
+                        // Add wrapper class for species search to maintain fixed width
+                        if (element.id === 'species-search') {
+                            tomSelect.wrapper.classList.add('species-search-wrapper');
+                        }
+                    });
+                }
 
-				document.addEventListener('DOMContentLoaded', function() {
-					initializeTypeaheads();
-				});
+                document.addEventListener('DOMContentLoaded', function() {
+                    initializeTypeaheads();
+                });
