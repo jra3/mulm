@@ -63,9 +63,12 @@ This repository uses directory-specific README files for detailed documentation:
 
 ### Code Quality
 
-- ❌ **Never use dynamic imports** - Always use static imports at the top of files
+- ❌ **NEVER use dynamic imports** - ALWAYS use static imports at the top of files
+  - ❌ BAD: `const { foo } = await import("@/module");`
+  - ✅ GOOD: `import { foo } from "@/module";` at top of file
+  - Reason: Breaks tree shaking, type checking, and code analysis
 - ❌ **Never use `require()`** in TypeScript - Use ES6 imports
-- ✅ **Static imports only** - Enables tree shaking, type checking, and better performance
+- ✅ **Static imports only** - All imports must be at the top of the file
 - ✅ **HTMX-first architecture** - Prefer HTMX attributes over custom JavaScript for form interactions
 - ✅ **Validate with Zod schemas** - Always validate request bodies with zod, never use `as` type assertions
 - ✅ **Function naming clarity** - Functions that mutate should have names like `ensure`, `create`, `update`, not just `get`
