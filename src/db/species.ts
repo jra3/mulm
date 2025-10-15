@@ -1674,3 +1674,85 @@ export async function bulkSetPoints(groupIds: number[], points: number | null): 
     throw new Error("Failed to bulk set points");
   }
 }
+
+/**
+ * Check if a member has previously bred a species (by group_id)
+ * Used for first-time species bonus detection in approval workflow
+ *
+ * @param memberId - Member ID to check
+ * @param groupId - Species group ID
+ * @returns Object with hasBreedBefore flag and count of prior breedings
+ */
+export async function hasBreedSpeciesBefore(
+  memberId: number,
+  groupId: number
+): Promise<{
+  hasBreedBefore: boolean;
+  priorBreedCount: number;
+}> {
+  const rows = await query<{ count: number }>(
+    `
+    SELECT COUNT(DISTINCT s.id) as count
+    FROM submissions s
+    LEFT JOIN species_common_name cn ON s.common_name_id = cn.common_name_id
+    LEFT JOIN species_scientific_name scin ON s.scientific_name_id = scin.scientific_name_id
+    WHERE s.member_id = ?
+      AND (cn.group_id = ? OR scin.group_id = ?)
+      AND s.approved_on IS NOT NULL
+  `,
+    [memberId, groupId, groupId]
+  );
+
+  const count = rows[0]?.count || 0;
+
+  return {
+    hasBreedBefore: count > 0,
+    priorBreedCount: count,
+  };
+}
+
+/**
+ * Get common_name_id and scientific_name_id from a group_id and the submission's name strings
+ * Looks up existing names in the split schema tables, or creates them if needed
+ *
+ * @param groupId - Species group ID
+ * @param commonName - Common name from submission
+ * @param scientificName - Scientific name from submission
+ * @returns Object with common_name_id and scientific_name_id
+ */
+export async function getNameIdsFromGroupId(
+  groupId: number,
+  commonName: string,
+  scientificName: string
+): Promise<{ common_name_id: number; scientific_name_id: number }> {
+  // Look up common name ID
+  const commonRows = await query<{ common_name_id: number }>(
+    "SELECT common_name_id FROM species_common_name WHERE group_id = ? AND common_name = ?",
+    [groupId, commonName]
+  );
+
+  let common_name_id = commonRows[0]?.common_name_id;
+
+  // If not found, create it
+  if (!common_name_id) {
+    common_name_id = await addCommonName(groupId, commonName);
+  }
+
+  // Look up scientific name ID
+  const scientificRows = await query<{ scientific_name_id: number }>(
+    "SELECT scientific_name_id FROM species_scientific_name WHERE group_id = ? AND scientific_name = ?",
+    [groupId, scientificName]
+  );
+
+  let scientific_name_id = scientificRows[0]?.scientific_name_id;
+
+  // If not found, create it
+  if (!scientific_name_id) {
+    scientific_name_id = await addScientificName(groupId, scientificName);
+  }
+
+  return {
+    common_name_id,
+    scientific_name_id,
+  };
+}

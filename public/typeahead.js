@@ -109,6 +109,8 @@ function buildTomSelectOptions(element, config) {
 					const hiddenValue = selectedOption[config.hiddenIdValueField];
 					if (hiddenValue !== undefined && hiddenValue !== null) {
 						hiddenElement.value = hiddenValue;
+						// Dispatch change event for HTMX listeners
+						hiddenElement.dispatchEvent(new Event('change', { bubbles: true }));
 					}
 				}
 			}

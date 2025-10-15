@@ -1,89 +1,112 @@
+// Admin Approval Panel - HTMX-Driven Species Selection
+- const hasGroupIdError = errors && errors.has && errors.has("group_id");
+- const hasPointsError = errors && errors.has && errors.has("points");
+
 .container.mx-auto.flex.justify-center.space-x-4
-	form(hx-post=`/admin/submissions/${submission.id}/approve`)
-		input(type="hidden" name="id" value=submission.id)
-		.flex.flex-col.gap-2
-			.flex.gap-4
-				.select-wrapper.max-w-40
-					select(name="points" class=errors && errors.has("points") && "error")
-						option(value="" disabled selected) Base Points
-						option(value=5 selected=submission.points == 5) 5
-						option(value=10 selected=submission.points == 10) 10
-						option(value=15 selected=submission.points == 15) 15
-						option(value=20 selected=submission.points == 20) 20
+    form(hx-post=`/admin/submissions/${submission.id}/approve` id="approval-form")
+        input(type="hidden" name="id" value=submission.id)
+        // Hidden input populated by typeahead, triggers HTMX to fetch bonus checkboxes
+        input(
+            type="hidden"
+            name="group_id"
+            id="species-group-id"
+            value=""
+            hx-get=`/admin/submissions/${submission.id}/approval-bonuses`
+            hx-trigger="change"
+            hx-target="#approval-dynamic-section"
+            hx-swap="outerHTML"
+            hx-include="this")
 
-				button.primary.p-4(type="submit") Approve
-				button.destructive(
-					type="button"
-					hx-get=`/admin/dialog/submissions/${submission.id}/request-changes`
-					hx-target="closest body"
-					hx-swap="beforeend") Feedback
+        .flex.flex-col.gap-3
+            // Top row: Species typeahead + Points selector
+            .flex.gap-4.items-center
+                label.text-white.whitespace-nowrap Species:
+                // Species typeahead with HTMX integration
+                // When species is selected, typeahead populates hidden input #species-group-id
+                // The hidden input has HTMX attributes to fetch bonus checkboxes on change
+                select#species-search.tom-select-typeahead.flex-1(
+                    data-api-url="/api/species/search"
+                    data-param-species_type=submission.species_type
+                    data-hidden-id-field="species-group-id"
+                    data-hidden-id-value-field="group_id"
+                    data-value-field="text"
+                    data-label-field="text"
+                    data-search-fields="text,common_name,scientific_name"
+                    data-min-query-length="2"
+                    data-max-items="1"
+                    data-placeholder="Search species..."
+                    class=hasGroupIdError ? "error" : "")
 
-			.flex.gap-4.items-center
-				input.text-input(
-					name="class"
-					type="text"
-					value=submission.species_class
-					disabled)
-				input.text-input(
-					class=errors && errors.has("canonical_genus") && "error"
-					name="canonical_genus"
-					type="text"
-					value=name.canonical_genus
-					placeholder="Genus")
-				input.text-input(
-					class=errors && errors.has("canonical_species_name") && "error"
-					name="canonical_species_name"
-					type="text"
-					value=name.canonical_species_name
-					placeholder="Species")
-			.flex.gap-4.items-center
-				details
-					summary.link.light.p-4 Bonuses
-					.flex.flex-col.gap-4
-						.flex.gap-4
-							.select-wrapper.max-w-50
-								select(name="article_points")
-									option(value="" disabled selected) Article Points
-									option(value=0 selected=submission.article_points == 0) No Article
-									option(value=5 selected=submission.article_points == 5) 5
-									option(value=10 selected=submission.article_points == 10) 10
+                .select-wrapper.max-w-40
+                    select(name="points" id="base-points" class=hasPointsError ? "error" : "")
+                        option(value="" disabled selected) Base Points
+                        option(value=5 selected=submission.points == 5) 5
+                        option(value=10 selected=submission.points == 10) 10
+                        option(value=15 selected=submission.points == 15) 15
+                        option(value=20 selected=submission.points == 20) 20
 
-							input.text-input.w-full(
-								name="article_url"
-								type="text"
-								placeholder="Article / Video Link")
+            // Dynamic section - replaced by HTMX when species selected
+            #approval-dynamic-section
+                // Bonus section
+                .flex.gap-4.items-center
+                    .flex.gap-2.items-center
+                        input(
+                            type="checkbox"
+                            id="first"
+                            name="first_time_species"
+                            checked=submission.first_time_species == 1)
+                        label.text-white(for="first") First Time Species
 
-						.grid.gap-4.grid-cols-4
-							.flex.gap-2.items-center
-								input(
-									type="checkbox"
-									id="first"
-									name="first_time_species"
-									checked=submission.first_time_species == 1)
-								label.text-white(for="first") First Time Species
+                    if submission.program == "fish"
+                        .flex.gap-2.items-center
+                            input(
+                                type="checkbox"
+                                id="cares"
+                                name="cares_species"
+                                checked=submission.cares_species == 1)
+                            label.text-white(for="cares") CARES Species
 
-							if submission.program == "fish"
-								.flex.gap-2.items-center
-									input(
-										type="checkbox"
-										id="cares"
-										name="cares_species"
-										checked=submission.cares_species == 1)
-									label.text-white(for="cares") CARES Species
+            // Action buttons (static, below dynamic section)
+            .flex.gap-4.items-center
+                button.primary.p-4(type="submit") Approve
+                button.destructive(
+                    type="button"
+                    hx-get=`/admin/dialog/submissions/${submission.id}/request-changes`
+                    hx-target="closest body"
+                    hx-swap="beforeend") Feedback
 
-							if submission.program == "plant"
-								.flex.gap-2.items-center
-									input(
-										type="checkbox"
-										id="flowered"
-										name="flowered"
-										checked=submission.flowered == 1)
-									label.text-white(for="flowered") Flowered
+            // Additional Bonuses (collapsible)
+            .flex.gap-4.items-center
+                details
+                    summary.link.light.p-4 Additional Bonuses
+                    .flex.flex-col.gap-4.mt-2
+                        .flex.gap-4
+                            .select-wrapper.max-w-50
+                                select(name="article_points")
+                                    option(value="" disabled selected) Article Points
+                                    option(value=0 selected=submission.article_points == 0) No Article
+                                    option(value=5 selected=submission.article_points == 5) 5
+                                    option(value=10 selected=submission.article_points == 10) 10
 
-								.flex.gap-2.items-center
-									input(
-										type="checkbox"
-										id="sexual"
-										name="sexual_reproduction"
-										checked=submission.sexual_reproduction == 1)
-									label.text-white(for="sexual") Sexual Reproduction
+                            input.text-input.w-full(
+                                name="article_url"
+                                type="text"
+                                placeholder="Article / Video Link")
+
+                        if submission.program == "plant"
+                            .grid.gap-4.grid-cols-2
+                                .flex.gap-2.items-center
+                                    input(
+                                        type="checkbox"
+                                        id="flowered"
+                                        name="flowered"
+                                        checked=submission.flowered == 1)
+                                    label.text-white(for="flowered") Flowered
+
+                                .flex.gap-2.items-center
+                                    input(
+                                        type="checkbox"
+                                        id="sexual"
+                                        name="sexual_reproduction"
+                                        checked=submission.sexual_reproduction == 1)
+                                    label.text-white(for="sexual") Sexual Reproduction

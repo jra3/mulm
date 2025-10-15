@@ -1,0 +1,42 @@
+// Dynamic section - updated via HTMX when species is selected
+- const pointsJsonValue = JSON.stringify(basePoints || '');
+- const showFirstTime = priorBreedCount !== undefined;
+- const plural = (priorBreedCount && priorBreedCount > 1) ? 's' : '';
+- const breedMessage = 'Previously bred ' + priorBreedCount + ' time' + plural;
+- const isFish = program == "fish";
+
+#approval-dynamic-section
+	// Always update base points selector (either to species value or reset to empty)
+	script.
+		(function() {
+			const basePointsSelect = document.getElementById('base-points');
+			if (basePointsSelect) {
+				basePointsSelect.value = !{pointsJsonValue};
+			}
+		})();
+
+	// Bonus indicators
+	.flex.gap-4.items-center
+		.flex.gap-2.items-center
+			input(
+				type="checkbox"
+				id="first"
+				name="first_time_species"
+				checked=isFirstTime)
+			label.text-white(for="first") First Time Species
+			if showFirstTime
+				if isFirstTime
+					span.text-sm.text-green-400 ✓ First time!
+				else if priorBreedCount
+					span.text-sm.text-gray-400= breedMessage
+
+		if isFish
+			.flex.gap-2.items-center
+				input(
+					type="checkbox"
+					id="cares"
+					name="cares_species"
+					checked=isCaresSpecies)
+				label.text-white(for="cares") CARES Species
+				if isCaresSpecies
+					span.text-sm.text-green-400 (auto-detected)

@@ -37,6 +37,7 @@ adminRouter.get("/witness-queue{/:program}", admin.showWitnessQueue);
 adminRouter.get("/waiting-period{/:program}", admin.showWaitingPeriod);
 
 adminRouter.post("/submissions/:id/approve", admin.approveSubmission);
+adminRouter.get("/submissions/:id/approval-bonuses", admin.getApprovalBonuses);
 adminRouter.get("/submissions/:id/edit", admin.viewEditSubmission);
 
 adminRouter.get("/members", admin.viewMembers);

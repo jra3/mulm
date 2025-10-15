@@ -177,3 +177,55 @@ html
 								maxlength="2000"
 							)
 						button.primary(type="submit") Add Note
+
+		// Initialize typeahead for species selection in approval panel
+		if isAdmin
+			style.
+				/* Force typeahead to maintain fixed width and handle long text */
+				.ts-wrapper.species-search-wrapper {
+					width: 400px !important;
+					min-width: 400px !important;
+					max-width: 400px !important;
+				}
+				.ts-wrapper.species-search-wrapper .ts-control {
+					width: 100% !important;
+				}
+				/* Handle long text in selected items */
+				.ts-wrapper.species-search-wrapper .ts-control.single-value .item {
+					overflow: hidden !important;
+					text-overflow: ellipsis !important;
+					white-space: nowrap !important;
+					max-width: calc(100% - 40px) !important;
+					display: block !important;
+				}
+				/* Hide input when item is selected (has-items class) */
+				.ts-wrapper.species-search-wrapper.has-items .ts-control input {
+					width: 0 !important;
+					padding: 0 !important;
+					margin: 0 !important;
+					opacity: 0 !important;
+				}
+
+			script.
+				function initializeTypeaheads() {
+					const typeaheadElements = document.querySelectorAll('select.tom-select-typeahead:not(.tomselected)');
+					typeaheadElements.forEach(function(element) {
+						const config = getTypeaheadConfig(element);
+						const tomSelectOptions = buildTomSelectOptions(element, config);
+						const tomSelect = new TomSelect(element, tomSelectOptions);
+						element.tomSelectInstance = tomSelect;
+
+						if (config.maxItems === 1) {
+							tomSelect.control.classList.add('single-value');
+						}
+
+						// Add wrapper class for species search to maintain fixed width
+						if (element.id === 'species-search') {
+							tomSelect.wrapper.classList.add('species-search-wrapper');
+						}
+					});
+				}
+
+				document.addEventListener('DOMContentLoaded', function() {
+					initializeTypeaheads();
+				});

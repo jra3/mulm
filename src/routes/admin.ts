@@ -46,8 +46,8 @@ import {
   speciesTypes,
   waterTypes,
 } from "@/forms/submission";
-import { recordName } from "@/db/species";
-import { getBodyParam, getBodyString } from "@/utils/request";
+import { recordName, getNameIdsFromGroupId, hasBreedSpeciesBefore, getSpeciesGroup } from "@/db/species";
+import { getBodyParam, getBodyString, getQueryString } from "@/utils/request";
 import { checkAndUpdateMemberLevel, checkAllMemberLevels, Program } from "@/levelManager";
 import { checkAndGrantSpecialtyAwards, checkAllSpecialtyAwards } from "@/specialtyAwardManager";
 import { createActivity } from "@/db/activity";
@@ -607,6 +607,53 @@ export const sendWelcomeEmail = async (req: MulmRequest, res: Response) => {
   }
 };
 
+/**
+ * GET /admin/submissions/:id/approval-bonuses
+ * HTMX endpoint: Returns bonus checkboxes fragment when species is selected
+ */
+export const getApprovalBonuses = async (req: MulmRequest, res: Response) => {
+  const { id } = req.params;
+  const groupId = parseInt(getQueryString(req, "group_id", ""));
+
+  if (isNaN(groupId)) {
+    res.status(400).send("Invalid group ID");
+    return;
+  }
+
+  const submission = await getSubmissionById(parseInt(id));
+  if (!submission) {
+    res.status(404).send("Submission not found");
+    return;
+  }
+
+  try {
+    // Check first-time status and get species data
+    const [breedingHistory, speciesGroup] = await Promise.all([
+      hasBreedSpeciesBefore(submission.member_id, groupId),
+      getSpeciesGroup(groupId),
+    ]);
+
+    const templateData = {
+      submission: {
+        id: submission.id,
+      },
+      program: submission.program,
+      isFirstTime: !breedingHistory.hasBreedBefore,
+      priorBreedCount: breedingHistory.priorBreedCount,
+      isCaresSpecies: speciesGroup?.is_cares_species === 1,
+      basePoints: speciesGroup?.base_points,
+    };
+
+    logger.info("Rendering approval bonuses", templateData);
+
+    // Render the bonus checkboxes fragment (includes base points selector)
+    res.render("admin/approvalBonuses", templateData);
+  } catch (error) {
+    logger.error("Error fetching approval bonuses", error);
+    res.status(500).send("Error loading bonus data");
+  }
+};
+
 export const approveSubmission = async (req: MulmRequest, res: Response) => {
   const { viewer } = req;
 
@@ -620,6 +667,7 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
         id: submission.id,
         points: submission.points,
         species_class: submission.species_class,
+        program: submission.program,
       },
       errors,
       name: {
@@ -636,13 +684,26 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
 
   const updates = parsed.data;
 
-  const speciesIds = await recordName({
-    program_class: submission.species_class,
-    common_name: submission.species_common_name,
-    latin_name: submission.species_latin_name,
-    canonical_genus: parsed.data.canonical_genus,
-    canonical_species_name: parsed.data.canonical_species_name,
-  });
+  // Determine species IDs: either from selected group_id or from manual entry
+  let speciesIds: { common_name_id: number; scientific_name_id: number };
+
+  if (updates.group_id) {
+    // NEW WORKFLOW: Species selected from typeahead
+    speciesIds = await getNameIdsFromGroupId(
+      updates.group_id,
+      submission.species_common_name,
+      submission.species_latin_name
+    );
+  } else {
+    // LEGACY WORKFLOW: Manual genus/species entry (backward compatibility)
+    speciesIds = await recordName({
+      program_class: submission.species_class,
+      common_name: submission.species_common_name,
+      latin_name: submission.species_latin_name,
+      canonical_genus: updates.canonical_genus!,
+      canonical_species_name: updates.canonical_species_name!,
+    });
+  }
 
   await approve(viewer!.id, id, speciesIds, updates);
   const member = await getMember(submission.member_id);

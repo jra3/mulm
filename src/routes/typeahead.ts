@@ -68,14 +68,32 @@ export const searchSpecies = async (
       10 // Limit results for typeahead
     );
 
-    const formattedSpecies: SpeciesTypeaheadItem[] = species.map((s) => ({
-      text: `${s.common_name} (${s.scientific_name})`,
-      common_name: s.common_name,
-      scientific_name: s.scientific_name,
-      program_class: s.program_class,
-      group_id: s.group_id,
-      name_id: s.name_id,
-    }));
+    const formattedSpecies: SpeciesTypeaheadItem[] = species.map((s) => {
+      // Build canonical name from genus + species
+      const canonicalName = `${s.canonical_genus} ${s.canonical_species_name}`;
+
+      // Format display text based on what type of name this is
+      let displayText: string;
+      if (s.common_name && s.common_name.trim()) {
+        // Common name: show "Common Name (Genus species)"
+        displayText = `${s.common_name} (${canonicalName})`;
+      } else if (s.scientific_name && s.scientific_name.trim()) {
+        // Scientific name: just show "Genus species"
+        displayText = s.scientific_name;
+      } else {
+        // Fallback to canonical name
+        displayText = canonicalName;
+      }
+
+      return {
+        text: displayText,
+        common_name: s.common_name,
+        scientific_name: s.scientific_name,
+        program_class: s.program_class,
+        group_id: s.group_id,
+        name_id: s.name_id,
+      };
+    });
 
     res.json(formattedSpecies);
   } catch (error) {
@@ -83,3 +101,4 @@ export const searchSpecies = async (
     sendApiErrors.searchFailed(res, "species");
   }
 };
+
