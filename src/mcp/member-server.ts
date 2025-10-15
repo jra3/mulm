@@ -39,6 +39,41 @@ type MemberDetail = Member & {
   tank_preset_count: number;
 };
 
+// Tool argument types
+type ListMembersArgs = {
+  query?: string;
+  is_admin?: boolean;
+  has_submissions?: boolean;
+  limit?: number;
+  offset?: number;
+};
+
+type GetMemberDetailArgs = {
+  member_id: number;
+};
+
+type MergeMembersArgs = {
+  from_member_id: number;
+  to_member_id: number;
+  preview?: boolean;
+};
+
+type UpdateMemberArgs = {
+  member_id: number;
+  contact_email?: string;
+  display_name?: string;
+};
+
+type DeleteMemberArgs = {
+  member_id: number;
+  force?: boolean;
+};
+
+type SetAdminStatusArgs = {
+  member_id: number;
+  is_admin: boolean;
+};
+
 // Create MCP server
 const server = new Server(
   {
@@ -327,18 +362,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
  * TOOL IMPLEMENTATIONS
  */
 
-async function handleListMembers(args: any) {
+async function handleListMembers(args: ListMembersArgs) {
   const { query: searchQuery, is_admin, has_submissions, limit = 100, offset = 0 } = args;
 
   const conditions: string[] = ["1=1"];
-  const params: any[] = [];
+  const params: (string | number)[] = [];
 
   if (is_admin !== undefined) {
     conditions.push("m.is_admin = ?");
     params.push(is_admin ? 1 : 0);
   }
 
-  if (searchQuery && searchQuery.trim().length >= 2) {
+  if (searchQuery && typeof searchQuery === 'string' && searchQuery.trim().length >= 2) {
     const searchPattern = `%${searchQuery.trim().toLowerCase()}%`;
     conditions.push("(LOWER(m.display_name) LIKE ? OR LOWER(m.contact_email) LIKE ?)");
     params.push(searchPattern, searchPattern);
@@ -388,7 +423,7 @@ async function handleListMembers(args: any) {
   };
 }
 
-async function handleGetMemberDetail(args: any) {
+async function handleGetMemberDetail(args: GetMemberDetailArgs) {
   const { member_id } = args;
 
   const members = await query<Member>("SELECT * FROM members WHERE id = ?", [member_id]);
@@ -482,7 +517,7 @@ async function handleGetMemberDetail(args: any) {
   };
 }
 
-async function handleMergeMembers(args: any) {
+async function handleMergeMembers(args: MergeMembersArgs) {
   const { from_member_id, to_member_id, preview } = args;
 
   if (from_member_id === to_member_id) {
@@ -611,17 +646,17 @@ async function handleMergeMembers(args: any) {
   };
 }
 
-async function handleUpdateMember(args: any) {
+async function handleUpdateMember(args: UpdateMemberArgs) {
   const { member_id, contact_email, display_name } = args;
 
   const updates: string[] = [];
-  const values: any[] = [];
+  const values: (string | number)[] = [];
 
-  if (contact_email !== undefined) {
+  if (contact_email !== undefined && typeof contact_email === 'string') {
     updates.push("contact_email = ?");
     values.push(contact_email.trim());
   }
-  if (display_name !== undefined) {
+  if (display_name !== undefined && typeof display_name === 'string') {
     updates.push("display_name = ?");
     values.push(display_name.trim());
   }
@@ -663,7 +698,7 @@ async function handleUpdateMember(args: any) {
   };
 }
 
-async function handleDeleteMember(args: any) {
+async function handleDeleteMember(args: DeleteMemberArgs) {
   const { member_id, force } = args;
 
   // Check if member exists
@@ -723,7 +758,7 @@ async function handleDeleteMember(args: any) {
   };
 }
 
-async function handleSetAdminStatus(args: any) {
+async function handleSetAdminStatus(args: SetAdminStatusArgs) {
   const { member_id, is_admin } = args;
 
   const members = await query<Member>("SELECT * FROM members WHERE id = ?", [member_id]);

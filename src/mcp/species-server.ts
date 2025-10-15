@@ -50,6 +50,97 @@ type SpeciesName = {
   scientific_name: string;
 };
 
+// Tool argument types
+type CreateSpeciesGroupArgs = {
+  program_class: string;
+  canonical_genus: string;
+  canonical_species_name: string;
+  species_type: string;
+  base_points?: number;
+  is_cares_species?: boolean;
+};
+
+type UpdateSpeciesGroupArgs = {
+  group_id: number;
+  base_points?: number;
+  is_cares_species?: boolean;
+  external_references?: string[];
+  image_links?: string[];
+};
+
+type DeleteSpeciesGroupArgs = {
+  group_id: number;
+  force?: boolean;
+};
+
+type AddSpeciesSynonymArgs = {
+  group_id: number;
+  common_name: string;
+  scientific_name: string;
+};
+
+type UpdateSpeciesSynonymArgs = {
+  name_id: number;
+  common_name?: string;
+  scientific_name?: string;
+};
+
+type DeleteSpeciesSynonymArgs = {
+  name_id: number;
+  force?: boolean;
+};
+
+type MergeSpeciesGroupsArgs = {
+  canonical_group_id: number;
+  defunct_group_id: number;
+  preview?: boolean;
+};
+
+type SearchSpeciesArgs = {
+  query?: string;
+  species_type?: string;
+  program_class?: string;
+  has_base_points?: boolean;
+  is_cares_species?: boolean;
+  sort_by?: string;
+  limit?: number;
+  offset?: number;
+  count_only?: boolean;
+};
+
+type GetSpeciesDetailArgs = {
+  group_id: number;
+};
+
+type SetBasePointsArgs = {
+  group_id?: number;
+  group_ids?: number[];
+  species_type?: string;
+  program_class?: string;
+  base_points: number;
+  preview?: boolean;
+};
+
+type ToggleCaresStatusArgs = {
+  group_id: number;
+  is_cares_species: boolean;
+};
+
+type UpdateCanonicalNameArgs = {
+  group_id: number;
+  new_canonical_genus?: string;
+  new_canonical_species_name?: string;
+  preserve_old_as_synonym?: boolean;
+};
+
+type SpeciesAdminFilters = {
+  species_type?: string;
+  program_class?: string;
+  has_base_points?: boolean;
+  is_cares_species?: boolean;
+  search?: string;
+};
+
 // Helper function to parse JSON fields
 function parseJsonField<T>(jsonString: string | null): T | null {
   if (!jsonString) return null;
@@ -645,7 +736,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
  * TOOL IMPLEMENTATIONS
  */
 
-async function handleCreateSpeciesGroup(args: any) {
+async function handleCreateSpeciesGroup(args: CreateSpeciesGroupArgs) {
   const {
     program_class,
     canonical_genus,
@@ -682,7 +773,7 @@ async function handleCreateSpeciesGroup(args: any) {
   };
 }
 
-async function handleUpdateSpeciesGroup(args: any) {
+async function handleUpdateSpeciesGroup(args: UpdateSpeciesGroupArgs) {
   const { group_id, base_points, is_cares_species, external_references, image_links } = args;
 
   const changes = await updateSpeciesGroup(group_id, {
@@ -712,7 +803,7 @@ async function handleUpdateSpeciesGroup(args: any) {
   };
 }
 
-async function handleDeleteSpeciesGroup(args: any) {
+async function handleDeleteSpeciesGroup(args: DeleteSpeciesGroupArgs) {
   const { group_id, force } = args;
 
   const changes = await deleteSpeciesGroup(group_id, force);
@@ -736,7 +827,7 @@ async function handleDeleteSpeciesGroup(args: any) {
   };
 }
 
-async function handleAddSpeciesSynonym(args: any) {
+async function handleAddSpeciesSynonym(args: AddSpeciesSynonymArgs) {
   const { group_id, common_name, scientific_name } = args;
 
   const name_id = await addSynonym(group_id, common_name, scientific_name);
@@ -760,7 +851,7 @@ async function handleAddSpeciesSynonym(args: any) {
   };
 }
 
-async function handleUpdateSpeciesSynonym(args: any) {
+async function handleUpdateSpeciesSynonym(args: UpdateSpeciesSynonymArgs) {
   const { name_id, common_name, scientific_name } = args;
 
   const changes = await updateSynonym(name_id, {
@@ -787,7 +878,7 @@ async function handleUpdateSpeciesSynonym(args: any) {
   };
 }
 
-async function handleDeleteSpeciesSynonym(args: any) {
+async function handleDeleteSpeciesSynonym(args: DeleteSpeciesSynonymArgs) {
   const { name_id, force } = args;
 
   const changes = await deleteSynonym(name_id, force);
@@ -811,7 +902,7 @@ async function handleDeleteSpeciesSynonym(args: any) {
   };
 }
 
-async function handleMergeSpeciesGroups(args: any) {
+async function handleMergeSpeciesGroups(args: MergeSpeciesGroupsArgs) {
   const { canonical_group_id, defunct_group_id, preview } = args;
 
   if (canonical_group_id === defunct_group_id) {
@@ -915,7 +1006,7 @@ async function handleMergeSpeciesGroups(args: any) {
   };
 }
 
-async function handleSearchSpecies(args: any) {
+async function handleSearchSpecies(args: SearchSpeciesArgs) {
   const {
     query: searchQuery,
     species_type,
@@ -928,7 +1019,7 @@ async function handleSearchSpecies(args: any) {
     count_only = false,
   } = args;
 
-  const filters = {
+  const filters: SpeciesAdminFilters = {
     species_type,
     program_class,
     has_base_points,
@@ -986,7 +1077,7 @@ async function handleSearchSpecies(args: any) {
   };
 }
 
-async function handleGetSpeciesDetail(args: any) {
+async function handleGetSpeciesDetail(args: GetSpeciesDetailArgs) {
   const { group_id } = args;
 
   const speciesDetail = await getSpeciesDetail(group_id);
@@ -1012,7 +1103,7 @@ async function handleGetSpeciesDetail(args: any) {
   };
 }
 
-async function handleSetBasePoints(args: any) {
+async function handleSetBasePoints(args: SetBasePointsArgs) {
   const { group_id, group_ids, species_type, program_class, base_points, preview } = args;
 
   // Determine which species to update
@@ -1024,7 +1115,7 @@ async function handleSetBasePoints(args: any) {
     targetGroupIds = group_ids;
   } else if (species_type || program_class) {
     // Query to get group_ids matching filters
-    const filters: any = { species_type, program_class };
+    const filters: SpeciesAdminFilters = { species_type, program_class };
     const result = await getSpeciesForAdmin(filters, "name", 10000, 0);
     targetGroupIds = result.species.map((s) => s.group_id);
   } else {
@@ -1115,7 +1206,7 @@ async function handleSetBasePoints(args: any) {
   };
 }
 
-async function handleToggleCaresStatus(args: any) {
+async function handleToggleCaresStatus(args: ToggleCaresStatusArgs) {
   const { group_id, is_cares_species } = args;
 
   const changes = await updateSpeciesGroup(group_id, {
@@ -1142,7 +1233,7 @@ async function handleToggleCaresStatus(args: any) {
   };
 }
 
-async function handleUpdateCanonicalName(args: any) {
+async function handleUpdateCanonicalName(args: UpdateCanonicalNameArgs) {
   const {
     group_id,
     new_canonical_genus,
@@ -1169,7 +1260,7 @@ async function handleUpdateCanonicalName(args: any) {
   await withTransaction(async (db) => {
     // Update canonical name
     const updates: string[] = [];
-    const values: any[] = [];
+    const values: (string | number)[] = [];
 
     if (new_canonical_genus) {
       updates.push("canonical_genus = ?");
