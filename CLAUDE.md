@@ -67,6 +67,19 @@ This repository uses directory-specific README files for detailed documentation:
 - ❌ **Never use `require()`** in TypeScript - Use ES6 imports
 - ✅ **Static imports only** - Enables tree shaking, type checking, and better performance
 
+### Pre-commit Hooks
+
+The repository uses [husky](https://github.com/typicode/husky) and [lint-staged](https://github.com/okonet/lint-staged) to automatically lint staged files before commits:
+
+- ESLint runs on all staged `.ts` files in `src/` and `scripts/`
+- Auto-fixes are applied when possible
+- Commits are blocked if lint errors remain
+
+To bypass the pre-commit hook (not recommended):
+```bash
+git commit --no-verify
+```
+
 ### Scripts Directory
 
 Scripts use separate tsconfig for CLI compatibility. Run with:

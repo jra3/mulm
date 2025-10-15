@@ -20,7 +20,8 @@
 		"lint:fix": "eslint 'src/**/*.ts' --fix",
 		"format": "prettier --write \"src/**/*.{ts,js,json}\" \"scripts/**/*.{ts,js}\"",
 		"format:check": "prettier --check \"src/**/*.{ts,js,json}\" \"scripts/**/*.{ts,js}\"",
-		"script": "ts-node"
+		"script": "ts-node",
+		"prepare": "husky"
 	},
 	"repository": {
 		"type": "git",
@@ -81,7 +82,9 @@
 		"eslint": "^9.22.0",
 		"eslint-config-prettier": "^10.1.8",
 		"globals": "^16.0.0",
+		"husky": "^9.1.7",
 		"lightningcss": "^1.29.3",
+		"lint-staged": "^16.2.4",
 		"nodemon": "^3.1.9",
 		"postcss": "^8.5.3",
 		"postcss-cli": "^11.0.0",
@@ -92,6 +95,14 @@
 		"tsx": "^4.19.4",
 		"typescript": "^5.8.2",
 		"typescript-eslint": "^8.26.0"
+	},
+	"lint-staged": {
+		"src/**/*.ts": [
+			"eslint --fix"
+		],
+		"scripts/**/*.ts": [
+			"eslint --fix"
+		]
 	},
 	"keywords": []
 }
