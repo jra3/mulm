@@ -48,7 +48,7 @@ import {
 } from "@/forms/submission";
 import {
   ensureNameIdsForGroupId,
-  hasBreedSpeciesBefore,
+  isFirstTimeSpeciesForProgram,
   getSpeciesGroup,
 } from "@/db/species";
 import { getBodyParam, getBodyString, getQueryString } from "@/utils/request";
@@ -631,9 +631,9 @@ export const getApprovalBonuses = async (req: MulmRequest, res: Response) => {
   }
 
   try {
-    // Check first-time status and get species data
+    // Check first-time status (program-wide) and get species data
     const [breedingHistory, speciesGroup] = await Promise.all([
-      hasBreedSpeciesBefore(submission.member_id, groupId),
+      isFirstTimeSpeciesForProgram(groupId),
       getSpeciesGroup(groupId),
     ]);
 
@@ -642,7 +642,7 @@ export const getApprovalBonuses = async (req: MulmRequest, res: Response) => {
         id: submission.id,
       },
       program: submission.program,
-      isFirstTime: !breedingHistory.hasBreedBefore,
+      isFirstTime: breedingHistory.isFirstTime,
       priorBreedCount: breedingHistory.priorBreedCount,
       isCaresSpecies: speciesGroup?.is_cares_species === 1,
       basePoints: speciesGroup?.base_points,

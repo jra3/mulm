@@ -1676,18 +1676,19 @@ export async function bulkSetPoints(groupIds: number[], points: number | null): 
 }
 
 /**
- * Check if a member has previously bred a species (by group_id)
+ * Check if a species has been bred before by ANY member (program-wide)
  * Used for first-time species bonus detection in approval workflow
  *
- * @param memberId - Member ID to check
+ * NOTE: First-time bonus is awarded when a species is bred for the FIRST TIME EVER
+ * in the program, not per-member. This checks if ANY member has bred it before.
+ *
  * @param groupId - Species group ID
- * @returns Object with hasBreedBefore flag and count of prior breedings
+ * @returns Object with isFirstTime flag and count of prior breedings across all members
  */
-export async function hasBreedSpeciesBefore(
-  memberId: number,
+export async function isFirstTimeSpeciesForProgram(
   groupId: number
 ): Promise<{
-  hasBreedBefore: boolean;
+  isFirstTime: boolean;
   priorBreedCount: number;
 }> {
   const rows = await query<{ count: number }>(
@@ -1696,17 +1697,16 @@ export async function hasBreedSpeciesBefore(
     FROM submissions s
     LEFT JOIN species_common_name cn ON s.common_name_id = cn.common_name_id
     LEFT JOIN species_scientific_name scin ON s.scientific_name_id = scin.scientific_name_id
-    WHERE s.member_id = ?
-      AND (cn.group_id = ? OR scin.group_id = ?)
+    WHERE (cn.group_id = ? OR scin.group_id = ?)
       AND s.approved_on IS NOT NULL
   `,
-    [memberId, groupId, groupId]
+    [groupId, groupId]
   );
 
   const count = rows[0]?.count || 0;
 
   return {
-    hasBreedBefore: count > 0,
+    isFirstTime: count === 0,
     priorBreedCount: count,
   };
 }
