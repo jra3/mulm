@@ -46,7 +46,11 @@ import {
   speciesTypes,
   waterTypes,
 } from "@/forms/submission";
-import { getNameIdsFromGroupId, hasBreedSpeciesBefore, getSpeciesGroup } from "@/db/species";
+import {
+  getNameIdsFromGroupId,
+  hasBreedSpeciesBefore,
+  getSpeciesGroup,
+} from "@/db/species";
 import { getBodyParam, getBodyString, getQueryString } from "@/utils/request";
 import { checkAndUpdateMemberLevel, checkAllMemberLevels, Program } from "@/levelManager";
 import { checkAndGrantSpecialtyAwards, checkAllSpecialtyAwards } from "@/specialtyAwardManager";
@@ -670,10 +674,6 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
         program: submission.program,
       },
       errors,
-      name: {
-        canonical_genus: getBodyString(req, "canonical_genus"),
-        canonical_species_name: getBodyString(req, "canonical_species_name"),
-      },
     });
   };
 
