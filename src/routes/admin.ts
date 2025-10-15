@@ -46,7 +46,7 @@ import {
   speciesTypes,
   waterTypes,
 } from "@/forms/submission";
-import { recordName, getNameIdsFromGroupId, hasBreedSpeciesBefore, getSpeciesGroup } from "@/db/species";
+import { getNameIdsFromGroupId, hasBreedSpeciesBefore, getSpeciesGroup } from "@/db/species";
 import { getBodyParam, getBodyString, getQueryString } from "@/utils/request";
 import { checkAndUpdateMemberLevel, checkAllMemberLevels, Program } from "@/levelManager";
 import { checkAndGrantSpecialtyAwards, checkAllSpecialtyAwards } from "@/specialtyAwardManager";
@@ -684,26 +684,12 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
 
   const updates = parsed.data;
 
-  // Determine species IDs: either from selected group_id or from manual entry
-  let speciesIds: { common_name_id: number; scientific_name_id: number };
-
-  if (updates.group_id) {
-    // NEW WORKFLOW: Species selected from typeahead
-    speciesIds = await getNameIdsFromGroupId(
-      updates.group_id,
-      submission.species_common_name,
-      submission.species_latin_name
-    );
-  } else {
-    // LEGACY WORKFLOW: Manual genus/species entry (backward compatibility)
-    speciesIds = await recordName({
-      program_class: submission.species_class,
-      common_name: submission.species_common_name,
-      latin_name: submission.species_latin_name,
-      canonical_genus: updates.canonical_genus!,
-      canonical_species_name: updates.canonical_species_name!,
-    });
-  }
+  // Get species name IDs from the selected group_id
+  const speciesIds = await getNameIdsFromGroupId(
+    updates.group_id,
+    submission.species_common_name,
+    submission.species_latin_name
+  );
 
   await approve(viewer!.id, id, speciesIds, updates);
   const member = await getMember(submission.member_id);
