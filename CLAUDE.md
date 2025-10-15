@@ -66,6 +66,11 @@ This repository uses directory-specific README files for detailed documentation:
 - ❌ **Never use dynamic imports** - Always use static imports at the top of files
 - ❌ **Never use `require()`** in TypeScript - Use ES6 imports
 - ✅ **Static imports only** - Enables tree shaking, type checking, and better performance
+- ✅ **HTMX-first architecture** - Prefer HTMX attributes over custom JavaScript for form interactions
+- ✅ **Validate with Zod schemas** - Always validate request bodies with zod, never use `as` type assertions
+- ✅ **Function naming clarity** - Functions that mutate should have names like `ensure`, `create`, `update`, not just `get`
+- ⚠️ **Avoid `&&` in Pug attributes** - Use ternary operators or server-side variables to prevent HTML encoding issues
+- ⚠️ **AdminRouter routes** - Don't check `viewer.is_admin` in individual handlers; `requireAdmin` middleware handles it
 
 ### Pre-commit Hooks
 
