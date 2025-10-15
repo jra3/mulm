@@ -138,7 +138,7 @@ html
             .grid.gap-6(class="md:grid-cols-2")
 
               //- Common Names
-              div
+              .flex.flex-col
                 .flex.justify-between.items-center.mb-3
                   h3.text-base.font-bold.text-gray-900 Common Names (#{commonNames.length})
                   button.outline.text-sm(
@@ -173,7 +173,7 @@ html
                       ) Add First Common Name
 
               //- Scientific Names
-              div
+              .flex.flex-col
                 .flex.justify-between.items-center.mb-3
                   h3.text-base.font-bold.text-gray-900 Scientific Names (#{scientificNames.length})
                   button.outline.text-sm(
