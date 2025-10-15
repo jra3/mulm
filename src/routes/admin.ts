@@ -47,7 +47,7 @@ import {
   waterTypes,
 } from "@/forms/submission";
 import {
-  getNameIdsFromGroupId,
+  ensureNameIdsForGroupId,
   hasBreedSpeciesBefore,
   getSpeciesGroup,
 } from "@/db/species";
@@ -684,8 +684,8 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
 
   const updates = parsed.data;
 
-  // Get species name IDs from the selected group_id
-  const speciesIds = await getNameIdsFromGroupId(
+  // Ensure species name IDs exist for the selected group_id
+  const speciesIds = await ensureNameIdsForGroupId(
     updates.group_id,
     submission.species_common_name,
     submission.species_latin_name

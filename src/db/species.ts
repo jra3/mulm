@@ -1712,15 +1712,15 @@ export async function hasBreedSpeciesBefore(
 }
 
 /**
- * Get common_name_id and scientific_name_id from a group_id and the submission's name strings
- * Looks up existing names in the split schema tables, or creates them if needed
+ * Ensure name IDs exist for a species group and submission's name strings
+ * Looks up existing names in the split schema tables, creating them if they don't exist
  *
  * @param groupId - Species group ID
  * @param commonName - Common name from submission
  * @param scientificName - Scientific name from submission
  * @returns Object with common_name_id and scientific_name_id
  */
-export async function getNameIdsFromGroupId(
+export async function ensureNameIdsForGroupId(
   groupId: number,
   commonName: string,
   scientificName: string
