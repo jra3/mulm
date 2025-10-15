@@ -3,8 +3,6 @@ include ../header.pug
 +dialog
 	h2.text-2xl.font-bold.mb-4 Set Points for Selected Species
 
-	p.text-gray-700.mb-4 Set base points for selected species
-
 	form(
 		hx-post="/admin/species/bulk-set-points"
 		hx-include="[name='groupIds']:checked"
@@ -25,4 +23,4 @@ include ../header.pug
 					type="button"
 					hx-on:click="document.getElementById('dialog').remove()"
 				) Cancel
-				button.primary(type="submit") Apply Points
+				button.primary(type="submit") Bulk Edit Points
