@@ -74,8 +74,6 @@ mixin CRUDForm()
                     valueField: "common_name",
                     labelField: "common_name",
                     secondaryField: "scientific_name",
-                    hiddenIdField: "species_name_id",
-                    hiddenIdValueField: "name_id",
                     allowCreate: true,
                     createOnBlur: true,
                     filterBySpeciesType: form.species_type || 'Fish'
@@ -89,8 +87,6 @@ mixin CRUDForm()
                     valueField: "scientific_name",
                     labelField: "scientific_name",
                     secondaryField: "common_name",
-                    hiddenIdField: "species_name_id",
-                    hiddenIdValueField: "name_id",
                     allowCreate: true,
                     createOnBlur: true,
                     filterBySpeciesType: form.species_type || 'Fish'

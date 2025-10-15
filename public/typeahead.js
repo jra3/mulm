@@ -11,10 +11,6 @@ function getTypeaheadConfig(element) {
 
 	return {
 		apiUrl: element.dataset.apiUrl,
-		linkedField: element.dataset.linkedField,
-		linkedValueField: element.dataset.linkedValueField,
-		hiddenIdField: element.dataset.hiddenIdField,
-		hiddenIdValueField: element.dataset.hiddenIdValueField,
 		valueField: element.dataset.valueField || 'value',
 		labelField: labelField,
 		searchFields: searchFields,
@@ -63,57 +59,11 @@ function buildTomSelectOptions(element, config) {
 			// Sync TomSelect internal state to underlying select element
 			this.sync();
 
+			// Dispatch custom event for external listeners to handle
 			element.dispatchEvent(new CustomEvent('typeahead:change', {
 				detail: { value, selectedOption },
 				bubbles: true
 			}));
-
-			// Auto-populate linked field if configured
-			if (config.linkedField && config.linkedValueField && selectedOption) {
-				const linkedElement = document.getElementById(config.linkedField);
-				if (linkedElement && linkedElement.tomSelectInstance) {
-					const linkedValue = selectedOption[config.linkedValueField];
-					if (linkedValue) {
-						const linkedInstance = linkedElement.tomSelectInstance;
-						const linkedConfig = getTypeaheadConfig(linkedElement);
-
-						// Create option object using the linked field's configuration
-						const linkedOption = {
-							[linkedConfig.valueField]: linkedValue,
-							[linkedConfig.labelField]: linkedValue,
-							// Copy over all the original data for compatibility
-							...selectedOption
-						};
-
-						// Ensure secondary field is properly set
-						if (linkedConfig.secondaryField && selectedOption[linkedConfig.secondaryField]) {
-							linkedOption[linkedConfig.secondaryField] = selectedOption[linkedConfig.secondaryField];
-						}
-
-						// Add the option if it doesn't exist yet
-						if (!linkedInstance.options[linkedValue]) {
-							linkedInstance.addOption(linkedOption);
-						}
-						// Set the value
-						// Clear and set to force visual update
-						linkedInstance.clear(true);
-						linkedInstance.setValue(linkedValue, true); // silent=false to trigger change
-					}
-				}
-			}
-
-			// Populate hidden ID field if configured
-			if (config.hiddenIdField && config.hiddenIdValueField && selectedOption) {
-				const hiddenElement = document.getElementById(config.hiddenIdField);
-				if (hiddenElement) {
-					const hiddenValue = selectedOption[config.hiddenIdValueField];
-					if (hiddenValue !== undefined && hiddenValue !== null) {
-						hiddenElement.value = hiddenValue;
-						// Dispatch change event for HTMX listeners
-						hiddenElement.dispatchEvent(new Event('change', { bubbles: true }));
-					}
-				}
-			}
 		},
 
 		onLoad: function() {

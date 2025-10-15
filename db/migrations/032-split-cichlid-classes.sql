@@ -151,6 +151,25 @@ UPDATE species_name_group
 SET program_class = 'Cichlids - Old World'
 WHERE program_class = 'Cichlids';
 
+-- Fix misclassified cichlids that were added as 'Miscellaneous'
+-- These were added after the original species imports
+
+-- New World cichlids incorrectly marked as Miscellaneous
+UPDATE species_name_group
+SET program_class = 'Cichlids - New World'
+WHERE program_class = 'Miscellaneous'
+AND canonical_genus IN ('Andinoacara', 'Apistogrammoides');
+
+-- Old World cichlids incorrectly marked as Miscellaneous
+UPDATE species_name_group
+SET program_class = 'Cichlids - Old World'
+WHERE program_class = 'Miscellaneous'
+AND canonical_genus IN (
+    'Altolamprologus',
+    'Aristochromis',
+    'Astatoreochromis'
+);
+
 -- Update existing submissions where species_class is 'Cichlids'
 -- Match with species_name_group to get the new class name
 UPDATE submissions

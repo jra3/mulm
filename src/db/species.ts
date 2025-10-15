@@ -449,12 +449,19 @@ export async function searchSpeciesTypeahead(
 
   // UNION query: search both common names and scientific names
   // Each subquery joins with species_name_group for metadata
+  // Uses canonical names from species_name_group as fallback for pairing
   const sql = `
     SELECT
       cn.common_name_id as name_id,
       cn.group_id,
       cn.common_name,
-      '' as scientific_name,
+      COALESCE(
+        (SELECT sn.scientific_name FROM species_scientific_name sn
+         WHERE sn.group_id = cn.group_id
+         ORDER BY sn.scientific_name
+         LIMIT 1),
+        sng.canonical_genus || ' ' || sng.canonical_species_name
+      ) as scientific_name,
       sng.program_class,
       sng.species_type,
       sng.canonical_genus,
@@ -469,7 +476,13 @@ export async function searchSpeciesTypeahead(
     SELECT
       sn.scientific_name_id as name_id,
       sn.group_id,
-      '' as common_name,
+      COALESCE(
+        (SELECT cn.common_name FROM species_common_name cn
+         WHERE cn.group_id = sn.group_id
+         ORDER BY cn.common_name
+         LIMIT 1),
+        sng.canonical_genus || ' ' || sng.canonical_species_name
+      ) as common_name,
       sn.scientific_name,
       sng.program_class,
       sng.species_type,
