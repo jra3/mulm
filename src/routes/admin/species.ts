@@ -284,7 +284,8 @@ export const deleteCommonNameRoute = async (req: MulmRequest, res: Response) => 
       return;
     }
 
-    res.status(200).send("Common name deleted");
+    // Return empty response - HTMX will remove the element
+    res.status(200).send("");
   } catch {
     res.status(500).send("Failed to delete common name");
   }
@@ -316,7 +317,8 @@ export const deleteScientificNameRoute = async (req: MulmRequest, res: Response)
       return;
     }
 
-    res.status(200).send("Scientific name deleted");
+    // Return empty response - HTMX will remove the element
+    res.status(200).send("");
   } catch {
     res.status(500).send("Failed to delete scientific name");
   }
