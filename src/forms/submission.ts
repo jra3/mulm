@@ -42,11 +42,16 @@ export const bapFields = z.object({
     .string()
     .optional()
     .transform((val) => (val ? parseInt(val) : undefined)),
-  member_name: z.string().min(1, "Required").max(100, "Name too long (max 100 characters)"),
+  member_id: z
+    .string()
+    .optional()
+    .transform((val) => (val ? parseInt(val) : undefined)),
+  member_name: z.string().min(1, "Required").max(100, "Name too long (max 100 characters)").optional(),
   member_email: z
     .string()
     .email("Valid address required")
-    .max(100, "Email too long (max 100 characters)"),
+    .max(100, "Email too long (max 100 characters)")
+    .optional(),
   water_type: waterTypeEnum,
   species_type: speciesTypeEnum,
   reproduction_date: z.string().refine(

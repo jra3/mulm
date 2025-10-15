@@ -19,7 +19,7 @@ import {
 import { extractValid } from "@/forms/utils";
 import { getQueryString } from "@/utils/request";
 import { MulmRequest } from "@/sessions";
-import { MemberRecord, getMember, getMemberByEmail } from "@/db/members";
+import { MemberRecord, getMember, getMembersList } from "@/db/members";
 import { onSubmissionSend } from "@/notifications";
 import * as db from "@/db/submissions";
 import { getSpeciesGroup, getGroupIdFromNameId } from "@/db/species";
@@ -28,31 +28,42 @@ import { getNotesForSubmission } from "@/db/submission_notes";
 import { formatShortDate } from "@/utils/dateFormat";
 import { parseVideoUrlWithOEmbed, isValidVideoUrl } from "@/utils/videoParser";
 
-export const renderSubmissionForm = (req: MulmRequest, res: Response) => {
-  const { viewer } = req;
-  const form = {
-    // auto-fill member name and email if logged in
-    member_name: viewer?.display_name,
-    member_email: viewer?.contact_email,
-    ...req.query,
-  };
+async function getFormTemplateData(isAdmin: boolean, speciesType: string) {
+  const members = isAdmin ? await getMembersList() : [];
 
-  const selectedType = getQueryString(req, "species_type", "Fish");
-  res.render("submit", {
-    title: getBapFormTitle(selectedType),
-    form,
-    errors: new Map(),
-    classOptions: getClassOptions(selectedType),
+  return {
+    classOptions: getClassOptions(speciesType),
     waterTypes,
     speciesTypes,
     foodTypes,
     spawnLocations,
-    isLivestock: isLivestock(selectedType),
-    hasFoods: hasFoods(selectedType),
-    hasSpawnLocations: hasSpawnLocations(selectedType),
-    hasLighting: hasLighting(selectedType),
-    hasSupplements: hasSupplements(selectedType),
-    isAdmin: Boolean(viewer?.is_admin),
+    isLivestock: isLivestock(speciesType),
+    hasFoods: hasFoods(speciesType),
+    hasSpawnLocations: hasSpawnLocations(speciesType),
+    hasLighting: hasLighting(speciesType),
+    hasSupplements: hasSupplements(speciesType),
+    isAdmin,
+    members,
+  };
+}
+
+export const renderSubmissionForm = async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+  const form = {
+    // auto-fill member ID if logged in
+    member_id: viewer?.id,
+    member_name: viewer?.display_name,
+    ...req.query,
+  };
+
+  const selectedType = getQueryString(req, "species_type", "Fish");
+  const templateData = await getFormTemplateData(Boolean(viewer?.is_admin), selectedType);
+
+  res.render("submit", {
+    title: getBapFormTitle(selectedType),
+    form,
+    errors: new Map(),
+    ...templateData,
   });
 };
 
@@ -95,29 +106,20 @@ export const view = async (req: MulmRequest, res: Response) => {
   };
 
   if (viewer && aspect.isSelf && !aspect.isSubmitted) {
+    const templateData = await getFormTemplateData(Boolean(aspect.isAdmin), submission.species_type);
     res.render("submit", {
       title: `Edit ${getBapFormTitle(submission.program)}`,
       form: {
         ...submission,
+        member_id: viewer.id,
         member_name: viewer.display_name,
-        member_email: viewer.contact_email,
         foods: parseStringArray(submission.foods),
         spawn_locations: parseStringArray(submission.spawn_locations),
         supplement_type: parseStringArray(submission.supplement_type),
         supplement_regimen: parseStringArray(submission.supplement_regimen),
       },
       errors: new Map(),
-      classOptions: getClassOptions(submission.species_type),
-      waterTypes,
-      speciesTypes,
-      foodTypes,
-      spawnLocations,
-      isLivestock: isLivestock(submission.species_type),
-      hasFoods: hasFoods(submission.species_type),
-      hasSpawnLocations: hasSpawnLocations(submission.species_type),
-      hasLighting: hasLighting(submission.species_type),
-      hasSupplements: hasSupplements(submission.species_type),
-      isAdmin: aspect.isAdmin,
+      ...templateData,
     });
     return;
   }
@@ -255,41 +257,32 @@ export const create = async (req: MulmRequest, res: Response) => {
 
   if (errors) {
     const selectedType = form.species_type || "Fish";
+    const templateData = await getFormTemplateData(Boolean(viewer.is_admin), selectedType);
     res.render("bapForm/form", {
       title: getBapFormTitle(selectedType),
       form,
       errors,
-      classOptions: getClassOptions(selectedType),
-      waterTypes,
-      speciesTypes,
-      foodTypes,
-      spawnLocations,
-      isLivestock: isLivestock(selectedType),
-      hasFoods: hasFoods(selectedType),
-      hasSpawnLocations: hasSpawnLocations(selectedType),
-      hasLighting: hasLighting(selectedType),
-      hasSupplements: hasSupplements(selectedType),
-      isAdmin: Boolean(viewer.is_admin),
+      ...templateData,
     });
     return;
   }
 
-  if (form.member_email != viewer.contact_email || form.member_name != viewer.display_name) {
-    // Admins can supply any member
-    if (!viewer.is_admin) {
-      res.status(403).send();
+  // Determine which member this submission is for
+  let memberId: number;
+
+  if (form.member_id) {
+    // Admin specified a member via the dropdown
+    memberId = parseInt(String(form.member_id));
+
+    // Verify admin is allowed to submit for other members
+    if (memberId !== viewer.id && !viewer.is_admin) {
+      res.status(403).send("Not authorized to submit for other members");
       return;
     }
+  } else {
+    // No member_id specified, use logged-in user
+    memberId = viewer.id;
   }
-
-  const member = await getMemberByEmail(form.member_email!);
-
-  if (!member) {
-    res.status(400).send("No member found");
-    return;
-  }
-
-  const memberId = member.id;
 
   // TODO figure out how to avoid read after write
   const subId = await db.createSubmission(memberId, form, !draft);
@@ -301,7 +294,10 @@ export const create = async (req: MulmRequest, res: Response) => {
   }
 
   if (!draft) {
-    await onSubmissionSend(sub, member);
+    const member = await getMember(memberId);
+    if (member) {
+      await onSubmissionSend(sub, member);
+    }
   }
 
   // Redirect to the submission view page after successful creation
@@ -338,24 +334,15 @@ export const update = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const { form, draft, errors } = parseAndValidateForm(req);
+  const { form, draft, errors} = parseAndValidateForm(req);
   if (errors) {
     const selectedType = form.species_type || "Fish";
+    const templateData = await getFormTemplateData(Boolean(viewer.is_admin), selectedType);
     res.render("bapForm/form", {
       title: `Edit ${getBapFormTitle(selectedType)}`,
       form,
       errors,
-      classOptions: getClassOptions(selectedType),
-      waterTypes,
-      speciesTypes,
-      foodTypes,
-      spawnLocations,
-      isLivestock: isLivestock(selectedType),
-      hasFoods: hasFoods(selectedType),
-      hasSpawnLocations: hasSpawnLocations(selectedType),
-      hasLighting: hasLighting(selectedType),
-      hasSupplements: hasSupplements(selectedType),
-      isAdmin: Boolean(viewer.is_admin),
+      ...templateData,
     });
     return;
   }

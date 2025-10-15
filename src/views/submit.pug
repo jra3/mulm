@@ -23,6 +23,24 @@ html
 				});
 			}
 
+			function initMemberSelect() {
+				const memberSelect = document.getElementById('member_select');
+				// Only initialize if element exists and has the tom-select-single class (admin only)
+				if (!memberSelect || !memberSelect.classList.contains('tom-select-single')) {
+					return;
+				}
+
+				if (memberSelect.tomselect) {
+					memberSelect.tomselect.destroy();
+				}
+
+				const instance = new TomSelect(memberSelect, {
+					create: false,
+					maxItems: 1,
+				});
+				memberSelect.tomSelectInstance = instance;
+			}
+
 			function initializeTypeaheads() {
 				const typeaheadElements = document.querySelectorAll('select.tom-select-typeahead:not(.tomselected)');
 				typeaheadElements.forEach(function(element) {
@@ -44,16 +62,17 @@ html
 				const target = event.detail.elt;
 				if (target && target.id === 'bapForm') {
 					initStaticMultiSelects();
+					initMemberSelect();
 					initializeTypeaheads();
 				}
 			});
 
-			// Handle species typeahead changes - update hidden species_name_id, species_class, and sync names
+			// Handle species typeahead changes for form auto-population
 			document.addEventListener("typeahead:change", function (e) {
 				const target = e.target;
 				const detail = e.detail;
 
-				// Only handle species typeahead changes (common or latin name)
+				// Handle species typeahead changes (common or latin name)
 				if (target.id === 'species_common_name' || target.id === 'species_latin_name') {
 					const selectedOption = detail.selectedOption;
 
@@ -129,6 +148,7 @@ html
 
 			document.addEventListener("DOMContentLoaded", function () {
 				initStaticMultiSelects();
+				initMemberSelect();
 				initializeTypeaheads();
 
 				document.querySelectorAll("input, textarea, select").forEach((el) => {
