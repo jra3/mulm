@@ -89,6 +89,42 @@ html
 							type="button"
 						) Delete
 
+		// Admin Notes Section - visible only to program admins (shown BEFORE approval panels)
+		if isAdmin
+			section.bg-gray-700.py-6
+				div.max-w-4xl.mx-auto.text-left.px-4
+					h2.text-xl.font-bold.mb-2.text-white Admin Notes
+					p.text-sm.text-gray-300.mb-4 Private notes visible only to program admins
+
+					//- Notes feed
+					div#notes-list.mb-6.space-y-3
+						if adminNotes && adminNotes.length > 0
+							each note in adminNotes
+								include ../admin/submissionNote.pug
+						else
+							p.text-gray-500.text-sm.italic No notes yet
+
+					//- Note form
+					form#note-form(
+						hx-post=`/admin/submissions/${submission.id}/notes`
+						hx-target="#notes-list"
+						hx-swap="beforeend"
+						hx-on--after-request="this.reset()"
+					)
+						div.mb-2
+							label.input-label(for="note_text") Add Note
+							textarea.text-input(
+								id="note_text"
+								name="note_text"
+								placeholder="Write a note..."
+								rows="3"
+								required
+								maxlength="2000"
+							)
+						button.primary(type="submit") Add Note
+
+		// Admin Action Panels (screening, waiting period, approval)
+		section.bg-gray-100
 			if isAdmin
 				// Screening Actions Panel - only show for pending screening
 				if submission.witness_verification_status === 'pending'
@@ -143,40 +179,6 @@ html
 						// Show approval panel for other admins
 						.status-panel.status-panel-admin#adminPanel
 							include ../admin/approvalPanel.pug
-
-		// Admin Notes Section - visible only to program admins
-		if isAdmin
-			section.bg-gray-700.py-6
-				div.max-w-4xl.mx-auto.text-left.px-4
-					h2.text-xl.font-bold.mb-2.text-white Admin Notes
-					p.text-sm.text-gray-300.mb-4 Private notes visible only to program admins
-
-					//- Notes feed
-					div#notes-list.mb-6.space-y-3
-						if adminNotes && adminNotes.length > 0
-							each note in adminNotes
-								include ../admin/submissionNote.pug
-						else
-							p.text-gray-500.text-sm.italic No notes yet
-
-					//- Note form
-					form#note-form(
-						hx-post=`/admin/submissions/${submission.id}/notes`
-						hx-target="#notes-list"
-						hx-swap="beforeend"
-						hx-on--after-request="this.reset()"
-					)
-						div.mb-2
-							label.input-label(for="note_text") Add Note
-							textarea.text-input(
-								id="note_text"
-								name="note_text"
-								placeholder="Write a note..."
-								rows="3"
-								required
-								maxlength="2000"
-							)
-						button.primary(type="submit") Add Note
 
 		// Initialize typeahead for species selection in approval panel
 		if isAdmin
