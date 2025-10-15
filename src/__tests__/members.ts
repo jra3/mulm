@@ -42,7 +42,12 @@ test("Create with google", async () => {
   const id = await createMember("honk@dazzle.com", "Honk Dazzle", { google_sub: "123456789" });
   const acct = await getGoogleAccount("123456789");
   expect(acct?.member_id).toEqual(id);
-  expect((await getMember(acct!.member_id))?.display_name).toEqual("Honk Dazzle");
+
+  if (!acct) {
+    throw new Error("Failed to retrieve Google account for test");
+  }
+
+  expect((await getMember(acct.member_id))?.display_name).toEqual("Honk Dazzle");
 });
 
 test("Create with google COLLISION", async () => {

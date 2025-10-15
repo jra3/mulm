@@ -244,12 +244,20 @@ describe("Species Detail Functionality", () => {
     const apisto = species.find((s) => s.canonical_genus === "Apistogramma");
 
     expect(apisto).toBeDefined();
-    const detail = await getSpeciesDetail(apisto!.group_id);
+    if (!apisto) {
+      throw new Error("Apistogramma species not found in test data");
+    }
+
+    const detail = await getSpeciesDetail(apisto.group_id);
 
     expect(detail).toBeDefined();
-    expect(detail!.canonical_genus).toBe("Apistogramma");
-    expect(detail!.canonical_species_name).toBe("cacatuoides");
-    expect(detail!.synonyms.length).toBeGreaterThan(0);
+    if (!detail) {
+      throw new Error("Failed to retrieve species detail for Apistogramma");
+    }
+
+    expect(detail.canonical_genus).toBe("Apistogramma");
+    expect(detail.canonical_species_name).toBe("cacatuoides");
+    expect(detail.synonyms.length).toBeGreaterThan(0);
   });
 
   test("Returns null for non-existent species", async () => {
