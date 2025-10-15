@@ -1,4 +1,35 @@
 //- Tank Preset Form (for both create and edit)
+//- Local mixin for form fields to reduce repetition
+mixin formField(name, labelText, placeholder, value, required=false)
+	.mb-3
+		label.block.text-sm.font-medium.text-gray-700.mb-1(for=name)= labelText
+			if required
+				|  *
+		input.w-full.px-3.py-2.border.border-gray-300.rounded(
+			type="text"
+			name=name
+			id=name
+			placeholder=placeholder
+			value=value || ''
+			required=required
+			class=errors && errors.has(name) ? 'border-2 border-red-500' : ''
+			aria-invalid=errors && errors.has(name) ? 'true' : 'false'
+		)
+		if errors && errors.has(name)
+			p.text-red-600.text-sm.mt-1.font-medium= errors.get(name)
+
+//- Local mixin for grid form fields (2-column layout)
+mixin gridFormField(name, labelText, placeholder, value)
+	div
+		label.block.text-sm.font-medium.text-gray-700.mb-1(for=name)= labelText
+		input.w-full.px-3.py-2.border.border-gray-300.rounded(
+			type="text"
+			name=name
+			id=name
+			placeholder=placeholder
+			value=value || ''
+		)
+
 .bg-white.border.border-gray-300.rounded-lg.p-4.mb-3(class=editing ? 'tank-preset-card' : '')
 	form(
 		hx-post="/account/tanks"
@@ -12,9 +43,9 @@
 			.bg-red-50.border.border-red-200.text-red-800.px-4.py-3.rounded.mb-3= errors.get('form')
 
 		//- Preset Name (read-only when editing, or editable for new)
-		.mb-3
-			label.block.text-sm.font-medium.text-gray-700.mb-1(for="preset_name") Tank Name *
-			if editing
+		if editing
+			.mb-3
+				label.block.text-sm.font-medium.text-gray-700.mb-1(for="preset_name") Tank Name *
 				input.w-full.px-3.py-2.border.border-gray-300.rounded.bg-gray-100(
 					type="text"
 					value=preset.preset_name
@@ -22,131 +53,22 @@
 				)
 				input(type="hidden" name="preset_name" value=preset.preset_name)
 				input(type="hidden" name="editing" value="true")
-			else
-				input(
-					class=errors.has('preset_name') ? 'w-full px-3 py-2 border-2 border-red-500 rounded' : 'w-full px-3 py-2 border border-gray-300 rounded'
-					type="text"
-					name="preset_name"
-					id="preset_name"
-					placeholder="e.g., Community Tank, Breeding Tank"
-					value=preset.preset_name || ''
-					required
-					aria-invalid=errors.has('preset_name') ? 'true' : 'false'
-				)
-			if errors.has('preset_name')
-				p.text-red-600.text-sm.mt-1.font-medium= errors.get('preset_name')
+		else
+			+formField('preset_name', 'Tank Name', 'e.g., Community Tank, Breeding Tank', preset.preset_name, true)
 
 		//- Tank parameters grid
 		.grid.grid-cols-1.gap-3(class="sm:grid-cols-2")
-			div
-				label.block.text-sm.font-medium.text-gray-700.mb-1(for="tank_size") Tank Size
-				input.w-full.px-3.py-2.border.border-gray-300.rounded(
-					type="text"
-					name="tank_size"
-					id="tank_size"
-					placeholder="e.g., 20 gallons, 75L"
-					value=preset.tank_size || ''
-				)
-
-			div
-				label.block.text-sm.font-medium.text-gray-700.mb-1(for="filter_type") Filter Type
-				input.w-full.px-3.py-2.border.border-gray-300.rounded(
-					type="text"
-					name="filter_type"
-					id="filter_type"
-					placeholder="e.g., Sponge, HOB, Canister"
-					value=preset.filter_type || ''
-				)
-
-			div
-				label.block.text-sm.font-medium.text-gray-700.mb-1(for="temperature") Temperature
-				input.w-full.px-3.py-2.border.border-gray-300.rounded(
-					type="text"
-					name="temperature"
-					id="temperature"
-					placeholder="e.g., 78°F, 25°C"
-					value=preset.temperature || ''
-				)
-
-			div
-				label.block.text-sm.font-medium.text-gray-700.mb-1(for="ph") pH
-				input.w-full.px-3.py-2.border.border-gray-300.rounded(
-					type="text"
-					name="ph"
-					id="ph"
-					placeholder="e.g., 7.0"
-					value=preset.ph || ''
-				)
-
-			div
-				label.block.text-sm.font-medium.text-gray-700.mb-1(for="gh") General Hardness (GH)
-				input.w-full.px-3.py-2.border.border-gray-300.rounded(
-					type="text"
-					name="gh"
-					id="gh"
-					placeholder="e.g., 150 ppm"
-					value=preset.gh || ''
-				)
-
-			div
-				label.block.text-sm.font-medium.text-gray-700.mb-1(for="specific_gravity") Specific Gravity
-				input.w-full.px-3.py-2.border.border-gray-300.rounded(
-					type="text"
-					name="specific_gravity"
-					id="specific_gravity"
-					placeholder="e.g., 1.025 (for marine)"
-					value=preset.specific_gravity || ''
-				)
-
-			div
-				label.block.text-sm.font-medium.text-gray-700.mb-1(for="water_change_volume") Water Change Volume
-				input.w-full.px-3.py-2.border.border-gray-300.rounded(
-					type="text"
-					name="water_change_volume"
-					id="water_change_volume"
-					placeholder="e.g., 25%, 10 gallons"
-					value=preset.water_change_volume || ''
-				)
-
-			div
-				label.block.text-sm.font-medium.text-gray-700.mb-1(for="water_change_frequency") Change Frequency
-				input.w-full.px-3.py-2.border.border-gray-300.rounded(
-					type="text"
-					name="water_change_frequency"
-					id="water_change_frequency"
-					placeholder="e.g., Weekly, Every 3 days"
-					value=preset.water_change_frequency || ''
-				)
-
-			div
-				label.block.text-sm.font-medium.text-gray-700.mb-1(for="substrate_type") Substrate Type
-				input.w-full.px-3.py-2.border.border-gray-300.rounded(
-					type="text"
-					name="substrate_type"
-					id="substrate_type"
-					placeholder="e.g., Gravel, Sand"
-					value=preset.substrate_type || ''
-				)
-
-			div
-				label.block.text-sm.font-medium.text-gray-700.mb-1(for="substrate_depth") Substrate Depth
-				input.w-full.px-3.py-2.border.border-gray-300.rounded(
-					type="text"
-					name="substrate_depth"
-					id="substrate_depth"
-					placeholder="e.g., 2 inches"
-					value=preset.substrate_depth || ''
-				)
-
-			div
-				label.block.text-sm.font-medium.text-gray-700.mb-1(for="substrate_color") Substrate Color
-				input.w-full.px-3.py-2.border.border-gray-300.rounded(
-					type="text"
-					name="substrate_color"
-					id="substrate_color"
-					placeholder="e.g., Black, Natural"
-					value=preset.substrate_color || ''
-				)
+			+gridFormField('tank_size', 'Tank Size', 'e.g., 20 gallons, 75L', preset.tank_size)
+			+gridFormField('filter_type', 'Filter Type', 'e.g., Sponge, HOB, Canister', preset.filter_type)
+			+gridFormField('temperature', 'Temperature', 'e.g., 78°F, 25°C', preset.temperature)
+			+gridFormField('ph', 'pH', 'e.g., 7.0', preset.ph)
+			+gridFormField('gh', 'General Hardness (GH)', 'e.g., 150 ppm', preset.gh)
+			+gridFormField('specific_gravity', 'Specific Gravity', 'e.g., 1.025 (for marine)', preset.specific_gravity)
+			+gridFormField('water_change_volume', 'Water Change Volume', 'e.g., 25%, 10 gallons', preset.water_change_volume)
+			+gridFormField('water_change_frequency', 'Change Frequency', 'e.g., Weekly, Every 3 days', preset.water_change_frequency)
+			+gridFormField('substrate_type', 'Substrate Type', 'e.g., Gravel, Sand', preset.substrate_type)
+			+gridFormField('substrate_depth', 'Substrate Depth', 'e.g., 2 inches', preset.substrate_depth)
+			+gridFormField('substrate_color', 'Substrate Color', 'e.g., Black, Natural', preset.substrate_color)
 
 		//- Submit buttons
 		.mt-4.flex.gap-2
