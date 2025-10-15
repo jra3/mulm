@@ -15,9 +15,11 @@ import {
   addSynonym,
   deleteSynonym as deleteSynonymDb,
   bulkSetPoints,
+  mergeSpecies,
 } from "@/db/species";
 import { getQueryString, getQueryNumber, getQueryBoolean, getBodyString } from "@/utils/request";
 import { getClassOptions } from "@/forms/submission";
+import { mergeSpeciesSchema } from "@/forms/speciesMerge";
 import * as z from "zod";
 
 /**
@@ -581,5 +583,72 @@ export const bulkSetPointsAction = async (req: MulmRequest, res: Response) => {
     res.set("HX-Redirect", "/admin/species").status(200).send();
   } catch {
     res.status(500).send("Failed to update species points");
+  }
+};
+
+/**
+ * GET /admin/dialog/species/:groupId/merge
+ * Render merge species dialog (HTMX partial)
+ */
+export const mergeSpeciesDialog = async (req: MulmRequest, res: Response) => {
+  const groupId = parseInt(req.params.groupId);
+
+  if (!groupId) {
+    res.status(400).send("Invalid species ID");
+    return;
+  }
+
+  const defunctSpecies = await getSpeciesDetail(groupId);
+
+  if (!defunctSpecies) {
+    res.status(404).send("Species not found");
+    return;
+  }
+
+  const defunctNames = await getNamesForGroup(groupId);
+
+  res.render("admin/mergeSpeciesDialog", {
+    defunctSpecies,
+    defunctNames,
+  });
+};
+
+/**
+ * POST /admin/species/:groupId/merge
+ * Merge defunct species into canonical species
+ */
+export const mergeSpeciesAction = async (req: MulmRequest, res: Response) => {
+  const parsed = mergeSpeciesSchema.safeParse(req.body);
+
+  if (!parsed.success) {
+    res.status(400).send(parsed.error.issues[0].message);
+    return;
+  }
+
+  const { defunct_group_id, canonical_group_id } = parsed.data;
+
+  // Verify both species exist
+  const [defunctSpecies, canonicalSpecies] = await Promise.all([
+    getSpeciesDetail(defunct_group_id),
+    getSpeciesDetail(canonical_group_id),
+  ]);
+
+  if (!defunctSpecies) {
+    res.status(404).send("Defunct species not found");
+    return;
+  }
+
+  if (!canonicalSpecies) {
+    res.status(404).send("Canonical species not found");
+    return;
+  }
+
+  try {
+    await mergeSpecies(canonical_group_id, defunct_group_id);
+
+    // Success - redirect to canonical species edit page
+    res.set("HX-Redirect", `/admin/species/${canonical_group_id}/edit`).status(200).send();
+  } catch {
+    res.status(500).send("Failed to merge species");
   }
 };

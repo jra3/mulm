@@ -198,12 +198,21 @@ html
           .mt-6.pt-6.border-t.border-gray-300
             .bg-red-50.border.border-red-200.rounded-lg.p-4
               h4.text-sm.font-semibold.text-red-800.mb-2 Danger Zone
-              p.text-sm.text-red-700.mb-3 Deleting this species will remove all synonyms and cannot be undone.
-              button.destructive.w-full(
-                type="button"
-                hx-delete=`/admin/species/${species.group_id}`
-                hx-confirm="Delete this species and all its synonyms? This cannot be undone."
-                hx-on--after-request="if(event.detail.successful) { window.location.href='/admin/species'; }"
-              ) Delete Species
+              p.text-sm.text-red-700.mb-3 Merge this species into another or delete it permanently.
+
+              .flex.flex-col.gap-2
+                button.outline.w-full(
+                  type="button"
+                  hx-get=`/admin/dialog/species/${species.group_id}/merge`
+                  hx-target="body"
+                  hx-swap="beforeend"
+                ) Merge Into Another Species
+
+                button.destructive.w-full(
+                  type="button"
+                  hx-delete=`/admin/species/${species.group_id}`
+                  hx-confirm="Delete this species and all its synonyms? This cannot be undone."
+                  hx-on--after-request="if(event.detail.successful) { window.location.href='/admin/species'; }"
+                ) Delete Species
 
     +footer()

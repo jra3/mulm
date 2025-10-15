@@ -1,0 +1,71 @@
+include ../header.pug
+
++dialog
+	h2.text-2xl.font-bold.mb-4.text-red-600 Merge Species (Destructive)
+
+	.bg-yellow-50.border-l-4.border-yellow-400.p-4.mb-4
+		p.text-yellow-800.font-semibold.mb-2 ⚠️ Warning: This action cannot be undone
+		p.text-yellow-700.text-sm This will:
+		ul.list-disc.ml-5.text-yellow-700.text-sm
+			li Move all common and scientific names from defunct species to canonical species
+			li Redirect all submissions to the canonical species
+			li Delete the defunct species permanently
+
+	form(
+		hx-post=`/admin/species/${defunctSpecies.group_id}/merge`
+	)
+		input(type="hidden" name="defunct_group_id" value=defunctSpecies.group_id)
+		input(type="hidden" id="canonical_group_id_hidden" name="canonical_group_id")
+
+		.flex.flex-col.gap-4
+			//- Show current (defunct) species
+			.space-y-2
+				label.input-label Merge This Species (will be deleted)
+				.p-3.bg-red-50.rounded-lg.border.border-red-300
+					strong.text-red-800= `${defunctSpecies.canonical_genus} ${defunctSpecies.canonical_species_name}`
+					if defunctNames
+						.text-sm.text-red-700.mt-1
+							| #{defunctNames.common_names.length} common names, #{defunctNames.scientific_names.length} scientific names
+
+			//- Canonical species typeahead
+			.space-y-2
+				label.input-label(for="canonical_species") Into This Species (will be kept)
+				select#canonical_species.tom-select-typeahead(
+					data-api-url="/api/species/search"
+					data-param-species_type=defunctSpecies.species_type
+					data-hidden-id-field="canonical_group_id_hidden"
+					data-hidden-id-value-field="group_id"
+					data-value-field="text"
+					data-label-field="text"
+					data-search-fields="text,common_name,scientific_name"
+					data-min-query-length="2"
+					data-max-items="1"
+					data-placeholder="Search for canonical species..."
+				)
+
+			//- Confirmation checkbox
+			.flex.items-start.gap-2
+				input(type="checkbox" id="confirm" name="confirm" required)
+				label.text-sm.text-gray-700(for="confirm")
+					strong I understand this will permanently merge these species and cannot be undone
+
+			.flex.gap-2.justify-end
+				button.outline(
+					type="button"
+					hx-on:click="document.getElementById('dialog').remove()"
+				) Cancel
+				button.destructive(type="submit") Merge Species
+
+	//- Initialize typeahead after dialog is in DOM
+	script.
+		(function() {
+			const typeahead = document.getElementById('canonical_species');
+			if (typeahead && typeof TomSelect !== 'undefined' && typeof getTypeaheadConfig === 'function') {
+				const config = getTypeaheadConfig(typeahead);
+				const options = buildTomSelectOptions(typeahead, config);
+				const instance = new TomSelect(typeahead, options);
+				if (config.maxItems === 1) {
+					instance.control.classList.add('single-value');
+				}
+			}
+		})();
