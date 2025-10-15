@@ -28,7 +28,7 @@ html
         form(
           hx-patch=`/admin/species/${species.group_id}`
           hx-swap="none"
-          hx-on--after-request="if(event.detail.successful) { window.location.href='/admin/species'; }"
+          hx-on--after-request="if(event.detail.successful && event.detail.elt === this) { window.location.href='/admin/species'; }"
         )
 
           //- Canonical Name Section (Warning)
@@ -216,3 +216,15 @@ html
                 ) Delete Species
 
     +footer()
+
+    // Temporary HTMX debugging
+    script.
+      document.body.addEventListener('htmx:beforeRequest', function(evt) {
+        console.log('HTMX beforeRequest:', evt.detail);
+      });
+      document.body.addEventListener('htmx:afterRequest', function(evt) {
+        console.log('HTMX afterRequest:', evt.detail);
+      });
+      document.body.addEventListener('htmx:responseError', function(evt) {
+        console.log('HTMX responseError:', evt.detail);
+      });
