@@ -16,6 +16,17 @@ export interface TestMember {
 }
 
 /**
+ * Helper to safely extract lastID from SQLite run results
+ * @throws Error if lastID is undefined
+ */
+function getLastInsertId(result: { lastID?: number }, context: string): number {
+  if (result.lastID === undefined) {
+    throw new Error(`Failed to get lastID for ${context}`);
+  }
+  return result.lastID;
+}
+
+/**
  * Creates a fresh in-memory SQLite database for testing
  * Runs migrations and overrides the global database connection
  */
@@ -62,9 +73,13 @@ export async function createTestMembers(count: number = 1): Promise<TestMember[]
 
     const memberId = await createMember(email, displayName);
     const { getMember } = await import("../db/members");
-    const member = (await getMember(memberId)) as TestMember;
+    const member = await getMember(memberId);
 
-    members.push(member);
+    if (!member) {
+      throw new Error(`Failed to retrieve created member with ID ${memberId}`);
+    }
+
+    members.push(member as TestMember);
   }
 
   return members;
@@ -122,8 +137,8 @@ export async function createTestSpeciesName(
   );
 
   return {
-    common_name_id: commonResult.lastID as number,
-    scientific_name_id: scientificResult.lastID as number,
+    common_name_id: getLastInsertId(commonResult, "species common name"),
+    scientific_name_id: getLastInsertId(scientificResult, "species scientific name"),
     group_id: group.group_id,
   };
 }
@@ -172,7 +187,7 @@ export async function createTestSubmission(
     ]
   );
 
-  return result.lastID as number;
+  return getLastInsertId(result, "test submission");
 }
 
 /**
@@ -197,7 +212,10 @@ export async function createMultipleTestSubmissions(
  * Jest suite-level database fixture
  * Sets up beforeEach and afterEach hooks for database management
  */
-export function useTestDatabase() {
+export function useTestDatabase(): {
+  getDb: () => Database;
+  getTestDb: () => TestDatabase;
+} {
   let testDb: TestDatabase;
 
   beforeEach(async () => {
