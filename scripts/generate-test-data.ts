@@ -130,7 +130,10 @@ const propagationMethods = [
 const lightTypes = ["LED", "T5", "T8", "Metal Halide", "compact fluorescent"];
 
 function randomChoice<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
+  if (arr.length === 0) {
+    throw new Error("Cannot select from empty array");
+  }
+  return arr[Math.floor(Math.random() * arr.length)]!;
 }
 
 function randomInt(min: number, max: number): number {
@@ -147,6 +150,14 @@ function dateFromDaysAgo(daysAgo: number): Date {
   const date = new Date();
   date.setDate(date.getDate() - daysAgo);
   return date;
+}
+
+function extractGenusAndSpecies(latinName: string): { genus: string; species: string } {
+  const parts = latinName.trim().split(/\s+/);
+  return {
+    genus: parts[0] || "Unknown",
+    species: parts[1] || "sp.",
+  };
 }
 
 function generateFishSubmission(memberName: string, memberEmail: string): FormValues {
@@ -327,10 +338,14 @@ async function createWitnessTestSubmissions(
 ) {
   logger.info("Creating submissions in various witness states...");
 
-  const member1 = users.find((u) => u.name === "Sarah Johnson")!;
-  const member2 = users.find((u) => u.name === "Michael Chen")!;
-  const member3 = users.find((u) => u.name === "Emily Davis")!;
-  const member4 = users.find((u) => u.name === "Robert Wilson")!;
+  const member1 = users.find((u) => u.name === "Sarah Johnson");
+  const member2 = users.find((u) => u.name === "Michael Chen");
+  const member3 = users.find((u) => u.name === "Emily Davis");
+  const member4 = users.find((u) => u.name === "Robert Wilson");
+
+  if (!member1 || !member2 || !member3 || !member4) {
+    throw new Error("Required test users not found");
+  }
 
   // 1. Draft submission (not submitted)
   logger.info("Creating draft submission...");
@@ -500,14 +515,14 @@ async function generateTestData() {
           const formData = generateCatfishSubmission(user.name, user.email, catfish);
           const submissionId = await createSubmission(user.id, formData, true);
 
-          // Extract genus for canonical name
-          const [genus, species] = catfish.latin.split(" ");
+          // Extract genus and species for canonical name
+          const { genus, species } = extractGenusAndSpecies(catfish.latin);
           submissionsToApprove.push({
             id: submissionId,
             userId: user.id,
             points: randomInt(3, 8),
             genus,
-            species: species || "sp.",
+            species,
             commonName: catfish.common,
             latinName: catfish.latin,
             speciesType: "Fish",
@@ -539,13 +554,15 @@ async function generateTestData() {
           }
 
           const submissionId = await createSubmission(user.id, formData, true);
-          const [genus, species] = (formData.species_latin_name || "Unknown species").split(" ");
+          const { genus, species } = extractGenusAndSpecies(
+            formData.species_latin_name || "Unknown species"
+          );
           submissionsToApprove.push({
             id: submissionId,
             userId: user.id,
             points: randomInt(3, 8),
             genus,
-            species: species || "sp.",
+            species,
             commonName: formData.species_common_name || "Unknown",
             latinName: formData.species_latin_name || "Unknown species",
             speciesType: formData.species_type || "Fish",
@@ -562,13 +579,13 @@ async function generateTestData() {
           const formData = generateSpecialtyFishSubmission(user.name, user.email, anabantoid);
           const submissionId = await createSubmission(user.id, formData, true);
 
-          const [genus, species] = anabantoid.latin.split(" ");
+          const { genus, species } = extractGenusAndSpecies(anabantoid.latin);
           submissionsToApprove.push({
             id: submissionId,
             userId: user.id,
             points: randomInt(3, 8),
             genus,
-            species: species || "sp.",
+            species,
             commonName: anabantoid.common,
             latinName: anabantoid.latin,
             speciesType: "Fish",
@@ -589,13 +606,13 @@ async function generateTestData() {
           const formData = generateSpecialtyFishSubmission(user.name, user.email, livebearer);
           const submissionId = await createSubmission(user.id, formData, true);
 
-          const [genus, species] = livebearer.latin.split(" ");
+          const { genus, species } = extractGenusAndSpecies(livebearer.latin);
           submissionsToApprove.push({
             id: submissionId,
             userId: user.id,
             points: randomInt(3, 8),
             genus,
-            species: species || "sp.",
+            species,
             commonName: livebearer.common,
             latinName: livebearer.latin,
             speciesType: "Fish",
@@ -637,13 +654,15 @@ async function generateTestData() {
           const submissionId = await createSubmission(user.id, formData, shouldSubmit);
 
           if (shouldSubmit) {
-            const [genus, species] = (formData.species_latin_name || "Unknown species").split(" ");
+            const { genus, species } = extractGenusAndSpecies(
+              formData.species_latin_name || "Unknown species"
+            );
             submissionsToApprove.push({
               id: submissionId,
               userId: user.id,
               points: randomInt(3, 8),
               genus,
-              species: species || "sp.",
+              species,
               commonName: formData.species_common_name || "Unknown",
               latinName: formData.species_latin_name || "Unknown species",
               speciesType: formData.species_type || "Fish",
