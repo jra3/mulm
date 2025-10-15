@@ -25,9 +25,9 @@ const fishNames = [
   { common: "Zebra Danio", latin: "Danio rerio", class: "Cyprinids" },
   { common: "Corydoras", latin: "Corydoras paleatus", class: "Catfish & Loaches" },
   { common: "Guppy", latin: "Poecilia reticulata", class: "Livebearers" },
-  { common: "Angelfish", latin: "Pterophyllum scalare", class: "Cichlids" },
+  { common: "Angelfish", latin: "Pterophyllum scalare", class: "Cichlids - New World" },
   { common: "Cherry Barb", latin: "Puntius titteya", class: "Cyprinids" },
-  { common: "German Blue Ram", latin: "Mikrogeophagus ramirezi", class: "Cichlids" },
+  { common: "German Blue Ram", latin: "Mikrogeophagus ramirezi", class: "Cichlids - New World" },
 ];
 
 // Additional catfish species for specialty award

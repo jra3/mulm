@@ -112,7 +112,7 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
 
     void test("should support partial matching", async () => {
       const groupId = await createSpeciesGroup({
-        programClass: "Cichlids",
+        programClass: "Cichlids - New World",
         speciesType: "Fish",
         canonicalGenus: "Typeaheadicus",
         canonicalSpeciesName: "angelus",
@@ -197,7 +197,7 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
   void describe("Multiple names per species", () => {
     void test("should return all matching common names for a species", async () => {
       const groupId = await createSpeciesGroup({
-        programClass: "Cichlids",
+        programClass: "Cichlids - New World",
         speciesType: "Fish",
         canonicalGenus: "Typeaheadicus",
         canonicalSpeciesName: "testscalare",
@@ -310,7 +310,7 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
   void describe("Limit parameter", () => {
     void test("should default to 10 results", async () => {
       const groupId = await createSpeciesGroup({
-        programClass: "Cichlids",
+        programClass: "Cichlids - New World",
         speciesType: "Fish",
         canonicalGenus: "Typeaheadicus",
         canonicalSpeciesName: "testagassizii",
@@ -327,7 +327,7 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
 
     void test("should respect custom limit", async () => {
       const groupId = await createSpeciesGroup({
-        programClass: "Cichlids",
+        programClass: "Cichlids - New World",
         speciesType: "Fish",
         canonicalGenus: "Typeaheadicus",
         canonicalSpeciesName: "testagassizii2",
@@ -419,7 +419,7 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
   void describe("Edge cases", () => {
     void test("should handle species with no names", async () => {
       await createSpeciesGroup({
-        programClass: "Cichlids",
+        programClass: "Cichlids - New World",
         speciesType: "Fish",
         canonicalGenus: "Orphan",
         canonicalSpeciesName: "species",
@@ -431,7 +431,7 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
 
     void test("should handle Unicode characters in search", async () => {
       const groupId = await createSpeciesGroup({
-        programClass: "Cichlids",
+        programClass: "Cichlids - New World",
         speciesType: "Fish",
         canonicalGenus: "Typeaheadicus",
         canonicalSpeciesName: "testamphiacanthoides",
@@ -461,7 +461,7 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
   void describe("Sorting", () => {
     void test("should sort common names alphabetically when all common", async () => {
       const groupId = await createSpeciesGroup({
-        programClass: "Cichlids",
+        programClass: "Cichlids - New World",
         speciesType: "Fish",
         canonicalGenus: "Typeaheadicus",
         canonicalSpeciesName: "testscalare",

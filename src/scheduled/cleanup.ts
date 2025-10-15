@@ -1,5 +1,6 @@
 import { deleteExpiredAuthCodes } from "@/db/auth";
 import { deleteExpiredChallenges } from "@/db/webauthn";
+import { db } from "@/db/conn";
 import { logger } from "@/utils/logger";
 
 /**
@@ -9,6 +10,12 @@ import { logger } from "@/utils/logger";
  */
 export async function runDailyCleanup(): Promise<void> {
   try {
+    // Check if database is initialized before running cleanup
+    if (!db(true)) {
+      logger.warn("Database not yet initialized, skipping cleanup");
+      return;
+    }
+
     logger.info("Starting daily cleanup tasks");
 
     // Delete expired auth codes (password reset tokens)

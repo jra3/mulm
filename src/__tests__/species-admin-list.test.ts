@@ -43,7 +43,7 @@ void describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
     // Fish 2: Cichlids, no points, not CARES
     const fish2 = await db.run(`
       INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name, base_points, is_cares_species)
-      VALUES ('Cichlids', 'Fish', 'Testicus', 'cichlidus', NULL, 0)
+      VALUES ('Cichlids - New World', 'Fish', 'Testicus', 'cichlidus', NULL, 0)
     `);
     fishGroupId2 = fish2.lastID as number;
     await addCommonName(fishGroupId2, "Test Cichlid");
@@ -137,10 +137,10 @@ void describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
 
     void test("should filter by program_class", async () => {
       const livebearers = await getSpeciesForAdmin({ program_class: "Livebearers" });
-      const cichlids = await getSpeciesForAdmin({ program_class: "Cichlids" });
+      const cichlids = await getSpeciesForAdmin({ program_class: "Cichlids - New World" });
 
       assert.ok(livebearers.species.every((s) => s.program_class === "Livebearers"));
-      assert.ok(cichlids.species.every((s) => s.program_class === "Cichlids"));
+      assert.ok(cichlids.species.every((s) => s.program_class === "Cichlids - New World"));
     });
 
     void test("should filter by has_base_points = true", async () => {

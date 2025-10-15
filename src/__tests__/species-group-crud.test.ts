@@ -188,7 +188,7 @@ void describe("Species Group CRUD Operations", () => {
 
     void test("should throw error for duplicate canonical name", async () => {
       await createSpeciesGroup({
-        programClass: "Cichlids",
+        programClass: "Cichlids - New World",
         speciesType: "Fish",
         canonicalGenus: "Duplicate",
         canonicalSpeciesName: "test",
@@ -208,14 +208,14 @@ void describe("Species Group CRUD Operations", () => {
 
     void test("should allow same genus with different species", async () => {
       const id1 = await createSpeciesGroup({
-        programClass: "Cichlids",
+        programClass: "Cichlids - New World",
         speciesType: "Fish",
         canonicalGenus: "Samegenus",
         canonicalSpeciesName: "species1",
       });
 
       const id2 = await createSpeciesGroup({
-        programClass: "Cichlids",
+        programClass: "Cichlids - New World",
         speciesType: "Fish",
         canonicalGenus: "Samegenus",
         canonicalSpeciesName: "species2",
@@ -226,14 +226,14 @@ void describe("Species Group CRUD Operations", () => {
 
     void test("should allow same species name with different genus", async () => {
       const id1 = await createSpeciesGroup({
-        programClass: "Cichlids",
+        programClass: "Cichlids - New World",
         speciesType: "Fish",
         canonicalGenus: "Genus1",
         canonicalSpeciesName: "samespecies",
       });
 
       const id2 = await createSpeciesGroup({
-        programClass: "Cichlids",
+        programClass: "Cichlids - New World",
         speciesType: "Fish",
         canonicalGenus: "Genus2",
         canonicalSpeciesName: "samespecies",
@@ -244,7 +244,7 @@ void describe("Species Group CRUD Operations", () => {
 
     void test("should accept all valid species types", async () => {
       const fish = await createSpeciesGroup({
-        programClass: "Cichlids",
+        programClass: "Cichlids - New World",
         speciesType: "Fish",
         canonicalGenus: "TypeTest",
         canonicalSpeciesName: "fish",
@@ -319,7 +319,7 @@ void describe("Species Group CRUD Operations", () => {
 
     void test("should update program class", async () => {
       const changes = await updateSpeciesGroup(testGroupId, {
-        programClass: "Cichlids",
+        programClass: "Cichlids - New World",
       });
 
       assert.strictEqual(changes, 1);
@@ -327,7 +327,7 @@ void describe("Species Group CRUD Operations", () => {
       const updated = await db.get<SpeciesGroupRow>("SELECT * FROM species_name_group WHERE group_id = ?", [
         testGroupId,
       ]);
-      assert.strictEqual(updated?.program_class, "Cichlids");
+      assert.strictEqual(updated?.program_class, "Cichlids - New World");
     });
 
     void test("should update base points", async () => {
@@ -485,7 +485,7 @@ void describe("Species Group CRUD Operations", () => {
       // Create another species
       await db.run(`
         INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name)
-        VALUES ('Cichlids', 'Fish', 'Existing', 'species')
+        VALUES ('Cichlids - New World', 'Fish', 'Existing', 'species')
       `);
 
       await assert.rejects(
@@ -767,7 +767,7 @@ void describe("Species Group CRUD Operations", () => {
     void test("bulk update then individual update", async () => {
       const other = await db.run(`
         INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name)
-        VALUES ('Cichlids', 'Fish', 'Other', 'species')
+        VALUES ('Cichlids - New World', 'Fish', 'Other', 'species')
       `);
       const otherId = other.lastID as number;
 

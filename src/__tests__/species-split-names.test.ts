@@ -75,7 +75,7 @@ void describe("Species Split Name Schema CRUD", () => {
     void test("should return empty array for group with no common names", async () => {
       const emptyGroup = await db.run(`
         INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name)
-        VALUES ('Cichlids', 'Fish', 'Empty', 'nonames')
+        VALUES ('Cichlids - New World', 'Fish', 'Empty', 'nonames')
       `);
 
       const names = await getCommonNamesForGroup(emptyGroup.lastID as number);
@@ -106,7 +106,7 @@ void describe("Species Split Name Schema CRUD", () => {
     void test("should return empty array for group with no scientific names", async () => {
       const emptyGroup = await db.run(`
         INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name)
-        VALUES ('Cichlids', 'Fish', 'Empty', 'noscinames')
+        VALUES ('Cichlids - New World', 'Fish', 'Empty', 'noscinames')
       `);
 
       const names = await getScientificNamesForGroup(emptyGroup.lastID as number);
@@ -133,7 +133,7 @@ void describe("Species Split Name Schema CRUD", () => {
     void test("should return empty arrays for group with no names", async () => {
       const emptyGroup = await db.run(`
         INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name)
-        VALUES ('Cichlids', 'Fish', 'Empty', 'both')
+        VALUES ('Cichlids - New World', 'Fish', 'Empty', 'both')
       `);
 
       const result = await getNamesForGroup(emptyGroup.lastID as number);
@@ -189,7 +189,7 @@ void describe("Species Split Name Schema CRUD", () => {
     void test("should allow same common name in different groups", async () => {
       const otherGroup = await db.run(`
         INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name)
-        VALUES ('Cichlids', 'Fish', 'Other', 'species')
+        VALUES ('Cichlids - New World', 'Fish', 'Other', 'species')
       `);
 
       const id = await addCommonName(otherGroup.lastID as number, "Test Fish");
@@ -239,7 +239,7 @@ void describe("Species Split Name Schema CRUD", () => {
     void test("should allow same scientific name in different groups", async () => {
       const otherGroup = await db.run(`
         INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name)
-        VALUES ('Cichlids', 'Fish', 'Other', 'species')
+        VALUES ('Cichlids - New World', 'Fish', 'Other', 'species')
       `);
 
       const id = await addScientificName(otherGroup.lastID as number, "Testicus splitus");
@@ -432,7 +432,7 @@ void describe("Species Split Name Schema CRUD", () => {
     void test("should allow species with one common name, many scientific", async () => {
       const group = await db.run(`
         INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name)
-        VALUES ('Cichlids', 'Fish', 'Multicus', 'scientificus')
+        VALUES ('Cichlids - New World', 'Fish', 'Multicus', 'scientificus')
       `);
       const groupId = group.lastID as number;
 
@@ -453,7 +453,7 @@ void describe("Species Split Name Schema CRUD", () => {
     void test("should handle species with no names at all", async () => {
       const group = await db.run(`
         INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name)
-        VALUES ('Cichlids', 'Fish', 'Nonames', 'atall')
+        VALUES ('Cichlids - New World', 'Fish', 'Nonames', 'atall')
       `);
 
       const result = await getNamesForGroup(group.lastID as number);

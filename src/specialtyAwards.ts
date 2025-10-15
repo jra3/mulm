@@ -51,20 +51,18 @@ export const specialtyAwards: SpecialtyAward[] = [
   {
     name: "New World Cichlids Specialist",
     requiredSpecies: 12,
-    eligibilityFilter: (sub) => sub.species_class === "Cichlids",
-    // Note: We'd need additional metadata to distinguish New World vs Old World cichlids
-    // For now, treating all Cichlids the same until we have better classification
+    eligibilityFilter: (sub) => sub.species_class === "Cichlids - New World",
   },
   {
     name: "Old World Cichlids Specialist",
     requiredSpecies: 12,
-    eligibilityFilter: (sub) => sub.species_class === "Cichlids",
+    eligibilityFilter: (sub) => sub.species_class === "Cichlids - Old World",
     limitations: {
       description: "no more than 5 mouth brooders",
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       validator: (submissions) => {
         // This would require additional metadata about breeding method
-        // For now, we'll allow all cichlids until we have better data
+        // For now, we'll allow all Old World cichlids until we have better data
         return true;
       },
     },

@@ -14,7 +14,7 @@ async function setupTestData(): Promise<void> {
   const member2 = await createMember("breeder2@test.com", "Test Breeder 2");
 
   const species1Id = await recordName({
-    program_class: "Cichlids",
+    program_class: "Cichlids - New World",
     canonical_genus: "Apistogramma",
     canonical_species_name: "cacatuoides",
     common_name: "Cockatoo Dwarf Cichlid",
@@ -59,7 +59,7 @@ async function setupTestData(): Promise<void> {
       species_name_id: findSpeciesNameId(species1Id),
       program: "fish",
       species_type: "Fish",
-      species_class: "Cichlids",
+      species_class: "Cichlids - New World",
       species_common_name: "Cockatoo Dwarf Cichlid",
       species_latin_name: "Apistogramma cacatuoides",
       approved_on: "2024-01-01",
@@ -81,7 +81,7 @@ async function setupTestData(): Promise<void> {
       species_name_id: findSpeciesNameId(species1Id),
       program: "fish",
       species_type: "Fish",
-      species_class: "Cichlids",
+      species_class: "Cichlids - New World",
       species_common_name: "Cockatoo Dwarf Cichlid",
       species_latin_name: "Apistogramma cacatuoides",
       approved_on: "2024-02-01",
@@ -138,7 +138,7 @@ describe("Species Explorer Search Functionality", () => {
   });
 
   test("Filters by species class correctly", async () => {
-    const filters: SpeciesFilters = { species_class: "Cichlids" };
+    const filters: SpeciesFilters = { species_class: "Cichlids - New World" };
     const species = await getSpeciesForExplorer(filters);
     expect(species.length).toBe(1);
     expect(species[0].canonical_genus).toBe("Apistogramma");
@@ -209,7 +209,7 @@ describe("Species Explorer Search Functionality", () => {
   test("Combined filters work correctly", async () => {
     const filters: SpeciesFilters = {
       species_type: "Fish",
-      species_class: "Cichlids",
+      species_class: "Cichlids - New World",
       search: "Apisto",
     };
     const species = await getSpeciesForExplorer(filters);
