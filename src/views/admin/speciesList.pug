@@ -179,7 +179,7 @@ html
                     hx-target="body"
                     hx-swap="beforeend"
                     hx-include="#bulk-species-form"
-                  ) Set Points
+                  ) Bulk Edit Points
                 button.outline(
                   type="button"
                   hx-on:click="document.querySelectorAll('.species-checkbox').forEach(cb => cb.checked = false); document.getElementById('select-all').checked = false; this.closest('form').dispatchEvent(new Event('change', {bubbles: true}));"
