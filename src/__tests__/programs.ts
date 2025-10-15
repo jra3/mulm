@@ -4,7 +4,7 @@ const fishRules = levelRules["fish"];
 const plantRules = levelRules["plant"];
 const coralRules = levelRules["coral"];
 
-function subs(fives: number, tens: number, fifteens: number, twenties: number) {
+function subs(fives: number, tens: number, fifteens: number, twenties: number): number[] {
   const awards = [];
   for (let i = 0; i < fives; i++) {
     awards.push(5);

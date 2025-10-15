@@ -22,7 +22,7 @@ export async function deleteExpiredAuthCodes(cutoff: Date) {
     const conn = writeConn;
     const deleteRow = await conn.prepare("DELETE FROM auth_codes WHERE expires_on < ?");
     try {
-      return await deleteRow.run(cutoff);
+      return await deleteRow.run(cutoff.toISOString());
     } finally {
       await deleteRow.finalize();
     }

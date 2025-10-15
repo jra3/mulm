@@ -33,6 +33,7 @@ import {
   oauthRateLimiter,
 } from "./middleware/rateLimiter";
 import * as emailDemo from "./routes/emailDemo";
+import { startScheduledCleanup } from "./scheduled/cleanup";
 
 const app = express();
 
@@ -251,4 +252,7 @@ const HOST = "0.0.0.0"; // Listen on all interfaces
 app.listen(PORT, HOST, () => {
   console.log(`Server running at http://localhost:${PORT}`);
   console.log(`Server running at https://${config.domain}`);
+
+  // Start scheduled cleanup tasks (runs daily at 3 AM)
+  startScheduledCleanup();
 });

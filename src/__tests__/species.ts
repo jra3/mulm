@@ -8,7 +8,7 @@ beforeEach(async () => {
   await setupTestData();
 });
 
-async function setupTestData() {
+async function setupTestData(): Promise<void> {
   const testDb = getDb();
   const member1 = await createMember("breeder1@test.com", "Test Breeder 1");
   const member2 = await createMember("breeder2@test.com", "Test Breeder 2");
