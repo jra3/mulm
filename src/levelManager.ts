@@ -28,7 +28,7 @@ export async function checkAndUpdateMemberLevel(
 
     // Get all approved submissions for this member and program
     const submissions = await getSubmissionsByMember(
-      memberId.toString(),
+      memberId,
       false, // don't include unsubmitted
       false // don't include unapproved
     );

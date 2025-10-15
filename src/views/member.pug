@@ -1,6 +1,7 @@
 include header.pug
 include mixins/submissionImages.pug
 include mixins/date.pug
+include mixins/trophy.pug
 
 - const stringCell = ['p-3', 'text-left', 'border-b', 'border-gray-200'];
 - const heading = ['p-3', 'text-left', 'font-bold', 'text-gray-900', 'border-b-2', 'border-gray-300', 'bg-gray-50', 'cursor-pointer', 'select-none', 'hover:bg-gray-100'];
@@ -87,6 +88,7 @@ html
 
 	body.bg-white.text-gray-800
 		+pageHeader(isLoggedIn, member.display_name)
+			+trophy(member.awards)
 
 		if member.awards && member.awards.length > 0
 			section.bg-blue-50.py-8

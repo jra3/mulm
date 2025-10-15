@@ -76,7 +76,7 @@ async function getMemberWithPoints(
   if (!member) return null;
 
   const submissions: Submission[] = await getSubmissionsByMember(
-    member.id.toString(),
+    member.id,
     false, // don't include unsubmitted
     false // don't include unapproved
   );
@@ -586,7 +586,7 @@ export const sendWelcomeEmail = async (req: MulmRequest, res: Response) => {
 
     // Fetch approved submissions for the email
     const submissions = await getSubmissionsByMember(
-      member.id.toString(),
+      member.id,
       false, // don't include unsubmitted
       false // don't include unapproved
     );

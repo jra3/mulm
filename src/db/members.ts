@@ -268,10 +268,14 @@ export async function searchMembers(
   );
 }
 
-export async function getMemberWithAwards(memberId: string) {
+export async function getAwardsForMember(memberId: number): Promise<AwardRecord[]> {
+  return query<AwardRecord>("SELECT * FROM awards WHERE member_id = ?", [memberId]);
+}
+
+export async function getMemberWithAwards(memberId: number) {
   const [members, awards] = await Promise.all([
     query<MemberRecord>("SELECT * FROM members WHERE id = ?", [memberId]),
-    query<AwardRecord>("SELECT * FROM awards WHERE member_id = ?", [memberId]),
+    getAwardsForMember(memberId),
   ]);
   const member = members.pop();
   return { ...member, awards };

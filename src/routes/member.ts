@@ -5,7 +5,12 @@ import { Response } from "express";
 import { getSubmissionStatus } from "@/utils/submissionStatus";
 
 export const view = async (req: MulmRequest, res: Response) => {
-  const { memberId } = req.params;
+  const memberId = parseInt(req.params.memberId);
+  if (isNaN(memberId)) {
+    res.status(400).send("Invalid member ID");
+    return;
+  }
+
   const member = await getMemberWithAwards(memberId);
   if (!member) {
     res.status(404).send("Member not found");

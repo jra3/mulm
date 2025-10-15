@@ -144,7 +144,7 @@ export async function createSubmission(memberId: number, form: FormValues, submi
 }
 
 export function getSubmissionsByMember(
-  memberId: string,
+  memberId: number,
   includeUnsubmitted: boolean,
   includeUnapproved: boolean
 ) {
