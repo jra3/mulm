@@ -538,12 +538,7 @@ export const addSynonymForm = (req: MulmRequest, res: Response) => {
  * Render bulk set points dialog (HTMX partial)
  */
 export const bulkSetPointsDialog = (req: MulmRequest, res: Response) => {
-  const groupIds = req.query.groupIds as string;
-  const count = groupIds ? groupIds.split(",").length : 0;
-
-  res.render("admin/bulkSetPointsDialog", {
-    count,
-  });
+  res.render("admin/bulkSetPointsDialog");
 };
 
 // Schema for bulk set points form
