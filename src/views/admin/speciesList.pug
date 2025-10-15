@@ -226,7 +226,14 @@ html
                 a.outline.px-3.py-2(href=`/admin/species?page=${pagination.currentPage + 1}${baseQuery}`) Next
 
         else
-          .bg-white.rounded-lg.shadow-md.p-8.text-center
-            p.text-gray-500.text-lg No species found matching your criteria.
-            if filters.species_type || filters.program_class || filters.has_base_points !== undefined || filters.is_cares_species !== undefined || filters.search
-              a.link.mt-2(href="/admin/species") Clear filters to see all species
+          .bg-white.rounded-lg.shadow-md.p-12.text-center
+            .flex.flex-col.items-center.gap-4
+              svg.w-16.h-16.text-gray-400(fill="none" stroke="currentColor" viewBox="0 0 24 24")
+                path(stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z")
+              div
+                p.text-gray-900.text-xl.font-semibold.mb-2 No Species Found
+                p.text-gray-500 No species match your current filters.
+              if filters.species_type || filters.program_class || filters.has_base_points !== undefined || filters.is_cares_species !== undefined || filters.search
+                .flex.gap-3.mt-2
+                  a.primary.px-4.py-2(href="/admin/species") Clear All Filters
+                  button.outline.px-4.py-2(type="button" onclick="history.back()") Go Back
