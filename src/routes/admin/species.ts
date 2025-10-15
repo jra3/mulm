@@ -13,7 +13,7 @@ import {
   deleteCommonName,
   deleteScientificName,
   addSynonym,
-  deleteSynonym,
+  deleteSynonym as deleteSynonymDb,
   bulkSetPoints,
 } from "@/db/species";
 import { getQueryString, getQueryNumber, getQueryBoolean, getBodyString } from "@/utils/request";
@@ -340,7 +340,7 @@ export const deleteSynonym = async (req: MulmRequest, res: Response) => {
 
   try {
     const force = req.query.force === "true";
-    const changes = await deleteSynonym(nameId, force);
+    const changes = await deleteSynonymDb(nameId, force);
 
     if (changes === 0) {
       res.status(404).send("Synonym not found");
