@@ -3,162 +3,163 @@ include header.pug
 doctype html
 html
 
-	+headTag(title)
+    +headTag(title)
 
-	body.bg-white.text-gray-800
-		+pageHeader(true, title, subtitle)
+    body.bg-white.text-gray-800
+        +pageHeader(true, title, subtitle)
 
-		include bapForm/form.pug
+        include bapForm/form.pug
 
-		script.
-			function initStaticMultiSelects() {
-				document.querySelectorAll("select.tom-select-multi").forEach((select) => {
-					if (select.tomselect) {
-						select.tomselect.destroy();
-					}
-					new TomSelect(select, {
-						hideSelected: true,
-						create: true,
-					});
-				});
-			}
+        script.
+            function initStaticMultiSelects() {
+                document.querySelectorAll("select.tom-select-multi").forEach((select) => {
 
-			function initMemberSelect() {
-				const memberSelect = document.getElementById('member_select');
-				// Only initialize if element exists and has the tom-select-single class (admin only)
-				if (!memberSelect || !memberSelect.classList.contains('tom-select-single')) {
-					return;
-				}
+                    if (select.tomselect) {
+                        select.tomselect.destroy();
+                    }
 
-				if (memberSelect.tomselect) {
-					memberSelect.tomselect.destroy();
-				}
+                    new TomSelect(select, {
+                        hideSelected: true,
+                        create: true,
+                    });
+                });
+            }
 
-				const instance = new TomSelect(memberSelect, {
-					create: false,
-					maxItems: 1,
-				});
-				memberSelect.tomSelectInstance = instance;
-			}
+            function initMemberSelect() {
+                const memberSelect = document.getElementById('member_select');
+                // Only initialize if element exists and has the tom-select-single class (admin only)
+                if (!memberSelect || !memberSelect.classList.contains('tom-select-single')) {
+                    return;
+                }
 
-			function initializeTypeaheads() {
-				const typeaheadElements = document.querySelectorAll('select.tom-select-typeahead:not(.tomselected)');
-				typeaheadElements.forEach(function(element) {
-					const config = getTypeaheadConfig(element);
-					const tomSelectOptions = buildTomSelectOptions(element, config);
-					const tomSelect = new TomSelect(element, tomSelectOptions);
-					// Store reference for potential cleanup
-					element.tomSelectInstance = tomSelect;
-					// Add class for single-value styling
-					if (config.maxItems === 1) {
-						tomSelect.control.classList.add('single-value');
-					}
-				});
-			}
+                if (memberSelect.tomselect) {
+                    memberSelect.tomselect.destroy();
+                }
 
-			document.addEventListener("htmx:load", function (event) {
-				// Only reinitialize Tom Select if the form itself was swapped
-				// Don't reinitialize for partial updates like video preview
-				const target = event.detail.elt;
-				if (target && target.id === 'bapForm') {
-					initStaticMultiSelects();
-					initMemberSelect();
-					initializeTypeaheads();
-				}
-			});
+                const instance = new TomSelect(memberSelect, {
+                    create: false,
+                    maxItems: 1,
+                });
+                memberSelect.tomSelectInstance = instance;
+            }
 
-			// Handle species typeahead changes for form auto-population
-			document.addEventListener("typeahead:change", function (e) {
-				const target = e.target;
-				const detail = e.detail;
+            function initializeTypeaheads() {
+                const typeaheadElements = document.querySelectorAll('select.tom-select-typeahead:not(.tomselected)');
+                typeaheadElements.forEach(function(element) {
+                    const config = getTypeaheadConfig(element);
+                    const tomSelectOptions = buildTomSelectOptions(element, config);
+                    const tomSelect = new TomSelect(element, tomSelectOptions);
+                    // Store reference for potential cleanup
+                    element.tomSelectInstance = tomSelect;
+                    // Add class for single-value styling
+                    if (config.maxItems === 1) {
+                        tomSelect.control.classList.add('single-value');
+                    }
+                });
+            }
 
-				// Handle species typeahead changes (common or latin name)
-				if (target.id === 'species_common_name' || target.id === 'species_latin_name') {
-					const selectedOption = detail.selectedOption;
+            document.addEventListener("htmx:load", function (event) {
+                // Only reinitialize Tom Select if the form itself was swapped
+                // Don't reinitialize for partial updates like video preview
+                const target = event.detail.elt;
+                if (target && target.id === 'bapForm') {
+                    initStaticMultiSelects();
+                    initMemberSelect();
+                    initializeTypeaheads();
+                }
+            });
 
-					console.log('Typeahead change:', target.id, selectedOption);
+            //- // Handle species typeahead changes for form auto-population
+            //- document.addEventListener("typeahead:change", function (e) {
+            //-     const target = e.target;
+            //-     const detail = e.detail;
 
-					if (selectedOption && selectedOption.name_id) {
-						// Update the hidden species_name_id field
-						const hiddenIdField = document.getElementById('species_name_id');
-						if (hiddenIdField) {
-							hiddenIdField.value = selectedOption.name_id;
-						}
+            //-     // Handle species typeahead changes (common or latin name)
+            //-     if (target.id === 'species_common_name' || target.id === 'species_latin_name') {
+            //-         const selectedOption = detail.selectedOption;
 
-						// Update species_class if available in the selected option
-						if (selectedOption.program_class) {
-							const speciesClassField = document.getElementById('species_class');
-							if (speciesClassField) {
-								speciesClassField.value = selectedOption.program_class;
-								console.log('Updated species_class to:', selectedOption.program_class);
-							}
-						}
+            //-         console.log('Typeahead change:', target.id, selectedOption);
 
-						// Sync the paired field (common <-> scientific)
-						if (target.id === 'species_common_name' && selectedOption.scientific_name) {
-							// User selected common name, update scientific name
-							console.log('Syncing scientific name:', selectedOption.scientific_name);
-							const scientificNameField = document.getElementById('species_latin_name');
-							if (scientificNameField && scientificNameField.tomSelectInstance) {
-								const instance = scientificNameField.tomSelectInstance;
-								const scientificValue = selectedOption.scientific_name;
+            //-         if (selectedOption && selectedOption.name_id) {
+            //-             // Update the hidden species_name_id field
+            //-             const hiddenIdField = document.getElementById('species_name_id');
+            //-             if (hiddenIdField) {
+            //-                 hiddenIdField.value = selectedOption.name_id;
+            //-             }
 
-								// Add option if it doesn't exist (using scientific_name as the key)
-								if (!instance.options[scientificValue]) {
-									console.log('Adding option:', scientificValue);
-									instance.addOption({
-										scientific_name: scientificValue,
-										common_name: selectedOption.common_name,
-										name_id: selectedOption.name_id,
-										program_class: selectedOption.program_class
-									});
-								}
-								// Clear and set to ensure visual update
-								instance.clear(true);
-								instance.setValue(scientificValue, false);
-								console.log('Set scientific name to:', scientificValue);
-							}
-						} else if (target.id === 'species_latin_name' && selectedOption.common_name) {
-							// User selected scientific name, update common name
-							console.log('Syncing common name:', selectedOption.common_name);
-							const commonNameField = document.getElementById('species_common_name');
-							if (commonNameField && commonNameField.tomSelectInstance) {
-								const instance = commonNameField.tomSelectInstance;
-								const commonValue = selectedOption.common_name;
+            //-             // Update species_class if available in the selected option
+            //-             if (selectedOption.program_class) {
+            //-                 const speciesClassField = document.getElementById('species_class');
+            //-                 if (speciesClassField) {
+            //-                     speciesClassField.value = selectedOption.program_class;
+            //-                     console.log('Updated species_class to:', selectedOption.program_class);
+            //-                 }
+            //-             }
 
-								// Add option if it doesn't exist (using common_name as the key)
-								if (!instance.options[commonValue]) {
-									console.log('Adding option:', commonValue);
-									instance.addOption({
-										common_name: commonValue,
-										scientific_name: selectedOption.scientific_name,
-										name_id: selectedOption.name_id,
-										program_class: selectedOption.program_class
-									});
-								}
-								// Clear and set to ensure visual update
-								instance.clear(true);
-								instance.setValue(commonValue, false);
-								console.log('Set common name to:', commonValue);
-							}
-						}
-					}
-				}
-			});
+            //-             // Sync the paired field (common <-> scientific)
+            //-             if (target.id === 'species_common_name' && selectedOption.scientific_name) {
+            //-                 // User selected common name, update scientific name
+            //-                 console.log('Syncing scientific name:', selectedOption.scientific_name);
+            //-                 const scientificNameField = document.getElementById('species_latin_name');
+            //-                 if (scientificNameField && scientificNameField.tomSelectInstance) {
+            //-                     const instance = scientificNameField.tomSelectInstance;
+            //-                     const scientificValue = selectedOption.scientific_name;
 
-			document.addEventListener("DOMContentLoaded", function () {
-				initStaticMultiSelects();
-				initMemberSelect();
-				initializeTypeaheads();
+            //-                     // Add option if it doesn't exist (using scientific_name as the key)
+            //-                     if (!instance.options[scientificValue]) {
+            //-                         console.log('Adding option:', scientificValue);
+            //-                         instance.addOption({
+            //-                             scientific_name: scientificValue,
+            //-                             common_name: selectedOption.common_name,
+            //-                             name_id: selectedOption.name_id,
+            //-                             program_class: selectedOption.program_class
+            //-                         });
+            //-                     }
+            //-                     // Clear and set to ensure visual update
+            //-                     instance.clear(true);
+            //-                     instance.setValue(scientificValue, false);
+            //-                     console.log('Set scientific name to:', scientificValue);
+            //-                 }
+            //-             } else if (target.id === 'species_latin_name' && selectedOption.common_name) {
+            //-                 // User selected scientific name, update common name
+            //-                 console.log('Syncing common name:', selectedOption.common_name);
+            //-                 const commonNameField = document.getElementById('species_common_name');
+            //-                 if (commonNameField && commonNameField.tomSelectInstance) {
+            //-                     const instance = commonNameField.tomSelectInstance;
+            //-                     const commonValue = selectedOption.common_name;
 
-				document.querySelectorAll("input, textarea, select").forEach((el) => {
-					if (el.name && sessionStorage.getItem(el.name) != undefined) {
-						if (el.type === "checkbox") {
-							el.checked = sessionStorage.getItem(el.name) === "true";
-						} else {
-							el.value = sessionStorage.getItem(el.name);
-						}
-					}
-				})
-			});
+            //-                     // Add option if it doesn't exist (using common_name as the key)
+            //-                     if (!instance.options[commonValue]) {
+            //-                         console.log('Adding option:', commonValue);
+            //-                         instance.addOption({
+            //-                             common_name: commonValue,
+            //-                             scientific_name: selectedOption.scientific_name,
+            //-                             name_id: selectedOption.name_id,
+            //-                             program_class: selectedOption.program_class
+            //-                         });
+            //-                     }
+            //-                     // Clear and set to ensure visual update
+            //-                     instance.clear(true);
+            //-                     instance.setValue(commonValue, false);
+            //-                     console.log('Set common name to:', commonValue);
+            //-                 }
+            //-             }
+            //-         }
+            //-     }
+            //- });
 
+            document.addEventListener("DOMContentLoaded", function () {
+                initStaticMultiSelects();
+                initMemberSelect();
+                initializeTypeaheads();
+
+                document.querySelectorAll("input, textarea, select").forEach((el) => {
+                    if (el.name && sessionStorage.getItem(el.name) != undefined) {
+                        if (el.type === "checkbox") {
+                            el.checked = sessionStorage.getItem(el.name) === "true";
+                        } else {
+                            el.value = sessionStorage.getItem(el.name);
+                        }
+                    }
+                })
+            });
