@@ -197,6 +197,13 @@ void describe("Pug Template Rendering", () => {
       3: "Bob Johnson",
     },
 
+    // Trophy data for standings
+    trophies: {
+      1: { level: "gold", icon: "🥇", awards: ["Specialist Award - Cichlids"] },
+      2: { level: "silver", icon: "🥈", awards: ["Breeder Award Level 2"] },
+      3: { level: "bronze", icon: "🥉", awards: ["Breeder Award Level 1"] },
+    },
+
     // Split schema name data for admin templates
     name: {
       common_name_id: 1,
@@ -381,6 +388,8 @@ void describe("Pug Template Rendering", () => {
       /^mixins\/date\.pug$/, // Date formatting mixins only
       /^mixins\/countBadge\.pug$/, // Mixin-only template
       /^mixins\/submissionVideo\.pug$/, // Mixin-only template
+      /^mixins\/trophy\.pug$/, // Mixin-only template
+      /^mixins\/caresBadge\.pug$/, // Mixin-only template
       /^activity\/activity-item\.pug$/, // Mixin-only template
       /^activity\/award-granted\.pug$/, // Include-only template
       /^activity\/submission-approved\.pug$/, // Include-only template

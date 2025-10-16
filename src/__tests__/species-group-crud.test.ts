@@ -163,7 +163,7 @@ void describe("Species Group CRUD Operations", () => {
         async () =>
           await createSpeciesGroup({
             programClass: "Test",
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             speciesType: "Invalid" as any,
             canonicalGenus: "Genus",
             canonicalSpeciesName: "species",
@@ -459,7 +459,7 @@ void describe("Species Group CRUD Operations", () => {
 
     void test("should throw error for invalid species type", async () => {
       await assert.rejects(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         async () => await updateSpeciesGroup(testGroupId, { speciesType: "InvalidType" as any }),
         { message: /must be Fish, Plant, Invert, or Coral/ }
       );
@@ -646,7 +646,6 @@ void describe("Species Group CRUD Operations", () => {
         [groupId1, groupId2, groupId3]
       );
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       assert.ok(updated.every((s: { base_points: number | null }) => s.base_points === 15));
     });
 
@@ -671,7 +670,6 @@ void describe("Species Group CRUD Operations", () => {
         "SELECT base_points FROM species_name_group WHERE group_id IN (?, ?)",
         [groupId2, groupId3]
       );
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       assert.ok(updated.every((s: { base_points: number | null }) => s.base_points === null));
     });
 
