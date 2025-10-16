@@ -181,7 +181,7 @@ export async function verifyCredentialAndAuthenticate(
       expectedRPID: rpID,
       credential: {
         id: credential.credential_id,
-        publicKey: credential.public_key,
+        publicKey: new Uint8Array(credential.public_key),
         counter: credential.counter,
       },
     });
