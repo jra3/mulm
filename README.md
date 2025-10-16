@@ -275,7 +275,7 @@ See `CLAUDE.md` for detailed Pug best practices.
 
 ## License
 
-[Add your license here]
+MIT License - see package.json for details
 
 ## Support
 
