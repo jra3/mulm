@@ -21,7 +21,7 @@
 		"format": "prettier --write \"src/**/*.{ts,js,json}\" \"scripts/**/*.{ts,js}\"",
 		"format:check": "prettier --check \"src/**/*.{ts,js,json}\" \"scripts/**/*.{ts,js}\"",
 		"script": "ts-node",
-		"prepare": "husky"
+		"prepare": "husky || true"
 	},
 	"repository": {
 		"type": "git",

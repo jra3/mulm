@@ -24,13 +24,7 @@ WORKDIR /app
 
 # Install production dependencies only
 COPY package*.json ./
-RUN apk add --no-cache --virtual .build-deps \
-        python3 \
-        make \
-        g++ && \
-    npm ci --omit=dev --ignore-scripts && \
-    npm rebuild sqlite3 && \
-    apk del .build-deps && \
+RUN npm ci --omit=dev && \
     npm cache clean --force
 
 # Copy built application from builder
