@@ -1,6 +1,7 @@
 include ../header.pug
 include ../mixins/date.pug
 include ../mixins/caresBadge.pug
+include ../mixins/emptyState.pug
 
 doctype html
 html
@@ -155,8 +156,7 @@ html
 												+shortDate(item.latest_breed_date, "Latest breeding date")
 
 				else
-					.bg-white.rounded-lg.shadow-md.p-8.text-center
-						p.text-gray-500.text-lg No species found matching your criteria.
+					+emptyState("No species found matching your criteria.", { showCard: true, size: "lg" })
 						if filters.species_type || filters.species_class || filters.search
 							a.link.mt-2(href="/species") Try clearing your filters
 

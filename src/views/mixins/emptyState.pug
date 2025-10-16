@@ -1,0 +1,58 @@
+//- Empty state mixin for consistent styling across the application
+//- Usage examples:
+//-   +emptyState("No items found")
+//-   +emptyState("No species found matching your criteria.", { showCard: true, size: "lg" })
+//-   +emptyState("No tank presets saved yet.", { actionText: "Add New Tank Preset", actionUrl: "/account/tank-presets/new" })
+//-   +emptyState("No common names yet", { showIcon: true, iconPath: "M7 8h10M7 12h4m1 8l-4-4...", actionText: "Add First Common Name", size: "xs", htmx: { get: "/url", target: "#target" } })
+
+mixin emptyState(message, options = {})
+  - const { showCard = false, actionText, actionUrl, size = 'base', showIcon = false, iconPath, htmx } = options
+  - const sizeClasses = { xs: 'text-xs', base: 'text-base', lg: 'text-lg' }
+  
+  if showCard
+    .bg-white.rounded-lg.shadow-md.p-8.text-center
+      if showIcon && iconPath
+        svg.w-8.h-8.text-gray-300.mx-auto.mb-2(fill="none" stroke="currentColor" viewBox="0 0 24 24")
+          path(stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d=iconPath)
+      p(class=`text-gray-500 ${sizeClasses[size]}`)= message
+      if actionText
+        if htmx
+          button.link.mt-4(
+            type="button"
+            hx-get=htmx.get
+            hx-target=htmx.target
+            hx-swap=htmx.swap || "innerHTML"
+          )= actionText
+        else if actionUrl
+          a.link.mt-4(href=actionUrl)= actionText
+  else if showIcon && iconPath
+    .flex.flex-col.items-center.gap-2.py-6.text-center
+      svg.w-8.h-8.text-gray-300(fill="none" stroke="currentColor" viewBox="0 0 24 24")
+        path(stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d=iconPath)
+      div(class=sizeClasses[size] + ' text-gray-500')= message
+      if actionText
+        if htmx
+          button.outline.text-xs.mt-1(
+            type="button"
+            hx-get=htmx.get
+            hx-target=htmx.target
+            hx-swap=htmx.swap || "innerHTML"
+          )= actionText
+        else if actionUrl
+          button.outline.text-xs.mt-1(
+            type="button"
+            onclick=`location.href='${actionUrl}'`
+          )= actionText
+  else
+    p(class=`text-gray-500 italic ${sizeClasses[size]} text-center`)= message
+    if actionText
+      .text-center.mt-2
+        if htmx
+          button.link(
+            type="button"
+            hx-get=htmx.get
+            hx-target=htmx.target
+            hx-swap=htmx.swap || "innerHTML"
+          )= actionText
+        else if actionUrl
+          a.link(href=actionUrl)= actionText

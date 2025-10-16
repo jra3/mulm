@@ -1,4 +1,5 @@
 include ../header.pug
+include ../mixins/emptyState.pug
 
 doctype html
 html
@@ -161,16 +162,17 @@ html
                           hx-swap="outerHTML swap:0.5s"
                         ) ×
                   else
-                    .flex.flex-col.items-center.gap-2.py-6.text-center
-                      svg.w-8.h-8.text-gray-300(fill="none" stroke="currentColor" viewBox="0 0 24 24")
-                        path(stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z")
-                      .text-xs.text-gray-500 No common names yet
-                      button.outline.text-xs.mt-1(
-                        type="button"
-                        hx-get=`/admin/species/${species.group_id}/common-names/new`
-                        hx-target="#common-name-list"
-                        hx-swap="beforeend"
-                      ) Add First Common Name
+                    +emptyState("No common names yet", {
+                      showIcon: true,
+                      iconPath: "M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z",
+                      actionText: "Add First Common Name",
+                      size: "xs",
+                      htmx: {
+                        get: `/admin/species/${species.group_id}/common-names/new`,
+                        target: "#common-name-list",
+                        swap: "beforeend"
+                      }
+                    })
 
               //- Scientific Names
               div
