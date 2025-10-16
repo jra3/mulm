@@ -56,8 +56,11 @@ function buildTomSelectOptions(element, config) {
 		onChange: function (value) {
 			const selectedOption = this.options[value];
 
-			// Sync TomSelect internal state to underlying select element
-			this.sync();
+			// Manually update the underlying select element's value
+			// Tom Select manages its own UI, but we need to ensure the form value is set
+			if (element.value !== value) {
+				element.value = value;
+			}
 
 			// Dispatch custom event for external listeners to handle
 			element.dispatchEvent(new CustomEvent('typeahead:change', {
