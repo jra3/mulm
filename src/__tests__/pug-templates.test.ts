@@ -539,6 +539,19 @@ void describe("Pug Template Rendering", () => {
             break;
           }
 
+          case "admin/mergeSpeciesDialog.pug":
+            templateData.defunctSpecies = {
+              group_id: 1,
+              canonical_genus: "Apistogramma",
+              canonical_species_name: "cacatuoides",
+              species_type: "Fish",
+            };
+            templateData.defunctNames = {
+              common_names: [{ common_name: "Cockatoo Dwarf Cichlid" }],
+              scientific_names: [{ scientific_name: "Apistogramma cacatuoides" }],
+            };
+            break;
+
           case "index.pug":
             // Index already has comprehensive data
             break;
