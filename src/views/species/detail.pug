@@ -1,5 +1,6 @@
 include ../header.pug
 include ../mixins/date.pug
+include ../mixins/caresBadge.pug
 
 - const stringCell = ['p-3', 'overflow-hidden', 'text-ellipsis', 'whitespace-nowrap', 'border-gray-300'];
 - const heading = ['p-3', 'text-left', 'font-semibold', 'text-gray-700', 'bg-gray-50', 'border-gray-300'];
@@ -31,7 +32,10 @@ html
 				.bg-white.rounded-lg.shadow-md.p-6.mb-6
 					.flex.flex-col.items-start.justify-between(class="lg:flex-row lg:items-center")
 						div
-							h1.text-3xl.font-bold.text-gray-900.mb-2= displayName
+							.flex.items-center.gap-2.mb-2
+								h1.text-3xl.font-bold.text-gray-900= displayName
+								if species.is_cares_species == 1
+									+caresBadge()
 							p.text-lg.text-gray-600
 								span.inline-block.px-3.py-1.text-sm.font-medium.bg-blue-100.text-blue-800.rounded-full
 									= species.program_class

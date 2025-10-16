@@ -66,6 +66,8 @@ export type Submission = {
   denied_on: string | null;
   denied_by: number | null;
   denied_reason: string | null;
+
+  is_cares_species?: number | null;
 };
 
 export function formToDB(memberId: number, form: FormValues, submit: boolean) {
@@ -157,9 +159,13 @@ export function getSubmissionsByMember(
 				(IFNULL(submissions.flowered, 0) * submissions.points) +
 				(IFNULL(submissions.sexual_reproduction, 0) * submissions.points)
 				as total_points,
-			members.display_name as member_name
-		FROM submissions LEFT JOIN members
-		ON submissions.member_id == members.id
+			members.display_name as member_name,
+			sng.is_cares_species
+		FROM submissions
+		LEFT JOIN members ON submissions.member_id == members.id
+		LEFT JOIN species_common_name cn ON submissions.common_name_id = cn.common_name_id
+		LEFT JOIN species_scientific_name scin ON submissions.scientific_name_id = scin.scientific_name_id
+		LEFT JOIN species_name_group sng ON (cn.group_id = sng.group_id OR scin.group_id = sng.group_id)
 		WHERE submissions.member_id = ?`;
 
   if (!includeUnsubmitted) {
@@ -245,9 +251,13 @@ export async function getOutstandingSubmissions(program: string) {
 				(IFNULL(submissions.flowered, 0) * submissions.points) +
 				(IFNULL(submissions.sexual_reproduction, 0) * submissions.points)
 				as total_points,
-			members.display_name as member_name
-		FROM submissions JOIN members
-		ON submissions.member_id == members.id
+			members.display_name as member_name,
+			sng.is_cares_species
+		FROM submissions
+		JOIN members ON submissions.member_id == members.id
+		LEFT JOIN species_common_name cn ON submissions.common_name_id = cn.common_name_id
+		LEFT JOIN species_scientific_name scin ON submissions.scientific_name_id = scin.scientific_name_id
+		LEFT JOIN species_name_group sng ON (cn.group_id = sng.group_id OR scin.group_id = sng.group_id)
 		WHERE submitted_on IS NOT NULL
 		AND approved_on IS NULL
 		AND witness_verification_status = 'confirmed'
@@ -263,9 +273,13 @@ export function getWitnessQueue(program: string) {
     `
 		SELECT
 			submissions.*,
-			members.display_name as member_name
-		FROM submissions JOIN members
-		ON submissions.member_id == members.id
+			members.display_name as member_name,
+			sng.is_cares_species
+		FROM submissions
+		JOIN members ON submissions.member_id == members.id
+		LEFT JOIN species_common_name cn ON submissions.common_name_id = cn.common_name_id
+		LEFT JOIN species_scientific_name scin ON submissions.scientific_name_id = scin.scientific_name_id
+		LEFT JOIN species_name_group sng ON (cn.group_id = sng.group_id OR scin.group_id = sng.group_id)
 		WHERE submitted_on IS NOT NULL
 		AND witness_verification_status = 'pending'
 		AND program = ?
@@ -280,10 +294,14 @@ export function getWaitingPeriodSubmissions(program: string) {
 		SELECT
 			submissions.*,
 			members.display_name as member_name,
-			witnessed_members.display_name as witnessed_by_name
-		FROM submissions 
+			witnessed_members.display_name as witnessed_by_name,
+			sng.is_cares_species
+		FROM submissions
 		JOIN members ON submissions.member_id == members.id
 		LEFT JOIN members as witnessed_members ON submissions.witnessed_by == witnessed_members.id
+		LEFT JOIN species_common_name cn ON submissions.common_name_id = cn.common_name_id
+		LEFT JOIN species_scientific_name scin ON submissions.scientific_name_id = scin.scientific_name_id
+		LEFT JOIN species_name_group sng ON (cn.group_id = sng.group_id OR scin.group_id = sng.group_id)
 		WHERE submitted_on IS NOT NULL
 		AND witness_verification_status = 'confirmed'
 		AND approved_on IS NULL

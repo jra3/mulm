@@ -1,6 +1,7 @@
 include ../header.pug
 include ../mixins/submissionImages.pug
 include ../mixins/submissionVideo.pug
+include ../mixins/caresBadge.pug
 
 mixin reviewTextInput(labelText, name, type="text")
     .grid.gap-2
@@ -27,7 +28,10 @@ html
                     +reviewTextInput("Member Name", "member_name")
 
             div.max-w-4xl.mx-auto.text-left.pt-4.px-4
-                h2(class="text-l font-bold mb-4") Species Details
+                .flex.items-center.gap-2.mb-4
+                    h2(class="text-l font-bold") Species Details
+                    if name && name.is_cares_species == 1
+                        +caresBadge('sm')
                 div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
                     +reviewTextInput("Common Name", "species_common_name")
                     +reviewTextInput("Latin Name", "species_latin_name")

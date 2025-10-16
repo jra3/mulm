@@ -1,5 +1,6 @@
 include ../header.pug
 include ../mixins/date.pug
+include ../mixins/caresBadge.pug
 
 doctype html
 html
@@ -120,9 +121,12 @@ html
 									each item in species
 										tr(class="hover:bg-gray-50")
 											td.p-3.border-r.border-gray-300
-												a.link.font-semibold(href=`/species/${item.group_id}`)
-													= `${item.canonical_genus} ${item.canonical_species_name}`
-											
+												.flex.items-center.gap-2
+													a.link.font-semibold(href=`/species/${item.group_id}`)
+														= `${item.canonical_genus} ${item.canonical_species_name}`
+													if item.is_cares_species == 1
+														+caresBadge('sm')
+
 											td.p-3.border-r.border-gray-300
 												span.inline-block.px-2.py-1.text-xs.font-medium.bg-blue-100.text-blue-800.rounded-full
 													= item.program_class

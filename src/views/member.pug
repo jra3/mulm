@@ -2,6 +2,7 @@ include header.pug
 include mixins/submissionImages.pug
 include mixins/date.pug
 include mixins/trophy.pug
+include mixins/caresBadge.pug
 
 - const stringCell = ['p-3', 'text-left', 'border-b', 'border-gray-200'];
 - const heading = ['p-3', 'text-left', 'font-bold', 'text-gray-900', 'border-b-2', 'border-gray-300', 'bg-gray-50', 'cursor-pointer', 'select-none', 'hover:bg-gray-100'];
@@ -53,7 +54,10 @@ mixin submissionTable(submissions, totalPoints)
 						td(class=stringCell)
 							a.link(href=`/submissions/${sub.id}`)= sub.species_common_name
 						td(class=stringCell)
-							a.link(href=`/submissions/${sub.id}`)= sub.species_latin_name
+							.flex.items-center.gap-2
+								a.link(href=`/submissions/${sub.id}`)= sub.species_latin_name
+								if sub.is_cares_species == 1
+									+caresBadge('sm')
 						td(class=stringCell)
 							+shortDate(sub.submitted_on, "Submitted on")
 						td(class=numberCell)= sub.points || "Unapproved"
