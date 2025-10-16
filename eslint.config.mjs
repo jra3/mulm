@@ -47,7 +47,13 @@ export default [
 		rules: {
 			"@typescript-eslint/no-explicit-any": "warn",
 			"@typescript-eslint/no-floating-promises": "error",
-			"@typescript-eslint/no-misused-promises": "error"
+			"@typescript-eslint/no-misused-promises": "error",
+			// Disable unsafe rules for test files due to Node.js test runner lacking proper types
+			"@typescript-eslint/no-unsafe-call": "off",
+			"@typescript-eslint/no-unsafe-member-access": "off",
+			"@typescript-eslint/no-unsafe-assignment": "off",
+			"@typescript-eslint/no-unsafe-argument": "off",
+			"@typescript-eslint/require-await": "off"
 		}
 	},
 
@@ -64,7 +70,8 @@ export default [
 		rules: {
 			"@typescript-eslint/no-explicit-any": "warn",
 			"@typescript-eslint/no-floating-promises": "error",
-			"@typescript-eslint/no-misused-promises": "error"
+			"@typescript-eslint/no-misused-promises": "error",
+			"@typescript-eslint/require-await": "off"
 		}
 	},
 

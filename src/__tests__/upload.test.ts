@@ -152,7 +152,7 @@ void describe("Upload Transaction Tests", () => {
 
       await db.exec("COMMIT;");
       assert.fail("Transaction should have failed");
-    } catch (error) {
+    } catch {
       // Transaction should fail and rollback
       await db.exec("ROLLBACK;").catch(() => {});
     }
@@ -428,7 +428,7 @@ void describe("Upload Transaction Tests", () => {
 
       await db.exec("COMMIT;");
       assert.fail("Transaction should have failed");
-    } catch (error) {
+    } catch {
       await db.exec("ROLLBACK;").catch(() => {});
 
       // In real code, cleanup would happen here

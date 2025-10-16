@@ -29,7 +29,6 @@ void describe("Witness Workflow Integration Tests", () => {
   let testMember: TestMember;
   let admin1: TestMember;
   let admin2: TestMember;
-  let admin3: TestMember;
 
   // Helper function to create a test submission
   async function createTestSubmission(
@@ -80,16 +79,6 @@ void describe("Witness Workflow Integration Tests", () => {
     return result as TestSubmission;
   }
 
-  // Helper to create multiple submissions for testing
-  async function createMultipleSubmissions(count: number, memberId: number): Promise<number[]> {
-    const submissions: number[] = [];
-    for (let i = 0; i < count; i++) {
-      const id = await createTestSubmission(memberId, "Fish", "New World");
-      submissions.push(id);
-    }
-    return submissions;
-  }
-
   beforeEach(async () => {
     // Create fresh in-memory database for each test
     db = await open({
@@ -112,17 +101,14 @@ void describe("Witness Workflow Integration Tests", () => {
     const memberEmail = `member-${Date.now()}@test.com`;
     const admin1Email = `admin1-${Date.now()}@test.com`;
     const admin2Email = `admin2-${Date.now()}@test.com`;
-    const admin3Email = `admin3-${Date.now()}@test.com`;
 
     const memberId = await createMember(memberEmail, "Test Member");
     const admin1Id = await createMember(admin1Email, "Admin One");
     const admin2Id = await createMember(admin2Email, "Admin Two");
-    const admin3Id = await createMember(admin3Email, "Admin Three");
 
     testMember = (await getMember(memberId)) as TestMember;
     admin1 = (await getMember(admin1Id)) as TestMember;
     admin2 = (await getMember(admin2Id)) as TestMember;
-    admin3 = (await getMember(admin3Id)) as TestMember;
   });
 
   afterEach(async () => {
