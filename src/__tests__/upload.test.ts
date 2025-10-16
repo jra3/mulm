@@ -394,12 +394,14 @@ void describe("Upload Transaction Tests", () => {
 
     // Track S3 delete calls
     const deletedKeys: string[] = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockS3Client.send = mock.fn(async (command: any) => {
       // Track delete operations
       if (command.constructor.name === "DeleteObjectCommand") {
         deletedKeys.push(command.input.Key);
       }
       return { $metadata: { httpStatusCode: 200 } };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     }) as any;
 
     const uploadedKeys = [
