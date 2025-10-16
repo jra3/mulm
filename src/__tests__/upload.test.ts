@@ -394,15 +394,27 @@ void describe("Upload Transaction Tests", () => {
 
     // Track S3 delete calls
     const deletedKeys: string[] = [];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    mockS3Client.send = mock.fn(async (command: any) => {
-      // Track delete operations
-      if (command.constructor.name === "DeleteObjectCommand") {
-        deletedKeys.push(command.input.Key);
-      }
-      return { $metadata: { httpStatusCode: 200 } };
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    }) as any;
+
+    // Create a new mock client with tracking for this specific test
+    const trackingMockClient = {
+      send: mock.fn(async (command: any) => {
+        // Track delete operations
+        if (command.constructor.name === "DeleteObjectCommand") {
+          deletedKeys.push(command.input.Key);
+        }
+        return { $metadata: { httpStatusCode: 200 } };
+         
+      }),
+    } as unknown as S3Client;
+
+    // Override R2 client with tracking mock for this test
+    overrideR2Client(trackingMockClient, {
+      endpoint: "https://test.r2.cloudflarestorage.com",
+      accessKeyId: "test-key",
+      secretAccessKey: "test-secret",
+      bucketName: "test-bucket",
+      publicUrl: "https://test.example.com",
+    });
 
     const uploadedKeys = [
       "submissions/1/1/fail-original.jpg",
