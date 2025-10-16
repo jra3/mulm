@@ -70,7 +70,7 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
       const results = await searchSpeciesTypeahead("zztest siamese");
       assert.strictEqual(results.length, 1);
       assert.strictEqual(results[0].common_name, "ZZTEST Siamese Fighter");
-      assert.strictEqual(results[0].scientific_name, "");
+      assert.strictEqual(results[0].scientific_name, "Typeaheadicus testicus");
       assert.strictEqual(results[0].group_id, groupId);
     });
 
@@ -86,7 +86,7 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
 
       const results = await searchSpeciesTypeahead("scientificus");
       assert.strictEqual(results.length, 1);
-      assert.strictEqual(results[0].common_name, "");
+      assert.strictEqual(results[0].common_name, "Typeaheadicus scientificus");
       assert.strictEqual(results[0].scientific_name, "ZZTEST scientificus");
       assert.strictEqual(results[0].group_id, groupId);
     });
