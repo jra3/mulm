@@ -1,4 +1,5 @@
 include header.pug
+include mixins/trophy.pug
 
 doctype html
 html
@@ -21,7 +22,9 @@ html
 							each member in members
 								div(class="flex justify-between items-center px-3 border-b border-gray-200 last:border-b-0")
 									a.contents.link(href=`/member/${member.id}`)
-										div(class="text-left")= member.display_name
+										div(class="text-left flex items-center gap-1")
+											span= member.display_name
+											+trophy(trophies[member.id])
 										div(class="text-right font-semibold ml-4")= member.points
 
 		.w-full.bg-gray-300.p-4.shadow-md

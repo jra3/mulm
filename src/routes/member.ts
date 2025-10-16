@@ -3,6 +3,7 @@ import { getSubmissionsByMember } from "@/db/submissions";
 import { MulmRequest } from "@/sessions";
 import { Response } from "express";
 import { getSubmissionStatus } from "@/utils/submissionStatus";
+import { getTrophyData } from "@/utils/awards";
 
 export const view = async (req: MulmRequest, res: Response) => {
   const memberId = parseInt(req.params.memberId);
@@ -59,5 +60,6 @@ export const view = async (req: MulmRequest, res: Response) => {
     isLoggedIn: Boolean(viewer),
     isSelf,
     isAdmin,
+    trophyData: getTrophyData(member.awards),
   });
 };

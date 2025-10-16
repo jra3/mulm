@@ -272,6 +272,35 @@ export async function getAwardsForMember(memberId: number): Promise<AwardRecord[
   return query<AwardRecord>("SELECT * FROM awards WHERE member_id = ?", [memberId]);
 }
 
+/**
+ * Get awards for multiple members in a single query
+ * Returns a map of member_id to their awards array
+ */
+export async function getAwardsForMembers(
+  memberIds: number[]
+): Promise<Map<number, AwardRecord[]>> {
+  if (memberIds.length === 0) {
+    return new Map();
+  }
+
+  const placeholders = memberIds.map(() => "?").join(", ");
+  const allAwards = await query<AwardRecord>(
+    `SELECT * FROM awards WHERE member_id IN (${placeholders}) ORDER BY member_id, date_awarded DESC`,
+    memberIds
+  );
+
+  // Group awards by member_id
+  const awardsByMember = new Map<number, AwardRecord[]>();
+  for (const award of allAwards) {
+    if (!awardsByMember.has(award.member_id)) {
+      awardsByMember.set(award.member_id, []);
+    }
+    awardsByMember.get(award.member_id)!.push(award);
+  }
+
+  return awardsByMember;
+}
+
 export async function getMemberWithAwards(memberId: number) {
   const [members, awards] = await Promise.all([
     query<MemberRecord>("SELECT * FROM members WHERE id = ?", [memberId]),

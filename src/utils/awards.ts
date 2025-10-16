@@ -11,6 +11,12 @@ export type Award = {
 
 export type TrophyLevel = "gold" | "silver" | "bronze" | null;
 
+export type TrophyData = {
+  icon: string;
+  level: TrophyLevel;
+  tooltip: string;
+} | null;
+
 /**
  * Determine trophy level based on specialty awards earned
  *
@@ -70,4 +76,28 @@ export function formatAwardsList(awards: Award[]): string {
   );
 
   return specialtyAwards.map((a) => a.award_name).join(", ");
+}
+
+/**
+ * Get trophy data for displaying next to member names
+ * Returns all the data Pug needs in a simple object
+ *
+ * @param awards - Array of all awards for a member
+ * @returns Trophy data object or null if no trophy should be shown
+ */
+export function getTrophyData(awards: Award[] | undefined): TrophyData {
+  if (!awards || awards.length === 0) {
+    return null;
+  }
+
+  const level = getTrophyLevel(awards);
+  if (!level) {
+    return null;
+  }
+
+  return {
+    icon: getTrophyIcon(level),
+    level,
+    tooltip: `Specialty Awards: ${formatAwardsList(awards)}`,
+  };
 }

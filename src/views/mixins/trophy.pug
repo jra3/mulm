@@ -1,17 +1,11 @@
 //- Trophy icon mixin for displaying specialty award achievements
-//- Uses awards data to show bronze/silver/gold trophy with tooltip
+//- Expects trophyData object with { icon, tooltip } or null
 
-mixin trophy(awards)
-	if awards && awards.length > 0
-		- const { getTrophyLevel, getTrophyIcon, formatAwardsList } = require('@/utils/awards')
-		- const level = getTrophyLevel(awards)
-		if level
-			- const icon = getTrophyIcon(level)
-			- const awardsList = formatAwardsList(awards)
-			- const title = `Specialty Awards: ${awardsList}`
-			span.inline-block.ml-1.cursor-help(
-				title=title
-				aria-label=title
-				role="img"
-				aria-hidden="false"
-			)= icon
+mixin trophy(trophyData)
+	if trophyData
+		span.inline-block.ml-1.cursor-help(
+			title=trophyData.tooltip
+			aria-label=trophyData.tooltip
+			role="img"
+			aria-hidden="false"
+		)= trophyData.icon

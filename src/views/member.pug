@@ -87,8 +87,7 @@ html
 			});
 
 	body.bg-white.text-gray-800
-		+pageHeader(isLoggedIn, member.display_name)
-			+trophy(member.awards)
+		+pageHeader(isLoggedIn, member.display_name, null, trophyData)
 
 		if member.awards && member.awards.length > 0
 			section.bg-blue-50.py-8
