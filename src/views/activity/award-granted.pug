@@ -1,5 +1,10 @@
+include ../mixins/trophy.pug
+
 .text-sm
     span.font-medium.text-gray-900= activity.member_name
+    if activity.awards
+        |
+        +trophy(activity.awards)
     span.text-gray-600  earned the 
     span.font-medium.text-gray-900= data.award_name
     span.text-gray-600  award!

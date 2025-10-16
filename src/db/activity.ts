@@ -1,5 +1,13 @@
 import { db, query } from "./conn";
 import { logger } from "@/utils/logger";
+import { getAwardsForMembers } from "./members";
+
+type AwardRecord = {
+  member_id: number;
+  award_name: string;
+  date_awarded: string;
+  award_type?: "species" | "meta_species" | "manual";
+};
 
 export interface ActivityFeedItem {
   id: number;
@@ -11,6 +19,7 @@ export interface ActivityFeedItem {
 
   // Joined data
   member_name?: string;
+  awards?: AwardRecord[];
 }
 
 export interface SubmissionApprovedData {
@@ -55,7 +64,7 @@ export async function createActivity(
 export async function getRecentActivity(limit: number = 10): Promise<ActivityFeedItem[]> {
   const activities = await query<ActivityFeedItem>(
     `
-        SELECT 
+        SELECT
             af.*,
             m.display_name as member_name
         FROM activity_feed af
@@ -66,5 +75,13 @@ export async function getRecentActivity(limit: number = 10): Promise<ActivityFee
     [limit]
   );
 
-  return activities;
+  // Batch fetch awards for all members in the activity feed
+  const memberIds = [...new Set(activities.map((a) => a.member_id))];
+  const awardsMap = await getAwardsForMembers(memberIds);
+
+  // Attach awards to each activity
+  return activities.map((activity) => ({
+    ...activity,
+    awards: awardsMap.get(activity.member_id) || [],
+  }));
 }
