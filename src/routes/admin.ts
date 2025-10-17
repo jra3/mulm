@@ -46,6 +46,10 @@ import {
   spawnLocations,
   speciesTypes,
   waterTypes,
+  hasLighting,
+  hasSupplements,
+  hasFoods,
+  hasSpawnLocations,
 } from "@/forms/submission";
 import {
   ensureNameIdsForGroupId,
@@ -1006,13 +1010,24 @@ export const editApprovedSubmissionForm = async (req: MulmRequest, res: Response
   }
 
   res.render("admin/editApprovedSubmission", {
-    submission,
+    submission: {
+      ...submission,
+      reproduction_date: submission.reproduction_date ? new Date(submission.reproduction_date).toISOString().split("T")[0] : "",
+      foods: parseStringArray(submission.foods),
+      spawn_locations: parseStringArray(submission.spawn_locations),
+    },
     member,
     currentGroupId,
-    foods: parseStringArray(submission.foods).join(", "),
-    spawn_locations: parseStringArray(submission.spawn_locations).join(", "),
+    foodTypes,
+    spawnLocations,
     supplement_type: parseStringArray(submission.supplement_type || "[]").join(", "),
     supplement_regimen: parseStringArray(submission.supplement_regimen || "[]").join(", "),
+    // Conditional field visibility based on species type
+    isLivestock: isLivestock(submission.species_type),
+    hasFoods: hasFoods(submission.species_type),
+    hasSpawnLocations: hasSpawnLocations(submission.species_type),
+    hasLighting: hasLighting(submission.species_type),
+    hasSupplements: hasSupplements(submission.species_type),
   });
 };
 
@@ -1060,6 +1075,33 @@ export const saveApprovedSubmissionEdits = async (req: MulmRequest, res: Respons
   delete (updates as Partial<typeof updates>).reason;
   const groupId = updates.group_id;
   delete (updates as Partial<typeof updates>).group_id;
+
+  // Preserve time component of reproduction_date if date changed
+  if (updates.reproduction_date && submission.reproduction_date) {
+    const oldDate = new Date(submission.reproduction_date);
+    const newDateOnly = updates.reproduction_date; // YYYY-MM-DD format from form
+
+    // Extract time component from old date
+    const hours = oldDate.getUTCHours();
+    const minutes = oldDate.getUTCMinutes();
+    const seconds = oldDate.getUTCSeconds();
+
+    // Combine new date with old time
+    const [year, month, day] = newDateOnly.split("-").map(Number);
+    const newDateTime = new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds));
+
+    // Use ISO string for database storage
+    updates.reproduction_date = newDateTime.toISOString();
+  }
+
+  // Convert arrays from multi-select to JSON strings for database storage
+  const updatesForDb = { ...updates } as Record<string, unknown>;
+  if (updates.foods !== undefined) {
+    updatesForDb.foods = JSON.stringify(updates.foods || []);
+  }
+  if (updates.spawn_locations !== undefined) {
+    updatesForDb.spawn_locations = JSON.stringify(updates.spawn_locations || []);
+  }
 
   // Calculate what changed
   interface Change {
@@ -1115,20 +1157,19 @@ export const saveApprovedSubmissionEdits = async (req: MulmRequest, res: Respons
   const pointsChanged = changes.some(c => pointFields.includes(c.field));
 
   // If species group changed, update name IDs
-  const updatesWithNameIds = updates as typeof updates & { common_name_id?: number; scientific_name_id?: number };
   if (groupId && groupId !== submission.common_name_id) {
     const speciesIds = await ensureNameIdsForGroupId(
       groupId,
       submission.species_common_name,
       submission.species_latin_name
     );
-    updatesWithNameIds.common_name_id = speciesIds.common_name_id;
-    updatesWithNameIds.scientific_name_id = speciesIds.scientific_name_id;
+    updatesForDb.common_name_id = speciesIds.common_name_id;
+    updatesForDb.scientific_name_id = speciesIds.scientific_name_id;
   }
 
   try {
-    // Save changes
-    await updateSubmission(submission.id, updatesWithNameIds);
+    // Save changes to database
+    await updateSubmission(submission.id, updatesForDb);
 
     // Create changelog entry in submission_notes
     const changelog = {

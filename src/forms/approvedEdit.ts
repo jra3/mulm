@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { formBoolean } from "./formBoolean";
+import { multiSelect } from "./utils";
 
 /**
  * Validation schema for editing approved submissions
@@ -19,11 +20,11 @@ export const approvedEditSchema = z.object({
   reproduction_date: z.string().optional(),
   count: z.string().optional(),
 
-  // Arrays (will be JSON stringified before saving)
-  foods: z.string().optional(), // Already JSON string from form
-  spawn_locations: z.string().optional(), // Already JSON string from form
-  supplement_type: z.string().optional(), // Already JSON string from form
-  supplement_regimen: z.string().optional(), // Already JSON string from form
+  // Arrays (multi-select fields)
+  foods: multiSelect.optional(),
+  spawn_locations: multiSelect.optional(),
+  supplement_type: z.string().optional(), // TODO: Convert to multiSelect
+  supplement_regimen: z.string().optional(), // Text field, not multi-select
 
   // Tank parameters
   tank_size: z.string().optional(),

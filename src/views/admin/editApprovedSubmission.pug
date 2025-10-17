@@ -1,4 +1,5 @@
 include ../mixins/formCheckbox.pug
+include ../bapForm/inputs.pug
 
 form.bg-white.rounded-lg(
 	hx-post=`/admin/submissions/${submission.id}/edit-approved`
@@ -107,36 +108,41 @@ form.bg-white.rounded-lg(
 						value=submission.reproduction_date
 					)
 
-				.form-group
-					label.input-label(for="count") Count
-					input.text-input(
-						type="text"
-						id="count"
-						name="count"
-						value=submission.count || ""
-					)
+				if isLivestock
+					.form-group
+						label.input-label(for="count") Count
+						input.text-input(
+							type="text"
+							id="count"
+							name="count"
+							value=submission.count || ""
+						)
 
-				.form-group
-					label.input-label(for="foods") Foods
-					input.text-input(
-						type="text"
-						id="foods"
-						name="foods"
-						value=foods || ""
-						placeholder="Comma-separated"
-					)
+				if hasFoods
+					.form-group
+						label.input-label(for="foods") Foods
+						select.tom-select-multi(
+							id="foods"
+							name="foods"
+							multiple
+						)
+							each food in foodTypes
+								- const selected = submission.foods && submission.foods.includes(food);
+								option(value=food selected=selected)= food
 
-				.form-group
-					label.input-label(for="spawn_locations") Spawn Locations
-					input.text-input(
-						type="text"
-						id="spawn_locations"
-						name="spawn_locations"
-						value=spawn_locations || ""
-						placeholder="Comma-separated"
-					)
+				if hasSpawnLocations
+					.form-group
+						label.input-label(for="spawn_locations") Spawn Locations
+						select.tom-select-multi(
+							id="spawn_locations"
+							name="spawn_locations"
+							multiple
+						)
+							each loc in spawnLocations
+								- const selected = submission.spawn_locations && submission.spawn_locations.includes(loc);
+								option(value=loc selected=selected)= loc
 
-				if submission.species_type === 'Plant' || submission.species_type === 'Coral'
+				if !isLivestock && submission.species_type !== 'Coral'
 					.form-group
 						label.input-label(for="propagation_method") Propagation Method
 						input.text-input(
@@ -258,50 +264,52 @@ form.bg-white.rounded-lg(
 						value=submission.substrate_color || ""
 					)
 
-				.form-group
-					label.input-label(for="light_type") Light Type
-					input.text-input(
-						type="text"
-						id="light_type"
-						name="light_type"
-						value=submission.light_type || ""
-					)
+				if hasLighting
+					.form-group
+						label.input-label(for="light_type") Light Type
+						input.text-input(
+							type="text"
+							id="light_type"
+							name="light_type"
+							value=submission.light_type || ""
+						)
 
-				.form-group
-					label.input-label(for="light_strength") Light Strength
-					input.text-input(
-						type="text"
-						id="light_strength"
-						name="light_strength"
-						value=submission.light_strength || ""
-					)
+					.form-group
+						label.input-label(for="light_strength") Light Strength
+						input.text-input(
+							type="text"
+							id="light_strength"
+							name="light_strength"
+							value=submission.light_strength || ""
+						)
 
-				.form-group
-					label.input-label(for="light_hours") Light Hours
-					input.text-input(
-						type="text"
-						id="light_hours"
-						name="light_hours"
-						value=submission.light_hours || ""
-					)
+					.form-group
+						label.input-label(for="light_hours") Light Hours
+						input.text-input(
+							type="text"
+							id="light_hours"
+							name="light_hours"
+							value=submission.light_hours || ""
+						)
 
-				.form-group
-					label.input-label(for="co2") CO2
-					input.text-input(
-						type="text"
-						id="co2"
-						name="co2"
-						value=submission.co2 || ""
-					)
+				if hasSupplements
+					.form-group
+						label.input-label(for="co2") CO2
+						input.text-input(
+							type="text"
+							id="co2"
+							name="co2"
+							value=submission.co2 || ""
+						)
 
-				.form-group.col-span-2
-					label.input-label(for="co2_description") CO2 Description
-					input.text-input(
-						type="text"
-						id="co2_description"
-						name="co2_description"
-						value=submission.co2_description || ""
-					)
+					.form-group.col-span-2
+						label.input-label(for="co2_description") CO2 Description
+						input.text-input(
+							type="text"
+							id="co2_description"
+							name="co2_description"
+							value=submission.co2_description || ""
+						)
 
 		// Required Reason (visible on all tabs)
 		.mt-6.p-4.bg-yellow-50.border.border-yellow-300.rounded
@@ -350,16 +358,6 @@ form.bg-white.rounded-lg(
 				}
 			});
 		}
-
-		// Initialize typeaheads when modal loads
-		document.addEventListener('DOMContentLoaded', function() {
-			// Wait a tick for the dialog to be in DOM
-			setTimeout(() => {
-				if (typeof initializeTypeaheads === 'function') {
-					initializeTypeaheads();
-				}
-			}, 0);
-		});
 
 	style.
 		.tab-button {

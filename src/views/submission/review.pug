@@ -92,6 +92,45 @@ html
                 style="max-width: 900px; width: 90%; max-height: 90vh; padding: 0; border: none; margin: auto;"
             )
 
+            script.
+                // Initialize Tom Select for edit approved submission form
+                function initEditFormMultiSelects() {
+                    document.querySelectorAll("#edit-approved-dialog select.tom-select-multi").forEach((select) => {
+                        if (select.tomselect) {
+                            select.tomselect.destroy();
+                        }
+
+                        new TomSelect(select, {
+                            hideSelected: true,
+                            create: true,
+                        });
+                    });
+                }
+
+                function initEditFormTypeaheads() {
+                    const typeaheadElements = document.querySelectorAll('#edit-approved-dialog select.tom-select-typeahead:not(.tomselected)');
+                    typeaheadElements.forEach(function(element) {
+                        const config = getTypeaheadConfig(element);
+                        const tomSelectOptions = buildTomSelectOptions(element, config);
+                        const tomSelect = new TomSelect(element, tomSelectOptions);
+                        element.tomSelectInstance = tomSelect;
+                        if (config.maxItems === 1) {
+                            tomSelect.control.classList.add('single-value');
+                        }
+                        element.classList.add('tomselected');
+                    });
+                }
+
+                // Listen for HTMX content loads
+                document.addEventListener("htmx:load", function (event) {
+                    const target = event.detail.elt;
+                    // Reinitialize when dialog content is loaded
+                    if (target && target.closest && target.closest('#edit-approved-dialog')) {
+                        initEditFormMultiSelects();
+                        initEditFormTypeaheads();
+                    }
+                });
+
             style.
                 #edit-approved-dialog::backdrop {
                     background-color: rgba(0, 0, 0, 0.5);
