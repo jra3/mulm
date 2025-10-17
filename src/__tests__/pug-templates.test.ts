@@ -390,6 +390,7 @@ void describe("Pug Template Rendering", () => {
       /^mixins\/submissionVideo\.pug$/, // Mixin-only template
       /^mixins\/trophy\.pug$/, // Mixin-only template
       /^mixins\/caresBadge\.pug$/, // Mixin-only template
+      /^mixins\/formCheckbox\.pug$/, // Mixin-only template
       /^activity\/activity-item\.pug$/, // Mixin-only template
       /^activity\/award-granted\.pug$/, // Include-only template
       /^activity\/submission-approved\.pug$/, // Include-only template
@@ -554,6 +555,17 @@ void describe("Pug Template Rendering", () => {
 
           case "index.pug":
             // Index already has comprehensive data
+            break;
+
+          case "activityDemo.pug":
+            templateData.activities = Array.from({ length: 5 }, () => ({
+              ...createMockActivity(),
+              activity_data: JSON.stringify({
+                species_common_name: faker.animal.fish(),
+                species_type: faker.helpers.arrayElement(["Fish", "Plant", "Coral"]),
+                award_name: faker.helpers.arrayElement(["Level 1 Breeder Award", "Level 2 Breeder Award"]),
+              }),
+            }));
             break;
 
           default:
