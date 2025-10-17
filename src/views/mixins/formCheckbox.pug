@@ -1,0 +1,12 @@
+//- Checkbox that always sends a value (0 or 1)
+//- Uses hidden input trick to ensure unchecked boxes send '0'
+mixin formCheckbox(name, label, checked)
+	label.flex.items-center.gap-2
+		input(type="hidden" name=name value="0")
+		input(
+			type="checkbox"
+			name=name
+			value="1"
+			checked=checked == 1 || checked === true
+		)
+		span= label

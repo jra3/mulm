@@ -56,6 +56,7 @@ export type Submission = {
 
   article_points?: number | null;
   first_time_species?: boolean | null;
+  cares_species?: boolean | null;
   flowered?: boolean | null;
   sexual_reproduction?: boolean | null;
 
@@ -156,6 +157,7 @@ export function getSubmissionsByMember(
 			submissions.points +
 				IFNULL(submissions.article_points, 0) +
 				(IFNULL(submissions.first_time_species, 0) * 5) +
+				(IFNULL(submissions.cares_species, 0) * 5) +
 				(IFNULL(submissions.flowered, 0) * submissions.points) +
 				(IFNULL(submissions.sexual_reproduction, 0) * submissions.points)
 				as total_points,
@@ -189,6 +191,7 @@ export async function getSubmissionById(id: number) {
 			submissions.points +
 				IFNULL(submissions.article_points, 0) +
 				(IFNULL(submissions.first_time_species, 0) * 5) +
+				(IFNULL(submissions.cares_species, 0) * 5) +
 				(IFNULL(submissions.flowered, 0) * submissions.points) +
 				(IFNULL(submissions.sexual_reproduction, 0) * submissions.points)
 				as total_points,
@@ -224,6 +227,7 @@ export function getApprovedSubmissionsInDateRange(startDate: Date, endDate: Date
 			submissions.points +
 				IFNULL(submissions.article_points, 0) +
 				(IFNULL(submissions.first_time_species, 0) * 5) +
+				(IFNULL(submissions.cares_species, 0) * 5) +
 				(IFNULL(submissions.flowered, 0) * submissions.points) +
 				(IFNULL(submissions.sexual_reproduction, 0) * submissions.points)
 				as total_points,
@@ -248,6 +252,7 @@ export async function getOutstandingSubmissions(program: string) {
 			submissions.points +
 				IFNULL(submissions.article_points, 0) +
 				(IFNULL(submissions.first_time_species, 0) * 5) +
+				(IFNULL(submissions.cares_species, 0) * 5) +
 				(IFNULL(submissions.flowered, 0) * submissions.points) +
 				(IFNULL(submissions.sexual_reproduction, 0) * submissions.points)
 				as total_points,
@@ -433,6 +438,7 @@ export function getApprovedSubmissions(program: string) {
 			submissions.points +
 				IFNULL(submissions.article_points, 0) +
 				(IFNULL(submissions.first_time_species, 0) * 5) +
+				(IFNULL(submissions.cares_species, 0) * 5) +
 				(IFNULL(submissions.flowered, 0) * submissions.points) +
 				(IFNULL(submissions.sexual_reproduction, 0) * submissions.points)
 				as total_points,
@@ -532,6 +538,7 @@ export function getTodayApprovedSubmissions() {
 			submissions.points +
 				IFNULL(submissions.article_points, 0) +
 				(IFNULL(submissions.first_time_species, 0) * 5) +
+				(IFNULL(submissions.cares_species, 0) * 5) +
 				(IFNULL(submissions.flowered, 0) * submissions.points) +
 				(IFNULL(submissions.sexual_reproduction, 0) * submissions.points)
 				as total_points,

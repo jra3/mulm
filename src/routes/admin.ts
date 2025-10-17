@@ -22,6 +22,7 @@ import {
   type Submission,
 } from "@/db/submissions";
 import { approvalSchema } from "@/forms/approval";
+import { approvedEditSchema } from "@/forms/approvedEdit";
 import { inviteSchema } from "@/forms/member";
 import {
   onSubmissionApprove,
@@ -50,6 +51,7 @@ import {
   ensureNameIdsForGroupId,
   isFirstTimeSpeciesForProgram,
   getSpeciesGroup,
+  getGroupIdFromNameId,
 } from "@/db/species";
 import { getBodyParam, getBodyString, getQueryString } from "@/utils/request";
 import { checkAndUpdateMemberLevel, checkAllMemberLevels, Program } from "@/levelManager";
@@ -956,3 +958,230 @@ export async function cancelEditSubmissionNote(req: MulmRequest, res: Response) 
     note,
   });
 }
+
+/**
+ * GET /admin/submissions/:id/edit-approved
+ * Renders edit modal for approved submissions
+ */
+export const editApprovedSubmissionForm = async (req: MulmRequest, res: Response) => {
+  const submission = await validateSubmission(req, res);
+  if (!submission || !submission.approved_on) {
+    res.status(400).send("Submission not found or not approved");
+    return;
+  }
+
+  const { viewer } = req;
+
+  // Prevent editing own submissions (prevents point manipulation)
+  if (submission.member_id === viewer!.id) {
+    res.status(403).send("Cannot edit your own approved submissions");
+    return;
+  }
+
+  const member = await getMember(submission.member_id);
+  if (!member) {
+    res.status(404).send("Member not found");
+    return;
+  }
+
+  // Parse JSON arrays for display
+  const parseStringArray = (jsonString: string): string[] => {
+    try {
+      const parsed: unknown = JSON.parse(jsonString);
+      if (Array.isArray(parsed) && parsed.every((item) => typeof item === "string")) {
+        return parsed;
+      }
+    } catch {
+      // JSON parse failed
+    }
+    return [];
+  };
+
+  // Get current group_id for species typeahead
+  let currentGroupId = null;
+  if (submission.common_name_id) {
+    currentGroupId = await getGroupIdFromNameId(submission.common_name_id, true);
+  } else if (submission.scientific_name_id) {
+    currentGroupId = await getGroupIdFromNameId(submission.scientific_name_id, false);
+  }
+
+  res.render("admin/editApprovedSubmission", {
+    submission,
+    member,
+    currentGroupId,
+    foods: parseStringArray(submission.foods).join(", "),
+    spawn_locations: parseStringArray(submission.spawn_locations).join(", "),
+    supplement_type: parseStringArray(submission.supplement_type || "[]").join(", "),
+    supplement_regimen: parseStringArray(submission.supplement_regimen || "[]").join(", "),
+  });
+};
+
+/**
+ * POST /admin/submissions/:id/edit-approved
+ * Processes approved submission edits with full audit trail
+ */
+export const saveApprovedSubmissionEdits = async (req: MulmRequest, res: Response) => {
+  logger.info("=== SAVE APPROVED EDITS CALLED ===", { submissionId: req.params.id });
+
+  const { viewer } = req;
+  const submission = await validateSubmission(req, res);
+
+  if (!submission || !submission.approved_on) {
+    logger.error("Submission not found or not approved", { submission });
+    res.status(400).send("Submission not found or not approved");
+    return;
+  }
+
+  // Prevent editing own submissions
+  if (submission.member_id === viewer!.id) {
+    res.status(403).send("Cannot edit your own approved submissions");
+    return;
+  }
+
+  // Validate form
+  const parsed = approvedEditSchema.safeParse(req.body);
+  if (!parsed.success) {
+    logger.error("Validation failed", { errors: parsed.error.issues });
+    const errors = new Map<string, string>();
+    parsed.error.issues.forEach((issue) => {
+      errors.set(String(issue.path[0]), issue.message);
+    });
+
+    res.status(400).send(`Validation error: ${parsed.error.issues[0].message}`);
+    return;
+  }
+
+  logger.info("Validation passed", { data: parsed.data });
+
+  const updates = parsed.data;
+  const reason = updates.reason;
+
+  // Remove reason and group_id from updates (reason goes in audit log, group_id is converted to name IDs)
+  delete (updates as Partial<typeof updates>).reason;
+  const groupId = updates.group_id;
+  delete (updates as Partial<typeof updates>).group_id;
+
+  // Calculate what changed
+  interface Change {
+    field: string;
+    old: unknown;
+    new: unknown;
+  }
+  
+  const changes: Change[] = [];
+  for (const [field, newValue] of Object.entries(updates)) {
+    if (newValue === undefined) continue;
+
+    const oldValue = submission[field as keyof Submission];
+
+    // Normalize values for comparison (treat empty string, null, undefined, empty arrays as equivalent)
+    const normalizeValue = (val: unknown): string | number | boolean | null => {
+      if (val === '' || val === null || val === undefined) return null;
+      if (val === '[]') return null; // Empty JSON array
+      if (typeof val === 'number') return val;
+      if (typeof val === 'boolean') return val;
+      if (typeof val === 'string') return val;
+      return JSON.stringify(val);
+    };
+
+    const normalizedOld = normalizeValue(oldValue);
+    const normalizedNew = normalizeValue(newValue);
+
+    // Special handling for booleans (checkbox fields)
+    const booleanFields = ['first_time_species', 'cares_species', 'flowered', 'sexual_reproduction'];
+    if (booleanFields.includes(field)) {
+      // newValue is already a boolean from Zod transform
+      const oldBool = Boolean(oldValue);
+      const newBool = typeof newValue === 'boolean' ? newValue : Boolean(Number(newValue));
+      if (oldBool !== newBool) {
+        changes.push({ field, old: oldBool, new: newBool });
+      }
+    } else if (normalizedOld !== normalizedNew) {
+      // Only record if there's a meaningful change
+      changes.push({ field, old: oldValue, new: newValue });
+    }
+  }
+
+  if (changes.length === 0) {
+    logger.warn("No changes detected", { updates, submission });
+    res.status(400).send("No changes detected");
+    return;
+  }
+
+  logger.info("Changes detected", { changes });
+
+  // Check for point-related changes
+  const pointFields = ["points", "article_points", "first_time_species", "cares_species", "flowered", "sexual_reproduction"];
+  const pointsChanged = changes.some(c => pointFields.includes(c.field));
+
+  // If species group changed, update name IDs
+  const updatesWithNameIds = updates as typeof updates & { common_name_id?: number; scientific_name_id?: number };
+  if (groupId && groupId !== submission.common_name_id) {
+    const speciesIds = await ensureNameIdsForGroupId(
+      groupId,
+      submission.species_common_name,
+      submission.species_latin_name
+    );
+    updatesWithNameIds.common_name_id = speciesIds.common_name_id;
+    updatesWithNameIds.scientific_name_id = speciesIds.scientific_name_id;
+  }
+
+  try {
+    // Save changes
+    await updateSubmission(submission.id, updatesWithNameIds);
+
+    // Create changelog entry in submission_notes
+    const changelog = {
+      type: "admin_edit",
+      changes,
+      reason,
+      timestamp: new Date().toISOString(),
+      admin_id: viewer!.id,
+      admin_name: viewer!.display_name,
+    };
+
+    await addNote(submission.id, viewer!.id, JSON.stringify(changelog));
+
+    logger.info(`Approved submission ${submission.id} edited by admin ${viewer!.id}`, { changes });
+
+    // Post-save side effects
+    const member = await getMember(submission.member_id);
+    if (!member) {
+      res.status(500).send("Member not found");
+      return;
+    }
+
+    // If points changed, recalculate member levels
+    if (pointsChanged && submission.program) {
+      try {
+        await checkAndUpdateMemberLevel(member.id, submission.program as Program);
+        await checkAndGrantSpecialtyAwards(member.id);
+        logger.info(`Recalculated levels for member ${member.id} after point edit`);
+      } catch (error) {
+        logger.error("Error recalculating member levels after edit", error);
+      }
+    }
+
+    // Create activity feed entry for significant changes
+    const significantFields = ["points", "article_points", "species_common_name", "species_latin_name"];
+    if (changes.some(c => significantFields.includes(c.field))) {
+      try {
+        await createActivity("submission_approved", member.id, submission.id.toString(), {
+          species_common_name: submission.species_common_name,
+          species_type: submission.species_type,
+          points: updates.points !== undefined ? updates.points : submission.points || 0,
+          first_time_species: Boolean(updates.first_time_species !== undefined ? updates.first_time_species : submission.first_time_species),
+          article_points: updates.article_points !== undefined ? updates.article_points : submission.article_points || undefined,
+        });
+      } catch (error) {
+        logger.error("Error creating activity feed entry after edit", error);
+      }
+    }
+
+    // Redirect back to submission page
+    res.set("HX-Redirect", `/submissions/${submission.id}`).send();
+  } catch (error) {
+    logger.error("Error saving approved submission edits", error);
+    res.status(500).send("Failed to save changes. Please try again.");
+  }
+};

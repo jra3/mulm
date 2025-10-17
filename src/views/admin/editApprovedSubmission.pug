@@ -1,0 +1,391 @@
+include ../mixins/formCheckbox.pug
+
+form.bg-white.rounded-lg(
+	hx-post=`/admin/submissions/${submission.id}/edit-approved`
+	style="width: 100%; max-height: 90vh; overflow-y: auto;"
+)
+	.p-6
+		.flex.justify-between.items-center.mb-6
+			h2.text-2xl.font-bold Edit Approved Submission
+			button.text-gray-500.hover_text-gray-700(
+				type="button"
+				onclick="document.getElementById('edit-approved-dialog').close()"
+				aria-label="Close"
+			) ✕
+
+		.mb-4.p-4.bg-blue-50.border.border-blue-200.rounded
+			p.text-sm.text-blue-800
+				strong Editing:
+				= " " + submission.species_common_name
+				|  (
+				em= submission.species_latin_name
+				| )
+			p.text-sm.text-blue-600
+				| Member: #{member.display_name}
+
+		// Tabs
+		.border-b.border-gray-200.mb-6
+			.flex.gap-4(role="tablist")
+				button.tab-button.active(
+					type="button"
+					data-tab="species"
+					onclick="switchTab(event, 'species')"
+				) Species & Points
+				button.tab-button(
+					type="button"
+					data-tab="details"
+					onclick="switchTab(event, 'details')"
+				) Details
+				button.tab-button(
+					type="button"
+					data-tab="tank"
+					onclick="switchTab(event, 'tank')"
+				) Tank Info
+
+		// Tab 1: Species & Points
+		.tab-content.active(data-tab-content="species")
+			.grid.gap-4(class="md:grid-cols-2")
+				.form-group
+					label.input-label(for="species-search") Species Group
+					select.tom-select-typeahead(
+						id="species-search"
+						name="group_id"
+						data-endpoint="/api/typeahead/species"
+						data-value-field="group_id"
+						data-label-field="display"
+						data-search-field="display"
+						data-max-items="1"
+					)
+						if submission.common_name_id || submission.scientific_name_id
+							option(
+								value=currentGroupId
+								selected
+							)= `${submission.species_common_name} (${submission.species_latin_name})`
+
+				.form-group
+					label.input-label(for="points") Base Points
+					.select-wrapper
+						select.text-input(
+							id="points"
+							name="points"
+						)
+							option(value=5 selected=submission.points == 5) 5
+							option(value=10 selected=submission.points == 10) 10
+							option(value=15 selected=submission.points == 15) 15
+							option(value=20 selected=submission.points == 20) 20
+
+				.form-group
+					label.input-label(for="article_points") Article Points
+					.select-wrapper
+						select.text-input(
+							id="article_points"
+							name="article_points"
+						)
+							option(value=0 selected=!submission.article_points) No Article
+							option(value=5 selected=submission.article_points == 5) 5
+							option(value=10 selected=submission.article_points == 10) 10
+
+			.mt-4.space-y-2
+				+formCheckbox('first_time_species', 'First Time Species (+5 points)', submission.first_time_species)
+
+				if submission.program === 'fish'
+					+formCheckbox('cares_species', 'CARES Species (+5 points)', submission.cares_species)
+
+				if submission.species_type === 'Plant'
+					+formCheckbox('flowered', 'Flowered (double points)', submission.flowered)
+					+formCheckbox('sexual_reproduction', 'Sexual Reproduction (double points)', submission.sexual_reproduction)
+
+		// Tab 2: Details
+		.tab-content.hidden(data-tab-content="details")
+			.grid.gap-4(class="md:grid-cols-2")
+				.form-group
+					label.input-label(for="reproduction_date") Reproduction Date
+					input.text-input(
+						type="date"
+						id="reproduction_date"
+						name="reproduction_date"
+						value=submission.reproduction_date
+					)
+
+				.form-group
+					label.input-label(for="count") Count
+					input.text-input(
+						type="text"
+						id="count"
+						name="count"
+						value=submission.count || ""
+					)
+
+				.form-group
+					label.input-label(for="foods") Foods
+					input.text-input(
+						type="text"
+						id="foods"
+						name="foods"
+						value=foods || ""
+						placeholder="Comma-separated"
+					)
+
+				.form-group
+					label.input-label(for="spawn_locations") Spawn Locations
+					input.text-input(
+						type="text"
+						id="spawn_locations"
+						name="spawn_locations"
+						value=spawn_locations || ""
+						placeholder="Comma-separated"
+					)
+
+				if submission.species_type === 'Plant' || submission.species_type === 'Coral'
+					.form-group
+						label.input-label(for="propagation_method") Propagation Method
+						input.text-input(
+							type="text"
+							id="propagation_method"
+							name="propagation_method"
+							value=submission.propagation_method || ""
+						)
+
+				.form-group.col-span-2
+					label.input-label(for="video_url") Video URL
+					input.text-input(
+						type="url"
+						id="video_url"
+						name="video_url"
+						value=submission.video_url || ""
+						placeholder="https://youtube.com/..."
+					)
+
+		// Tab 3: Tank Info
+		.tab-content.hidden(data-tab-content="tank")
+			.grid.gap-4(class="md:grid-cols-2")
+				.form-group
+					label.input-label(for="tank_size") Tank Size
+					input.text-input(
+						type="text"
+						id="tank_size"
+						name="tank_size"
+						value=submission.tank_size || ""
+					)
+
+				.form-group
+					label.input-label(for="filter_type") Filter Type
+					input.text-input(
+						type="text"
+						id="filter_type"
+						name="filter_type"
+						value=submission.filter_type || ""
+					)
+
+				.form-group
+					label.input-label(for="water_change_volume") Water Change Volume (%)
+					input.text-input(
+						type="text"
+						id="water_change_volume"
+						name="water_change_volume"
+						value=submission.water_change_volume || ""
+					)
+
+				.form-group
+					label.input-label(for="water_change_frequency") Water Change Frequency
+					input.text-input(
+						type="text"
+						id="water_change_frequency"
+						name="water_change_frequency"
+						value=submission.water_change_frequency || ""
+					)
+
+				.form-group
+					label.input-label(for="temperature") Temperature
+					input.text-input(
+						type="text"
+						id="temperature"
+						name="temperature"
+						value=submission.temperature || ""
+					)
+
+				.form-group
+					label.input-label(for="ph") pH
+					input.text-input(
+						type="text"
+						id="ph"
+						name="ph"
+						value=submission.ph || ""
+					)
+
+				.form-group
+					label.input-label(for="gh") Hardness (GH)
+					input.text-input(
+						type="text"
+						id="gh"
+						name="gh"
+						value=submission.gh || ""
+					)
+
+				.form-group
+					label.input-label(for="specific_gravity") Specific Gravity
+					input.text-input(
+						type="text"
+						id="specific_gravity"
+						name="specific_gravity"
+						value=submission.specific_gravity || ""
+					)
+
+				.form-group
+					label.input-label(for="substrate_type") Substrate Type
+					input.text-input(
+						type="text"
+						id="substrate_type"
+						name="substrate_type"
+						value=submission.substrate_type || ""
+					)
+
+				.form-group
+					label.input-label(for="substrate_depth") Substrate Depth
+					input.text-input(
+						type="text"
+						id="substrate_depth"
+						name="substrate_depth"
+						value=submission.substrate_depth || ""
+					)
+
+				.form-group
+					label.input-label(for="substrate_color") Substrate Color
+					input.text-input(
+						type="text"
+						id="substrate_color"
+						name="substrate_color"
+						value=submission.substrate_color || ""
+					)
+
+				.form-group
+					label.input-label(for="light_type") Light Type
+					input.text-input(
+						type="text"
+						id="light_type"
+						name="light_type"
+						value=submission.light_type || ""
+					)
+
+				.form-group
+					label.input-label(for="light_strength") Light Strength
+					input.text-input(
+						type="text"
+						id="light_strength"
+						name="light_strength"
+						value=submission.light_strength || ""
+					)
+
+				.form-group
+					label.input-label(for="light_hours") Light Hours
+					input.text-input(
+						type="text"
+						id="light_hours"
+						name="light_hours"
+						value=submission.light_hours || ""
+					)
+
+				.form-group
+					label.input-label(for="co2") CO2
+					input.text-input(
+						type="text"
+						id="co2"
+						name="co2"
+						value=submission.co2 || ""
+					)
+
+				.form-group.col-span-2
+					label.input-label(for="co2_description") CO2 Description
+					input.text-input(
+						type="text"
+						id="co2_description"
+						name="co2_description"
+						value=submission.co2_description || ""
+					)
+
+		// Required Reason (visible on all tabs)
+		.mt-6.p-4.bg-yellow-50.border.border-yellow-300.rounded
+			.form-group
+				label.input-label.required(for="reason") Reason for Changes
+				textarea.text-input(
+					id="reason"
+					name="reason"
+					style="height: 120px;"
+					required
+					maxlength="2000"
+					placeholder="Explain why these changes are being made (e.g., 'Corrected species identification based on photo review' or 'Fixed point calculation error')"
+				)
+				p.text-sm.text-gray-600.mt-1
+					| This will be recorded in the submission's edit history and may be visible to the member.
+
+		// Actions
+		.flex.justify-end.gap-3.mt-6
+			button.secondary(
+				type="button"
+				onclick="document.getElementById('edit-approved-dialog').close()"
+			) Cancel
+			button.primary(
+				type="submit"
+			) Save Changes
+
+	// Tab switching script
+	script.
+		function switchTab(event, tabName) {
+			event.preventDefault();
+
+			// Update tab buttons
+			const buttons = document.querySelectorAll('.tab-button');
+			buttons.forEach(btn => btn.classList.remove('active'));
+			event.target.classList.add('active');
+
+			// Update tab content
+			const contents = document.querySelectorAll('.tab-content');
+			contents.forEach(content => {
+				if (content.getAttribute('data-tab-content') === tabName) {
+					content.classList.remove('hidden');
+					content.classList.add('active');
+				} else {
+					content.classList.add('hidden');
+					content.classList.remove('active');
+				}
+			});
+		}
+
+		// Initialize typeaheads when modal loads
+		document.addEventListener('DOMContentLoaded', function() {
+			// Wait a tick for the dialog to be in DOM
+			setTimeout(() => {
+				if (typeof initializeTypeaheads === 'function') {
+					initializeTypeaheads();
+				}
+			}, 0);
+		});
+
+	style.
+		.tab-button {
+			padding: 0.75rem 1.5rem;
+			border-bottom: 2px solid transparent;
+			color: #6b7280;
+			font-weight: 500;
+			transition: all 0.2s;
+		}
+		.tab-button:hover {
+			color: #374151;
+			border-bottom-color: #d1d5db;
+		}
+		.tab-button.active {
+			color: #2563eb;
+			border-bottom-color: #2563eb;
+		}
+		.form-group {
+			display: flex;
+			flex-direction: column;
+			gap: 0.5rem;
+		}
+		.input-label.required::after {
+			content: " *";
+			color: #dc2626;
+		}
+		.col-span-2 {
+			grid-column: span 2 / span 2;
+		}

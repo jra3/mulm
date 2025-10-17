@@ -74,24 +74,46 @@ html
                     +reviewTextInput("Points", "points")
                     +reviewTextInput("Total Points", "total_points")
 
-            // Action buttons in single row
-            if (isAdmin && false) || (isSelf && !isApproved)
-                div.flex.justify-center.max-w-4xl.mx-auto.text-center.gap-4
-                    if isAdmin && false
-                        a(href=`/admin/submissions/${submission.id}/edit`)
-                            button.primary(type="button") Edit Submission as Admin
-                    else if isSelf && !isApproved
-                        form.inline(hx-patch=`/submissions/${submission.id}`)
-                            button.primary(name="unsubmit" type="submit") Edit Submission
+        // Admin Edit Section - centered, above admin notes
+        if isAdmin && isApproved && !isSelf
+            section.bg-gray-100.py-6
+                div.max-w-4xl.mx-auto.text-center.px-4
+                    button.primary(
+                        type="button"
+                        onclick="document.getElementById('edit-approved-dialog').showModal()"
+                        hx-get=`/admin/submissions/${submission.id}/edit-approved`
+                        hx-target="#edit-approved-dialog"
+                        hx-swap="innerHTML"
+                    ) Edit Approved Submission
 
-                    // Delete button - smaller, de-emphasized
-                    if isAdmin || (isSelf && !isApproved)
-                        button.destructive(
-                            class="px-4 py-2 text-sm"
-                            hx-delete=`/submissions/${submission.id}`
-                            hx-confirm="Are you sure you want to permanently delete this submission? This cannot be undone."
-                            type="button"
-                        ) Delete
+            // Dialog container for edit modal
+            dialog#edit-approved-dialog(
+                class="rounded-lg shadow-xl"
+                style="max-width: 900px; width: 90%; max-height: 90vh; padding: 0; border: none; margin: auto;"
+            )
+
+            style.
+                #edit-approved-dialog::backdrop {
+                    background-color: rgba(0, 0, 0, 0.5);
+                }
+
+        // Member Edit Section - for unsubmitted submissions
+        if isSelf && !isApproved
+            section.bg-gray-100.py-6
+                div.max-w-4xl.mx-auto.text-center.px-4
+                    form.inline(hx-patch=`/submissions/${submission.id}`)
+                        button.primary(name="unsubmit" type="submit") Edit Submission
+
+        // Delete button section
+        if isAdmin || (isSelf && !isApproved)
+            section.bg-gray-100.pb-6
+                div.max-w-4xl.mx-auto.text-center.px-4
+                    button.destructive(
+                        class="px-4 py-2 text-sm"
+                        hx-delete=`/submissions/${submission.id}`
+                        hx-confirm="Are you sure you want to permanently delete this submission? This cannot be undone."
+                        type="button"
+                    ) Delete
 
         // Admin Notes Section - visible only to program admins (shown BEFORE approval panels)
         if isAdmin

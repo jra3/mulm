@@ -3,9 +3,11 @@ import config from "@/config.json";
 import { type Submission } from "./db/submissions";
 import { getAdminEmails, MemberRecord } from "./db/members";
 import * as pug from "pug";
+import { logger } from "@/utils/logger";
 
 const DEBUG_EMAIL = process.env.DEBUG_EMAIL;
 const fromEmail = `BASNY Breeder Awards ${config.fromEmail}`;
+const EMAILS_DISABLED = true; // Set to false to re-enable emails
 
 const transporter = nodemailer.createTransport({
   host: config.smtpHost,
@@ -21,6 +23,11 @@ const renderOnSubmission = pug.compileFile("src/views/email/onSubmission.pug");
 const renderOnScreeningApproved = pug.compileFile("src/views/email/onScreeningApproved.pug");
 const renderOnScreeningRejected = pug.compileFile("src/views/email/onScreeningRejected.pug");
 export async function onSubmissionSend(sub: Submission, member: MemberRecord) {
+  if (EMAILS_DISABLED) {
+    logger.info("Email disabled - would have sent submission confirmation", { submissionId: sub.id });
+    return;
+  }
+
   const admins = await getAdminEmails();
 
   return transporter.sendMail({
@@ -38,6 +45,11 @@ export async function onSubmissionSend(sub: Submission, member: MemberRecord) {
 }
 
 export async function sendChangesRequest(sub: Submission, contact_email: string, content: string) {
+  if (EMAILS_DISABLED) {
+    logger.info("Email disabled - would have sent changes request", { submissionId: sub.id });
+    return;
+  }
+
   const admins = await getAdminEmails();
 
   return transporter.sendMail({
@@ -52,6 +64,11 @@ export async function sendChangesRequest(sub: Submission, contact_email: string,
 
 const renderOnApprove = pug.compileFile("src/views/email/onApproval.pug");
 export async function onSubmissionApprove(sub: Submission, member: MemberRecord) {
+  if (EMAILS_DISABLED) {
+    logger.info("Email disabled - would have sent submission approval", { submissionId: sub.id });
+    return;
+  }
+
   return transporter.sendMail({
     from: fromEmail,
     to: member.contact_email,
@@ -67,6 +84,11 @@ export async function onSubmissionApprove(sub: Submission, member: MemberRecord)
 
 const renderResetEmail = pug.compileFile("src/views/email/onForgotPassword.pug");
 export async function sendResetEmail(email: string, display_name: string, code: string) {
+  if (EMAILS_DISABLED) {
+    logger.info("Email disabled - would have sent password reset", { email });
+    return;
+  }
+
   return transporter.sendMail({
     from: fromEmail,
     to: email,
@@ -88,6 +110,11 @@ export async function sendInviteEmail(
   member?: MemberRecord,
   submissions?: Submission[]
 ) {
+  if (EMAILS_DISABLED) {
+    logger.info("Email disabled - would have sent invite", { email });
+    return;
+  }
+
   return transporter.sendMail({
     from: fromEmail,
     to: email,
@@ -112,6 +139,11 @@ export async function onLevelUpgrade(
   newLevel: string,
   totalPoints?: number
 ) {
+  if (EMAILS_DISABLED) {
+    logger.info("Email disabled - would have sent level upgrade", { memberId: member.id, newLevel });
+    return;
+  }
+
   const programNames = {
     fish: "Breeder Awards Program (BAP)",
     plant: "Horticultural Awards Program (HAP)",
@@ -138,6 +170,11 @@ export async function onScreeningApproved(
   member: MemberRecord,
   witness: MemberRecord
 ) {
+  if (EMAILS_DISABLED) {
+    logger.info("Email disabled - would have sent screening approved", { submissionId: submission.id });
+    return;
+  }
+
   return transporter.sendMail({
     from: fromEmail,
     to: member.contact_email,
@@ -157,6 +194,11 @@ export async function onScreeningRejected(
   member: MemberRecord,
   reason: string
 ) {
+  if (EMAILS_DISABLED) {
+    logger.info("Email disabled - would have sent screening rejected", { submissionId: submission.id });
+    return;
+  }
+
   return transporter.sendMail({
     from: fromEmail,
     to: member.contact_email,
