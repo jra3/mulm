@@ -1,0 +1,40 @@
+include header.pug
+include activity/activity-item.pug
+
+doctype html
+html
+    +headTag
+
+    body.bg-gray-50.text-gray-800
+        +pageHeader(false, "Activity Demo")
+
+        section.bg-white.py-8
+            .container.mx-auto.px-4.max-w-4xl
+                .mb-8
+                    h1.text-3xl.font-bold.text-gray-900.mb-2 Activity Feed Demo
+                    p.text-gray-600 This page demonstrates the rendering of activity feed items with sample data.
+
+                .bg-gray-50.rounded-lg.p-6.mb-8
+                    h2.text-xl.font-semibold.text-gray-900.mb-4 Template Types
+                    .space-y-2.text-sm
+                        div
+                            span.font-medium submission_approved:
+                            |  Shows when a member's breeding submission is approved
+                        div
+                            span.font-medium award_granted:
+                            |  Shows when a member earns an award
+
+                .space-y-4
+                    each activity in activities
+                        +activityItem(activity)
+
+                .mt-8.p-4.bg-blue-50.border.border-blue-200.rounded
+                    h3.font-semibold.text-blue-900.mb-2 Testing Notes:
+                    ul.list-disc.list-inside.text-sm.text-blue-800.space-y-1
+                        li Check that spaces appear correctly between all text elements
+                        li Verify that member names and species names are clickable links
+                        li Confirm links use hover underline styling
+                        li Ensure trophy icons appear for members with awards
+                        li Verify date formatting shows relative times
+
+        +footer()

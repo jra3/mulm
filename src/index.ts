@@ -33,6 +33,7 @@ import {
   oauthRateLimiter,
 } from "./middleware/rateLimiter";
 import * as emailDemo from "./routes/emailDemo";
+import * as activityDemo from "./routes/activityDemo";
 import { startScheduledCleanup } from "./scheduled/cleanup";
 
 const app = express();
@@ -162,8 +163,18 @@ router.get("/me", (req: MulmRequest, res) => {
 
 router.get("/species", species.explorer);
 
-// Demo routes (dev/admin only)
-router.get("/demo/emails", emailDemo.emailDemoPage);
+// Middleware to restrict demo routes to development only
+const devOnly = (_req: MulmRequest, res: express.Response, next: express.NextFunction) => {
+  if (process.env.NODE_ENV === "production") {
+    res.status(404).send("Not found");
+    return;
+  }
+  next();
+};
+
+// Demo routes (development only)
+router.get("/demo/emails", devOnly, emailDemo.emailDemoPage);
+router.get("/demo/activity", devOnly, activityDemo.view);
 router.get("/species/:groupId", species.detail);
 
 router.get("/account", account.viewAccountSettings);

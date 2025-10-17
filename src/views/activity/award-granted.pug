@@ -1,18 +1,19 @@
 include ../mixins/trophy.pug
 
+- const sp = " ";
+
 .text-sm
-    span.font-medium.text-gray-900= activity.member_name
+    a.font-medium.text-gray-900.hover_underline(href=`/member/${activity.member_id}`)= activity.member_name
     if activity.awards
-        |
+        = sp
         +trophy(activity.awards)
-    span.text-gray-600  earned the 
-    span.font-medium.text-gray-900= data.award_name
-    span.text-gray-600  award!
-    
-    .mt-1
-        if data.award_type === 'specialty'
-            div(class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800")
-                | Specialty Award
-        else if data.award_type === 'meta'
-            div(class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800")
-                | Meta Award
+    span.text-gray-600  earned the
+    = sp
+    if data.award_type === 'specialty'
+        span.font-medium.rounded.px-1.bg-yellow-100.text-yellow-800= data.award_name
+    else if data.award_type === 'meta'
+        span.font-medium.rounded.px-1.bg-purple-100.text-purple-800= data.award_name
+    else
+        span.font-medium.text-gray-900= data.award_name
+    = sp
+    span.text-gray-600 award!

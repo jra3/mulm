@@ -1,15 +1,16 @@
 include ../mixins/trophy.pug
 
+- const sp = " ";
+
 .text-sm
-    span.font-medium.text-gray-900= activity.member_name
-    if activity.awards
-        |
-        +trophy(activity.awards)
-    span.text-gray-600  successfully bred 
-    span.font-medium.text-gray-900= data.species_common_name
+    a.font-medium.text-gray-900.hover_underline(href=`/member/${activity.member_id}`)= activity.member_name
+    = sp
+    span.text-gray-600 successfully bred
+    = sp
+    a.font-medium.text-gray-900.hover_underline(href=`/submissions/${activity.related_id}`)= data.species_common_name
     if data.species_type
         span.text-gray-500  (#{data.species_type})
-    
+
     if data.points || data.first_time_species || data.article_points
         .flex.items-center.space-x-2.mt-1
             if data.points
