@@ -7,7 +7,7 @@ import { logger } from "@/utils/logger";
 
 const DEBUG_EMAIL = process.env.DEBUG_EMAIL;
 const fromEmail = `BASNY Breeder Awards ${config.fromEmail}`;
-const EMAILS_DISABLED = true; // Set to false to re-enable emails
+const EMAILS_DISABLED = false; // Set to false to re-enable emails
 
 const transporter = nodemailer.createTransport({
   host: config.smtpHost,
