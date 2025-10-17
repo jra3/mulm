@@ -5,36 +5,29 @@
 .container.mx-auto.flex.justify-center.space-x-4
     form(hx-post=`/admin/submissions/${submission.id}/approve` id="approval-form")
         input(type="hidden" name="id" value=submission.id)
-        // Hidden input populated by typeahead, triggers HTMX to fetch bonus checkboxes
-        input(
-            type="hidden"
-            name="group_id"
-            id="species-group-id"
-            value=""
-            hx-get=`/admin/submissions/${submission.id}/approval-bonuses`
-            hx-trigger="change"
-            hx-target="#approval-dynamic-section"
-            hx-swap="outerHTML"
-            hx-include="this")
 
         .flex.flex-col.gap-3
             // Top row: Species typeahead + Points selector
             .flex.gap-4.items-center
                 label.text-white.whitespace-nowrap Species:
                 // Species typeahead with HTMX integration
-                // When species is selected, typeahead populates hidden input #species-group-id
-                // The hidden input has HTMX attributes to fetch bonus checkboxes on change
+                // Tom Select value is group_id, which gets submitted directly
                 select#species-search.tom-select-typeahead.flex-1(
+                    name="group_id"
                     data-api-url="/api/species/search"
                     data-param-species_type=submission.species_type
-                    data-hidden-id-field="species-group-id"
-                    data-hidden-id-value-field="group_id"
-                    data-value-field="text"
+                    data-value-field="group_id"
                     data-label-field="text"
                     data-search-fields="text,common_name,scientific_name"
                     data-min-query-length="2"
                     data-max-items="1"
                     data-placeholder="Search species..."
+                    hx-get=`/admin/submissions/${submission.id}/approval-bonuses`
+                    hx-trigger="change"
+                    hx-target="#approval-dynamic-section"
+                    hx-swap="outerHTML"
+                    hx-indicator="#approval-dynamic-section .htmx-indicator"
+                    hx-include="this"
                     class=hasGroupIdError ? "error" : "")
 
                 .select-wrapper.max-w-40
@@ -47,6 +40,13 @@
 
             // Dynamic section - replaced by HTMX when species selected
             #approval-dynamic-section
+                // Loading indicator - shown while HTMX loads bonus data
+                .htmx-indicator.flex.gap-2.items-center.text-white
+                    svg.animate-spin.h-5.w-5(xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24")
+                        circle.opacity-25(cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4")
+                        path.opacity-75(fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z")
+                    span Loading bonus options...
+
                 // Bonus section
                 .flex.gap-4.items-center
                     .flex.gap-2.items-center
