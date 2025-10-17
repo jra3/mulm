@@ -49,6 +49,15 @@ html
                 +submissionImages(submission.images, 'gallery')
                 +submissionVideo(submission.video_url, videoMetadata)
 
+                if submission.article_link
+                    div.mb-6
+                        h3.text-lg.font-bold.mb-3.text-gray-900 Breeding Article
+                        a.text-blue-600.hover_text-blue-800.hover_underline.break-all(
+                            href=submission.article_link
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        )= submission.article_link
+
             div.max-w-4xl.mx-auto.text-left.pt-4.px-4
                 h2(class="text-l font-bold pt-2 mb-4") Tank Details
                 div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")

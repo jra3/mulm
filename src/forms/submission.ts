@@ -131,6 +131,12 @@ export const bapFields = z.object({
     .max(500, "URL too long (max 500 characters)")
     .optional()
     .or(z.literal("")),
+  article_link: z
+    .string()
+    .url("Must be a valid URL")
+    .max(500, "URL too long (max 500 characters)")
+    .optional()
+    .or(z.literal("")),
 });
 
 export const bapDraftForm = bapFields.partial();
