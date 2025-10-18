@@ -5,7 +5,8 @@ mixin queueButton(program, text, count, queueType = "queue")
 	if count > 0
 		a(href=baseUrl)
 			button.primary
-				| #{text} #{' '}
+				span.text-sm= text
+				| #{' '}
 				+countBadge(count)
 	else
 		button.outline(disabled alt=`No outstanding reviews for ${program}`)= text

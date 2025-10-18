@@ -68,6 +68,10 @@ export type Submission = {
   denied_by: number | null;
   denied_reason: string | null;
 
+  changes_requested_on: string | null;
+  changes_requested_by: number | null;
+  changes_requested_reason: string | null;
+
   is_cares_species?: number | null;
 };
 

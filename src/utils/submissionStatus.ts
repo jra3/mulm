@@ -6,6 +6,7 @@ export type SubmissionStatus =
   | "pending-witness"
   | "waiting-period"
   | "pending-approval"
+  | "changes-requested"
   | "approved"
   | "denied";
 
@@ -44,6 +45,18 @@ export function getSubmissionStatus(submission: Partial<Submission>): StatusInfo
       bgColor: "bg-green-100",
       rowColor: "bg-green-50",
       description: `${submission.points || 0} points awarded`,
+    };
+  }
+
+  // Changes requested by admin (user can edit while preserving witness data)
+  if (submission.changes_requested_on) {
+    return {
+      status: "changes-requested",
+      label: "Changes Requested",
+      color: "text-orange-800",
+      bgColor: "bg-orange-100",
+      rowColor: "bg-orange-50",
+      description: "Admin requested changes - edit and resubmit",
     };
   }
 
@@ -124,6 +137,8 @@ function getStatusIcon(status: SubmissionStatus): string {
       return "⏳";
     case "pending-approval":
       return "🔵";
+    case "changes-requested":
+      return "📝";
     case "approved":
       return "✅";
     case "denied":

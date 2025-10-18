@@ -62,6 +62,35 @@ export async function sendChangesRequest(sub: Submission, contact_email: string,
   });
 }
 
+const renderOnChangesRequested = pug.compileFile("src/views/email/onChangesRequested.pug");
+export async function onChangesRequested(
+  submission: Submission,
+  member: MemberRecord,
+  reason: string
+) {
+  if (EMAILS_DISABLED) {
+    logger.info("Email disabled - would have sent changes requested", { submissionId: submission.id });
+    return;
+  }
+
+  const admins = await getAdminEmails();
+
+  return transporter.sendMail({
+    from: fromEmail,
+    to: member.contact_email,
+    cc: admins,
+    bcc: DEBUG_EMAIL,
+    subject: `Changes Requested - ${submission.species_common_name}`,
+    html: renderOnChangesRequested({
+      domain: config.domain,
+      submission,
+      member,
+      reason,
+      programContactEmail: config.adminsEmail,
+    }),
+  });
+}
+
 const renderOnApprove = pug.compileFile("src/views/email/onApproval.pug");
 export async function onSubmissionApprove(sub: Submission, member: MemberRecord) {
   if (EMAILS_DISABLED) {

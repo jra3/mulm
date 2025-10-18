@@ -105,7 +105,10 @@ export const view = async (req: MulmRequest, res: Response) => {
     isAdmin: viewer && viewer.is_admin,
   };
 
-  if (viewer && aspect.isSelf && !aspect.isSubmitted) {
+  // Allow editing if: not submitted yet (draft) OR changes were requested by admin
+  const canEdit = !aspect.isSubmitted || submission.changes_requested_on != null;
+
+  if (viewer && aspect.isSelf && canEdit) {
     const templateData = await getFormTemplateData(Boolean(aspect.isAdmin), submission.species_type);
     res.render("submit", {
       title: `Edit ${getBapFormTitle(submission.program)}`,
@@ -347,8 +350,20 @@ export const update = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  // TODO fix silly serial queries at some point
-  await db.updateSubmission(submission.id, db.formToDB(submission.member_id, form, !draft));
+  // Prepare updates from form
+  const formUpdates = db.formToDB(submission.member_id, form, !draft);
+
+  // If resubmitting after changes were requested, clear those fields
+  if (!draft && submission.changes_requested_on) {
+    await db.updateSubmission(submission.id, {
+      ...formUpdates,
+      changes_requested_on: null,
+      changes_requested_by: null,
+      changes_requested_reason: null,
+    });
+  } else {
+    await db.updateSubmission(submission.id, formUpdates);
+  }
   const sub = await db.getSubmissionById(submission.id);
   const member = await getMember(submission.member_id);
   if (!draft && sub && member) {

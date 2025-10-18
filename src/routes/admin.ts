@@ -26,7 +26,7 @@ import { approvedEditSchema } from "@/forms/approvedEdit";
 import { inviteSchema } from "@/forms/member";
 import {
   onSubmissionApprove,
-  sendChangesRequest,
+  onChangesRequested,
   sendInviteEmail,
   onScreeningApproved,
   onScreeningRejected,
@@ -365,9 +365,15 @@ export const sendRequestChanges = async (req: MulmRequest, res: Response) => {
       return;
     }
 
+    // Set changes_requested fields instead of unsetting submitted_on
+    // This preserves witness data while allowing user to edit
     await Promise.all([
-      updateSubmission(submission.id, { submitted_on: null }),
-      sendChangesRequest(submission, member?.contact_email, content),
+      updateSubmission(submission.id, {
+        changes_requested_on: new Date().toISOString(),
+        changes_requested_by: req.viewer!.id,
+        changes_requested_reason: content,
+      }),
+      onChangesRequested(submission, member, content),
     ]);
 
     // Redirect to approval queue for the submission's program
