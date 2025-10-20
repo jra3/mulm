@@ -146,6 +146,40 @@ void describe("Submission Status Calculation", () => {
     });
   });
 
+  void describe("Changes Requested Status", () => {
+    void test("should return changes-requested status for submissions with changes requested", () => {
+      const submission = {
+        ...baseSubmission,
+        submitted_on: "2024-01-01",
+        changes_requested_on: "2024-01-10",
+        changes_requested_by: 2,
+        changes_requested_reason: "Please provide clearer photos",
+        witness_verification_status: "confirmed" as const,
+        witnessed_on: "2024-01-05",
+      };
+      const status = getSubmissionStatus(submission);
+
+      assert.strictEqual(status.status, "changes-requested");
+      assert.strictEqual(status.label, "Changes Requested");
+      assert.strictEqual(status.color, "text-orange-800");
+      assert.strictEqual(status.bgColor, "bg-orange-100");
+      assert.strictEqual(status.rowColor, "bg-orange-50");
+      assert.strictEqual(status.description, "Admin requested changes - edit and resubmit");
+    });
+
+    void test("should prioritize changes-requested over draft status", () => {
+      // Edge case: changes requested but user hasn't resubmitted yet
+      const submission = {
+        ...baseSubmission,
+        submitted_on: "2024-01-01",
+        changes_requested_on: "2024-01-10",
+      };
+      const status = getSubmissionStatus(submission);
+
+      assert.strictEqual(status.status, "changes-requested");
+    });
+  });
+
   void describe("Pending Approval Status", () => {
     void test("should return pending-approval for witnessed submissions past waiting period", () => {
       // Mock a submission that's been witnessed and past waiting period
