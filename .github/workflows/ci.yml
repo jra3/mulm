@@ -74,6 +74,9 @@ jobs:
       - name: Build project
         run: npm run build
 
+      - name: Setup E2E database
+        run: npx ts-node scripts/setup-e2e-db.ts
+
       - name: Run e2e tests
         run: npm run test:e2e
         env:
