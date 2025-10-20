@@ -111,6 +111,10 @@ test.describe("Form Submission Flow", () => {
 
 		await page.selectOption('select[name="species_class"]', "Livebearers");
 
+		// Wait for Tom Select JavaScript to initialize on foods/spawn_locations
+		// Give it plenty of time since it's triggered by htmx:load event
+		await page.waitForTimeout(3000);
+
 		const today = new Date().toISOString().split("T")[0];
 		await page.fill('input[name="reproduction_date"]', today);
 
@@ -118,19 +122,21 @@ test.describe("Form Submission Flow", () => {
 		await fillTomSelectTypeahead(page, "species_latin_name", "Poecilia reticulata");
 
 		// Fill required fields for Fish (foods and spawn_locations)
-		await selectTomSelectMultiple(page, "foods", ["Live Foods", "Flake"]);
-		await selectTomSelectMultiple(page, "spawn_locations", ["Spawning Mop"]);
+		// Use direct selectOption with actual values from source arrays
+		await page.selectOption('select[name="foods"]', ["Live", "Flake"]);
+		await page.selectOption('select[name="spawn_locations"]', ["Plant"]);
 
-		// Verify they were selected
-		const foodsValue = await page.locator('select[name="foods"]').inputValue();
-		const spawnValue = await page.locator('select[name="spawn_locations"]').inputValue();
-		console.log(`Foods selected: ${foodsValue}`);
-		console.log(`Spawn locations selected: ${spawnValue}`);
-
-		// Tank details
+		// Tank details (all required fields)
+		await page.fill('input[name="tank_size"]', "20 gallon");
+		await page.fill('input[name="filter_type"]', "Sponge filter");
+		await page.fill('input[name="water_change_volume"]', "25%");
+		await page.fill('input[name="water_change_frequency"]', "Weekly");
 		await page.fill('input[name="temperature"]', "76");
 		await page.fill('input[name="ph"]', "7.4");
 		await page.fill('input[name="gh"]', "180");
+		await page.fill('input[name="substrate_type"]', "Gravel");
+		await page.fill('input[name="substrate_depth"]', "2 inches");
+		await page.fill('input[name="substrate_color"]', "Natural");
 
 		// Fry count
 		await page.fill('input[name="count"]', "30");
