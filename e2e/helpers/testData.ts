@@ -16,6 +16,15 @@ export const TEST_USER = {
 	displayName: "E2E Test User",
 };
 
+/**
+ * Test admin user credentials
+ */
+export const TEST_ADMIN = {
+	email: "baptest+admin@porcnick.com",
+	password: "AdminPassword123!",
+	displayName: "E2E Test Admin",
+};
+
 export async function getTestDatabase(): Promise<Database> {
 	const dbPath = path.join(__dirname, "../../db/database.db");
 	return await open({
@@ -28,7 +37,7 @@ export async function getTestDatabase(): Promise<Database> {
 /**
  * Create a test user if it doesn't exist
  */
-export async function ensureTestUserExists(email: string, password: string, displayName: string): Promise<number> {
+export async function ensureTestUserExists(email: string, password: string, displayName: string, isAdmin = false): Promise<number> {
 	const db = await getTestDatabase();
 
 	try {
@@ -37,6 +46,28 @@ export async function ensureTestUserExists(email: string, password: string, disp
 
 		if (existing) {
 			console.log(`Test user ${email} already exists (ID: ${existing.id})`);
+
+			// Update admin status if needed
+			if (isAdmin) {
+				await db.run("UPDATE members SET is_admin = ? WHERE id = ?", 1, existing.id);
+			}
+
+			// Ensure password account exists
+			const passwordAccount = await db.get("SELECT * FROM password_account WHERE member_id = ?", existing.id);
+			if (!passwordAccount) {
+				const passwordEntry = await makePasswordEntry(password);
+				await db.run(
+					`INSERT INTO password_account (member_id, N, r, p, salt, hash) VALUES (?, ?, ?, ?, ?, ?)`,
+					existing.id,
+					passwordEntry.N,
+					passwordEntry.r,
+					passwordEntry.p,
+					passwordEntry.salt,
+					passwordEntry.hash
+				);
+				console.log(`Added password account for ${email}`);
+			}
+
 			return existing.id;
 		}
 
@@ -44,9 +75,10 @@ export async function ensureTestUserExists(email: string, password: string, disp
 		const passwordEntry = await makePasswordEntry(password);
 
 		const result = await db.run(
-			`INSERT INTO members (contact_email, display_name) VALUES (?, ?)`,
+			`INSERT INTO members (contact_email, display_name, is_admin) VALUES (?, ?, ?)`,
 			email,
-			displayName
+			displayName,
+			isAdmin ? 1 : 0
 		);
 
 		const memberId = result.lastID as number;
