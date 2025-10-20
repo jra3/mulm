@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Production Site
+    url: https://bap.basny.org
+    about: Visit the live BASNY BAP platform
+  - name: Documentation
+    url: https://github.com/jra3/mulm/wiki
+    about: Check the wiki for setup and deployment guides

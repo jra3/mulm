@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "description": "Branch protection rules for the main branch. Apply with: cat .github/branch-protection.json | gh api --method PUT /repos/jra3/mulm/branches/main/protection --input -",
+  "required_status_checks": {
+    "strict": true,
+    "checks": [
+      {"context": "test"},
+      {"context": "e2e-tests"}
+    ]
+  },
+  "enforce_admins": false,
+  "required_pull_request_reviews": null,
+  "restrictions": null,
+  "allow_force_pushes": false,
+  "allow_deletions": false,
+  "required_linear_history": false
+}
