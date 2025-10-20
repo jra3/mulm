@@ -10,7 +10,7 @@
 		"dev": "concurrently nodemon \"postcss src/**/*.css --base src --dir public --watch\"",
 		"build": "tsc && npm run postcss && npm run copy-files",
 		"postcss": "postcss src/**/*.css --base src --dir public",
-		"copy-files": "cp -r ./public ./dist/ && cp -r ./src/views ./dist/",
+		"copy-files": "cp -r ./public ./dist/ && cp -r ./src/views ./dist/src/",
 		"test": "NODE_ENV=test tsx --test src/__tests__/*.test.ts",
 		"test:watch": "NODE_ENV=test tsx --test --watch 'src/**/*.test.ts'",
 		"test:e2e": "playwright test",
