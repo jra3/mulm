@@ -244,19 +244,30 @@ test.describe("Form Submission Flow", () => {
 		await page.goto(`/submissions/${submissionId}`);
 		await page.waitForSelector("#bapForm");
 
-		// Change some fields
-		await fillTomSelectTypeahead(page, "species_common_name", "Updated Guppy");
+		// Change some fields - change temperature FIRST to avoid HTMX swaps resetting it
 		await page.fill('input[name="temperature"]', "78");
 
-		// Scroll to ensure Save Edits button is in view
+		// Wait a bit before changing species name (which might trigger swaps)
+		await page.waitForTimeout(500);
+
+		await fillTomSelectTypeahead(page, "species_common_name", "Updated Guppy");
+
+		// Wait for any HTMX swaps from species name change to complete
+		await page.waitForLoadState("networkidle");
+		await page.waitForTimeout(1000);
+
+		// Scroll to ensure button is in view
 		await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
 		await page.waitForTimeout(500);
 
-		// Save edits
-		const saveButton = page.locator('button[type="submit"]:has-text("Save Edits")');
+		// Save edits - for drafts, use "Save Draft" button (not "Save Edits")
+		const saveButton = page.locator('button[name="draft"]');
 		await saveButton.scrollIntoViewIfNeeded();
 		await saveButton.click();
 		await page.waitForLoadState("networkidle");
+
+		// Give HTMX time to process the save
+		await page.waitForTimeout(2000);
 
 		// Verify changes in database
 		const db = await getTestDatabase();
