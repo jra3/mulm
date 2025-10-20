@@ -17,6 +17,9 @@
 - name: database
   color: "1d76db"
   description: "Database schema, migrations, and data integrity"
+- name: dependencies
+  color: "f1c40f"
+  description: "Dependency updates from Dependabot"
 - name: documentation
   color: "0075ca"
   description: "Improvements or additions to documentation"
@@ -29,6 +32,9 @@
 - name: forms
   color: "c2e0c6"
   description: "Form handling, validation, and user input"
+- name: github-actions
+  color: "000000"
+  description: "GitHub Actions workflow updates"
 - name: good first issue
   color: "7057ff"
   description: "Good for newcomers"
