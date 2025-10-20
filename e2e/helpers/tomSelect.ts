@@ -79,6 +79,40 @@ export async function selectTomSelectOption(page: Page, fieldName: string, value
 }
 
 /**
+ * Select multiple values from a Tom Select multi-select dropdown
+ *
+ * @param page - Playwright page object
+ * @param fieldName - The name attribute of the select element
+ * @param values - Array of values to select
+ */
+export async function selectTomSelectMultiple(page: Page, fieldName: string, values: string[]): Promise<void> {
+	// Wait for Tom Select to be initialized
+	await page.waitForSelector(`select[name="${fieldName}"].tomselected`, { timeout: 5000 });
+
+	// Find the ts-control and input
+	const control = page.locator(`select[name="${fieldName}"] + .ts-wrapper .ts-control`);
+	const input = control.locator('input');
+
+	for (const value of values) {
+		// Click to focus/open dropdown
+		await control.click();
+		await page.waitForTimeout(200);
+
+		// Type the value to filter
+		await input.type(value);
+		await page.waitForTimeout(500);
+
+		// Use keyboard to select first match
+		await input.press('ArrowDown');
+		await page.waitForTimeout(100);
+		await input.press('Enter');
+
+		// Wait for selection to process and clear the input
+		await page.waitForTimeout(300);
+	}
+}
+
+/**
  * Get the currently selected value from a Tom Select field
  *
  * @param page - Playwright page object

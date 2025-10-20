@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { login, logout } from "./helpers/auth";
 import { TEST_USER, cleanupTestUserSubmissions, getSubmissionsForMember, getTestDatabase } from "./helpers/testData";
-import { fillTomSelectTypeahead } from "./helpers/tomSelect";
+import { fillTomSelectTypeahead, selectTomSelectMultiple } from "./helpers/tomSelect";
 
 test.describe.configure({ mode: 'serial' });
 
@@ -116,6 +116,10 @@ test.describe("Form Submission Flow", () => {
 
 		await fillTomSelectTypeahead(page, "species_common_name", "Fancy Guppy");
 		await fillTomSelectTypeahead(page, "species_latin_name", "Poecilia reticulata");
+
+		// Fill required fields for Fish (foods and spawn_locations)
+		await selectTomSelectMultiple(page, "foods", ["Live Foods", "Flake"]);
+		await selectTomSelectMultiple(page, "spawn_locations", ["Spawning Mop"]);
 
 		// Tank details
 		await page.fill('input[name="temperature"]', "76");
