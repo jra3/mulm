@@ -15,6 +15,9 @@ db/*.db-shm
 db/*.db-wal
 public/index.css
 
+# SSL certificates
+nginx/certs/
+
 # Test files
 public/*test*
 .playwright-mcp/
