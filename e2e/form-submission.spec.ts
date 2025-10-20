@@ -248,8 +248,14 @@ test.describe("Form Submission Flow", () => {
 		await fillTomSelectTypeahead(page, "species_common_name", "Updated Guppy");
 		await page.fill('input[name="temperature"]', "78");
 
+		// Scroll to ensure Save Edits button is in view
+		await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+		await page.waitForTimeout(500);
+
 		// Save edits
-		await page.click('button[type="submit"]:has-text("Save Edits")');
+		const saveButton = page.locator('button[type="submit"]:has-text("Save Edits")');
+		await saveButton.scrollIntoViewIfNeeded();
+		await saveButton.click();
 		await page.waitForLoadState("networkidle");
 
 		// Verify changes in database
