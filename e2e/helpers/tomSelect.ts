@@ -89,25 +89,28 @@ export async function selectTomSelectMultiple(page: Page, fieldName: string, val
 	// Wait for Tom Select to be initialized
 	await page.waitForSelector(`select[name="${fieldName}"].tomselected`, { timeout: 5000 });
 
-	// Find the ts-control and input
+	// Find the ts-control
 	const control = page.locator(`select[name="${fieldName}"] + .ts-wrapper .ts-control`);
-	const input = control.locator('input');
 
 	for (const value of values) {
-		// Click to focus/open dropdown
+		// Click to open dropdown
 		await control.click();
-		await page.waitForTimeout(200);
 
-		// Type the value to filter
-		await input.type(value);
-		await page.waitForTimeout(500);
+		// Wait longer for dropdown to fully open/render
+		await page.waitForTimeout(800);
 
-		// Use keyboard to select first match
-		await input.press('ArrowDown');
-		await page.waitForTimeout(100);
-		await input.press('Enter');
+		// Verify dropdown is actually open before clicking
+		const dropdownVisible = await page.locator('.ts-dropdown .option').first().isVisible();
+		if (!dropdownVisible) {
+			// Dropdown didn't open, try clicking control again
+			await control.click();
+			await page.waitForTimeout(500);
+		}
 
-		// Wait for selection to process and clear the input
+		// Click the option directly
+		await page.click(`.ts-dropdown .option:has-text("${value}")`, { force: true });
+
+		// Wait for selection to process
 		await page.waitForTimeout(300);
 	}
 }
