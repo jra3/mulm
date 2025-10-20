@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { login, logout } from "./helpers/auth";
 import { TEST_USER, cleanupTestUserSubmissions, getSubmissionsForMember, getTestDatabase } from "./helpers/testData";
+import { fillTomSelectTypeahead } from "./helpers/tomSelect";
 
 test.describe("Form Submission Flow", () => {
 	// Clean up before each test
@@ -32,10 +33,9 @@ test.describe("Form Submission Flow", () => {
 		const today = new Date().toISOString().split("T")[0];
 		await page.fill('input[name="reproduction_date"]', today);
 
-		// Fill in species common name (freeform text for now)
-		// We'll test the typeahead linking separately
-		await page.fill('input[name="species_common_name"]', "Guppy");
-		await page.fill('input[name="species_latin_name"]', "Poecilia reticulata");
+		// Fill in species common name using Tom Select typeahead
+		await fillTomSelectTypeahead(page, "species_common_name", "Guppy");
+		await fillTomSelectTypeahead(page, "species_latin_name", "Poecilia reticulata");
 
 		// Fill in tank details
 		await page.fill('input[name="temperature"]', "75");
@@ -94,8 +94,8 @@ test.describe("Form Submission Flow", () => {
 		const today = new Date().toISOString().split("T")[0];
 		await page.fill('input[name="reproduction_date"]', today);
 
-		await page.fill('input[name="species_common_name"]', "Fancy Guppy");
-		await page.fill('input[name="species_latin_name"]', "Poecilia reticulata");
+		await fillTomSelectTypeahead(page, "species_common_name", "Fancy Guppy");
+		await fillTomSelectTypeahead(page, "species_latin_name", "Poecilia reticulata");
 
 		// Tank details
 		await page.fill('input[name="temperature"]', "76");
@@ -158,8 +158,8 @@ test.describe("Form Submission Flow", () => {
 
 		const today = new Date().toISOString().split("T")[0];
 		await page.fill('input[name="reproduction_date"]', today);
-		await page.fill('input[name="species_common_name"]', "Original Guppy");
-		await page.fill('input[name="species_latin_name"]', "Poecilia reticulata");
+		await fillTomSelectTypeahead(page, "species_common_name", "Original Guppy");
+		await fillTomSelectTypeahead(page, "species_latin_name", "Poecilia reticulata");
 		await page.fill('input[name="temperature"]', "74");
 		await page.fill('input[name="ph"]', "7.0");
 		await page.fill('input[name="gh"]', "150");
@@ -180,7 +180,7 @@ test.describe("Form Submission Flow", () => {
 		await page.waitForSelector("#bapForm");
 
 		// Change some fields
-		await page.fill('input[name="species_common_name"]', "Updated Guppy");
+		await fillTomSelectTypeahead(page, "species_common_name", "Updated Guppy");
 		await page.fill('input[name="temperature"]', "78");
 
 		// Save edits
@@ -220,8 +220,8 @@ test.describe("Form Submission Flow", () => {
 
 		const today = new Date().toISOString().split("T")[0];
 		await page.fill('input[name="reproduction_date"]', today);
-		await page.fill('input[name="species_common_name"]', "To Delete");
-		await page.fill('input[name="species_latin_name"]', "Deletis fishus");
+		await fillTomSelectTypeahead(page, "species_common_name", "To Delete");
+		await fillTomSelectTypeahead(page, "species_latin_name", "Deletis fishus");
 		await page.fill('input[name="temperature"]', "75");
 		await page.fill('input[name="ph"]', "7.0");
 		await page.fill('input[name="gh"]', "150");
