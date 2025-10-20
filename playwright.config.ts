@@ -12,6 +12,9 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
 	testDir: "./e2e",
 
+	/* Global setup - creates test users and data */
+	globalSetup: require.resolve("./e2e/global-setup"),
+
 	/* Run tests in files in parallel */
 	fullyParallel: true,
 
