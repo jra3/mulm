@@ -1,0 +1,70 @@
+# GitHub Labels Configuration
+# This file is automatically synced to the repository by the label-sync workflow
+# Format: https://github.com/crazy-max/ghaction-github-labeler
+
+- name: accessibility
+  color: "0e8a16"
+  description: "Accessibility and WCAG compliance improvements"
+- name: admin-tools
+  color: "f9d0c4"
+  description: "Admin interface and management tools"
+- name: beginner-friendly
+  color: "7057ff"
+  description: "Good for newcomers and junior developers"
+- name: bug
+  color: "d73a4a"
+  description: "Something isn't working"
+- name: database
+  color: "1d76db"
+  description: "Database schema, migrations, and data integrity"
+- name: documentation
+  color: "0075ca"
+  description: "Improvements or additions to documentation"
+- name: duplicate
+  color: "cfd3d7"
+  description: "This issue or pull request already exists"
+- name: enhancement
+  color: "a2eeef"
+  description: "New feature or request"
+- name: forms
+  color: "c2e0c6"
+  description: "Form handling, validation, and user input"
+- name: good first issue
+  color: "7057ff"
+  description: "Good for newcomers"
+- name: help wanted
+  color: "008672"
+  description: "Extra attention is needed"
+- name: infrastructure
+  color: "5319e7"
+  description: "Infrastructure, deployment, and DevOps"
+- name: invalid
+  color: "e4e669"
+  description: "This doesn't seem right"
+- name: performance
+  color: "fbca04"
+  description: "Performance optimization and monitoring"
+- name: priority:high
+  color: "d93f0b"
+  description: "High priority - should be addressed soon"
+- name: priority:low
+  color: "0e8a16"
+  description: "Low priority - nice to have"
+- name: priority:medium
+  color: "fbca04"
+  description: "Medium priority - important but not urgent"
+- name: question
+  color: "d876e3"
+  description: "Further information is requested"
+- name: security
+  color: "d93f0b"
+  description: "Security improvements and vulnerability fixes"
+- name: testing
+  color: "0052cc"
+  description: "Testing, test coverage, and quality assurance"
+- name: ui/ux
+  color: "c5def5"
+  description: "User interface and user experience improvements"
+- name: wontfix
+  color: "ffffff"
+  description: "This will not be worked on"
