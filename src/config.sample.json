@@ -14,5 +14,10 @@
   "s3Secret": "",
   "s3Url": "",
   "s3Bucket": "",
-  "r2PublicUrl": ""
+  "r2PublicUrl": "",
+  "webauthn": {
+    "rpName": "BAP Portal",
+    "rpID": "localhost",
+    "origin": "http://localhost:4200"
+  }
 }
