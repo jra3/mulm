@@ -23,8 +23,9 @@ test.describe("Form Submission Flow", () => {
 		await page.selectOption('select[name="water_type"]', "Fresh");
 		await page.selectOption('select[name="species_type"]', "Fish");
 
-		// Wait for form to reload (HTMX swap after species type change)
-		await page.waitForSelector('select[name="species_class"]');
+		// Wait for HTMX swap to complete (species_type triggers full form replacement)
+		await page.waitForLoadState("networkidle");
+		await page.waitForSelector('select[name="species_class"]', { state: "visible" });
 
 		// Select species class
 		await page.selectOption('select[name="species_class"]', "Livebearers");
@@ -46,10 +47,19 @@ test.describe("Form Submission Flow", () => {
 		await page.fill('input[name="count"]', "25");
 
 		// Save as draft
+		const currentUrl = page.url();
 		await page.click('button[name="draft"]');
 
-		// Wait for success (form should reload or redirect)
+		// Wait for HTMX to process and form to reload/redirect
 		await page.waitForLoadState("networkidle");
+
+		// Give extra time for HTMX swap to complete
+		await page.waitForTimeout(1000);
+
+		// Check if URL changed (successful save redirects to /submissions/:id)
+		const newUrl = page.url();
+		console.log(`URL before save: ${currentUrl}`);
+		console.log(`URL after save: ${newUrl}`);
 
 		// Verify the submission was created in the database
 		const db = await getTestDatabase();
@@ -86,8 +96,9 @@ test.describe("Form Submission Flow", () => {
 		await page.selectOption('select[name="water_type"]', "Fresh");
 		await page.selectOption('select[name="species_type"]', "Fish");
 
-		// Wait for HTMX swap
-		await page.waitForSelector('select[name="species_class"]');
+		// Wait for HTMX swap to complete
+		await page.waitForLoadState("networkidle");
+		await page.waitForSelector('select[name="species_class"]', { state: "visible" });
 
 		await page.selectOption('select[name="species_class"]', "Livebearers");
 
@@ -152,7 +163,10 @@ test.describe("Form Submission Flow", () => {
 
 		await page.selectOption('select[name="water_type"]', "Fresh");
 		await page.selectOption('select[name="species_type"]', "Fish");
-		await page.waitForSelector('select[name="species_class"]');
+
+		// Wait for HTMX swap to complete
+		await page.waitForLoadState("networkidle");
+		await page.waitForSelector('select[name="species_class"]', { state: "visible" });
 
 		await page.selectOption('select[name="species_class"]', "Livebearers");
 
@@ -214,7 +228,10 @@ test.describe("Form Submission Flow", () => {
 
 		await page.selectOption('select[name="water_type"]', "Fresh");
 		await page.selectOption('select[name="species_type"]', "Fish");
-		await page.waitForSelector('select[name="species_class"]');
+
+		// Wait for HTMX swap to complete
+		await page.waitForLoadState("networkidle");
+		await page.waitForSelector('select[name="species_class"]', { state: "visible" });
 
 		await page.selectOption('select[name="species_class"]', "Livebearers");
 

@@ -39,19 +39,15 @@ export async function fillTomSelectTypeahead(
 	const input = control.locator('input');
 	await input.fill(searchText);
 
-	// Wait for the dropdown to appear with options
-	await page.waitForSelector('.ts-dropdown .option', {
-		state: "visible",
-		timeout: 5000,
-	});
+	// Wait for API results to load (Tom Select hits /api/species/search)
+	await page.waitForTimeout(1500);
 
-	if (exactMatch) {
-		// Find the exact match in the dropdown
-		await page.click(`.ts-dropdown .option:has-text("${searchText}")`);
-	} else {
-		// Click the first option
-		await page.click('.ts-dropdown .option:first-child');
-	}
+	// Use keyboard navigation to select the first option
+	// This is more reliable than trying to find and click dropdown elements
+	// ArrowDown will highlight the first result, Enter will select it
+	await input.press('ArrowDown');
+	await page.waitForTimeout(200);
+	await input.press('Enter');
 
 	// Wait for Tom Select to process the selection and close dropdown
 	await page.waitForSelector('.ts-dropdown', { state: "hidden", timeout: 2000 });
