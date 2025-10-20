@@ -46,6 +46,8 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await fillTomSelectTypeahead(page, "species_common_name", "Test Guppy");
 		await fillTomSelectTypeahead(page, "species_latin_name", "Poecilia reticulata");
 		await page.fill('input[name="temperature"]', "75");
+		await page.fill('input[name="ph"]', "7.0");
+		await page.fill('input[name="gh"]', "150");
 		await page.fill('input[name="count"]', "20");
 
 		// Wait for Tom Select and fill foods/spawn
@@ -173,6 +175,8 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await fillTomSelectTypeahead(page, "species_common_name", "Test Guppy");
 		await fillTomSelectTypeahead(page, "species_latin_name", "Poecilia reticulata");
 		await page.fill('input[name="temperature"]', "75");
+		await page.fill('input[name="ph"]', "7.0");
+		await page.fill('input[name="gh"]', "150");
 		await page.fill('input[name="count"]', "20");
 
 		// Wait for Tom Select and fill foods/spawn
@@ -330,6 +334,8 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await fillTomSelectTypeahead(page, "species_common_name", "Test Guppy");
 		await fillTomSelectTypeahead(page, "species_latin_name", "Poecilia reticulata");
 		await page.fill('input[name="temperature"]', "75");
+		await page.fill('input[name="ph"]', "7.0");
+		await page.fill('input[name="gh"]', "150");
 		await page.fill('input[name="count"]', "20");
 
 		// Wait for Tom Select and fill foods/spawn
