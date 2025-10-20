@@ -22,6 +22,11 @@ nginx/certs/
 public/*test*
 .playwright-mcp/
 
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
+
 .\#*
 *.sqlite
 
