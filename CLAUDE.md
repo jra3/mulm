@@ -59,6 +59,40 @@ This repository uses directory-specific README files for detailed documentation:
 - **[infrastructure/README.md](infrastructure/README.md)** - Production deployment, monitoring, operations, recovery
 - **[nginx/README.md](nginx/README.md)** - Nginx configuration, SSL, rate limiting, security
 
+## Development Workflow
+
+### Branch Protection
+
+The `main` branch is protected and requires:
+- ✅ All CI checks must pass (`test` + `e2e-tests`)
+- ✅ Branch must be up-to-date with main
+- ❌ No force pushes allowed
+- ❌ No direct deletion allowed
+
+**Recommended workflow:**
+1. Create a feature branch: `git checkout -b feature/my-feature`
+2. Make changes and commit with descriptive messages
+3. Push branch: `git push -u origin feature/my-feature`
+4. Open a pull request using the PR template
+5. Ensure CI passes before merging
+6. Use squash or merge commit (no force push to main)
+
+**For quick fixes** (admins only):
+- Direct commits to main are allowed for admins but CI must still pass
+- Use with caution - prefer PRs for visibility and review
+
+### GitHub Governance as Code
+
+Repository settings are version-controlled in `.github/`:
+
+- **Labels**: `.github/labels.yml` - Auto-synced via workflow
+- **Issue Templates**: `.github/ISSUE_TEMPLATE/` - Bug reports and feature requests
+- **PR Template**: `.github/PULL_REQUEST_TEMPLATE.md` - Checklist for all PRs
+- **Branch Protection**: `.github/branch-protection.json` - Main branch rules (reapply with `gh api`)
+- **Security Policy**: `SECURITY.md` - Vulnerability reporting guidelines
+
+To modify labels, edit `.github/labels.yml` and push - they sync automatically.
+
 ## Critical Rules
 
 ### Code Quality
