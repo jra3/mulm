@@ -121,6 +121,12 @@ test.describe("Form Submission Flow", () => {
 		await selectTomSelectMultiple(page, "foods", ["Live Foods", "Flake"]);
 		await selectTomSelectMultiple(page, "spawn_locations", ["Spawning Mop"]);
 
+		// Verify they were selected
+		const foodsValue = await page.locator('select[name="foods"]').inputValue();
+		const spawnValue = await page.locator('select[name="spawn_locations"]').inputValue();
+		console.log(`Foods selected: ${foodsValue}`);
+		console.log(`Spawn locations selected: ${spawnValue}`);
+
 		// Tank details
 		await page.fill('input[name="temperature"]', "76");
 		await page.fill('input[name="ph"]', "7.4");

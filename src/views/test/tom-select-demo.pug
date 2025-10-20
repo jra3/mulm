@@ -1,0 +1,143 @@
+include ../header.pug
+
+doctype html
+html
+	+headTag
+
+	body.bg-gray-100.text-gray-800
+		+pageHeader(true, title)
+
+		.max-w-4xl.mx-auto.p-8.bg-white.mt-8.mb-8.rounded.shadow
+			h1.text-3xl.font-bold.mb-8 Tom Select Component Testing
+			p.text-gray-600.mb-8 Test page for validating Tom Select interaction helpers in isolation
+
+			form#testForm(action="/test/tom-select-demo" method="POST")
+
+				//- Multi-Select (Static list) - Test this first since it's causing issues
+				section.mb-8.p-6.bg-gray-50.rounded
+					h2.text-xl.font-bold.mb-4 Multi-Select (Static List)
+					p.text-sm.text-gray-600.mb-4 Select multiple items from predefined list
+
+					.mb-4
+						label.block.font-medium.mb-2(for="foods") Foods
+						select.tom-select-multi(
+							id="foods"
+							name="foods"
+							multiple
+						)
+							option(value="Live Foods") Live Foods
+							option(value="Flake") Flake
+							option(value="Pellets") Pellets
+							option(value="Frozen Foods") Frozen Foods
+							option(value="Vegetables") Vegetables
+
+					.mb-4
+						label.block.font-medium.mb-2(for="spawn_locations") Spawn Locations
+						select.tom-select-multi(
+							id="spawn_locations"
+							name="spawn_locations"
+							multiple
+						)
+							option(value="Spawning Mop") Spawning Mop
+							option(value="Plants") Plants
+							option(value="Substrate") Substrate
+							option(value="Rocks/Caves") Rocks/Caves
+							option(value="Open Water") Open Water
+
+					.bg-white.p-3.rounded.border
+						div.mb-2
+							strong Foods Selected:
+							span#foods_value.ml-2.font-mono.text-blue-600 (none)
+						div
+							strong Spawn Locations:
+							span#spawn_value.ml-2.font-mono.text-blue-600 (none)
+
+				//- Submit button
+				.flex.gap-4.mt-8
+					button.primary(type="button" id="submitTest") Test Submit
+					button.outline(type="button" id="resetBtn") Reset
+
+			//- Results display
+			#results.mt-8.p-6.bg-blue-50.rounded.hidden
+				h3.text-lg.font-bold.mb-2 Form Values
+				pre#results_json.bg-white.p-4.rounded.overflow-auto.text-sm
+
+		+footer()
+
+		script.
+			// Initialize Tom Select on page load
+			document.addEventListener('DOMContentLoaded', function() {
+				initializeMultiSelects();
+				updateDisplayValues();
+			});
+
+			// Multi-select initialization (from submit.pug pattern)
+			function initializeMultiSelects() {
+				const multiSelectElements = document.querySelectorAll('select.tom-select-multi:not(.tomselected)');
+				console.log('Found', multiSelectElements.length, 'multi-select elements to initialize');
+
+				multiSelectElements.forEach(function(element) {
+					console.log('Initializing Tom Select on', element.name);
+					const instance = new TomSelect(element, {
+						plugins: ['remove_button'],
+						hideSelected: false,
+						maxItems: null,
+						onChange: function(values) {
+							console.log('Tom Select changed:', element.name, values);
+							updateDisplayValues();
+						}
+					});
+					element.tomSelectInstance = instance;
+				});
+			}
+
+			// Update display values
+			function updateDisplayValues() {
+				const foodsSelect = document.querySelector('select[name="foods"]');
+				if (foodsSelect) {
+					const foodsValues = Array.from(foodsSelect.selectedOptions).map(o => o.value);
+					document.getElementById('foods_value').textContent = foodsValues.length > 0 ? foodsValues.join(', ') : '(none)';
+					console.log('Foods values:', foodsValues);
+				}
+
+				const spawnSelect = document.querySelector('select[name="spawn_locations"]');
+				if (spawnSelect) {
+					const spawnValues = Array.from(spawnSelect.selectedOptions).map(o => o.value);
+					document.getElementById('spawn_value').textContent = spawnValues.length > 0 ? spawnValues.join(', ') : '(none)';
+					console.log('Spawn values:', spawnValues);
+				}
+			}
+
+			// Reset form
+			document.getElementById('resetBtn').addEventListener('click', function() {
+				document.querySelectorAll('.tomselected').forEach(el => {
+					if (el.tomSelectInstance) {
+						el.tomSelectInstance.clear();
+					}
+				});
+				updateDisplayValues();
+			});
+
+			// Handle test submit
+			document.getElementById('submitTest').addEventListener('click', function() {
+				const formData = new FormData(document.getElementById('testForm'));
+				const data = {};
+
+				// Handle multi-value fields properly
+				for (const [key, value] of formData.entries()) {
+					if (data[key]) {
+						if (!Array.isArray(data[key])) {
+							data[key] = [data[key]];
+						}
+						data[key].push(value);
+					} else {
+						// Check if this field has multiple values
+						const allValues = formData.getAll(key);
+						data[key] = allValues.length > 1 ? allValues : value;
+					}
+				}
+
+				document.getElementById('results').classList.remove('hidden');
+				document.getElementById('results_json').textContent = JSON.stringify(data, null, 2);
+				console.log('Form data:', data);
+			});
