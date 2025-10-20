@@ -30,7 +30,7 @@ RUN npm ci --omit=dev && \
 # Copy built application from builder
 COPY --from=builder /app/dist/src ./src
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/dist/views ./src/views
+COPY --from=builder /app/dist/src/views ./src/views
 
 # Copy runtime files
 COPY start.sh ./
