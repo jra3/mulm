@@ -42,9 +42,12 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		const today = new Date().toISOString().split("T")[0];
 		await page.fill('input[name="reproduction_date"]', today);
 
-		// Fill minimal required fields
-		await page.fill('input[name="species_common_name"]', "Test Guppy");
-		await page.fill('input[name="species_latin_name"]', "Poecilia reticulata");
+		// Wait for Tom Select to initialize on species name fields (triggered by htmx:load)
+		await page.waitForTimeout(2000);
+
+		// Fill species names using Tom Select typeahead
+		await fillTomSelectTypeahead(page, "species_common_name", "Guppy");
+		await fillTomSelectTypeahead(page, "species_latin_name", "Poecilia reticulata");
 		await page.fill('input[name="temperature"]', "75");
 		await page.fill('input[name="ph"]', "7.0");
 		await page.fill('input[name="gh"]', "150");
@@ -171,9 +174,12 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		const today = new Date().toISOString().split("T")[0];
 		await page.fill('input[name="reproduction_date"]', today);
 
-		// Fill minimal required fields
-		await page.fill('input[name="species_common_name"]', "Test Guppy");
-		await page.fill('input[name="species_latin_name"]', "Poecilia reticulata");
+		// Wait for Tom Select to initialize on species name fields (triggered by htmx:load)
+		await page.waitForTimeout(2000);
+
+		// Fill species names using Tom Select typeahead
+		await fillTomSelectTypeahead(page, "species_common_name", "Guppy");
+		await fillTomSelectTypeahead(page, "species_latin_name", "Poecilia reticulata");
 		await page.fill('input[name="temperature"]', "75");
 		await page.fill('input[name="ph"]', "7.0");
 		await page.fill('input[name="gh"]', "150");
@@ -330,9 +336,12 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		const today = new Date().toISOString().split("T")[0];
 		await page.fill('input[name="reproduction_date"]', today);
 
-		// Fill minimal required fields
-		await page.fill('input[name="species_common_name"]', "Test Guppy");
-		await page.fill('input[name="species_latin_name"]', "Poecilia reticulata");
+		// Wait for Tom Select to initialize on species name fields (triggered by htmx:load)
+		await page.waitForTimeout(2000);
+
+		// Fill species names using Tom Select typeahead
+		await fillTomSelectTypeahead(page, "species_common_name", "Guppy");
+		await fillTomSelectTypeahead(page, "species_latin_name", "Poecilia reticulata");
 		await page.fill('input[name="temperature"]', "75");
 		await page.fill('input[name="ph"]', "7.0");
 		await page.fill('input[name="gh"]', "150");
