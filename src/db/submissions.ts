@@ -555,39 +555,71 @@ export async function approveSubmission(
   updates: ApprovalFormValues
 ) {
   try {
-    const conn = writeConn;
-    const { points, article_points, first_time_species, flowered, sexual_reproduction } = updates;
-    const stmt = await conn.prepare(`
-			UPDATE submissions SET
-			  common_name_id = ?,
-			  scientific_name_id = ?,
-				points = ?,
-				article_points = ?,
-				first_time_species = ?,
-				flowered = ?,
-				sexual_reproduction = ?,
-				approved_by = ?,
-				approved_on = ?
-			WHERE id = ?`);
-    try {
-      await stmt.run(
+    return await withTransaction(async (db) => {
+      // Get current submission state
+      const stmt = await db.prepare(`
+        SELECT id, submitted_on, approved_on, denied_on, witness_verification_status
+        FROM submissions WHERE id = ?`);
+      const current: Submission[] = await stmt.all(id);
+      await stmt.finalize();
+
+      if (!current[0]) {
+        throw new Error("Submission not found");
+      }
+
+      // Validate submission state
+      if (!current[0].submitted_on) {
+        throw new Error("Cannot approve draft submissions");
+      }
+
+      if (current[0].approved_on) {
+        throw new Error("Cannot approve already approved submissions");
+      }
+
+      if (current[0].denied_on) {
+        throw new Error("Cannot approve denied submissions");
+      }
+
+      // Update submission with approval data
+      const { points, article_points, first_time_species, flowered, sexual_reproduction, cares_species } = updates;
+      const updateStmt = await db.prepare(`
+        UPDATE submissions SET
+          common_name_id = ?,
+          scientific_name_id = ?,
+          points = ?,
+          article_points = ?,
+          first_time_species = ?,
+          cares_species = ?,
+          flowered = ?,
+          sexual_reproduction = ?,
+          approved_by = ?,
+          approved_on = ?
+        WHERE id = ?`);
+
+      const result = await updateStmt.run(
         speciesIds.common_name_id,
         speciesIds.scientific_name_id,
         points,
         article_points,
         first_time_species ? 1 : 0,
+        cares_species ? 1 : 0,
         flowered ? 1 : 0,
         sexual_reproduction ? 1 : 0,
         approvedBy,
         new Date().toISOString(),
         id
       );
-    } finally {
-      await stmt.finalize();
-    }
+      await updateStmt.finalize();
+
+      if (result.changes === 0) {
+        throw new Error("Failed to update submission");
+      }
+
+      logger.info(`Submission ${id} approved by admin ${approvedBy} with ${points} base points`);
+    });
   } catch (err) {
-    logger.error("Failed to update submission", err);
-    throw new Error("Failed to update submission");
+    logger.error("Failed to approve submission", err);
+    throw err;
   }
 }
 
