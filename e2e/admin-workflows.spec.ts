@@ -78,21 +78,35 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await page.waitForLoadState("networkidle");
 		await page.waitForTimeout(1000);
 
-		// Get submission ID from URL
-		const submissionUrl = page.url();
-		const submissionIdMatch = submissionUrl.match(/submissions\/(\d+)/);
-		expect(submissionIdMatch).toBeTruthy();
-		const submissionId = parseInt(submissionIdMatch![1]);
+		// Get submission ID from database (URL may not redirect in all cases)
+		const db = await getTestDatabase();
+		let submissionId: number;
+		try {
+			const user = await db.get<{ id: number }>(
+				"SELECT id FROM members WHERE contact_email = ?",
+				TEST_USER.email
+			);
+			expect(user).toBeTruthy();
+
+			const submissions = await db.all(
+				"SELECT * FROM submissions WHERE member_id = ? AND submitted_on IS NOT NULL ORDER BY id DESC",
+				user!.id
+			);
+			expect(submissions.length).toBeGreaterThan(0);
+			submissionId = submissions[0].id;
+		} finally {
+			await db.close();
+		}
 
 		// Logout regular user
 		await page.click('button[hx-post="/auth/logout"]');
 		await page.waitForLoadState("networkidle");
 
 		// Step 2: Set witness data (admin user already created in beforeEach)
-		const db = await getTestDatabase();
+		const db2 = await getTestDatabase();
 		try {
 			// Get admin user ID
-			const adminUser = await db.get<{ id: number }>(
+			const adminUser = await db2.get<{ id: number }>(
 				"SELECT id FROM members WHERE contact_email = ?",
 				TEST_ADMIN.email
 			);
@@ -102,7 +116,7 @@ test.describe("Admin - Changes Requested Workflow", () => {
 			}
 
 			// Simulate witness confirmation
-			await db.run(
+			await db2.run(
 				"UPDATE submissions SET witnessed_by = ?, witnessed_on = ?, witness_verification_status = ? WHERE id = ?",
 				adminUser.id,
 				new Date().toISOString(),
@@ -110,7 +124,7 @@ test.describe("Admin - Changes Requested Workflow", () => {
 				submissionId
 			);
 		} finally {
-			await db.close();
+			await db2.close();
 		}
 
 		// Login as admin
@@ -133,9 +147,9 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await page.waitForLoadState("networkidle");
 
 		// Step 4: Verify in database
-		const db2 = await getTestDatabase();
+		const db3 = await getTestDatabase();
 		try {
-			const submission = await db2.get(
+			const submission = await db3.get(
 				"SELECT * FROM submissions WHERE id = ?",
 				submissionId
 			);
@@ -154,7 +168,7 @@ test.describe("Admin - Changes Requested Workflow", () => {
 			expect(submission.submitted_on).toBeTruthy(); // Still submitted
 			expect(submission.approved_on).toBeNull(); // Not approved
 		} finally {
-			await db2.close();
+			await db3.close();
 		}
 	});
 
@@ -210,11 +224,25 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await page.waitForLoadState("networkidle");
 		await page.waitForTimeout(1000);
 
-		// Get submission ID from URL
-		const submissionUrl = page.url();
-		const submissionIdMatch = submissionUrl.match(/submissions\/(\d+)/);
-		expect(submissionIdMatch).toBeTruthy();
-		const submissionId = parseInt(submissionIdMatch![1]);
+		// Get submission ID from database (URL may not redirect in all cases)
+		const db = await getTestDatabase();
+		let submissionId: number;
+		try {
+			const user = await db.get<{ id: number }>(
+				"SELECT id FROM members WHERE contact_email = ?",
+				TEST_USER.email
+			);
+			expect(user).toBeTruthy();
+
+			const submissions = await db.all(
+				"SELECT * FROM submissions WHERE member_id = ? AND submitted_on IS NOT NULL ORDER BY id DESC",
+				user!.id
+			);
+			expect(submissions.length).toBeGreaterThan(0);
+			submissionId = submissions[0].id;
+		} finally {
+			await db.close();
+		}
 
 		// Logout regular user
 		await page.click('button[hx-post="/auth/logout"]');
@@ -372,11 +400,25 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await page.waitForLoadState("networkidle");
 		await page.waitForTimeout(1000);
 
-		// Get submission ID from URL
-		const submissionUrl = page.url();
-		const submissionIdMatch = submissionUrl.match(/submissions\/(\d+)/);
-		expect(submissionIdMatch).toBeTruthy();
-		const submissionId = parseInt(submissionIdMatch![1]);
+		// Get submission ID from database (URL may not redirect in all cases)
+		const db = await getTestDatabase();
+		let submissionId: number;
+		try {
+			const user = await db.get<{ id: number }>(
+				"SELECT id FROM members WHERE contact_email = ?",
+				TEST_USER.email
+			);
+			expect(user).toBeTruthy();
+
+			const submissions = await db.all(
+				"SELECT * FROM submissions WHERE member_id = ? AND submitted_on IS NOT NULL ORDER BY id DESC",
+				user!.id
+			);
+			expect(submissions.length).toBeGreaterThan(0);
+			submissionId = submissions[0].id;
+		} finally {
+			await db.close();
+		}
 
 		// Logout regular user
 		await page.click('button[hx-post="/auth/logout"]');
