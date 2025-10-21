@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { login, logout } from "./helpers/auth";
 import { TEST_USER, TEST_ADMIN, cleanupTestUserSubmissions, getTestDatabase, ensureTestUserExists } from "./helpers/testData";
 import { fillTomSelectTypeahead } from "./helpers/tomSelect";
+import { createTestSubmission } from "./helpers/submissions";
 
 /**
  * Admin Workflow Tests
@@ -26,116 +27,49 @@ test.describe("Admin - Changes Requested Workflow", () => {
 	});
 
 	test("admin can request changes from submitted form", async ({ page }) => {
-		// Step 1: Create and submit a form as regular user
-		await login(page, TEST_USER);
+		// Step 1: Create a submitted form directly in database (faster and more reliable)
+		const db = await getTestDatabase();
+		let submissionId: number;
+		let adminId: number;
 
-		// Create a simple submitted form
-		await page.goto("/submissions/new");
-		await page.waitForSelector("#bapForm");
-
-		await page.selectOption('select[name="water_type"]', "Fresh");
-		await page.selectOption('select[name="species_type"]', "Fish");
-		await page.waitForLoadState("networkidle");
-
-		await page.selectOption('select[name="species_class"]', "Livebearers");
-
-		// Wait for Tom Select to initialize on species name fields by checking for the Tom Select wrapper
-		await page.waitForSelector('.ts-wrapper', { timeout: 5000 });
-
-		const today = new Date().toISOString().split("T")[0];
-		await page.fill('input[name="reproduction_date"]', today);
-
-		// Fill species names using Tom Select typeahead
-		await fillTomSelectTypeahead(page, "species_common_name", "Guppy");
-		await fillTomSelectTypeahead(page, "species_latin_name", "Poecilia reticulata");
-		await page.fill('input[name="temperature"]', "75");
-		await page.fill('input[name="ph"]', "7.0");
-		await page.fill('input[name="gh"]', "150");
-		await page.fill('input[name="count"]', "20");
-
-		// Wait for Tom Select on foods/spawn fields to be ready
-		await page.waitForSelector('select[name="foods"] + .ts-wrapper', { timeout: 5000 });
-		await page.selectOption('select[name="foods"]', ["Live"]);
-		await page.selectOption('select[name="spawn_locations"]', ["Plant"]);
-
-		// Fill required tank fields
-		await page.fill('input[name="tank_size"]', "10 gallon");
-		await page.fill('input[name="filter_type"]', "Sponge");
-		await page.fill('input[name="water_change_volume"]', "25%");
-		await page.fill('input[name="water_change_frequency"]', "Weekly");
-		await page.fill('input[name="substrate_type"]', "Gravel");
-		await page.fill('input[name="substrate_depth"]', "1 inch");
-		await page.fill('input[name="substrate_color"]', "Natural");
-
-		// Scroll to ensure submit button is in view
-		await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-		await page.waitForTimeout(500);
-
-		// Submit (not draft)
-		const submitButton = page.locator('button[type="submit"]:has-text("Submit")');
-		await submitButton.scrollIntoViewIfNeeded();
-		await submitButton.click();
-
-		// Wait for submission to complete
-		await page.waitForLoadState("networkidle");
-		await page.waitForTimeout(1000);
-
-		// Get submission ID from URL
-		const currentUrl = page.url();
-		console.log("Current URL after submission:", currentUrl);
-
-		if (!currentUrl.includes('/submissions/')) {
-			throw new Error(`Form submission did not redirect to submission page. Current URL: ${currentUrl}`);
-		}
-
-		const urlMatch = currentUrl.match(/\/submissions\/(\d+)/);
-		const submissionId = urlMatch ? parseInt(urlMatch[1]) : 0;
-
-		expect(submissionId).toBeGreaterThan(0);
-
-		// Logout regular user
-		await logout(page);
-
-		// Step 2: Set witness data (admin user already created in beforeEach)
-		const db2 = await getTestDatabase();
 		try {
-			// Get admin user ID
-			const adminUser = await db2.get<{ id: number }>(
+			// Get user and admin IDs
+			const user = await db.get<{ id: number }>(
+				"SELECT id FROM members WHERE contact_email = ?",
+				TEST_USER.email
+			);
+			const admin = await db.get<{ id: number }>(
 				"SELECT id FROM members WHERE contact_email = ?",
 				TEST_ADMIN.email
 			);
 
-			if (!adminUser) {
-				throw new Error("Admin user should exist from beforeEach");
+			if (!user || !admin) {
+				throw new Error("Test users not found in database");
 			}
 
-			// Simulate witness confirmation
-			await db2.run(
-				"UPDATE submissions SET witnessed_by = ?, witnessed_on = ?, witness_verification_status = ? WHERE id = ?",
-				adminUser.id,
-				new Date().toISOString(),
-				"confirmed",
-				submissionId
-			);
+			adminId = admin.id;
+
+			// Create submitted submission with witness confirmation
+			submissionId = await createTestSubmission({
+				memberId: user.id,
+				submitted: true,
+				witnessed: true,
+				witnessedBy: admin.id,
+			});
 		} finally {
-			await db2.close();
+			await db.close();
 		}
 
-		// Login as admin
+		// Step 2: Login as admin and request changes
 		await login(page, TEST_ADMIN);
 
 		// Navigate to submission
 		await page.goto(`/submissions/${submissionId}`);
 		await page.waitForLoadState("networkidle");
 
-		// Step 3: Request changes
-		// Scroll down to approval panel at the bottom
-		await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-
-		// Wait for the "Request Changes" button to appear in the approval panel
+		// Scroll down to approval panel at the bottom where Request Changes button is
 		const requestChangesButton = page.locator('button:has-text("Request Changes")').first();
 		await requestChangesButton.scrollIntoViewIfNeeded();
-		await requestChangesButton.waitFor({ state: "visible", timeout: 10000 });
 		await requestChangesButton.click();
 
 		// Wait for HTMX dialog to appear with the textarea field
@@ -146,7 +80,7 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await page.click('button[type="submit"]:has-text("Send")');
 		await page.waitForLoadState("networkidle");
 
-		// Step 4: Verify in database
+		// Step 3: Verify in database
 		const db3 = await getTestDatabase();
 		try {
 			const submission = await db3.get(
