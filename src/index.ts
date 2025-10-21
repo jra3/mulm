@@ -139,6 +139,8 @@ router.get("/submissions/:id", submission.view);
 router.post("/submissions", submission.create);
 router.patch("/submissions/:id", submission.update);
 router.delete("/submissions/:id", submission.remove);
+router.get("/submissions/:id/edit-media", submission.renderEditMedia);
+router.patch("/submissions/:id/media", submission.updateMedia);
 
 // Tank form component (used in BAP submissions)
 router.get("/tank", tank.view);

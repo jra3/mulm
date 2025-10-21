@@ -361,7 +361,7 @@ export const sendRequestChanges = async (req: MulmRequest, res: Response) => {
 
     const content = getBodyString(req, "content");
     if (!content || content.trim().length === 0) {
-      res.status(400).send("Please provide feedback message");
+      res.status(400).send("Please describe what changes are needed");
       return;
     }
 
@@ -380,7 +380,7 @@ export const sendRequestChanges = async (req: MulmRequest, res: Response) => {
     res.set("HX-Redirect", `/admin/queue/${submission.program}`).send();
   } catch (error) {
     logger.error("Error sending request changes:", error);
-    res.status(500).send("Failed to send feedback. Please try again.");
+    res.status(500).send("Failed to request changes. Please try again.");
   }
 };
 
@@ -392,7 +392,7 @@ export const requestChangesForm = async (req: MulmRequest, res: Response) => {
   }
 
   const contents = `
-Changes are requested form your BAP submission. Please review the notes below, make appropriate changes, and resubmit.
+Changes are requested from your BAP submission. Please review the notes below, make appropriate changes, and resubmit.
 
 -----------------
 
