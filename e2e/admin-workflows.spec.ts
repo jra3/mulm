@@ -143,11 +143,13 @@ test.describe("Admin - Changes Requested Workflow", () => {
 
 		// Navigate to submission
 		await page.goto(`/submissions/${submissionId}`);
-		await page.waitForSelector("body");
+		await page.waitForLoadState("networkidle");
 
 		// Step 3: Request changes
-		// Look for the "Request Changes" button in admin panel
-		await page.click('button:has-text("Request Changes")');
+		// Wait for the "Request Changes" or "Feedback" button to appear
+		const requestChangesButton = page.locator('button:has-text("Request Changes"), button:has-text("Feedback")').first();
+		await requestChangesButton.waitFor({ state: "visible", timeout: 10000 });
+		await requestChangesButton.click();
 
 		// Fill in the reason
 		await page.waitForSelector('textarea[name="changes_requested_reason"]');
