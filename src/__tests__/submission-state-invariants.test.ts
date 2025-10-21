@@ -300,14 +300,15 @@ void describe("Submission State Machine - Invariant Tests", () => {
       submission = await getSubmissionById(submissionId);
       await assertSubmissionInvariantsHold(submission);
 
-      // Resubmit (clear changes_requested, preserve witness)
+      // Resubmit (clear changes_requested, preserve witness AND original submitted_on)
       const currentWitnessStatus = submission!.witness_verification_status;
+      const originalSubmittedOn = submission!.submitted_on;
       await updateSubmission(submissionId, {
         changes_requested_on: null,
         changes_requested_by: null,
         changes_requested_reason: null,
-        submitted_on: new Date().toISOString(),
         witness_verification_status: currentWitnessStatus,
+        submitted_on: originalSubmittedOn, // Preserve original submission timestamp
       });
       submission = await getSubmissionById(submissionId);
       await assertSubmissionInvariantsHold(submission);

@@ -370,7 +370,7 @@ export const update = async (req: MulmRequest, res: Response) => {
   // Prepare updates from form
   const formUpdates = db.formToDB(submission.member_id, form, !draft);
 
-  // If resubmitting after changes were requested, clear those fields AND preserve witness status
+  // If resubmitting after changes were requested, clear those fields AND preserve witness/submit data
   if (!draft && submission.changes_requested_on) {
     await db.updateSubmission(submission.id, {
       ...formUpdates,
@@ -379,6 +379,8 @@ export const update = async (req: MulmRequest, res: Response) => {
       changes_requested_reason: null,
       // Preserve existing witness status when resubmitting (don't reset to pending)
       witness_verification_status: submission.witness_verification_status,
+      // Preserve original submitted_on timestamp (don't update to now)
+      submitted_on: submission.submitted_on,
     });
   } else {
     await db.updateSubmission(submission.id, formUpdates);
