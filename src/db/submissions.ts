@@ -223,6 +223,64 @@ export async function deleteSubmission(id: number) {
   }
 }
 
+/**
+ * Delete a submission with permission validation
+ * @param submissionId - ID of submission to delete
+ * @param userId - ID of user attempting deletion
+ * @param isAdmin - Whether user is an admin
+ * @throws Error if not authorized or submission not found
+ */
+export async function deleteSubmissionWithAuth(
+  submissionId: number,
+  userId: number,
+  isAdmin: boolean
+): Promise<void> {
+  try {
+    return await withTransaction(async (db) => {
+      // Get current submission
+      const stmt = await db.prepare(`
+        SELECT id, member_id, approved_on
+        FROM submissions WHERE id = ?`);
+      const current: Submission[] = await stmt.all(submissionId);
+      await stmt.finalize();
+
+      if (!current[0]) {
+        throw new Error("Submission not found");
+      }
+
+      const submission = current[0];
+
+      // Admin can delete anything
+      if (isAdmin) {
+        const deleteStmt = await db.prepare("DELETE FROM submissions WHERE id = ?");
+        await deleteStmt.run(submissionId);
+        await deleteStmt.finalize();
+        logger.info(`Admin ${userId} deleted submission ${submissionId}`);
+        return;
+      }
+
+      // Non-admin: must be owner
+      if (submission.member_id !== userId) {
+        throw new Error("Cannot delete another member's submission");
+      }
+
+      // Owner can only delete unapproved submissions
+      if (submission.approved_on) {
+        throw new Error("Cannot delete approved submissions");
+      }
+
+      // Delete allowed
+      const deleteStmt = await db.prepare("DELETE FROM submissions WHERE id = ?");
+      await deleteStmt.run(submissionId);
+      await deleteStmt.finalize();
+      logger.info(`Member ${userId} deleted their submission ${submissionId}`);
+    });
+  } catch (err) {
+    logger.error("Failed to delete submission with auth", err);
+    throw err;
+  }
+}
+
 export function getApprovedSubmissionsInDateRange(startDate: Date, endDate: Date, program: string) {
   return query<Submission>(
     `
