@@ -39,8 +39,8 @@ test.describe("Admin - Changes Requested Workflow", () => {
 
 		await page.selectOption('select[name="species_class"]', "Livebearers");
 
-		// Wait for Tom Select to initialize on species name fields (triggered by htmx:load event)
-		await page.waitForTimeout(3000);
+		// Wait for Tom Select to initialize on species name fields by checking for the Tom Select wrapper
+		await page.waitForSelector('.ts-wrapper[data-ts-control]', { timeout: 5000 });
 
 		const today = new Date().toISOString().split("T")[0];
 		await page.fill('input[name="reproduction_date"]', today);
@@ -53,8 +53,8 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await page.fill('input[name="gh"]', "150");
 		await page.fill('input[name="count"]', "20");
 
-		// Wait for Tom Select and fill foods/spawn
-		await page.waitForTimeout(3000);
+		// Wait for Tom Select on foods/spawn fields to be ready
+		await page.waitForSelector('select[name="foods"] + .ts-wrapper', { timeout: 5000 });
 		await page.selectOption('select[name="foods"]', ["Live"]);
 		await page.selectOption('select[name="spawn_locations"]', ["Plant"]);
 
@@ -68,15 +68,11 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await page.fill('input[name="substrate_color"]', "Natural");
 
 		// Submit (not draft)
-		await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-		await page.waitForTimeout(500);
-
 		const submitButton = page.locator('button[type="submit"]:has-text("Submit")');
 		await submitButton.scrollIntoViewIfNeeded();
 		await submitButton.click();
 
 		await page.waitForLoadState("networkidle");
-		await page.waitForTimeout(1000);
 
 		// Get submission ID from database (URL may not redirect in all cases)
 		const db = await getTestDatabase();
@@ -97,9 +93,6 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		} finally {
 			await db.close();
 		}
-
-		// Wait for any HTMX redirects to complete
-		await page.waitForTimeout(1000);
 
 		// Navigate to home to ensure logout button is accessible
 		await page.goto("/");
@@ -151,11 +144,7 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await requestChangesButton.waitFor({ state: "visible", timeout: 10000 });
 		await requestChangesButton.click();
 
-		// Wait for HTMX to load the dialog
-		await page.waitForLoadState("networkidle");
-		await page.waitForTimeout(1000);
-
-		// Fill in the reason (field name is "content", not "changes_requested_reason")
+		// Wait for HTMX dialog to appear with the textarea field
 		await page.waitForSelector('textarea[name="content"]', { timeout: 10000 });
 		await page.fill('textarea[name="content"]', "Please add more photos and details about water parameters");
 
@@ -202,8 +191,8 @@ test.describe("Admin - Changes Requested Workflow", () => {
 
 		await page.selectOption('select[name="species_class"]', "Livebearers");
 
-		// Wait for Tom Select to initialize on species name fields (triggered by htmx:load event)
-		await page.waitForTimeout(3000);
+		// Wait for Tom Select to initialize on species name fields by checking for the Tom Select wrapper
+		await page.waitForSelector('.ts-wrapper[data-ts-control]', { timeout: 5000 });
 
 		const today = new Date().toISOString().split("T")[0];
 		await page.fill('input[name="reproduction_date"]', today);
@@ -216,8 +205,8 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await page.fill('input[name="gh"]', "150");
 		await page.fill('input[name="count"]', "20");
 
-		// Wait for Tom Select and fill foods/spawn
-		await page.waitForTimeout(3000);
+		// Wait for Tom Select on foods/spawn fields to be ready
+		await page.waitForSelector('select[name="foods"] + .ts-wrapper', { timeout: 5000 });
 		await page.selectOption('select[name="foods"]', ["Live"]);
 		await page.selectOption('select[name="spawn_locations"]', ["Plant"]);
 
@@ -231,15 +220,11 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await page.fill('input[name="substrate_color"]', "Natural");
 
 		// Submit (not draft)
-		await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-		await page.waitForTimeout(500);
-
 		const submitButton = page.locator('button[type="submit"]:has-text("Submit")');
 		await submitButton.scrollIntoViewIfNeeded();
 		await submitButton.click();
 
 		await page.waitForLoadState("networkidle");
-		await page.waitForTimeout(1000);
 
 		// Get submission ID from database (URL may not redirect in all cases)
 		const dbTest2a = await getTestDatabase();
@@ -324,15 +309,10 @@ test.describe("Admin - Changes Requested Workflow", () => {
 
 		// Make edits - temperature first to avoid HTMX swap
 		await page.fill('input[name="temperature"]', "78");
-		await page.waitForTimeout(500);
 
 		// Fill additional details
 		await page.fill('input[name="ph"]', "7.2");
 		await page.fill('input[name="gh"]', "180");
-
-		// Scroll to ensure button is in view
-		await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-		await page.waitForTimeout(500);
 
 		// Save edits (for submitted forms with changes requested, button should be "Save Edits")
 		const saveButton = page.locator('button[type="submit"]:has-text("Save Edits")');
@@ -340,7 +320,6 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await saveButton.click();
 
 		await page.waitForLoadState("networkidle");
-		await page.waitForTimeout(1000);
 
 		// Step 4: Verify changes persisted but changes_requested fields still set
 		const dbTest2c = await getTestDatabase();
@@ -382,8 +361,8 @@ test.describe("Admin - Changes Requested Workflow", () => {
 
 		await page.selectOption('select[name="species_class"]', "Livebearers");
 
-		// Wait for Tom Select to initialize on species name fields (triggered by htmx:load event)
-		await page.waitForTimeout(3000);
+		// Wait for Tom Select to initialize on species name fields by checking for the Tom Select wrapper
+		await page.waitForSelector('.ts-wrapper[data-ts-control]', { timeout: 5000 });
 
 		const today = new Date().toISOString().split("T")[0];
 		await page.fill('input[name="reproduction_date"]', today);
@@ -396,8 +375,8 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await page.fill('input[name="gh"]', "150");
 		await page.fill('input[name="count"]', "20");
 
-		// Wait for Tom Select and fill foods/spawn
-		await page.waitForTimeout(3000);
+		// Wait for Tom Select on foods/spawn fields to be ready
+		await page.waitForSelector('select[name="foods"] + .ts-wrapper', { timeout: 5000 });
 		await page.selectOption('select[name="foods"]', ["Live"]);
 		await page.selectOption('select[name="spawn_locations"]', ["Plant"]);
 
@@ -411,15 +390,11 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await page.fill('input[name="substrate_color"]', "Natural");
 
 		// Submit (not draft)
-		await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-		await page.waitForTimeout(500);
-
 		const submitButton = page.locator('button[type="submit"]:has-text("Submit")');
 		await submitButton.scrollIntoViewIfNeeded();
 		await submitButton.click();
 
 		await page.waitForLoadState("networkidle");
-		await page.waitForTimeout(1000);
 
 		// Get submission ID from database (URL may not redirect in all cases)
 		const dbTest3a = await getTestDatabase();
@@ -514,11 +489,6 @@ test.describe("Admin - Changes Requested Workflow", () => {
 
 		// Make some edits
 		await page.fill('input[name="ph"]', "7.4");
-		await page.waitForTimeout(500);
-
-		// Scroll to ensure button is in view
-		await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-		await page.waitForTimeout(500);
 
 		// Look for "Resubmit" button (this should clear changes_requested fields)
 		const resubmitButton = page.locator('button[type="submit"]:has-text("Resubmit")');
@@ -526,7 +496,6 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await resubmitButton.click();
 
 		await page.waitForLoadState("networkidle");
-		await page.waitForTimeout(1000);
 
 		// Step 4: Verify changes_requested fields are cleared
 		const dbTest3d = await getTestDatabase();

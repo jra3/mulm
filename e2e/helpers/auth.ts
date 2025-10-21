@@ -28,15 +28,13 @@ export async function login(page: Page, user: TestUser = TEST_USER): Promise<voi
 	await page.fill('input[name="email"]', user.email);
 	await page.fill('input[name="password"]', user.password);
 
-	// Submit login form and wait for navigation (HTMX sends HX-Redirect header on success)
-	await Promise.all([
-		page.waitForNavigation({ waitUntil: "networkidle" }),
-		page.click('button[type="submit"]:has-text("Log In"), button[type="submit"]:has-text("Login")'),
-	]);
+	// Submit login form (HTMX sends HX-Redirect header on success)
+	await page.click('button[type="submit"]:has-text("Log In"), button[type="submit"]:has-text("Login")');
 
-	// Verify we're logged in by checking for logout button
+	// Wait for successful login by checking for logout button
+	// This is more reliable than waitForNavigation with HTMX redirects
 	await page.waitForSelector('button:has-text("Log Out")[hx-post="/auth/logout"]', {
-		timeout: 5000,
+		timeout: 10000,
 	});
 }
 
