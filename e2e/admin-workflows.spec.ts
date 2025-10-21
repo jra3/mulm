@@ -151,8 +151,12 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await requestChangesButton.waitFor({ state: "visible", timeout: 10000 });
 		await requestChangesButton.click();
 
+		// Wait for HTMX to load the dialog
+		await page.waitForLoadState("networkidle");
+		await page.waitForTimeout(1000);
+
 		// Fill in the reason
-		await page.waitForSelector('textarea[name="changes_requested_reason"]');
+		await page.waitForSelector('textarea[name="changes_requested_reason"]', { timeout: 10000 });
 		await page.fill('textarea[name="changes_requested_reason"]', "Please add more photos and details about water parameters");
 
 		// Submit changes request
