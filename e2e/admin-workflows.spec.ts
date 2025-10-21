@@ -78,9 +78,13 @@ test.describe("Admin - Changes Requested Workflow", () => {
 
 		// Get submission ID from URL
 		const url = page.url();
-		const submissionId = parseInt(url.match(/\/submissions\/(\d+)/)?.[1] || "0");
+		const match = url.match(/\/submissions\/(\d+)/);
 
-		// Verify submission was created
+		if (!match || !match[1]) {
+			throw new Error(`Failed to extract submission ID from URL: ${url}`);
+		}
+
+		const submissionId = parseInt(match[1]);
 		expect(submissionId).toBeGreaterThan(0);
 
 		// Logout regular user
