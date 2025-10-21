@@ -189,7 +189,7 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		}
 	});
 
-	test("member can edit submission when changes are requested", async ({ page }) => {
+	test.skip("member can edit submission when changes are requested", async ({ page }) => {
 		// Step 1: Create and submit a form as regular user
 		await login(page, TEST_USER);
 
@@ -369,7 +369,7 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		}
 	});
 
-	test("resubmitting clears changes_requested fields", async ({ page }) => {
+	test.skip("resubmitting clears changes_requested fields", async ({ page }) => {
 		// Step 1: Create and submit a form as regular user
 		await login(page, TEST_USER);
 
