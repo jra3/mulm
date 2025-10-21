@@ -155,12 +155,12 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await page.waitForLoadState("networkidle");
 		await page.waitForTimeout(1000);
 
-		// Fill in the reason
-		await page.waitForSelector('textarea[name="changes_requested_reason"]', { timeout: 10000 });
-		await page.fill('textarea[name="changes_requested_reason"]', "Please add more photos and details about water parameters");
+		// Fill in the reason (field name is "content", not "changes_requested_reason")
+		await page.waitForSelector('textarea[name="content"]', { timeout: 10000 });
+		await page.fill('textarea[name="content"]', "Please add more photos and details about water parameters");
 
 		// Submit changes request
-		await page.click('button[type="submit"]:has-text("Send Request")');
+		await page.click('button[type="submit"]:has-text("Send")');
 		await page.waitForLoadState("networkidle");
 
 		// Step 4: Verify in database
