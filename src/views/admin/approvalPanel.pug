@@ -73,7 +73,11 @@
                     type="button"
                     hx-get=`/admin/dialog/submissions/${submission.id}/request-changes`
                     hx-target="closest body"
-                    hx-swap="beforeend") Feedback
+                    hx-swap="beforeend") Request Changes
+                button.destructive(
+                    type="button"
+                    hx-delete=`/submissions/${submission.id}`
+                    hx-confirm="Are you sure you want to permanently delete this submission? This cannot be undone.") Delete
 
             // Additional Bonuses (collapsible)
             .flex.gap-4.items-center

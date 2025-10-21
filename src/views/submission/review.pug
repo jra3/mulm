@@ -152,27 +152,16 @@ html
                     form.inline(hx-patch=`/submissions/${submission.id}`)
                         button.primary(name="unsubmit" type="submit") Edit Submission
 
-        // Admin action buttons section
-        if isAdmin || (isSelf && !isApproved)
+        // Delete button section - only for submission owner
+        if isSelf
             section.bg-gray-100.pb-6
                 div.max-w-4xl.mx-auto.text-center.px-4
-                    .flex.justify-center.gap-4
-                        // Request Changes button - show for admins on submitted but unapproved submissions
-                        if isAdmin && isSubmitted && !isApproved
-                            button.secondary(
-                                type="button"
-                                hx-get=`/admin/dialog/submissions/${submission.id}/request-changes`
-                                hx-target="closest body"
-                                hx-swap="beforeend"
-                            ) Request Changes
-
-                        // Delete button
-                        button.destructive(
-                            class="px-4 py-2 text-sm"
-                            hx-delete=`/submissions/${submission.id}`
-                            hx-confirm="Are you sure you want to permanently delete this submission? This cannot be undone."
-                            type="button"
-                        ) Delete
+                    button.destructive(
+                        class="px-4 py-2 text-sm"
+                        hx-delete=`/submissions/${submission.id}`
+                        hx-confirm="Are you sure you want to permanently delete this submission? This cannot be undone."
+                        type="button"
+                    ) Delete
 
         // Admin Notes Section - visible only to program admins (shown BEFORE approval panels)
         if isAdmin

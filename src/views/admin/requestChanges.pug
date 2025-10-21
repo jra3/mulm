@@ -1,7 +1,7 @@
 include ../header.pug
 
 +dialog()
-	h2.text-xl.font-extrabold.mb-4 Submission Feedback
+	h2.text-xl.font-extrabold.mb-4 Request Changes
 	form.contents#feedbackForm(
 		hx-post=`/admin/submissions/${submission.id}/request-changes`
 		hx-trigger="submit"
@@ -12,7 +12,7 @@ include ../header.pug
 		hx-on::response-error="this.querySelector('#requestChangesError').textContent = event.detail.xhr.responseText; document.getElementById('feedbackSubmitBtn').disabled = false;"
 	)
 		span#requestChangesError.font-semibold.text-red-600(role="alert" aria-live="polite")
-		label.input-label(for="requestChangesText") Feedback for submitter
+		label.input-label(for="requestChangesText") Changes requested
 		textarea.w-full.h-96.bg-white(
 			name="content"
 			id="requestChangesText"
