@@ -33,7 +33,7 @@ export async function login(page: Page, user: TestUser = TEST_USER): Promise<voi
 
 	// Wait for successful login by checking for logout button
 	// This is more reliable than waitForNavigation with HTMX redirects
-	await page.waitForSelector('button:has-text("Log Out")[hx-post="/auth/logout"]', {
+	await page.waitForSelector('button:has-text("Log Out")', {
 		timeout: 10000,
 	});
 }
