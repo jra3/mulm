@@ -1,0 +1,279 @@
+include ../header.pug
+
+doctype html
+html
+	+headTag
+
+	body.bg-white.text-gray-800
+		+pageHeader(true, "", "")
+
+		section.bg-gray-100.py-6
+			div.max-w-4xl.mx-auto.text-center.px-4
+				h1.text-3xl.font-bold.mb-2 Edit Photos & Video
+				p.text-gray-600.mb-4= `${submission.species_common_name} (${submission.species_latin_name})`
+				p.text-sm.text-gray-500 Submitted on #{submission.submitted_on ? new Date(submission.submitted_on).toLocaleDateString() : 'N/A'}
+
+		form(hx-patch=`/submissions/${submission.id}/media` hx-trigger="submit")
+			input(type="hidden" name="id" value=submission.id)
+
+			//- Photos Section
+			section.bg-gray-100.py-4
+				div.max-w-4xl.mx-auto.text-left.px-4
+					h2.text-xl.font-bold.mb-4 Photos
+					p.text-sm.text-gray-600.mb-4 Upload up to 5 photos of your breeding success (optional)
+
+					//- Upload zone
+					div#image-upload-container.relative
+						div#upload-zone.border-2.border-dashed.border-gray-300.rounded-lg.p-8.text-center.hover_border-gray-400.transition-colors(
+							class="cursor-pointer"
+							onclick="document.getElementById('image-input').click()"
+							ondrop="handleDrop(event)"
+							ondragover="handleDragOver(event)"
+							ondragleave="handleDragLeave(event)"
+						)
+							svg.mx-auto.h-12.w-12.text-gray-400(fill="none" stroke="currentColor" viewbox="0 0 24 24")
+								path(stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12")
+
+							p.mt-2.text-sm.text-gray-600
+								span.font-semibold Click to upload
+								|  or drag and drop
+							p.text-xs.text-gray-500 PNG, JPG, WebP up to 10MB each
+
+							input#image-input.hidden(
+								type="file"
+								name="images"
+								accept="image/jpeg,image/png,image/webp"
+								multiple
+								onchange="handleFileSelect(event)"
+							)
+
+					//- Progress indicator
+					div#upload-progress.hidden.mt-4
+						div.bg-gray-200.rounded-full.h-2.overflow-hidden
+							div#progress-bar.bg-blue-600.h-2.transition-all.duration-300(style="width: 0%")
+						p#progress-text.text-sm.text-gray-600.mt-2 Uploading...
+
+					//- Error messages
+					div#upload-errors.hidden.mt-4.p-4.bg-red-50.border.border-red-200.rounded-lg
+						p.text-sm.font-semibold.text-red-800 Upload Errors:
+						ul#error-list.text-sm.text-red-600.mt-2.list-disc.list-inside
+
+					//- Image preview grid
+					div#image-preview-grid.grid.grid-cols-2.gap-4.mt-6(class="sm:grid-cols-3 md:grid-cols-4")
+
+					//- Hidden field to store image metadata
+					input#images-metadata(type="hidden" name="images" value=form.images || "[]")
+
+			//- Video Section
+			section.bg-gray-100.py-4
+				div.max-w-4xl.mx-auto.text-left.px-4
+					h2.text-xl.font-bold.mb-4 Video Link
+					p.text-sm.text-gray-600.mb-4 Add a link to a YouTube or Vimeo video (optional)
+
+					div.grid.gap-2
+						label.input-label(for="video_url") Video URL
+						div.relative
+							input.text-input(
+								id="video_url"
+								name="video_url"
+								type="url"
+								placeholder="https://youtube.com/watch?v=..."
+								value=form.video_url || ""
+								hx-get="/api/video/preview"
+								hx-trigger="input changed delay:500ms"
+								hx-target="#video-preview"
+								hx-vals='js:{"url": document.getElementById("video_url").value}'
+							)
+							span#video-url-hint.text-xs.text-gray-500 Paste a link from YouTube or Vimeo
+
+					//- Video preview
+					div#video-preview.mt-4
+
+			//- Action buttons
+			section.bg-gray-100.py-6
+				div.max-w-4xl.mx-auto.text-center.px-4
+					div.flex.justify-center.gap-4
+						button.primary(type="submit") Save Changes
+						a.secondary(href=`/submissions/${submission.id}`) Cancel
+
+		//- Image upload JavaScript
+		script.
+			// Use window scope to avoid redeclaration errors
+			if (!window.uploadState) {
+				window.uploadState = {
+					uploadedImages: !{form.images || '[]'},
+					uploadInProgress: false,
+					eventSource: null
+				};
+			} else {
+				window.uploadState.uploadedImages = !{form.images || '[]'};
+			}
+
+			function handleDragOver(e) {
+				e.preventDefault();
+				e.currentTarget.classList.add('border-blue-500', 'bg-blue-50');
+			}
+
+			function handleDragLeave(e) {
+				e.preventDefault();
+				e.currentTarget.classList.remove('border-blue-500', 'bg-blue-50');
+			}
+
+			function handleDrop(e) {
+				e.preventDefault();
+				e.currentTarget.classList.remove('border-blue-500', 'bg-blue-50');
+
+				const files = e.dataTransfer.files;
+				if (files.length > 0) {
+					uploadFiles(files);
+				}
+			}
+
+			function handleFileSelect(e) {
+				const files = e.target.files;
+				if (files.length > 0) {
+					uploadFiles(files);
+				}
+			}
+
+			async function uploadFiles(files) {
+				if (window.uploadState.uploadInProgress) {
+					alert('Please wait for the current upload to complete');
+					return;
+				}
+
+				// Check total image count
+				if (window.uploadState.uploadedImages.length + files.length > 5) {
+					alert('You can upload a maximum of 5 images total');
+					return;
+				}
+
+				window.uploadState.uploadInProgress = true;
+				const uploadId = 'upload_' + Date.now();
+
+				// Show progress
+				document.getElementById('upload-progress').classList.remove('hidden');
+				document.getElementById('upload-errors').classList.add('hidden');
+
+				// Set up SSE for progress tracking
+				window.uploadState.eventSource = new EventSource('/api/upload/progress/' + uploadId);
+				window.uploadState.eventSource.onmessage = function(event) {
+					const data = JSON.parse(event.data);
+					updateProgress(data.percent, data.message);
+
+					if (data.stage === 'complete' || data.stage === 'error') {
+						window.uploadState.eventSource.close();
+						window.uploadState.eventSource = null;
+					}
+				};
+
+				// Prepare form data
+				const formData = new FormData();
+				formData.append('uploadId', uploadId);
+				formData.append('submissionId', document.querySelector('input[name="id"]')?.value || '0');
+
+				for (let i = 0; i < files.length; i++) {
+					formData.append('images', files[i]);
+				}
+
+				try {
+					const response = await fetch('/api/upload/image', {
+						method: 'POST',
+						body: formData
+					});
+
+					const result = await response.json();
+
+					if (result.success) {
+						// Add uploaded images to the list
+						window.uploadState.uploadedImages = window.uploadState.uploadedImages.concat(result.images);
+						updateImageGrid();
+						updateHiddenField();
+
+						// Show errors if any
+						if (result.errors && result.errors.length > 0) {
+							showErrors(result.errors);
+						}
+					} else {
+						showErrors([result.error || 'Upload failed']);
+					}
+				} catch (error) {
+					console.error('Upload error:', error);
+					showErrors(['Upload failed: ' + error.message]);
+				} finally {
+					window.uploadState.uploadInProgress = false;
+					document.getElementById('upload-progress').classList.add('hidden');
+					document.getElementById('image-input').value = '';
+
+					if (window.uploadState.eventSource) {
+						window.uploadState.eventSource.close();
+					}
+				}
+			}
+
+			function updateProgress(percent, message) {
+				document.getElementById('progress-bar').style.width = percent + '%';
+				document.getElementById('progress-text').textContent = message;
+			}
+
+			function showErrors(errors) {
+				const errorContainer = document.getElementById('upload-errors');
+				const errorList = document.getElementById('error-list');
+
+				errorList.innerHTML = '';
+				errors.forEach(error => {
+					const li = document.createElement('li');
+					li.textContent = error;
+					errorList.appendChild(li);
+				});
+
+				errorContainer.classList.remove('hidden');
+			}
+
+			function updateImageGrid() {
+				const grid = document.getElementById('image-preview-grid');
+				grid.innerHTML = '';
+
+				window.uploadState.uploadedImages.forEach((image, index) => {
+					const div = document.createElement('div');
+					div.className = 'relative group';
+					div.innerHTML = `
+						<img src="${image.url}" alt="Uploaded image ${index + 1}"
+								 class="w-full h-32 object-cover rounded-lg shadow-md">
+						<button type="button"
+										onclick="removeImage(${index})"
+										class="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+										aria-label="Remove image">
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+							</svg>
+						</button>
+					`;
+					grid.appendChild(div);
+				});
+			}
+
+			function removeImage(index) {
+				if (confirm('Remove this image?')) {
+					// If image has a key, we should delete from R2
+					const image = window.uploadState.uploadedImages[index];
+					if (image.key) {
+						fetch('/api/upload/image/' + encodeURIComponent(image.key), {
+							method: 'DELETE'
+						}).catch(console.error);
+					}
+
+					window.uploadState.uploadedImages.splice(index, 1);
+					updateImageGrid();
+					updateHiddenField();
+				}
+			}
+
+			function updateHiddenField() {
+				document.getElementById('images-metadata').value = JSON.stringify(window.uploadState.uploadedImages);
+			}
+
+			// Initialize grid if there are existing images
+			if (window.uploadState.uploadedImages.length > 0) {
+				updateImageGrid();
+			}

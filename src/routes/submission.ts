@@ -17,7 +17,7 @@ import {
   isLivestock,
 } from "@/forms/submission";
 import { extractValid } from "@/forms/utils";
-import { getQueryString } from "@/utils/request";
+import { getQueryString, getBodyString } from "@/utils/request";
 import { MulmRequest } from "@/sessions";
 import { MemberRecord, getMember, getMembersList } from "@/db/members";
 import { onSubmissionSend } from "@/notifications";
@@ -402,6 +402,123 @@ export const remove = async (req: MulmRequest, res: Response) => {
 
   // Not authorized
   res.status(403).send("Cannot delete approved submissions");
+};
+
+/**
+ * GET /submissions/:id/edit-media
+ * Renders form for editing photos and video on approved submissions (owner only)
+ */
+export const renderEditMedia = async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+  const submission = await validateSubmission(req, res);
+
+  if (!submission) {
+    return;
+  }
+
+  if (!viewer) {
+    res.status(401).send();
+    return;
+  }
+
+  // Only owner can edit media
+  if (viewer.id !== submission.member_id) {
+    res.status(403).send("You can only edit media on your own submissions");
+    return;
+  }
+
+  // Only approved submissions
+  if (!submission.approved_on) {
+    res.status(400).send("You can only edit media on approved submissions");
+    return;
+  }
+
+  // Parse images JSON
+  let images: unknown[] = [];
+  try {
+    const parsed: unknown = JSON.parse(submission.images || "[]");
+    if (Array.isArray(parsed)) {
+      images = parsed;
+    }
+  } catch {
+    images = [];
+  }
+
+  res.render("submission/editMedia", {
+    title: "Edit Photos & Video",
+    submission,
+    form: {
+      id: submission.id,
+      images: JSON.stringify(images),
+      video_url: submission.video_url || "",
+    },
+  });
+};
+
+/**
+ * PATCH /submissions/:id/media
+ * Updates photos and video URL on approved submissions (owner only)
+ */
+export const updateMedia = async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+  const submission = await validateSubmission(req, res);
+
+  if (!submission) {
+    return;
+  }
+
+  if (!viewer) {
+    res.status(401).send();
+    return;
+  }
+
+  // Only owner can edit media
+  if (viewer.id !== submission.member_id) {
+    res.status(403).send("You can only edit media on your own submissions");
+    return;
+  }
+
+  // Only approved submissions
+  if (!submission.approved_on) {
+    res.status(400).send("You can only edit media on approved submissions");
+    return;
+  }
+
+  // Get images and video_url from form
+  const images = getBodyString(req, "images", "[]");
+  const video_url = getBodyString(req, "video_url", "");
+
+  // Validate images JSON
+  try {
+    const parsed: unknown = JSON.parse(images);
+    if (!Array.isArray(parsed)) {
+      res.status(400).send("Invalid images data");
+      return;
+    }
+  } catch {
+    res.status(400).send("Invalid images format");
+    return;
+  }
+
+  // Validate video URL if provided
+  const trimmedVideoUrl = video_url.trim();
+  if (trimmedVideoUrl !== "") {
+    try {
+      new URL(trimmedVideoUrl);
+    } catch {
+      res.status(400).send("Invalid video URL format");
+      return;
+    }
+  }
+
+  // Update only images and video_url
+  await db.updateSubmission(submission.id, {
+    images,
+    video_url: trimmedVideoUrl || null,
+  });
+
+  // Redirect back to submission view
+  res.set("HX-Redirect", `/submissions/${submission.id}`).status(200).send();
 };
 
 /**
