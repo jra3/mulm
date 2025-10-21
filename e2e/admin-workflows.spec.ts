@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { login } from "./helpers/auth";
+import { login, logout } from "./helpers/auth";
 import { TEST_USER, TEST_ADMIN, cleanupTestUserSubmissions, getTestDatabase, ensureTestUserExists } from "./helpers/testData";
 import { fillTomSelectTypeahead } from "./helpers/tomSelect";
 
@@ -40,7 +40,7 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await page.selectOption('select[name="species_class"]', "Livebearers");
 
 		// Wait for Tom Select to initialize on species name fields by checking for the Tom Select wrapper
-		await page.waitForSelector('.ts-wrapper[data-ts-control]', { timeout: 5000 });
+		await page.waitForSelector('.ts-wrapper', { timeout: 5000 });
 
 		const today = new Date().toISOString().split("T")[0];
 		await page.fill('input[name="reproduction_date"]', today);
@@ -72,39 +72,19 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await submitButton.scrollIntoViewIfNeeded();
 		await submitButton.click();
 
+		// Wait for HTMX submission to complete and redirect to submission view
+		await page.waitForURL(/\/submissions\/\d+/, { timeout: 10000 });
 		await page.waitForLoadState("networkidle");
 
-		// Get submission ID from database (URL may not redirect in all cases)
-		const db = await getTestDatabase();
-		let submissionId: number;
-		try {
-			const user = await db.get<{ id: number }>(
-				"SELECT id FROM members WHERE contact_email = ?",
-				TEST_USER.email
-			);
-			expect(user).toBeTruthy();
+		// Get submission ID from URL
+		const url = page.url();
+		const submissionId = parseInt(url.match(/\/submissions\/(\d+)/)?.[1] || "0");
 
-			const submissions = await db.all(
-				"SELECT * FROM submissions WHERE member_id = ? AND submitted_on IS NOT NULL ORDER BY id DESC",
-				user!.id
-			);
-			expect(submissions.length).toBeGreaterThan(0);
-			submissionId = submissions[0].id;
-		} finally {
-			await db.close();
-		}
-
-		// Navigate to home to ensure logout button is accessible
-		await page.goto("/");
-		await page.waitForLoadState("networkidle");
-
-		// Navigate to home to ensure logout button is accessible
-		await page.goto("/");
-		await page.waitForLoadState("networkidle");
+		// Verify submission was created
+		expect(submissionId).toBeGreaterThan(0);
 
 		// Logout regular user
-		await page.click('button[hx-post="/auth/logout"]');
-		await page.waitForLoadState("networkidle");
+		await logout(page);
 
 		// Step 2: Set witness data (admin user already created in beforeEach)
 		const db2 = await getTestDatabase();
@@ -192,7 +172,7 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await page.selectOption('select[name="species_class"]', "Livebearers");
 
 		// Wait for Tom Select to initialize on species name fields by checking for the Tom Select wrapper
-		await page.waitForSelector('.ts-wrapper[data-ts-control]', { timeout: 5000 });
+		await page.waitForSelector('.ts-wrapper', { timeout: 5000 });
 
 		const today = new Date().toISOString().split("T")[0];
 		await page.fill('input[name="reproduction_date"]', today);
@@ -246,13 +226,8 @@ test.describe("Admin - Changes Requested Workflow", () => {
 			await dbTest2a.close();
 		}
 
-		// Navigate to home to ensure logout button is accessible
-		await page.goto("/");
-		await page.waitForLoadState("networkidle");
-
 		// Logout regular user
-		await page.click('button[hx-post="/auth/logout"]');
-		await page.waitForLoadState("networkidle");
+		await logout(page);
 
 		// Step 2: Set witness data
 		const dbTest2b = await getTestDatabase();
@@ -362,7 +337,7 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await page.selectOption('select[name="species_class"]', "Livebearers");
 
 		// Wait for Tom Select to initialize on species name fields by checking for the Tom Select wrapper
-		await page.waitForSelector('.ts-wrapper[data-ts-control]', { timeout: 5000 });
+		await page.waitForSelector('.ts-wrapper', { timeout: 5000 });
 
 		const today = new Date().toISOString().split("T")[0];
 		await page.fill('input[name="reproduction_date"]', today);
@@ -416,13 +391,8 @@ test.describe("Admin - Changes Requested Workflow", () => {
 			await dbTest3a.close();
 		}
 
-		// Navigate to home to ensure logout button is accessible
-		await page.goto("/");
-		await page.waitForLoadState("networkidle");
-
 		// Logout regular user
-		await page.click('button[hx-post="/auth/logout"]');
-		await page.waitForLoadState("networkidle");
+		await logout(page);
 
 		// Step 2: Set witness data
 		const dbTest3b = await getTestDatabase();

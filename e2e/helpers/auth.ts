@@ -37,10 +37,11 @@ export async function login(page: Page, user: TestUser = TEST_USER): Promise<voi
 
 /**
  * Logout the current user
+ * Uses simple GET request to /test-logout for reliability
  */
 export async function logout(page: Page): Promise<void> {
-	// Click logout link/button
-	await page.click('a:has-text("Log Out"), button:has-text("Log Out"), form[action*="logout"] button');
+	// Navigate to test logout endpoint (destroys session and redirects to home)
+	await page.goto("/test-logout");
 
 	// Wait for redirect to home (logged out state)
 	await page.waitForSelector('button:has-text("Log In"), a:has-text("Log In")');
