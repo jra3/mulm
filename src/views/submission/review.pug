@@ -83,19 +83,8 @@ html
                     +reviewTextInput("Points", "points")
                     +reviewTextInput("Total Points", "total_points")
 
-        // Admin Edit Section - centered, above admin notes
+        // Dialog container for edit approved submission modal
         if isAdmin && isApproved && !isSelf
-            section.bg-gray-100.py-6
-                div.max-w-4xl.mx-auto.text-center.px-4
-                    button.primary(
-                        type="button"
-                        onclick="document.getElementById('edit-approved-dialog').showModal()"
-                        hx-get=`/admin/submissions/${submission.id}/edit-approved`
-                        hx-target="#edit-approved-dialog"
-                        hx-swap="innerHTML"
-                    ) Edit Approved Submission
-
-            // Dialog container for edit modal
             dialog#edit-approved-dialog(
                 class="rounded-lg shadow-xl"
                 style="max-width: 900px; width: 90%; max-height: 90vh; padding: 0; border: none; margin: auto;"
@@ -172,42 +161,9 @@ html
                             type="button"
                         ) Delete
 
-        // Admin Notes Section - visible only to program admins (shown BEFORE approval panels)
+        // Unified Admin Section (action panels + notes + edit button)
         if isAdmin
-            section.bg-gray-700.py-6
-                div.max-w-4xl.mx-auto.text-left.px-4
-                    h2.text-xl.font-bold.mb-2.text-white Admin Notes
-                    p.text-sm.text-gray-300.mb-4 Private notes visible only to program admins
-
-                    //- Notes feed
-                    div#notes-list.mb-6.space-y-3
-                        if adminNotes && adminNotes.length > 0
-                            each note in adminNotes
-                                include ../admin/submissionNote.pug
-                        else
-                            p.text-gray-500.text-sm.italic No notes yet
-
-                    //- Note form
-                    form#note-form(
-                        hx-post=`/admin/submissions/${submission.id}/notes`
-                        hx-target="#notes-list"
-                        hx-swap="beforeend"
-                        hx-on--after-request="this.reset()"
-                    )
-                        div.mb-2
-                            textarea.text-input(
-                                id="note_text"
-                                name="note_text"
-                                placeholder="Write a note..."
-                                rows="3"
-                                required
-                                maxlength="2000"
-                            )
-                        button.primary(type="submit") Add Note
-
-        // Admin Action Panels (screening, waiting period, approval)
-        section.bg-gray-100
-            if isAdmin
+            section.bg-gray-100
                 // Screening Actions Panel - only show for pending screening
                 if submission.witness_verification_status === 'pending'
                     if isSelf
@@ -248,6 +204,25 @@ html
                                 .bg-blue-100.rounded.p-3.mt-2
                                     p.text-blue-800.font-semibold Days until eligible for auction: #{waitingPeriodStatus.daysRemaining}
                                     p.text-blue-600.text-sm.mt-1 Elapsed: #{waitingPeriodStatus.elapsedDays} of #{waitingPeriodStatus.requiredDays} days
+
+                        // Admin actions panel during waiting period
+                        if isAdmin && !isSelf
+                            .status-panel.status-panel-admin
+                                .container.mx-auto.max-w-4xl
+                                    h3.text-white.text-lg.font-semibold.mb-4 Admin Actions
+                                    p.text-white.mb-4 While awaiting auction eligibility, you can request changes or delete this submission.
+                                    .flex.justify-center.gap-4
+                                        button.destructive(
+                                            type="button"
+                                            hx-get=`/admin/dialog/submissions/${submission.id}/request-changes`
+                                            hx-target="closest body"
+                                            hx-swap="beforeend"
+                                        ) Request Changes
+                                        button.destructive(
+                                            type="button"
+                                            hx-delete=`/submissions/${submission.id}`
+                                            hx-confirm="Are you sure you want to permanently delete this submission? This cannot be undone."
+                                        ) Delete
                     else if isSelf
                         // Show message for self-approval prevention
                         .status-panel.status-panel-warning
@@ -261,6 +236,53 @@ html
                         // Show approval panel for other admins
                         .status-panel.status-panel-admin#adminPanel
                             include ../admin/approvalPanel.pug
+
+            // Admin Notes and Actions - shown after action panels
+            section.bg-gray-700.py-6
+                div.max-w-4xl.mx-auto.text-left.px-4
+                    h2.text-xl.font-bold.mb-2.text-white Admin Section
+                    p.text-sm.text-gray-300.mb-4 Private notes and actions visible only to program admins
+
+                    // Edit Approved Submission button (for approved submissions only)
+                    if isApproved && !isSelf
+                        div.mb-6
+                            button.primary(
+                                type="button"
+                                onclick="document.getElementById('edit-approved-dialog').showModal()"
+                                hx-get=`/admin/submissions/${submission.id}/edit-approved`
+                                hx-target="#edit-approved-dialog"
+                                hx-swap="innerHTML"
+                            ) Edit Approved Submission
+
+                    // Notes subsection
+                    div.mt-6
+                        h3.text-lg.font-semibold.text-white.mb-2 Notes
+
+                        //- Notes feed
+                        div#notes-list.mb-6.space-y-3
+                            if adminNotes && adminNotes.length > 0
+                                each note in adminNotes
+                                    include ../admin/submissionNote.pug
+                            else
+                                p.text-gray-500.text-sm.italic No notes yet
+
+                        //- Note form
+                        form#note-form(
+                            hx-post=`/admin/submissions/${submission.id}/notes`
+                            hx-target="#notes-list"
+                            hx-swap="beforeend"
+                            hx-on--after-request="this.reset()"
+                        )
+                            div.mb-2
+                                textarea.text-input(
+                                    id="note_text"
+                                    name="note_text"
+                                    placeholder="Write a note..."
+                                    rows="3"
+                                    required
+                                    maxlength="2000"
+                                )
+                            button.primary(type="submit") Add Note
 
         // Initialize typeahead for species selection in approval panel
         if isAdmin

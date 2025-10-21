@@ -28,8 +28,8 @@ export async function createTestSubmission(options: TestSubmissionOptions): Prom
 	try {
 		const now = new Date().toISOString();
 		const submittedOn = options.submitted ? now : null;
-		// Set witnessed_on to 30 days ago to ensure waiting period is satisfied
-		const witnessedOn = options.witnessed ? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString() : null;
+		// Set witnessed_on to 70 days ago to ensure waiting period is satisfied (60 day requirement)
+		const witnessedOn = options.witnessed ? new Date(Date.now() - 70 * 24 * 60 * 60 * 1000).toISOString() : null;
 		const approvedOn = options.approved ? now : null;
 
 		const result = await db.run(
