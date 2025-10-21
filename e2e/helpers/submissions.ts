@@ -10,6 +10,7 @@ export interface TestSubmissionOptions {
 	submitted?: boolean;
 	witnessed?: boolean;
 	witnessedBy?: number;
+	witnessedDaysAgo?: number; // How many days ago witnessing occurred (default: 0 - today)
 	approved?: boolean;
 	approvedBy?: number;
 	points?: number;
@@ -28,8 +29,10 @@ export async function createTestSubmission(options: TestSubmissionOptions): Prom
 	try {
 		const now = new Date().toISOString();
 		const submittedOn = options.submitted ? now : null;
-		// Set witnessed_on to 70 days ago to ensure waiting period is satisfied (60 day requirement)
-		const witnessedOn = options.witnessed ? new Date(Date.now() - 70 * 24 * 60 * 60 * 1000).toISOString() : null;
+		// Set witnessed_on based on witnessedDaysAgo parameter (default 0 = today)
+		// For waiting period tests, use 0 (today). For approval tests, use 70+ days to satisfy 60-day requirement
+		const daysAgo = options.witnessedDaysAgo !== undefined ? options.witnessedDaysAgo : 0;
+		const witnessedOn = options.witnessed ? new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString() : null;
 		const approvedOn = options.approved ? now : null;
 
 		const result = await db.run(
