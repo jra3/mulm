@@ -392,7 +392,7 @@ export async function declineWitness(submissionId: number, witnessAdminId: numbe
     return await withTransaction(async (db) => {
       // Check current state and prevent self-witnessing - use transaction db
       const stmt = await db.prepare(`
-				SELECT id, member_id, witness_verification_status 
+				SELECT id, member_id, witness_verification_status
 				FROM submissions WHERE id = ?`);
       const current: Submission[] = await stmt.all(submissionId);
       await stmt.finalize();
@@ -427,6 +427,70 @@ export async function declineWitness(submissionId: number, witnessAdminId: numbe
     });
   } catch (err) {
     logger.error("Failed to decline witness", err);
+    throw err;
+  }
+}
+
+/**
+ * Request changes on a submission (admin action)
+ * Validates submission state and sets changes_requested fields
+ * Throws errors for invalid states (draft, approved, denied)
+ */
+export async function requestChanges(
+  submissionId: number,
+  adminId: number,
+  reason: string
+): Promise<void> {
+  try {
+    return await withTransaction(async (db) => {
+      // Get current submission state
+      const stmt = await db.prepare(`
+        SELECT id, submitted_on, approved_on, denied_on
+        FROM submissions WHERE id = ?`);
+      const current: Submission[] = await stmt.all(submissionId);
+      await stmt.finalize();
+
+      if (!current[0]) {
+        throw new Error("Submission not found");
+      }
+
+      // Validate submission state
+      if (!current[0].submitted_on) {
+        throw new Error("Cannot request changes on draft submissions");
+      }
+
+      if (current[0].approved_on) {
+        throw new Error("Cannot request changes on approved submissions");
+      }
+
+      if (current[0].denied_on) {
+        throw new Error("Cannot request changes on denied submissions");
+      }
+
+      // Set changes_requested fields
+      const updateStmt = await db.prepare(`
+        UPDATE submissions SET
+          changes_requested_on = ?,
+          changes_requested_by = ?,
+          changes_requested_reason = ?
+        WHERE id = ?`);
+
+      const result = await updateStmt.run(
+        new Date().toISOString(),
+        adminId,
+        reason,
+        submissionId
+      );
+      await updateStmt.finalize();
+
+      if (result.changes === 0) {
+        throw new Error("Failed to update submission");
+      }
+
+      logger.info(`Changes requested for submission ${submissionId} by admin ${adminId}`);
+    });
+  } catch (err) {
+    logger.error("Failed to request changes", err);
     throw err;
   }
 }

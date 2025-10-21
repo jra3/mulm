@@ -19,6 +19,7 @@ import {
   getWaitingPeriodSubmissions,
   confirmWitness,
   declineWitness,
+  requestChanges,
   type Submission,
 } from "@/db/submissions";
 import { approvalSchema } from "@/forms/approval";
@@ -365,20 +366,22 @@ export const sendRequestChanges = async (req: MulmRequest, res: Response) => {
       return;
     }
 
-    // Set changes_requested fields instead of unsetting submitted_on
-    // This preserves witness data while allowing user to edit
+    // Call database function (handles validation and state updates)
     await Promise.all([
-      updateSubmission(submission.id, {
-        changes_requested_on: new Date().toISOString(),
-        changes_requested_by: req.viewer!.id,
-        changes_requested_reason: content,
-      }),
+      requestChanges(submission.id, req.viewer!.id, content),
       onChangesRequested(submission, member, content),
     ]);
 
     // Redirect to approval queue for the submission's program
     res.set("HX-Redirect", `/admin/queue/${submission.program}`).send();
   } catch (error) {
+    // Handle validation errors from db.requestChanges
+    if (error instanceof Error) {
+      if (error.message.includes("Cannot request changes")) {
+        res.status(400).send(error.message);
+        return;
+      }
+    }
     logger.error("Error sending request changes:", error);
     res.status(500).send("Failed to request changes. Please try again.");
   }
