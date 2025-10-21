@@ -67,24 +67,30 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await page.fill('input[name="substrate_depth"]', "1 inch");
 		await page.fill('input[name="substrate_color"]', "Natural");
 
+		// Scroll to ensure submit button is in view
+		await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+		await page.waitForTimeout(500);
+
 		// Submit (not draft)
 		const submitButton = page.locator('button[type="submit"]:has-text("Submit")');
 		await submitButton.scrollIntoViewIfNeeded();
 		await submitButton.click();
 
-		// Wait for HTMX submission to complete and redirect to submission view
-		await page.waitForURL(/\/submissions\/\d+/, { timeout: 10000 });
+		// Wait for submission to complete
 		await page.waitForLoadState("networkidle");
+		await page.waitForTimeout(1000);
 
 		// Get submission ID from URL
-		const url = page.url();
-		const match = url.match(/\/submissions\/(\d+)/);
+		const currentUrl = page.url();
+		console.log("Current URL after submission:", currentUrl);
 
-		if (!match || !match[1]) {
-			throw new Error(`Failed to extract submission ID from URL: ${url}`);
+		if (!currentUrl.includes('/submissions/')) {
+			throw new Error(`Form submission did not redirect to submission page. Current URL: ${currentUrl}`);
 		}
 
-		const submissionId = parseInt(match[1]);
+		const urlMatch = currentUrl.match(/\/submissions\/(\d+)/);
+		const submissionId = urlMatch ? parseInt(urlMatch[1]) : 0;
+
 		expect(submissionId).toBeGreaterThan(0);
 
 		// Logout regular user
@@ -123,8 +129,12 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await page.waitForLoadState("networkidle");
 
 		// Step 3: Request changes
-		// Wait for the "Request Changes" or "Feedback" button to appear
-		const requestChangesButton = page.locator('button:has-text("Request Changes"), button:has-text("Feedback")').first();
+		// Scroll down to approval panel at the bottom
+		await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+
+		// Wait for the "Request Changes" button to appear in the approval panel
+		const requestChangesButton = page.locator('button:has-text("Request Changes")').first();
+		await requestChangesButton.scrollIntoViewIfNeeded();
 		await requestChangesButton.waitFor({ state: "visible", timeout: 10000 });
 		await requestChangesButton.click();
 
