@@ -217,158 +217,71 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		}
 	});
 
-	// TODO: Refactor to use createTestSubmission helper instead of manual form filling
-	// Currently fails because manual witness setup doesn't match test expectations
-	test.skip("resubmitting clears changes_requested fields", async ({ page }) => {
-		// Step 1: Create and submit a form as regular user
-		await login(page, TEST_USER);
-
-		await page.goto("/submissions/new");
-		await page.waitForSelector("#bapForm");
-
-		await page.selectOption('select[name="water_type"]', "Fresh");
-		await page.selectOption('select[name="species_type"]', "Fish");
-		await page.waitForLoadState("networkidle");
-
-		await page.selectOption('select[name="species_class"]', "Livebearers");
-
-		// Wait for Tom Select to initialize on species name fields by checking for the Tom Select wrapper
-		await page.waitForSelector('.ts-wrapper', { timeout: 5000 });
-
-		const today = new Date().toISOString().split("T")[0];
-		await page.fill('input[name="reproduction_date"]', today);
-
-		// Fill species names using Tom Select typeahead
-		await fillTomSelectTypeahead(page, "species_common_name", "Guppy");
-		await fillTomSelectTypeahead(page, "species_latin_name", "Poecilia reticulata");
-		await page.fill('input[name="temperature"]', "75");
-		await page.fill('input[name="ph"]', "7.0");
-		await page.fill('input[name="gh"]', "150");
-		await page.fill('input[name="count"]', "20");
-
-		// Wait for Tom Select on foods/spawn fields to be ready
-		await page.waitForSelector('select[name="foods"] + .ts-wrapper', { timeout: 5000 });
-		await page.selectOption('select[name="foods"]', ["Live"]);
-		await page.selectOption('select[name="spawn_locations"]', ["Plant"]);
-
-		// Fill required tank fields
-		await page.fill('input[name="tank_size"]', "10 gallon");
-		await page.fill('input[name="filter_type"]', "Sponge");
-		await page.fill('input[name="water_change_volume"]', "25%");
-		await page.fill('input[name="water_change_frequency"]', "Weekly");
-		await page.fill('input[name="substrate_type"]', "Gravel");
-		await page.fill('input[name="substrate_depth"]', "1 inch");
-		await page.fill('input[name="substrate_color"]', "Natural");
-
-		// Submit (not draft)
-		const submitButton = page.locator('button[type="submit"]:has-text("Submit")');
-		await submitButton.scrollIntoViewIfNeeded();
-		await submitButton.click();
-
-		await page.waitForLoadState("networkidle");
-
-		// Get submission ID from database (URL may not redirect in all cases)
-		const dbTest3a = await getTestDatabase();
+	// NOTE: Works in CI (serial mode). May have race conditions in local parallel mode.
+	test("resubmitting clears changes_requested fields", async ({ page }) => {
+		// Step 1: Create a submitted submission with witness confirmation and changes requested
+		const db = await getTestDatabase();
 		let submissionId: number;
 		try {
-			const user = await dbTest3a.get<{ id: number }>(
+			const user = await db.get<{ id: number }>(
 				"SELECT id FROM members WHERE contact_email = ?",
 				TEST_USER.email
 			);
-			expect(user).toBeTruthy();
-
-			const submissions = await dbTest3a.all(
-				"SELECT * FROM submissions WHERE member_id = ? AND submitted_on IS NOT NULL ORDER BY id DESC",
-				user!.id
-			);
-			expect(submissions.length).toBeGreaterThan(0);
-			submissionId = submissions[0].id;
-		} finally {
-			await dbTest3a.close();
-		}
-
-		// Logout regular user
-		await logout(page);
-
-		// Step 2: Set witness data
-		const dbTest3b = await getTestDatabase();
-		try {
-			// Get admin user ID
-			const adminUser = await dbTest3b.get<{ id: number }>(
+			const admin = await db.get<{ id: number }>(
 				"SELECT id FROM members WHERE contact_email = ?",
 				TEST_ADMIN.email
 			);
 
-			if (!adminUser) {
-				throw new Error("Admin user should exist from beforeEach");
+			if (!user || !admin) {
+				throw new Error("Test users not found in database");
 			}
 
-			// Simulate witness confirmation
-			await dbTest3b.run(
-				"UPDATE submissions SET witnessed_by = ?, witnessed_on = ?, witness_verification_status = ? WHERE id = ?",
-				adminUser.id,
+			// Create submission with witness confirmation
+			submissionId = await createTestSubmission({
+				memberId: user.id,
+				submitted: true,
+				witnessed: true,
+				witnessedBy: admin.id,
+				witnessedDaysAgo: 0, // Just witnessed today - still in waiting period
+			});
+
+			// Set changes_requested fields directly in database
+			await db.run(
+				"UPDATE submissions SET changes_requested_on = ?, changes_requested_by = ?, changes_requested_reason = ? WHERE id = ?",
 				new Date().toISOString(),
-				"confirmed",
+				admin.id,
+				"Please add more details",
 				submissionId
 			);
 		} finally {
-			await dbTest3b.close();
+			await db.close();
 		}
 
-		// Login as admin
-		await login(page, TEST_ADMIN);
-
-		// Navigate to submission and request changes
-		await page.goto(`/submissions/${submissionId}`);
-		await page.waitForSelector("body");
-
-		await page.click('button:has-text("Request Changes")');
-		await page.waitForSelector('textarea[name="content"]', { timeout: 10000 });
-		await page.fill('textarea[name="content"]', "Please add more details");
-
-		await page.click('button[type="submit"]:has-text("Send")');
-
-		// Wait for HTMX redirect to complete
-		await page.waitForURL(/\/admin\/queue\//, { timeout: 10000 });
-		await page.waitForLoadState("networkidle");
-
-		// Verify changes_requested fields are set
-		const dbTest3c = await getTestDatabase();
-		try {
-			const beforeResubmit = await dbTest3c.get(
-				"SELECT * FROM submissions WHERE id = ?",
-				submissionId
-			);
-			expect(beforeResubmit.changes_requested_on).toBeTruthy();
-			expect(beforeResubmit.changes_requested_by).toBeTruthy();
-			expect(beforeResubmit.changes_requested_reason).toBe("Please add more details");
-		} finally {
-			await dbTest3c.close();
-		}
-
-		// Logout admin
-		await logout(page);
-
-		// Step 3: Login as member and resubmit
+		// Step 2: Login as member and resubmit
 		await login(page, TEST_USER);
 
 		await page.goto(`/submissions/${submissionId}`);
 		await page.waitForSelector("#bapForm");
 
+		// Verify changes requested banner is visible
+		await expect(page.locator('text=Changes Requested')).toBeVisible();
+
 		// Make some edits
 		await page.fill('input[name="ph"]', "7.4");
 
-		// Look for "Resubmit" button (this should clear changes_requested fields)
+		// Click "Resubmit" button (this should clear changes_requested fields)
 		const resubmitButton = page.locator('button[type="submit"]:has-text("Resubmit")');
 		await resubmitButton.scrollIntoViewIfNeeded();
 		await resubmitButton.click();
 
+		// Wait for redirect after resubmit
+		await page.waitForURL(/\/submissions\/\d+/, { timeout: 10000 });
 		await page.waitForLoadState("networkidle");
 
-		// Step 4: Verify changes_requested fields are cleared
-		const dbTest3d = await getTestDatabase();
+		// Step 3: Verify changes_requested fields are cleared
+		const db2 = await getTestDatabase();
 		try {
-			const submission = await dbTest3d.get(
+			const submission = await db2.get(
 				"SELECT * FROM submissions WHERE id = ?",
 				submissionId
 			);
@@ -389,7 +302,7 @@ test.describe("Admin - Changes Requested Workflow", () => {
 			// Verify edits persisted
 			expect(submission.ph).toBe("7.4");
 		} finally {
-			await dbTest3d.close();
+			await db2.close();
 		}
 	});
 });
