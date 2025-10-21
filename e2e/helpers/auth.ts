@@ -13,39 +13,35 @@ export interface TestUser {
 
 /**
  * Login via password authentication
+ * Uses dedicated test login page for reliability (no HTMX, no dialogs)
  */
 export async function login(page: Page, user: TestUser = TEST_USER): Promise<void> {
-	// Navigate to home page
-	await page.goto("/");
-
-	// Click login button to open dialog
-	await page.click('button:has-text("Log In"), a:has-text("Log In"), button:has-text("Login")');
-
-	// Wait for login dialog to appear
-	await page.waitForSelector('input[name="email"]', { state: "visible" });
+	// Navigate to test login page (only available in test mode)
+	await page.goto("/test-login");
 
 	// Fill in credentials
 	await page.fill('input[name="email"]', user.email);
 	await page.fill('input[name="password"]', user.password);
 
-	// Submit login form and wait for navigation (HTMX sends HX-Redirect header on success)
+	// Submit form and wait for navigation to complete
 	await Promise.all([
 		page.waitForNavigation({ waitUntil: "networkidle" }),
-		page.click('button[type="submit"]:has-text("Log In"), button[type="submit"]:has-text("Login")'),
+		page.click('button[type="submit"]'),
 	]);
 
 	// Verify we're logged in by checking for logout button
-	await page.waitForSelector('button:has-text("Log Out")[hx-post="/auth/logout"]', {
+	await page.waitForSelector('button:has-text("Log Out")', {
 		timeout: 5000,
 	});
 }
 
 /**
  * Logout the current user
+ * Uses simple GET request to /test-logout for reliability
  */
 export async function logout(page: Page): Promise<void> {
-	// Click logout link/button
-	await page.click('a:has-text("Log Out"), button:has-text("Log Out"), form[action*="logout"] button');
+	// Navigate to test logout endpoint (destroys session and redirects to home)
+	await page.goto("/test-logout");
 
 	// Wait for redirect to home (logged out state)
 	await page.waitForSelector('button:has-text("Log In"), a:has-text("Log In")');

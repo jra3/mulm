@@ -110,6 +110,22 @@ export const view = async (req: MulmRequest, res: Response) => {
 
   if (viewer && aspect.isSelf && canEdit) {
     const templateData = await getFormTemplateData(Boolean(aspect.isAdmin), submission.species_type);
+
+    // Fetch changes_requested metadata if applicable
+    let changesRequested = null;
+    if (submission.changes_requested_on) {
+      const adminWhoRequested = submission.changes_requested_by
+        ? await getMember(submission.changes_requested_by)
+        : null;
+
+      changesRequested = {
+        reason: submission.changes_requested_reason,
+        requestedBy: adminWhoRequested?.display_name || "Admin",
+        requestedOn: formatShortDate(submission.changes_requested_on),
+        hasWitness: submission.witnessed_by != null,
+      };
+    }
+
     res.render("submit", {
       title: `Edit ${getBapFormTitle(submission.program)}`,
       form: {
@@ -122,6 +138,7 @@ export const view = async (req: MulmRequest, res: Response) => {
         supplement_regimen: parseStringArray(submission.supplement_regimen),
       },
       errors: new Map(),
+      changesRequested,
       ...templateData,
     });
     return;
@@ -353,13 +370,17 @@ export const update = async (req: MulmRequest, res: Response) => {
   // Prepare updates from form
   const formUpdates = db.formToDB(submission.member_id, form, !draft);
 
-  // If resubmitting after changes were requested, clear those fields
+  // If resubmitting after changes were requested, clear those fields AND preserve witness/submit data
   if (!draft && submission.changes_requested_on) {
     await db.updateSubmission(submission.id, {
       ...formUpdates,
       changes_requested_on: null,
       changes_requested_by: null,
       changes_requested_reason: null,
+      // Preserve existing witness status when resubmitting (don't reset to pending)
+      witness_verification_status: submission.witness_verification_status,
+      // Preserve original submitted_on timestamp (don't update to now)
+      submitted_on: submission.submitted_on,
     });
   } else {
     await db.updateSubmission(submission.id, formUpdates);

@@ -223,6 +223,64 @@ export async function deleteSubmission(id: number) {
   }
 }
 
+/**
+ * Delete a submission with permission validation
+ * @param submissionId - ID of submission to delete
+ * @param userId - ID of user attempting deletion
+ * @param isAdmin - Whether user is an admin
+ * @throws Error if not authorized or submission not found
+ */
+export async function deleteSubmissionWithAuth(
+  submissionId: number,
+  userId: number,
+  isAdmin: boolean
+): Promise<void> {
+  try {
+    return await withTransaction(async (db) => {
+      // Get current submission
+      const stmt = await db.prepare(`
+        SELECT id, member_id, approved_on
+        FROM submissions WHERE id = ?`);
+      const current: Submission[] = await stmt.all(submissionId);
+      await stmt.finalize();
+
+      if (!current[0]) {
+        throw new Error("Submission not found");
+      }
+
+      const submission = current[0];
+
+      // Admin can delete anything
+      if (isAdmin) {
+        const deleteStmt = await db.prepare("DELETE FROM submissions WHERE id = ?");
+        await deleteStmt.run(submissionId);
+        await deleteStmt.finalize();
+        logger.info(`Admin ${userId} deleted submission ${submissionId}`);
+        return;
+      }
+
+      // Non-admin: must be owner
+      if (submission.member_id !== userId) {
+        throw new Error("Cannot delete another member's submission");
+      }
+
+      // Owner can only delete unapproved submissions
+      if (submission.approved_on) {
+        throw new Error("Cannot delete approved submissions");
+      }
+
+      // Delete allowed
+      const deleteStmt = await db.prepare("DELETE FROM submissions WHERE id = ?");
+      await deleteStmt.run(submissionId);
+      await deleteStmt.finalize();
+      logger.info(`Member ${userId} deleted their submission ${submissionId}`);
+    });
+  } catch (err) {
+    logger.error("Failed to delete submission with auth", err);
+    throw err;
+  }
+}
+
 export function getApprovedSubmissionsInDateRange(startDate: Date, endDate: Date, program: string) {
   return query<Submission>(
     `
@@ -392,7 +450,7 @@ export async function declineWitness(submissionId: number, witnessAdminId: numbe
     return await withTransaction(async (db) => {
       // Check current state and prevent self-witnessing - use transaction db
       const stmt = await db.prepare(`
-				SELECT id, member_id, witness_verification_status 
+				SELECT id, member_id, witness_verification_status
 				FROM submissions WHERE id = ?`);
       const current: Submission[] = await stmt.all(submissionId);
       await stmt.finalize();
@@ -427,6 +485,70 @@ export async function declineWitness(submissionId: number, witnessAdminId: numbe
     });
   } catch (err) {
     logger.error("Failed to decline witness", err);
+    throw err;
+  }
+}
+
+/**
+ * Request changes on a submission (admin action)
+ * Validates submission state and sets changes_requested fields
+ * Throws errors for invalid states (draft, approved, denied)
+ */
+export async function requestChanges(
+  submissionId: number,
+  adminId: number,
+  reason: string
+): Promise<void> {
+  try {
+    return await withTransaction(async (db) => {
+      // Get current submission state
+      const stmt = await db.prepare(`
+        SELECT id, submitted_on, approved_on, denied_on
+        FROM submissions WHERE id = ?`);
+      const current: Submission[] = await stmt.all(submissionId);
+      await stmt.finalize();
+
+      if (!current[0]) {
+        throw new Error("Submission not found");
+      }
+
+      // Validate submission state
+      if (!current[0].submitted_on) {
+        throw new Error("Cannot request changes on draft submissions");
+      }
+
+      if (current[0].approved_on) {
+        throw new Error("Cannot request changes on approved submissions");
+      }
+
+      if (current[0].denied_on) {
+        throw new Error("Cannot request changes on denied submissions");
+      }
+
+      // Set changes_requested fields
+      const updateStmt = await db.prepare(`
+        UPDATE submissions SET
+          changes_requested_on = ?,
+          changes_requested_by = ?,
+          changes_requested_reason = ?
+        WHERE id = ?`);
+
+      const result = await updateStmt.run(
+        new Date().toISOString(),
+        adminId,
+        reason,
+        submissionId
+      );
+      await updateStmt.finalize();
+
+      if (result.changes === 0) {
+        throw new Error("Failed to update submission");
+      }
+
+      logger.info(`Changes requested for submission ${submissionId} by admin ${adminId}`);
+    });
+  } catch (err) {
+    logger.error("Failed to request changes", err);
     throw err;
   }
 }
@@ -491,39 +613,71 @@ export async function approveSubmission(
   updates: ApprovalFormValues
 ) {
   try {
-    const conn = writeConn;
-    const { points, article_points, first_time_species, flowered, sexual_reproduction } = updates;
-    const stmt = await conn.prepare(`
-			UPDATE submissions SET
-			  common_name_id = ?,
-			  scientific_name_id = ?,
-				points = ?,
-				article_points = ?,
-				first_time_species = ?,
-				flowered = ?,
-				sexual_reproduction = ?,
-				approved_by = ?,
-				approved_on = ?
-			WHERE id = ?`);
-    try {
-      await stmt.run(
+    return await withTransaction(async (db) => {
+      // Get current submission state
+      const stmt = await db.prepare(`
+        SELECT id, submitted_on, approved_on, denied_on, witness_verification_status
+        FROM submissions WHERE id = ?`);
+      const current: Submission[] = await stmt.all(id);
+      await stmt.finalize();
+
+      if (!current[0]) {
+        throw new Error("Submission not found");
+      }
+
+      // Validate submission state
+      if (!current[0].submitted_on) {
+        throw new Error("Cannot approve draft submissions");
+      }
+
+      if (current[0].approved_on) {
+        throw new Error("Cannot approve already approved submissions");
+      }
+
+      if (current[0].denied_on) {
+        throw new Error("Cannot approve denied submissions");
+      }
+
+      // Update submission with approval data
+      const { points, article_points, first_time_species, flowered, sexual_reproduction, cares_species } = updates;
+      const updateStmt = await db.prepare(`
+        UPDATE submissions SET
+          common_name_id = ?,
+          scientific_name_id = ?,
+          points = ?,
+          article_points = ?,
+          first_time_species = ?,
+          cares_species = ?,
+          flowered = ?,
+          sexual_reproduction = ?,
+          approved_by = ?,
+          approved_on = ?
+        WHERE id = ?`);
+
+      const result = await updateStmt.run(
         speciesIds.common_name_id,
         speciesIds.scientific_name_id,
         points,
         article_points,
         first_time_species ? 1 : 0,
+        cares_species ? 1 : 0,
         flowered ? 1 : 0,
         sexual_reproduction ? 1 : 0,
         approvedBy,
         new Date().toISOString(),
         id
       );
-    } finally {
-      await stmt.finalize();
-    }
+      await updateStmt.finalize();
+
+      if (result.changes === 0) {
+        throw new Error("Failed to update submission");
+      }
+
+      logger.info(`Submission ${id} approved by admin ${approvedBy} with ${points} base points`);
+    });
   } catch (err) {
-    logger.error("Failed to update submission", err);
-    throw new Error("Failed to update submission");
+    logger.error("Failed to approve submission", err);
+    throw err;
   }
 }
 

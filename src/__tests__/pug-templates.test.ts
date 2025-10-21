@@ -391,6 +391,7 @@ void describe("Pug Template Rendering", () => {
       /^mixins\/trophy\.pug$/, // Mixin-only template
       /^mixins\/caresBadge\.pug$/, // Mixin-only template
       /^mixins\/formCheckbox\.pug$/, // Mixin-only template
+      /^mixins\/changesRequestedBanner\.pug$/, // Mixin-only template (tested via submit.pug)
       /^activity\/activity-item\.pug$/, // Mixin-only template
       /^activity\/award-granted\.pug$/, // Include-only template
       /^activity\/submission-approved\.pug$/, // Include-only template
@@ -566,6 +567,15 @@ void describe("Pug Template Rendering", () => {
                 award_name: faker.helpers.arrayElement(["Level 1 Breeder Award", "Level 2 Breeder Award"]),
               }),
             }));
+            break;
+
+          case "mixins/changesRequestedBanner.pug":
+            templateData.changesRequested = {
+              reason: "Please add more photos and details",
+              requestedBy: "Test Admin",
+              requestedOn: "10/20/2025",
+              hasWitness: true,
+            };
             break;
 
           default:
