@@ -39,11 +39,11 @@ test.describe("Admin - Changes Requested Workflow", () => {
 
 		await page.selectOption('select[name="species_class"]', "Livebearers");
 
+		// Wait for Tom Select to initialize on species name fields (triggered by htmx:load event)
+		await page.waitForTimeout(3000);
+
 		const today = new Date().toISOString().split("T")[0];
 		await page.fill('input[name="reproduction_date"]', today);
-
-		// Wait for Tom Select to initialize on species name fields (triggered by htmx:load)
-		await page.waitForTimeout(2000);
 
 		// Fill species names using Tom Select typeahead
 		await fillTomSelectTypeahead(page, "species_common_name", "Guppy");
@@ -171,11 +171,11 @@ test.describe("Admin - Changes Requested Workflow", () => {
 
 		await page.selectOption('select[name="species_class"]', "Livebearers");
 
+		// Wait for Tom Select to initialize on species name fields (triggered by htmx:load event)
+		await page.waitForTimeout(3000);
+
 		const today = new Date().toISOString().split("T")[0];
 		await page.fill('input[name="reproduction_date"]', today);
-
-		// Wait for Tom Select to initialize on species name fields (triggered by htmx:load)
-		await page.waitForTimeout(2000);
 
 		// Fill species names using Tom Select typeahead
 		await fillTomSelectTypeahead(page, "species_common_name", "Guppy");
@@ -333,11 +333,11 @@ test.describe("Admin - Changes Requested Workflow", () => {
 
 		await page.selectOption('select[name="species_class"]', "Livebearers");
 
+		// Wait for Tom Select to initialize on species name fields (triggered by htmx:load event)
+		await page.waitForTimeout(3000);
+
 		const today = new Date().toISOString().split("T")[0];
 		await page.fill('input[name="reproduction_date"]', today);
-
-		// Wait for Tom Select to initialize on species name fields (triggered by htmx:load)
-		await page.waitForTimeout(2000);
 
 		// Fill species names using Tom Select typeahead
 		await fillTomSelectTypeahead(page, "species_common_name", "Guppy");
