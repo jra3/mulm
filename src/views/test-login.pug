@@ -1,0 +1,48 @@
+doctype html
+html
+	head
+		meta(charset="UTF-8")
+		meta(name="viewport" content="width=device-width, initial-scale=1.0")
+		title Test Login
+		style.
+			body {
+				font-family: system-ui, -apple-system, sans-serif;
+				max-width: 400px;
+				margin: 100px auto;
+				padding: 20px;
+			}
+			input, button {
+				width: 100%;
+				padding: 10px;
+				margin: 10px 0;
+				font-size: 16px;
+			}
+			button {
+				background: #0066cc;
+				color: white;
+				border: none;
+				cursor: pointer;
+			}
+			.error {
+				color: red;
+				margin: 10px 0;
+			}
+	body
+		h1 Test Login
+		p.error= error || ""
+
+		form(method="POST" action="/test-login")
+			input(
+				type="email"
+				name="email"
+				placeholder="Email"
+				required
+				autofocus
+			)
+			input(
+				type="password"
+				name="password"
+				placeholder="Password"
+				required
+			)
+			button(type="submit") Log In

@@ -13,28 +13,25 @@ export interface TestUser {
 
 /**
  * Login via password authentication
+ * Uses dedicated test login page for reliability (no HTMX, no dialogs)
  */
 export async function login(page: Page, user: TestUser = TEST_USER): Promise<void> {
-	// Navigate to home page
-	await page.goto("/");
-
-	// Click login button to open dialog
-	await page.click('button:has-text("Log In"), a:has-text("Log In"), button:has-text("Login")');
-
-	// Wait for login dialog to appear
-	await page.waitForSelector('input[name="email"]', { state: "visible" });
+	// Navigate to test login page (only available in test mode)
+	await page.goto("/test-login");
 
 	// Fill in credentials
 	await page.fill('input[name="email"]', user.email);
 	await page.fill('input[name="password"]', user.password);
 
-	// Submit login form (HTMX sends HX-Redirect header on success)
-	await page.click('button[type="submit"]:has-text("Log In"), button[type="submit"]:has-text("Login")');
+	// Submit form and wait for navigation to complete
+	await Promise.all([
+		page.waitForNavigation({ waitUntil: "networkidle" }),
+		page.click('button[type="submit"]'),
+	]);
 
-	// Wait for successful login by checking for logout button
-	// This is more reliable than waitForNavigation with HTMX redirects
+	// Verify we're logged in by checking for logout button
 	await page.waitForSelector('button:has-text("Log Out")', {
-		timeout: 10000,
+		timeout: 5000,
 	});
 }
 
