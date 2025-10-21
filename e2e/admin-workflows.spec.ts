@@ -98,6 +98,17 @@ test.describe("Admin - Changes Requested Workflow", () => {
 			await db.close();
 		}
 
+		// Wait for any HTMX redirects to complete
+		await page.waitForTimeout(1000);
+
+		// Navigate to home to ensure logout button is accessible
+		await page.goto("/");
+		await page.waitForLoadState("networkidle");
+
+		// Navigate to home to ensure logout button is accessible
+		await page.goto("/");
+		await page.waitForLoadState("networkidle");
+
 		// Logout regular user
 		await page.click('button[hx-post="/auth/logout"]');
 		await page.waitForLoadState("networkidle");
@@ -225,34 +236,38 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await page.waitForTimeout(1000);
 
 		// Get submission ID from database (URL may not redirect in all cases)
-		const db = await getTestDatabase();
+		const dbTest2a = await getTestDatabase();
 		let submissionId: number;
 		try {
-			const user = await db.get<{ id: number }>(
+			const user = await dbTest2a.get<{ id: number }>(
 				"SELECT id FROM members WHERE contact_email = ?",
 				TEST_USER.email
 			);
 			expect(user).toBeTruthy();
 
-			const submissions = await db.all(
+			const submissions = await dbTest2a.all(
 				"SELECT * FROM submissions WHERE member_id = ? AND submitted_on IS NOT NULL ORDER BY id DESC",
 				user!.id
 			);
 			expect(submissions.length).toBeGreaterThan(0);
 			submissionId = submissions[0].id;
 		} finally {
-			await db.close();
+			await dbTest2a.close();
 		}
+
+		// Navigate to home to ensure logout button is accessible
+		await page.goto("/");
+		await page.waitForLoadState("networkidle");
 
 		// Logout regular user
 		await page.click('button[hx-post="/auth/logout"]');
 		await page.waitForLoadState("networkidle");
 
 		// Step 2: Set witness data
-		const db = await getTestDatabase();
+		const dbTest2b = await getTestDatabase();
 		try {
 			// Get admin user ID
-			const adminUser = await db.get<{ id: number }>(
+			const adminUser = await dbTest2b.get<{ id: number }>(
 				"SELECT id FROM members WHERE contact_email = ?",
 				TEST_ADMIN.email
 			);
@@ -262,7 +277,7 @@ test.describe("Admin - Changes Requested Workflow", () => {
 			}
 
 			// Simulate witness confirmation
-			await db.run(
+			await dbTest2b.run(
 				"UPDATE submissions SET witnessed_by = ?, witnessed_on = ?, witness_verification_status = ? WHERE id = ?",
 				adminUser.id,
 				new Date().toISOString(),
@@ -270,7 +285,7 @@ test.describe("Admin - Changes Requested Workflow", () => {
 				submissionId
 			);
 		} finally {
-			await db.close();
+			await dbTest2b.close();
 		}
 
 		// Login as admin
@@ -322,9 +337,9 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await page.waitForTimeout(1000);
 
 		// Step 4: Verify changes persisted but changes_requested fields still set
-		const db2 = await getTestDatabase();
+		const dbTest2c = await getTestDatabase();
 		try {
-			const submission = await db2.get(
+			const submission = await dbTest2c.get(
 				"SELECT * FROM submissions WHERE id = ?",
 				submissionId
 			);
@@ -344,7 +359,7 @@ test.describe("Admin - Changes Requested Workflow", () => {
 			expect(submission.witnessed_on).toBeTruthy();
 			expect(submission.witness_verification_status).toBe("confirmed");
 		} finally {
-			await db2.close();
+			await dbTest2c.close();
 		}
 	});
 
@@ -401,34 +416,38 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await page.waitForTimeout(1000);
 
 		// Get submission ID from database (URL may not redirect in all cases)
-		const db = await getTestDatabase();
+		const dbTest3a = await getTestDatabase();
 		let submissionId: number;
 		try {
-			const user = await db.get<{ id: number }>(
+			const user = await dbTest3a.get<{ id: number }>(
 				"SELECT id FROM members WHERE contact_email = ?",
 				TEST_USER.email
 			);
 			expect(user).toBeTruthy();
 
-			const submissions = await db.all(
+			const submissions = await dbTest3a.all(
 				"SELECT * FROM submissions WHERE member_id = ? AND submitted_on IS NOT NULL ORDER BY id DESC",
 				user!.id
 			);
 			expect(submissions.length).toBeGreaterThan(0);
 			submissionId = submissions[0].id;
 		} finally {
-			await db.close();
+			await dbTest3a.close();
 		}
+
+		// Navigate to home to ensure logout button is accessible
+		await page.goto("/");
+		await page.waitForLoadState("networkidle");
 
 		// Logout regular user
 		await page.click('button[hx-post="/auth/logout"]');
 		await page.waitForLoadState("networkidle");
 
 		// Step 2: Set witness data
-		const db = await getTestDatabase();
+		const dbTest3b = await getTestDatabase();
 		try {
 			// Get admin user ID
-			const adminUser = await db.get<{ id: number }>(
+			const adminUser = await dbTest3b.get<{ id: number }>(
 				"SELECT id FROM members WHERE contact_email = ?",
 				TEST_ADMIN.email
 			);
@@ -438,7 +457,7 @@ test.describe("Admin - Changes Requested Workflow", () => {
 			}
 
 			// Simulate witness confirmation
-			await db.run(
+			await dbTest3b.run(
 				"UPDATE submissions SET witnessed_by = ?, witnessed_on = ?, witness_verification_status = ? WHERE id = ?",
 				adminUser.id,
 				new Date().toISOString(),
@@ -446,7 +465,7 @@ test.describe("Admin - Changes Requested Workflow", () => {
 				submissionId
 			);
 		} finally {
-			await db.close();
+			await dbTest3b.close();
 		}
 
 		// Login as admin
@@ -464,9 +483,9 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await page.waitForLoadState("networkidle");
 
 		// Verify changes_requested fields are set
-		const db2 = await getTestDatabase();
+		const dbTest3c = await getTestDatabase();
 		try {
-			const beforeResubmit = await db2.get(
+			const beforeResubmit = await dbTest3c.get(
 				"SELECT * FROM submissions WHERE id = ?",
 				submissionId
 			);
@@ -474,7 +493,7 @@ test.describe("Admin - Changes Requested Workflow", () => {
 			expect(beforeResubmit.changes_requested_by).toBeTruthy();
 			expect(beforeResubmit.changes_requested_reason).toBe("Please add more details");
 		} finally {
-			await db2.close();
+			await dbTest3c.close();
 		}
 
 		// Logout admin
@@ -504,9 +523,9 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await page.waitForTimeout(1000);
 
 		// Step 4: Verify changes_requested fields are cleared
-		const db3 = await getTestDatabase();
+		const dbTest3d = await getTestDatabase();
 		try {
-			const submission = await db3.get(
+			const submission = await dbTest3d.get(
 				"SELECT * FROM submissions WHERE id = ?",
 				submissionId
 			);
@@ -527,7 +546,7 @@ test.describe("Admin - Changes Requested Workflow", () => {
 			// Verify edits persisted
 			expect(submission.ph).toBe("7.4");
 		} finally {
-			await db3.close();
+			await dbTest3d.close();
 		}
 	});
 });
