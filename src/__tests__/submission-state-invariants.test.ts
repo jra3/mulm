@@ -237,15 +237,17 @@ void describe("Submission State Machine - Invariant Tests", () => {
         changesRequested: true,
       });
 
-      // Simulate resubmit (clear changes_requested fields, preserve witness data)
+      let submission = await getSubmissionById(submissionId);
+
+      // Simulate resubmit (clear changes_requested fields, preserve witness AND submitted_on)
       await updateSubmission(submissionId, {
         changes_requested_on: null,
         changes_requested_by: null,
         changes_requested_reason: null,
-        submitted_on: new Date().toISOString(),
+        submitted_on: submission!.submitted_on, // Preserve original
       });
 
-      const submission = await getSubmissionById(submissionId);
+      submission = await getSubmissionById(submissionId);
       await assertSubmissionInvariantsHold(submission);
     });
   });
