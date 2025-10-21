@@ -1,0 +1,32 @@
+//- Changes Requested Banner
+//- Shows when admin has requested changes to a submission
+//- Displays feedback, preserves witness info, and guides next steps
+
+mixin changesRequestedBanner(changesRequested)
+	if changesRequested
+		.status-panel.status-panel-warning
+			.container.mx-auto.max-w-4xl
+				h3.text-yellow-800.text-lg.font-semibold.mb-2 📝 Changes Requested
+				p.text-yellow-700.mb-3 #{changesRequested.requestedBy} reviewed your submission on #{changesRequested.requestedOn} and is requesting some changes before it can be approved.
+
+				//- Admin's feedback
+				.bg-yellow-100.rounded.p-3.mb-3.border-l-4.border-yellow-600
+					p.text-yellow-900.font-semibold.mb-1 Feedback:
+					p.text-yellow-800= changesRequested.reason
+
+				//- Witness preservation notice (if applicable)
+				if changesRequested.hasWitness
+					.bg-green-50.rounded.p-3.mb-3.border-l-4.border-green-500
+						p.text-green-800
+							strong ✅ Good News:
+							|  Your witness confirmation is preserved. You do not need to go through screening again.
+
+				//- Next steps
+				.text-yellow-700
+					p.font-semibold.mb-2 Next Steps:
+					ul.list-disc.list-inside.space-y-1.text-sm
+						li Make the requested changes below
+						li Click "Save Draft" to save your progress
+						li When ready, click "Resubmit" to return to the approval queue
+						if changesRequested.hasWitness
+							li Your witness confirmation will be preserved when you resubmit

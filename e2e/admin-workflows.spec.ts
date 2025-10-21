@@ -111,7 +111,8 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		}
 	});
 
-	test.skip("member can edit submission when changes are requested", async ({ page }) => {
+	// NOTE: Works in CI (serial mode). May have race conditions in local parallel mode.
+	test("member can edit submission when changes are requested", async ({ page }) => {
 		// Step 1: Create a submitted submission with witness confirmation
 		const db = await getTestDatabase();
 		let submissionId: number;
@@ -167,8 +168,13 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await page.goto(`/submissions/${submissionId}`);
 		await page.waitForSelector("#bapForm");
 
-		// TODO: Add UI notice showing changes were requested
-		// For now, just verify the form is editable
+		// Verify changes requested banner is visible
+		const changesNotice = page.locator('text=Changes Requested');
+		await expect(changesNotice).toBeVisible();
+
+		// Verify admin feedback is shown
+		const feedback = page.locator('text=Please add more details');
+		await expect(feedback).toBeVisible();
 
 		// Make edits - temperature first to avoid HTMX swap
 		await page.fill('input[name="temperature"]', "78");
@@ -177,10 +183,10 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await page.fill('input[name="ph"]', "7.2");
 		await page.fill('input[name="gh"]', "180");
 
-		// Save edits (for submitted forms with changes requested, button should be "Save Edits")
-		const saveButton = page.locator('button[type="submit"]:has-text("Save Edits")');
-		await saveButton.scrollIntoViewIfNeeded();
-		await saveButton.click();
+		// Save edits as draft (for changes-requested submissions, Save Draft keeps changes_requested fields)
+		const saveDraftButton = page.locator('button[type="submit"]:has-text("Save Draft")');
+		await saveDraftButton.scrollIntoViewIfNeeded();
+		await saveDraftButton.click();
 
 		await page.waitForLoadState("networkidle");
 
@@ -211,6 +217,8 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		}
 	});
 
+	// TODO: Refactor to use createTestSubmission helper instead of manual form filling
+	// Currently fails because manual witness setup doesn't match test expectations
 	test.skip("resubmitting clears changes_requested fields", async ({ page }) => {
 		// Step 1: Create and submit a form as regular user
 		await login(page, TEST_USER);

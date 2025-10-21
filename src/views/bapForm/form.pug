@@ -262,11 +262,21 @@ mixin CRUDForm()
 
     section.bg-gray-100.py-4
         div.flex.justify-center.max-w-4xl.mx-auto.text-center.gap-4
-            if form.submitted_on || editing
+            if form.changes_requested_on
+                //- Changes requested: show Save Draft + Resubmit buttons
+                button.outline(class="w-2/5 max-w-200" type="submit" name="draft" value="true" title="Save your progress (keeps changes-requested status)" hx-disabled-elt="this")
+                    span Save Draft
+                    span.htmx-indicator.spinner
+                button.primary(class="w-2/5 max-w-200" type="submit" title="Resubmit for review (clears changes-requested status)" hx-disabled-elt="this")
+                    span Resubmit
+                    span.htmx-indicator.spinner
+            else if form.submitted_on || editing
+                //- Submitted/Admin edit: show single Save Edits button
                 button.primary(class="w-2/5 max-w-200" type="submit" title="Save changes to your submission" hx-disabled-elt="this")
                     span Save Edits
                     span.htmx-indicator.spinner
             else
+                //- Draft: show Submit + Save Draft buttons
                 button.primary(class="w-2/5 max-w-200" type="submit" title="Submit your entry for witness verification and review" hx-disabled-elt="this")
                     span Submit
                     span.htmx-indicator.spinner
