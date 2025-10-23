@@ -1,131 +1,70 @@
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
-import { Database, open } from "sqlite";
-import sqlite3 from "sqlite3";
-import { overrideConnection } from "../db/conn";
 import { deleteSubmissionWithAuth, getSubmissionById } from "../db/submissions";
-import { createMember, getMember } from "../db/members";
+import {
+  setupTestDatabase,
+  teardownTestDatabase,
+  createTestSubmission,
+  createTestMember,
+  type TestContext,
+} from "./helpers/testHelpers";
 
 /**
  * Integration tests for submission deletion authorization
  * Tests that deletions are properly authorized based on ownership and approval state
  */
 
-interface TestMember {
-  id: number;
-  display_name: string;
-  contact_email: string;
-}
-
 void describe("Submission Deletion - Authorization", () => {
-  let db: Database;
-  let member1: TestMember;
-  let member2: TestMember;
-  let admin: TestMember;
-
-  // Helper to create test submission
-  async function createTestSubmission(options: {
-    memberId: number;
-    submitted?: boolean;
-    approved?: boolean;
-  }): Promise<number> {
-    const now = new Date().toISOString();
-    const result = await db.run(
-      `INSERT INTO submissions (
-        member_id, species_class, species_type, species_common_name,
-        species_latin_name, reproduction_date, temperature, ph, gh,
-        water_type, witness_verification_status, program,
-        submitted_on, approved_on, approved_by, points
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        options.memberId,
-        "Livebearers",
-        "Fish",
-        "Guppy",
-        "Poecilia reticulata",
-        now,
-        "75",
-        "7.0",
-        "150",
-        "Fresh",
-        "pending",
-        "fish",
-        options.submitted ? now : null,
-        options.approved ? now : null,
-        options.approved ? admin.id : null,
-        options.approved ? 10 : null,
-      ]
-    );
-
-    return result.lastID as number;
-  }
+  let ctx: TestContext;
+  let member2: { id: number };
 
   beforeEach(async () => {
-    db = await open({
-      filename: ":memory:",
-      driver: sqlite3.Database,
-    });
-
-    await db.exec("PRAGMA foreign_keys = OFF;");
-    await db.migrate({ migrationsPath: "./db/migrations" });
-    overrideConnection(db);
-
-    const member1Email = `member1-${Date.now()}@test.com`;
-    const member2Email = `member2-${Date.now()}@test.com`;
-    const adminEmail = `admin-${Date.now()}@test.com`;
-
-    const member1Id = await createMember(member1Email, "Member One");
-    const member2Id = await createMember(member2Email, "Member Two");
-    const adminId = await createMember(adminEmail, "Test Admin");
-
-    member1 = (await getMember(member1Id)) as TestMember;
-    member2 = (await getMember(member2Id)) as TestMember;
-    admin = (await getMember(adminId)) as TestMember;
+    ctx = await setupTestDatabase();
+    // Create a second regular member for cross-ownership tests
+    member2 = await createTestMember(ctx.db, { email: `member2-${Date.now()}@test.com` });
   });
 
   afterEach(async () => {
-    try {
-      await db.close();
-    } catch {
-      // Ignore
-    }
+    await teardownTestDatabase(ctx);
   });
 
-  void describe("Owner Deletion", () => {
-    void test("should allow owner to delete draft submission", async () => {
-      const submissionId = await createTestSubmission({
-        memberId: member1.id,
+  void describe("Owner Permissions", () => {
+    void test("should allow member to delete their own draft submission", async () => {
+      const submissionId = await createTestSubmission(ctx.db, {
+        memberId: ctx.member.id,
         submitted: false,
       });
 
-      await deleteSubmissionWithAuth(submissionId, member1.id, false);
+      await deleteSubmissionWithAuth(submissionId, ctx.member.id, false);
 
       const submission = await getSubmissionById(submissionId);
       assert.strictEqual(submission, undefined);
     });
 
-    void test("should allow owner to delete submitted (unapproved) submission", async () => {
-      const submissionId = await createTestSubmission({
-        memberId: member1.id,
+    void test("should allow member to delete their own submitted but unapproved submission", async () => {
+      const submissionId = await createTestSubmission(ctx.db, {
+        memberId: ctx.member.id,
         submitted: true,
-        approved: false,
       });
 
-      await deleteSubmissionWithAuth(submissionId, member1.id, false);
+      await deleteSubmissionWithAuth(submissionId, ctx.member.id, false);
 
       const submission = await getSubmissionById(submissionId);
       assert.strictEqual(submission, undefined);
     });
 
-    void test("should REJECT owner deletion of approved submission", async () => {
-      const submissionId = await createTestSubmission({
-        memberId: member1.id,
+    void test("should NOT allow member to delete their own approved submission", async () => {
+      const submissionId = await createTestSubmission(ctx.db, {
+        memberId: ctx.member.id,
         submitted: true,
+        witnessStatus: "confirmed",
+        witnessedBy: ctx.admin.id,
         approved: true,
+        approvedBy: ctx.admin.id,
       });
 
       await assert.rejects(
-        async () => await deleteSubmissionWithAuth(submissionId, member1.id, false),
+        async () => await deleteSubmissionWithAuth(submissionId, ctx.member.id, false),
         /Cannot delete approved submissions/
       );
 
@@ -133,17 +72,15 @@ void describe("Submission Deletion - Authorization", () => {
       const submission = await getSubmissionById(submissionId);
       assert.ok(submission !== undefined);
     });
-  });
 
-  void describe("Non-Owner Deletion", () => {
-    void test("should REJECT non-owner deletion attempt", async () => {
-      const submissionId = await createTestSubmission({
-        memberId: member1.id,
+    void test("should NOT allow member to delete another member's submission", async () => {
+      const submissionId = await createTestSubmission(ctx.db, {
+        memberId: member2.id,
         submitted: false,
       });
 
       await assert.rejects(
-        async () => await deleteSubmissionWithAuth(submissionId, member2.id, false),
+        async () => await deleteSubmissionWithAuth(submissionId, ctx.member.id, false),
         /Cannot delete another member's submission/
       );
 
@@ -153,65 +90,159 @@ void describe("Submission Deletion - Authorization", () => {
     });
   });
 
-  void describe("Admin Deletion", () => {
-    void test("should allow admin to delete draft submission", async () => {
-      const submissionId = await createTestSubmission({
-        memberId: member1.id,
+  void describe("Admin Permissions", () => {
+    void test("should allow admin to delete any draft submission", async () => {
+      const submissionId = await createTestSubmission(ctx.db, {
+        memberId: ctx.member.id,
         submitted: false,
       });
 
-      await deleteSubmissionWithAuth(submissionId, admin.id, true);
+      await deleteSubmissionWithAuth(submissionId, ctx.admin.id, true);
 
       const submission = await getSubmissionById(submissionId);
       assert.strictEqual(submission, undefined);
     });
 
-    void test("should allow admin to delete submitted submission", async () => {
-      const submissionId = await createTestSubmission({
-        memberId: member1.id,
+    void test("should allow admin to delete any submitted but unapproved submission", async () => {
+      const submissionId = await createTestSubmission(ctx.db, {
+        memberId: ctx.member.id,
         submitted: true,
       });
 
-      await deleteSubmissionWithAuth(submissionId, admin.id, true);
+      await deleteSubmissionWithAuth(submissionId, ctx.admin.id, true);
 
       const submission = await getSubmissionById(submissionId);
       assert.strictEqual(submission, undefined);
     });
 
-    void test("should allow admin to delete APPROVED submission (admin override)", async () => {
-      const submissionId = await createTestSubmission({
-        memberId: member1.id,
+    void test("should allow admin to delete their own approved submission", async () => {
+      const submissionId = await createTestSubmission(ctx.db, {
+        memberId: ctx.admin.id,
         submitted: true,
+        witnessStatus: "confirmed",
+        witnessedBy: ctx.admin.id,
         approved: true,
+        approvedBy: ctx.admin.id,
       });
 
-      await deleteSubmissionWithAuth(submissionId, admin.id, true);
+      await deleteSubmissionWithAuth(submissionId, ctx.admin.id, true);
 
       const submission = await getSubmissionById(submissionId);
       assert.strictEqual(submission, undefined);
     });
 
-    void test("should allow admin to delete another member's submission", async () => {
-      const submissionId = await createTestSubmission({
-        memberId: member1.id,
+    void test("should allow admin to delete another member's approved submission", async () => {
+      const submissionId = await createTestSubmission(ctx.db, {
+        memberId: ctx.member.id,
         submitted: true,
+        witnessStatus: "confirmed",
+        witnessedBy: ctx.admin.id,
+        approved: true,
+        approvedBy: ctx.admin.id,
       });
 
-      await deleteSubmissionWithAuth(submissionId, admin.id, true);
+      // Admins can delete any submission, including approved ones
+      await deleteSubmissionWithAuth(submissionId, ctx.admin.id, true);
 
+      // Verify submission was deleted
       const submission = await getSubmissionById(submissionId);
       assert.strictEqual(submission, undefined);
     });
   });
 
   void describe("Edge Cases", () => {
-    void test("should reject deletion of non-existent submission", async () => {
+    void test("should handle non-existent submission gracefully", async () => {
       const nonExistentId = 99999;
 
       await assert.rejects(
-        async () => await deleteSubmissionWithAuth(nonExistentId, member1.id, false),
+        async () => await deleteSubmissionWithAuth(nonExistentId, ctx.member.id, false),
         /Submission not found/
       );
+    });
+
+    void test("should handle deletion of submission with photos and audit trail", async () => {
+      const submissionId = await createTestSubmission(ctx.db, {
+        memberId: ctx.member.id,
+        submitted: true,
+        witnessStatus: "confirmed",
+        witnessedBy: ctx.admin.id,
+      });
+
+      // Request changes to create audit trail
+      await ctx.db.run(
+        `UPDATE submissions SET
+          changes_requested_on = ?,
+          changes_requested_by = ?,
+          changes_requested_reason = ?
+        WHERE id = ?`,
+        [new Date().toISOString(), ctx.admin.id, "Test feedback", submissionId]
+      );
+
+      await deleteSubmissionWithAuth(submissionId, ctx.member.id, false);
+
+      const submission = await getSubmissionById(submissionId);
+      assert.strictEqual(submission, undefined);
+    });
+
+    void test("should prevent deletion with isAdmin=false even if user is admin in database", async () => {
+      const submissionId = await createTestSubmission(ctx.db, {
+        memberId: member2.id,
+        submitted: false,
+      });
+
+      // Admin tries to delete but passes isAdmin=false (should be rejected)
+      await assert.rejects(
+        async () => await deleteSubmissionWithAuth(submissionId, ctx.admin.id, false),
+        /Cannot delete another member's submission/
+      );
+
+      // Verify submission still exists
+      const submission = await getSubmissionById(submissionId);
+      assert.ok(submission !== undefined);
+    });
+
+    void test("should handle deletion of witnessed but not approved submission", async () => {
+      const submissionId = await createTestSubmission(ctx.db, {
+        memberId: ctx.member.id,
+        submitted: true,
+        witnessStatus: "confirmed",
+        witnessedBy: ctx.admin.id,
+      });
+
+      await deleteSubmissionWithAuth(submissionId, ctx.member.id, false);
+
+      const submission = await getSubmissionById(submissionId);
+      assert.strictEqual(submission, undefined);
+    });
+
+    void test("should handle deletion of witnessed and declined submission", async () => {
+      const submissionId = await createTestSubmission(ctx.db, {
+        memberId: ctx.member.id,
+        submitted: true,
+        witnessStatus: "declined",
+        witnessedBy: ctx.admin.id,
+      });
+
+      await deleteSubmissionWithAuth(submissionId, ctx.member.id, false);
+
+      const submission = await getSubmissionById(submissionId);
+      assert.strictEqual(submission, undefined);
+    });
+
+    void test("should handle deletion of denied submission", async () => {
+      const submissionId = await createTestSubmission(ctx.db, {
+        memberId: ctx.member.id,
+        submitted: true,
+        witnessStatus: "confirmed",
+        witnessedBy: ctx.admin.id,
+        denied: true,
+        deniedBy: ctx.admin.id,
+      });
+
+      await deleteSubmissionWithAuth(submissionId, ctx.member.id, false);
+
+      const submission = await getSubmissionById(submissionId);
+      assert.strictEqual(submission, undefined);
     });
   });
 });
