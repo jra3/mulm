@@ -14,9 +14,22 @@ import { getMember } from "../db/members";
 import { calculateLevel, levelRules } from "../programs";
 
 /**
- * Integration tests for Level Manager
+ * Comprehensive tests for Level Manager
  * Tests point-to-level calculation, level upgrades, and email notifications
  */
+
+/**
+ * Helper function to generate point arrays
+ * Makes test data more readable
+ */
+function subs(fives: number, tens: number, fifteens: number, twenties: number): number[] {
+  const awards: number[] = [];
+  for (let i = 0; i < fives; i++) awards.push(5);
+  for (let i = 0; i < tens; i++) awards.push(10);
+  for (let i = 0; i < fifteens; i++) awards.push(15);
+  for (let i = 0; i < twenties; i++) awards.push(20);
+  return awards;
+}
 
 void describe("Level Manager", () => {
   let ctx: TestContext;
@@ -130,6 +143,26 @@ void describe("Level Manager", () => {
         ]);
         assert.strictEqual(level, "Grand Poobah Yoda Breeder");
       });
+
+      void test("should stay at Hobbyist with 500 5-point awards", () => {
+        // Tests that distribution requirements prevent advancement
+        assert.strictEqual(calculateLevel(levelRules.fish, subs(500, 0, 0, 0)), "Hobbyist");
+        assert.strictEqual(calculateLevel(levelRules.fish, subs(500, 1, 0, 0)), "Hobbyist");
+        assert.strictEqual(calculateLevel(levelRules.fish, subs(500, 0, 1, 0)), "Hobbyist");
+      });
+
+      void test("should reach Premier Breeder", () => {
+        assert.strictEqual(calculateLevel(levelRules.fish, subs(300, 4, 2, 5)), "Premier Breeder");
+      });
+
+      void test("should reach Senior Premier Breeder", () => {
+        assert.strictEqual(calculateLevel(levelRules.fish, subs(400, 4, 2, 5)), "Senior Premier Breeder");
+      });
+
+      void test("should reach Grand Poobah Yoda Breeder with massive points", () => {
+        assert.strictEqual(calculateLevel(levelRules.fish, subs(800, 4, 2, 5)), "Grand Poobah Yoda Breeder");
+        assert.strictEqual(calculateLevel(levelRules.fish, subs(9999, 4, 2, 5)), "Grand Poobah Yoda Breeder");
+      });
     });
 
     void describe("Plant Program", () => {
@@ -168,6 +201,42 @@ void describe("Level Manager", () => {
         ]);
         assert.strictEqual(level, "Expert Aquatic Horticulturist");
       });
+
+      void test("should stay at Beginner with only 5-point awards", () => {
+        assert.strictEqual(calculateLevel(levelRules.plant, subs(500, 0, 0, 0)), "Beginner Aquatic Horticulturist");
+        assert.strictEqual(calculateLevel(levelRules.plant, subs(500, 1, 0, 0)), "Beginner Aquatic Horticulturist");
+        assert.strictEqual(calculateLevel(levelRules.plant, subs(500, 0, 1, 0)), "Beginner Aquatic Horticulturist");
+      });
+
+      void test("should reach Senior Aquatic Horticulturist", () => {
+        assert.strictEqual(calculateLevel(levelRules.plant, subs(12, 0, 0, 2)), "Senior Aquatic Horticulturist");
+        assert.strictEqual(calculateLevel(levelRules.plant, subs(60, 0, 0, 2)), "Senior Aquatic Horticulturist");
+      });
+
+      void test("should reach Master Aquatic Horticulturist", () => {
+        assert.strictEqual(calculateLevel(levelRules.plant, subs(6, 40, 2, 2)), "Master Aquatic Horticulturist");
+        assert.strictEqual(calculateLevel(levelRules.plant, subs(6, 400, 2, 2)), "Master Aquatic Horticulturist");
+      });
+
+      void test("should reach Grand Master Aquatic Horticulturist", () => {
+        assert.strictEqual(calculateLevel(levelRules.plant, subs(6, 65, 2, 4)), "Grand Master Aquatic Horticulturist");
+        assert.strictEqual(calculateLevel(levelRules.plant, subs(6, 650, 2, 4)), "Grand Master Aquatic Horticulturist");
+      });
+
+      void test("should reach Senior Grand Master Aquatic Horticulturist", () => {
+        assert.strictEqual(calculateLevel(levelRules.plant, subs(6, 84, 2, 5)), "Senior Grand Master Aquatic Horticulturist");
+        assert.strictEqual(calculateLevel(levelRules.plant, subs(6, 129, 2, 7)), "Senior Grand Master Aquatic Horticulturist");
+      });
+
+      void test("should reach Premier Aquatic Horticulturist", () => {
+        assert.strictEqual(calculateLevel(levelRules.plant, subs(6, 130, 2, 7)), "Premier Aquatic Horticulturist");
+        assert.strictEqual(calculateLevel(levelRules.plant, subs(6, 179, 2, 7)), "Premier Aquatic Horticulturist");
+      });
+
+      void test("should reach Senior Premier Aquatic Horticulturist", () => {
+        assert.strictEqual(calculateLevel(levelRules.plant, subs(6, 180, 2, 7)), "Senior Premier Aquatic Horticulturist");
+        assert.strictEqual(calculateLevel(levelRules.plant, subs(6, 9999, 2, 7)), "Senior Premier Aquatic Horticulturist");
+      });
     });
 
     void describe("Coral Program", () => {
@@ -176,6 +245,41 @@ void describe("Level Manager", () => {
         assert.strictEqual(calculateLevel(levelRules.coral, [5, 5, 5, 5, 5]), "Beginner Coral Propagator");
         assert.strictEqual(calculateLevel(levelRules.coral, [5, 5, 5, 5, 5, 5, 5, 5, 5, 5]), "Coral Propagator");
         assert.strictEqual(calculateLevel(levelRules.coral, Array(20).fill(5)), "Senior Coral Propagator");
+      });
+
+      void test("should reach Beginner Coral Propagator", () => {
+        assert.strictEqual(calculateLevel(levelRules.coral, subs(5, 0, 0, 0)), "Beginner Coral Propagator");
+        assert.strictEqual(calculateLevel(levelRules.coral, subs(9, 0, 0, 0)), "Beginner Coral Propagator");
+      });
+
+      void test("should reach Coral Propagator", () => {
+        assert.strictEqual(calculateLevel(levelRules.coral, subs(0, 5, 0, 0)), "Coral Propagator");
+        assert.strictEqual(calculateLevel(levelRules.coral, subs(1, 9, 0, 0)), "Coral Propagator");
+      });
+
+      void test("should reach Senior Coral Propagator", () => {
+        assert.strictEqual(calculateLevel(levelRules.coral, subs(0, 10, 0, 0)), "Senior Coral Propagator");
+        assert.strictEqual(calculateLevel(levelRules.coral, subs(1, 29, 0, 0)), "Senior Coral Propagator");
+      });
+
+      void test("should reach Expert Coral Propagator", () => {
+        assert.strictEqual(calculateLevel(levelRules.coral, subs(0, 30, 0, 0)), "Expert Coral Propagator");
+        assert.strictEqual(calculateLevel(levelRules.coral, subs(1, 49, 0, 0)), "Expert Coral Propagator");
+      });
+
+      void test("should reach Master Coral Propagator", () => {
+        assert.strictEqual(calculateLevel(levelRules.coral, subs(0, 50, 0, 0)), "Master Coral Propagator");
+        assert.strictEqual(calculateLevel(levelRules.coral, subs(1, 74, 0, 0)), "Master Coral Propagator");
+      });
+
+      void test("should reach Grand Master Coral Propagator", () => {
+        assert.strictEqual(calculateLevel(levelRules.coral, subs(0, 75, 0, 0)), "Grand Master Coral Propagator");
+        assert.strictEqual(calculateLevel(levelRules.coral, subs(1, 99, 0, 0)), "Grand Master Coral Propagator");
+      });
+
+      void test("should reach Senior Grand Master Coral Propagator", () => {
+        assert.strictEqual(calculateLevel(levelRules.coral, subs(0, 100, 0, 0)), "Senior Grand Master Coral Propagator");
+        assert.strictEqual(calculateLevel(levelRules.coral, subs(0, 0, 0, 9999)), "Senior Grand Master Coral Propagator");
       });
     });
 
