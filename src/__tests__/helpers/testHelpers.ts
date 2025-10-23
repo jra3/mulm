@@ -171,9 +171,9 @@ export interface CreateSubmissionOptions {
   submitted?: boolean;
 
   /**
-   * Witness verification status (default: "pending")
+   * Witness verification status (default: "pending" if submitted, null if draft)
    */
-  witnessStatus?: "pending" | "confirmed" | "declined";
+  witnessStatus?: "pending" | "confirmed" | "declined" | null;
 
   /**
    * Whether submission has been approved (default: false)
@@ -297,7 +297,7 @@ export async function createTestSubmission(
   const {
     memberId,
     submitted = false,
-    witnessStatus = "pending",
+    witnessStatus: providedWitnessStatus,
     approved = false,
     denied = false,
     changesRequested = false,
@@ -318,6 +318,9 @@ export async function createTestSubmission(
     foods = '["Flakes","Live food"]',
     spawnLocations = '["Plants","Spawning mop"]',
   } = options;
+
+  // Draft submissions should have null witness status, submitted ones default to "pending"
+  const witnessStatus = providedWitnessStatus ?? (submitted ? "pending" : null);
 
   const result = await db.run(
     `INSERT INTO submissions (
@@ -345,8 +348,8 @@ export async function createTestSubmission(
       witnessStatus,
       program,
       submitted ? now : null,
-      witnessedBy || (witnessStatus !== "pending" ? witnessedBy : null),
-      witnessStatus !== "pending" ? now : null,
+      witnessedBy || (witnessStatus === "confirmed" || witnessStatus === "declined" ? witnessedBy : null),
+      witnessStatus === "confirmed" || witnessStatus === "declined" ? now : null,
       approved ? now : null,
       approvedBy || (approved ? approvedBy : null),
       approved ? points || 10 : null,
