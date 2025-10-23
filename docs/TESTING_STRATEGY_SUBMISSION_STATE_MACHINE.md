@@ -69,7 +69,7 @@ This document outlines the submission state machine, existing test coverage, and
   - Prevents race conditions via transaction
 - **Side Effects**: Email to member (onScreeningApproved)
 
-### 3. **PENDING-WITNESS → PENDING-APPROVAL**
+### 3. **PENDING-WITNESS → PENDING-APPROVAL** (with waiting period)
 - **Trigger**: Admin declines witness
 - **Code**: `src/db/submissions.ts` (declineWitness)
 - **Changes**:
@@ -78,6 +78,7 @@ This document outlines the submission state machine, existing test coverage, and
   - `witnessed_on = NOW()`
 - **Validations**: Same as confirm
 - **Side Effects**: Email to member (onScreeningRejected)
+- **Note**: Declining witness does NOT skip the waiting period - submission must still be 60 days old (based on `reproduction_date`) before approval
 
 ### 4. **WAITING-PERIOD → PENDING-APPROVAL**
 - **Trigger**: Time-based (30 days for marine, 60 days for others)

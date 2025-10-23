@@ -11,6 +11,7 @@ export interface TestSubmissionOptions {
 	witnessed?: boolean;
 	witnessedBy?: number;
 	witnessedDaysAgo?: number; // How many days ago witnessing occurred (default: 0 - today)
+	reproductionDaysAgo?: number; // How many days ago reproduction occurred (default: 70 for old spawns)
 	approved?: boolean;
 	approvedBy?: number;
 	points?: number;
@@ -31,8 +32,13 @@ export async function createTestSubmission(options: TestSubmissionOptions): Prom
 		const submittedOn = options.submitted ? now : null;
 		// Set witnessed_on based on witnessedDaysAgo parameter (default 0 = today)
 		// For waiting period tests, use 0 (today). For approval tests, use 70+ days to satisfy 60-day requirement
-		const daysAgo = options.witnessedDaysAgo !== undefined ? options.witnessedDaysAgo : 0;
-		const witnessedOn = options.witnessed ? new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString() : null;
+		const witnessedDaysAgo = options.witnessedDaysAgo !== undefined ? options.witnessedDaysAgo : 0;
+		const witnessedOn = options.witnessed ? new Date(Date.now() - witnessedDaysAgo * 24 * 60 * 60 * 1000).toISOString() : null;
+
+		// Set reproduction_date based on reproductionDaysAgo parameter (default 70 for mature spawns)
+		const reproductionDaysAgo = options.reproductionDaysAgo !== undefined ? options.reproductionDaysAgo : 70;
+		const reproductionDate = new Date(Date.now() - reproductionDaysAgo * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
 		const approvedOn = options.approved ? now : null;
 
 		const result = await db.run(
@@ -74,7 +80,7 @@ export async function createTestSubmission(options: TestSubmissionOptions): Prom
 			"Poecilia reticulata",
 			"Fresh",
 			"20",
-			new Date().toISOString().split("T")[0],
+			reproductionDate,
 			JSON.stringify(["Live"]),
 			JSON.stringify(["Plant"]),
 			"10 gallon",
