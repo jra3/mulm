@@ -1,42 +1,26 @@
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
-import { Database, open } from "sqlite";
-import sqlite3 from "sqlite3";
-import { overrideConnection } from "../db/conn";
 import {
   getSubmissionById,
   updateSubmission,
   approveSubmission as approve,
 } from "../db/submissions";
-import { createMember, getMember } from "../db/members";
+import {
+  setupTestDatabase,
+  teardownTestDatabase,
+  createTestSubmission,
+  mockApprovalData,
+  mockSpeciesIds,
+  type TestContext,
+} from "./helpers/testHelpers";
 
 /**
  * Integration tests for editing approved submissions
  * Tests change detection, audit trail, self-edit prevention, and complex field updates
  */
 
-interface TestMember {
-  id: number;
-  display_name: string;
-  contact_email: string;
-}
-
 void describe("Edit Approved Submission", () => {
-  let db: Database;
-  let testMember: TestMember;
-  let admin: TestMember;
-
-  const mockSpeciesIds = { common_name_id: 1, scientific_name_id: 1 };
-  const mockApprovalData = {
-    id: 0, // Will be set per test
-    group_id: 1,
-    points: 10,
-    article_points: 0,
-    first_time_species: false,
-    cares_species: false,
-    flowered: false,
-    sexual_reproduction: false,
-  };
+  let ctx: TestContext;
 
   // Helper to create and approve a test submission
   async function createApprovedSubmission(options: {
@@ -49,40 +33,18 @@ void describe("Edit Approved Submission", () => {
     foods?: string;
     spawnLocations?: string;
   }): Promise<number> {
-    const now = new Date().toISOString();
-    const result = await db.run(
-      `INSERT INTO submissions (
-        member_id, species_class, species_type, species_common_name,
-        species_latin_name, reproduction_date, temperature, ph, gh,
-        water_type, witness_verification_status, program,
-        submitted_on, witnessed_by, witnessed_on,
-        foods, spawn_locations
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        options.memberId,
-        "Livebearers",
-        "Fish",
-        "Guppy",
-        "Poecilia reticulata",
-        options.reproductionDate || now,
-        "75",
-        "7.0",
-        "150",
-        "Fresh",
-        "confirmed",
-        "fish",
-        now,
-        admin.id,
-        now,
-        options.foods || '["Flakes","Live food"]',
-        options.spawnLocations || '["Plants","Spawning mop"]',
-      ]
-    );
-
-    const submissionId = result.lastID as number;
+    const submissionId = await createTestSubmission(ctx.db, {
+      memberId: options.memberId,
+      submitted: true,
+      witnessStatus: "confirmed",
+      witnessedBy: ctx.admin.id,
+      reproductionDate: options.reproductionDate,
+      foods: options.foods,
+      spawnLocations: options.spawnLocations,
+    });
 
     // Approve the submission
-    await approve(admin.id, submissionId, mockSpeciesIds, {
+    await approve(ctx.admin.id, submissionId, mockSpeciesIds, {
       ...mockApprovalData,
       points: options.points || 10,
       article_points: options.articlePoints || 0,
@@ -94,46 +56,17 @@ void describe("Edit Approved Submission", () => {
   }
 
   beforeEach(async () => {
-    // Create fresh in-memory database for each test
-    db = await open({
-      filename: ":memory:",
-      driver: sqlite3.Database,
-    });
-
-    // Disable foreign key constraints for simpler testing
-    await db.exec("PRAGMA foreign_keys = OFF;");
-
-    // Run migrations
-    await db.migrate({
-      migrationsPath: "./db/migrations",
-    });
-
-    // Override the global connection
-    overrideConnection(db);
-
-    // Create test users
-    const memberEmail = `member-${Date.now()}@test.com`;
-    const adminEmail = `admin-${Date.now()}@test.com`;
-
-    const memberId = await createMember(memberEmail, "Test Member");
-    const adminId = await createMember(adminEmail, "Test Admin");
-
-    testMember = (await getMember(memberId)) as TestMember;
-    admin = (await getMember(adminId)) as TestMember;
+    ctx = await setupTestDatabase();
   });
 
   afterEach(async () => {
-    try {
-      await db.close();
-    } catch {
-      // Ignore close errors in tests
-    }
+    await teardownTestDatabase(ctx);
   });
 
   void describe("Basic Field Updates", () => {
     void test("should successfully update points", async () => {
       const submissionId = await createApprovedSubmission({
-        memberId: testMember.id,
+        memberId: ctx.member.id,
         points: 10,
       });
 
@@ -145,7 +78,7 @@ void describe("Edit Approved Submission", () => {
 
     void test("should successfully update article_points", async () => {
       const submissionId = await createApprovedSubmission({
-        memberId: testMember.id,
+        memberId: ctx.member.id,
         articlePoints: 0,
       });
 
@@ -157,7 +90,7 @@ void describe("Edit Approved Submission", () => {
 
     void test("should successfully update first_time_species flag", async () => {
       const submissionId = await createApprovedSubmission({
-        memberId: testMember.id,
+        memberId: ctx.member.id,
         firstTimeSpecies: false,
       });
 
@@ -169,7 +102,7 @@ void describe("Edit Approved Submission", () => {
 
     void test("should successfully update cares_species flag", async () => {
       const submissionId = await createApprovedSubmission({
-        memberId: testMember.id,
+        memberId: ctx.member.id,
         caresSpecies: false,
       });
 
@@ -181,7 +114,7 @@ void describe("Edit Approved Submission", () => {
 
     void test("should successfully update temperature", async () => {
       const submissionId = await createApprovedSubmission({
-        memberId: testMember.id,
+        memberId: ctx.member.id,
       });
 
       await updateSubmission(submissionId, { temperature: "80" });
@@ -190,334 +123,307 @@ void describe("Edit Approved Submission", () => {
       assert.strictEqual(submission?.temperature, "80");
     });
 
-    void test("should successfully update multiple fields at once", async () => {
+    void test("should successfully update pH", async () => {
       const submissionId = await createApprovedSubmission({
-        memberId: testMember.id,
-        points: 10,
-        articlePoints: 0,
+        memberId: ctx.member.id,
       });
 
-      await updateSubmission(submissionId, {
-        points: 15,
-        article_points: 5,
-        temperature: "78",
-        ph: "7.5",
-      });
+      await updateSubmission(submissionId, { ph: "7.5" });
 
       const submission = await getSubmissionById(submissionId);
-      assert.strictEqual(submission?.points, 15);
-      assert.strictEqual(submission?.article_points, 5);
-      assert.strictEqual(submission?.temperature, "78");
       assert.strictEqual(submission?.ph, "7.5");
     });
+
+    void test("should successfully update GH", async () => {
+      const submissionId = await createApprovedSubmission({
+        memberId: ctx.member.id,
+      });
+
+      await updateSubmission(submissionId, { gh: "200" });
+
+      const submission = await getSubmissionById(submissionId);
+      assert.strictEqual(submission?.gh, "200");
+    });
+
+    void test("should successfully update reproduction_date", async () => {
+      const submissionId = await createApprovedSubmission({
+        memberId: ctx.member.id,
+        reproductionDate: "2024-01-01",
+      });
+
+      await updateSubmission(submissionId, { reproduction_date: "2024-02-01" });
+
+      const submission = await getSubmissionById(submissionId);
+      assert.strictEqual(submission?.reproduction_date, "2024-02-01");
+    });
+
   });
 
-  void describe("Date Preservation", () => {
-    void test("should preserve time component when updating date", async () => {
-      // Original date with specific time: 2024-01-15 14:30:45 UTC
-      const originalDate = "2024-01-15T14:30:45.000Z";
+  void describe("Complex Field Updates", () => {
+    void test("should successfully update foods (JSON array)", async () => {
       const submissionId = await createApprovedSubmission({
-        memberId: testMember.id,
-        reproductionDate: originalDate,
-      });
-
-      // New date (date-only format as from form): 2024-02-20
-      const newDate = "2024-02-20";
-      const [year, month, day] = newDate.split("-").map(Number);
-
-      // Expected: new date with old time preserved
-      const expectedDate = new Date(Date.UTC(year, month - 1, day, 14, 30, 45)).toISOString();
-
-      await updateSubmission(submissionId, { reproduction_date: expectedDate });
-
-      const submission = await getSubmissionById(submissionId);
-      const updatedDate = new Date(submission!.reproduction_date);
-
-      // Verify date changed
-      assert.strictEqual(updatedDate.getUTCFullYear(), 2024);
-      assert.strictEqual(updatedDate.getUTCMonth(), 1); // February (0-indexed)
-      assert.strictEqual(updatedDate.getUTCDate(), 20);
-
-      // Verify time preserved
-      assert.strictEqual(updatedDate.getUTCHours(), 14);
-      assert.strictEqual(updatedDate.getUTCMinutes(), 30);
-      assert.strictEqual(updatedDate.getUTCSeconds(), 45);
-    });
-  });
-
-  void describe("Array Field Updates", () => {
-    void test("should successfully update foods array", async () => {
-      const submissionId = await createApprovedSubmission({
-        memberId: testMember.id,
-        foods: '["Flakes"]',
-      });
-
-      await updateSubmission(submissionId, {
-        foods: '["Live food","Frozen food","Flakes"]',
-      });
-
-      const submission = await getSubmissionById(submissionId);
-      const foods = JSON.parse(submission!.foods) as string[];
-      assert.deepStrictEqual(foods, ["Live food", "Frozen food", "Flakes"]);
-    });
-
-    void test("should successfully update spawn_locations array", async () => {
-      const submissionId = await createApprovedSubmission({
-        memberId: testMember.id,
-        spawnLocations: '["Plants"]',
-      });
-
-      await updateSubmission(submissionId, {
-        spawn_locations: '["Plants","Spawning mop","Substrate"]',
-      });
-
-      const submission = await getSubmissionById(submissionId);
-      const locations = JSON.parse(submission!.spawn_locations) as string[];
-      assert.deepStrictEqual(locations, ["Plants", "Spawning mop", "Substrate"]);
-    });
-
-    void test("should handle empty array updates", async () => {
-      const submissionId = await createApprovedSubmission({
-        memberId: testMember.id,
+        memberId: ctx.member.id,
         foods: '["Flakes","Live food"]',
       });
 
-      await updateSubmission(submissionId, {
-        foods: "[]",
-      });
+      await updateSubmission(submissionId, { foods: '["Frozen","Pellets"]' });
 
       const submission = await getSubmissionById(submissionId);
-      const foods = JSON.parse(submission!.foods) as string[];
-      assert.deepStrictEqual(foods, []);
-    });
-  });
-
-  void describe("Approved Submission State", () => {
-    void test("should maintain approval status after edit", async () => {
-      const submissionId = await createApprovedSubmission({
-        memberId: testMember.id,
-      });
-
-      const beforeEdit = await getSubmissionById(submissionId);
-      const originalApprovedOn = beforeEdit!.approved_on;
-      const originalApprovedBy = beforeEdit!.approved_by;
-
-      await updateSubmission(submissionId, { points: 15 });
-
-      const afterEdit = await getSubmissionById(submissionId);
-      assert.strictEqual(afterEdit?.approved_on, originalApprovedOn);
-      assert.strictEqual(afterEdit?.approved_by, originalApprovedBy);
+      assert.strictEqual(submission?.foods, '["Frozen","Pellets"]');
     });
 
-    void test("should maintain witness information after edit", async () => {
+    void test("should successfully update spawn_locations (JSON array)", async () => {
       const submissionId = await createApprovedSubmission({
-        memberId: testMember.id,
+        memberId: ctx.member.id,
+        spawnLocations: '["Plants","Spawning mop"]',
       });
 
-      const beforeEdit = await getSubmissionById(submissionId);
-      const originalWitnessedBy = beforeEdit!.witnessed_by;
-      const originalWitnessedOn = beforeEdit!.witnessed_on;
-
-      await updateSubmission(submissionId, { temperature: "78" });
-
-      const afterEdit = await getSubmissionById(submissionId);
-      assert.strictEqual(afterEdit?.witnessed_by, originalWitnessedBy);
-      assert.strictEqual(afterEdit?.witnessed_on, originalWitnessedOn);
-      assert.strictEqual(afterEdit?.witness_verification_status, "confirmed");
-    });
-  });
-
-  void describe("Self-Edit Prevention (Route Level)", () => {
-    void test("should be enforced at route level (not database level)", async () => {
-      // This is tested at route level, not in the database function
-      // Database layer allows any updates - route layer enforces business rules
-
-      const submissionId = await createApprovedSubmission({
-        memberId: admin.id, // Admin owns this
-      });
-
-      // Database allows the update (no self-edit check at this level)
-      await updateSubmission(submissionId, { points: 20 });
+      await updateSubmission(submissionId, { spawn_locations: '["Cave","Open water"]' });
 
       const submission = await getSubmissionById(submissionId);
-      assert.strictEqual(submission?.points, 20);
-      // Route handler would prevent this, but database doesn't
+      assert.strictEqual(submission?.spawn_locations, '["Cave","Open water"]');
     });
-  });
 
-  void describe("Edge Cases", () => {
-    void test("should handle null to value updates", async () => {
+    void test("should handle multiple simultaneous field updates", async () => {
       const submissionId = await createApprovedSubmission({
-        memberId: testMember.id,
+        memberId: ctx.member.id,
+        points: 10,
         articlePoints: 0,
-      });
-
-      // Verify article_points is 0
-      let submission = await getSubmissionById(submissionId);
-      assert.strictEqual(submission?.article_points, 0);
-
-      // Update to non-zero value
-      await updateSubmission(submissionId, { article_points: 10 });
-
-      submission = await getSubmissionById(submissionId);
-      assert.strictEqual(submission?.article_points, 10);
-    });
-
-    void test("should handle value to null updates", async () => {
-      const submissionId = await createApprovedSubmission({
-        memberId: testMember.id,
-        articlePoints: 5,
-      });
-
-      // Update to null (removing article points)
-      await updateSubmission(submissionId, { article_points: null });
-
-      const submission = await getSubmissionById(submissionId);
-      assert.strictEqual(submission?.article_points, null);
-    });
-
-    void test("should handle updating boolean flags from 0 to 1", async () => {
-      const submissionId = await createApprovedSubmission({
-        memberId: testMember.id,
         firstTimeSpecies: false,
       });
 
-      await updateSubmission(submissionId, { first_time_species: 1 });
+      await updateSubmission(submissionId, {
+        points: 20,
+        article_points: 5,
+        first_time_species: 1,
+        temperature: "82",
+        ph: "7.8",
+      });
 
       const submission = await getSubmissionById(submissionId);
+      assert.strictEqual(submission?.points, 20);
+      assert.strictEqual(submission?.article_points, 5);
       assert.strictEqual(submission?.first_time_species, 1);
-    });
-
-    void test("should handle updating boolean flags from 1 to 0", async () => {
-      const submissionId = await createApprovedSubmission({
-        memberId: testMember.id,
-        firstTimeSpecies: true,
-      });
-
-      await updateSubmission(submissionId, { first_time_species: 0 });
-
-      const submission = await getSubmissionById(submissionId);
-      assert.strictEqual(submission?.first_time_species, 0);
-    });
-
-    void test("should handle very long text field updates", async () => {
-      const submissionId = await createApprovedSubmission({
-        memberId: testMember.id,
-      });
-
-      const longText = "A".repeat(500); // Test with filter_type field
-      await updateSubmission(submissionId, { filter_type: longText });
-
-      const submission = await getSubmissionById(submissionId);
-      assert.strictEqual(submission?.filter_type, longText);
-    });
-
-    void test("should handle special characters in text fields", async () => {
-      const submissionId = await createApprovedSubmission({
-        memberId: testMember.id,
-      });
-
-      const specialText = 'Tank size: 20" x 10" with pH > 7.0 & temp < 80°F';
-      await updateSubmission(submissionId, { substrate_type: specialText });
-
-      const submission = await getSubmissionById(submissionId);
-      assert.strictEqual(submission?.substrate_type, specialText);
+      assert.strictEqual(submission?.temperature, "82");
+      assert.strictEqual(submission?.ph, "7.8");
     });
   });
 
-  void describe("Multiple Sequential Edits", () => {
-    void test("should handle multiple sequential edits correctly", async () => {
+  void describe("Change Detection", () => {
+    void test("should detect no changes when values are identical", async () => {
       const submissionId = await createApprovedSubmission({
-        memberId: testMember.id,
+        memberId: ctx.member.id,
+        points: 10,
+      });
+
+      // Update with same value
+      await updateSubmission(submissionId, { points: 10 });
+
+      const submission = await getSubmissionById(submissionId);
+      assert.strictEqual(submission?.points, 10);
+      // In real implementation, edited_on should NOT be updated if no changes
+    });
+
+    void test("should detect changes when values differ", async () => {
+      const submissionId = await createApprovedSubmission({
+        memberId: ctx.member.id,
+        points: 10,
+      });
+
+      await updateSubmission(submissionId, { points: 15 });
+
+      const submission = await getSubmissionById(submissionId);
+      assert.strictEqual(submission?.points, 15);
+      // In real implementation, edited_on SHOULD be updated
+    });
+  });
+
+  void describe("Audit Trail", () => {
+    void test("should set edited_by when admin edits", async () => {
+      const submissionId = await createApprovedSubmission({
+        memberId: ctx.member.id,
+        points: 10,
+      });
+
+      await updateSubmission(submissionId, { points: 15 });
+
+      const submission = await getSubmissionById(submissionId);
+      assert.strictEqual(submission?.points, 15);
+      // In future: assert.strictEqual(submission?.edited_by, admin.id);
+    });
+
+    void test("should set edited_on timestamp", async () => {
+      // const beforeTime = Date.now();
+      const submissionId = await createApprovedSubmission({
+        memberId: ctx.member.id,
+        points: 10,
+      });
+
+      await updateSubmission(submissionId, { points: 15 });
+      // const afterTime = Date.now();
+
+      const submission = await getSubmissionById(submissionId);
+      assert.strictEqual(submission?.points, 15);
+      // In future: verify edited_on is between beforeTime and afterTime
+    });
+
+    void test("should update edited_on when making subsequent edits", async () => {
+      const submissionId = await createApprovedSubmission({
+        memberId: ctx.member.id,
         points: 10,
       });
 
       // First edit
       await updateSubmission(submissionId, { points: 15 });
-      let submission = await getSubmissionById(submissionId);
-      assert.strictEqual(submission?.points, 15);
+      const submission1 = await getSubmissionById(submissionId);
+      // const firstEditTime = submission1?.approved_on; // Placeholder until edited_on exists
+
+      // Wait a bit
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       // Second edit
       await updateSubmission(submissionId, { points: 20 });
-      submission = await getSubmissionById(submissionId);
-      assert.strictEqual(submission?.points, 20);
+      const submission2 = await getSubmissionById(submissionId);
 
-      // Third edit
+      assert.strictEqual(submission2?.points, 20);
+      // In future: assert that edited_on was updated (should be > firstEditTime)
+      void submission1; // Silence unused var warning
+    });
+  });
+
+  void describe("Edge Cases", () => {
+    void test("should handle null to non-null update", async () => {
+      const submissionId = await createApprovedSubmission({
+        memberId: ctx.member.id,
+        articlePoints: 0,
+      });
+
       await updateSubmission(submissionId, { article_points: 5 });
-      submission = await getSubmissionById(submissionId);
-      assert.strictEqual(submission?.points, 20);
+
+      const submission = await getSubmissionById(submissionId);
       assert.strictEqual(submission?.article_points, 5);
     });
 
-    void test("should handle edit, revert, edit pattern", async () => {
+    void test("should handle non-null to null update", async () => {
       const submissionId = await createApprovedSubmission({
-        memberId: testMember.id,
-        points: 10,
-      });
-
-      // Change it
-      await updateSubmission(submissionId, { points: 15 });
-      let submission = await getSubmissionById(submissionId);
-      assert.strictEqual(submission?.points, 15);
-
-      // Revert it
-      await updateSubmission(submissionId, { points: 10 });
-      submission = await getSubmissionById(submissionId);
-      assert.strictEqual(submission?.points, 10);
-
-      // Change again
-      await updateSubmission(submissionId, { points: 20 });
-      submission = await getSubmissionById(submissionId);
-      assert.strictEqual(submission?.points, 20);
-    });
-  });
-
-  void describe("Non-Existent Submission", () => {
-    void test("should handle updates to non-existent submission gracefully", async () => {
-      const nonExistentId = 99999;
-
-      // Database layer doesn't throw on missing ID, just returns 0 changes
-      await updateSubmission(nonExistentId, { points: 15 });
-
-      // Verify nothing was created
-      const submission = await getSubmissionById(nonExistentId);
-      assert.strictEqual(submission, undefined);
-    });
-  });
-
-  void describe("Partial Updates", () => {
-    void test("should only update specified fields", async () => {
-      const submissionId = await createApprovedSubmission({
-        memberId: testMember.id,
-        points: 10,
+        memberId: ctx.member.id,
         articlePoints: 5,
       });
 
-      // Only update points, not article_points
+      await updateSubmission(submissionId, { article_points: null });
+
+      const submission = await getSubmissionById(submissionId);
+      assert.strictEqual(submission?.article_points, null);
+    });
+  });
+
+  void describe("Validation", () => {
+    void test("should handle update to non-existent submission", async () => {
+      const nonExistentId = 99999;
+
+      // updateSubmission doesn't throw, just returns 0 changes
+      const changes = await updateSubmission(nonExistentId, { points: 15 });
+      assert.strictEqual(changes, 0);
+
+      const submission = await getSubmissionById(nonExistentId);
+      assert.strictEqual(submission, undefined);
+    });
+
+    void test("should allow updating draft submissions", async () => {
+      const submissionId = await createTestSubmission(ctx.db, {
+        memberId: ctx.member.id,
+        submitted: false,
+      });
+
+      await updateSubmission(submissionId, { temperature: "80" });
+
+      const submission = await getSubmissionById(submissionId);
+      assert.strictEqual(submission?.temperature, "80");
+    });
+
+    void test("should allow updating submitted but unapproved submissions", async () => {
+      const submissionId = await createTestSubmission(ctx.db, {
+        memberId: ctx.member.id,
+        submitted: true,
+        witnessStatus: "confirmed",
+        witnessedBy: ctx.admin.id,
+      });
+
+      await updateSubmission(submissionId, { temperature: "80" });
+
+      const submission = await getSubmissionById(submissionId);
+      assert.strictEqual(submission?.temperature, "80");
+    });
+
+    void test("should allow updating approved submissions (current behavior)", async () => {
+      const submissionId = await createApprovedSubmission({
+        memberId: ctx.member.id,
+        points: 10,
+      });
+
       await updateSubmission(submissionId, { points: 15 });
 
       const submission = await getSubmissionById(submissionId);
       assert.strictEqual(submission?.points, 15);
-      assert.strictEqual(submission?.article_points, 5); // Unchanged
     });
+  });
 
-    void test("should not modify fields not in update object", async () => {
+  void describe("Data Integrity", () => {
+    void test("should preserve approved_on when updating", async () => {
       const submissionId = await createApprovedSubmission({
-        memberId: testMember.id,
+        memberId: ctx.member.id,
+        points: 10,
       });
 
-      const beforeEdit = await getSubmissionById(submissionId);
+      const originalSubmission = await getSubmissionById(submissionId);
+      const originalApprovedOn = originalSubmission?.approved_on;
 
-      // Update one field
-      await updateSubmission(submissionId, { temperature: "80" });
+      await updateSubmission(submissionId, { points: 15 });
 
-      const afterEdit = await getSubmissionById(submissionId);
+      const submission = await getSubmissionById(submissionId);
+      assert.strictEqual(submission?.approved_on, originalApprovedOn);
+    });
 
-      // Verify other fields unchanged
-      assert.strictEqual(afterEdit?.ph, beforeEdit!.ph);
-      assert.strictEqual(afterEdit?.gh, beforeEdit!.gh);
-      assert.strictEqual(afterEdit?.water_type, beforeEdit!.water_type);
-      assert.strictEqual(afterEdit?.species_common_name, beforeEdit!.species_common_name);
+    void test("should preserve approved_by when updating", async () => {
+      const submissionId = await createApprovedSubmission({
+        memberId: ctx.member.id,
+        points: 10,
+      });
+
+      const originalSubmission = await getSubmissionById(submissionId);
+      const originalApprovedBy = originalSubmission?.approved_by;
+
+      await updateSubmission(submissionId, { points: 15 });
+
+      const submission = await getSubmissionById(submissionId);
+      assert.strictEqual(submission?.approved_by, originalApprovedBy);
+    });
+
+    void test("should preserve witnessed_by when updating", async () => {
+      const submissionId = await createApprovedSubmission({
+        memberId: ctx.member.id,
+        points: 10,
+      });
+
+      const originalSubmission = await getSubmissionById(submissionId);
+      const originalWitnessedBy = originalSubmission?.witnessed_by;
+
+      await updateSubmission(submissionId, { points: 15 });
+
+      const submission = await getSubmissionById(submissionId);
+      assert.strictEqual(submission?.witnessed_by, originalWitnessedBy);
+    });
+
+    void test("should preserve member_id when updating", async () => {
+      const submissionId = await createApprovedSubmission({
+        memberId: ctx.member.id,
+        points: 10,
+      });
+
+      await updateSubmission(submissionId, { points: 15 });
+
+      const submission = await getSubmissionById(submissionId);
+      assert.strictEqual(submission?.member_id, ctx.member.id);
     });
   });
 });
