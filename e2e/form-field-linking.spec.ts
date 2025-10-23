@@ -73,7 +73,7 @@ test.describe("BAP Form - Field Linking", () => {
 		// Verify common name field was auto-populated
 		const commonName = await getTomSelectValue(page, "species_common_name");
 		expect(commonName).toBeTruthy();
-		expect(commonName.toLowerCase()).toContain("guppy");
+		expect(commonName!.toLowerCase()).toContain("guppy");
 
 		// Verify hidden species_name_id field has a value
 		const nameId = await page.inputValue('input[name="species_name_id"]');
@@ -155,7 +155,7 @@ test.describe("BAP Form - Field Linking", () => {
 		const commonName = await getTomSelectValue(page, "species_common_name");
 		expect(commonName).toBeTruthy();
 		// The API might return the scientific name as the common name if no common name exists
-		expect(commonName.toLowerCase()).toMatch(/(platy|xiphophorus)/);
+		expect(commonName!.toLowerCase()).toMatch(/(platy|xiphophorus)/);
 
 		// Verify hidden ID updated to new species
 		const secondNameId = await page.inputValue('input[name="species_name_id"]');

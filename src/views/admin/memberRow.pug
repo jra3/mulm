@@ -1,30 +1,28 @@
 mixin memberRow(member)
-	- const stringCell = ['p-3', 'text-left', 'border-b', 'border-gray-200'];
-	- const numberCell = ['p-3', 'text-right', 'border-b', 'border-gray-200'];
-	- const centerCell = ['p-3', 'text-center', 'border-b', 'border-gray-200'];
-	tr(class="hover:bg-gray-50")
+    - const stringCell = ['p-3', 'text-left', 'border-b', 'border-gray-200'];
+    - const numberCell = ['p-3', 'text-right', 'border-b', 'border-gray-200'];
+    - const centerCell = ['p-3', 'text-center', 'border-b', 'border-gray-200'];
+    tr(class="hover:bg-gray-50")
 
-		td(class=numberCell)= member.id
-		td(class=centerCell)
-			input(disabled checked=member.is_admin == 1 type="checkbox")
+        td(class=numberCell)= member.id
+        td(class=centerCell)
+            input(disabled checked=member.is_admin == 1 type="checkbox")
 
-		td(class=stringCell)
-			a.link(href=`/member/${member.id}`)= member.display_name
-		td(class=stringCell)= member.contact_email
-		td(class=numberCell title=`Level: ${member.fish_level || 'None'}`)= member.fishTotalPoints || 0
-		td(class=numberCell title=`Level: ${member.plant_level || 'None'}`)= member.plantTotalPoints || 0
-		td(class=numberCell title=`Level: ${member.coral_level || 'None'}`)= member.coralTotalPoints || 0
-		td(class=centerCell)
-			.flex.gap-2.items-center.justify-center
-				a.link(
-					hx-target="closest tr"
-					hx-swap="outerHTML"
-					hx-get=`/admin/members/${member.id}/edit`) Edit
-				if member.hasPassword === 0 && member.hasGoogleAccount === 0
-					button(
-						hx-post=`/admin/members/${member.id}/send-welcome`
-						hx-target="closest tr"
-						hx-swap="outerHTML"
-						class="px-3 py-1 bg-blue-600 text-white rounded text-sm" +
-							" hover:bg-blue-700"
-						title="Send welcome email with password setup link") Send Welcome
+        td(class=stringCell)
+            a.link(href=`/member/${member.id}`)= member.display_name
+        td(class=stringCell)= member.contact_email
+        td(class=numberCell title=`Level: ${member.fish_level || 'None'}`)= member.fishTotalPoints || 0
+        td(class=numberCell title=`Level: ${member.plant_level || 'None'}`)= member.plantTotalPoints || 0
+        td(class=numberCell title=`Level: ${member.coral_level || 'None'}`)= member.coralTotalPoints || 0
+        td(class=centerCell)
+            .flex.gap-2.items-center.justify-center
+                a.link(
+                    hx-target="closest tr"
+                    hx-swap="outerHTML"
+                    hx-get=`/admin/members/${member.id}/edit`) Edit
+                if member.hasPassword === 0 && member.hasGoogleAccount === 0
+                    button.primary.text-sm(
+                        hx-post=`/admin/members/${member.id}/send-welcome`
+                        hx-target="closest tr"
+                        hx-swap="outerHTML"
+                        title="Send welcome email with password setup link") Send Welcome
