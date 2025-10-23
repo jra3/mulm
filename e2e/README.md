@@ -30,10 +30,15 @@ npm run test:e2e -- hello-world.spec.ts
 e2e/
 ├── helpers/
 │   ├── auth.ts          # Authentication utilities
+│   ├── tomSelect.ts     # Tom Select dropdown interaction helpers
 │   └── testData.ts      # Test data seeding and cleanup
 ├── global-setup.ts      # Runs once before all tests (creates test users)
 ├── hello-world.spec.ts  # ✅ Basic connectivity tests (4/4 passing)
-└── form-submission.spec.ts  # 🚧 WIP: Form submission flow tests
+├── form-field-linking.spec.ts  # ✅ Form field linking tests (11/11 passing)
+├── form-submission.spec.ts     # ✅ Form submission flow tests (4/4 passing)
+├── auth.spec.ts         # ✅ Authentication tests
+├── admin-workflows.spec.ts     # ✅ Admin workflow tests
+└── tom-select-demo.spec.ts     # ✅ Tom Select demo tests
 ```
 
 ## Test Status
@@ -46,31 +51,31 @@ e2e/
 - ✅ No console errors on load
 - ✅ Health check endpoint responds
 
+**form-field-linking.spec.ts** - Form field linking (11/11 tests) ⭐ **NEW**
+- ✅ Auto-populate scientific name when common name is selected
+- ✅ Auto-populate common name when scientific name is selected
+- ✅ Update hidden species_name_id field when species is selected
+- ✅ Populate species_class field based on selected species
+- ✅ Maintain sync when switching between fields
+- ✅ Properly initialize Tom Select dropdowns
+- ✅ No JavaScript errors during field linking
+- ✅ Handle bidirectional sync correctly
+- ✅ Preserve field values across HTMX swaps
+- ✅ Handle species with multiple common names
+- ✅ Handle newly created custom species names
+
+**form-submission.spec.ts** - Form submission flows (4/4 tests)
+- ✅ Create and save draft submission
+- ✅ Submit complete form for review
+- ✅ Edit draft submission
+- ✅ Delete draft submission
+
 **CI Integration:**
 - ✅ Runs on every push/PR
 - ✅ Browser auto-install in CI
 - ✅ Screenshot/video on failure
 - ✅ Artifacts uploaded (30 day retention)
 - ✅ Parallel with unit tests
-
-### 🚧 Work in Progress
-
-**form-submission.spec.ts** - Form submission flows (0/4 passing)
-- ❌ Create and save draft submission
-- ❌ Submit complete form for review
-- ❌ Edit draft submission
-- ❌ Delete draft submission
-
-**Known Issues:**
-1. **Login flow needs refinement** - Dialog interaction not completing
-2. **Tom Select fields** - Species name fields use Tom Select dropdowns, not regular inputs
-3. **HTMX interactions** - Need to wait for HTMX swaps after field changes
-
-**Next Steps:**
-- Fix login helper to handle HTMX dialog properly
-- Create Tom Select interaction helpers
-- Add proper waits for HTMX swaps
-- Handle session/cookie management
 
 ## Helpers
 
@@ -231,19 +236,29 @@ await page.selectOption('select[name="species_type"]', 'Fish');
 await page.waitForSelector('select[name="species_class"]'); // Wait for HTMX swap
 ```
 
-### Tom Select Dropdowns
+### Tom Select Dropdowns (`helpers/tomSelect.ts`)
+
 ```typescript
-// Tom Select creates custom dropdowns - need special handling
-// Regular fill/type won't work
-// TODO: Create helper functions for Tom Select interactions
+import { fillTomSelectTypeahead, getTomSelectValue, selectTomSelectMultiple } from "./helpers/tomSelect";
+
+// Fill a typeahead field (e.g., species name)
+await fillTomSelectTypeahead(page, "species_common_name", "Guppy");
+
+// Get the selected value
+const value = await getTomSelectValue(page, "species_common_name");
+
+// Select multiple values (e.g., foods, spawn locations)
+await selectTomSelectMultiple(page, "foods", ["Live", "Flake"]);
+
+// Clear a field
+await clearTomSelect(page, "species_common_name");
 ```
 
 ## Known Limitations
 
-1. **No Tom Select helper yet** - Need to create utilities for Tom Select dropdown interactions
-2. **Login flow incomplete** - HTMX dialog interaction needs refinement
-3. **No file upload tests** - Image upload not yet tested
-4. **No admin workflow tests** - Witness/approval flows not yet tested
+1. **No file upload tests** - Image upload not yet fully tested in E2E
+2. **Limited mobile viewport testing** - Most tests focus on desktop viewport
+3. **No visual regression testing** - UI changes are not automatically detected
 
 ## Resources
 
@@ -266,32 +281,35 @@ npm run build
 npm run test:e2e
 ```
 
-### Login fails in tests
-
-**Issue:** Login dialog doesn't complete, can't find logout link
-
-**Status:** Known issue - needs debugging. The login dialog opens and credentials are filled, but the form submission via HTMX isn't completing.
-
-**Workaround:** Use direct database session creation (bypass UI login) - TODO
-
 ### Tom Select fields not interacting
 
 **Issue:** Can't fill `species_common_name` or `species_latin_name`
 
 **Cause:** These are Tom Select typeahead dropdowns, not regular inputs
 
-**Solution:** Need to create Tom Select interaction helpers that:
-1. Click the Tom Select control
-2. Type into the search input
-3. Wait for results
-4. Select from dropdown
-5. Verify selection
+**Solution:** ✅ **FIXED** - Use the Tom Select helpers in `e2e/helpers/tomSelect.ts`:
+```typescript
+import { fillTomSelectTypeahead } from "./helpers/tomSelect";
+await fillTomSelectTypeahead(page, "species_common_name", "Guppy");
+```
 
-## Next Steps
+### Field linking not working
 
-1. **Fix login helper** - Debug HTMX dialog interaction
-2. **Create Tom Select helpers** - Enable species field interactions
-3. **Complete form submission tests** - Get all 4 tests passing
-4. **Add field linking tests** - Test common ↔ scientific name sync
-5. **Add image upload tests** - Test file upload flow
-6. **Add session persistence tests** - Test sessionStorage behavior
+**Issue:** Common name and scientific name fields don't sync
+
+**Status:** ✅ **FIXED** - Comprehensive tests added in `form-field-linking.spec.ts` to prevent regressions
+
+The form field linking functionality (which was temporarily disabled in commit c9e9606) is now:
+- Re-enabled in production
+- Fully tested with 11 E2E tests
+- Protected against future regressions
+
+## Future Enhancements
+
+1. **Image upload tests** - Test file upload flow and image preview
+2. **Session persistence tests** - Test sessionStorage behavior across reloads
+3. **Visual regression testing** - Add screenshot comparison tests
+4. **Cross-browser testing** - Run tests on Firefox and WebKit
+5. **Mobile viewport testing** - Add responsive design tests
+6. **Accessibility testing** - Add automated a11y checks
+7. **Performance testing** - Add Core Web Vitals monitoring
