@@ -522,3 +522,95 @@ export function assertSubmissionState(
     }
   }
 }
+
+/**
+ * Creates a test species with split schema and returns name IDs
+ * This is needed for proper foreign key relationships in tests
+ *
+ * @param db - Database instance
+ * @param commonName - Common name for the species
+ * @param scientificName - Scientific name for the species
+ * @param genus - Canonical genus name
+ * @param species - Canonical species name
+ * @param programClass - BAP program class (e.g., "Cichlids - New World")
+ * @returns Object with common_name_id, scientific_name_id, and group_id
+ *
+ * @example
+ * ```typescript
+ * const speciesIds = await createTestSpeciesName(
+ *   ctx.db,
+ *   "Neon Tetra",
+ *   "Paracheirodon innesi",
+ *   "Paracheirodon",
+ *   "innesi",
+ *   "Characins"
+ * );
+ * ```
+ */
+export async function createTestSpeciesName(
+  db: Database,
+  commonName: string = "Test Fish",
+  scientificName: string = "Testus fishus",
+  genus: string = "Testus",
+  species: string = "fishus",
+  programClass: string = "Freshwater"
+): Promise<{ common_name_id: number; scientific_name_id: number; group_id: number }> {
+  // First create or get the species name group
+  await db.run(
+    `
+    INSERT OR IGNORE INTO species_name_group (program_class, canonical_genus, canonical_species_name, species_type)
+    VALUES (?, ?, ?, 'Fish')
+  `,
+    [programClass, genus, species]
+  );
+
+  const group = await db.get<{ group_id: number }>(
+    `
+    SELECT group_id FROM species_name_group
+    WHERE canonical_genus = ? AND canonical_species_name = ?
+  `,
+    [genus, species]
+  );
+
+  if (!group) {
+    throw new Error("Failed to create or find species name group");
+  }
+
+  // Create or get the common name
+  await db.run(
+    `
+    INSERT OR IGNORE INTO species_common_name (group_id, common_name)
+    VALUES (?, ?)
+  `,
+    [group.group_id, commonName]
+  );
+
+  const commonNameRecord = await db.get<{ common_name_id: number }>(
+    `SELECT common_name_id FROM species_common_name WHERE group_id = ? AND common_name = ?`,
+    [group.group_id, commonName]
+  );
+
+  // Create or get the scientific name
+  await db.run(
+    `
+    INSERT OR IGNORE INTO species_scientific_name (group_id, scientific_name)
+    VALUES (?, ?)
+  `,
+    [group.group_id, scientificName]
+  );
+
+  const scientificNameRecord = await db.get<{ scientific_name_id: number }>(
+    `SELECT scientific_name_id FROM species_scientific_name WHERE group_id = ? AND scientific_name = ?`,
+    [group.group_id, scientificName]
+  );
+
+  if (!commonNameRecord || !scientificNameRecord) {
+    throw new Error("Failed to create or retrieve species names");
+  }
+
+  return {
+    common_name_id: commonNameRecord.common_name_id,
+    scientific_name_id: scientificNameRecord.scientific_name_id,
+    group_id: group.group_id,
+  };
+}
