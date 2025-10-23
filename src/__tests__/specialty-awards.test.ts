@@ -1,3 +1,5 @@
+import { describe, test } from "node:test";
+import assert from "node:assert";
 import {
   checkSpecialtyAwards,
   checkMetaAwards,
@@ -5,8 +7,8 @@ import {
   SubmissionForAward,
 } from "../specialtyAwards";
 
-describe("Specialty Awards", () => {
-  test("Anabantoids Specialist award works correctly", () => {
+void describe("Specialty Awards", () => {
+  void test("Anabantoids Specialist award works correctly", () => {
     const submissions: SubmissionForAward[] = [
       {
         species_class: "Anabantoids",
@@ -47,10 +49,10 @@ describe("Specialty Awards", () => {
     ];
 
     const awards = checkSpecialtyAwards(submissions);
-    expect(awards).toContain("Anabantoids Specialist");
+    assert.ok(awards.includes("Anabantoids Specialist"));
   });
 
-  test("Marine Invertebrates & Corals Specialist works across programs", () => {
+  void test("Marine Invertebrates & Corals Specialist works across programs", () => {
     const submissions: SubmissionForAward[] = [
       // Marine inverts from fish program
       {
@@ -99,10 +101,10 @@ describe("Specialty Awards", () => {
     ];
 
     const awards = checkSpecialtyAwards(submissions);
-    expect(awards).toContain("Marine Invertebrates & Corals Specialist");
+    assert.ok(awards.includes("Marine Invertebrates & Corals Specialist"));
   });
 
-  test("Brackish Water Specialist works across species types", () => {
+  void test("Brackish Water Specialist works across species types", () => {
     const submissions: SubmissionForAward[] = [
       {
         species_class: "Livebearers",
@@ -125,10 +127,10 @@ describe("Specialty Awards", () => {
     ];
 
     const awards = checkSpecialtyAwards(submissions);
-    expect(awards).toContain("Brackish Water Specialist");
+    assert.ok(awards.includes("Brackish Water Specialist"));
   });
 
-  test("Catfish Specialist limitation works correctly", () => {
+  void test("Catfish Specialist limitation works correctly", () => {
     // Test with all Corydoras - should not qualify due to limitation
     const allCorydoras: SubmissionForAward[] = [
       {
@@ -169,7 +171,7 @@ describe("Specialty Awards", () => {
     ];
 
     let awards = checkSpecialtyAwards(allCorydoras);
-    expect(awards).not.toContain("Catfish Specialist");
+    assert.ok(!awards.includes("Catfish Specialist"));
 
     // Test with mix including non-Corydoras - should qualify
     const mixedCatfish: SubmissionForAward[] = [
@@ -184,10 +186,10 @@ describe("Specialty Awards", () => {
     ];
 
     awards = checkSpecialtyAwards(mixedCatfish);
-    expect(awards).toContain("Catfish Specialist");
+    assert.ok(awards.includes("Catfish Specialist"));
   });
 
-  test("Awards require sufficient unique species", () => {
+  void test("Awards require sufficient unique species", () => {
     // Only 2 Anabantoids species - should not qualify (needs 6)
     const submissions: SubmissionForAward[] = [
       {
@@ -205,10 +207,10 @@ describe("Specialty Awards", () => {
     ];
 
     const awards = checkSpecialtyAwards(submissions);
-    expect(awards).not.toContain("Anabantoids Specialist");
+    assert.ok(!awards.includes("Anabantoids Specialist"));
   });
 
-  test("Duplicate species are counted only once", () => {
+  void test("Duplicate species are counted only once", () => {
     // 6 submissions but only 3 unique species - should not qualify
     const submissions: SubmissionForAward[] = [
       {
@@ -250,10 +252,10 @@ describe("Specialty Awards", () => {
     ];
 
     const awards = checkSpecialtyAwards(submissions);
-    expect(awards).not.toContain("Anabantoids Specialist");
+    assert.ok(!awards.includes("Anabantoids Specialist"));
   });
 
-  test("Catfish award handles missing genus data gracefully", () => {
+  void test("Catfish award handles missing genus data gracefully", () => {
     // Test with submissions missing genus data - should fail limitation gracefully
     const catfishWithoutGenus: SubmissionForAward[] = [
       {
@@ -295,26 +297,26 @@ describe("Specialty Awards", () => {
 
     // Should not award because genus data is missing for limitation check
     const awards = checkSpecialtyAwards(catfishWithoutGenus);
-    expect(awards).not.toContain("Catfish Specialist");
+    assert.ok(!awards.includes("Catfish Specialist"));
   });
 });
 
-describe("Meta-Awards", () => {
-  test("getCountableSpecialtyAwards excludes invertebrates award", () => {
+void describe("Meta-Awards", () => {
+  void test("getCountableSpecialtyAwards excludes invertebrates award", () => {
     const countableAwards = getCountableSpecialtyAwards();
 
-    expect(countableAwards).not.toContain("Marine Invertebrates & Corals Specialist");
-    expect(countableAwards).toContain("Anabantoids Specialist");
-    expect(countableAwards).toContain("Catfish Specialist");
-    expect(countableAwards).toContain("Killifish Specialist");
-    expect(countableAwards.length).toBe(10); // 11 total - 1 excluded
+    assert.ok(!countableAwards.includes("Marine Invertebrates & Corals Specialist"));
+    assert.ok(countableAwards.includes("Anabantoids Specialist"));
+    assert.ok(countableAwards.includes("Catfish Specialist"));
+    assert.ok(countableAwards.includes("Killifish Specialist"));
+    assert.strictEqual(countableAwards.length, 10); // 11 total - 1 excluded
   });
 
-  test("Senior Specialist Award requires 4 countable awards", () => {
+  void test("Senior Specialist Award requires 4 countable awards", () => {
     // 3 awards - should not qualify
     const threeAwards = ["Anabantoids Specialist", "Catfish Specialist", "Characins Specialist"];
     let metaAwards = checkMetaAwards(threeAwards);
-    expect(metaAwards).not.toContain("Senior Specialist Award");
+    assert.ok(!metaAwards.includes("Senior Specialist Award"));
 
     // 4 awards - should qualify
     const fourAwards = [
@@ -324,10 +326,10 @@ describe("Meta-Awards", () => {
       "Cyprinids Specialist",
     ];
     metaAwards = checkMetaAwards(fourAwards);
-    expect(metaAwards).toContain("Senior Specialist Award");
+    assert.ok(metaAwards.includes("Senior Specialist Award"));
   });
 
-  test("Expert Specialist Award requires 7 countable awards", () => {
+  void test("Expert Specialist Award requires 7 countable awards", () => {
     // 6 awards - should not qualify for Expert (but should for Senior)
     const sixAwards = [
       "Anabantoids Specialist",
@@ -338,16 +340,16 @@ describe("Meta-Awards", () => {
       "Livebearers Specialist",
     ];
     let metaAwards = checkMetaAwards(sixAwards);
-    expect(metaAwards).toContain("Senior Specialist Award");
-    expect(metaAwards).not.toContain("Expert Specialist Award");
+    assert.ok(metaAwards.includes("Senior Specialist Award"));
+    assert.ok(!metaAwards.includes("Expert Specialist Award"));
 
     // 7 awards - should qualify for Expert
     const sevenAwards = [...sixAwards, "Brackish Water Specialist"];
     metaAwards = checkMetaAwards(sevenAwards);
-    expect(metaAwards).toContain("Expert Specialist Award");
+    assert.ok(metaAwards.includes("Expert Specialist Award"));
   });
 
-  test("Invertebrates award does not count toward meta-awards", () => {
+  void test("Invertebrates award does not count toward meta-awards", () => {
     // 4 awards including invertebrates - should not qualify because invertebrates excluded
     const fourAwardsWithInverts = [
       "Anabantoids Specialist",
@@ -356,15 +358,15 @@ describe("Meta-Awards", () => {
       "Marine Invertebrates & Corals Specialist", // This one doesn't count
     ];
     let metaAwards = checkMetaAwards(fourAwardsWithInverts);
-    expect(metaAwards).not.toContain("Senior Specialist Award");
+    assert.ok(!metaAwards.includes("Senior Specialist Award"));
 
     // 5 awards including invertebrates - should qualify (4 countable + 1 excluded)
     const fiveAwardsWithInverts = [...fourAwardsWithInverts, "Cyprinids Specialist"];
     metaAwards = checkMetaAwards(fiveAwardsWithInverts);
-    expect(metaAwards).toContain("Senior Specialist Award");
+    assert.ok(metaAwards.includes("Senior Specialist Award"));
   });
 
-  test("Meta-awards are not granted if already earned", () => {
+  void test("Meta-awards are not granted if already earned", () => {
     const awardsWithExistingMeta = [
       "Anabantoids Specialist",
       "Catfish Specialist",
@@ -374,10 +376,10 @@ describe("Meta-Awards", () => {
     ];
 
     const metaAwards = checkMetaAwards(awardsWithExistingMeta);
-    expect(metaAwards).not.toContain("Senior Specialist Award");
+    assert.ok(!metaAwards.includes("Senior Specialist Award"));
   });
 
-  test("Can earn both Senior and Expert in same check", () => {
+  void test("Can earn both Senior and Expert in same check", () => {
     // Member with 7+ awards but no existing meta-awards
     const sevenAwards = [
       "Anabantoids Specialist",
@@ -390,12 +392,12 @@ describe("Meta-Awards", () => {
     ];
 
     const metaAwards = checkMetaAwards(sevenAwards);
-    expect(metaAwards).toContain("Senior Specialist Award");
-    expect(metaAwards).toContain("Expert Specialist Award");
-    expect(metaAwards.length).toBe(2);
+    assert.ok(metaAwards.includes("Senior Specialist Award"));
+    assert.ok(metaAwards.includes("Expert Specialist Award"));
+    assert.strictEqual(metaAwards.length, 2);
   });
 
-  test("Expert requires Senior threshold but can be earned independently", () => {
+  void test("Expert requires Senior threshold but can be earned independently", () => {
     // 7 awards should earn Expert (and Senior if not already earned)
     const expertLevelAwards = [
       "Anabantoids Specialist",
@@ -408,7 +410,7 @@ describe("Meta-Awards", () => {
     ];
 
     const metaAwards = checkMetaAwards(expertLevelAwards);
-    expect(metaAwards).toContain("Expert Specialist Award");
-    expect(metaAwards).toContain("Senior Specialist Award");
+    assert.ok(metaAwards.includes("Expert Specialist Award"));
+    assert.ok(metaAwards.includes("Senior Specialist Award"));
   });
 });
