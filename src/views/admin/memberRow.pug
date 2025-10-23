@@ -21,7 +21,7 @@ mixin memberRow(member)
                     hx-swap="outerHTML"
                     hx-get=`/admin/members/${member.id}/edit`) Edit
                 if member.hasPassword === 0 && member.hasGoogleAccount === 0
-                    button.primary.text-sm(
+                    button.primary(
                         hx-post=`/admin/members/${member.id}/send-welcome`
                         hx-target="closest tr"
                         hx-swap="outerHTML"
