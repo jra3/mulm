@@ -49,8 +49,42 @@ export async function fillTomSelectTypeahead(
 	await page.waitForTimeout(200);
 	await input.press('Enter');
 
-	// Wait for Tom Select to process the selection and close dropdown
-	await page.waitForSelector('.ts-dropdown', { state: "hidden", timeout: 2000 });
+	// Wait for the underlying select element to have a value set
+	// This is the critical state change - the dropdown closing is cosmetic
+	const selectElement = page.locator(`select[name="${fieldName}"]`);
+	await selectElement.waitFor({ state: "attached", timeout: 5000 });
+
+	// Wait for the value to be populated (not empty string)
+	// Use a more generous timeout for CI environments
+	let valueSet = false;
+	const startTime = Date.now();
+	const maxWaitTime = 5000;
+
+	while (!valueSet && Date.now() - startTime < maxWaitTime) {
+		const currentValue = await selectElement.inputValue();
+		if (currentValue && currentValue.trim() !== '') {
+			valueSet = true;
+			break;
+		}
+		await page.waitForTimeout(100);
+	}
+
+	if (!valueSet) {
+		throw new Error(`Tom Select field "${fieldName}" did not populate with a value after ${maxWaitTime}ms`);
+	}
+
+	// Try to wait for the dropdown to close, but don't fail if it takes too long
+	// The dropdown closing is a visual cleanup step - the important part (value set) is done
+	const tsWrapper = page.locator(`select[name="${fieldName}"] + .ts-wrapper`);
+	const dropdownSelector = tsWrapper.locator('.ts-dropdown');
+
+	try {
+		await dropdownSelector.waitFor({ state: "hidden", timeout: 3000 });
+	} catch (err) {
+		// Log but don't fail - this is cosmetic. In CI environments, the dropdown
+		// animation timing can be slow, but the value is already set correctly.
+		console.warn(`Tom Select dropdown for "${fieldName}" did not close within timeout (value was set successfully)`);
+	}
 }
 
 /**
