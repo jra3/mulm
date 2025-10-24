@@ -54,8 +54,8 @@ export async function fillTomSelectTypeahead(
 	// 500ms is required for CI environments (300ms was too short)
 	await page.waitForTimeout(500);
 
-	// Wait for the dropdown to close - this confirms Tom Select has finished processing
-	// Use a specific selector for the dropdown associated with this field
+	// Wait for Tom Select to process the selection and close dropdown
+	// Use a specific selector for the dropdown associated with this field to avoid race conditions
 	const tsWrapper = page.locator(`select[name="${fieldName}"] + .ts-wrapper`);
 	const dropdownSelector = tsWrapper.locator('.ts-dropdown');
 
