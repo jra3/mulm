@@ -17,6 +17,14 @@ declare module "@/config.json" {
     s3Url: string;
     s3Bucket: string;
     r2PublicUrl: string;
+    iucn?: {
+      apiToken: string;
+      baseUrl: string;
+      rateLimitMs: number;
+      enableSync: boolean;
+      maxRetries: number;
+      timeoutMs: number;
+    };
   }
 
   const config: Config;

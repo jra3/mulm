@@ -363,6 +363,7 @@ Database operations are organized by domain:
 - `src/db/members.ts` - Member CRUD operations
 - `src/db/submissions.ts` - Submission CRUD operations
 - `src/db/species.ts` - Species and synonym management
+- `src/db/iucn.ts` - IUCN Red List conservation status operations
 - `src/db/tanks.ts` - Tank preset operations
 - `src/db/activity.ts` - Activity feed operations
 
