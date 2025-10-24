@@ -49,9 +49,10 @@ export async function fillTomSelectTypeahead(
 	await page.waitForTimeout(200);
 	await input.press('Enter');
 
-	// Small delay to let Tom Select process the Enter key and update the value
+	// Delay to let Tom Select process the Enter key and update the value
 	// Without this, the dropdown might close before the value is actually set
-	await page.waitForTimeout(300);
+	// 500ms is required for CI environments (300ms was too short)
+	await page.waitForTimeout(500);
 
 	// Wait for the dropdown to close - this confirms Tom Select has finished processing
 	// Use a specific selector for the dropdown associated with this field
