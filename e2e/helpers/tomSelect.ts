@@ -49,14 +49,17 @@ export async function fillTomSelectTypeahead(
 	await page.waitForTimeout(200);
 	await input.press('Enter');
 
-	// Wait for the dropdown to close - this is our synchronization point
+	// Small delay to let Tom Select process the Enter key and update the value
+	// Without this, the dropdown might close before the value is actually set
+	await page.waitForTimeout(300);
+
+	// Wait for the dropdown to close - this confirms Tom Select has finished processing
 	// Use a specific selector for the dropdown associated with this field
 	const tsWrapper = page.locator(`select[name="${fieldName}"] + .ts-wrapper`);
 	const dropdownSelector = tsWrapper.locator('.ts-dropdown');
 
 	try {
 		// Increased timeout from 2s to 5s for CI environments
-		// This waits for the actual state change (dropdown closing) without arbitrary sleeps
 		await dropdownSelector.waitFor({ state: "hidden", timeout: 5000 });
 	} catch (err) {
 		// If dropdown doesn't close within timeout, it's likely already closed
