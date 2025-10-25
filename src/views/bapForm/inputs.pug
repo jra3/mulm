@@ -1,6 +1,8 @@
 include ../mixins/formInput.pug
 
-//- Basic text input - uses unified base mixin for consistency
+//- Backward-compatible wrappers for BAP forms
+//- These maintain the existing API while using the unified base mixin where possible
+
 mixin bapTextInput(labelText, name, placeholder, type="text")
 	+formInput({
 		label: labelText,
@@ -12,7 +14,6 @@ mixin bapTextInput(labelText, name, placeholder, type="text")
 	})&attributes(attributes)
 
 
-//- Specialized inputs for the BAP submission form
 mixin bapSimpleSelectInput(labelText, name)
 	.flex.flex-col.gap-2
 		label.input-label(for=name)
