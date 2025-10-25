@@ -141,10 +141,40 @@ await deleteSubmission(submissionId);
 
 ### Global Setup
 
+**scripts/setup-e2e-db.ts** runs before Playwright (via CI workflow):
+- Creates database and runs all migrations
+- **Seeds test species data** (Guppy, Swordtail, Platy)
+- Required for Tom Select typeahead fields to work properly
+
 **e2e/global-setup.ts** runs before all tests:
 - Creates test user `baptest+e2e@porcnick.com` if it doesn't exist
 - Uses proper scrypt password hashing (via `src/auth.ts`)
 - Idempotent - safe to run multiple times
+
+### Test Data Seeding
+
+**CRITICAL**: The CI database starts completely empty (just schema, no data).
+
+When adding new E2E tests that use species data, ensure the species exist in `scripts/setup-e2e-db.ts`:
+
+```typescript
+const testSpecies = [
+  {
+    group: { canonical_genus: "Poecilia", canonical_species_name: "reticulata", ... },
+    commonNames: ["Guppy", "Fancy Guppy"],
+    scientificNames: ["Poecilia reticulata"]
+  },
+  // Add more species as needed
+];
+```
+
+**Why this matters**: Issue #180 spent weeks chasing "timing issues" that were actually missing species data. Tests searched for species that didn't exist in CI, causing:
+- Tom Select API returning 0 results
+- Tests creating custom entries instead of selecting existing species
+- HTMX field linking failures (no species to link to)
+- Intermittent failures that seemed timing-related
+
+**Lesson learned**: When tests pass locally but fail in CI, check if test data exists in both environments!
 
 ## Debugging Failed Tests
 
@@ -973,8 +1003,21 @@ await db.close();
 6. **Use database for setup** - Only test UI interactions you care about
 7. **Read error context files** - They show exactly what's on the page
 8. **Be specific with selectors** - Context matters when multiple elements match
+9. **CI database is empty by default** - Seed test data in setup-e2e-db.ts, not migrations
+10. **Debug logging reveals environment differences** - Add logging to understand CI vs local behavior
 
 The most important skill: **Iterate based on actual error messages**, not assumptions. Every test failure teaches you something about how HTMX works in this application.
+
+### Debugging "Flaky" Tests
+
+If tests pass locally but fail intermittently in CI:
+
+1. **Add comprehensive logging** to understand what's different
+2. **Check test data** - Does the data exist in both environments?
+3. **Compare API responses** - Do searches return the same results?
+4. **Don't assume timing** - Most "timing issues" are actually missing/different data
+
+See Issue #180 for a real-world example where weeks of timing fixes failed, but logging revealed the CI database was simply empty.
 
 ## Future Enhancements
 
