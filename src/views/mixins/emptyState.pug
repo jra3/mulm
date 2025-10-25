@@ -76,9 +76,9 @@ mixin emptyState(message, options = {})
 					)= actionText
 	else
 		//- Simple inline style
-		p(class=`text-gray-500 italic ${sizeClasses[size]} text-center`)= message
+		p(class=`text-gray-500 italic ${sizeClasses[size]}`)= message
 		if actionText
-			.text-center.mt-2
+			.mt-2
 				if htmx
 					button.link(
 						type="button"
