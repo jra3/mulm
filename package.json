@@ -19,6 +19,7 @@
 		"test:e2e:ui": "playwright test --ui",
 		"test:e2e:report": "playwright show-report",
 		"start": "node dist/src/index.js",
+		"sync-db": "./infrastructure/sync-db-from-production.sh",
 		"mcp:species": "tsx src/mcp/species-server.ts",
 		"mcp:members": "tsx src/mcp/member-server.ts",
 		"lint": "eslint 'src/**/*.ts'",
