@@ -1,3 +1,5 @@
+include ../mixins/emptyState.pug
+
 //- Video Preview Card
 //- Displays video thumbnail and metadata after URL validation
 .bg-white.border.border-gray-300.rounded-lg.p-4.mt-2(role="region" aria-label="Video preview")
@@ -11,7 +13,7 @@
 			)
 		else
 			.bg-gray-200.rounded.flex.items-center.justify-center(class="w-32 h-24")
-				span.text-gray-500.text-xs No preview
+				+emptyState("No preview", { size: "xs" })
 
 		//- Metadata
 		.flex-1.min-w-0

@@ -1,3 +1,5 @@
+include ../mixins/emptyState.pug
+
 #accountLinks
 	h2.text-xl.font-bold.mb-4(class="sm:text-2xl") Linked Accounts
 
@@ -35,7 +37,7 @@
 						hx-confirm="Remove this passkey?"
 					) Remove
 		else
-			.text-gray-500.italic No passkeys registered yet
+			+emptyState("No passkeys registered yet")
 
 	button#addPasskeyBtn.primary(type="button") Add New Passkey
 

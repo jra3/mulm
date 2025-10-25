@@ -1,0 +1,87 @@
+//- Empty State Mixin
+//- Displays consistent empty state messages across the application
+//-
+//- Parameters:
+//-   message (required) - The message to display
+//-   options (optional object):
+//-     showCard - Wrap in a card with shadow (default: false)
+//-     actionText - Text for optional action button/link
+//-     actionUrl - URL for action link
+//-     size - Text size: 'xs', 'sm', 'base', 'lg', 'xl' (default: 'base')
+//-     showIcon - Show an SVG icon (default: false)
+//-     iconPath - SVG path data for icon
+//-     emoji - Emoji character for hero style
+//-     subtitle - Secondary message text
+//-     htmx - HTMX attributes object { get, target, swap }
+//-
+//- Usage Examples:
+//-   Simple: +emptyState("No items found")
+//-   Card: +emptyState("No species found", { showCard: true, size: "lg" })
+//-   With action: +emptyState("No tank presets saved yet", { actionText: "Add Preset", actionUrl: "/account/tank-presets/new" })
+//-   With icon: +emptyState("No common names yet", { showIcon: true, iconPath: "M7 8h10M7 12h4...", size: "xs" })
+//-   Hero style: +emptyState("No awards yet tonight!", { emoji: "🐠", size: "xl", subtitle: "Submissions will appear as they are approved" })
+//-   HTMX action: +emptyState("No names yet", { showIcon: true, iconPath: "...", actionText: "Add", htmx: { get: "/url", target: "#target" } })
+
+mixin emptyState(message, options = {})
+	- const { showCard = false, actionText, actionUrl, size = 'base', showIcon = false, iconPath, emoji, subtitle, htmx } = options
+	- const sizeClasses = { xs: 'text-xs', sm: 'text-sm', base: 'text-base', lg: 'text-lg', xl: 'text-4xl' }
+
+	if emoji
+		//- Hero style with emoji
+		.text-center.bg-white.rounded-xl.shadow-lg.p-12.max-w-2xl.mx-auto
+			p.text-6xl.mb-6= emoji
+			h2(class=`font-bold text-gray-700 mb-4 ${sizeClasses[size] || sizeClasses.xl}`)= message
+			if subtitle
+				p.text-2xl.text-gray-500= subtitle
+	else if showCard
+		//- Card style
+		.bg-white.rounded-lg.shadow-md.p-8.text-center
+			if showIcon && iconPath
+				svg.w-8.h-8.text-gray-300.mx-auto.mb-2(fill="none" stroke="currentColor" viewBox="0 0 24 24")
+					path(stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d=iconPath)
+			p(class=`text-gray-500 ${sizeClasses[size]}`)= message
+			if subtitle
+				p.text-gray-400.text-sm.mt-2= subtitle
+			if actionText
+				if htmx
+					button.link.mt-4(
+						type="button"
+						hx-get=htmx.get
+						hx-target=htmx.target
+						hx-swap=htmx.swap || "innerHTML"
+					)= actionText
+				else if actionUrl
+					a.link.mt-4.block(href=actionUrl)= actionText
+	else if showIcon && iconPath
+		//- Icon style (for inline areas)
+		.flex.flex-col.items-center.gap-2.py-6.text-center
+			svg.w-8.h-8.text-gray-300(fill="none" stroke="currentColor" viewBox="0 0 24 24")
+				path(stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d=iconPath)
+			div(class=`${sizeClasses[size]} text-gray-500`)= message
+			if actionText
+				if htmx
+					button.outline.text-xs.mt-1(
+						type="button"
+						hx-get=htmx.get
+						hx-target=htmx.target
+						hx-swap=htmx.swap || "innerHTML"
+					)= actionText
+				else if actionUrl
+					button.outline.text-xs.mt-1(
+						type="button"
+						onclick=`location.href='${actionUrl}'`
+					)= actionText
+	else
+		//- Simple inline style
+		p(class=`text-gray-500 italic ${sizeClasses[size]} text-center`)= message
+		if actionText
+			.text-center.mt-2
+				if htmx
+					button.link(
+						type="button"
+						hx-get=htmx.get
+						hx-target=htmx.target
+						hx-swap=htmx.swap || "innerHTML"
+					)= actionText
+				else if actionUrl
+					a.link(href=actionUrl)= actionUrl

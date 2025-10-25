@@ -2,6 +2,7 @@ include ../header.pug
 include ../mixins/submissionImages.pug
 include ../mixins/submissionVideo.pug
 include ../mixins/caresBadge.pug
+include ../mixins/emptyState.pug
 
 mixin reviewTextInput(labelText, name, type="text")
     .grid.gap-2
@@ -264,7 +265,7 @@ html
                                 each note in adminNotes
                                     include ../admin/submissionNote.pug
                             else
-                                p.text-gray-500.text-sm.italic No notes yet
+                                +emptyState("No notes yet", { size: "sm" })
 
                         //- Note form
                         form#note-form(
