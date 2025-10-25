@@ -1,8 +1,3 @@
-include ../mixins/formInput.pug
-
-//- Backward-compatible wrappers for account forms
-//- These maintain the existing API while using the unified base mixin
-
 mixin inputLabel(labelText, name)
 	.flex.flex-col.gap-2
 		label.input-label(for=name)= labelText
@@ -11,17 +6,25 @@ mixin inputLabel(labelText, name)
 		block
 
 mixin textInput(labelText, name, value)
-	+formInput({
-		label: labelText,
-		name: name,
-		value: value,
-		errors: typeof errors !== 'undefined' ? errors : null
-	})&attributes(attributes)
+	+inputLabel(labelText, name)
+		input.text-input(
+			id=name
+			value=value
+			name=name
+			class=errors && errors.has(name) ? "error" : ""
+			disabled=attributes.disabled)
+		if attributes.disabled
+			input.text-input(
+				value=value
+				name=name
+				type="hidden")
 
 mixin passwordInput(labelText, name)
-	+formInput({
-		type: 'password',
-		label: labelText,
-		name: name,
-		errors: typeof errors !== 'undefined' ? errors : null
-	})&attributes(attributes)
+	+inputLabel(labelText, name)
+		input.text-input(
+			type="password"
+			id=name
+			placeholder="************"
+			name=name
+			class=errors && errors.has(name) ? "error" : ""
+			disabled=attributes.disabled)

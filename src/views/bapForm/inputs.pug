@@ -1,17 +1,26 @@
-include ../mixins/formInput.pug
-
-//- Backward-compatible wrappers for BAP forms
-//- These maintain the existing API while using the unified base mixin where possible
-
 mixin bapTextInput(labelText, name, placeholder, type="text")
-	+formInput({
-		label: labelText,
-		name: name,
-		type: type,
-		placeholder: placeholder,
-		formObject: typeof form !== 'undefined' ? form : null,
-		errors: typeof errors !== 'undefined' ? errors : null
-	})&attributes(attributes)
+	.flex.flex-col.gap-2
+		label.input-label(for=name)
+			span= labelText
+			if errors.has(name)
+				span.text-red-600.font-extrabold(role="alert" id=`${name}-error`)= ` ${errors.get(name)}`
+
+		input.text-input(
+			id=name
+			value=form[name] || ""
+			name=name
+			type=type
+			placeholder=placeholder
+			class=errors.has(name) ? "error" : ""
+			aria-invalid=errors.has(name) ? "true" : "false"
+			aria-describedby=errors.has(name) ? `${name}-error` : undefined
+			aria-required=attributes.required !== false ? "true" : "false"
+			disabled=attributes.disabled)
+		if attributes.disabled
+			input.text-input(
+				value=form[name]
+				name=name
+				type="hidden")
 
 
 mixin bapSimpleSelectInput(labelText, name)
