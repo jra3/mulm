@@ -21,7 +21,9 @@ include ../mixins/emptyState.pug
 	h3.text-lg.font-bold.mb-2 Passkeys
 	p.text-sm.text-gray-600.mb-4 Manage your passwordless authentication methods (Touch ID, Face ID, Windows Hello, etc.)
 
-	#passkeysList.space-y-2.mb-4
+	button#addPasskeyBtn.primary.mb-4(type="button") Add New Passkey
+
+	#passkeysList.space-y-2
 		if credentials && credentials.length > 0
 			each cred in credentials
 				.flex.gap-4.items-center.p-3.bg-gray-50.rounded(id=`passkey-${cred.id}`)
@@ -38,8 +40,6 @@ include ../mixins/emptyState.pug
 					) Remove
 		else
 			+emptyState("No passkeys registered yet")
-
-	button#addPasskeyBtn.primary(type="button") Add New Passkey
 
 	script(type="module").
 		// Use SimpleWebAuthn browser helpers for proper credential encoding
