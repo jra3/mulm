@@ -49,42 +49,19 @@ export async function fillTomSelectTypeahead(
 		{ timeout: 5000 }
 	);
 
-	// Wait for dropdown options to be rendered
-	// Use the specific dropdown for this field, not the generic .ts-dropdown selector
-	const dropdown = tsWrapper.locator('.ts-dropdown');
-	await dropdown.waitFor({ state: "visible", timeout: 3000 });
+	// Small delay to let Tom Select process the API response and render options
+	// This is more reliable than trying to wait for specific DOM changes in CI
+	await page.waitForTimeout(500);
 
-	// Wait for options to be populated in the dropdown
-	// The dropdown becomes visible before options are rendered, so we need to wait for options
-	// Use a longer timeout and poll for options to appear
-	await page.waitForFunction(
-		(fieldName) => {
-			const wrapper = document.querySelector(`select[name="${fieldName}"] + .ts-wrapper`);
-			const dropdown = wrapper?.querySelector('.ts-dropdown');
-			const options = dropdown?.querySelectorAll('.option');
-			return options && options.length > 0;
-		},
-		fieldName,
-		{ timeout: 5000 }
-	);
-
-	// Click the option that contains our search text
-	// This is more reliable than keyboard navigation in CI environments
-	// Look for an option that contains the search text (case-insensitive)
-	const matchingOption = dropdown.locator(`.option`).filter({ hasText: searchText }).first();
-	const optionExists = await matchingOption.count() > 0;
-
-	if (optionExists) {
-		// Click the option that matches our search text
-		await matchingOption.click();
-	} else {
-		// Fallback to first option if no match found (shouldn't happen with typeahead)
-		const firstOption = dropdown.locator('.option').first();
-		await firstOption.click();
-	}
+	// Use keyboard navigation to select the first option
+	// This is actually more reliable than clicking in some cases
+	await input.press('ArrowDown');
+	await page.waitForTimeout(100);
+	await input.press('Enter');
 
 	// Wait for the dropdown to close, indicating Tom Select has processed the selection
 	// Use the field-specific dropdown, not the generic selector
+	const dropdown = tsWrapper.locator('.ts-dropdown');
 	await dropdown.waitFor({ state: "hidden", timeout: 5000 });
 
 	// Wait for the underlying select value to be set
