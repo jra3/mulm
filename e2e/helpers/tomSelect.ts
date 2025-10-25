@@ -52,8 +52,21 @@ export async function fillTomSelectTypeahead(
 	// Wait for dropdown options to be rendered
 	// Use the specific dropdown for this field, not the generic .ts-dropdown selector
 	const dropdown = tsWrapper.locator('.ts-dropdown');
-	await dropdown.waitFor({ state: "visible", timeout: 2000 });
-	await dropdown.locator('.option').first().waitFor({ state: "visible", timeout: 2000 });
+	await dropdown.waitFor({ state: "visible", timeout: 3000 });
+
+	// Wait for options to be populated in the dropdown
+	// The dropdown becomes visible before options are rendered, so we need to wait for options
+	// Use a longer timeout and poll for options to appear
+	await page.waitForFunction(
+		(fieldName) => {
+			const wrapper = document.querySelector(`select[name="${fieldName}"] + .ts-wrapper`);
+			const dropdown = wrapper?.querySelector('.ts-dropdown');
+			const options = dropdown?.querySelectorAll('.option');
+			return options && options.length > 0;
+		},
+		fieldName,
+		{ timeout: 5000 }
+	);
 
 	// Click the option that contains our search text
 	// This is more reliable than keyboard navigation in CI environments
