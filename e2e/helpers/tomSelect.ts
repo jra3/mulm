@@ -21,121 +21,50 @@ export async function fillTomSelectTypeahead(
 	exactMatch = false,
 	waitForFieldLinking = true
 ): Promise<void> {
-	console.log(`[TomSelect] START: field=${fieldName}, search="${searchText}"`);
-
 	// Tom Select wraps the original select and creates a ts-wrapper sibling
 	// Structure: <select class="tomselected"> + <div class="ts-wrapper"><div class="ts-control"><input></div></div>
 
 	// Wait for Tom Select to be initialized on this field
-	// Tom Select adds the "tomselected" class and creates the ts-wrapper sibling
 	await page.waitForSelector(`select[name="${fieldName}"].tomselected`, { timeout: 10000 });
-	console.log(`[TomSelect] Tom Select initialized`);
 
 	// Get the Tom Select wrapper for this specific field (to avoid matching other dropdowns)
 	const tsWrapper = page.locator(`select[name="${fieldName}"] + .ts-wrapper`);
 	await tsWrapper.waitFor({ timeout: 2000 });
-	console.log(`[TomSelect] Found ts-wrapper`);
 
-	// Find the ts-control which is inside the ts-wrapper
+	// Find the ts-control and input
 	const control = tsWrapper.locator('.ts-control');
-
-	// Click to focus/open the dropdown
-	await control.click();
-	console.log(`[TomSelect] Clicked control to open dropdown`);
-
-	// Type into the Tom Select input
 	const input = control.locator('input');
-	await input.fill(searchText);
-	console.log(`[TomSelect] Filled input with: "${searchText}"`);
 
-	// Wait for the API call to complete (Tom Select hits /api/species/search)
-	// This replaces the arbitrary 1500ms wait
-	const responsePromise = page.waitForResponse(
+	// Open dropdown and type search text
+	await control.click();
+	await input.fill(searchText);
+
+	// Wait for the API call to complete (instead of arbitrary 1500ms timeout)
+	await page.waitForResponse(
 		(resp) => resp.url().includes('/api/species/search') && resp.status() === 200,
 		{ timeout: 5000 }
 	);
-	const response = await responsePromise;
-	console.log(`[TomSelect] API responded: ${response.status()}`);
 
-	// Log the response body to see what options we got
-	const responseBody = await response.json();
-	console.log(`[TomSelect] API returned ${responseBody.length} results`);
-	if (responseBody.length > 0) {
-		console.log(`[TomSelect] First result: ${JSON.stringify(responseBody[0])}`);
-	}
-
-	// Small delay to let Tom Select process the API response and render options
-	// This is more reliable than trying to wait for specific DOM changes in CI
+	// Small delay for Tom Select to process API response and render options
 	await page.waitForTimeout(500);
 
-	// Log dropdown state and contents
-	const dropdown = tsWrapper.locator('.ts-dropdown');
-	const isDropdownVisible = await dropdown.isVisible().catch(() => false);
-	console.log(`[TomSelect] Dropdown visible: ${isDropdownVisible}`);
-
-	if (isDropdownVisible) {
-		const dropdownHTML = await dropdown.innerHTML().catch(() => 'ERROR getting HTML');
-		console.log(`[TomSelect] Dropdown HTML length: ${dropdownHTML.length} chars`);
-		const optionCount = await dropdown.locator('.option').count();
-		console.log(`[TomSelect] Option count: ${optionCount}`);
-	}
-
 	// Use keyboard navigation to select the first option
-	// This is actually more reliable than clicking in some cases
 	await input.press('ArrowDown');
-	console.log(`[TomSelect] Pressed ArrowDown`);
 	await page.waitForTimeout(100);
 	await input.press('Enter');
-	console.log(`[TomSelect] Pressed Enter`);
 
-	// Wait for the dropdown to close, indicating Tom Select has processed the selection
-	// Use the field-specific dropdown, not the generic selector
+	// Wait for dropdown to close (use field-specific selector, not generic .ts-dropdown)
+	const dropdown = tsWrapper.locator('.ts-dropdown');
 	await dropdown.waitFor({ state: "hidden", timeout: 5000 });
-	console.log(`[TomSelect] Dropdown closed`);
 
-	// Wait for the underlying select value to be set
-	const selectElement = page.locator(`select[name="${fieldName}"]`);
-	await selectElement.evaluate((el: HTMLSelectElement) => {
-		// Poll until value is set
-		return new Promise<void>((resolve) => {
-			const checkValue = () => {
-				if (el.value && el.value.trim() !== '') {
-					resolve();
-				} else {
-					setTimeout(checkValue, 50);
-				}
-			};
-			// Start checking immediately
-			checkValue();
-			// But also set a timeout
-			setTimeout(() => resolve(), 3000);
-		});
-	});
-
-	const finalValue = await selectElement.inputValue();
-	console.log(`[TomSelect] Final select value: "${finalValue}"`);
-
-	// If this is a species field and HTMX field linking is enabled, wait for it to complete
+	// If this is a species field with HTMX field linking, wait for network to settle
 	if (waitForFieldLinking && (fieldName === 'species_latin_name' || fieldName === 'species_common_name')) {
-		console.log(`[TomSelect] Waiting for HTMX field linking...`);
-		// Wait for network to be idle (HTMX request to populate linked field)
-		// Use a shorter timeout than full networkidle
 		try {
 			await page.waitForLoadState('networkidle', { timeout: 3000 });
-			console.log(`[TomSelect] Network idle - field linking complete`);
 		} catch (e) {
-			console.log(`[TomSelect] Network idle timeout (may be OK)`);
-			// If networkidle times out, that's okay - the critical part (value set) already happened
-			// This just ensures we wait for any HTMX field linking that might be happening
+			// Timeout is OK - the value is set, this just ensures HTMX linking completes
 		}
-
-		// Log the linked field value to see if HTMX worked
-		const linkedField = fieldName === 'species_latin_name' ? 'species_common_name' : 'species_latin_name';
-		const linkedValue = await page.locator(`select[name="${linkedField}"]`).inputValue().catch(() => 'ERROR');
-		console.log(`[TomSelect] Linked field ${linkedField} value: "${linkedValue}"`);
 	}
-
-	console.log(`[TomSelect] COMPLETE: field=${fieldName}`);
 }
 
 /**
