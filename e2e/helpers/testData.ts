@@ -193,3 +193,88 @@ export async function cleanupTestUserSubmissions(email: string): Promise<void> {
 		await db.close();
 	}
 }
+
+/**
+ * Ensure test species exist in the database
+ * Seeds minimal species data required for E2E tests
+ */
+export async function ensureTestSpeciesExist(): Promise<void> {
+	const db = await getTestDatabase();
+
+	try {
+		// Species needed by E2E tests with their common and scientific names
+		const testSpecies = [
+			{
+				group: { canonical_genus: "Poecilia", canonical_species_name: "reticulata", program_class: "Livebearers", species_type: "Fish" },
+				names: [
+					{ common_name: "Guppy", scientific_name: "Poecilia reticulata" },
+					{ common_name: "Fancy Guppy", scientific_name: "Poecilia reticulata" },
+				]
+			},
+			{
+				group: { canonical_genus: "Xiphophorus", canonical_species_name: "hellerii", program_class: "Livebearers", species_type: "Fish" },
+				names: [
+					{ common_name: "Swordtail", scientific_name: "Xiphophorus hellerii" },
+					{ common_name: "Green Swordtail", scientific_name: "Xiphophorus hellerii" },
+				]
+			},
+			{
+				group: { canonical_genus: "Xiphophorus", canonical_species_name: "maculatus", program_class: "Livebearers", species_type: "Fish" },
+				names: [
+					{ common_name: "Platy", scientific_name: "Xiphophorus maculatus" },
+					{ common_name: "Southern Platyfish", scientific_name: "Xiphophorus maculatus" },
+				]
+			},
+		];
+
+		for (const species of testSpecies) {
+			// Check if group exists
+			const existing = await db.get(
+				`SELECT group_id FROM species_name_group WHERE canonical_genus = ? AND canonical_species_name = ?`,
+				species.group.canonical_genus,
+				species.group.canonical_species_name
+			);
+
+			let groupId: number;
+
+			if (existing) {
+				groupId = existing.group_id;
+			} else {
+				// Create species group
+				const result = await db.run(
+					`INSERT INTO species_name_group (canonical_genus, canonical_species_name, program_class, species_type)
+					 VALUES (?, ?, ?, ?)`,
+					species.group.canonical_genus,
+					species.group.canonical_species_name,
+					species.group.program_class,
+					species.group.species_type
+				);
+				groupId = result.lastID as number;
+			}
+
+			// Add name variants
+			for (const name of species.names) {
+				const existingName = await db.get(
+					`SELECT name_id FROM species_name WHERE group_id = ? AND common_name = ? AND scientific_name = ?`,
+					groupId,
+					name.common_name,
+					name.scientific_name
+				);
+
+				if (!existingName) {
+					await db.run(
+						`INSERT INTO species_name (group_id, common_name, scientific_name)
+						 VALUES (?, ?, ?)`,
+						groupId,
+						name.common_name,
+						name.scientific_name
+					);
+				}
+			}
+		}
+
+		console.log("Test species data seeded ✓");
+	} finally {
+		await db.close();
+	}
+}
