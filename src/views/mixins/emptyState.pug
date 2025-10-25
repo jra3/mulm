@@ -55,9 +55,12 @@ mixin emptyState(message, options = {})
 	else if showIcon && iconPath
 		//- Icon style (for inline areas)
 		.flex.flex-col.items-center.gap-2.py-6.text-center
-			svg.w-8.h-8.text-gray-300(fill="none" stroke="currentColor" viewBox="0 0 24 24")
+			svg.w-16.h-16.text-gray-400(fill="none" stroke="currentColor" viewBox="0 0 24 24")
 				path(stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d=iconPath)
-			div(class=`${sizeClasses[size]} text-gray-500`)= message
+			div
+				div(class=`${sizeClasses[size]} font-semibold text-gray-900 mb-2`)= message
+				if subtitle
+					p.text-gray-500= subtitle
 			if actionText
 				if htmx
 					button.outline.text-xs.mt-1(

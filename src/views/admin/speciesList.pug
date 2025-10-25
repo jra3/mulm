@@ -1,5 +1,6 @@
 include ../header.pug
 include adminNav.pug
+include ../mixins/emptyState.pug
 
 - const stringCell = ['p-3', 'text-left', 'border-b', 'border-gray-200'];
 - const heading = ['p-3', 'text-left', 'font-bold', 'text-gray-900', 'border-b-2', 'border-gray-300', 'bg-gray-50', 'cursor-pointer', 'select-none', 'hover:bg-gray-100'];
@@ -227,13 +228,8 @@ html
 
         else
           .bg-white.rounded-lg.shadow-md.p-12.text-center
-            .flex.flex-col.items-center.gap-4
-              svg.w-16.h-16.text-gray-400(fill="none" stroke="currentColor" viewBox="0 0 24 24")
-                path(stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z")
-              div
-                p.text-gray-900.text-xl.font-semibold.mb-2 No Species Found
-                p.text-gray-500 No species match your current filters.
-              if filters.species_type || filters.program_class || filters.has_base_points !== undefined || filters.is_cares_species !== undefined || filters.search
-                .flex.gap-3.mt-2
-                  a.primary.px-4.py-2(href="/admin/species") Clear All Filters
-                  button.outline.px-4.py-2(type="button" onclick="history.back()") Go Back
+            +emptyState("No Species Found", { showIcon: true, iconPath: "M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z", subtitle: "No species match your current filters.", size: "lg" })
+            if filters.species_type || filters.program_class || filters.has_base_points !== undefined || filters.is_cares_species !== undefined || filters.search
+              .flex.gap-3.mt-4.justify-center
+                a.primary.px-4.py-2(href="/admin/species") Clear All Filters
+                button.outline.px-4.py-2(type="button" onclick="history.back()") Go Back

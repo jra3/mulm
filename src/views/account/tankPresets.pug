@@ -1,3 +1,5 @@
+include ../mixins/emptyState.pug
+
 #tankPresets
 	h2(class="text-xl sm:text-2xl font-bold mb-4") My Tank Presets
 
@@ -124,4 +126,4 @@
 			each preset in presets
 				include tankPresetCard.pug
 		else
-			p.text-gray-500.italic No tank presets saved yet. Click "Add New Tank Preset" to get started.
+			+emptyState('No tank presets saved yet. Click "Add New Tank Preset" to get started.')

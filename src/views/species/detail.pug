@@ -1,6 +1,7 @@
 include ../header.pug
 include ../mixins/date.pug
 include ../mixins/caresBadge.pug
+include ../mixins/emptyState.pug
 
 - const stringCell = ['p-3', 'overflow-hidden', 'text-ellipsis', 'whitespace-nowrap', 'border-gray-300'];
 - const heading = ['p-3', 'text-left', 'font-semibold', 'text-gray-700', 'bg-gray-50', 'border-gray-300'];
@@ -101,8 +102,6 @@ html
 															+shortDate(submission.approved_on, "Approved on")
 
 				else
-					.bg-white.rounded-lg.shadow-md.p-8.text-center
-						p.text-gray-500.text-lg No breeding reports found for this species.
-						p.text-gray-400.text-sm This species may be in our database but hasn't been successfully bred yet.
+					+emptyState("No breeding reports found for this species.", { showCard: true, size: "lg", subtitle: "This species may be in our database but hasn't been successfully bred yet." })
 
 		+footer()

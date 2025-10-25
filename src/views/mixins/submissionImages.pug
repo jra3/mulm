@@ -1,6 +1,8 @@
 //- Mixin for displaying submission images
 //- Usage: +submissionImages(submission.images, 'gallery|thumbnails|single')
 
+include emptyState.pug
+
 mixin getImageUrl(imageMetadata, variant)
 	- const key = imageMetadata.key;
 	- const variantKey = key.replace('-original', `-${variant}`);
@@ -91,7 +93,7 @@ mixin submissionImages(imagesJson, layout='gallery')
 	else
 		//- No images placeholder (optional, can be removed if you want nothing to show)
 		if layout === 'gallery'
-			div(class="text-gray-500 text-sm italic mb-4") No photos attached
+			+emptyState("No photos attached", { size: "sm" })
 
 mixin imageCount(imagesJson)
 	- let images = [];

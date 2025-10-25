@@ -3,6 +3,7 @@ include queueButton.pug
 include adminNav.pug
 include ../mixins/date.pug
 include ../mixins/caresBadge.pug
+include ../mixins/emptyState.pug
 
 - const stringCell = ['p-3', 'text-left', 'border-b', 'border-gray-200'];
 - const heading = ['p-3', 'text-left', 'font-bold', 'text-gray-900', 'border-b-2', 'border-gray-300', 'bg-gray-50', 'cursor-pointer', 'select-none', 'hover:bg-gray-100'];
@@ -70,7 +71,6 @@ html
 				+waitingPeriodTable(submissions)
 			else
 				.text-center.py-12
-					.text-gray-500.text-lg No submissions awaiting auction eligibility for #{subtitle.toLowerCase()}.
-					p.text-sm.text-gray-400.mt-2 Check other programs using the navigation below.
+					+emptyState(`No submissions awaiting auction eligibility for ${subtitle.toLowerCase()}.`, { size: "lg", subtitle: "Check other programs using the navigation below." })
 
 		+adminNav("waiting", programCounts, witnessCounts)
