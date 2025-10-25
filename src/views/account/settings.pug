@@ -1,4 +1,5 @@
 include ./field.pug
+include ../mixins/loadingSpinner.pug
 
 #accountSettings
 	h2(class="text-xl sm:text-2xl font-bold mb-4") Edit Account
@@ -11,4 +12,4 @@ include ./field.pug
 			+passwordInput("Confirm New Password", "password_confirm")
 		button.mt-4.primary(type="submit" hx-disabled-elt="this")
 			span Update
-			span.htmx-indicator.spinner
+			+loadingSpinner()

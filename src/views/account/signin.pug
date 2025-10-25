@@ -1,5 +1,6 @@
 include ./field.pug
 include ../header.pug
+include ../mixins/loadingSpinner.pug
 
 +dialog()
 	#signin.w-full.flex.flex-col.items-center.gap-2
@@ -14,7 +15,7 @@ include ../header.pug
 			.flex.gap-2.items-center
 				button.primary(type="submit" hx-disabled-elt="this")
 					span Log In
-					span.htmx-indicator.spinner
+					+loadingSpinner()
 				a.link(
 					hx-get="/dialog/auth/signup"
 					hx-swap="outerHTML"

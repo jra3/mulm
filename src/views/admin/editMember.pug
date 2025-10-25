@@ -1,3 +1,5 @@
+include ../mixins/loadingSpinner.pug
+
 tr(class="bg-blue-50")
 	- const stringCell = ['p-3', 'text-left', 'border-b', 'border-gray-200'];
 	- const numberCell = ['p-3', 'text-right', 'border-b', 'border-gray-200'];
@@ -37,7 +39,7 @@ tr(class="bg-blue-50")
 				hx-trigger="submit")
 				button.primary(type="submit" hx-disabled-elt="this" aria-label="Save member changes")
 					span Save
-					span.htmx-indicator.spinner-sm
+					+loadingSpinner()
 			button(
 				hx-target="closest tr"
 				hx-swap="outerHTML"

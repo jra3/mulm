@@ -1,6 +1,7 @@
 include supplementLine.pug
 include inputs.pug
 include imageUpload.pug
+include ../mixins/loadingSpinner.pug
 
 mixin CRUDForm()
     if form.id
@@ -266,23 +267,23 @@ mixin CRUDForm()
                 //- Changes requested: show Save Draft + Resubmit buttons
                 button.outline(class="w-2/5 max-w-200" type="submit" name="draft" value="true" title="Save your progress (keeps changes-requested status)" hx-disabled-elt="this")
                     span Save Draft
-                    span.htmx-indicator.spinner
+                    +loadingSpinner()
                 button.primary(class="w-2/5 max-w-200" type="submit" title="Resubmit for review (clears changes-requested status)" hx-disabled-elt="this")
                     span Resubmit
-                    span.htmx-indicator.spinner
+                    +loadingSpinner()
             else if form.submitted_on || editing
                 //- Submitted/Admin edit: show single Save Edits button
                 button.primary(class="w-2/5 max-w-200" type="submit" title="Save changes to your submission" hx-disabled-elt="this")
                     span Save Edits
-                    span.htmx-indicator.spinner
+                    +loadingSpinner()
             else
                 //- Draft: show Submit + Save Draft buttons
                 button.primary(class="w-2/5 max-w-200" type="submit" title="Submit your entry for witness verification and review" hx-disabled-elt="this")
                     span Submit
-                    span.htmx-indicator.spinner
+                    +loadingSpinner()
                 button.outline(class="w-2/5 max-w-200" type="submit" name="draft" value="true" title="Save your progress without submitting for review" hx-disabled-elt="this")
                     span Save Draft
-                    span.htmx-indicator.spinner
+                    +loadingSpinner()
                 if form.id
                     // Delete button for drafts - smaller, inline with Submit/Save Draft
                     button.destructive(

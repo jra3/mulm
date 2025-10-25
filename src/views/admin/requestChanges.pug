@@ -27,5 +27,4 @@ include ../header.pug
 		div.flex.items-center.gap-2
 			button#feedbackSubmitBtn.primary(type="submit" hx-disabled-elt="this")
 				span Send
-				span.htmx-indicator.spinner
-			+loadingSpinner("feedbackIndicator")
+				+loadingSpinner()

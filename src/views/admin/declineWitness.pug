@@ -27,5 +27,4 @@ include ../header.pug
 		div.flex.items-center.gap-2
 			button#witnessSubmitBtn.primary(type="submit" hx-disabled-elt="this")
 				span Send Request
-				span.htmx-indicator.spinner
-			+loadingSpinner("witnessIndicator")
+				+loadingSpinner()

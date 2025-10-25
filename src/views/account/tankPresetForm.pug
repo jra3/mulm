@@ -1,3 +1,5 @@
+include ../mixins/loadingSpinner.pug
+
 //- Tank Preset Form (for both create and edit)
 //- Local mixin for form fields to reduce repetition
 mixin formField(name, labelText, placeholder, value, required=false)
@@ -74,7 +76,7 @@ mixin gridFormField(name, labelText, placeholder, value)
 		.mt-4.flex.gap-2
 			button.primary(type="submit" hx-disabled-elt="this")
 				span= editing ? 'Update Preset' : 'Create Preset'
-				span.htmx-indicator.spinner
+				+loadingSpinner()
 			if editing
 				button.secondary(
 					type="button"
