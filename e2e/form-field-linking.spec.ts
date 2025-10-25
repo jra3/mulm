@@ -65,10 +65,8 @@ test.describe("BAP Form - Field Linking", () => {
 		page,
 	}) => {
 		// Select a species via scientific name
+		// Helper now waits for HTMX field linking to complete
 		await fillTomSelectTypeahead(page, "species_latin_name", "Poecilia reticulata");
-
-		// Wait for field linking to complete
-		await page.waitForTimeout(500);
 
 		// Verify common name field was auto-populated
 		const commonName = await getTomSelectValue(page, "species_common_name");
@@ -89,10 +87,8 @@ test.describe("BAP Form - Field Linking", () => {
 		expect(initialValue).toBe("");
 
 		// Select a species via common name
+		// Helper now waits for HTMX field linking to complete
 		await fillTomSelectTypeahead(page, "species_common_name", "Guppy");
-
-		// Wait for field linking
-		await page.waitForTimeout(500);
 
 		// Verify hidden field now contains a numeric ID
 		const updatedValue = await page.inputValue('input[name="species_name_id"]');
@@ -319,9 +315,10 @@ test.describe("BAP Form - Field Linking", () => {
 	});
 
 	test("should handle species with multiple common names", async ({ page }) => {
-		// Some species have multiple common names, e.g., "Platy" and "Southern Platyfish"
-		await fillTomSelectTypeahead(page, "species_common_name", "Platy");
-		await page.waitForTimeout(500);
+		// Some species have multiple common names
+		// Helper now waits for HTMX field linking to complete
+		// Use "Swordtail" to test field linking (Xiphophorus hellerii)
+		await fillTomSelectTypeahead(page, "species_common_name", "Swordtail");
 
 		// Verify scientific name is populated
 		const scientificName = await getTomSelectValue(page, "species_latin_name");
