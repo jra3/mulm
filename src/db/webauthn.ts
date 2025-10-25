@@ -62,12 +62,12 @@ export async function saveCredential(data: {
 }
 
 /**
- * Get credential by credential ID (for authentication)
+ * Get credential by numeric ID
  */
-export async function getCredentialById(credentialId: string): Promise<WebAuthnCredential | null> {
+export async function getCredentialById(id: number): Promise<WebAuthnCredential | null> {
   const rows = await query<WebAuthnCredential>(
-    "SELECT * FROM webauthn_credentials WHERE credential_id = ?",
-    [credentialId]
+    "SELECT * FROM webauthn_credentials WHERE id = ?",
+    [id]
   );
   return rows[0] || null;
 }

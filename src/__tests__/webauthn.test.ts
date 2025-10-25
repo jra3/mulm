@@ -59,7 +59,7 @@ void describe("WebAuthn Database Operations", () => {
 
       assert.ok(credentialId > 0);
 
-      const retrieved = await getCredentialById("test-credential-123");
+      const retrieved = await getCredentialById(credentialId);
       assert.ok(retrieved);
       assert.strictEqual(retrieved.member_id, testMemberId);
       assert.strictEqual(retrieved.credential_id, "test-credential-123");
@@ -90,7 +90,7 @@ void describe("WebAuthn Database Operations", () => {
     });
 
     void test("should update credential counter", async () => {
-      await saveCredential({
+      const credId = await saveCredential({
         member_id: testMemberId,
         credential_id: "test-cred",
         public_key: Buffer.from("key"),
@@ -99,7 +99,7 @@ void describe("WebAuthn Database Operations", () => {
 
       await updateCredentialCounter("test-cred", 5);
 
-      const updated = await getCredentialById("test-cred");
+      const updated = await getCredentialById(credId);
       assert.ok(updated);
       assert.strictEqual(updated.counter, 5);
       assert.ok(updated.last_used_on); // Should be set
@@ -115,7 +115,7 @@ void describe("WebAuthn Database Operations", () => {
 
       await updateCredentialDeviceName(credId, "My MacBook");
 
-      const updated = await getCredentialById("test-cred");
+      const updated = await getCredentialById(credId);
       assert.ok(updated);
       assert.strictEqual(updated.device_name, "My MacBook");
     });
@@ -130,7 +130,7 @@ void describe("WebAuthn Database Operations", () => {
 
       await deleteCredential(credId);
 
-      const deleted = await getCredentialById("test-cred");
+      const deleted = await getCredentialById(credId);
       assert.strictEqual(deleted, null);
     });
 
@@ -138,7 +138,7 @@ void describe("WebAuthn Database Operations", () => {
       // Enable FK constraints in test
       await db.run("PRAGMA foreign_keys = ON");
 
-      await saveCredential({
+      const credId = await saveCredential({
         member_id: testMemberId,
         credential_id: "test-cred",
         public_key: Buffer.from("key"),
@@ -149,7 +149,7 @@ void describe("WebAuthn Database Operations", () => {
       await db.run("DELETE FROM members WHERE id = ?", [testMemberId]);
 
       // Credential should be gone (cascaded)
-      const credential = await getCredentialById("test-cred");
+      const credential = await getCredentialById(credId);
       assert.strictEqual(credential, null);
     });
   });

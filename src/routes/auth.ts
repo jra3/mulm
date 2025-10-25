@@ -431,7 +431,7 @@ export const deletePasskey = async (req: MulmRequest, res: Response) => {
   }
 
   const credentialId = parseInt(req.params.id);
-  const credential = await getCredentialById(String(credentialId));
+  const credential = await getCredentialById(credentialId);
 
   // Verify ownership
   if (!credential || credential.member_id !== req.viewer.id) {
@@ -457,7 +457,7 @@ export const renamePasskey = async (req: MulmRequest, res: Response) => {
   const credentialId = parseInt(req.params.id);
   const { name } = req.body as { name: string };
 
-  const credential = await getCredentialById(String(credentialId));
+  const credential = await getCredentialById(credentialId);
 
   // Verify ownership
   if (!credential || credential.member_id !== req.viewer.id) {

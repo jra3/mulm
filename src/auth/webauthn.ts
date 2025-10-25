@@ -13,12 +13,13 @@ import {
 } from "@simplewebauthn/server";
 import {
   saveCredential,
-  getCredentialById,
   getCredentialsByMember,
   updateCredentialCounter,
   saveChallenge,
   getChallenge,
+  type WebAuthnCredential,
 } from "@/db/webauthn";
+import { query } from "@/db/conn";
 import configData from "@/config.json";
 
 // Type the config properly
@@ -154,9 +155,13 @@ export async function generateAuthenticationOptionsForLogin(): Promise<PublicKey
 export async function verifyCredentialAndAuthenticate(
   response: AuthenticationResponseJSON
 ): Promise<{ verified: boolean; memberId?: number }> {
-  // Get credential from database
+  // Get credential from database by credential_id
   const credentialIdBase64 = Buffer.from(response.id, "base64url").toString("base64url");
-  const credential = await getCredentialById(credentialIdBase64);
+  const rows = await query<WebAuthnCredential>(
+    "SELECT * FROM webauthn_credentials WHERE credential_id = ?",
+    [credentialIdBase64]
+  );
+  const credential = rows[0] || null;
 
   if (!credential) {
     return { verified: false };
