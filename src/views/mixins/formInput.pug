@@ -1,0 +1,59 @@
+//- Unified Form Input Base Mixin
+//- Provides consistent form input rendering with error handling and accessibility
+//-
+//- @param options - Configuration object:
+//-   - label: Label text (required)
+//-   - name: Input name attribute (required)
+//-   - type: Input type (default: "text")
+//-   - value: Direct value (for account forms)
+//-   - formObject: Form data object (for BAP forms)
+//-   - errors: Error Map object
+//-   - placeholder: Placeholder text
+//-   - required: Whether field is required (default: from attributes)
+//-   - disabled: Whether field is disabled (default: from attributes)
+//-   - className: Additional CSS classes
+
+mixin formInput(options)
+	- const name = options.name
+	- const label = options.label
+	- const type = options.type || 'text'
+	- const placeholder = options.placeholder || (type === 'password' ? '************' : '')
+	- const formObject = options.formObject
+	- const errors = options.errors
+	- const required = options.required !== undefined ? options.required : (attributes.required !== false)
+	- const disabled = options.disabled !== undefined ? options.disabled : attributes.disabled
+	- const className = options.className || ''
+
+	//- Value resolution: direct value (account forms) or form object (BAP forms)
+	- const fieldValue = options.value !== undefined ? options.value : (formObject && formObject[name]) || ""
+
+	//- Error state
+	- const hasError = errors && errors.has && errors.has(name)
+	- const errorClass = hasError ? 'error' : ''
+	- const finalClass = `${className} ${errorClass}`.trim()
+
+	.flex.flex-col.gap-2
+		label.input-label(for=name)
+			span= label
+			if hasError
+				span.text-red-600.font-extrabold(role="alert" id=`${name}-error`)= ` ${errors.get(name)}`
+
+		input.text-input(
+			id=name
+			type=type
+			value=fieldValue
+			name=name
+			placeholder=placeholder
+			class=finalClass
+			required=required
+			disabled=disabled
+			aria-invalid=hasError ? "true" : "false"
+			aria-describedby=hasError ? `${name}-error` : undefined
+			aria-required=required ? "true" : "false")&attributes(attributes)
+
+		//- Hidden input for disabled fields to preserve value on form submit
+		if disabled
+			input(
+				value=fieldValue
+				name=name
+				type="hidden")

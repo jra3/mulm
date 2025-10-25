@@ -394,6 +394,7 @@ void describe("Pug Template Rendering", () => {
       /^mixins\/changesRequestedBanner\.pug$/, // Mixin-only template (tested via submit.pug)
       /^mixins\/emptyState\.pug$/, // Mixin-only template
       /^mixins\/loadingSpinner\.pug$/, // Mixin-only template
+      /^mixins\/formInput\.pug$/, // Mixin-only template
       /^activity\/activity-item\.pug$/, // Mixin-only template
       /^activity\/award-granted\.pug$/, // Include-only template
       /^activity\/submission-approved\.pug$/, // Include-only template
