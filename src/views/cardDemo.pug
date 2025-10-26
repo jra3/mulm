@@ -1,0 +1,235 @@
+include header.pug
+include mixins/card.pug
+
+doctype html
+html
+	+headTag
+
+	body.bg-gray-50.text-gray-800
+		+pageHeader(false, "Card Mixin Demo")
+	.container.mx-auto.px-4.py-8.max-w-4xl
+		h1.text-3xl.font-bold.mb-2 Card Mixin Demo
+		p.text-gray-600.mb-8 Proposed card variants for issue #136 - Card/Container Mixin Refactoring
+
+		//- Default Card
+		section.mb-12
+			h2.text-2xl.font-semibold.mb-3.text-gray-800 1. Default Card
+			p.text-sm.text-gray-600.mb-4
+				strong Used in:
+				|  Tank presets, video previews
+			p.text-sm.text-gray-600.mb-4
+				strong Usage:
+				code.bg-gray-100.px-2.py-1.rounded +card()
+				|  or
+				code.bg-gray-100.px-2.py-1.rounded +card({variant: 'default'})
+
+			//- Demo card
+			+card()
+				h3.font-bold.text-lg.mb-2 Example Tank Preset
+				.grid.grid-cols-2.gap-x-4.gap-y-2.text-sm
+					div
+						span.text-gray-600 Tank Size:
+						span.ml-1.font-medium 20 gallons
+					div
+						span.text-gray-600 Temperature:
+						span.ml-1.font-medium 76°F
+					div
+						span.text-gray-600 pH:
+						span.ml-1.font-medium 7.2
+					div
+						span.text-gray-600 Filter:
+						span.ml-1.font-medium Sponge filter
+
+		//- Activity Card
+		section.mb-12
+			h2.text-2xl.font-semibold.mb-3.text-gray-800 2. Activity Card
+			p.text-sm.text-gray-600.mb-4
+				strong Used in:
+				|  Activity feed items
+			p.text-sm.text-gray-600.mb-4
+				strong Usage:
+				code.bg-gray-100.px-2.py-1.rounded +card({variant: 'activity'})
+
+			//- Demo card
+			+card({variant: 'activity'})
+				.flex.items-start.space-x-3
+					.flex-shrink-0
+						.w-8.h-8.bg-green-100.rounded-full.flex.items-center.justify-center
+							svg.w-4.h-4.text-green-600(fill="currentColor" viewBox="0 0 20 20")
+								path(fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd")
+					.flex-1.min-w-0
+						p.font-medium Submission Approved
+						p.text-sm.text-gray-600 Your breeding report for Corydoras paleatus has been approved
+						p.text-xs.text-gray-500.mt-1 2 hours ago
+
+		//- Content Card
+		section.mb-12
+			h2.text-2xl.font-semibold.mb-3.text-gray-800 3. Content Card
+			p.text-sm.text-gray-600.mb-4
+				strong Used in:
+				|  Species detail sections (transparent background)
+			p.text-sm.text-gray-600.mb-4
+				strong Usage:
+				code.bg-gray-100.px-2.py-1.rounded +card({variant: 'content'})
+
+			//- Demo card (with gray background to show transparency)
+			.bg-gray-50.p-4.rounded
+				+card({variant: 'content'})
+					h3.font-semibold.mb-2 Species Information
+					p.text-sm.text-gray-700 This card has no background color, making it suitable for embedding within other content areas while maintaining subtle visual separation.
+
+		//- Admin Row Card
+		section.mb-12
+			h2.text-2xl.font-semibold.mb-3.text-gray-800 4. Admin Row Card
+			p.text-sm.text-gray-600.mb-4
+				strong Used in:
+				|  Admin interfaces, scientific name rows, submission notes
+			p.text-sm.text-gray-600.mb-4
+				strong Usage:
+				code.bg-gray-100.px-2.py-1.rounded +card({variant: 'admin', padding: 'sm', margin: ''})
+
+			//- Demo card
+			+card({variant: 'admin', padding: 'sm', margin: ''})
+				.flex.items-center.gap-2
+					.flex-1.font-medium.text-sm.italic Corydoras aeneus
+					button.destructive.text-xs.px-2.py-1(type="button") Delete
+
+		//- Info Card
+		section.mb-12
+			h2.text-2xl.font-semibold.mb-3.text-gray-800 5. Info Card
+			p.text-sm.text-gray-600.mb-4
+				strong Used in:
+				|  Informational messages, admin edit contexts
+			p.text-sm.text-gray-600.mb-4
+				strong Usage:
+				code.bg-gray-100.px-2.py-1.rounded +card({variant: 'info'})
+
+			//- Demo card
+			+card({variant: 'info'})
+				p.text-sm.text-blue-800
+					strong Editing:
+					|  Peppered Corydoras (
+					em Corydoras paleatus
+					| )
+				p.text-sm.text-blue-600.mt-1 Member: John Smith
+
+		//- Warning Card
+		section.mb-12
+			h2.text-2xl.font-semibold.mb-3.text-gray-800 6. Warning Card
+			p.text-sm.text-gray-600.mb-4
+				strong Used in:
+				|  Warning messages, notices requiring attention
+			p.text-sm.text-gray-600.mb-4
+				strong Usage:
+				code.bg-gray-100.px-2.py-1.rounded +card({variant: 'warning'})
+
+			//- Demo card
+			+card({variant: 'warning'})
+				p.text-sm.text-yellow-800
+					strong Warning:
+					|  This action cannot be undone. Please review carefully before proceeding.
+
+		//- Error Card
+		section.mb-12
+			h2.text-2xl.font-semibold.mb-3.text-gray-800 7. Error Card
+			p.text-sm.text-gray-600.mb-4
+				strong Used in:
+				|  Error messages, validation failures
+			p.text-sm.text-gray-600.mb-4
+				strong Usage:
+				code.bg-gray-100.px-2.py-1.rounded +card({variant: 'error'})
+
+			//- Demo card
+			+card({variant: 'error'})
+				p.text-sm.font-semibold.text-red-800 Upload Errors:
+				ul.list-disc.list-inside.text-sm.text-red-700.mt-2
+					li File size exceeds 10MB limit
+					li Invalid file format (use PNG, JPG, or WebP)
+
+		//- Upload Zone
+		section.mb-12
+			h2.text-2xl.font-semibold.mb-3.text-gray-800 8. Upload Zone
+			p.text-sm.text-gray-600.mb-4
+				strong Used in:
+				|  File upload areas (drag-and-drop zones)
+			p.text-sm.text-gray-600.mb-4
+				strong Usage:
+				code.bg-gray-100.px-2.py-1.rounded +card({variant: 'upload'})
+
+			//- Demo card
+			+card({variant: 'upload', extraClasses: 'text-center hover_border-gray-400 transition-colors'})
+				svg.mx-auto.h-12.w-12.text-gray-400(fill="none" stroke="currentColor" viewbox="0 0 24 24")
+					path(stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12")
+				p.mt-2.text-sm.text-gray-600
+					span.font-semibold Click to upload
+					|  or drag and drop
+				p.text-xs.text-gray-500 PNG, JPG, WebP up to 10MB each
+
+		//- Custom Options Demo
+		section.mb-12
+			h2.text-2xl.font-semibold.mb-3.text-gray-800 9. Custom Options
+			p.text-sm.text-gray-600.mb-4
+				strong Flexibility:
+				|  Override padding, margin, add shadow, or extra classes
+
+			.space-y-4
+				div
+					p.text-sm.font-medium.mb-2 Large padding:
+						code.bg-gray-100.px-2.py-1.rounded +card({padding: 'lg'})
+					+card({padding: 'lg'})
+						p.text-sm Large padding (p-6) for spacious content
+
+				div
+					p.text-sm.font-medium.mb-2 No margin:
+						code.bg-gray-100.px-2.py-1.rounded +card({margin: ''})
+					+card({margin: ''})
+						p.text-sm No bottom margin for stacking cards
+
+				div
+					p.text-sm.font-medium.mb-2 With shadow:
+						code.bg-gray-100.px-2.py-1.rounded +card({shadow: 'md'})
+					+card({shadow: 'md'})
+						p.text-sm Medium shadow for elevated appearance
+
+				div
+					p.text-sm.font-medium.mb-2 Extra classes:
+						code.bg-gray-100.px-2.py-1.rounded +card({extraClasses: 'hover:shadow-lg cursor-pointer'})
+					+card({extraClasses: 'hover_shadow-lg cursor-pointer'})
+						p.text-sm Hover over this card to see the shadow effect
+
+		//- Implementation Summary
+		section.mb-8
+			h2.text-2xl.font-semibold.mb-3.text-gray-800 Implementation Summary
+			+card({padding: 'lg', margin: ''})
+				h3.font-semibold.mb-3 Files to be migrated:
+				ul.list-disc.list-inside.text-sm.space-y-1
+					li
+						code.bg-gray-100.px-1.rounded account/tankPresetCard.pug
+						|  → default card
+					li
+						code.bg-gray-100.px-1.rounded account/tankPresets.pug
+						|  → default card
+					li
+						code.bg-gray-100.px-1.rounded account/tankPresetForm.pug
+						|  → default card
+					li
+						code.bg-gray-100.px-1.rounded bapForm/videoPreview.pug
+						|  → default card
+					li
+						code.bg-gray-100.px-1.rounded activity/activity-item.pug
+						|  → activity card
+					li
+						code.bg-gray-100.px-1.rounded admin/scientificNameRow.pug
+						|  → admin row card
+					li
+						code.bg-gray-100.px-1.rounded species/detail.pug
+						|  → content card (2 sections)
+					li Various admin pages → info/warning/error cards
+
+				h3.font-semibold.mt-6.mb-3 Benefits:
+				ul.list-disc.list-inside.text-sm.space-y-1
+					li Consistent card styling across the application
+					li Single source of truth for design updates
+					li ~40-50 lines of duplicate code eliminated
+					li Easy to add new variants or modify existing ones
+					li Clear, documented API for developers

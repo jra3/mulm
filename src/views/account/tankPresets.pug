@@ -1,5 +1,6 @@
 include ../mixins/emptyState.pug
 include ../mixins/loadingSpinner.pug
+include ../mixins/card.pug
 
 #tankPresets
 	h2(class="text-xl sm:text-2xl font-bold mb-4") My Tank Presets
@@ -12,7 +13,7 @@ include ../mixins/loadingSpinner.pug
 
 	//- New preset form (hidden by default)
 	#newPresetForm.hidden
-		.bg-white.border.border-gray-300.rounded-lg.p-4.mb-3
+		+card()
 			form(
 				hx-post="/account/tanks"
 				hx-target="#tankPresetsContent"

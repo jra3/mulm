@@ -1,0 +1,86 @@
+//- Card Mixin - Reusable container component
+//-
+//- Creates consistent card/container styling across the application
+//-
+//- @param {Object} options - Configuration options
+//- @param {String} options.variant - Card style variant (default: 'default')
+//-   - 'default': White background, gray-300 border (tank presets, video previews)
+//-   - 'activity': White background with shadow-sm (activity feed)
+//-   - 'content': Transparent background (species details)
+//-   - 'admin': Gray-50 background, compact (admin rows)
+//-   - 'info': Blue-50 background (informational messages)
+//-   - 'warning': Yellow-50 background (warnings)
+//-   - 'error': Red-50 background (errors)
+//-   - 'upload': Dashed border (file uploads)
+//- @param {String} options.padding - Override padding: 'sm'(p-2), 'md'(p-4), 'lg'(p-6), 'xl'(p-8)
+//- @param {String} options.margin - Margin classes (default: 'mb-3', use '' for none)
+//- @param {Boolean|String} options.shadow - Shadow: true for 'shadow-sm', 'md' for 'shadow-md'
+//- @param {String} options.extraClasses - Additional CSS classes
+//-
+//- Usage:
+//-   +card()
+//-     p Card content
+//-
+//-   +card({variant: 'info'})
+//-     p Info message
+//-
+//-   +card({padding: 'lg', shadow: 'md'})
+//-     p Large padded card with shadow
+
+mixin card(options = {})
+	- const variant = options.variant || 'default'
+	- const padding = options.padding || null
+	- const margin = options.margin !== undefined ? options.margin : 'mb-3'
+	- const shadow = options.shadow || null
+	- const extraClasses = options.extraClasses || ''
+
+	//- Base classes array
+	- let classes = []
+
+	//- Variant-specific classes
+	- if (variant === 'default') {
+	-   classes.push('bg-white', 'border', 'border-gray-300', 'rounded-lg')
+	- } else if (variant === 'activity') {
+	-   classes.push('bg-white', 'rounded-lg', 'border', 'border-gray-200')
+	- } else if (variant === 'content') {
+	-   classes.push('border', 'border-gray-200', 'rounded-lg')
+	- } else if (variant === 'admin') {
+	-   classes.push('bg-gray-50', 'rounded', 'border', 'border-gray-200')
+	- } else if (variant === 'info') {
+	-   classes.push('bg-blue-50', 'border', 'border-blue-200', 'rounded-lg')
+	- } else if (variant === 'warning') {
+	-   classes.push('bg-yellow-50', 'border', 'border-yellow-200', 'rounded-lg')
+	- } else if (variant === 'error') {
+	-   classes.push('bg-red-50', 'border', 'border-red-300', 'rounded-lg')
+	- } else if (variant === 'upload') {
+	-   classes.push('border-2', 'border-dashed', 'border-gray-300', 'rounded-lg')
+	- }
+
+	//- Padding (variant-specific defaults or override)
+	- if (padding) {
+	-   const paddingMap = { sm: 'p-2', md: 'p-4', lg: 'p-6', xl: 'p-8' }
+	-   classes.push(paddingMap[padding] || 'p-4')
+	- } else if (variant === 'admin') {
+	-   classes.push('p-2')
+	- } else if (variant === 'upload') {
+	-   classes.push('p-8')
+	- } else {
+	-   classes.push('p-4')
+	- }
+
+	//- Margin
+	- if (margin) classes.push(margin)
+
+	//- Shadow
+	- if (shadow === true || variant === 'activity') {
+	-   classes.push('shadow-sm')
+	- } else if (shadow === 'md') {
+	-   classes.push('shadow-md')
+	- }
+
+	//- Extra classes
+	- if (extraClasses) classes.push(extraClasses)
+
+	//- Render the card
+	div(class=classes.join(' '))
+		block

@@ -37,6 +37,7 @@ import {
 } from "./middleware/rateLimiter";
 import * as emailDemo from "./routes/emailDemo";
 import * as activityDemo from "./routes/activityDemo";
+import * as cardDemo from "./routes/cardDemo";
 import testRouter from "./routes/test";
 import { startScheduledCleanup } from "./scheduled/cleanup";
 
@@ -181,6 +182,7 @@ const devOnly = (_req: MulmRequest, res: express.Response, next: express.NextFun
 // Demo routes (development only)
 router.get("/demo/emails", devOnly, emailDemo.emailDemoPage);
 router.get("/demo/activity", devOnly, activityDemo.view);
+router.get("/demo/cards", devOnly, cardDemo.view);
 
 // Test routes (development/test only)
 router.use("/test", devOnly, testRouter);

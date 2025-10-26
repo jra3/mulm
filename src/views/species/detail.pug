@@ -2,6 +2,7 @@ include ../header.pug
 include ../mixins/date.pug
 include ../mixins/caresBadge.pug
 include ../mixins/emptyState.pug
+include ../mixins/card.pug
 
 - const stringCell = ['p-3', 'overflow-hidden', 'text-ellipsis', 'whitespace-nowrap', 'border-gray-300'];
 - const heading = ['p-3', 'text-left', 'font-semibold', 'text-gray-700', 'bg-gray-50', 'border-gray-300'];
@@ -55,7 +56,7 @@ html
 						h2.text-xl.font-bold.text-gray-900.mb-4 Known Names & Synonyms
 						.grid.grid-cols-1.gap-4(class="md:grid-cols-2")
 							each synonym in species.synonyms
-								.border.border-gray-200.rounded-lg.p-4
+								+card({variant: 'content', margin: ''})
 									if synonym.common_name
 										.font-medium.text-gray-900= synonym.common_name
 									if synonym.scientific_name
@@ -68,7 +69,7 @@ html
 						
 						.grid.grid-cols-1.gap-6(class="lg:grid-cols-2")
 							each breeder in breeders
-								.border.border-gray-200.rounded-lg.p-4
+								+card({variant: 'content', margin: ''})
 									.flex.justify-between.items-start.mb-3
 										div
 											a(class="text-lg font-semibold text-blue-600 hover:text-blue-800" href=`/member/${breeder.member_id}`)= breeder.member_name

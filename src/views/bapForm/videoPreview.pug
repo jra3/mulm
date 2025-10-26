@@ -1,8 +1,9 @@
 include ../mixins/emptyState.pug
+include ../mixins/card.pug
 
 //- Video Preview Card
 //- Displays video thumbnail and metadata after URL validation
-.bg-white.border.border-gray-300.rounded-lg.p-4.mt-2(role="region" aria-label="Video preview")
++card({margin: 'mt-2'})(role="region" aria-label="Video preview")
 	.flex.gap-4
 		//- Thumbnail
 		if metadata.thumbnailUrl

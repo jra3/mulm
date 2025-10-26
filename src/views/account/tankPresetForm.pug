@@ -1,4 +1,5 @@
 include ../mixins/loadingSpinner.pug
+include ../mixins/card.pug
 
 //- Tank Preset Form (for both create and edit)
 //- Local mixin for form fields to reduce repetition
@@ -32,7 +33,7 @@ mixin gridFormField(name, labelText, placeholder, value)
 			value=value || ''
 		)
 
-.bg-white.border.border-gray-300.rounded-lg.p-4.mb-3(class=editing ? 'tank-preset-card' : '')
++card({extraClasses: editing ? 'tank-preset-card' : ''})
 	form(
 		hx-post="/account/tanks"
 		hx-target=editing ? 'closest .tank-preset-card' : '#tankPresetsContent'

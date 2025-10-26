@@ -1,9 +1,10 @@
 include ../mixins/date.pug
+include ../mixins/card.pug
 
 mixin activityItem(activity)
     - const data = JSON.parse(activity.activity_data)
-    
-    .activity-item.bg-white.rounded-lg.shadow-sm.border.border-gray-200.p-4.mb-3
+
+    +card({variant: 'activity', extraClasses: 'activity-item'})
         .flex.items-start.space-x-3
             .flex-shrink-0
                 if activity.activity_type === 'submission_approved'
