@@ -2,6 +2,7 @@ include ../header.pug
 include ../mixins/submissionImages.pug
 include ../mixins/submissionVideo.pug
 include ../mixins/caresBadge.pug
+include ../mixins/iucnBadge.pug
 include ../mixins/emptyState.pug
 
 mixin reviewTextInput(labelText, name, type="text")
@@ -33,6 +34,10 @@ html
                     h2(class="text-l font-bold") Species Details
                     if name && name.is_cares_species == 1
                         +caresBadge('sm')
+                    if name && name.iucn_redlist_category
+                        +iucnBadge(name.iucn_redlist_category, 'sm', false, true, name.iucn_redlist_id)
+                    if name && name.iucn_population_trend
+                        +populationTrend(name.iucn_population_trend, 'sm')
                 div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
                     +reviewTextInput("Common Name", "species_common_name")
                     +reviewTextInput("Latin Name", "species_latin_name")
