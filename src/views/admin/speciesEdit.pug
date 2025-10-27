@@ -295,8 +295,16 @@ html
 
     +footer()
 
-    // Temporary HTMX debugging
+    // HTMX event handlers
     script.
+      // Reload page after IUCN sync completes (for single species)
+      document.body.addEventListener('pageReload', function() {
+        setTimeout(function() {
+          window.location.reload();
+        }, 1000);
+      });
+
+      // Temporary HTMX debugging
       document.body.addEventListener('htmx:beforeRequest', function(evt) {
         console.log('HTMX beforeRequest:', evt.detail);
       });

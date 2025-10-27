@@ -753,7 +753,7 @@ export const bulkSyncIucn = async (req: MulmRequest, res: Response) => {
       }
     }
 
-    // Return success message as HTML
+    // Return success message as HTML with auto-reload
     const resultHtml = `
       <div class="bg-green-50 border-l-4 border-green-400 p-4 mb-4 rounded-lg">
         <div class="flex items-start gap-3">
@@ -764,13 +764,23 @@ export const bulkSyncIucn = async (req: MulmRequest, res: Response) => {
             <h3 class="text-base font-semibold text-green-800">IUCN Sync Complete</h3>
             <p class="text-sm text-green-700 mt-1">
               Processed ${groupIds.length} species: ${successCount} successful, ${notFoundCount} not found, ${errorCount} errors.
-              <button class="text-blue-600 hover:text-blue-800 underline ml-2" onclick="window.location.reload()">Refresh page to see updated data</button>
             </p>
           </div>
         </div>
       </div>
     `;
-    res.send(resultHtml);
+
+    // If single species sync, trigger page reload after short delay to show updated data
+    if (groupIds.length === 1) {
+      res.set("HX-Trigger-After-Swap", "pageReload").send(resultHtml);
+    } else {
+      // For bulk sync, show message with manual reload button
+      const bulkResultHtml = resultHtml.replace(
+        "</p>",
+        '<button class="text-blue-600 hover:text-blue-800 underline ml-2" onclick="window.location.reload()">Refresh page to see updated data</button></p>'
+      );
+      res.send(bulkResultHtml);
+    }
   } catch (error) {
     logger.error("Bulk IUCN sync failed", error);
     res.status(500).send("Sync operation failed. Please check logs.");
