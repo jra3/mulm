@@ -147,7 +147,7 @@ html
 
               tbody
                 each entry in recentLog
-                  tr.hover:bg-gray-50
+                  tr(class="hover:bg-gray-50")
                     td(class=stringCell)
                       span.font-medium= entry.species_name
                     td(class=stringCell)
@@ -162,7 +162,7 @@ html
                       +shortDate(entry.sync_date)
                     td(class=stringCell)
                       if entry.status !== 'success'
-                        button.text-xs.text-blue-600.hover:text-blue-800(
+                        button.outline.text-xs(
                           type="button"
                           hx-post="/admin/iucn/sync"
                           hx-vals=`{"mode": "single", "groupId": ${entry.group_id}}`
@@ -175,4 +175,4 @@ html
 
     //- Back to admin home
     .container.mx-auto.px-4.py-6
-      a.text-blue-600.hover:text-blue-800(href="/admin/queue") ← Back to Admin Queue
+      a(class="text-blue-600 hover:text-blue-800" href="/admin/queue") ← Back to Admin Queue
