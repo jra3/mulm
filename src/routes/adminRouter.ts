@@ -2,6 +2,7 @@ import { Router } from "express";
 import { requireAdmin } from "./admin";
 import * as admin from "./admin";
 import * as speciesAdmin from "./admin/species";
+import * as iucnAdmin from "./admin/iucn";
 
 const adminRouter = Router();
 
@@ -12,6 +13,13 @@ adminRouter.get("/species", speciesAdmin.listSpecies);
 adminRouter.get("/species/:groupId/edit", speciesAdmin.editSpeciesSidebar);
 adminRouter.patch("/species/:groupId", speciesAdmin.updateSpecies);
 adminRouter.delete("/species/:groupId", speciesAdmin.deleteSpecies);
+
+// IUCN Red List management
+adminRouter.get("/iucn", iucnAdmin.showDashboard);
+adminRouter.post("/iucn/sync", iucnAdmin.syncSpecies);
+adminRouter.get("/iucn/status", iucnAdmin.getSyncStatus);
+adminRouter.get("/iucn/log", iucnAdmin.showSyncLog);
+adminRouter.get("/iucn/missing", iucnAdmin.showMissingSpecies);
 
 // Bulk operations
 adminRouter.get("/dialog/species/bulk-set-points", speciesAdmin.bulkSetPointsDialog);

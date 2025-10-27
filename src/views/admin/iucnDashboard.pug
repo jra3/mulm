@@ -1,0 +1,178 @@
+include ../header.pug
+include ../mixins/date.pug
+include ../mixins/emptyState.pug
+include ../mixins/card.pug
+
+- const stringCell = ['p-3', 'text-left', 'border-b', 'border-gray-200'];
+- const heading = ['p-3', 'text-left', 'font-bold', 'text-gray-900', 'border-b-2', 'border-gray-300', 'bg-gray-50', 'cursor-pointer', 'select-none', 'hover:bg-gray-100'];
+
+//- IUCN Category Badge Colors
+mixin iucnCategoryBadge(category)
+  if category
+    - const badges = { 'CR': {bg: 'bg-red-100', text: 'text-red-800', label: 'Critically Endangered'}, 'EN': {bg: 'bg-orange-100', text: 'text-orange-800', label: 'Endangered'}, 'VU': {bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Vulnerable'}, 'NT': {bg: 'bg-blue-100', text: 'text-blue-800', label: 'Near Threatened'}, 'LC': {bg: 'bg-green-100', text: 'text-green-800', label: 'Least Concern'}, 'DD': {bg: 'bg-gray-100', text: 'text-gray-800', label: 'Data Deficient'}, 'NE': {bg: 'bg-gray-100', text: 'text-gray-600', label: 'Not Evaluated'}, 'EW': {bg: 'bg-red-100', text: 'text-red-900', label: 'Extinct in Wild'}, 'EX': {bg: 'bg-black', text: 'text-white', label: 'Extinct'} };
+    - const badge = badges[category] || {bg: 'bg-gray-100', text: 'text-gray-800', label: category};
+    span(
+      class=`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${badge.bg} ${badge.text}`
+      title=badge.label
+    )= category
+  else
+    span.text-gray-400.text-xs No data
+
+//- Population Trend Indicator
+mixin populationTrend(trend)
+  if trend === 'Increasing'
+    span.text-green-600(title="Population Increasing") ↑
+  else if trend === 'Decreasing'
+    span.text-red-600(title="Population Decreasing") ↓
+  else if trend === 'Stable'
+    span.text-blue-600(title="Population Stable") ↔
+  else if trend === 'Unknown'
+    span.text-gray-400(title="Population Trend Unknown") ?
+  else
+    span.text-gray-300 -
+
+//- Sync Status Badge
+mixin syncStatusBadge(status)
+  if status === 'success'
+    span.inline-flex.items-center.px-2.py-1.rounded-full.text-xs.font-medium.bg-green-100.text-green-800 ✓ Success
+  else if status === 'not_found'
+    span.inline-flex.items-center.px-2.py-1.rounded-full.text-xs.font-medium.bg-gray-100.text-gray-800 ⊘ Not Found
+  else if status === 'api_error'
+    span.inline-flex.items-center.px-2.py-1.rounded-full.text-xs.font-medium.bg-red-100.text-red-800 ⚠ Error
+  else if status === 'rate_limited'
+    span.inline-flex.items-center.px-2.py-1.rounded-full.text-xs.font-medium.bg-yellow-100.text-yellow-800 ⏱ Rate Limited
+  else if status === 'csv_import'
+    span.inline-flex.items-center.px-2.py-1.rounded-full.text-xs.font-medium.bg-blue-100.text-blue-800 📄 CSV Import
+
+doctype html
+html
+  +headTag(title)
+    script(src='/tablesort.min.js')
+    script(src='/tablesort.date.min.js')
+    script.
+      document.addEventListener('DOMContentLoaded', function() {
+        const tables = document.querySelectorAll('table[data-sortable]');
+        tables.forEach(table => {
+          new Tablesort(table, {
+            descending: true
+          });
+        });
+      });
+
+  body.bg-white.text-gray-800
+    +pageHeader(true, title)
+
+    .container.mx-auto.px-4.py-6.max-w-7xl
+
+      //- Info Card
+      +card({variant: 'info'})
+        .flex.items-start.gap-3
+          div
+            h3.text-base.font-semibold.text-blue-800 IUCN Red List Integration
+            p.text-sm.text-blue-700.mt-1
+              | This dashboard manages IUCN Red List conservation status data for species in the database.
+              | Not all aquarium species are assessed by IUCN, so "Not Found" results are expected and normal.
+
+      //- Statistics Cards
+      #stats-section
+        include iucnStatsCards.pug
+
+      //- Action Buttons Section
+      .mt-8.mb-6
+        h2.text-xl.font-bold.text-gray-900.mb-4 Sync Operations
+
+        .flex.gap-3.flex-wrap
+          button.primary(
+            type="button"
+            hx-post="/admin/iucn/sync"
+            hx-vals='{"mode": "missing"}'
+            hx-target="#stats-section"
+            hx-swap="innerHTML"
+            hx-indicator="#sync-indicator"
+            hx-confirm="This will sync all species currently missing IUCN data. This may take several minutes due to API rate limits. Continue?"
+          )
+            | Sync Missing Species
+
+          button.primary(
+            type="button"
+            hx-post="/admin/iucn/sync"
+            hx-vals='{"mode": "stale", "daysOld": 365}'
+            hx-target="#stats-section"
+            hx-swap="innerHTML"
+            hx-indicator="#sync-indicator"
+            hx-confirm="This will re-sync species with IUCN data older than 1 year. Continue?"
+          )
+            | Re-sync Stale Data (>1 year)
+
+          button.outline(
+            type="button"
+            hx-post="/admin/iucn/sync"
+            hx-vals='{"mode": "all"}'
+            hx-target="#stats-section"
+            hx-swap="innerHTML"
+            hx-indicator="#sync-indicator"
+            hx-confirm="⚠️ WARNING: This will sync ALL species in the database. This will take a LONG time (hours) due to API rate limits. Are you absolutely sure?"
+          )
+            | Sync All Species (Slow!)
+
+          a.outline(href="/admin/iucn/log" role="button")
+            | View Full Sync Log
+
+          a.outline(href="/admin/iucn/missing" role="button")
+            | View Missing Species
+
+        //- Loading Indicator
+        #sync-indicator.htmx-indicator.mt-4
+          .flex.gap-2.items-center.text-blue-600
+            svg.animate-spin.h-5.w-5(xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24")
+              circle.opacity-25(cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4")
+              path.opacity-75(fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z")
+            span Syncing species with IUCN API... This may take several minutes.
+
+      //- Recent Sync Activity Table
+      .mt-8
+        h2.text-xl.font-bold.text-gray-900.mb-4 Recent Sync Activity
+
+        if recentLog && recentLog.length > 0
+          .overflow-x-auto.w-full
+            table(data-sortable class="w-full bg-white shadow-sm rounded-lg")
+              thead
+                tr
+                  th(class=heading) Species
+                  th(class=heading) IUCN Category
+                  th(class=heading) Trend
+                  th(class=heading) Status
+                  th(class=heading data-sort-method="date" data-sort-default) Sync Date
+                  th(class="p-3 text-left font-bold text-gray-900 border-b-2 border-gray-300 bg-gray-50" data-sort-method="none") Actions
+
+              tbody
+                each entry in recentLog
+                  tr.hover:bg-gray-50
+                    td(class=stringCell)
+                      span.font-medium= entry.species_name
+                    td(class=stringCell)
+                      +iucnCategoryBadge(entry.current_category)
+                    td(class=stringCell)
+                      +populationTrend(entry.population_trend)
+                    td(class=stringCell)
+                      +syncStatusBadge(entry.status)
+                      if entry.error_message
+                        p.text-xs.text-red-600.mt-1= entry.error_message
+                    td(class=stringCell)
+                      +shortDate(entry.sync_date)
+                    td(class=stringCell)
+                      if entry.status !== 'success'
+                        button.text-xs.text-blue-600.hover:text-blue-800(
+                          type="button"
+                          hx-post="/admin/iucn/sync"
+                          hx-vals=`{"mode": "single", "groupId": ${entry.group_id}}`
+                          hx-target="#stats-section"
+                          hx-swap="innerHTML"
+                          hx-indicator="#sync-indicator"
+                        ) Retry
+        else
+          +emptyState("No sync activity yet.", { subtitle: "Use the buttons above to start syncing IUCN data." })
+
+    //- Back to admin home
+    .container.mx-auto.px-4.py-6
+      a.text-blue-600.hover:text-blue-800(href="/admin/queue") ← Back to Admin Queue
