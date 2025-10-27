@@ -396,12 +396,14 @@ void describe("Pug Template Rendering", () => {
       /^mixins\/loadingSpinner\.pug$/, // Mixin-only template
       /^mixins\/card\.pug$/, // Mixin-only template
       /^activity\/activity-item\.pug$/, // Mixin-only template
+      /^activity\/activity-list-partial\.pug$/, // Partial template for HTMX pagination
       /^activity\/award-granted\.pug$/, // Include-only template
       /^activity\/submission-approved\.pug$/, // Include-only template
       /^admin\/adminNav\.pug$/, // Mixin-only template
       /^admin\/adminActionsPanel\.pug$/, // Mixin-only template
       /^admin\/memberRow\.pug$/, // Mixin-only template
       /^admin\/queueButton\.pug$/, // Mixin-only template
+      /^admin\/iucnStatsCards\.pug$/, // HTMX fragment for IUCN dashboard
       /^bapForm\/style\.pug$/, // Style-only template
       /^bapForm\/supplementLine\.pug$/, // Mixin-only template
       /^bapForm\/supplementSingleLine\.pug$/, // Mixin-only template
@@ -559,6 +561,29 @@ void describe("Pug Template Rendering", () => {
 
           case "index.pug":
             // Index already has comprehensive data
+            break;
+
+          case "admin/iucnDashboard.pug":
+            templateData.stats = {
+              total_species: 2301,
+              species_with_iucn_data: 150,
+              successful_syncs: 150,
+              total_syncs: 200,
+              not_found_count: 50,
+              error_count: 0,
+              last_sync_date: new Date().toISOString(),
+            };
+            templateData.recentLog = Array.from({ length: 5 }, (_, i) => ({
+              id: i + 1,
+              group_id: i + 1,
+              sync_date: new Date().toISOString(),
+              status: faker.helpers.arrayElement(["success", "not_found", "api_error"]),
+              category_found: faker.helpers.arrayElement(["CR", "EN", "VU", "LC", null]),
+              error_message: null,
+              species_name: `${faker.science.chemicalElement().name} ${faker.science.chemicalElement().name}`,
+              current_category: faker.helpers.arrayElement(["CR", "EN", "VU", "LC", null]),
+              population_trend: faker.helpers.arrayElement(["Increasing", "Decreasing", "Stable", "Unknown", null]),
+            }));
             break;
 
           case "activityDemo.pug":
