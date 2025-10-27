@@ -17,9 +17,13 @@ import {
   bulkSetPoints,
   mergeSpecies,
 } from "@/db/species";
+import { updateIucnData, recordIucnSync } from "@/db/iucn";
+import { IUCNClient } from "@/integrations/iucn";
+import { db } from "@/db/conn";
 import { getQueryString, getQueryNumber, getQueryBoolean, getBodyString } from "@/utils/request";
 import { getClassOptions } from "@/forms/submission";
 import { mergeSpeciesSchema } from "@/forms/speciesMerge";
+import { logger } from "@/utils/logger";
 import * as z from "zod";
 
 /**
@@ -40,6 +44,7 @@ export const listSpecies = async (req: MulmRequest, res: Response) => {
     program_class: getQueryString(req, "species_class"),
     has_base_points: getQueryBoolean(req, "has_points"),
     is_cares_species: getQueryBoolean(req, "is_cares"),
+    iucn_category: getQueryString(req, "iucn"),
     search: getQueryString(req, "search"),
   };
 
@@ -652,5 +657,122 @@ export const mergeSpeciesAction = async (req: MulmRequest, res: Response) => {
     res.set("HX-Redirect", `/admin/species/${canonical_group_id}/edit`).status(200).send();
   } catch {
     res.status(500).send("Failed to merge species");
+  }
+};
+
+// Schema for bulk IUCN sync
+const bulkSyncIucnSchema = z.object({
+  groupIds: z.union([
+    z.string().transform((val) => val.split(",").map((id) => parseInt(id.trim()))),
+    z.array(z.string()).transform((arr) => arr.map((id) => parseInt(id))),
+  ]),
+});
+
+/**
+ * POST /admin/species/bulk-sync-iucn
+ * Bulk sync IUCN data for selected species
+ */
+export const bulkSyncIucn = async (req: MulmRequest, res: Response) => {
+  const parsed = bulkSyncIucnSchema.safeParse(req.body);
+
+  if (!parsed.success) {
+    res.status(400).send(parsed.error.issues[0]?.message ?? "Invalid request");
+    return;
+  }
+
+  const { groupIds } = parsed.data;
+
+  if (groupIds.length === 0) {
+    res.status(400).send("No species selected");
+    return;
+  }
+
+  try {
+    const database = db(true);
+    const iucnClient = new IUCNClient();
+
+    // Test API connection first
+    const connectionOk = await iucnClient.testConnection();
+    if (!connectionOk) {
+      res.status(503).send("IUCN API is not accessible. Please try again later.");
+      return;
+    }
+
+    // Get species data for selected IDs
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const speciesData: any[] = await database.all(
+      `SELECT group_id, canonical_genus, canonical_species_name
+       FROM species_name_group
+       WHERE group_id IN (${groupIds.map(() => "?").join(",")})`,
+      ...groupIds
+    );
+
+    let successCount = 0;
+    let notFoundCount = 0;
+    let errorCount = 0;
+
+    // Sync each species
+    for (const species of speciesData as Array<{
+      group_id: number;
+      canonical_genus: string;
+      canonical_species_name: string;
+    }>) {
+      try {
+        const scientificName = `${species.canonical_genus} ${species.canonical_species_name}`;
+        const result = await iucnClient.getSpeciesByName(scientificName);
+
+        if (result) {
+          await updateIucnData(database, species.group_id, {
+            category: result.category,
+            taxonId: result.taxonid,
+            populationTrend: result.population_trend || undefined,
+          });
+          await recordIucnSync(database, species.group_id, "success", {
+            category: result.category,
+            taxonId: result.taxonid,
+            populationTrend: result.population_trend || undefined,
+          });
+          successCount++;
+        } else {
+          await recordIucnSync(database, species.group_id, "not_found");
+          notFoundCount++;
+        }
+      } catch (error) {
+        logger.error(
+          `IUCN sync failed for ${species.canonical_genus} ${species.canonical_species_name}`,
+          error
+        );
+        await recordIucnSync(
+          database,
+          species.group_id,
+          "api_error",
+          undefined,
+          error instanceof Error ? error.message : "Unknown error"
+        );
+        errorCount++;
+      }
+    }
+
+    // Return success message as HTML
+    const resultHtml = `
+      <div class="bg-green-50 border-l-4 border-green-400 p-4 mb-4 rounded-lg">
+        <div class="flex items-start gap-3">
+          <svg class="w-6 h-6 text-green-600 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div>
+            <h3 class="text-base font-semibold text-green-800">IUCN Sync Complete</h3>
+            <p class="text-sm text-green-700 mt-1">
+              Processed ${groupIds.length} species: ${successCount} successful, ${notFoundCount} not found, ${errorCount} errors.
+              <button class="text-blue-600 hover:text-blue-800 underline ml-2" onclick="window.location.reload()">Refresh page to see updated data</button>
+            </p>
+          </div>
+        </div>
+      </div>
+    `;
+    res.send(resultHtml);
+  } catch (error) {
+    logger.error("Bulk IUCN sync failed", error);
+    res.status(500).send("Sync operation failed. Please check logs.");
   }
 };

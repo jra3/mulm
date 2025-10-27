@@ -1212,6 +1212,7 @@ export type SpeciesAdminFilters = {
   program_class?: string;
   has_base_points?: boolean;
   is_cares_species?: boolean;
+  iucn_category?: string; // Specific IUCN category or special values: 'with_data', 'missing'
   search?: string;
 };
 
@@ -1224,6 +1225,9 @@ export type SpeciesAdminListItem = {
   base_points: number | null;
   is_cares_species: number;
   synonym_count: number;
+  iucn_redlist_category: string | null;
+  iucn_population_trend: string | null;
+  iucn_last_updated: string | null;
 };
 
 export type SpeciesAdminListResult = {
@@ -1250,7 +1254,8 @@ export async function getSpeciesForAdmin(
   limit = 50,
   offset = 0
 ): Promise<SpeciesAdminListResult> {
-  const { species_type, program_class, has_base_points, is_cares_species, search } = filters;
+  const { species_type, program_class, has_base_points, is_cares_species, iucn_category, search } =
+    filters;
 
   // Build WHERE conditions
   const conditions: string[] = ["1=1"];
@@ -1275,6 +1280,18 @@ export async function getSpeciesForAdmin(
   if (is_cares_species !== undefined) {
     conditions.push("AND sng.is_cares_species = ?");
     params.push(is_cares_species ? 1 : 0);
+  }
+
+  if (iucn_category) {
+    if (iucn_category === "with_data") {
+      conditions.push("AND sng.iucn_redlist_category IS NOT NULL");
+    } else if (iucn_category === "missing") {
+      conditions.push("AND sng.iucn_redlist_category IS NULL");
+    } else {
+      // Specific IUCN category (CR, EN, VU, etc.)
+      conditions.push("AND sng.iucn_redlist_category = ?");
+      params.push(iucn_category);
+    }
   }
 
   if (search && search.trim().length >= 2) {
@@ -1311,7 +1328,7 @@ export async function getSpeciesForAdmin(
   const countResult = await query<{ count: number }>(countSql, params);
   const total_count = countResult[0]?.count || 0;
 
-  // Get paginated results with synonym count from both tables
+  // Get paginated results with synonym count from both tables and IUCN data
   const dataSql = `
     SELECT
       sng.group_id,
@@ -1321,6 +1338,9 @@ export async function getSpeciesForAdmin(
       sng.program_class,
       sng.base_points,
       sng.is_cares_species,
+      sng.iucn_redlist_category,
+      sng.iucn_population_trend,
+      sng.iucn_last_updated,
       (
         SELECT COUNT(*) FROM species_common_name cn WHERE cn.group_id = sng.group_id
       ) + (

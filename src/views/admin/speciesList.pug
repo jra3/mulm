@@ -1,6 +1,7 @@
 include ../header.pug
 include adminNav.pug
 include ../mixins/emptyState.pug
+include ../mixins/iucnBadge.pug
 
 - const stringCell = ['p-3', 'text-left', 'border-b', 'border-gray-200'];
 - const heading = ['p-3', 'text-left', 'font-bold', 'text-gray-900', 'border-b-2', 'border-gray-300', 'bg-gray-50', 'cursor-pointer', 'select-none', 'hover:bg-gray-100'];
@@ -19,6 +20,7 @@ mixin speciesTable(speciesList)
           th(class=heading) Class
           th(class=numberHeading data-sort-method="number") Points
           th(class=heading) CARES
+          th(class=heading) IUCN Status
           th(class=nonSortableHeading) Actions
 
       tbody
@@ -56,6 +58,12 @@ mixin speciesTable(speciesList)
                 span.text-yellow-500(title="CARES Conservation Species") ⭐
               else
                 span.text-gray-300 ☆
+
+            td(class=stringCell)
+              .flex.items-center.gap-1
+                +iucnBadge(item.iucn_redlist_category, 'sm', false, false, null)
+                if item.iucn_population_trend
+                  +populationTrend(item.iucn_population_trend, 'sm')
 
             td(class=stringCell)
               a(
@@ -104,7 +112,7 @@ html
         //- Filters Section
         .bg-white.rounded-lg.shadow-md.p-6.mb-6
           form(method="GET" action="/admin/species")
-            .grid.grid-cols-1.gap-4(class="md:grid-cols-2 lg:grid-cols-5")
+            .grid.grid-cols-1.gap-4(class="md:grid-cols-2 lg:grid-cols-6")
 
               //- Species Type Filter
               .space-y-2
@@ -135,12 +143,31 @@ html
 
               //- CARES Filter
               .space-y-2
-                label.block.text-sm.font-medium.text-gray-700(for="is_cares") Conservation
+                label.block.text-sm.font-medium.text-gray-700(for="is_cares") CARES
                 .select-wrapper
                   select#is_cares(name="is_cares" onchange="this.form.submit()")
-                    option(value="" selected=(filters.is_cares_species === undefined)) All Species
+                    option(value="" selected=(filters.is_cares_species === undefined)) All
                     option(value="true" selected=(filters.is_cares_species === true)) CARES Only
                     option(value="false" selected=(filters.is_cares_species === false)) Non-CARES
+
+              //- IUCN Filter
+              .space-y-2
+                label.block.text-sm.font-medium.text-gray-700(for="iucn") IUCN Status
+                .select-wrapper
+                  select#iucn(name="iucn" onchange="this.form.submit()")
+                    option(value="" selected=!filters.iucn_category) All
+                    option(value="with_data" selected=(filters.iucn_category === 'with_data')) With IUCN Data
+                    option(value="missing" selected=(filters.iucn_category === 'missing')) Missing IUCN
+                    option(disabled) ──────────
+                    option(value="CR" selected=(filters.iucn_category === 'CR')) CR - Critically Endangered
+                    option(value="EN" selected=(filters.iucn_category === 'EN')) EN - Endangered
+                    option(value="VU" selected=(filters.iucn_category === 'VU')) VU - Vulnerable
+                    option(value="NT" selected=(filters.iucn_category === 'NT')) NT - Near Threatened
+                    option(value="LC" selected=(filters.iucn_category === 'LC')) LC - Least Concern
+                    option(value="DD" selected=(filters.iucn_category === 'DD')) DD - Data Deficient
+                    option(value="NE" selected=(filters.iucn_category === 'NE')) NE - Not Evaluated
+                    option(value="EW" selected=(filters.iucn_category === 'EW')) EW - Extinct in Wild
+                    option(value="EX" selected=(filters.iucn_category === 'EX')) EX - Extinct
 
               //- Search Input
               .space-y-2
@@ -157,7 +184,7 @@ html
             .flex.justify-between.items-center.mt-4
               .flex.gap-2
                 button.primary(type="submit") Apply Filters
-                if filters.species_type || filters.program_class || filters.has_base_points !== undefined || filters.is_cares_species !== undefined || filters.search
+                if filters.species_type || filters.program_class || filters.has_base_points !== undefined || filters.is_cares_species !== undefined || filters.iucn_category || filters.search
                   a.link(href="/admin/species") Clear Filters
 
               .text-sm.text-gray-600
@@ -181,10 +208,29 @@ html
                     hx-swap="beforeend"
                     hx-include="#bulk-species-form"
                   ) Bulk Edit Points
-                button.outline(
-                  type="button"
-                  hx-on:click="document.querySelectorAll('.species-checkbox').forEach(cb => cb.checked = false); document.getElementById('select-all').checked = false; this.closest('form').dispatchEvent(new Event('change', {bubbles: true}));"
-                ) Clear Selection
+                  button.primary(
+                    type="button"
+                    hx-post="/admin/species/bulk-sync-iucn"
+                    hx-include="#bulk-species-form"
+                    hx-target="#bulk-sync-results"
+                    hx-swap="innerHTML"
+                    hx-indicator="#bulk-sync-indicator"
+                  ) Sync IUCN Data
+                  button.outline(
+                    type="button"
+                    hx-on:click="document.querySelectorAll('.species-checkbox').forEach(cb => cb.checked = false); document.getElementById('select-all').checked = false; this.closest('form').dispatchEvent(new Event('change', {bubbles: true}));"
+                  ) Clear Selection
+
+                //- Loading indicator for IUCN sync
+                #bulk-sync-indicator.htmx-indicator
+                  .flex.gap-2.items-center.text-blue-600
+                    svg.animate-spin.h-4.w-4(xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24")
+                      circle.opacity-25(cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4")
+                      path.opacity-75(fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z")
+                    span Syncing...
+
+            //- Results message area for bulk IUCN sync
+            #bulk-sync-results
 
             +speciesTable(species)
 
@@ -194,6 +240,7 @@ html
           - if (filters.program_class) queryParams.push(`species_class=${encodeURIComponent(filters.program_class)}`);
           - if (filters.has_base_points !== undefined) queryParams.push(`has_points=${filters.has_base_points}`);
           - if (filters.is_cares_species !== undefined) queryParams.push(`is_cares=${filters.is_cares_species}`);
+          - if (filters.iucn_category) queryParams.push(`iucn=${encodeURIComponent(filters.iucn_category)}`);
           - if (filters.search) queryParams.push(`search=${encodeURIComponent(filters.search)}`);
           - if (sort !== 'name') queryParams.push(`sort=${sort}`);
           - const baseQuery = queryParams.length > 0 ? '&' + queryParams.join('&') : '';

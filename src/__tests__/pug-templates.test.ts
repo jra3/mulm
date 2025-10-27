@@ -152,10 +152,25 @@ void describe("Pug Template Rendering", () => {
     // Species data
     species: {
       id: 1,
+      group_id: 1,
       latin_name: "Apistogramma cacatuoides",
       common_name: "Cockatoo Dwarf Cichlid",
+      canonical_genus: "Apistogramma",
+      canonical_species_name: "cacatuoides",
       class: "Cichlid",
+      program_class: "Cichlids",
+      species_type: "Fish",
       points: 15,
+      base_points: 15,
+      is_cares_species: 0,
+      iucn_redlist_category: "LC",
+      iucn_population_trend: "Stable",
+      iucn_last_updated: new Date().toISOString(),
+      iucn_redlist_id: 12345,
+      synonym_count: 2,
+      synonyms: [],
+      external_references: null,
+      image_links: null,
     },
 
     // Enhanced submission data
@@ -390,6 +405,7 @@ void describe("Pug Template Rendering", () => {
       /^mixins\/submissionVideo\.pug$/, // Mixin-only template
       /^mixins\/trophy\.pug$/, // Mixin-only template
       /^mixins\/caresBadge\.pug$/, // Mixin-only template
+      /^mixins\/iucnBadge\.pug$/, // Mixin-only template
       /^mixins\/formCheckbox\.pug$/, // Mixin-only template
       /^mixins\/changesRequestedBanner\.pug$/, // Mixin-only template (tested via submit.pug)
       /^mixins\/emptyState\.pug$/, // Mixin-only template
@@ -403,7 +419,6 @@ void describe("Pug Template Rendering", () => {
       /^admin\/adminActionsPanel\.pug$/, // Mixin-only template
       /^admin\/memberRow\.pug$/, // Mixin-only template
       /^admin\/queueButton\.pug$/, // Mixin-only template
-      /^admin\/iucnStatsCards\.pug$/, // HTMX fragment for IUCN dashboard
       /^bapForm\/style\.pug$/, // Style-only template
       /^bapForm\/supplementLine\.pug$/, // Mixin-only template
       /^bapForm\/supplementSingleLine\.pug$/, // Mixin-only template
@@ -563,28 +578,6 @@ void describe("Pug Template Rendering", () => {
             // Index already has comprehensive data
             break;
 
-          case "admin/iucnDashboard.pug":
-            templateData.stats = {
-              total_species: 2301,
-              species_with_iucn_data: 150,
-              successful_syncs: 150,
-              total_syncs: 200,
-              not_found_count: 50,
-              error_count: 0,
-              last_sync_date: new Date().toISOString(),
-            };
-            templateData.recentLog = Array.from({ length: 5 }, (_, i) => ({
-              id: i + 1,
-              group_id: i + 1,
-              sync_date: new Date().toISOString(),
-              status: faker.helpers.arrayElement(["success", "not_found", "api_error"]),
-              category_found: faker.helpers.arrayElement(["CR", "EN", "VU", "LC", null]),
-              error_message: null,
-              species_name: `${faker.science.chemicalElement().name} ${faker.science.chemicalElement().name}`,
-              current_category: faker.helpers.arrayElement(["CR", "EN", "VU", "LC", null]),
-              population_trend: faker.helpers.arrayElement(["Increasing", "Decreasing", "Stable", "Unknown", null]),
-            }));
-            break;
 
           case "activityDemo.pug":
             templateData.activities = Array.from({ length: 5 }, () => ({
