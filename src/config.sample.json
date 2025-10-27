@@ -1,6 +1,7 @@
 {
   "databaseFile": "db/database.db",
   "domain": "localhost:4200",
+  "disableEmails": true,
   "googleClientId": "",
   "googleClientSecret": "",
   "adminsEmail": "admin@example.com",

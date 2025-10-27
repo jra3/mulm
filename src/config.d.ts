@@ -3,6 +3,7 @@ declare module "@/config.json" {
   interface Config {
     databaseFile: string;
     domain: string;
+    disableEmails?: boolean;
     googleClientId: string;
     googleClientSecret: string;
     adminsEmail: string;

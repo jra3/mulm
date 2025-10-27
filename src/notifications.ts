@@ -7,7 +7,9 @@ import { logger } from "@/utils/logger";
 
 const DEBUG_EMAIL = process.env.DEBUG_EMAIL;
 const fromEmail = `BASNY Breeder Awards ${config.fromEmail}`;
-const EMAILS_DISABLED = process.env.NODE_ENV === "test"; // Disable emails in test mode
+const EMAILS_DISABLED =
+  process.env.NODE_ENV === "test" || // Disable emails in test mode
+  config.disableEmails === true; // Config killswitch for local development
 
 const transporter = nodemailer.createTransport({
   host: config.smtpHost,
