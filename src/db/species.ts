@@ -323,6 +323,8 @@ export type SpeciesExplorerItem = {
   scientific_names: string;
   latest_breed_date: string | null;
   is_cares_species: number;
+  iucn_redlist_category: string | null;
+  iucn_population_trend: string | null;
 };
 
 /**
@@ -388,6 +390,8 @@ function buildSpeciesSearchQuery(
 			sng.canonical_genus,
 			sng.canonical_species_name,
 			sng.is_cares_species,
+			sng.iucn_redlist_category,
+			sng.iucn_population_trend,
 			COALESCE(COUNT(DISTINCT s.id), 0) as total_breeds,
 			COALESCE(COUNT(DISTINCT s.member_id), 0) as total_breeders,
 			COALESCE(GROUP_CONCAT(DISTINCT cn.common_name), '') as common_names,
@@ -398,7 +402,7 @@ function buildSpeciesSearchQuery(
 		LEFT JOIN species_scientific_name scin ON sng.group_id = scin.group_id
 		LEFT JOIN submissions s ON (s.common_name_id = cn.common_name_id OR s.scientific_name_id = scin.scientific_name_id) AND s.approved_on IS NOT NULL
 		WHERE ${conditions.join(" ")}
-		GROUP BY sng.group_id, sng.program_class, sng.canonical_genus, sng.canonical_species_name, sng.is_cares_species
+		GROUP BY sng.group_id, sng.program_class, sng.canonical_genus, sng.canonical_species_name, sng.is_cares_species, sng.iucn_redlist_category, sng.iucn_population_trend
 		HAVING total_breeds > 0
 		ORDER BY ${orderBy}
 		${limit ? "LIMIT ?" : ""}
