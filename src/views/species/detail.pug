@@ -40,7 +40,7 @@ html
 								if species.is_cares_species == 1
 									+caresBadge()
 								if species.iucn_redlist_category
-									+iucnBadge(species.iucn_redlist_category, 'md', false, true, species.iucn_redlist_id)
+									+iucnBadge(species.iucn_redlist_category, 'md', false, true, species.iucn_redlist_url)
 							p.text-lg.text-gray-600
 								span.inline-block.px-3.py-1.text-sm.font-medium.bg-blue-100.text-blue-800.rounded-full
 									= species.program_class

@@ -16,6 +16,7 @@ export interface IUCNData {
   category: IUCNCategory;
   taxonId?: number;
   populationTrend?: PopulationTrend;
+  url?: string;
 }
 
 /**
@@ -96,6 +97,11 @@ export async function updateIucnData(
     if (data.populationTrend !== undefined) {
       updates.push("iucn_population_trend = ?");
       values.push(data.populationTrend);
+    }
+
+    if (data.url !== undefined) {
+      updates.push("iucn_redlist_url = ?");
+      values.push(data.url);
     }
 
     values.push(groupId);

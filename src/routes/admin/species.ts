@@ -726,11 +726,13 @@ export const bulkSyncIucn = async (req: MulmRequest, res: Response) => {
             category: result.category,
             taxonId: result.taxonid,
             populationTrend: result.population_trend || undefined,
+            url: result.url,
           });
           await recordIucnSync(database, species.group_id, "success", {
             category: result.category,
             taxonId: result.taxonid,
             populationTrend: result.population_trend || undefined,
+            url: result.url,
           });
           successCount++;
         } else {

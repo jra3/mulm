@@ -61,7 +61,7 @@ mixin speciesTable(speciesList)
 
             td(class=stringCell)
               .flex.items-center.gap-1
-                +iucnBadge(item.iucn_redlist_category, 'sm', false, false, null)
+                +iucnBadge(item.iucn_redlist_category, 'sm', false, true, item.iucn_redlist_url)
                 if item.iucn_population_trend
                   +populationTrend(item.iucn_population_trend, 'sm')
 

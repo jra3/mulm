@@ -42,6 +42,7 @@ export interface IUCNSpeciesResult {
   marine_system?: boolean; // Found in marine systems
   freshwater_system?: boolean; // Found in freshwater
   terrestrial_system?: boolean; // Found on land
+  url?: string; // Direct URL to IUCN Red List species page
 }
 
 /**
@@ -319,6 +320,7 @@ export class IUCNClient {
       main_common_name: response.taxon.common_names?.find((n) => n.main)?.name,
       authority: response.taxon.authority,
       category: latestAssessment.red_list_category_code,
+      url: latestAssessment.url, // Direct link to IUCN species page
       population_trend: undefined, // v4 API doesn't include this in basic query
       marine_system: undefined,
       freshwater_system: undefined,

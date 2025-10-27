@@ -35,7 +35,7 @@ html
                     if name && name.is_cares_species == 1
                         +caresBadge('sm')
                     if name && name.iucn_redlist_category
-                        +iucnBadge(name.iucn_redlist_category, 'sm', false, true, name.iucn_redlist_id)
+                        +iucnBadge(name.iucn_redlist_category, 'sm', false, true, name.iucn_redlist_url)
                     if name && name.iucn_population_trend
                         +populationTrend(name.iucn_population_trend, 'sm')
                 div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")

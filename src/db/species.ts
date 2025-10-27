@@ -325,6 +325,7 @@ export type SpeciesExplorerItem = {
   is_cares_species: number;
   iucn_redlist_category: string | null;
   iucn_population_trend: string | null;
+  iucn_redlist_url: string | null;
 };
 
 /**
@@ -392,6 +393,7 @@ function buildSpeciesSearchQuery(
 			sng.is_cares_species,
 			sng.iucn_redlist_category,
 			sng.iucn_population_trend,
+			sng.iucn_redlist_url,
 			COALESCE(COUNT(DISTINCT s.id), 0) as total_breeds,
 			COALESCE(COUNT(DISTINCT s.member_id), 0) as total_breeders,
 			COALESCE(GROUP_CONCAT(DISTINCT cn.common_name), '') as common_names,
@@ -402,7 +404,7 @@ function buildSpeciesSearchQuery(
 		LEFT JOIN species_scientific_name scin ON sng.group_id = scin.group_id
 		LEFT JOIN submissions s ON (s.common_name_id = cn.common_name_id OR s.scientific_name_id = scin.scientific_name_id) AND s.approved_on IS NOT NULL
 		WHERE ${conditions.join(" ")}
-		GROUP BY sng.group_id, sng.program_class, sng.canonical_genus, sng.canonical_species_name, sng.is_cares_species, sng.iucn_redlist_category, sng.iucn_population_trend
+		GROUP BY sng.group_id, sng.program_class, sng.canonical_genus, sng.canonical_species_name, sng.is_cares_species, sng.iucn_redlist_category, sng.iucn_population_trend, sng.iucn_redlist_url
 		HAVING total_breeds > 0
 		ORDER BY ${orderBy}
 		${limit ? "LIMIT ?" : ""}
@@ -537,6 +539,7 @@ export type SpeciesDetail = {
   iucn_population_trend: string | null;
   iucn_last_updated: string | null;
   iucn_redlist_id: number | null;
+  iucn_redlist_url: string | null;
   external_references: string | null;
   image_links: string | null;
   synonyms: Array<{
@@ -559,11 +562,12 @@ export async function getSpeciesDetail(groupId: number) {
     iucn_population_trend: string | null;
     iucn_last_updated: string | null;
     iucn_redlist_id: number | null;
+    iucn_redlist_url: string | null;
     external_references: string | null;
     image_links: string | null;
   }>(
     `
-		SELECT group_id, program_class, species_type, canonical_genus, canonical_species_name, base_points, is_cares_species, iucn_redlist_category, iucn_population_trend, iucn_last_updated, iucn_redlist_id, external_references, image_links
+		SELECT group_id, program_class, species_type, canonical_genus, canonical_species_name, base_points, is_cares_species, iucn_redlist_category, iucn_population_trend, iucn_last_updated, iucn_redlist_id, iucn_redlist_url, external_references, image_links
 		FROM species_name_group
 		WHERE group_id = ?
 	`,
@@ -1240,6 +1244,7 @@ export type SpeciesAdminListItem = {
   iucn_redlist_category: string | null;
   iucn_population_trend: string | null;
   iucn_last_updated: string | null;
+  iucn_redlist_url: string | null;
 };
 
 export type SpeciesAdminListResult = {
@@ -1353,6 +1358,7 @@ export async function getSpeciesForAdmin(
       sng.iucn_redlist_category,
       sng.iucn_population_trend,
       sng.iucn_last_updated,
+      sng.iucn_redlist_url,
       (
         SELECT COUNT(*) FROM species_common_name cn WHERE cn.group_id = sng.group_id
       ) + (

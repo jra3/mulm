@@ -5,22 +5,23 @@
 //-   category - IUCN category code: CR, EN, VU, NT, LC, DD, NE, EW, EX
 //-   size - Size variant: 'sm' (small, inline), 'md' (medium, default)
 //-   showLabel - Show full label instead of just code (default: false)
-//-   link - If true, links to IUCN Red List (requires taxonId)
-//-   taxonId - IUCN taxon ID for linking to species page
+//-   link - If true, links to IUCN Red List
+//-   iucnUrl - Direct IUCN URL (preferred) or scientific name for search fallback
 
-mixin iucnBadge(category, size, showLabel, link, taxonId)
+mixin iucnBadge(category, size, showLabel, link, iucnUrl)
   - size = size || 'md'
   - showLabel = showLabel || false
   - link = link || false
 
   - const sizeClasses = size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-3 py-1 text-sm'
+  - const linkUrl = iucnUrl || null
 
   if category === 'CR'
     - const config = {bg: 'bg-red-100', text: 'text-red-800', hover: 'hover:bg-red-200', label: 'Critically Endangered'}
     - const displayText = showLabel ? config.label : 'CR'
     - const baseClasses = `inline-flex items-center rounded-full font-semibold ${config.bg} ${config.text} ${sizeClasses}`
-    if link && taxonId
-      a(class=`${baseClasses} ${config.hover}` href=`https://www.iucnredlist.org/species/${taxonId}` target="_blank" rel="noopener noreferrer" title=config.label)= displayText
+    if link && linkUrl
+      a(class=`${baseClasses} ${config.hover}` href=linkUrl target="_blank" rel="noopener noreferrer" title=config.label)= displayText
     else
       span(class=baseClasses title=config.label)= displayText
 
@@ -28,8 +29,8 @@ mixin iucnBadge(category, size, showLabel, link, taxonId)
     - const config = {bg: 'bg-orange-100', text: 'text-orange-800', hover: 'hover:bg-orange-200', label: 'Endangered'}
     - const displayText = showLabel ? config.label : 'EN'
     - const baseClasses = `inline-flex items-center rounded-full font-semibold ${config.bg} ${config.text} ${sizeClasses}`
-    if link && taxonId
-      a(class=`${baseClasses} ${config.hover}` href=`https://www.iucnredlist.org/species/${taxonId}` target="_blank" rel="noopener noreferrer" title=config.label)= displayText
+    if link && linkUrl
+      a(class=`${baseClasses} ${config.hover}` href=linkUrl target="_blank" rel="noopener noreferrer" title=config.label)= displayText
     else
       span(class=baseClasses title=config.label)= displayText
 
@@ -37,8 +38,8 @@ mixin iucnBadge(category, size, showLabel, link, taxonId)
     - const config = {bg: 'bg-yellow-100', text: 'text-yellow-800', hover: 'hover:bg-yellow-200', label: 'Vulnerable'}
     - const displayText = showLabel ? config.label : 'VU'
     - const baseClasses = `inline-flex items-center rounded-full font-semibold ${config.bg} ${config.text} ${sizeClasses}`
-    if link && taxonId
-      a(class=`${baseClasses} ${config.hover}` href=`https://www.iucnredlist.org/species/${taxonId}` target="_blank" rel="noopener noreferrer" title=config.label)= displayText
+    if link && linkUrl
+      a(class=`${baseClasses} ${config.hover}` href=linkUrl target="_blank" rel="noopener noreferrer" title=config.label)= displayText
     else
       span(class=baseClasses title=config.label)= displayText
 
@@ -46,8 +47,8 @@ mixin iucnBadge(category, size, showLabel, link, taxonId)
     - const config = {bg: 'bg-blue-100', text: 'text-blue-800', hover: 'hover:bg-blue-200', label: 'Near Threatened'}
     - const displayText = showLabel ? config.label : 'NT'
     - const baseClasses = `inline-flex items-center rounded-full font-semibold ${config.bg} ${config.text} ${sizeClasses}`
-    if link && taxonId
-      a(class=`${baseClasses} ${config.hover}` href=`https://www.iucnredlist.org/species/${taxonId}` target="_blank" rel="noopener noreferrer" title=config.label)= displayText
+    if link && linkUrl
+      a(class=`${baseClasses} ${config.hover}` href=linkUrl target="_blank" rel="noopener noreferrer" title=config.label)= displayText
     else
       span(class=baseClasses title=config.label)= displayText
 
@@ -55,8 +56,8 @@ mixin iucnBadge(category, size, showLabel, link, taxonId)
     - const config = {bg: 'bg-green-100', text: 'text-green-800', hover: 'hover:bg-green-200', label: 'Least Concern'}
     - const displayText = showLabel ? config.label : 'LC'
     - const baseClasses = `inline-flex items-center rounded-full font-semibold ${config.bg} ${config.text} ${sizeClasses}`
-    if link && taxonId
-      a(class=`${baseClasses} ${config.hover}` href=`https://www.iucnredlist.org/species/${taxonId}` target="_blank" rel="noopener noreferrer" title=config.label)= displayText
+    if link && linkUrl
+      a(class=`${baseClasses} ${config.hover}` href=linkUrl target="_blank" rel="noopener noreferrer" title=config.label)= displayText
     else
       span(class=baseClasses title=config.label)= displayText
 
@@ -64,8 +65,8 @@ mixin iucnBadge(category, size, showLabel, link, taxonId)
     - const config = {bg: 'bg-gray-100', text: 'text-gray-800', hover: 'hover:bg-gray-200', label: 'Data Deficient'}
     - const displayText = showLabel ? config.label : 'DD'
     - const baseClasses = `inline-flex items-center rounded-full font-semibold ${config.bg} ${config.text} ${sizeClasses}`
-    if link && taxonId
-      a(class=`${baseClasses} ${config.hover}` href=`https://www.iucnredlist.org/species/${taxonId}` target="_blank" rel="noopener noreferrer" title=config.label)= displayText
+    if link && linkUrl
+      a(class=`${baseClasses} ${config.hover}` href=linkUrl target="_blank" rel="noopener noreferrer" title=config.label)= displayText
     else
       span(class=baseClasses title=config.label)= displayText
 
@@ -73,8 +74,8 @@ mixin iucnBadge(category, size, showLabel, link, taxonId)
     - const config = {bg: 'bg-gray-100', text: 'text-gray-600', hover: 'hover:bg-gray-200', label: 'Not Evaluated'}
     - const displayText = showLabel ? config.label : 'NE'
     - const baseClasses = `inline-flex items-center rounded-full font-semibold ${config.bg} ${config.text} ${sizeClasses}`
-    if link && taxonId
-      a(class=`${baseClasses} ${config.hover}` href=`https://www.iucnredlist.org/species/${taxonId}` target="_blank" rel="noopener noreferrer" title=config.label)= displayText
+    if link && linkUrl
+      a(class=`${baseClasses} ${config.hover}` href=linkUrl target="_blank" rel="noopener noreferrer" title=config.label)= displayText
     else
       span(class=baseClasses title=config.label)= displayText
 
@@ -82,8 +83,8 @@ mixin iucnBadge(category, size, showLabel, link, taxonId)
     - const config = {bg: 'bg-red-100', text: 'text-red-900', hover: 'hover:bg-red-200', label: 'Extinct in Wild'}
     - const displayText = showLabel ? config.label : 'EW'
     - const baseClasses = `inline-flex items-center rounded-full font-semibold ${config.bg} ${config.text} ${sizeClasses}`
-    if link && taxonId
-      a(class=`${baseClasses} ${config.hover}` href=`https://www.iucnredlist.org/species/${taxonId}` target="_blank" rel="noopener noreferrer" title=config.label)= displayText
+    if link && linkUrl
+      a(class=`${baseClasses} ${config.hover}` href=linkUrl target="_blank" rel="noopener noreferrer" title=config.label)= displayText
     else
       span(class=baseClasses title=config.label)= displayText
 
@@ -91,8 +92,8 @@ mixin iucnBadge(category, size, showLabel, link, taxonId)
     - const config = {bg: 'bg-black', text: 'text-white', hover: 'hover:bg-gray-800', label: 'Extinct'}
     - const displayText = showLabel ? config.label : 'EX'
     - const baseClasses = `inline-flex items-center rounded-full font-semibold ${config.bg} ${config.text} ${sizeClasses}`
-    if link && taxonId
-      a(class=`${baseClasses} ${config.hover}` href=`https://www.iucnredlist.org/species/${taxonId}` target="_blank" rel="noopener noreferrer" title=config.label)= displayText
+    if link && linkUrl
+      a(class=`${baseClasses} ${config.hover}` href=linkUrl target="_blank" rel="noopener noreferrer" title=config.label)= displayText
     else
       span(class=baseClasses title=config.label)= displayText
 
