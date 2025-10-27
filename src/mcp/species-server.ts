@@ -15,7 +15,7 @@ import {
   ListToolsRequestSchema,
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { query, withTransaction } from "../db/conn.js";
+import { query, withTransaction, db } from "../db/conn.js";
 import { logger } from "../utils/logger.js";
 import {
   createSpeciesGroup,
@@ -29,6 +29,17 @@ import {
   deleteSpeciesGroup,
   bulkSetPoints,
 } from "../db/species.js";
+import {
+  updateIucnData,
+  recordIucnSync,
+  getIucnSyncLog,
+  getSpeciesWithMissingIucn,
+  getSpeciesNeedingResync,
+  getIucnSyncStats,
+  type IUCNData,
+  type SyncStatus,
+} from "../db/iucn.js";
+import { getIUCNClient } from "../integrations/iucn.js";
 
 // Type definitions for database tables
 type SpeciesNameGroup = {
@@ -133,6 +144,24 @@ type UpdateCanonicalNameArgs = {
   preserve_old_as_synonym?: boolean;
 };
 
+type SyncIucnDataArgs = {
+  group_id?: number;
+  group_ids?: number[];
+  sync_missing?: boolean;
+  days_old?: number;
+  limit?: number;
+  preview?: boolean;
+};
+
+type GetIucnSyncLogArgs = {
+  group_id?: number;
+  limit?: number;
+};
+
+type GetSpeciesNeedingResyncArgs = {
+  days_old?: number;
+};
+
 type SpeciesAdminFilters = {
   species_type?: string;
   program_class?: string;
@@ -226,6 +255,36 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
         uri: "species://statistics",
         name: "Species Statistics",
         description: "Get aggregate statistics about the species database",
+        mimeType: "application/json",
+      },
+      {
+        uri: "species://iucn/statistics",
+        name: "IUCN Sync Statistics",
+        description: "Get statistics about IUCN Red List data sync operations",
+        mimeType: "application/json",
+      },
+      {
+        uri: "species://iucn/missing",
+        name: "Species Missing IUCN Data",
+        description: "List species that don't have IUCN conservation status data",
+        mimeType: "application/json",
+      },
+      {
+        uri: "species://iucn/by-category/CR",
+        name: "Critically Endangered Species",
+        description: "List all Critically Endangered species",
+        mimeType: "application/json",
+      },
+      {
+        uri: "species://iucn/by-category/EN",
+        name: "Endangered Species",
+        description: "List all Endangered species",
+        mimeType: "application/json",
+      },
+      {
+        uri: "species://iucn/by-category/VU",
+        name: "Vulnerable Species",
+        description: "List all Vulnerable species",
         mimeType: "application/json",
       },
     ],
@@ -435,6 +494,70 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
             uri,
             mimeType: "application/json",
             text: JSON.stringify(statistics, null, 2),
+          },
+        ],
+      };
+    }
+
+    // species://iucn/statistics
+    if (uri === "species://iucn/statistics") {
+      const database = db();
+      const stats = await getIucnSyncStats(database);
+      return {
+        contents: [
+          {
+            uri,
+            mimeType: "application/json",
+            text: JSON.stringify(stats, null, 2),
+          },
+        ],
+      };
+    }
+
+    // species://iucn/missing
+    if (uri === "species://iucn/missing") {
+      const database = db();
+      const missing = await getSpeciesWithMissingIucn(database);
+      return {
+        contents: [
+          {
+            uri,
+            mimeType: "application/json",
+            text: JSON.stringify(missing, null, 2),
+          },
+        ],
+      };
+    }
+
+    // species://iucn/by-category/{category}
+    const iucnCategoryMatch = uri.match(/^species:\/\/iucn\/by-category\/(\w+)$/);
+    if (iucnCategoryMatch) {
+      const category = iucnCategoryMatch[1];
+      const groups = await query<SpeciesNameGroup>(
+        "SELECT * FROM species_name_group WHERE iucn_redlist_category = ? ORDER BY canonical_genus, canonical_species_name",
+        [category]
+      );
+      return {
+        contents: [
+          {
+            uri,
+            mimeType: "application/json",
+            text: JSON.stringify(groups.map(formatSpeciesGroup), null, 2),
+          },
+        ],
+      };
+    }
+
+    // species://iucn/sync-log
+    if (uri === "species://iucn/sync-log") {
+      const database = db();
+      const log = await getIucnSyncLog(database, undefined, 100);
+      return {
+        contents: [
+          {
+            uri,
+            mimeType: "application/json",
+            text: JSON.stringify(log, null, 2),
           },
         ],
       };
@@ -672,6 +795,78 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           required: ["group_id"],
         },
       },
+      // IUCN Integration Tools
+      {
+        name: "sync_iucn_data",
+        description: "Sync IUCN Red List conservation status data from the IUCN API",
+        inputSchema: {
+          type: "object",
+          properties: {
+            group_id: { type: "number", description: "Single species group ID (optional)" },
+            group_ids: {
+              type: "array",
+              items: { type: "number" },
+              description: "Multiple species group IDs (optional)",
+            },
+            sync_missing: {
+              type: "boolean",
+              description: "Sync all species missing IUCN data (optional)",
+            },
+            days_old: {
+              type: "number",
+              description: "Sync species with data older than N days (optional)",
+            },
+            limit: {
+              type: "number",
+              description: "Limit number of species to sync (default: 10)",
+            },
+            preview: {
+              type: "boolean",
+              description: "Preview which species would be synced without executing (default: false)",
+            },
+          },
+        },
+      },
+      {
+        name: "get_iucn_sync_log",
+        description: "Get log of IUCN sync operations",
+        inputSchema: {
+          type: "object",
+          properties: {
+            group_id: { type: "number", description: "Filter by species group ID (optional)" },
+            limit: { type: "number", description: "Max entries to return (default: 100)" },
+          },
+        },
+      },
+      {
+        name: "get_species_missing_iucn",
+        description: "List species that don't have IUCN conservation status data",
+        inputSchema: {
+          type: "object",
+          properties: {},
+        },
+      },
+      {
+        name: "get_species_needing_resync",
+        description: "List species with stale IUCN data that needs updating",
+        inputSchema: {
+          type: "object",
+          properties: {
+            days_old: {
+              type: "number",
+              description: "Consider data stale after this many days (default: 365)",
+            },
+          },
+        },
+      },
+      {
+        name: "get_iucn_sync_stats",
+        description: "Get statistics about IUCN sync operations",
+        inputSchema: {
+          type: "object",
+          properties: {},
+        },
+      },
     ],
   };
 });
@@ -708,6 +903,16 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return await handleToggleCaresStatus(args);
       case "update_canonical_name":
         return await handleUpdateCanonicalName(args);
+      case "sync_iucn_data":
+        return await handleSyncIucnData(args);
+      case "get_iucn_sync_log":
+        return await handleGetIucnSyncLog(args);
+      case "get_species_missing_iucn":
+        return await handleGetSpeciesMissingIucn();
+      case "get_species_needing_resync":
+        return await handleGetSpeciesNeedingResync(args);
+      case "get_iucn_sync_stats":
+        return await handleGetIucnSyncStats();
       default:
         throw new Error(`Unknown tool: ${name}`);
     }
@@ -922,21 +1127,27 @@ async function handleMergeSpeciesGroups(args: MergeSpeciesGroupsArgs) {
   const canonical = groups.find((g) => g.group_id === canonical_group_id);
   const defunct = groups.find((g) => g.group_id === defunct_group_id);
 
-  // Get synonyms to move
-  const synonymsToMove = await query<SpeciesName>("SELECT * FROM species_name WHERE group_id = ?", [
-    defunct_group_id,
-  ]);
+  // Get synonyms to move (from both split tables)
+  const commonNamesToMove = await query<{ common_name_id: number; common_name: string }>(
+    "SELECT * FROM species_common_name WHERE group_id = ?",
+    [defunct_group_id]
+  );
+  const scientificNamesToMove = await query<{ scientific_name_id: number; scientific_name: string }>(
+    "SELECT * FROM species_scientific_name WHERE group_id = ?",
+    [defunct_group_id]
+  );
 
   // Get submissions that will be updated
   const submissionsToUpdate = await query<{ count: number }>(
-    "SELECT COUNT(*) as count FROM submissions s JOIN species_name sn ON s.species_name_id = sn.name_id WHERE sn.group_id = ?",
-    [defunct_group_id]
+    "SELECT COUNT(*) as count FROM submissions WHERE common_name_id IN (SELECT common_name_id FROM species_common_name WHERE group_id = ?) OR scientific_name_id IN (SELECT scientific_name_id FROM species_scientific_name WHERE group_id = ?)",
+    [defunct_group_id, defunct_group_id]
   );
 
   const previewData = {
     canonical_name: `${canonical?.canonical_genus} ${canonical?.canonical_species_name}`,
     defunct_name: `${defunct?.canonical_genus} ${defunct?.canonical_species_name}`,
-    synonyms_to_move: synonymsToMove.map((s) => `${s.common_name} (${s.scientific_name})`),
+    common_names_to_move: commonNamesToMove.map((s) => s.common_name),
+    scientific_names_to_move: scientificNamesToMove.map((s) => s.scientific_name),
     submissions_to_update: submissionsToUpdate[0]?.count || 0,
   };
 
@@ -951,7 +1162,8 @@ async function handleMergeSpeciesGroups(args: MergeSpeciesGroupsArgs) {
               preview: true,
               canonical_group_id,
               defunct_group_id,
-              synonyms_moved: synonymsToMove.length,
+              common_names_moved: commonNamesToMove.length,
+              scientific_names_moved: scientificNamesToMove.length,
               submissions_updated: previewData.submissions_to_update,
               preview_data: previewData,
               message: "Preview of merge operation (no changes made)",
@@ -966,14 +1178,23 @@ async function handleMergeSpeciesGroups(args: MergeSpeciesGroupsArgs) {
 
   // Execute merge
   await withTransaction(async (db) => {
-    // Update synonyms
-    const updateStmt = await db.prepare(`
-      UPDATE species_name
+    // Update common names
+    const updateCommonStmt = await db.prepare(`
+      UPDATE species_common_name
       SET group_id = ?
       WHERE group_id = ?
     `);
-    await updateStmt.run(canonical_group_id, defunct_group_id);
-    await updateStmt.finalize();
+    await updateCommonStmt.run(canonical_group_id, defunct_group_id);
+    await updateCommonStmt.finalize();
+
+    // Update scientific names
+    const updateScientificStmt = await db.prepare(`
+      UPDATE species_scientific_name
+      SET group_id = ?
+      WHERE group_id = ?
+    `);
+    await updateScientificStmt.run(canonical_group_id, defunct_group_id);
+    await updateScientificStmt.finalize();
 
     // Delete defunct group
     const deleteStmt = await db.prepare(`
@@ -993,7 +1214,8 @@ async function handleMergeSpeciesGroups(args: MergeSpeciesGroupsArgs) {
             success: true,
             canonical_group_id,
             defunct_group_id,
-            synonyms_moved: synonymsToMove.length,
+            common_names_moved: commonNamesToMove.length,
+            scientific_names_moved: scientificNamesToMove.length,
             submissions_updated: previewData.submissions_to_update,
             preview_data: previewData,
             message: "Species groups merged successfully",
@@ -1312,6 +1534,247 @@ async function handleUpdateCanonicalName(args: UpdateCanonicalNameArgs) {
             message: preserve_old_as_synonym
               ? "Canonical name updated, old name preserved as synonym"
               : "Canonical name updated",
+          },
+          null,
+          2
+        ),
+      },
+    ],
+  };
+}
+
+/**
+ * IUCN TOOL IMPLEMENTATIONS
+ */
+
+async function handleSyncIucnData(args: SyncIucnDataArgs) {
+  const { group_id, group_ids, sync_missing, days_old, limit = 10, preview = false } = args;
+
+  const database = db(true); // Write access for IUCN data updates
+  let targetSpecies: { group_id: number; canonical_genus: string; canonical_species_name: string }[] = [];
+
+  // Determine which species to sync
+  if (group_id) {
+    const species = await query<{ group_id: number; canonical_genus: string; canonical_species_name: string }>(
+      "SELECT group_id, canonical_genus, canonical_species_name FROM species_name_group WHERE group_id = ?",
+      [group_id]
+    );
+    if (species.length === 0) {
+      throw new Error(`Species group ${group_id} not found`);
+    }
+    targetSpecies = species;
+  } else if (group_ids && group_ids.length > 0) {
+    targetSpecies = await query<{ group_id: number; canonical_genus: string; canonical_species_name: string }>(
+      `SELECT group_id, canonical_genus, canonical_species_name FROM species_name_group WHERE group_id IN (${group_ids.map(() => "?").join(", ")})`,
+      group_ids
+    );
+  } else if (sync_missing) {
+    targetSpecies = await getSpeciesWithMissingIucn(database);
+  } else if (days_old !== undefined) {
+    targetSpecies = await getSpeciesNeedingResync(database, days_old);
+  } else {
+    throw new Error("Must provide group_id, group_ids, sync_missing=true, or days_old parameter");
+  }
+
+  // Apply limit
+  if (targetSpecies.length > limit) {
+    targetSpecies = targetSpecies.slice(0, limit);
+  }
+
+  if (targetSpecies.length === 0) {
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: JSON.stringify(
+            {
+              success: true,
+              synced_count: 0,
+              message: "No species matched the criteria",
+            },
+            null,
+            2
+          ),
+        },
+      ],
+    };
+  }
+
+  if (preview) {
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: JSON.stringify(
+            {
+              success: true,
+              preview: true,
+              species_to_sync: targetSpecies.map((s) => ({
+                group_id: s.group_id,
+                name: `${s.canonical_genus} ${s.canonical_species_name}`,
+              })),
+              total_count: targetSpecies.length,
+              message: "Preview of species to sync (no changes made)",
+            },
+            null,
+            2
+          ),
+        },
+      ],
+    };
+  }
+
+  // Perform actual sync
+  const iucnClient = getIUCNClient();
+  const results = [];
+
+  for (const species of targetSpecies) {
+    const scientificName = `${species.canonical_genus} ${species.canonical_species_name}`;
+    let status: SyncStatus = "not_found";
+    let errorMessage: string | undefined;
+    let iucnData: IUCNData | undefined;
+
+    try {
+      const iucnResult = await iucnClient.getSpeciesByName(scientificName);
+
+      if (iucnResult) {
+        status = "success";
+        iucnData = {
+          category: iucnResult.category,
+          taxonId: iucnResult.taxonid,
+          populationTrend: iucnResult.population_trend,
+        };
+
+        // Update the database
+        await updateIucnData(database, species.group_id, iucnData);
+      }
+    } catch (error) {
+      status = "api_error";
+      errorMessage = error instanceof Error ? error.message : "Unknown error";
+      logger.error(`Failed to sync IUCN data for ${scientificName}`, error);
+    }
+
+    // Record sync attempt
+    await recordIucnSync(database, species.group_id, status, iucnData, errorMessage);
+
+    results.push({
+      group_id: species.group_id,
+      scientific_name: scientificName,
+      status,
+      category: iucnData?.category,
+      error: errorMessage,
+    });
+  }
+
+  const successCount = results.filter((r) => r.status === "success").length;
+  const notFoundCount = results.filter((r) => r.status === "not_found").length;
+  const errorCount = results.filter((r) => r.status === "api_error").length;
+
+  return {
+    content: [
+      {
+        type: "text" as const,
+        text: JSON.stringify(
+          {
+            success: true,
+            synced_count: targetSpecies.length,
+            success_count: successCount,
+            not_found_count: notFoundCount,
+            error_count: errorCount,
+            results,
+            message: `Synced ${successCount} of ${targetSpecies.length} species successfully`,
+          },
+          null,
+          2
+        ),
+      },
+    ],
+  };
+}
+
+async function handleGetIucnSyncLog(args: GetIucnSyncLogArgs) {
+  const { group_id, limit = 100 } = args;
+
+  const database = db();
+  const log = await getIucnSyncLog(database, group_id, limit);
+
+  return {
+    content: [
+      {
+        type: "text" as const,
+        text: JSON.stringify(
+          {
+            success: true,
+            total_entries: log.length,
+            log_entries: log,
+          },
+          null,
+          2
+        ),
+      },
+    ],
+  };
+}
+
+async function handleGetSpeciesMissingIucn() {
+  const database = db();
+  const missing = await getSpeciesWithMissingIucn(database);
+
+  return {
+    content: [
+      {
+        type: "text" as const,
+        text: JSON.stringify(
+          {
+            success: true,
+            total_count: missing.length,
+            species: missing,
+          },
+          null,
+          2
+        ),
+      },
+    ],
+  };
+}
+
+async function handleGetSpeciesNeedingResync(args: GetSpeciesNeedingResyncArgs) {
+  const { days_old = 365 } = args;
+
+  const database = db();
+  const needingResync = await getSpeciesNeedingResync(database, days_old);
+
+  return {
+    content: [
+      {
+        type: "text" as const,
+        text: JSON.stringify(
+          {
+            success: true,
+            total_count: needingResync.length,
+            days_old_threshold: days_old,
+            species: needingResync,
+          },
+          null,
+          2
+        ),
+      },
+    ],
+  };
+}
+
+async function handleGetIucnSyncStats() {
+  const database = db();
+  const stats = await getIucnSyncStats(database);
+
+  return {
+    content: [
+      {
+        type: "text" as const,
+        text: JSON.stringify(
+          {
+            success: true,
+            stats,
           },
           null,
           2

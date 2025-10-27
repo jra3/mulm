@@ -1,13 +1,13 @@
 /**
  * IUCN Red List API Client
  *
- * Client for interacting with the IUCN Red List API v3 to fetch conservation status data.
+ * Client for interacting with the IUCN Red List API v4 to fetch conservation status data.
  *
  * API Documentation: https://api.iucnredlist.org/api-docs/
  * Terms of Use: https://www.iucnredlist.org/terms/terms-of-use
  *
  * Rate Limiting: IUCN requests 2-second delay between API calls
- * Authentication: Requires API token (obtain from https://apiv3.iucnredlist.org/api/v3/token)
+ * Authentication: Requires Bearer token in Authorization header (obtain from https://api.iucnredlist.org/)
  */
 
 import config from "@/config.json";
@@ -45,11 +45,53 @@ export interface IUCNSpeciesResult {
 }
 
 /**
- * IUCN API Response Wrapper
+ * IUCN API Response Wrapper (v3 - deprecated)
  */
 export interface IUCNAPIResponse {
   name: string; // Searched name
   result: IUCNSpeciesResult[];
+}
+
+/**
+ * IUCN API v4 Assessment Response
+ */
+export interface IUCNV4Assessment {
+  assessment_id: number;
+  year_published: string;
+  latest: boolean;
+  red_list_category_code: IUCNCategory;
+  url: string;
+  taxon_scientific_name: string;
+  possibly_extinct?: boolean;
+  possibly_extinct_in_the_wild?: boolean;
+}
+
+/**
+ * IUCN API v4 Taxon Response
+ */
+export interface IUCNV4TaxonResponse {
+  taxon: {
+    sis_id: number;
+    scientific_name: string;
+    genus_name: string;
+    species_name: string;
+    kingdom_name: string;
+    phylum_name: string;
+    class_name: string;
+    order_name: string;
+    family_name: string;
+    authority?: string;
+    common_names?: Array<{
+      name: string;
+      language: string;
+      main: boolean;
+    }>;
+  };
+  assessments: IUCNV4Assessment[];
+  params: {
+    genus_name: string;
+    species_name: string;
+  };
 }
 
 /**
@@ -148,7 +190,6 @@ export class IUCNClient {
     await this.enforceRateLimit();
 
     const url = `${this.config.baseUrl}${endpoint}`;
-    const urlWithToken = `${url}${endpoint.includes("?") ? "&" : "?"}token=${this.config.apiToken}`;
 
     logger.info(`IUCN API request: ${endpoint}`);
 
@@ -156,10 +197,11 @@ export class IUCNClient {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), this.config.timeoutMs);
 
-      const response = await fetch(urlWithToken, {
+      const response = await fetch(url, {
         signal: controller.signal,
         headers: {
           Accept: "application/json",
+          Authorization: `Bearer ${this.config.apiToken}`,
         },
       });
 
@@ -225,21 +267,19 @@ export class IUCNClient {
    * @param scientificName - Full scientific name (e.g., "Panthera tigris")
    * @returns Species data or null if not found
    *
-   * Note: The API may support both formats:
-   * - /species/{scientific_name} (full binomial)
-   * - /species/genus/{genus}/species/{species}
-   *
-   * We'll try the simpler format first and adjust based on testing.
+   * Note: v4 API uses /taxa/scientific_name?genus_name={genus}&species_name={species}
    */
   async getSpeciesByName(scientificName: string): Promise<IUCNSpeciesResult | null> {
-    const encodedName = encodeURIComponent(scientificName);
-    const response = await this.request<IUCNAPIResponse>(`/species/${encodedName}`);
-
-    if (!response || !response.result || response.result.length === 0) {
+    const parts = scientificName.trim().split(/\s+/);
+    if (parts.length < 2) {
+      logger.warn(`Invalid scientific name format: ${scientificName}`);
       return null;
     }
 
-    return response.result[0];
+    const genus = parts[0];
+    const species = parts[1];
+
+    return this.getSpecies(genus, species);
   }
 
   /**
@@ -250,8 +290,40 @@ export class IUCNClient {
    * @returns Species data or null if not found
    */
   async getSpecies(genus: string, species: string): Promise<IUCNSpeciesResult | null> {
-    const scientificName = `${genus} ${species}`;
-    return this.getSpeciesByName(scientificName);
+    const encodedGenus = encodeURIComponent(genus);
+    const encodedSpecies = encodeURIComponent(species);
+    const response = await this.request<IUCNV4TaxonResponse>(
+      `/taxa/scientific_name?genus_name=${encodedGenus}&species_name=${encodedSpecies}`
+    );
+
+    if (!response || !response.assessments || response.assessments.length === 0) {
+      return null;
+    }
+
+    // Get the latest assessment
+    const latestAssessment = response.assessments.find((a) => a.latest);
+    if (!latestAssessment) {
+      return null;
+    }
+
+    // Convert v4 response to v3-compatible format for backward compatibility
+    return {
+      taxonid: response.taxon.sis_id,
+      scientific_name: response.taxon.scientific_name,
+      kingdom: response.taxon.kingdom_name,
+      phylum: response.taxon.phylum_name,
+      class: response.taxon.class_name,
+      order: response.taxon.order_name,
+      family: response.taxon.family_name,
+      genus: response.taxon.genus_name,
+      main_common_name: response.taxon.common_names?.find((n) => n.main)?.name,
+      authority: response.taxon.authority,
+      category: latestAssessment.red_list_category_code,
+      population_trend: undefined, // v4 API doesn't include this in basic query
+      marine_system: undefined,
+      freshwater_system: undefined,
+      terrestrial_system: undefined,
+    };
   }
 
   /**
