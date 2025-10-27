@@ -64,6 +64,7 @@ import { checkAndGrantSpecialtyAwards, checkAllSpecialtyAwards } from "@/special
 import { createActivity } from "@/db/activity";
 import { logger } from "@/utils/logger";
 import { getSubmissionStatus } from "@/utils/submissionStatus";
+import { ValidationError, AuthorizationError, StateError } from "@/utils/errors";
 import {
   addNote,
   getNotesForSubmission,
@@ -429,29 +430,95 @@ Substrate:
 };
 
 export const confirmWitnessAction = async (req: MulmRequest, res: Response) => {
-  const submission = await validateSubmission(req, res);
-  if (!submission) {
-    res.send("Submission not found");
-    return;
+  try {
+    const submission = await validateSubmission(req, res);
+    if (!submission) {
+      logger.warn("Confirm witness action - submission not found", {
+        submissionId: req.params.id,
+        adminId: req.viewer?.id,
+      });
+      res.send("Submission not found");
+      return;
+    }
+
+    const [member, witness] = await Promise.all([
+      getMember(submission.member_id),
+      getMember(req.viewer!.id),
+    ]);
+
+    if (!member || !witness) {
+      logger.warn("Confirm witness action - member or witness not found", {
+        submissionId: submission.id,
+        adminId: req.viewer?.id,
+        memberFound: !!member,
+        witnessFound: !!witness,
+      });
+      res.send("Member or witness not found");
+      return;
+    }
+
+    logger.info("Processing witness confirmation from route", {
+      submissionId: submission.id,
+      adminId: req.viewer!.id,
+      speciesName: submission.species_common_name,
+    });
+
+    await Promise.all([
+      confirmWitness(submission.id, req.viewer!.id),
+      onScreeningApproved(submission, member, witness),
+    ]);
+
+    logger.info("Witness confirmation route completed successfully", {
+      submissionId: submission.id,
+      adminId: req.viewer!.id,
+      redirectTo: `/admin/witness-queue/${submission.program}`,
+    });
+
+    // Redirect to witness queue for the submission's program
+    res.set("HX-Redirect", `/admin/witness-queue/${submission.program}`).send();
+  } catch (err) {
+    const submissionId = req.params.id;
+    const adminId = req.viewer?.id;
+
+    // Log custom error types with detailed context
+    if (err instanceof ValidationError) {
+      logger.warn("Witness confirmation rejected - validation error", {
+        submissionId,
+        adminId,
+        errorCode: err.code,
+        errorMessage: err.message,
+        context: err.context,
+      });
+      res.send(err.message);
+    } else if (err instanceof AuthorizationError) {
+      logger.warn("Witness confirmation rejected - authorization error", {
+        submissionId,
+        adminId,
+        errorCode: err.code,
+        errorMessage: err.message,
+        context: err.context,
+      });
+      res.send(err.message);
+    } else if (err instanceof StateError) {
+      logger.warn("Witness confirmation rejected - state error", {
+        submissionId,
+        adminId,
+        errorCode: err.code,
+        errorMessage: err.message,
+        context: err.context,
+      });
+      res.send(err.message);
+    } else {
+      // Unexpected system errors
+      logger.error("Witness confirmation failed - unexpected error", {
+        submissionId,
+        adminId,
+        error: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+      });
+      res.send("An unexpected error occurred. Please try again.");
+    }
   }
-
-  const [member, witness] = await Promise.all([
-    getMember(submission.member_id),
-    getMember(req.viewer!.id),
-  ]);
-
-  if (!member || !witness) {
-    res.send("Member or witness not found");
-    return;
-  }
-
-  await Promise.all([
-    confirmWitness(submission.id, req.viewer!.id),
-    onScreeningApproved(submission, member, witness),
-  ]);
-
-  // Redirect to witness queue for the submission's program
-  res.set("HX-Redirect", `/admin/witness-queue/${submission.program}`).send();
 };
 
 export const declineWitnessForm = async (req: MulmRequest, res: Response) => {
@@ -496,32 +563,97 @@ export const declineWitnessAction = async (req: MulmRequest, res: Response) => {
   try {
     const submission = await validateSubmission(req, res);
     if (!submission) {
-      res.status(400).send("Submission not found");
+      logger.warn("Decline witness action - submission not found", {
+        submissionId: req.params.id,
+        adminId: req.viewer?.id,
+      });
+      res.send("Submission not found");
       return;
     }
 
     const member = await getMember(submission.member_id);
     if (!member) {
-      res.status(400).send("Member not found");
+      logger.warn("Decline witness action - member not found", {
+        submissionId: submission.id,
+        adminId: req.viewer?.id,
+        memberId: submission.member_id,
+      });
+      res.send("Member not found");
       return;
     }
 
     const reason = getBodyString(req, "reason");
     if (!reason || reason.trim().length === 0) {
-      res.status(400).send("Please provide a reason for requesting more documentation");
+      logger.warn("Decline witness action - missing reason", {
+        submissionId: submission.id,
+        adminId: req.viewer?.id,
+      });
+      res.send("Please provide a reason for requesting more documentation");
       return;
     }
+
+    logger.info("Processing witness decline from route", {
+      submissionId: submission.id,
+      adminId: req.viewer!.id,
+      speciesName: submission.species_common_name,
+      reasonLength: reason.length,
+    });
 
     await Promise.all([
       declineWitness(submission.id, req.viewer!.id),
       onScreeningRejected(submission, member, reason),
     ]);
 
+    logger.info("Witness decline route completed successfully", {
+      submissionId: submission.id,
+      adminId: req.viewer!.id,
+      redirectTo: `/admin/witness-queue/${submission.program}`,
+    });
+
     // Redirect to witness queue for the submission's program
     res.set("HX-Redirect", `/admin/witness-queue/${submission.program}`).send();
-  } catch (error) {
-    logger.error("Error declining witness:", error);
-    res.status(500).send("Failed to send request. Please try again.");
+  } catch (err) {
+    const submissionId = req.params.id;
+    const adminId = req.viewer?.id;
+
+    // Log custom error types with detailed context
+    if (err instanceof ValidationError) {
+      logger.warn("Witness decline rejected - validation error", {
+        submissionId,
+        adminId,
+        errorCode: err.code,
+        errorMessage: err.message,
+        context: err.context,
+      });
+      res.send(err.message);
+    } else if (err instanceof AuthorizationError) {
+      logger.warn("Witness decline rejected - authorization error", {
+        submissionId,
+        adminId,
+        errorCode: err.code,
+        errorMessage: err.message,
+        context: err.context,
+      });
+      res.send(err.message);
+    } else if (err instanceof StateError) {
+      logger.warn("Witness decline rejected - state error", {
+        submissionId,
+        adminId,
+        errorCode: err.code,
+        errorMessage: err.message,
+        context: err.context,
+      });
+      res.send(err.message);
+    } else {
+      // Unexpected system errors
+      logger.error("Witness decline failed - unexpected error", {
+        submissionId,
+        adminId,
+        error: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+      });
+      res.send("Failed to send request. Please try again.");
+    }
   }
 };
 
@@ -1021,7 +1153,9 @@ export const editApprovedSubmissionForm = async (req: MulmRequest, res: Response
   res.render("admin/editApprovedSubmission", {
     submission: {
       ...submission,
-      reproduction_date: submission.reproduction_date ? new Date(submission.reproduction_date).toISOString().split("T")[0] : "",
+      reproduction_date: submission.reproduction_date
+        ? new Date(submission.reproduction_date).toISOString().split("T")[0]
+        : "",
       foods: parseStringArray(submission.foods),
       spawn_locations: parseStringArray(submission.spawn_locations),
     },
@@ -1118,7 +1252,7 @@ export const saveApprovedSubmissionEdits = async (req: MulmRequest, res: Respons
     old: unknown;
     new: unknown;
   }
-  
+
   const changes: Change[] = [];
   for (const [field, newValue] of Object.entries(updates)) {
     if (newValue === undefined) continue;
@@ -1127,11 +1261,11 @@ export const saveApprovedSubmissionEdits = async (req: MulmRequest, res: Respons
 
     // Normalize values for comparison (treat empty string, null, undefined, empty arrays as equivalent)
     const normalizeValue = (val: unknown): string | number | boolean | null => {
-      if (val === '' || val === null || val === undefined) return null;
-      if (val === '[]') return null; // Empty JSON array
-      if (typeof val === 'number') return val;
-      if (typeof val === 'boolean') return val;
-      if (typeof val === 'string') return val;
+      if (val === "" || val === null || val === undefined) return null;
+      if (val === "[]") return null; // Empty JSON array
+      if (typeof val === "number") return val;
+      if (typeof val === "boolean") return val;
+      if (typeof val === "string") return val;
       return JSON.stringify(val);
     };
 
@@ -1139,11 +1273,16 @@ export const saveApprovedSubmissionEdits = async (req: MulmRequest, res: Respons
     const normalizedNew = normalizeValue(newValue);
 
     // Special handling for booleans (checkbox fields)
-    const booleanFields = ['first_time_species', 'cares_species', 'flowered', 'sexual_reproduction'];
+    const booleanFields = [
+      "first_time_species",
+      "cares_species",
+      "flowered",
+      "sexual_reproduction",
+    ];
     if (booleanFields.includes(field)) {
       // newValue is already a boolean from Zod transform
       const oldBool = Boolean(oldValue);
-      const newBool = typeof newValue === 'boolean' ? newValue : Boolean(Number(newValue));
+      const newBool = typeof newValue === "boolean" ? newValue : Boolean(Number(newValue));
       if (oldBool !== newBool) {
         changes.push({ field, old: oldBool, new: newBool });
       }
@@ -1162,8 +1301,15 @@ export const saveApprovedSubmissionEdits = async (req: MulmRequest, res: Respons
   logger.info("Changes detected", { changes });
 
   // Check for point-related changes
-  const pointFields = ["points", "article_points", "first_time_species", "cares_species", "flowered", "sexual_reproduction"];
-  const pointsChanged = changes.some(c => pointFields.includes(c.field));
+  const pointFields = [
+    "points",
+    "article_points",
+    "first_time_species",
+    "cares_species",
+    "flowered",
+    "sexual_reproduction",
+  ];
+  const pointsChanged = changes.some((c) => pointFields.includes(c.field));
 
   // If species group changed, update name IDs
   if (groupId && groupId !== submission.common_name_id) {
@@ -1213,15 +1359,27 @@ export const saveApprovedSubmissionEdits = async (req: MulmRequest, res: Respons
     }
 
     // Create activity feed entry for significant changes
-    const significantFields = ["points", "article_points", "species_common_name", "species_latin_name"];
-    if (changes.some(c => significantFields.includes(c.field))) {
+    const significantFields = [
+      "points",
+      "article_points",
+      "species_common_name",
+      "species_latin_name",
+    ];
+    if (changes.some((c) => significantFields.includes(c.field))) {
       try {
         await createActivity("submission_approved", member.id, submission.id.toString(), {
           species_common_name: submission.species_common_name,
           species_type: submission.species_type,
           points: updates.points !== undefined ? updates.points : submission.points || 0,
-          first_time_species: Boolean(updates.first_time_species !== undefined ? updates.first_time_species : submission.first_time_species),
-          article_points: updates.article_points !== undefined ? updates.article_points : submission.article_points || undefined,
+          first_time_species: Boolean(
+            updates.first_time_species !== undefined
+              ? updates.first_time_species
+              : submission.first_time_species
+          ),
+          article_points:
+            updates.article_points !== undefined
+              ? updates.article_points
+              : submission.article_points || undefined,
         });
       } catch (error) {
         logger.error("Error creating activity feed entry after edit", error);

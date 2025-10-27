@@ -2,6 +2,7 @@ import { ApprovalFormValues } from "@/forms/approval";
 import { FormValues } from "@/forms/submission";
 import { writeConn, query, withTransaction } from "./conn";
 import { logger } from "@/utils/logger";
+import { ValidationError, AuthorizationError, StateError } from "@/utils/errors";
 
 export type Submission = {
   id: number;
@@ -402,27 +403,49 @@ export async function getWitnessQueueCounts() {
 }
 
 export async function confirmWitness(submissionId: number, witnessAdminId: number) {
+  const startTime = Date.now();
+
   try {
+    logger.info("Starting witness confirmation", {
+      submissionId,
+      witnessAdminId,
+      timestamp: new Date().toISOString(),
+    });
+
     return await withTransaction(async (db) => {
       // Check current state and prevent self-witnessing - use transaction db
       const stmt = await db.prepare(`
-				SELECT id, member_id, witness_verification_status 
+				SELECT id, member_id, witness_verification_status, species_common_name
 				FROM submissions WHERE id = ?`);
       const current: Submission[] = await stmt.all(submissionId);
       await stmt.finalize();
 
+      // Validate submission exists
       if (!current[0]) {
-        throw new Error("Submission not found");
+        throw new ValidationError("Submission not found", "submissionId", submissionId);
       }
 
-      if (current[0].member_id === witnessAdminId) {
-        throw new Error("Cannot witness your own submission");
+      const submission = current[0];
+
+      // Validate authorization - prevent self-witnessing
+      if (submission.member_id === witnessAdminId) {
+        throw new AuthorizationError(
+          "Cannot witness your own submission",
+          witnessAdminId,
+          "confirm_witness"
+        );
       }
 
-      if (current[0].witness_verification_status !== "pending") {
-        throw new Error("Submission not in pending witness state");
+      // Validate state - must be pending
+      if (submission.witness_verification_status !== "pending") {
+        throw new StateError(
+          "Submission not in pending witness state",
+          "pending",
+          submission.witness_verification_status
+        );
       }
 
+      // Perform update
       const updateStmt = await db.prepare(`
 				UPDATE submissions SET
 					witnessed_by = ?,
@@ -433,40 +456,95 @@ export async function confirmWitness(submissionId: number, witnessAdminId: numbe
       const result = await updateStmt.run(witnessAdminId, new Date().toISOString(), submissionId);
       await updateStmt.finalize();
 
+      // Verify update succeeded (race condition check)
       if (result.changes === 0) {
-        throw new Error("Submission state changed during operation");
+        throw new StateError("Submission state changed during operation", "pending", "unknown");
       }
 
-      logger.info(`Witness confirmed for submission ${submissionId} by admin ${witnessAdminId}`);
+      const duration = Date.now() - startTime;
+      logger.info("Witness confirmation successful", {
+        submissionId,
+        witnessAdminId,
+        speciesName: submission.species_common_name,
+        duration: `${duration}ms`,
+      });
     });
   } catch (err) {
-    logger.error("Failed to confirm witness", err);
+    const duration = Date.now() - startTime;
+
+    // Handle custom errors with appropriate logging
+    if (
+      err instanceof ValidationError ||
+      err instanceof AuthorizationError ||
+      err instanceof StateError
+    ) {
+      logger.warn("Witness confirmation failed - business rule violation", {
+        submissionId,
+        witnessAdminId,
+        errorType: err.name,
+        errorCode: err.code,
+        errorMessage: err.message,
+        context: err.context,
+        duration: `${duration}ms`,
+      });
+    } else {
+      // System/unexpected errors
+      logger.error("Witness confirmation failed - system error", {
+        submissionId,
+        witnessAdminId,
+        error: err instanceof Error ? err.message : String(err),
+        duration: `${duration}ms`,
+      });
+    }
+
     throw err;
   }
 }
 
 export async function declineWitness(submissionId: number, witnessAdminId: number) {
+  const startTime = Date.now();
+
   try {
+    logger.info("Starting witness decline", {
+      submissionId,
+      witnessAdminId,
+      timestamp: new Date().toISOString(),
+    });
+
     return await withTransaction(async (db) => {
       // Check current state and prevent self-witnessing - use transaction db
       const stmt = await db.prepare(`
-				SELECT id, member_id, witness_verification_status
+				SELECT id, member_id, witness_verification_status, species_common_name
 				FROM submissions WHERE id = ?`);
       const current: Submission[] = await stmt.all(submissionId);
       await stmt.finalize();
 
+      // Validate submission exists
       if (!current[0]) {
-        throw new Error("Submission not found");
+        throw new ValidationError("Submission not found", "submissionId", submissionId);
       }
 
-      if (current[0].member_id === witnessAdminId) {
-        throw new Error("Cannot witness your own submission");
+      const submission = current[0];
+
+      // Validate authorization - prevent self-witnessing
+      if (submission.member_id === witnessAdminId) {
+        throw new AuthorizationError(
+          "Cannot witness your own submission",
+          witnessAdminId,
+          "decline_witness"
+        );
       }
 
-      if (current[0].witness_verification_status !== "pending") {
-        throw new Error("Submission not in pending witness state");
+      // Validate state - must be pending
+      if (submission.witness_verification_status !== "pending") {
+        throw new StateError(
+          "Submission not in pending witness state",
+          "pending",
+          submission.witness_verification_status
+        );
       }
 
+      // Perform update
       const updateStmt = await db.prepare(`
 				UPDATE submissions SET
 					witnessed_by = ?,
@@ -477,14 +555,47 @@ export async function declineWitness(submissionId: number, witnessAdminId: numbe
       const result = await updateStmt.run(witnessAdminId, new Date().toISOString(), submissionId);
       await updateStmt.finalize();
 
+      // Verify update succeeded (race condition check)
       if (result.changes === 0) {
-        throw new Error("Submission state changed during operation");
+        throw new StateError("Submission state changed during operation", "pending", "unknown");
       }
 
-      logger.info(`Witness declined for submission ${submissionId} by admin ${witnessAdminId}`);
+      const duration = Date.now() - startTime;
+      logger.info("Witness decline successful", {
+        submissionId,
+        witnessAdminId,
+        speciesName: submission.species_common_name,
+        duration: `${duration}ms`,
+      });
     });
   } catch (err) {
-    logger.error("Failed to decline witness", err);
+    const duration = Date.now() - startTime;
+
+    // Handle custom errors with appropriate logging
+    if (
+      err instanceof ValidationError ||
+      err instanceof AuthorizationError ||
+      err instanceof StateError
+    ) {
+      logger.warn("Witness decline failed - business rule violation", {
+        submissionId,
+        witnessAdminId,
+        errorType: err.name,
+        errorCode: err.code,
+        errorMessage: err.message,
+        context: err.context,
+        duration: `${duration}ms`,
+      });
+    } else {
+      // System/unexpected errors
+      logger.error("Witness decline failed - system error", {
+        submissionId,
+        witnessAdminId,
+        error: err instanceof Error ? err.message : String(err),
+        duration: `${duration}ms`,
+      });
+    }
+
     throw err;
   }
 }
@@ -533,12 +644,7 @@ export async function requestChanges(
           changes_requested_reason = ?
         WHERE id = ?`);
 
-      const result = await updateStmt.run(
-        new Date().toISOString(),
-        adminId,
-        reason,
-        submissionId
-      );
+      const result = await updateStmt.run(new Date().toISOString(), adminId, reason, submissionId);
       await updateStmt.finalize();
 
       if (result.changes === 0) {
@@ -639,7 +745,14 @@ export async function approveSubmission(
       }
 
       // Update submission with approval data
-      const { points, article_points, first_time_species, flowered, sexual_reproduction, cares_species } = updates;
+      const {
+        points,
+        article_points,
+        first_time_species,
+        flowered,
+        sexual_reproduction,
+        cares_species,
+      } = updates;
       const updateStmt = await db.prepare(`
         UPDATE submissions SET
           common_name_id = ?,
