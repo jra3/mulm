@@ -38,3 +38,5 @@ db/database*.broken-*
 db/database*.fresh-*
 db/database*.old
 db/database*.prod-*
+*.html
+*.db
