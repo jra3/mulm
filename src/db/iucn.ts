@@ -298,3 +298,291 @@ export async function getIucnSyncStats(db: Database): Promise<IUCNSyncStats> {
     last_sync_date: stats.last_sync_date || null,
   };
 }
+
+// ============================================================================
+// Canonical Name Recommendations
+// ============================================================================
+
+/**
+ * Status of a canonical name recommendation
+ */
+export type RecommendationStatus = "pending" | "accepted" | "rejected";
+
+/**
+ * Canonical name recommendation entry
+ */
+export interface CanonicalRecommendation {
+  id: number;
+  group_id: number;
+  current_canonical_genus: string;
+  current_canonical_species: string;
+  suggested_canonical_genus: string;
+  suggested_canonical_species: string;
+  iucn_taxon_id: number;
+  iucn_url: string | null;
+  reason: string;
+  status: RecommendationStatus;
+  created_at: string;
+  reviewed_at: string | null;
+  reviewed_by: number | null;
+}
+
+/**
+ * Create a new canonical name recommendation
+ *
+ * @param db - Database connection
+ * @param recommendation - Recommendation data
+ * @returns ID of the created recommendation
+ * @throws {Error} If database error occurs or duplicate pending recommendation exists
+ */
+export async function createCanonicalRecommendation(
+  db: Database,
+  recommendation: {
+    groupId: number;
+    currentGenus: string;
+    currentSpecies: string;
+    suggestedGenus: string;
+    suggestedSpecies: string;
+    iucnTaxonId: number;
+    iucnUrl?: string;
+    reason: string;
+  }
+): Promise<number> {
+  try {
+    const stmt = await db.prepare(
+      `INSERT INTO iucn_canonical_recommendations (
+        group_id,
+        current_canonical_genus,
+        current_canonical_species,
+        suggested_canonical_genus,
+        suggested_canonical_species,
+        iucn_taxon_id,
+        iucn_url,
+        reason
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      RETURNING id`
+    );
+
+    try {
+      const result = await stmt.get<{ id: number }>(
+        recommendation.groupId,
+        recommendation.currentGenus,
+        recommendation.currentSpecies,
+        recommendation.suggestedGenus,
+        recommendation.suggestedSpecies,
+        recommendation.iucnTaxonId,
+        recommendation.iucnUrl || null,
+        recommendation.reason
+      );
+      return result!.id;
+    } finally {
+      await stmt.finalize();
+    }
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("UNIQUE constraint")) {
+      throw new Error(`Pending recommendation already exists for group ${recommendation.groupId}`);
+    }
+    logger.error("Failed to create canonical recommendation", {
+      recommendation,
+      error: err,
+    });
+    throw new Error("Failed to create canonical recommendation");
+  }
+}
+
+/**
+ * Get canonical name recommendations
+ *
+ * @param db - Database connection
+ * @param filters - Optional filters
+ * @returns Array of recommendations
+ */
+export async function getCanonicalRecommendations(
+  db: Database,
+  filters?: {
+    groupId?: number;
+    status?: RecommendationStatus;
+    limit?: number;
+  }
+): Promise<CanonicalRecommendation[]> {
+  let query = `
+    SELECT
+      id,
+      group_id,
+      current_canonical_genus,
+      current_canonical_species,
+      suggested_canonical_genus,
+      suggested_canonical_species,
+      iucn_taxon_id,
+      iucn_url,
+      reason,
+      status,
+      created_at,
+      reviewed_at,
+      reviewed_by
+    FROM iucn_canonical_recommendations
+  `;
+
+  const conditions: string[] = [];
+  const params: (string | number)[] = [];
+
+  if (filters?.groupId !== undefined) {
+    conditions.push("group_id = ?");
+    params.push(filters.groupId);
+  }
+
+  if (filters?.status) {
+    conditions.push("status = ?");
+    params.push(filters.status);
+  }
+
+  if (conditions.length > 0) {
+    query += " WHERE " + conditions.join(" AND ");
+  }
+
+  query += " ORDER BY created_at DESC";
+
+  if (filters?.limit) {
+    query += " LIMIT ?";
+    params.push(filters.limit);
+  }
+
+  return await db.all(query, params);
+}
+
+/**
+ * Accept a canonical name recommendation and apply the change
+ *
+ * This updates the species group's canonical name and adds the old name as a synonym.
+ *
+ * @param db - Database connection
+ * @param recommendationId - ID of the recommendation to accept
+ * @param reviewedBy - Member ID of the admin accepting the recommendation
+ * @returns true if successful
+ * @throws {Error} If recommendation not found or database error
+ */
+export async function acceptCanonicalRecommendation(
+  db: Database,
+  recommendationId: number,
+  reviewedBy: number
+): Promise<boolean> {
+  try {
+    // Get the recommendation
+    const rec = await db.get<CanonicalRecommendation>(
+      `SELECT * FROM iucn_canonical_recommendations WHERE id = ? AND status = 'pending'`,
+      [recommendationId]
+    );
+
+    if (!rec) {
+      throw new Error(`Pending recommendation ${recommendationId} not found`);
+    }
+
+    // Perform the update in a transaction
+    await db.run("BEGIN TRANSACTION");
+
+    try {
+      const now = new Date().toISOString();
+
+      // 1. Update the canonical name in species_name_group
+      const updateResult = await db.run(
+        `UPDATE species_name_group
+         SET canonical_genus = ?,
+             canonical_species_name = ?
+         WHERE group_id = ?`,
+        [rec.suggested_canonical_genus, rec.suggested_canonical_species, rec.group_id]
+      );
+
+      if (!updateResult.changes || updateResult.changes === 0) {
+        throw new Error(`Species group ${rec.group_id} not found`);
+      }
+
+      // 2. Add old canonical name as a scientific name synonym (if not already present)
+      const oldScientificName = `${rec.current_canonical_genus} ${rec.current_canonical_species}`;
+      const existingSynonym = await db.get<{ scientific_name_id: number }>(
+        `SELECT scientific_name_id FROM species_scientific_name
+         WHERE group_id = ? AND scientific_name = ?`,
+        [rec.group_id, oldScientificName]
+      );
+
+      if (!existingSynonym) {
+        await db.run(
+          `INSERT INTO species_scientific_name (group_id, scientific_name)
+           VALUES (?, ?)`,
+          [rec.group_id, oldScientificName]
+        );
+      }
+
+      // 3. Mark recommendation as accepted
+      await db.run(
+        `UPDATE iucn_canonical_recommendations
+         SET status = 'accepted',
+             reviewed_at = ?,
+             reviewed_by = ?
+         WHERE id = ?`,
+        [now, reviewedBy, recommendationId]
+      );
+
+      await db.run("COMMIT");
+      return true;
+    } catch (err) {
+      await db.run("ROLLBACK");
+      throw err;
+    }
+  } catch (err) {
+    logger.error("Failed to accept canonical recommendation", {
+      recommendationId,
+      reviewedBy,
+      error: err,
+    });
+    // Re-throw our own errors with their original messages
+    if (err instanceof Error && err.message.includes("not found")) {
+      throw err;
+    }
+    throw new Error("Failed to accept canonical recommendation");
+  }
+}
+
+/**
+ * Reject a canonical name recommendation
+ *
+ * @param db - Database connection
+ * @param recommendationId - ID of the recommendation to reject
+ * @param reviewedBy - Member ID of the admin rejecting the recommendation
+ * @returns true if successful
+ * @throws {Error} If recommendation not found or database error
+ */
+export async function rejectCanonicalRecommendation(
+  db: Database,
+  recommendationId: number,
+  reviewedBy: number
+): Promise<boolean> {
+  try {
+    const now = new Date().toISOString();
+
+    const result = await db.run(
+      `UPDATE iucn_canonical_recommendations
+       SET status = 'rejected',
+           reviewed_at = ?,
+           reviewed_by = ?
+       WHERE id = ? AND status = 'pending'`,
+      [now, reviewedBy, recommendationId]
+    );
+
+    if (!result.changes || result.changes === 0) {
+      throw new Error(`Pending recommendation ${recommendationId} not found`);
+    }
+
+    return true;
+  } catch (err) {
+    logger.error("Failed to reject canonical recommendation", {
+      recommendationId,
+      reviewedBy,
+      error: err,
+    });
+    // Re-throw our own errors with their original messages
+    if (err instanceof Error && err.message.includes("not found")) {
+      throw err;
+    }
+    throw new Error("Failed to reject canonical recommendation");
+  }
+}

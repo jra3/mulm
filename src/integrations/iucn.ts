@@ -46,14 +46,6 @@ export interface IUCNSpeciesResult {
 }
 
 /**
- * IUCN API Response Wrapper (v3 - deprecated)
- */
-export interface IUCNAPIResponse {
-  name: string; // Searched name
-  result: IUCNSpeciesResult[];
-}
-
-/**
  * IUCN API v4 Assessment Response
  */
 export interface IUCNV4Assessment {
@@ -329,36 +321,51 @@ export class IUCNClient {
   }
 
   /**
-   * Check if a name is a synonym and get the accepted name
+   * Check if the queried name differs from IUCN's accepted name
    *
-   * @param scientificName - Scientific name to check
-   * @returns Synonym information or null if not found
+   * This detects potential synonyms or taxonomic changes by comparing the queried
+   * genus/species with what IUCN actually has in their database.
+   *
+   * NOTE: V3 API's dedicated /species/synonym endpoint was removed in March 2025.
+   * This is the v4-compatible approach for detecting taxonomic changes.
+   *
+   * @param genus - Genus name to check
+   * @param species - Species epithet to check
+   * @returns Object indicating if name differs and what the accepted name is
    */
-  async checkSynonym(scientificName: string): Promise<IUCNSpeciesResult | null> {
-    const encodedName = encodeURIComponent(scientificName);
-    const response = await this.request<IUCNAPIResponse>(`/species/synonym/${encodedName}`);
+  async checkIfSynonym(
+    genus: string,
+    species: string
+  ): Promise<{
+    isSynonym: boolean;
+    acceptedName: { genus: string; species: string; taxonId: number; url: string } | null;
+  }> {
+    const result = await this.getSpecies(genus, species);
 
-    if (!response || !response.result || response.result.length === 0) {
-      return null;
+    if (!result) {
+      // Species not found in IUCN database at all
+      return { isSynonym: false, acceptedName: null };
     }
 
-    return response.result[0];
-  }
+    // Compare queried name with returned name
+    const genusDiffers = result.genus.toLowerCase() !== genus.toLowerCase();
+    const speciesDiffers = result.scientific_name.split(" ")[1]?.toLowerCase() !== species.toLowerCase();
 
-  /**
-   * Get species by IUCN ID
-   *
-   * @param taxonId - IUCN taxon identifier
-   * @returns Species data or null if not found
-   */
-  async getSpeciesById(taxonId: number): Promise<IUCNSpeciesResult | null> {
-    const response = await this.request<IUCNAPIResponse>(`/species/id/${taxonId}`);
-
-    if (!response || !response.result || response.result.length === 0) {
-      return null;
+    if (genusDiffers || speciesDiffers) {
+      // IUCN has this species under a different name
+      return {
+        isSynonym: true,
+        acceptedName: {
+          genus: result.genus,
+          species: result.scientific_name.split(" ")[1] || species,
+          taxonId: result.taxonid,
+          url: result.url || "",
+        },
+      };
     }
 
-    return response.result[0];
+    // Names match - not a synonym
+    return { isSynonym: false, acceptedName: null };
   }
 
   /**
@@ -368,8 +375,9 @@ export class IUCNClient {
    */
   async testConnection(): Promise<boolean> {
     try {
-      // Try a known species as a connectivity test
-      await this.request<IUCNAPIResponse>("/version");
+      // Try a simple taxa query as a connectivity test
+      // Using a common, well-known species that should always be in the database
+      await this.getSpecies("Homo", "sapiens");
       return true;
     } catch (error) {
       logger.error("IUCN API connection test failed", error);

@@ -17,7 +17,7 @@ import {
   bulkSetPoints,
   mergeSpecies,
 } from "@/db/species";
-import { updateIucnData, recordIucnSync } from "@/db/iucn";
+import { updateIucnData, recordIucnSync, createCanonicalRecommendation } from "@/db/iucn";
 import { IUCNClient } from "@/integrations/iucn";
 import { db } from "@/db/conn";
 import { getQueryString, getQueryNumber, getQueryBoolean, getBodyString } from "@/utils/request";
@@ -710,6 +710,7 @@ export const bulkSyncIucn = async (req: MulmRequest, res: Response) => {
     let successCount = 0;
     let notFoundCount = 0;
     let errorCount = 0;
+    let synonymsFound = 0;
 
     // Sync each species
     for (const species of speciesData as Array<{
@@ -735,6 +736,38 @@ export const bulkSyncIucn = async (req: MulmRequest, res: Response) => {
             url: result.url,
           });
           successCount++;
+
+          // Check for synonym/name mismatch
+          const genusDiffers = result.genus.toLowerCase() !== species.canonical_genus.toLowerCase();
+          const speciesDiffers =
+            result.scientific_name.split(" ")[1]?.toLowerCase() !==
+            species.canonical_species_name.toLowerCase();
+
+          if (genusDiffers || speciesDiffers) {
+            const suggestedSpecies =
+              result.scientific_name.split(" ")[1] || species.canonical_species_name;
+
+            try {
+              await createCanonicalRecommendation(database, {
+                groupId: species.group_id,
+                currentGenus: species.canonical_genus,
+                currentSpecies: species.canonical_species_name,
+                suggestedGenus: result.genus,
+                suggestedSpecies: suggestedSpecies,
+                iucnTaxonId: result.taxonid,
+                iucnUrl: result.url,
+                reason: genusDiffers
+                  ? "IUCN accepted name differs (genus changed)"
+                  : "IUCN accepted name differs (species epithet changed)",
+              });
+              synonymsFound++;
+            } catch (err) {
+              // Ignore duplicate recommendations
+              if (!(err instanceof Error && err.message.includes("already exists"))) {
+                logger.warn(`Failed to create canonical recommendation for ${scientificName}`, err);
+              }
+            }
+          }
         } else {
           await recordIucnSync(database, species.group_id, "not_found");
           notFoundCount++;
@@ -756,6 +789,10 @@ export const bulkSyncIucn = async (req: MulmRequest, res: Response) => {
     }
 
     // Return success message as HTML with auto-reload
+    const synonymMessage =
+      synonymsFound > 0
+        ? ` <span class="text-amber-700 font-medium">${synonymsFound} name difference(s) detected - recommendations created for review.</span>`
+        : "";
     const resultHtml = `
       <div class="bg-green-50 border-l-4 border-green-400 p-4 mb-4 rounded-lg">
         <div class="flex items-start gap-3">
@@ -765,7 +802,7 @@ export const bulkSyncIucn = async (req: MulmRequest, res: Response) => {
           <div>
             <h3 class="text-base font-semibold text-green-800">IUCN Sync Complete</h3>
             <p class="text-sm text-green-700 mt-1">
-              Processed ${groupIds.length} species: ${successCount} successful, ${notFoundCount} not found, ${errorCount} errors.
+              Processed ${groupIds.length} species: ${successCount} successful, ${notFoundCount} not found, ${errorCount} errors.${synonymMessage}
             </p>
           </div>
         </div>

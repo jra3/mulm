@@ -13,6 +13,7 @@
  *   --missing-only         Only sync species without IUCN data
  *   --stale-only [days]    Only sync species with data older than N days (default: 365)
  *   --species-id ID        Sync single species by group ID
+ *   --check-synonyms       Check if IUCN has species under a different name
  *   --verbose              Show detailed progress information
  *   --resume              Resume from last failed sync
  *
@@ -32,6 +33,7 @@ import {
   recordIucnSync,
   getSpeciesWithMissingIucn,
   getSpeciesNeedingResync,
+  createCanonicalRecommendation,
   type IUCNData,
   type SyncStatus,
 } from "../src/db/iucn";
@@ -44,6 +46,7 @@ interface CLIOptions {
   speciesId?: number;
   verbose: boolean;
   resume: boolean;
+  checkSynonyms: boolean;
 }
 
 interface SpeciesForSync {
@@ -60,6 +63,7 @@ interface SyncResult {
   notFound: number;
   errors: number;
   skipped: number;
+  synonymsFound: number;
 }
 
 // Parse command line arguments
@@ -70,6 +74,7 @@ function parseArgs(): CLIOptions {
     missingOnly: false,
     verbose: false,
     resume: false,
+    checkSynonyms: false,
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -88,6 +93,8 @@ function parseArgs(): CLIOptions {
       options.verbose = true;
     } else if (args[i] === "--resume") {
       options.resume = true;
+    } else if (args[i] === "--check-synonyms") {
+      options.checkSynonyms = true;
     } else if (args[i] === "--help" || args[i] === "-h") {
       printHelp();
       process.exit(0);
@@ -110,6 +117,7 @@ Options:
   --missing-only         Only sync species without IUCN data
   --stale-only [days]    Only sync species with data older than N days (default: 365)
   --species-id ID        Sync single species by group ID
+  --check-synonyms       Check if IUCN has species under a different name
   --verbose              Show detailed progress information
   --resume               Resume from last failed sync
   --help, -h             Show this help message
@@ -176,7 +184,7 @@ async function syncSpecies(
   client: ReturnType<typeof getIUCNClient>,
   species: SpeciesForSync,
   options: CLIOptions
-): Promise<{ status: SyncStatus; category?: string; error?: string }> {
+): Promise<{ status: SyncStatus; category?: string; error?: string; synonymFound?: boolean }> {
   const scientificName = `${species.canonical_genus} ${species.canonical_species_name}`;
 
   if (options.verbose) {
@@ -207,7 +215,51 @@ async function syncSpecies(
       await recordIucnSync(db, species.group_id, "success", data);
     }
 
-    return { status: "success", category: iucnData.category };
+    let synonymFound = false;
+
+    // Check for synonym if requested
+    if (options.checkSynonyms && iucnData) {
+      const genusDiffers = iucnData.genus.toLowerCase() !== species.canonical_genus.toLowerCase();
+      const speciesDiffers =
+        iucnData.scientific_name.split(" ")[1]?.toLowerCase() !==
+        species.canonical_species_name.toLowerCase();
+
+      if (genusDiffers || speciesDiffers) {
+        synonymFound = true;
+        const suggestedSpecies = iucnData.scientific_name.split(" ")[1] || species.canonical_species_name;
+
+        if (options.verbose) {
+          console.log(
+            `    ⚠ Name mismatch detected: ${species.canonical_genus} ${species.canonical_species_name} ` +
+            `→ ${iucnData.genus} ${suggestedSpecies}`
+          );
+        }
+
+        if (!options.dryRun) {
+          try {
+            await createCanonicalRecommendation(db, {
+              groupId: species.group_id,
+              currentGenus: species.canonical_genus,
+              currentSpecies: species.canonical_species_name,
+              suggestedGenus: iucnData.genus,
+              suggestedSpecies: suggestedSpecies,
+              iucnTaxonId: iucnData.taxonid,
+              iucnUrl: iucnData.url,
+              reason: genusDiffers
+                ? "IUCN accepted name differs (genus changed)"
+                : "IUCN accepted name differs (species epithet changed)",
+            });
+          } catch (err) {
+            // Ignore duplicate recommendations
+            if (err instanceof Error && !err.message.includes("already exists")) {
+              console.error(`    Error creating recommendation: ${err.message}`);
+            }
+          }
+        }
+      }
+    }
+
+    return { status: "success", category: iucnData.category, synonymFound };
   } catch (error) {
     // API error
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
@@ -280,6 +332,7 @@ async function syncIUCNData() {
     notFound: 0,
     errors: 0,
     skipped: 0,
+    synonymsFound: 0,
   };
 
   // Process each species
@@ -308,6 +361,9 @@ async function syncIUCNData() {
     if (syncResult.status === "success") {
       console.log(`  ✓ ${syncResult.category}`);
       result.success++;
+      if (syncResult.synonymFound) {
+        result.synonymsFound++;
+      }
     } else if (syncResult.status === "not_found") {
       if (options.verbose) {
         console.log(`  ○ Not in IUCN database`);
@@ -339,6 +395,9 @@ async function syncIUCNData() {
   console.log(`○ Not found in IUCN: ${result.notFound}`);
   console.log(`✗ Errors: ${result.errors}`);
   console.log(`↪ Skipped (already has data): ${result.skipped}`);
+  if (options.checkSynonyms) {
+    console.log(`⚠ Synonyms/name changes found: ${result.synonymsFound}`);
+  }
   console.log(`⏱ Total time: ${Math.floor(totalTime / 60)}m ${totalTime % 60}s`);
 
   if (options.dryRun) {

@@ -36,8 +36,12 @@ import {
   getSpeciesWithMissingIucn,
   getSpeciesNeedingResync,
   getIucnSyncStats,
+  getCanonicalRecommendations,
+  acceptCanonicalRecommendation,
+  rejectCanonicalRecommendation,
   type IUCNData,
   type SyncStatus,
+  type RecommendationStatus,
 } from "../db/iucn.js";
 import { getIUCNClient } from "../integrations/iucn.js";
 
@@ -160,6 +164,22 @@ type GetIucnSyncLogArgs = {
 
 type GetSpeciesNeedingResyncArgs = {
   days_old?: number;
+};
+
+type GetCanonicalRecommendationsArgs = {
+  group_id?: number;
+  status?: RecommendationStatus;
+  limit?: number;
+};
+
+type AcceptCanonicalRecommendationArgs = {
+  recommendation_id: number;
+  reviewed_by: number;
+};
+
+type RejectCanonicalRecommendationArgs = {
+  recommendation_id: number;
+  reviewed_by: number;
 };
 
 type SpeciesAdminFilters = {
@@ -867,6 +887,67 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           properties: {},
         },
       },
+      // Canonical Name Recommendation Tools
+      {
+        name: "get_canonical_recommendations",
+        description:
+          "Get list of taxonomic name change recommendations from IUCN (when IUCN has species under a different name)",
+        inputSchema: {
+          type: "object",
+          properties: {
+            group_id: {
+              type: "number",
+              description: "Filter by species group ID (optional)",
+            },
+            status: {
+              type: "string",
+              enum: ["pending", "accepted", "rejected"],
+              description: 'Filter by status (optional, default shows all)',
+            },
+            limit: {
+              type: "number",
+              description: "Max recommendations to return (default: no limit)",
+            },
+          },
+        },
+      },
+      {
+        name: "accept_canonical_recommendation",
+        description:
+          "Accept a taxonomic name change recommendation (updates canonical name, preserves old name as synonym)",
+        inputSchema: {
+          type: "object",
+          properties: {
+            recommendation_id: {
+              type: "number",
+              description: "ID of the recommendation to accept",
+            },
+            reviewed_by: {
+              type: "number",
+              description: "Member ID of admin accepting the recommendation",
+            },
+          },
+          required: ["recommendation_id", "reviewed_by"],
+        },
+      },
+      {
+        name: "reject_canonical_recommendation",
+        description: "Reject a taxonomic name change recommendation (keeps current name unchanged)",
+        inputSchema: {
+          type: "object",
+          properties: {
+            recommendation_id: {
+              type: "number",
+              description: "ID of the recommendation to reject",
+            },
+            reviewed_by: {
+              type: "number",
+              description: "Member ID of admin rejecting the recommendation",
+            },
+          },
+          required: ["recommendation_id", "reviewed_by"],
+        },
+      },
     ],
   };
 });
@@ -913,6 +994,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return await handleGetSpeciesNeedingResync(args);
       case "get_iucn_sync_stats":
         return await handleGetIucnSyncStats();
+      case "get_canonical_recommendations":
+        return await handleGetCanonicalRecommendations(args);
+      case "accept_canonical_recommendation":
+        return await handleAcceptCanonicalRecommendation(args);
+      case "reject_canonical_recommendation":
+        return await handleRejectCanonicalRecommendation(args);
       default:
         throw new Error(`Unknown tool: ${name}`);
     }
@@ -1775,6 +1862,102 @@ async function handleGetIucnSyncStats() {
           {
             success: true,
             stats,
+          },
+          null,
+          2
+        ),
+      },
+    ],
+  };
+}
+
+/**
+ * CANONICAL NAME RECOMMENDATION TOOL IMPLEMENTATIONS
+ */
+
+async function handleGetCanonicalRecommendations(args: GetCanonicalRecommendationsArgs) {
+  const { group_id, status, limit } = args;
+
+  const database = db();
+  const recommendations = await getCanonicalRecommendations(database, {
+    groupId: group_id,
+    status,
+    limit,
+  });
+
+  return {
+    content: [
+      {
+        type: "text" as const,
+        text: JSON.stringify(
+          {
+            success: true,
+            total_count: recommendations.length,
+            recommendations: recommendations.map((rec) => ({
+              id: rec.id,
+              group_id: rec.group_id,
+              current_name: `${rec.current_canonical_genus} ${rec.current_canonical_species}`,
+              suggested_name: `${rec.suggested_canonical_genus} ${rec.suggested_canonical_species}`,
+              iucn_taxon_id: rec.iucn_taxon_id,
+              iucn_url: rec.iucn_url,
+              reason: rec.reason,
+              status: rec.status,
+              created_at: rec.created_at,
+              reviewed_at: rec.reviewed_at,
+              reviewed_by: rec.reviewed_by,
+            })),
+          },
+          null,
+          2
+        ),
+      },
+    ],
+  };
+}
+
+async function handleAcceptCanonicalRecommendation(args: AcceptCanonicalRecommendationArgs) {
+  const { recommendation_id, reviewed_by } = args;
+
+  const database = db(true); // Write access
+
+  const success = await acceptCanonicalRecommendation(database, recommendation_id, reviewed_by);
+
+  return {
+    content: [
+      {
+        type: "text" as const,
+        text: JSON.stringify(
+          {
+            success,
+            recommendation_id,
+            reviewed_by,
+            message: "Canonical name recommendation accepted and applied successfully",
+          },
+          null,
+          2
+        ),
+      },
+    ],
+  };
+}
+
+async function handleRejectCanonicalRecommendation(args: RejectCanonicalRecommendationArgs) {
+  const { recommendation_id, reviewed_by } = args;
+
+  const database = db(true); // Write access
+
+  const success = await rejectCanonicalRecommendation(database, recommendation_id, reviewed_by);
+
+  return {
+    content: [
+      {
+        type: "text" as const,
+        text: JSON.stringify(
+          {
+            success,
+            recommendation_id,
+            reviewed_by,
+            message: "Canonical name recommendation rejected successfully",
           },
           null,
           2

@@ -14,6 +14,10 @@ import {
   getSpeciesWithMissingIucn,
   getSpeciesNeedingResync,
   getIucnSyncStats,
+  createCanonicalRecommendation,
+  getCanonicalRecommendations,
+  acceptCanonicalRecommendation,
+  rejectCanonicalRecommendation,
   type IUCNData,
 } from "../db/iucn";
 
@@ -532,6 +536,236 @@ void describe("IUCN Database Operations", () => {
           );
         },
         /CHECK constraint failed/
+      );
+    });
+  });
+
+  void describe("Canonical Name Recommendations", () => {
+    void test("should create a canonical name recommendation", async () => {
+      const species = await createTestSpeciesName(
+        ctx.db,
+        "Old Name",
+        "Oldgenus oldspecies",
+        "Oldgenus",
+        "oldspecies",
+        "Test"
+      );
+
+      const recId = await createCanonicalRecommendation(ctx.db, {
+        groupId: species.group_id,
+        currentGenus: "Oldgenus",
+        currentSpecies: "oldspecies",
+        suggestedGenus: "Newgenus",
+        suggestedSpecies: "newspecies",
+        iucnTaxonId: 12345,
+        iucnUrl: "https://www.iucnredlist.org/species/12345",
+        reason: "IUCN accepted name differs (genus changed)",
+      });
+
+      assert.ok(recId > 0, "Should return recommendation ID");
+
+      const recommendations = await getCanonicalRecommendations(ctx.db, {
+        groupId: species.group_id,
+      });
+
+      assert.strictEqual(recommendations.length, 1, "Should have 1 recommendation");
+      assert.strictEqual(recommendations[0].group_id, species.group_id);
+      assert.strictEqual(recommendations[0].current_canonical_genus, "Oldgenus");
+      assert.strictEqual(recommendations[0].suggested_canonical_genus, "Newgenus");
+      assert.strictEqual(recommendations[0].status, "pending");
+    });
+
+    void test("should prevent duplicate pending recommendations", async () => {
+      const species = await createTestSpeciesName(
+        ctx.db,
+        "Duplicate Test",
+        "Dupus testus",
+        "Dupus",
+        "testus",
+        "Test"
+      );
+
+      await createCanonicalRecommendation(ctx.db, {
+        groupId: species.group_id,
+        currentGenus: "Dupus",
+        currentSpecies: "testus",
+        suggestedGenus: "Newdupus",
+        suggestedSpecies: "testus",
+        iucnTaxonId: 99999,
+        reason: "First recommendation",
+      });
+
+      await assert.rejects(
+        async () => {
+          await createCanonicalRecommendation(ctx.db, {
+            groupId: species.group_id,
+            currentGenus: "Dupus",
+            currentSpecies: "testus",
+            suggestedGenus: "Anotherdupus",
+            suggestedSpecies: "testus",
+            iucnTaxonId: 88888,
+            reason: "Second recommendation",
+          });
+        },
+        /Pending recommendation already exists/
+      );
+    });
+
+    void test("should get recommendations with filters", async () => {
+      const species1 = await createTestSpeciesName(
+        ctx.db,
+        "Species One",
+        "Genus1 species1",
+        "Genus1",
+        "species1",
+        "Test"
+      );
+      const species2 = await createTestSpeciesName(
+        ctx.db,
+        "Species Two",
+        "Genus2 species2",
+        "Genus2",
+        "species2",
+        "Test"
+      );
+
+      await createCanonicalRecommendation(ctx.db, {
+        groupId: species1.group_id,
+        currentGenus: "Genus1",
+        currentSpecies: "species1",
+        suggestedGenus: "NewGenus1",
+        suggestedSpecies: "species1",
+        iucnTaxonId: 11111,
+        reason: "Test 1",
+      });
+
+      await createCanonicalRecommendation(ctx.db, {
+        groupId: species2.group_id,
+        currentGenus: "Genus2",
+        currentSpecies: "species2",
+        suggestedGenus: "NewGenus2",
+        suggestedSpecies: "species2",
+        iucnTaxonId: 22222,
+        reason: "Test 2",
+      });
+
+      // Filter by status
+      const pending = await getCanonicalRecommendations(ctx.db, {
+        status: "pending",
+      });
+      assert.ok(pending.length >= 2, "Should have at least 2 pending recommendations");
+
+      // Filter by group_id
+      const forSpecies1 = await getCanonicalRecommendations(ctx.db, {
+        groupId: species1.group_id,
+      });
+      assert.strictEqual(forSpecies1.length, 1, "Should have 1 recommendation for species 1");
+      assert.strictEqual(forSpecies1[0].group_id, species1.group_id);
+    });
+
+    void test("should accept a canonical name recommendation", async () => {
+      const species = await createTestSpeciesName(
+        ctx.db,
+        "Accept Test",
+        "Oldgenus acceptus",
+        "Oldgenus",
+        "acceptus",
+        "Test"
+      );
+
+      const recId = await createCanonicalRecommendation(ctx.db, {
+        groupId: species.group_id,
+        currentGenus: "Oldgenus",
+        currentSpecies: "acceptus",
+        suggestedGenus: "Newgenus",
+        suggestedSpecies: "acceptus",
+        iucnTaxonId: 33333,
+        reason: "Genus change",
+      });
+
+      // Accept the recommendation (admin member_id = 1 from test setup)
+      const success = await acceptCanonicalRecommendation(ctx.db, recId, 1);
+      assert.strictEqual(success, true, "Should accept successfully");
+
+      // Verify canonical name was updated
+      const updatedSpecies = await ctx.db.get(
+        `SELECT canonical_genus, canonical_species_name FROM species_name_group WHERE group_id = ?`,
+        [species.group_id]
+      );
+      assert.strictEqual(updatedSpecies!.canonical_genus, "Newgenus");
+      assert.strictEqual(updatedSpecies!.canonical_species_name, "acceptus");
+
+      // Verify old name was added as synonym
+      const synonym = await ctx.db.get(
+        `SELECT scientific_name FROM species_scientific_name
+         WHERE group_id = ? AND scientific_name = ?`,
+        [species.group_id, "Oldgenus acceptus"]
+      );
+      assert.ok(synonym, "Old name should be added as synonym");
+      assert.strictEqual(synonym!.scientific_name, "Oldgenus acceptus");
+
+      // Verify recommendation status was updated
+      const recommendation = await ctx.db.get(
+        `SELECT status, reviewed_by FROM iucn_canonical_recommendations WHERE id = ?`,
+        [recId]
+      );
+      assert.strictEqual(recommendation!.status, "accepted");
+      assert.strictEqual(recommendation!.reviewed_by, 1);
+    });
+
+    void test("should reject a canonical name recommendation", async () => {
+      const species = await createTestSpeciesName(
+        ctx.db,
+        "Reject Test",
+        "Rejectus testus",
+        "Rejectus",
+        "testus",
+        "Test"
+      );
+
+      const recId = await createCanonicalRecommendation(ctx.db, {
+        groupId: species.group_id,
+        currentGenus: "Rejectus",
+        currentSpecies: "testus",
+        suggestedGenus: "Wronggenus",
+        suggestedSpecies: "testus",
+        iucnTaxonId: 44444,
+        reason: "Wrong suggestion",
+      });
+
+      // Reject the recommendation (admin member_id = 1)
+      const success = await rejectCanonicalRecommendation(ctx.db, recId, 1);
+      assert.strictEqual(success, true, "Should reject successfully");
+
+      // Verify canonical name was NOT updated
+      const species2 = await ctx.db.get(
+        `SELECT canonical_genus FROM species_name_group WHERE group_id = ?`,
+        [species.group_id]
+      );
+      assert.strictEqual(species2!.canonical_genus, "Rejectus", "Canonical name should not change");
+
+      // Verify recommendation status was updated
+      const recommendation = await ctx.db.get(
+        `SELECT status, reviewed_by FROM iucn_canonical_recommendations WHERE id = ?`,
+        [recId]
+      );
+      assert.strictEqual(recommendation!.status, "rejected");
+      assert.strictEqual(recommendation!.reviewed_by, 1);
+    });
+
+    void test("should handle non-existent recommendation", async () => {
+      await assert.rejects(
+        async () => {
+          await acceptCanonicalRecommendation(ctx.db, 999999, 1);
+        },
+        /Pending recommendation 999999 not found/
+      );
+
+      await assert.rejects(
+        async () => {
+          await rejectCanonicalRecommendation(ctx.db, 999999, 1);
+        },
+        /Pending recommendation 999999 not found/
       );
     });
   });
