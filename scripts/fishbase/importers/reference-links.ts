@@ -10,6 +10,8 @@
  *   npm run script scripts/fishbase/importers/reference-links.ts                # Dry-run (preview)
  *   npm run script scripts/fishbase/importers/reference-links.ts -- --execute   # Actually import
  *   npm run script scripts/fishbase/importers/reference-links.ts -- --limit=10  # Test with 10 species
+ *   npm run script scripts/fishbase/importers/reference-links.ts -- --db=/path/to/db  # Custom DB path
+ *   DB_PATH=/path/to/db npm run script scripts/fishbase/importers/reference-links.ts  # Using env var
  */
 
 import sqlite3 from 'sqlite3';
@@ -67,6 +69,8 @@ async function main() {
   const executeImport = args.includes('--execute');
   const limitArg = args.find(arg => arg.startsWith('--limit='));
   const limit = limitArg ? parseInt(limitArg.split('=')[1]) : undefined;
+  const dbArg = args.find(arg => arg.startsWith('--db='));
+  const customDbPath = dbArg ? dbArg.split('=')[1] : null;
 
   console.log('\n=== FishBase Reference Links Importer ===\n');
   console.log(`Mode: ${executeImport ? '🔴 EXECUTE (will modify database)' : '🟡 DRY-RUN (preview only)'}`);
@@ -76,7 +80,9 @@ async function main() {
   console.log('');
 
   // Connect to our SQLite database
-  const dbPath = join(__dirname, '../../../db/database.db');
+  // Priority: --db argument > DB_PATH env var > default path
+  const dbPath = customDbPath || process.env.DB_PATH || join(__dirname, '../../../db/database.db');
+  console.log(`Database: ${dbPath}\n`);
   const sqlite = await open({
     filename: dbPath,
     driver: sqlite3.Database,

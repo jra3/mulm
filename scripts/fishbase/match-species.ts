@@ -2,7 +2,9 @@
  * Match our species database against FishBase
  *
  * Usage:
- *   npm run script scripts/fishbase/match-species.ts
+ *   npm run script scripts/fishbase/match-species.ts                     # Use default DB
+ *   npm run script scripts/fishbase/match-species.ts -- --db=/path/to/db # Custom DB path
+ *   DB_PATH=/path/to/db npm run script scripts/fishbase/match-species.ts # Using env var
  */
 
 import sqlite3 from 'sqlite3';
@@ -28,10 +30,16 @@ interface FishBaseMatch {
 }
 
 async function main() {
+  const args = process.argv.slice(2);
+  const dbArg = args.find(arg => arg.startsWith('--db='));
+  const customDbPath = dbArg ? dbArg.split('=')[1] : null;
+
   console.log('\n=== Matching Species Against FishBase ===\n');
 
   // Connect to our SQLite database
-  const dbPath = join(__dirname, '../../db/database.db');
+  // Priority: --db argument > DB_PATH env var > default path
+  const dbPath = customDbPath || process.env.DB_PATH || join(__dirname, '../../db/database.db');
+  console.log(`Database: ${dbPath}\n`);
   const sqlite = await open({
     filename: dbPath,
     driver: sqlite3.Database,

@@ -55,6 +55,23 @@ npm run script scripts/fishbase/explore.ts -- count species
 npm run script scripts/fishbase/explore.ts -- search Corydoras paleatus
 ```
 
+### Custom Database Path
+
+All scripts support custom database paths via command-line argument or environment variable:
+
+```bash
+# Using command-line argument
+npm run script scripts/fishbase/importers/common-names.ts -- --db=/path/to/mulm.db
+
+# Using environment variable
+DB_PATH=/path/to/mulm.db npm run script scripts/fishbase/importers/common-names.ts
+
+# Default path (if not specified)
+# scripts/fishbase/../../../db/database.db
+```
+
+Priority order: `--db=` argument > `DB_PATH` env var > default path
+
 ## Available Tables
 
 ### Core Tables
