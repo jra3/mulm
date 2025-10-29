@@ -72,6 +72,42 @@ DB_PATH=/path/to/mulm.db npm run script scripts/fishbase/importers/common-names.
 
 Priority order: `--db=` argument > `DB_PATH` env var > default path
 
+## Using Scripts in Production
+
+The FishBase scripts are compiled to JavaScript and included in the Docker image.
+
+### Access Container Shell
+
+```bash
+# SSH into production server
+ssh BAP
+
+# Get shell in container
+sudo docker exec -it basny-app sh
+```
+
+### Run Scripts in Container
+
+```bash
+# Inside the container:
+DB_PATH=/mnt/basny-data/app/mulm.db node scripts/fishbase/explore.js search "Betta splendens"
+
+# Or from outside the container:
+ssh BAP "sudo docker exec basny-app node scripts/fishbase/explore.js search 'Betta splendens'"
+
+# Import common names to production
+ssh BAP "sudo docker exec basny-app sh -c 'DB_PATH=/mnt/basny-data/app/mulm.db node scripts/fishbase/importers/common-names.js --execute'"
+
+# Download cache to container
+ssh BAP "sudo docker exec basny-app node scripts/fishbase/download-cache.js"
+```
+
+### Production Database Path
+
+The production database is at: `/mnt/basny-data/app/mulm.db`
+
+Always use `DB_PATH` environment variable or `--db` argument when running in production.
+
 ## Available Tables
 
 ### Core Tables
