@@ -11,7 +11,7 @@ include ../header.pug
 		hx-disabled-elt="#feedbackSubmitBtn"
 		hx-on::response-error="this.querySelector('#requestChangesError').textContent = event.detail.xhr.responseText; document.getElementById('feedbackSubmitBtn').disabled = false;"
 	)
-		span#requestChangesError.font-semibold.text-red-600(role="alert" aria-live="polite")
+		span#requestChangesError.text-red-600.font-semibold.text-sm(role="alert" aria-live="polite")
 		label.input-label(for="requestChangesText") Changes requested
 		textarea.w-full.h-96.bg-white(
 			name="content"

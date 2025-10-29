@@ -1,5 +1,7 @@
 include ../mixins/loadingSpinner.pug
 include ../mixins/card.pug
+include ../mixins/errorMessage.pug
+include ../mixins/errorAlert.pug
 
 //- Tank Preset Form (for both create and edit)
 //- Local mixin for form fields to reduce repetition
@@ -18,8 +20,7 @@ mixin formField(name, labelText, placeholder, value, required=false)
 			class=errors && errors.has(name) ? 'border-2 border-red-500' : ''
 			aria-invalid=errors && errors.has(name) ? 'true' : 'false'
 		)
-		if errors && errors.has(name)
-			p.text-red-600.text-sm.mt-1.font-medium= errors.get(name)
+		+errorMessage(name, 'mt-1')
 
 //- Local mixin for grid form fields (2-column layout)
 mixin gridFormField(name, labelText, placeholder, value)
@@ -42,8 +43,7 @@ mixin gridFormField(name, labelText, placeholder, value)
 		h3.font-bold.text-lg.mb-4= editing ? `Edit: ${preset.preset_name}` : 'New Tank Preset'
 
 		//- General form error (if any)
-		if errors.has('form')
-			.bg-red-50.border.border-red-200.text-red-800.px-4.py-3.rounded.mb-3= errors.get('form')
+		+errorAlert('form')
 
 		//- Preset Name (read-only when editing, or editable for new)
 		if editing

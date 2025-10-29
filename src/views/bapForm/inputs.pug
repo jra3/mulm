@@ -1,10 +1,10 @@
+include ../mixins/errorMessage
+
 mixin bapTextInput(labelText, name, placeholder, type="text")
 	.flex.flex-col.gap-2
 		label.input-label(for=name)
 			span= labelText
-			if errors.has(name)
-				span.text-red-600.font-extrabold(role="alert" id=`${name}-error`)= ` ${errors.get(name)}`
-
+		+errorMessage(name)
 		input.text-input(
 			id=name
 			value=form[name] || ""
@@ -36,9 +36,7 @@ mixin bapMultiSelectInput(labelText, name, id)
 	.flex.flex-col.gap-2
 		label.input-label(for=name)
 			span= labelText
-			if errors.has(name)
-				span.text-red-600.font-extrabold(role="alert" id=`${name}-error`)= ` ${errors.get(name)}`
-
+		+errorMessage(name)
 		select.tom-select-multi(
 			id=id
 			name=name
@@ -80,9 +78,7 @@ mixin bapTypeaheadInput(options = {})
 	.flex.flex-col.gap-2
 		label.input-label(for=name)
 			span= label
-			if errors.has(name)
-				span.text-red-600.font-extrabold(role="alert" id=`${name}-error`)= ` ${errors.get(name)}`
-
+		+errorMessage(name)
 		select.tom-select-typeahead(
 			id=name
 			name=name

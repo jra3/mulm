@@ -1,0 +1,18 @@
+//- Inline field error message mixin
+//- Displays validation errors next to form fields with consistent styling and accessibility
+//-
+//- @param {string} name - The field name to check for errors
+//- @param {string} [customClass=''] - Optional additional CSS classes
+//-
+//- Example usage:
+//-   +errorMessage('email')
+//-   +errorMessage('password', 'mt-2')
+
+mixin errorMessage(name, customClass='')
+  if errors && errors.has(name)
+    span.text-red-600.font-semibold.text-sm(
+      role="alert"
+      id=`${name}-error`
+      aria-live="polite"
+      class=customClass
+    )= errors.get(name)

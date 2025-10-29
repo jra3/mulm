@@ -1,5 +1,6 @@
 include ./field.pug
 include ../mixins/loadingSpinner.pug
+include ../mixins/errorMessage.pug
 
 #signup.w-full.flex.flex-col.items-center.gap-2
 	h2(class="text-xl sm:text-2xl font-bold mb-4") Sign Up
@@ -11,4 +12,4 @@ include ../mixins/loadingSpinner.pug
 		button.primary(type="submit" hx-disabled-elt="this")
 			span Sign Up
 			+loadingSpinner()
-	span#signupError(class="font-extrabold text-red-400")= errors.get("form")
+	span#signupError.text-red-600.font-semibold.text-sm(role="alert" aria-live="polite")= errors.get("form")

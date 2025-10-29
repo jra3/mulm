@@ -11,7 +11,7 @@ include ../header.pug
 		hx-disabled-elt="#witnessSubmitBtn"
 		hx-on::response-error="this.querySelector('#witnessError').textContent = event.detail.xhr.responseText; document.getElementById('witnessSubmitBtn').disabled = false;"
 	)
-		span#witnessError.font-semibold.text-red-600(role="alert" aria-live="polite")
+		span#witnessError.text-red-600.font-semibold.text-sm(role="alert" aria-live="polite")
 		label.input-label(for="witnessReasonText") Reason for requesting more documentation
 		textarea.w-full.h-96.bg-white(
 			name="reason"

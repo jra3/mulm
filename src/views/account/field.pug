@@ -1,8 +1,9 @@
+include ../mixins/errorMessage
+
 mixin inputLabel(labelText, name)
 	.flex.flex-col.gap-2
 		label.input-label(for=name)= labelText
-			if errors && errors.has(name)
-				span(class="font-extrabold text-red-400")= ` ${errors.get(name)}`
+		+errorMessage(name)
 		block
 
 mixin textInput(labelText, name, value)

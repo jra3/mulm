@@ -22,7 +22,7 @@ include ../mixins/loadingSpinner.pug
 					hx-target="#signin"
 				) Sign Up
 
-			span#loginError(class="font-extrabold text-red-400")
+			span#loginError.text-red-600.font-semibold.text-sm(role="alert" aria-live="polite")
 
 		.flex.items-center.my-4(class="w-full")
 			.flex-grow.h-px.bg-gray-800

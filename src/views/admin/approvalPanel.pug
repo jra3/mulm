@@ -1,3 +1,5 @@
+include ../mixins/errorMessage.pug
+
 // Admin Approval Panel - HTMX-Driven Species Selection
 - const hasGroupIdError = errors && errors.has && errors.has("group_id");
 - const hasPointsError = errors && errors.has && errors.has("points");
@@ -12,31 +14,35 @@
                 label.text-white.whitespace-nowrap Species:
                 // Species typeahead with HTMX integration
                 // Tom Select value is group_id, which gets submitted directly
-                select#species-search.tom-select-typeahead.flex-1(
-                    name="group_id"
-                    data-api-url="/api/species/search"
-                    data-param-species_type=submission.species_type
-                    data-value-field="group_id"
-                    data-label-field="text"
-                    data-search-fields="text,common_name,scientific_name"
-                    data-min-query-length="2"
-                    data-max-items="1"
-                    data-placeholder="Search species..."
-                    hx-get=`/admin/submissions/${submission.id}/approval-bonuses`
-                    hx-trigger="change"
-                    hx-target="#approval-dynamic-section"
-                    hx-swap="outerHTML"
-                    hx-indicator="#approval-dynamic-section .htmx-indicator"
-                    hx-include="this"
-                    class=hasGroupIdError ? "error" : "")
+                .flex.flex-col
+                    select#species-search.tom-select-typeahead.flex-1(
+                        name="group_id"
+                        data-api-url="/api/species/search"
+                        data-param-species_type=submission.species_type
+                        data-value-field="group_id"
+                        data-label-field="text"
+                        data-search-fields="text,common_name,scientific_name"
+                        data-min-query-length="2"
+                        data-max-items="1"
+                        data-placeholder="Search species..."
+                        hx-get=`/admin/submissions/${submission.id}/approval-bonuses`
+                        hx-trigger="change"
+                        hx-target="#approval-dynamic-section"
+                        hx-swap="outerHTML"
+                        hx-indicator="#approval-dynamic-section .htmx-indicator"
+                        hx-include="this"
+                        class=hasGroupIdError ? "error" : "")
+                    +errorMessage('group_id')
 
-                .select-wrapper.max-w-40
-                    select(name="points" id="base-points" class=hasPointsError ? "error" : "")
-                        option(value="" disabled selected) Base Points
-                        option(value=5 selected=submission.points == 5) 5
-                        option(value=10 selected=submission.points == 10) 10
-                        option(value=15 selected=submission.points == 15) 15
-                        option(value=20 selected=submission.points == 20) 20
+                .flex.flex-col
+                    .select-wrapper.max-w-40
+                        select(name="points" id="base-points" class=hasPointsError ? "error" : "")
+                            option(value="" disabled selected) Base Points
+                            option(value=5 selected=submission.points == 5) 5
+                            option(value=10 selected=submission.points == 10) 10
+                            option(value=15 selected=submission.points == 15) 15
+                            option(value=20 selected=submission.points == 20) 20
+                    +errorMessage('points')
 
             // Dynamic section - replaced by HTMX when species selected
             #approval-dynamic-section
