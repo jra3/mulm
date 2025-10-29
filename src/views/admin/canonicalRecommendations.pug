@@ -1,0 +1,182 @@
+include ../header.pug
+include adminNav.pug
+include ../mixins/emptyState.pug
+include ../mixins/iucnBadge.pug
+
+- const stringCell = ['p-3', 'text-left', 'border-b', 'border-gray-200'];
+- const heading = ['p-3', 'text-left', 'font-bold', 'text-gray-900', 'border-b-2', 'border-gray-300', 'bg-gray-50'];
+
+mixin recommendationRow(rec)
+  tr(class="hover:bg-gray-50")
+    td(class=stringCell)
+      .flex.flex-col.gap-1
+        .font-semibold.text-gray-900
+          = `${rec.current_canonical_genus} ${rec.current_canonical_species}`
+        if rec.species
+          .text-xs.text-gray-500
+            = `ID: ${rec.group_id} • ${rec.species.program_class || 'N/A'}`
+
+    td(class=stringCell)
+      svg.w-5.h-5.text-gray-400.mx-auto(xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor")
+        path(stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3")
+
+    td(class=stringCell)
+      .flex.flex-col.gap-1
+        .font-semibold.text-emerald-700
+          = `${rec.suggested_canonical_genus} ${rec.suggested_canonical_species}`
+        if rec.iucn_url
+          a(href=rec.iucn_url target="_blank" rel="noopener noreferrer" class="text-xs text-blue-600 hover:underline")
+            | IUCN Red List ↗
+
+    td(class=stringCell)
+      .text-sm.text-gray-600= rec.reason
+
+    td(class=stringCell)
+      .text-xs.text-gray-500
+        = new Date(rec.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+
+    td(class=stringCell)
+      if rec.status === 'pending'
+        .flex.gap-2
+          button.primary.text-sm.px-3.py-1(
+            hx-post=`/admin/species/canonical-recommendations/${rec.id}/accept`
+            hx-confirm="Accept this name change? The current name will be added as a synonym."
+          ) Accept
+          button.outline.text-sm.px-3.py-1(
+            hx-post=`/admin/species/canonical-recommendations/${rec.id}/reject`
+            hx-confirm="Reject this recommendation?"
+          ) Reject
+      else if rec.status === 'accepted'
+        .flex.items-center.gap-1.text-green-700
+          svg.w-4.h-4(xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor")
+            path(stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7")
+          span.text-sm.font-medium Accepted
+        if rec.reviewed_at
+          .text-xs.text-gray-500.mt-1
+            = new Date(rec.reviewed_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+      else if rec.status === 'rejected'
+        .flex.items-center.gap-1.text-red-700
+          svg.w-4.h-4(xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor")
+            path(stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12")
+          span.text-sm.font-medium Rejected
+        if rec.reviewed_at
+          .text-xs.text-gray-500.mt-1
+            = new Date(rec.reviewed_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+
+doctype html
+html
+  +headTag(title)
+
+  body.bg-white.text-gray-800
+    +pageHeader(true, title)
+
+    section.bg-gray-100.py-6
+      div(class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8")
+
+        //- Quick Links Navigation
+        .mb-4.flex.gap-2
+          a.outline.text-sm.px-3.py-1(href="/admin/species")
+            | ← Back to Species Management
+
+        //- Info Banner
+        .bg-blue-50.border-l-4.border-blue-400.p-4.mb-6.rounded-lg
+          .flex.items-start.gap-3
+            svg.w-6.h-6.text-blue-600.flex-shrink-0(xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor")
+              path(stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z")
+            div
+              h3.text-base.font-semibold.text-blue-800 About Taxonomic Name Recommendations
+              p.text-sm.text-blue-700.mt-1
+                | These recommendations are automatically generated when IUCN Red List data shows a different scientific name than what's in our database.
+                | Accepting a recommendation will update the canonical name and preserve the old name as a synonym.
+
+        //- Sync All IUCN Data Button
+        .bg-amber-50.border-l-4.border-amber-400.p-4.mb-6.rounded-lg
+          .flex.items-start.gap-3.justify-between
+            div
+              h3.text-base.font-semibold.text-amber-800 Sync All Species with IUCN
+              p.text-sm.text-amber-700.mt-1
+                | This will check all species that haven't been synced in the last 30 days against the IUCN Red List database.
+                | This is a long-running operation that processes species in batches to respect API rate limits.
+                | The first batch will process immediately, and remaining species will be queued in the background.
+            button.primary.whitespace-nowrap.flex-shrink-0(
+              type="button"
+              hx-post="/admin/species/sync-all-iucn"
+              hx-target="#sync-all-results"
+              hx-swap="innerHTML"
+              hx-indicator="#sync-all-indicator"
+            )
+              | 🔄 Start Full Sync
+
+        //- Loading indicator
+        #sync-all-indicator.htmx-indicator.mb-4
+          .bg-blue-50.border-l-4.border-blue-400.p-4.rounded-lg
+            .flex.gap-2.items-center.text-blue-600
+              svg.animate-spin.h-5.w-5(xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24")
+                circle.opacity-25(cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4")
+                path.opacity-75(fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z")
+              span Processing IUCN sync...
+
+        //- Results area for sync all
+        #sync-all-results.mb-6
+
+        //- Filters Section
+        .bg-white.rounded-lg.shadow-md.p-6.mb-6
+          form(method="GET" action="/admin/species/canonical-recommendations")
+            .flex.items-end.gap-4
+              .flex-1.space-y-2
+                label.block.text-sm.font-medium.text-gray-700(for="status") Status
+                .select-wrapper
+                  select#status(name="status" onchange="this.form.submit()")
+                    option(value="" selected=!statusFilter) All Recommendations
+                    option(value="pending" selected=(statusFilter === 'pending')) Pending Only
+                    option(value="accepted" selected=(statusFilter === 'accepted')) Accepted
+                    option(value="rejected" selected=(statusFilter === 'rejected')) Rejected
+
+              if statusFilter
+                a.link(href="/admin/species/canonical-recommendations") Clear Filter
+
+        //- Results Table
+        if recommendations && recommendations.length > 0
+          .bg-white.rounded-lg.shadow-md.overflow-hidden
+            .overflow-x-auto.w-full
+              table(class="w-full")
+                thead
+                  tr
+                    th(class=heading style="width: 25%;") Current Name
+                    th(class=heading style="width: 5%;")
+                    th(class=heading style="width: 25%;") Suggested Name (IUCN)
+                    th(class=heading style="width: 20%;") Reason
+                    th(class=heading style="width: 10%;") Created
+                    th(class=heading style="width: 15%;") Actions
+
+                tbody
+                  each rec in recommendations
+                    +recommendationRow(rec)
+
+          //- Summary Stats
+          .mt-4.text-sm.text-gray-600.text-center
+            - const pendingCount = recommendations.filter(r => r.status === 'pending').length;
+            - const acceptedCount = recommendations.filter(r => r.status === 'accepted').length;
+            - const rejectedCount = recommendations.filter(r => r.status === 'rejected').length;
+
+            strong= recommendations.length
+            |  total recommendation(s)
+            if !statusFilter
+              |  •
+              span.text-amber-600.font-medium= pendingCount
+              |  pending •
+              span.text-green-600.font-medium= acceptedCount
+              |  accepted •
+              span.text-red-600.font-medium= rejectedCount
+              |  rejected
+
+        else
+          .bg-white.rounded-lg.shadow-md.p-12.text-center
+            if statusFilter
+              +emptyState("No Recommendations Found", { showIcon: true, iconPath: "M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z", subtitle: `No ${statusFilter} recommendations found.`, size: "lg" })
+              .mt-4
+                a.primary.px-4.py-2(href="/admin/species/canonical-recommendations") View All Recommendations
+            else
+              +emptyState("No Recommendations", { showIcon: true, iconPath: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z", subtitle: "No IUCN taxonomic name recommendations yet. Run IUCN sync on species to generate recommendations.", size: "lg" })
+              .mt-4
+                a.primary.px-4.py-2(href="/admin/species") Go to Species Management

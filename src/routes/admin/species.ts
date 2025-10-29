@@ -1,5 +1,6 @@
 import { Response } from "express";
 import { MulmRequest } from "@/sessions";
+import type { Database } from "sqlite";
 import {
   getSpeciesForAdmin,
   SpeciesAdminFilters,
@@ -17,7 +18,15 @@ import {
   bulkSetPoints,
   mergeSpecies,
 } from "@/db/species";
-import { updateIucnData, recordIucnSync, createCanonicalRecommendation } from "@/db/iucn";
+import {
+  updateIucnData,
+  recordIucnSync,
+  createCanonicalRecommendation,
+  getCanonicalRecommendations,
+  acceptCanonicalRecommendation,
+  rejectCanonicalRecommendation,
+  RecommendationStatus,
+} from "@/db/iucn";
 import { IUCNClient } from "@/integrations/iucn";
 import { db } from "@/db/conn";
 import { getQueryString, getQueryNumber, getQueryBoolean, getBodyString } from "@/utils/request";
@@ -825,3 +834,296 @@ export const bulkSyncIucn = async (req: MulmRequest, res: Response) => {
     res.status(500).send("Sync operation failed. Please check logs.");
   }
 };
+
+/**
+ * GET /admin/species/canonical-recommendations
+ * Display IUCN canonical name recommendations with filters
+ */
+export const listCanonicalRecommendations = async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+
+  if (!viewer?.is_admin) {
+    res.status(403).send("Admin access required");
+    return;
+  }
+
+  const statusFilter = getQueryString(req, "status") as RecommendationStatus | undefined;
+
+  const database = db(true);
+
+  try {
+    // Get recommendations with optional status filter
+    const recommendations = await getCanonicalRecommendations(database, {
+      status: statusFilter,
+    });
+
+    // For each recommendation, get the current species details
+    const recommendationsWithSpecies = await Promise.all(
+      recommendations.map(async (rec) => {
+        const species = await getSpeciesDetail(rec.group_id);
+        return {
+          ...rec,
+          species,
+        };
+      })
+    );
+
+    res.render("admin/canonicalRecommendations", {
+      title: "IUCN Taxonomic Name Recommendations",
+      recommendations: recommendationsWithSpecies,
+      statusFilter,
+    });
+  } catch (error) {
+    logger.error("Failed to load canonical recommendations", error);
+    res.status(500).send("Failed to load recommendations");
+  }
+};
+
+/**
+ * POST /admin/species/canonical-recommendations/:id/accept
+ * Accept a canonical name recommendation and apply the change
+ */
+export const acceptCanonicalRecommendationRoute = async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+
+  if (!viewer?.is_admin) {
+    res.status(403).send("Admin access required");
+    return;
+  }
+
+  const recommendationId = parseInt(req.params.id);
+  if (!recommendationId) {
+    res.status(400).send("Invalid recommendation ID");
+    return;
+  }
+
+  const database = db(true);
+
+  try {
+    await acceptCanonicalRecommendation(database, recommendationId, viewer.id);
+
+    // Success - redirect back to the list
+    res.set("HX-Redirect", "/admin/species/canonical-recommendations").status(200).send();
+  } catch (err) {
+    if (err instanceof Error) {
+      res.status(400).send(err.message);
+    } else {
+      res.status(500).send("Failed to accept recommendation");
+    }
+  }
+};
+
+/**
+ * POST /admin/species/canonical-recommendations/:id/reject
+ * Reject a canonical name recommendation
+ */
+export const rejectCanonicalRecommendationRoute = async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+
+  if (!viewer?.is_admin) {
+    res.status(403).send("Admin access required");
+    return;
+  }
+
+  const recommendationId = parseInt(req.params.id);
+  if (!recommendationId) {
+    res.status(400).send("Invalid recommendation ID");
+    return;
+  }
+
+  const database = db(true);
+
+  try {
+    await rejectCanonicalRecommendation(database, recommendationId, viewer.id);
+
+    // Success - redirect back to the list
+    res.set("HX-Redirect", "/admin/species/canonical-recommendations").status(200).send();
+  } catch (err) {
+    if (err instanceof Error) {
+      res.status(400).send(err.message);
+    } else {
+      res.status(500).send("Failed to reject recommendation");
+    }
+  }
+};
+
+/**
+ * POST /admin/species/sync-all-iucn
+ * Sync IUCN data for all species that haven't been synced in 30 days
+ * This is a long-running operation that processes species in batches
+ */
+export const syncAllIucnData = async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+
+  if (!viewer?.is_admin) {
+    res.status(403).send("Admin access required");
+    return;
+  }
+
+  const database = db(true);
+  const iucnClient = new IUCNClient();
+
+  try {
+    // Test API connection first
+    const connectionOk = await iucnClient.testConnection();
+    if (!connectionOk) {
+      res.status(503).send("IUCN API is not accessible. Please try again later.");
+      return;
+    }
+
+    // Get species that need syncing (haven't been synced in 30 days or never synced)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
+
+    interface SpeciesForSync {
+      group_id: number;
+      canonical_genus: string;
+      canonical_species_name: string;
+      iucn_last_updated: string | null;
+    }
+
+    const speciesToSync = await database.all<SpeciesForSync[]>(
+      `SELECT group_id, canonical_genus, canonical_species_name, iucn_last_updated
+       FROM species_name_group
+       WHERE species_type = 'Fish'
+         AND (iucn_last_updated IS NULL OR iucn_last_updated < ?)
+       ORDER BY iucn_last_updated ASC NULLS FIRST
+       LIMIT 100`,
+      [thirtyDaysAgoISO]
+    );
+
+    if (speciesToSync.length === 0) {
+      res.send(`
+        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg">
+          <p class="text-sm text-blue-700">All species are up to date! No sync needed.</p>
+        </div>
+      `);
+      return;
+    }
+
+    // Queue ALL species for background processing to avoid HTTP timeout
+    // Fire and forget - process in background
+    processRemainingBatches(speciesToSync, database, iucnClient).catch((err) => {
+      logger.error("Background IUCN sync failed", err);
+    });
+
+    const resultHtml = `
+      <div class="bg-green-50 border-l-4 border-green-400 p-4 rounded-lg">
+        <div class="flex items-start gap-3">
+          <svg class="w-6 h-6 text-green-600 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div>
+            <h3 class="text-base font-semibold text-green-800">IUCN Sync Queued</h3>
+            <p class="text-sm text-green-700 mt-1">
+              <span class="font-semibold">${speciesToSync.length} species</span> have been queued for IUCN sync.
+              Processing in batches of 5 with 2-second delays between batches.
+              This will take approximately <span class="font-semibold">${Math.ceil((speciesToSync.length / 5) * 2 / 60)} minutes</span>.
+            </p>
+            <p class="text-sm text-green-700 mt-2">
+              <span class="text-blue-600">Processing is happening in the background.</span>
+              Refresh this page in a few minutes to see updated data and any new recommendations.
+            </p>
+            <button class="text-blue-600 hover:text-blue-800 underline text-sm mt-2" onclick="window.location.reload()">Refresh page now</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    res.send(resultHtml);
+  } catch (error) {
+    logger.error("Bulk IUCN sync failed", error);
+    res.status(500).send("Sync operation failed. Please check logs.");
+  }
+};
+
+/**
+ * Process remaining IUCN sync batches in the background
+ */
+async function processRemainingBatches(
+  species: Array<{ group_id: number; canonical_genus: string; canonical_species_name: string }>,
+  database: Database,
+  iucnClient: IUCNClient
+) {
+  const batchSize = 5;
+  const rateLimitMs = 2000; // 2 seconds between batches
+
+  for (let i = 0; i < species.length; i += batchSize) {
+    const batch = species.slice(i, i + batchSize);
+
+    for (const sp of batch) {
+      try {
+        const scientificName = `${sp.canonical_genus} ${sp.canonical_species_name}`;
+        const result = await iucnClient.getSpeciesByName(scientificName);
+
+        if (result) {
+          await updateIucnData(database, sp.group_id, {
+            category: result.category,
+            taxonId: result.taxonid,
+            populationTrend: result.population_trend || undefined,
+            url: result.url,
+          });
+          await recordIucnSync(database, sp.group_id, "success", {
+            category: result.category,
+            taxonId: result.taxonid,
+            populationTrend: result.population_trend || undefined,
+            url: result.url,
+          });
+
+          // Check for name differences
+          const genusDiffers = result.genus.toLowerCase() !== sp.canonical_genus.toLowerCase();
+          const speciesDiffers =
+            result.scientific_name.split(" ")[1]?.toLowerCase() !== sp.canonical_species_name.toLowerCase();
+
+          if (genusDiffers || speciesDiffers) {
+            const suggestedSpecies = result.scientific_name.split(" ")[1] || sp.canonical_species_name;
+            try {
+              await createCanonicalRecommendation(database, {
+                groupId: sp.group_id,
+                currentGenus: sp.canonical_genus,
+                currentSpecies: sp.canonical_species_name,
+                suggestedGenus: result.genus,
+                suggestedSpecies: suggestedSpecies,
+                iucnTaxonId: result.taxonid,
+                iucnUrl: result.url,
+                reason: genusDiffers
+                  ? "IUCN accepted name differs (genus changed)"
+                  : "IUCN accepted name differs (species epithet changed)",
+              });
+            } catch (err) {
+              if (!(err instanceof Error && err.message.includes("already exists"))) {
+                logger.warn(`Failed to create canonical recommendation for ${scientificName}`, err);
+              }
+            }
+          }
+        } else {
+          // Not found - still update timestamp
+          await updateIucnData(database, sp.group_id, {
+            category: "NE",
+            taxonId: undefined,
+            populationTrend: undefined,
+            url: undefined,
+          });
+          await recordIucnSync(database, sp.group_id, "not_found");
+        }
+      } catch (error) {
+        logger.error(`Background IUCN sync failed for ${sp.canonical_genus} ${sp.canonical_species_name}`, error);
+        await recordIucnSync(
+          database,
+          sp.group_id,
+          "api_error",
+          undefined,
+          error instanceof Error ? error.message : "Unknown error"
+        );
+      }
+    }
+
+    // Rate limit between batches
+    if (i + batchSize < species.length) {
+      await new Promise((resolve) => setTimeout(resolve, rateLimitMs));
+    }
+  }
+
+  logger.info(`Background IUCN sync completed for ${species.length} species`);
+}

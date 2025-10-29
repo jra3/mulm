@@ -23,7 +23,7 @@ CREATE TABLE iucn_canonical_recommendations (
   reviewed_at DATETIME,
   reviewed_by INTEGER, -- member_id of admin who reviewed
   FOREIGN KEY (group_id) REFERENCES species_name_group(group_id) ON DELETE CASCADE,
-  FOREIGN KEY (reviewed_by) REFERENCES members(member_id) ON DELETE SET NULL
+  FOREIGN KEY (reviewed_by) REFERENCES members(id) ON DELETE SET NULL
 );
 
 -- Create indexes for efficient querying

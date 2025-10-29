@@ -13,6 +13,18 @@ adminRouter.get("/species/:groupId/edit", speciesAdmin.editSpeciesSidebar);
 adminRouter.patch("/species/:groupId", speciesAdmin.updateSpecies);
 adminRouter.delete("/species/:groupId", speciesAdmin.deleteSpecies);
 
+// IUCN canonical name recommendations
+adminRouter.get("/species/canonical-recommendations", speciesAdmin.listCanonicalRecommendations);
+adminRouter.post(
+  "/species/canonical-recommendations/:id/accept",
+  speciesAdmin.acceptCanonicalRecommendationRoute
+);
+adminRouter.post(
+  "/species/canonical-recommendations/:id/reject",
+  speciesAdmin.rejectCanonicalRecommendationRoute
+);
+adminRouter.post("/species/sync-all-iucn", speciesAdmin.syncAllIucnData);
+
 // Bulk operations
 adminRouter.get("/dialog/species/bulk-set-points", speciesAdmin.bulkSetPointsDialog);
 adminRouter.post("/species/bulk-set-points", speciesAdmin.bulkSetPointsAction);
