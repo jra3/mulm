@@ -11,11 +11,12 @@ COPY tsconfig.json ./
 COPY postcss.config.mjs ./
 COPY src ./src
 COPY public ./public
+COPY scripts ./scripts
 
 # Create config.json from sample for build (production uses mounted config)
 RUN cp src/config.sample.json src/config.json
 
-# Build the application
+# Build the application (includes compiling scripts)
 RUN npm run build
 
 # Production stage
@@ -31,6 +32,7 @@ RUN npm ci --omit=dev && \
 COPY --from=builder /app/dist/src ./src
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/dist/src/views ./src/views
+COPY --from=builder /app/dist/scripts/fishbase ./scripts/fishbase
 
 # Copy runtime files
 COPY start.sh ./
