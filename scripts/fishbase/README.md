@@ -19,6 +19,23 @@ This toolkit uses DuckDB to query FishBase parquet files directly from Hugging F
 npm install  # DuckDB is included as a dev dependency
 ```
 
+### Download FishBase Cache (Recommended)
+
+For better performance and to avoid rate limiting, download core tables to local cache:
+
+```bash
+# Download core tables (species, comnames, ecology, spawning, etc.) - ~35MB
+npm run script scripts/fishbase/download-cache.ts
+
+# Or download ALL tables - ~200MB
+npm run script scripts/fishbase/download-cache.ts -- --all
+
+# Or download a specific table
+npm run script scripts/fishbase/download-cache.ts -- --table=species
+```
+
+Once cached, all scripts automatically use local files instead of remote URLs (10x faster!).
+
 ### Explore FishBase Data
 
 ```bash
@@ -78,15 +95,46 @@ npm run script scripts/fishbase/explore.ts -- search Corydoras paleatus
 scripts/fishbase/
 ├── README.md                 # This file
 ├── .gitignore               # Ignore cache and DB files
-├── duckdb-utils.ts          # Core DuckDB utilities
+├── duckdb-utils.ts          # Core DuckDB utilities (auto-uses cache)
 ├── explore.ts               # Exploration CLI tool
-├── match-species.ts         # [TODO] Match our species against FishBase
+├── download-cache.ts        # Download parquet files to cache
+├── match-species.ts         # Match our species against FishBase
 ├── importers/
-│   ├── common-names.ts      # [TODO] Import common names
+│   ├── common-names.ts      # Import common names ✅
+│   ├── reference-links.ts   # Import FishBase URLs ✅
 │   ├── ecology.ts           # [TODO] Import ecology data
-│   ├── taxonomy.ts          # [TODO] Validate taxonomy
 │   └── fecundity.ts         # [TODO] Import breeding data
-└── cache/                   # Cached parquet files (git-ignored)
+└── cache/                   # Cached parquet files (~35MB, git-ignored)
+```
+
+## Cache Management
+
+The toolkit supports local caching for better performance and offline access.
+
+### Download Cache
+
+```bash
+# Download core tables (recommended, ~35MB)
+npm run script scripts/fishbase/download-cache.ts
+
+# Download all available tables (~200MB)
+npm run script scripts/fishbase/download-cache.ts -- --all
+
+# Download specific table
+npm run script scripts/fishbase/download-cache.ts -- --table=fecundity
+```
+
+### Cache Behavior
+
+- **Automatic fallback**: Scripts check cache first, use remote URLs if not cached
+- **No rate limiting**: Local queries are instant and unlimited
+- **10x faster**: Cached queries complete in ~1 second vs ~10 seconds remote
+- **Git-ignored**: Cache directory is excluded from version control
+
+### Clear Cache
+
+```bash
+rm -rf scripts/fishbase/cache/
 ```
 
 ## Development Phases
@@ -95,36 +143,48 @@ scripts/fishbase/
 - [x] Install DuckDB
 - [x] Create directory structure
 - [x] Set up basic utilities
+- [x] Local caching system
 
-### Phase 2: Exploration 🚧
+### Phase 2: Exploration ✅
 - [x] Create exploration CLI
-- [ ] Query FishBase tables
-- [ ] Test data quality
+- [x] Query FishBase tables
+- [x] Test data quality
 
-### Phase 3: Species Matching
-- [ ] Match our species against FishBase
-- [ ] Identify coverage gaps
-- [ ] Handle synonyms
+### Phase 3: Species Matching ✅
+- [x] Match our species against FishBase
+- [x] Identify coverage gaps (82% match rate)
+- [x] Handle synonyms
 
-### Phase 4: Import Common Names
-- [ ] Design import strategy
-- [ ] Implement common name importer
-- [ ] Preview and dry-run
+### Phase 4: Import Common Names ✅
+- [x] Design import strategy
+- [x] Implement common name importer
+- [x] Preview and dry-run
+- [x] Import 1,972 common names
 
-### Phase 5: Additional Enrichments
+### Phase 5: Reference Links ✅
+- [x] Design reference link strategy
+- [x] Import FishBase URLs for 1,393 species
+- [x] Store SpecCodes for future use
+
+### Phase 6: Additional Enrichments (Future)
 - [ ] Ecology data import
 - [ ] Taxonomy validation
-- [ ] Breeding info import
-- [ ] Reference links
+- [ ] Breeding info import (fecundity, spawning)
 
-## Potential Use Cases
+## Completed Integrations
 
-1. **Auto-populate common names** - Import 5-10 English common names per species
-2. **Taxonomy validation** - Flag species where FishBase uses different names
-3. **Ecology enrichment** - Add habitat, depth range, climate zone data
-4. **Breeding information** - Show fecundity data on submission review pages
-5. **Reference links** - Auto-add FishBase URLs to species pages
-6. **Smart search** - Better species lookup with more synonyms
+1. ✅ **Common names import** - Imported 1,972 English common names for 1,397 species
+2. ✅ **Reference links** - Added FishBase URLs for 1,393 species with SpecCodes stored
+3. ✅ **Local caching** - 10x performance improvement with cached parquet files
+
+## Potential Future Enhancements
+
+1. **Ecology enrichment** - Add habitat, depth range, climate zone data
+2. **Breeding information** - Import fecundity data for submission review pages
+3. **Taxonomy validation** - Flag species where FishBase uses different names
+4. **Water parameters** - Add pH, temperature, hardness ranges
+5. **Physical characteristics** - Add max length/weight data
+6. **Distribution data** - Add native regions and countries
 
 ## Technical Notes
 

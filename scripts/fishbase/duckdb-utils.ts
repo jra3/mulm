@@ -3,11 +3,14 @@
  */
 
 import * as duckdb from 'duckdb';
+import { existsSync } from 'fs';
+import { join } from 'path';
 
 const FISHBASE_VERSION = 'v24.07';
 const SEALIFEBASE_VERSION = 'v24.07';
 const FISHBASE_BASE_URL = `https://huggingface.co/datasets/cboettig/fishbase/resolve/main/data/fb/${FISHBASE_VERSION}/parquet`;
 const SEALIFEBASE_BASE_URL = `https://huggingface.co/datasets/cboettig/sealifebase/resolve/main/data/slb/${SEALIFEBASE_VERSION}/parquet`;
+const CACHE_DIR = join(__dirname, 'cache');
 
 export interface DuckDBConnection {
   db: duckdb.Database;
@@ -67,9 +70,17 @@ export async function createDuckDBConnection(dbPath: string = ':memory:'): Promi
 }
 
 /**
- * Get the URL for a FishBase table
+ * Get the URL or local path for a FishBase table
+ * Checks local cache first, falls back to remote URL
  */
 export function getFishBaseTableUrl(tableName: string, database: 'fishbase' | 'sealifebase' = 'fishbase'): string {
+  // Check for local cached file first
+  const localPath = join(CACHE_DIR, `${tableName}.parquet`);
+  if (existsSync(localPath)) {
+    return localPath;
+  }
+
+  // Fall back to remote URL
   const baseUrl = database === 'fishbase' ? FISHBASE_BASE_URL : SEALIFEBASE_BASE_URL;
   return `${baseUrl}/${tableName}.parquet`;
 }
