@@ -20,5 +20,10 @@
     "rpName": "BAP Portal",
     "rpID": "localhost",
     "origin": "http://localhost:4200"
+  },
+  "mcp": {
+    "enabled": false,
+    "port": 3001,
+    "host": "127.0.0.1"
   }
 }

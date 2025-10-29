@@ -26,6 +26,11 @@ declare module "@/config.json" {
       maxRetries: number;
       timeoutMs: number;
     };
+    mcp?: {
+      enabled: boolean;
+      port: number;
+      host: string;
+    };
   }
 
   const config: Config;

@@ -40,6 +40,7 @@ import * as activityDemo from "./routes/activityDemo";
 import * as cardDemo from "./routes/cardDemo";
 import testRouter from "./routes/test";
 import { startScheduledCleanup } from "./scheduled/cleanup";
+import { startMcpHttpServer } from "./mcp/http-server";
 
 const app = express();
 
@@ -372,4 +373,9 @@ app.listen(PORT, HOST, () => {
 
   // Start scheduled cleanup tasks (runs daily at 3 AM)
   startScheduledCleanup();
+
+  // Start MCP HTTP server if enabled in config
+  void startMcpHttpServer().catch((error) => {
+    console.error("Failed to start MCP HTTP server:", error);
+  });
 });

@@ -1,18 +1,12 @@
 {
   "mcpServers": {
     "species-database": {
-      "command": "npm",
-      "args": [
-        "run",
-        "mcp:species"
-      ]
+      "type": "http",
+      "url": "http://127.0.0.1:3001/mcp/species"
     },
     "member-management": {
-      "command": "npm",
-      "args": [
-        "run",
-        "mcp:members"
-      ]
+      "type": "http",
+      "url": "http://127.0.0.1:3001/mcp/members"
     }
   }
 }

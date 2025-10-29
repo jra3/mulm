@@ -6,6 +6,9 @@ services:
     restart: unless-stopped
     expose:
       - "4200"
+    ports:
+      # MCP HTTP server - bind to localhost only for SSH tunnel access
+      - "127.0.0.1:3001:3001"
     volumes:
       - /mnt/basny-data/app:/mnt/app-data
       - /mnt/basny-data/app/config/config.production.json:/app/src/config.json:ro
