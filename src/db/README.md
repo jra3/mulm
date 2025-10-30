@@ -197,6 +197,46 @@ export async function addSynonym(
 }
 ```
 
+## Species Database Schema
+
+The species data is organized into three tables:
+
+### `species_name_group`
+
+The core species table containing canonical names and all metadata:
+
+- `group_id` (PK) - Unique species group identifier
+- `canonical_genus` - Official genus name
+- `canonical_species_name` - Official species epithet
+- `program_class` - BAP program class (e.g., "Cichlids - New World", "Livebearers")
+- `species_type` - High-level category ("Fish", "Plant", "Invert", "Coral")
+- `base_points` - Point value for breeding this species (nullable)
+- `is_cares_species` - CARES conservation priority flag (0/1)
+- `iucn_*` fields - IUCN Red List conservation status data
+- `fishbase_*` fields - FishBase ecological and biological data
+
+### `species_common_name`
+
+Common name synonyms (many-to-one relationship with species_name_group):
+
+- `common_name_id` (PK)
+- `group_id` (FK to species_name_group)
+- `common_name` - Common name variant (e.g., "Rosy Barb", "Red Barb")
+- UNIQUE constraint on (group_id, common_name)
+
+### `species_scientific_name`
+
+Scientific name synonyms (many-to-one relationship with species_name_group):
+
+- `scientific_name_id` (PK)
+- `group_id` (FK to species_name_group)
+- `scientific_name` - Scientific name variant (e.g., "Puntius conchonius", "Barbus conchonius")
+- UNIQUE constraint on (group_id, scientific_name)
+
+**Example**: The species Puntius conchonius (group_id=1066) might have:
+- Common names: "Rosy Barb", "Red Barb" (in species_common_name)
+- Scientific names: "Puntius conchonius", "Barbus conchonius" (in species_scientific_name)
+
 ## Complete Example
 
 From `src/db/species.ts`:
@@ -206,23 +246,20 @@ import { query, writeConn } from '@/db/conn';
 import { logger } from '@/utils/logger';
 
 /**
- * Add a synonym for a species group
+ * Add a common name synonym for a species group
  * @param groupId The species group ID
  * @param commonName The common name synonym
- * @param scientificName The scientific name synonym
  * @returns The ID of the newly created synonym
  * @throws {Error} If name is empty, group not found, or duplicate entry
  */
-export async function addSynonym(
+export async function addCommonName(
   groupId: number,
-  commonName: string,
-  scientificName: string
+  commonName: string
 ): Promise<number> {
   // 1. Validate inputs
-  const trimmedCommon = commonName.trim();
-  const trimmedScientific = scientificName.trim();
-  if (!trimmedCommon || !trimmedScientific) {
-    throw new Error('Name cannot be empty');
+  const trimmed = commonName.trim();
+  if (!trimmed) {
+    throw new Error('Common name cannot be empty');
   }
 
   // 2. Verify foreign key references exist
@@ -238,23 +275,23 @@ export async function addSynonym(
   try {
     const conn = writeConn;
     const stmt = await conn.prepare(`
-      INSERT INTO species_name (group_id, common_name, scientific_name)
-      VALUES (?, ?, ?)
-      RETURNING id
+      INSERT INTO species_common_name (group_id, common_name)
+      VALUES (?, ?)
+      RETURNING common_name_id
     `);
     try {
-      const result = await stmt.get<{ id: number }>(groupId, trimmedCommon, trimmedScientific);
-      return result.id;
+      const result = await stmt.get<{ common_name_id: number }>(groupId, trimmed);
+      return result.common_name_id;
     } finally {
       await stmt.finalize();
     }
   } catch (err) {
     // 4. Handle specific errors
     if (err instanceof Error && err.message.includes('UNIQUE constraint')) {
-      throw new Error('Duplicate synonym');
+      throw new Error('Duplicate common name for this species');
     }
-    logger.error('Failed to add synonym', err);
-    throw new Error('Failed to add synonym');
+    logger.error('Failed to add common name', err);
+    throw new Error('Failed to add common name');
   }
 }
 ```

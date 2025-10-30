@@ -25,6 +25,9 @@ import {
   updateSpeciesGroup,
   deleteSpeciesGroup,
   bulkSetPoints,
+  deleteCommonName,
+  getCommonNamesByText,
+  bulkDeleteCommonNames,
 } from "../db/species";
 import {
   updateIucnData,
@@ -177,6 +180,21 @@ type AcceptCanonicalRecommendationArgs = {
 type RejectCanonicalRecommendationArgs = {
   recommendation_id: number;
   reviewed_by: number;
+};
+
+type ListCommonNamesByTextArgs = {
+  common_name: string;
+  limit?: number;
+};
+
+type DeleteCommonNameByIdArgs = {
+  common_name_id: number;
+};
+
+type BulkDeleteCommonNamesArgs = {
+  common_name?: string;
+  common_name_ids?: number[];
+  preview?: boolean;
 };
 
 type SpeciesAdminFilters = {
@@ -690,6 +708,52 @@ export function initializeSpeciesServer(server: Server): void {
             required: ["name_id"],
           },
         },
+        {
+          name: "list_common_names_by_text",
+          description: "Find all common names matching exact text across all species",
+          inputSchema: {
+            type: "object",
+            properties: {
+              common_name: { type: "string", description: "Common name to search for (exact match)" },
+              limit: { type: "number", description: "Optional limit on results (default: no limit)" },
+            },
+            required: ["common_name"],
+          },
+        },
+        {
+          name: "delete_common_name_by_id",
+          description: "Delete a single common name by its ID",
+          inputSchema: {
+            type: "object",
+            properties: {
+              common_name_id: { type: "number", description: "Common name ID to delete" },
+            },
+            required: ["common_name_id"],
+          },
+        },
+        {
+          name: "bulk_delete_common_names",
+          description:
+            "Delete multiple common names by text match or by IDs. Use preview mode to see what would be deleted.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              common_name: {
+                type: "string",
+                description: "Common name text to match (exact match, deletes all species with this name)",
+              },
+              common_name_ids: {
+                type: "array",
+                items: { type: "number" },
+                description: "Array of common name IDs to delete (alternative to common_name)",
+              },
+              preview: {
+                type: "boolean",
+                description: "If true, return what would be deleted without deleting (default: false)",
+              },
+            },
+          },
+        },
         // Advanced Operations
         {
           name: "merge_species_groups",
@@ -960,6 +1024,12 @@ export function initializeSpeciesServer(server: Server): void {
           return await handleUpdateSpeciesSynonym(args as UpdateSpeciesSynonymArgs);
         case "delete_species_synonym":
           return await handleDeleteSpeciesSynonym(args as DeleteSpeciesSynonymArgs);
+        case "list_common_names_by_text":
+          return await handleListCommonNamesByText(args as ListCommonNamesByTextArgs);
+        case "delete_common_name_by_id":
+          return await handleDeleteCommonNameById(args as DeleteCommonNameByIdArgs);
+        case "bulk_delete_common_names":
+          return await handleBulkDeleteCommonNames(args as BulkDeleteCommonNamesArgs);
         case "merge_species_groups":
           return await handleMergeSpeciesGroups(args as MergeSpeciesGroupsArgs);
         case "search_species":
@@ -1174,6 +1244,91 @@ async function handleDeleteSpeciesSynonym(args: DeleteSpeciesSynonymArgs) {
             name_id,
             changes,
             message: changes > 0 ? "Synonym deleted successfully" : "Synonym not found",
+          },
+          null,
+          2
+        ),
+      },
+    ],
+  };
+}
+
+async function handleListCommonNamesByText(args: ListCommonNamesByTextArgs) {
+  const { common_name, limit } = args;
+
+  const results = await getCommonNamesByText(common_name, limit);
+
+  return {
+    content: [
+      {
+        type: "text" as const,
+        text: JSON.stringify(
+          {
+            success: true,
+            common_name,
+            count: results.length,
+            results,
+          },
+          null,
+          2
+        ),
+      },
+    ],
+  };
+}
+
+async function handleDeleteCommonNameById(args: DeleteCommonNameByIdArgs) {
+  const { common_name_id } = args;
+
+  const changes = await deleteCommonName(common_name_id);
+
+  return {
+    content: [
+      {
+        type: "text" as const,
+        text: JSON.stringify(
+          {
+            success: true,
+            common_name_id,
+            changes,
+            message: changes > 0 ? "Common name deleted successfully" : "Common name not found",
+          },
+          null,
+          2
+        ),
+      },
+    ],
+  };
+}
+
+async function handleBulkDeleteCommonNames(args: BulkDeleteCommonNamesArgs) {
+  const { common_name, common_name_ids, preview = false } = args;
+
+  // Validate that we have either common_name or common_name_ids
+  if (!common_name && !common_name_ids) {
+    throw new Error("Must provide either 'common_name' or 'common_name_ids'");
+  }
+
+  if (common_name && common_name_ids) {
+    throw new Error("Cannot provide both 'common_name' and 'common_name_ids'");
+  }
+
+  const options = common_name ? { commonName: common_name } : { commonNameIds: common_name_ids! };
+  const result = await bulkDeleteCommonNames(options, preview);
+
+  return {
+    content: [
+      {
+        type: "text" as const,
+        text: JSON.stringify(
+          {
+            success: true,
+            preview,
+            count: result.count,
+            ...(result.preview && { preview_results: result.preview }),
+            message: preview
+              ? `Preview: Would delete ${result.count} common name(s)`
+              : `Deleted ${result.count} common name(s)`,
           },
           null,
           2

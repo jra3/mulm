@@ -1809,3 +1809,115 @@ export async function ensureNameIdsForGroupId(
     scientific_name_id,
   };
 }
+
+/**
+ * Type for common name search results with species details
+ */
+export type CommonNameWithSpecies = {
+  common_name_id: number;
+  group_id: number;
+  common_name: string;
+  canonical_genus: string;
+  canonical_species_name: string;
+  program_class: string;
+};
+
+/**
+ * Get all common names matching exact text across all species
+ * @param commonNameText - Common name to search for (exact match)
+ * @param limit - Optional limit on results (default: no limit)
+ * @returns Array of common names with species details
+ */
+export async function getCommonNamesByText(
+  commonNameText: string,
+  limit?: number
+): Promise<CommonNameWithSpecies[]> {
+  const sql = `
+    SELECT
+      scn.common_name_id,
+      scn.group_id,
+      scn.common_name,
+      sng.canonical_genus,
+      sng.canonical_species_name,
+      sng.program_class
+    FROM species_common_name scn
+    JOIN species_name_group sng ON scn.group_id = sng.group_id
+    WHERE scn.common_name = ?
+    ORDER BY sng.canonical_genus, sng.canonical_species_name
+    ${limit ? "LIMIT ?" : ""}
+  `;
+
+  const params = limit ? [commonNameText, limit] : [commonNameText];
+  return query<CommonNameWithSpecies>(sql, params);
+}
+
+/**
+ * Bulk delete common names by text match or by IDs
+ * @param options - Either { commonName: string } or { commonNameIds: number[] }
+ * @param preview - If true, return what would be deleted without deleting (default: false)
+ * @returns Object with count of deletions and optional preview data
+ */
+export async function bulkDeleteCommonNames(
+  options: { commonName: string } | { commonNameIds: number[] },
+  preview = false
+): Promise<{ count: number; preview?: CommonNameWithSpecies[] }> {
+  try {
+    // Get the list of common names to delete
+    let namesToDelete: CommonNameWithSpecies[];
+
+    if ("commonName" in options) {
+      // Search by text
+      namesToDelete = await getCommonNamesByText(options.commonName);
+    } else {
+      // Search by IDs
+      if (options.commonNameIds.length === 0) {
+        return { count: 0, preview: [] };
+      }
+
+      const placeholders = options.commonNameIds.map(() => "?").join(",");
+      namesToDelete = await query<CommonNameWithSpecies>(
+        `
+        SELECT
+          scn.common_name_id,
+          scn.group_id,
+          scn.common_name,
+          sng.canonical_genus,
+          sng.canonical_species_name,
+          sng.program_class
+        FROM species_common_name scn
+        JOIN species_name_group sng ON scn.group_id = sng.group_id
+        WHERE scn.common_name_id IN (${placeholders})
+        ORDER BY sng.canonical_genus, sng.canonical_species_name
+      `,
+        options.commonNameIds
+      );
+    }
+
+    // If preview mode, just return what would be deleted
+    if (preview) {
+      return {
+        count: namesToDelete.length,
+        preview: namesToDelete,
+      };
+    }
+
+    // Execute deletions in a transaction
+    let deletedCount = 0;
+    await withTransaction(async (db) => {
+      const stmt = await db.prepare("DELETE FROM species_common_name WHERE common_name_id = ?");
+      try {
+        for (const name of namesToDelete) {
+          const result = await stmt.run(name.common_name_id);
+          deletedCount += result.changes || 0;
+        }
+      } finally {
+        await stmt.finalize();
+      }
+    });
+
+    return { count: deletedCount };
+  } catch (err) {
+    logger.error("Failed to bulk delete common names", err);
+    throw new Error("Failed to bulk delete common names");
+  }
+}
