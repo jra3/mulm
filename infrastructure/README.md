@@ -454,7 +454,51 @@ Config file: `/mnt/basny-data/app/config/config.production.json`
 - `NODE_ENV`: Set to "production" in docker-compose.prod.yml
 - `DATABASE_FILE`: Can override config file setting (optional)
 
+## Monitoring & Automation
+
+### Database Monitoring
+
+The production database is monitored for corruption:
+- **Daily health checks** at 6:00 AM EST
+- **Pre-backup verification** before every backup
+- **Email alerts** sent to admins if corruption detected
+
+See **[DATABASE_MONITORING.md](DATABASE_MONITORING.md)** for:
+- Health check system overview
+- Alert configuration
+- Response procedures
+- Recovery steps
+
+### Automated Backups
+
+Database backups run automatically via cron:
+- **Hourly**: Every 6 hours (keeps last 4)
+- **Daily**: 2:00 AM EST (keeps last 7)
+- **Weekly**: Sunday 3:00 AM EST (keeps last 4)
+- **Monthly**: 1st at 4:00 AM EST (keeps last 12)
+
+All backups include integrity verification and email alerts on failure.
+
+See **[CRONTAB.md](CRONTAB.md)** for:
+- Complete cron schedule
+- Adding/removing jobs
+- Testing procedures
+- Troubleshooting
+
+### Email Alerts
+
+Email notifications use sendmail (ssmtp) to relay via the production SMTP server.
+
+See **[SENDMAIL_CONFIGURATION.md](SENDMAIL_CONFIGURATION.md)** for:
+- ssmtp installation and configuration
+- Testing email delivery
+- Updating SMTP credentials
+- Troubleshooting email issues
+
 ## Further Reading
 
 - **[nginx/README.md](../nginx/README.md)** - Nginx configuration, SSL, rate limiting, security headers
 - **[GitHub Wiki](https://github.com/jra3/mulm/wiki)** - Comprehensive deployment and operations guides
+- **[DATABASE_MONITORING.md](DATABASE_MONITORING.md)** - Health checks, corruption detection, alerts
+- **[SENDMAIL_CONFIGURATION.md](SENDMAIL_CONFIGURATION.md)** - Email alert system configuration
+- **[CRONTAB.md](CRONTAB.md)** - Automated jobs and schedules

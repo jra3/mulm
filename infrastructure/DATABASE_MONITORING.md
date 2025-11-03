@@ -70,8 +70,8 @@ Alerts are sent to the admin email configured in `/mnt/basny-data/app/config/con
 
 ```json
 {
-  "adminsEmail": "baptest@porcnick.com",
-  "fromEmail": "bap@basny.org"
+  "adminsEmail": "ADMIN_EMAIL_ADDRESS",  // Where corruption alerts are sent
+  "fromEmail": "FROM_EMAIL_ADDRESS"      // Outgoing email for alerts
 }
 ```
 
