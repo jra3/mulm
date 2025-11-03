@@ -70,6 +70,7 @@ type CreateSpeciesGroupArgs = {
 
 type UpdateSpeciesGroupArgs = {
   group_id: number;
+  program_class?: string;
   base_points?: number;
   is_cares_species?: boolean;
   external_references?: string[];
@@ -648,6 +649,7 @@ export function initializeSpeciesServer(server: Server): void {
             type: "object",
             properties: {
               group_id: { type: "number", description: "Species group ID" },
+              program_class: { type: "string", description: "BAP program class (e.g., Cichlids, Livebearers, Killifish)" },
               base_points: { type: "number", description: "Points awarded for breeding" },
               is_cares_species: { type: "boolean", description: "CARES conservation species" },
               external_references: {
@@ -1137,9 +1139,10 @@ async function handleCreateSpeciesGroup(args: CreateSpeciesGroupArgs) {
 }
 
 async function handleUpdateSpeciesGroup(args: UpdateSpeciesGroupArgs) {
-  const { group_id, base_points, is_cares_species, external_references, image_links } = args;
+  const { group_id, program_class, base_points, is_cares_species, external_references, image_links } = args;
 
   const changes = await updateSpeciesGroup(group_id, {
+    programClass: program_class,
     basePoints: base_points,
     isCaresSpecies: is_cares_species,
     externalReferences: external_references,
