@@ -1,0 +1,65 @@
+//- Progress Bar Mixin - Reusable progress indicator
+//-
+//- Creates a visual progress bar with percentage completion
+//-
+//- @param {Number} current - Current progress value
+//- @param {Number} total - Total/target value
+//- @param {Object} options - Configuration options
+//- @param {String} options.variant - Color variant (default: 'blue')
+//-   - 'blue': Blue progress bar (in progress)
+//-   - 'green': Green progress bar (complete)
+//-   - 'gray': Gray progress bar (not started)
+//- @param {String} options.size - Height size (default: 'md')
+//-   - 'sm': h-1.5 (small)
+//-   - 'md': h-2 (medium)
+//-   - 'lg': h-3 (large)
+//- @param {Boolean} options.showPercentage - Show percentage text (default: false)
+//- @param {String} options.extraClasses - Additional CSS classes
+//-
+//- Usage:
+//-   +progressBar(4, 6)
+//-     // 67% blue progress bar
+//-
+//-   +progressBar(6, 6, {variant: 'green', showPercentage: true})
+//-     // 100% green progress bar with "100%" text
+//-
+//-   +progressBar(0, 5, {variant: 'gray', size: 'lg'})
+//-     // 0% gray progress bar, large size
+
+mixin progressBar(current, total, options = {})
+	- const variant = options.variant || 'blue'
+	- const size = options.size || 'md'
+	- const showPercentage = options.showPercentage || false
+	- const extraClasses = options.extraClasses || ''
+	- const percentage = total > 0 ? Math.round((current / total) * 100) : 0
+	- const cappedPercentage = Math.min(100, Math.max(0, percentage))
+
+	//- Color classes based on variant
+	- let barColorClass = 'bg-blue-500'
+	- if (variant === 'green') {
+	-   barColorClass = 'bg-green-500'
+	- } else if (variant === 'gray') {
+	-   barColorClass = 'bg-gray-400'
+	- }
+
+	//- Size classes
+	- let heightClass = 'h-2'
+	- if (size === 'sm') {
+	-   heightClass = 'h-1.5'
+	- } else if (size === 'lg') {
+	-   heightClass = 'h-3'
+	- }
+
+	.progress-bar-container(class=extraClasses)
+		.w-full.bg-gray-200.rounded-full.overflow-hidden(class=heightClass)
+			.rounded-full.transition-all.duration-300(
+				class=`${barColorClass} ${heightClass}`
+				style=`width: ${cappedPercentage}%`
+				role="progressbar"
+				aria-valuenow=current
+				aria-valuemin="0"
+				aria-valuemax=total
+				aria-label=`${current} of ${total} complete`
+			)
+		if showPercentage
+			.text-xs.text-gray-600.mt-1.text-right= `${cappedPercentage}%`

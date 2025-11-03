@@ -4,6 +4,7 @@ include mixins/date.pug
 include mixins/trophy.pug
 include mixins/caresBadge.pug
 include mixins/emptyState.pug
+include mixins/progressBar.pug
 
 - const stringCell = ['p-3', 'text-left', 'border-b', 'border-gray-200'];
 - const heading = ['p-3', 'text-left', 'font-bold', 'text-gray-900', 'border-b-2', 'border-gray-300', 'bg-gray-50', 'cursor-pointer', 'select-none', 'hover:bg-gray-100'];
@@ -115,6 +116,31 @@ html
 										h4(class="font-semibold text-gray-800")= award.award_name
 										div(class="text-sm text-gray-500")
 											+shortDate(award.date_awarded, "Award granted on")
+
+		if progressData && progressData.awards
+			- const incompleteAwards = progressData.awards.filter(a => !a.isGranted && a.currentSpecies > 0)
+			if incompleteAwards.length > 0
+				section.bg-gray-50.py-8
+					div(class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8")
+						h3(class="text-xl lg:text-3xl font-extrabold text-center mb-6 text-gray-900") Progress Towards Awards
+						div(class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4")
+							each award in incompleteAwards
+								- const progressVariant = award.isComplete ? 'green' : 'blue'
+								- const borderColor = award.isComplete ? 'border-blue-500' : 'border-gray-300'
+								div(class=`bg-white rounded-lg shadow-md p-4 border-l-4 ${borderColor}`)
+									div.mb-3
+										h4(class="font-semibold text-gray-800 mb-1")= award.awardName.replace(' Specialist', '')
+										div(class="text-sm text-gray-600 mb-2")
+											span(class="text-lg font-bold")= award.currentSpecies
+											span  of #{award.requiredSpecies} species
+										+progressBar(award.currentSpecies, award.requiredSpecies, {variant: progressVariant, size: 'md'})
+									if award.specialRequirement
+										div(class=award.specialRequirement.isMet ? 'text-xs bg-green-100 text-green-800 p-2 rounded' : 'text-xs bg-yellow-100 text-yellow-800 p-2 rounded')
+											if award.specialRequirement.isMet
+												span ✓ #{award.specialRequirement.description}
+											else
+												span ⚠ Requires: #{award.specialRequirement.description}
+
 		- const hasAnySubmissions = fishSubs.length > 0 || plantSubs.length > 0 || coralSubs.length > 0;
 
 		if hasAnySubmissions

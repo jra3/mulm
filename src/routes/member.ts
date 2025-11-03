@@ -1,4 +1,4 @@
-import { getMemberWithAwards } from "@/db/members";
+import { getMemberWithAwards, getSpecialtyAwardProgress } from "@/db/members";
 import { getSubmissionsByMember } from "@/db/submissions";
 import { MulmRequest } from "@/sessions";
 import { Response } from "express";
@@ -49,6 +49,9 @@ export const view = async (req: MulmRequest, res: Response) => {
   const plantTotalPoints = calculateTotalPoints(plantSubs);
   const coralTotalPoints = calculateTotalPoints(coralSubs);
 
+  // Get specialty award progress
+  const progressData = await getSpecialtyAwardProgress(memberId);
+
   res.render("member", {
     member,
     fishSubs,
@@ -61,5 +64,6 @@ export const view = async (req: MulmRequest, res: Response) => {
     isSelf,
     isAdmin,
     trophyData: getTrophyData(member.awards),
+    progressData,
   });
 };

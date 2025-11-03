@@ -38,6 +38,7 @@ import {
 import * as emailDemo from "./routes/emailDemo";
 import * as activityDemo from "./routes/activityDemo";
 import * as cardDemo from "./routes/cardDemo";
+import * as hoverCardDemo from "./routes/hoverCardDemo";
 import testRouter from "./routes/test";
 import { startScheduledCleanup } from "./scheduled/cleanup";
 import { startMcpHttpServer } from "./mcp/http-server";
@@ -184,6 +185,7 @@ const devOnly = (_req: MulmRequest, res: express.Response, next: express.NextFun
 router.get("/demo/emails", devOnly, emailDemo.emailDemoPage);
 router.get("/demo/activity", devOnly, activityDemo.view);
 router.get("/demo/cards", devOnly, cardDemo.view);
+router.get("/demo/hovercard", devOnly, hoverCardDemo.view);
 
 // Test routes (development/test only)
 router.use("/test", devOnly, testRouter);

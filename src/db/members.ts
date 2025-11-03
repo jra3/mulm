@@ -2,6 +2,7 @@ import { makePasswordEntry, ScryptPassword } from "../auth";
 import { db, query, deleteOne, insertOne, updateOne } from "./conn";
 import { logger } from "@/utils/logger";
 import { createActivity } from "./activity";
+import { specialtyAwards, getCountableSpecialtyAwards } from "@/specialtyAwards";
 
 // type as represented in the database
 export type MemberRecord = {
@@ -308,6 +309,165 @@ export async function getMemberWithAwards(memberId: number) {
   ]);
   const member = members.pop();
   return { ...member, awards };
+}
+
+export interface AwardProgress {
+  awardName: string;
+  requiredSpecies: number;
+  currentSpecies: number;
+  percentComplete: number;
+  isComplete: boolean;
+  isGranted: boolean;
+  specialRequirement?: {
+    description: string;
+    isMet: boolean;
+  };
+  speciesBred: string[];
+}
+
+export interface SpecialtyAwardProgressData {
+  awards: AwardProgress[];
+  metaAwards: {
+    seniorSpecialist: {
+      current: number;
+      required: number;
+      isGranted: boolean;
+    };
+    expertSpecialist: {
+      current: number;
+      required: number;
+      isGranted: boolean;
+    };
+  };
+  totalCompleted: number;
+}
+
+/**
+ * Get detailed progress for all specialty awards for a member
+ * This powers the specialty awards progress UI
+ */
+export async function getSpecialtyAwardProgress(
+  memberId: number
+): Promise<SpecialtyAwardProgressData> {
+  // Get member's approved submissions with genus information (for catfish limitation)
+  const submissions = await query<{
+    species_class: string;
+    species_latin_name: string;
+    species_type: string;
+    water_type: string;
+    spawn_locations: string;
+    canonical_genus: string | null;
+  }>(
+    `
+		SELECT
+			s.species_class,
+			s.species_latin_name,
+			s.species_type,
+			s.water_type,
+			s.spawn_locations,
+			COALESCE(
+				sng_common.canonical_genus,
+				sng_scientific.canonical_genus
+			) as canonical_genus
+		FROM submissions s
+		LEFT JOIN species_common_name cn ON s.common_name_id = cn.common_name_id
+		LEFT JOIN species_name_group sng_common ON cn.group_id = sng_common.group_id
+		LEFT JOIN species_scientific_name scin ON s.scientific_name_id = scin.scientific_name_id
+		LEFT JOIN species_name_group sng_scientific ON scin.group_id = sng_scientific.group_id
+		WHERE s.member_id = ?
+			AND s.submitted_on IS NOT NULL
+			AND s.approved_on IS NOT NULL
+	`,
+    [memberId]
+  );
+
+  // Get member's existing awards to check what's granted
+  const grantedAwards = await getAwardsForMember(memberId);
+  const grantedAwardNames = new Set(grantedAwards.map((a) => a.award_name));
+
+  // Calculate progress for each specialty award
+  const awardProgressList: AwardProgress[] = [];
+
+  for (const award of specialtyAwards) {
+    // Filter submissions that match this award's eligibility criteria
+    const eligibleSubmissions = submissions.filter((sub) =>
+      award.eligibilityFilter({
+        species_class: sub.species_class,
+        species_latin_name: sub.species_latin_name,
+        species_type: sub.species_type,
+        water_type: sub.water_type,
+        spawn_locations: sub.spawn_locations,
+        canonical_genus: sub.canonical_genus || undefined,
+      })
+    );
+
+    // Count unique species (by latin name)
+    const uniqueSpecies = new Set(
+      eligibleSubmissions.map((sub) => sub.species_latin_name.toLowerCase())
+    );
+    const currentSpecies = uniqueSpecies.size;
+
+    // Check if limitations are met (if any)
+    let specialRequirement: AwardProgress["specialRequirement"];
+    if (award.limitations) {
+      const isMet = award.limitations.validator(
+        eligibleSubmissions.map((sub) => ({
+          species_class: sub.species_class,
+          species_latin_name: sub.species_latin_name,
+          species_type: sub.species_type,
+          water_type: sub.water_type,
+          spawn_locations: sub.spawn_locations,
+          canonical_genus: sub.canonical_genus || undefined,
+        }))
+      );
+
+      specialRequirement = {
+        description: award.limitations.description,
+        isMet,
+      };
+    }
+
+    // Determine if complete (has enough species AND meets limitations if any)
+    const isComplete =
+      currentSpecies >= award.requiredSpecies &&
+      (!specialRequirement || specialRequirement.isMet);
+
+    awardProgressList.push({
+      awardName: award.name,
+      requiredSpecies: award.requiredSpecies,
+      currentSpecies,
+      percentComplete: Math.round((currentSpecies / award.requiredSpecies) * 100),
+      isComplete,
+      isGranted: grantedAwardNames.has(award.name),
+      specialRequirement,
+      speciesBred: Array.from(uniqueSpecies),
+    });
+  }
+
+  // Calculate meta-award progress (counts granted awards, not just complete)
+  const countableAwardNames = getCountableSpecialtyAwards();
+  const completedCountableAwards = awardProgressList.filter(
+    (a) => a.isGranted && countableAwardNames.includes(a.awardName)
+  ).length;
+
+  const metaAwards = {
+    seniorSpecialist: {
+      current: completedCountableAwards,
+      required: 4,
+      isGranted: grantedAwardNames.has("Senior Specialist Award"),
+    },
+    expertSpecialist: {
+      current: completedCountableAwards,
+      required: 7,
+      isGranted: grantedAwardNames.has("Expert Specialist Award"),
+    },
+  };
+
+  return {
+    awards: awardProgressList,
+    metaAwards,
+    totalCompleted: awardProgressList.filter((a) => a.isComplete).length,
+  };
 }
 
 export async function grantAward(

@@ -412,6 +412,8 @@ void describe("Pug Template Rendering", () => {
       /^mixins\/loadingSpinner\.pug$/, // Mixin-only template
       /^mixins\/card\.pug$/, // Mixin-only template
       /^mixins\/errorAlert\.pug$/, // Mixin-only template
+      /^mixins\/progressBar\.pug$/, // Mixin-only template
+      /^mixins\/hoverCard\.pug$/, // Mixin-only template
       /^mixins\/errorMessage\.pug$/, // Mixin-only template
       /^activity\/activity-item\.pug$/, // Mixin-only template
       /^activity\/activity-list-partial\.pug$/, // Partial template for HTMX pagination
