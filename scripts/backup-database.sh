@@ -121,6 +121,36 @@ BACKUP_FILE="${BACKUP_DIR}/database_${TIMESTAMP}.db"
 
 log "Starting ${BACKUP_TYPE} backup to ${BACKUP_FILE}"
 
+# Check source database integrity BEFORE backing up corrupted data
+log "Checking source database integrity..."
+SOURCE_INTEGRITY=$(sqlite3 "${DB_PATH}" "PRAGMA integrity_check;" 2>&1)
+
+if [ "${SOURCE_INTEGRITY}" != "ok" ]; then
+    log_error "SOURCE DATABASE CORRUPTED! Will not create backup of corrupted data."
+    log_error "Integrity check output: ${SOURCE_INTEGRITY}"
+
+    # Send critical alert
+    send_alert "🚨 CRITICAL: Database Corruption Detected During Backup" \
+        "Database corruption was detected during ${BACKUP_TYPE} backup at ${TIMESTAMP}.
+
+SOURCE DATABASE IS CORRUPTED - backup aborted to prevent backing up corrupted data.
+
+Integrity check output:
+${SOURCE_INTEGRITY}
+
+IMMEDIATE ACTION REQUIRED:
+1. Run health check: /opt/basny/scripts/check-database-health.sh
+2. Review recovery procedures in /opt/basny/infrastructure/README.md
+3. Consider using .recover to create clean database
+
+Database: ${DB_PATH}
+Timestamp: ${TIMESTAMP}"
+
+    exit 1
+fi
+
+log_success "Source database integrity verified"
+
 # Create backup using SQLite .backup command (ensures consistency)
 if ! sqlite3 "${DB_PATH}" ".backup '${BACKUP_FILE}'" 2>&1 | tee -a "${LOG_FILE}"; then
     log_error "Backup creation failed"
