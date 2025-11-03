@@ -100,6 +100,33 @@ export const listSpecies = async (req: MulmRequest, res: Response) => {
 };
 
 /**
+ * GET /admin/species/:id/synonyms
+ * Returns HTML fragment with synonyms for hovercard
+ */
+export const getSpeciesSynonyms = async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+
+  if (!viewer?.is_admin) {
+    res.status(403).send("Admin access required");
+    return;
+  }
+
+  const groupId = parseInt(req.params.id, 10);
+  if (isNaN(groupId)) {
+    res.status(400).send("Invalid species ID");
+    return;
+  }
+
+  const names = await getNamesForGroup(groupId);
+
+  // Render the hovercard content
+  res.render("admin/speciesSynonymsHovercard", {
+    commonNames: names.common_names,
+    scientificNames: names.scientific_names,
+  });
+};
+
+/**
  * GET /admin/species/:groupId/edit
  * Render edit sidebar for species (HTMX partial)
  */

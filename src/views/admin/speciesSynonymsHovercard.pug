@@ -1,0 +1,19 @@
+//- Hovercard content showing species synonyms
+//- Used by HTMX to fetch and display synonym lists
+
+if commonNames && commonNames.length > 0
+	div
+		h4.font-semibold.text-gray-900.mb-1 Common Names
+		ul.list-disc.list-inside.text-sm.space-y-0.5
+			each name in commonNames
+				li= name.common_name
+
+if scientificNames && scientificNames.length > 0
+	div
+		h4.font-semibold.text-gray-900.mb-1 Scientific Names
+		ul.list-disc.list-inside.text-sm.space-y-0.5.italic
+			each name in scientificNames
+				li= name.scientific_name
+
+if (!commonNames || commonNames.length === 0) && (!scientificNames || scientificNames.length === 0)
+	p.text-sm.text-gray-500.italic No synonyms recorded

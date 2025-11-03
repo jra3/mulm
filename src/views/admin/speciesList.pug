@@ -2,6 +2,7 @@ include ../header.pug
 include adminNav.pug
 include ../mixins/emptyState.pug
 include ../mixins/iucnBadge.pug
+include ../mixins/hoverCard.pug
 
 - const stringCell = ['p-3', 'text-left', 'border-b', 'border-gray-200'];
 - const heading = ['p-3', 'text-left', 'font-bold', 'text-gray-900', 'border-b-2', 'border-gray-300', 'bg-gray-50', 'cursor-pointer', 'select-none', 'hover:bg-gray-100'];
@@ -29,14 +30,32 @@ mixin speciesTable(speciesList)
             td(class=stringCell + ' text-center')
               input(type="checkbox" name="groupIds" value=item.group_id class="species-checkbox cursor-pointer" hx-on:change="this.closest('form').dispatchEvent(new Event('change', {bubbles: true}));")
             td(class=stringCell)
-              - const synonymList = item.synonyms ? item.synonyms.map(s => `${s.common_name} (${s.scientific_name})`).join('\n') : '';
-              a.link.font-semibold(
-                href=`/admin/species/${item.group_id}/edit`
-                title=synonymList
-              )
-                = `${item.canonical_genus} ${item.canonical_species_name}`
-                if item.synonym_count > 0
-                  span.ml-1.text-xs.text-gray-500.font-normal (#{item.synonym_count})
+              if item.synonym_count > 0
+                +hoverCard({id: `species-${item.group_id}`, side: 'right', width: 'md', openDelay: 300})
+                  +hoverCardTrigger()
+                    a.link.font-semibold(href=`/admin/species/${item.group_id}/edit`)
+                      = `${item.canonical_genus} ${item.canonical_species_name}`
+                      span.ml-1.text-xs.text-gray-500.font-normal (#{item.synonym_count})
+                  +hoverCardContent({cardClasses: 'hovercard-blue-border'})
+                    if item.common_names && item.common_names.length > 0
+                      div
+                        h4.font-semibold.text-gray-900.mb-1 Common Names
+                        ul(class="list-disc list-inside text-sm space-y-0.5")
+                          each name in item.common_names
+                            li= name
+
+                    if item.scientific_names && item.scientific_names.length > 0
+                      div
+                        h4.font-semibold.text-gray-900.mb-1 Scientific Names
+                        ul(class="list-disc list-inside text-sm space-y-0.5 italic")
+                          each name in item.scientific_names
+                            li= name
+
+                    if (!item.common_names || item.common_names.length === 0) && (!item.scientific_names || item.scientific_names.length === 0)
+                      p.text-sm.text-gray-500.italic No synonyms recorded
+              else
+                a.link.font-semibold(href=`/admin/species/${item.group_id}/edit`)
+                  = `${item.canonical_genus} ${item.canonical_species_name}`
 
             td(class=stringCell)
               span.inline-block.px-2.py-1.text-xs.font-medium.bg-blue-100.text-blue-800.rounded-full
@@ -74,6 +93,8 @@ mixin speciesTable(speciesList)
 doctype html
 html
   +headTag(title)
+    link(rel='stylesheet', href='/components/hoverCard.css')
+    script(src='/js/hoverCard.js')
     script(src='/tablesort.min.js')
     script(src='/tablesort.number.min.js')
     script.

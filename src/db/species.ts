@@ -1343,6 +1343,57 @@ export async function getSpeciesForAdmin(
   const dataParams = [...params, limit, offset];
   const species = await query<SpeciesAdminListItem>(dataSql, dataParams);
 
+  // Fetch all synonyms for these species in batch
+  if (species.length > 0) {
+    const groupIds = species.map((s) => s.group_id);
+    const placeholders = groupIds.map(() => "?").join(",");
+
+    const [commonNames, scientificNames] = await Promise.all([
+      query<{ group_id: number; common_name: string }>(
+        `SELECT group_id, common_name
+         FROM species_common_name
+         WHERE group_id IN (${placeholders})
+         ORDER BY group_id, common_name`,
+        groupIds
+      ),
+      query<{ group_id: number; scientific_name: string }>(
+        `SELECT group_id, scientific_name
+         FROM species_scientific_name
+         WHERE group_id IN (${placeholders})
+         ORDER BY group_id, scientific_name`,
+        groupIds
+      ),
+    ]);
+
+    // Group synonyms by group_id
+    const commonByGroup = new Map<number, string[]>();
+    const scientificByGroup = new Map<number, string[]>();
+
+    commonNames.forEach((cn) => {
+      if (!commonByGroup.has(cn.group_id)) {
+        commonByGroup.set(cn.group_id, []);
+      }
+      commonByGroup.get(cn.group_id)!.push(cn.common_name);
+    });
+
+    scientificNames.forEach((sn) => {
+      if (!scientificByGroup.has(sn.group_id)) {
+        scientificByGroup.set(sn.group_id, []);
+      }
+      scientificByGroup.get(sn.group_id)!.push(sn.scientific_name);
+    });
+
+    // Attach to each species (safe to extend the object)
+    species.forEach((s) => {
+      const extended = s as SpeciesAdminListItem & {
+        common_names: string[];
+        scientific_names: string[];
+      };
+      extended.common_names = commonByGroup.get(s.group_id) || [];
+      extended.scientific_names = scientificByGroup.get(s.group_id) || [];
+    });
+  }
+
   return {
     species,
     total_count,
