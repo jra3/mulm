@@ -7,85 +7,90 @@ doctype html
 html
 	+headTag("HoverCard Demo")
 		//- Include HoverCard styles and script
-		link(rel='stylesheet', href='/hoverCard.css')
+		link(rel='stylesheet', href='/components/hoverCard.css')
 		script(src='/js/hoverCard.js')
 
 	body.bg-gray-50.text-gray-800
 		+pageHeader(false, "HoverCard Component Demo")
 
-		.container.mx-auto.px-4.py-8.max-w-4xl
+		.container.mx-auto.px-4.py-12.max-w-5xl
 
-			h1.text-3xl.font-bold.mb-2 HoverCard Component Demo
-			p.text-gray-600.mb-4
-				| A rich tooltip-like component inspired by shadcn's HoverCard,
-				| built with the native Popover API, HTMX, and minimal JavaScript.
+			//- Hero Section
+			.text-center.mb-16
+				h1.text-4xl.font-bold.mb-4.text-gray-900 HoverCard Component Demo
+				p.text-lg.text-gray-600.max-w-3xl.mx-auto
+					| A rich tooltip-like component inspired by shadcn's HoverCard,
+					| built with the native Popover API, HTMX, and minimal JavaScript.
 
 			//- Architecture Highlight
-			.bg-blue-50.border.border-blue-200.rounded-lg.p-4.mb-8
-				h3.font-semibold.text-blue-900.mb-2 🎯 HTMX-First Architecture
-				.text-sm.text-blue-800.space-y-1
-					p
-						strong Native Popover API:
-						|  Show/hide state, focus management, ESC key handling
-					p
-						strong HTMX (hx-on:):
-						|  Hover events, timers, user interactions
-					p
-						strong Lightweight JS:
-						|  Just positioning logic (~115 lines vs ~300 lines vanilla)
-					p.mt-2.text-xs.text-blue-600
-						| ✨ Result: Leverages browser features + HTMX patterns for a clean, maintainable solution
+			.bg-gradient-to-br.from-blue-50.to-indigo-50.border.border-blue-200.rounded-xl.p-6.mb-16.shadow-sm
+				.flex.items-start.gap-4
+					.text-3xl 🎯
+					div.flex-1
+						h3.font-semibold.text-blue-900.mb-3.text-lg HTMX-First Architecture
+						.grid.md_grid-cols-3.gap-4.text-sm.text-blue-900
+							div
+								.font-semibold.mb-1 Native Popover API
+								.text-blue-700.text-xs Show/hide state, focus management, ESC key handling
+							div
+								.font-semibold.mb-1 HTMX (hx-on:)
+								.text-blue-700.text-xs Hover events, timers, user interactions
+							div
+								.font-semibold.mb-1 Lightweight JS
+								.text-blue-700.text-xs Just positioning logic (~115 lines vs ~300 lines vanilla)
+						.mt-4.text-xs.text-blue-600.font-medium
+							| ✨ Result: Leverages browser features + HTMX patterns for a clean, maintainable solution
 
 			//- Basic Example
-			section.mb-12
-				h2.text-2xl.font-semibold.mb-3.text-gray-800 1. Basic HoverCard
-				p.text-sm.text-gray-600.mb-4
-					strong Usage:
-					|  Simple hover card with text content
+			section.mb-16
+				.mb-6
+					h2.text-3xl.font-bold.mb-2.text-gray-900 1. Basic HoverCard
+					p.text-gray-600
+						span.font-semibold.text-gray-700 Usage:
+						|  Simple hover card with text content
 
-				.bg-white.p-6.rounded-lg.border.border-gray-200
-					p.mb-4 Hover over the link below to see a basic hover card:
-
-					+hoverCard({id: 'basic-example', side: 'top'})
-						+hoverCardTrigger()
-							a.link(href="#") @brooklynaquarium
-						+hoverCardContent()
-							h3 Brooklyn Aquarium Society
-							p Founded in 1911, BASNY is one of the oldest aquarium societies in North America.
+				.bg-white.p-8.rounded-xl.border.border-gray-200.shadow-sm
+					p.text-base.mb-0 Hover over the link below to see a basic hover card:
+					p.text-base.mt-4
+						+hoverCard({id: 'basic-example', side: 'top'})
+							+hoverCardTrigger()
+								a.link(href="#") @brooklynaquarium
+							+hoverCardContent({cardClasses: 'hovercard-blue-border'})
+								h3 Brooklyn Aquarium Society
+								p Founded in 1911, BASNY is one of the oldest aquarium societies in North America.
 
 			//- Species Info Example
-			section.mb-12
-				h2.text-2xl.font-semibold.mb-3.text-gray-800 2. Species Information
-				p.text-sm.text-gray-600.mb-4
-					strong Use case:
-					|  Hover over a species name to see detailed information
+			section.mb-16
+				.mb-6
+					h2.text-3xl.font-bold.mb-2.text-gray-900 2. Species Information
+					p.text-gray-600
+						span.font-semibold.text-gray-700 Use case:
+						|  Hover over a species name to see detailed information
 
-				.bg-white.p-6.rounded-lg.border.border-gray-200
-					p.mb-4 I recently bred
+				.bg-white.p-8.rounded-xl.border.border-gray-200.shadow-sm
+					p.text-base.mb-0 I recently bred
 						|
 						+hoverCard({id: 'species-example', side: 'top', width: 'lg'})
 							+hoverCardTrigger()
 								a.link(href="#")
 									em Corydoras paleatus
-							+hoverCardContent({width: 'lg'})
-								.flex.items-start.gap-3
-									.flex-1
-										h3 Peppered Corydoras
-										p.italic.text-xs.text-gray-500.mb-2 Corydoras paleatus
-										p
-											| A popular armored catfish from South America.
-											| Hardy and peaceful, ideal for beginners.
-										hr
-										.text-xs.space-y-1
-											div
-												strong Class:
-												|  B (15 points)
-											div
-												strong Origin:
-												|  Brazil, Argentina, Uruguay
-											div
-												strong Max Size:
-												|  2.5 inches
+							+hoverCardContent({width: 'lg', cardClasses: 'hovercard-green-border'})
+								h3 Peppered Corydoras
+								p.italic.text-xs.text-gray-500 Corydoras paleatus
+								p.mt-2
+									| A popular armored catfish from South America.
+									| Hardy and peaceful, ideal for beginners.
+								hr
+								.grid.grid-cols-2.gap-x-4.gap-y-2.text-sm
+									div
+										div(class="text-xs text-gray-500 mb-0.5")= 'Class'
+										div(class="font-medium text-gray-900")= 'B (15 points)'
+									div
+										div(class="text-xs text-gray-500 mb-0.5")= 'Max Size'
+										div(class="font-medium text-gray-900")= '2.5 inches'
+									div.col-span-2
+										div(class="text-xs text-gray-500 mb-0.5")= 'Origin'
+										div(class="font-medium text-gray-900")= 'Brazil, Argentina, Uruguay'
 						|
 						| and
 						|
@@ -93,81 +98,83 @@ html
 							+hoverCardTrigger()
 								a.link(href="#")
 									em Apistogramma cacatuoides
-							+hoverCardContent({width: 'lg'})
+							+hoverCardContent({width: 'lg', cardClasses: 'hovercard-purple-border'})
 								h3 Cockatoo Dwarf Cichlid
-								p.italic.text-xs.text-gray-500.mb-2 Apistogramma cacatuoides
-								p
+								p.italic.text-xs.text-gray-500 Apistogramma cacatuoides
+								p.mt-2
 									| A colorful dwarf cichlid from the Amazon basin.
 									| Males display spectacular fin extensions.
 								hr
-								.text-xs.space-y-1
+								.grid.grid-cols-2.gap-x-4.gap-y-2.text-sm
 									div
-										strong Class:
-										|  C (30 points)
+										div(class="text-xs text-gray-500 mb-0.5")= 'Class'
+										div(class="font-medium text-gray-900")= 'C (30 points)'
 									div
-										strong Origin:
-										|  Peru, Colombia, Brazil
-									div
-										strong Max Size:
-										|  3-4 inches (male), 2 inches (female)
+										div(class="text-xs text-gray-500 mb-0.5")= 'Max Size'
+										div(class="font-medium text-gray-900")= '3-4" (M), 2" (F)'
+									div.col-span-2
+										div(class="text-xs text-gray-500 mb-0.5")= 'Origin'
+										div(class="font-medium text-gray-900")= 'Peru, Colombia, Brazil'
 						|  this year.
 
 			//- Member Profile Example
-			section.mb-12
-				h2.text-2xl.font-semibold.mb-3.text-gray-800 3. Member Profile Preview
-				p.text-sm.text-gray-600.mb-4
-					strong Use case:
-					|  Preview member information without navigation
+			section.mb-16
+				.mb-6
+					h2.text-3xl.font-bold.mb-2.text-gray-900 3. Member Profile Preview
+					p.text-gray-600
+						span.font-semibold.text-gray-700 Use case:
+						|  Preview member information without navigation
 
-				.bg-white.p-6.rounded-lg.border.border-gray-200
-					p.mb-4 Top contributors this month:
+				.bg-white.p-8.rounded-xl.border.border-gray-200.shadow-sm
+					p.text-base.mb-6 Top contributors this month:
 
 					.flex.flex-wrap.gap-4
 						+hoverCard({id: 'member-1', side: 'bottom', openDelay: 300})
 							+hoverCardTrigger()
 								button.outline(type="button") John Smith
-							+hoverCardContent()
+							+hoverCardContent({cardClasses: 'hovercard-amber-border'})
 								h3 John Smith
-								p.text-xs.text-gray-500.mb-2 Member since 2015
+								p.text-xs.text-gray-500 Member since 2015
 								hr
-								.space-y-1.text-xs
+								.grid.grid-cols-2.gap-x-4.gap-y-2.text-sm
 									div
-										strong Fish Level:
-										|  Gold (450 pts)
+										div(class="text-xs text-gray-500 mb-0.5")= 'Fish Level'
+										div(class="font-medium text-amber-600")= 'Gold (450 pts)'
 									div
-										strong Plant Level:
-										|  Silver (120 pts)
-									div
-										strong Submissions:
-										|  89 approved
+										div(class="text-xs text-gray-500 mb-0.5")= 'Plant Level'
+										div(class="font-medium text-gray-400")= 'Silver (120 pts)'
+									div.col-span-2
+										div(class="text-xs text-gray-500 mb-0.5")= 'Submissions'
+										div(class="font-medium text-gray-900")= '89 approved'
 
 						+hoverCard({id: 'member-2', side: 'bottom', openDelay: 300})
 							+hoverCardTrigger()
 								button.outline(type="button") Jane Doe
 							+hoverCardContent()
 								h3 Jane Doe
-								p.text-xs.text-gray-500.mb-2 Member since 2018
+								p.text-xs.text-gray-500 Member since 2018
 								hr
-								.space-y-1.text-xs
+								.grid.grid-cols-2.gap-x-4.gap-y-2.text-sm
 									div
-										strong Fish Level:
-										|  Silver (250 pts)
+										div(class="text-xs text-gray-500 mb-0.5")= 'Fish Level'
+										div(class="font-medium text-gray-400")= 'Silver (250 pts)'
 									div
-										strong Plant Level:
-										|  Bronze (45 pts)
-									div
-										strong Submissions:
-										|  52 approved
+										div(class="text-xs text-gray-500 mb-0.5")= 'Plant Level'
+										div(class="font-medium text-amber-700")= 'Bronze (45 pts)'
+									div.col-span-2
+										div(class="text-xs text-gray-500 mb-0.5")= 'Submissions'
+										div(class="font-medium text-gray-900")= '52 approved'
 
 			//- Badge Explanation Example
-			section.mb-12
-				h2.text-2xl.font-semibold.mb-3.text-gray-800 4. Badge Explanations
-				p.text-sm.text-gray-600.mb-4
-					strong Use case:
-					|  Explain badges and icons on hover
+			section.mb-16
+				.mb-6
+					h2.text-3xl.font-bold.mb-2.text-gray-900 4. Badge Explanations
+					p.text-gray-600
+						span.font-semibold.text-gray-700 Use case:
+						|  Explain badges and icons on hover
 
-				.bg-white.p-6.rounded-lg.border.border-gray-200
-					p.mb-4 Species status indicators:
+				.bg-white.p-8.rounded-xl.border.border-gray-200.shadow-sm
+					p.text-base.mb-6 Species status indicators:
 
 					.flex.items-center.gap-4
 						.flex.items-center.gap-2
@@ -193,13 +200,14 @@ html
 										| due to threats in its natural habitat.
 
 			//- Different Positions Example
-			section.mb-12
-				h2.text-2xl.font-semibold.mb-3.text-gray-800 5. Positioning
-				p.text-sm.text-gray-600.mb-4
-					strong Feature:
-					|  Smart positioning with fallback sides
+			section.mb-16
+				.mb-6
+					h2.text-3xl.font-bold.mb-2.text-gray-900 5. Positioning
+					p.text-gray-600
+						span.font-semibold.text-gray-700 Feature:
+						|  Smart positioning with automatic viewport collision detection
 
-				.bg-white.p-12.rounded-lg.border.border-gray-200
+				.bg-white.p-12.rounded-xl.border.border-gray-200.shadow-sm
 					.grid.grid-cols-3.gap-8.place-items-center
 
 						//- Top
@@ -236,58 +244,60 @@ html
 									p.text-xs Will flip if no space
 
 			//- Rich Content Example
-			section.mb-12
-				h2.text-2xl.font-semibold.mb-3.text-gray-800 6. Rich Content
-				p.text-sm.text-gray-600.mb-4
-					strong Feature:
-					|  Support for complex HTML content
+			section.mb-16
+				.mb-6
+					h2.text-3xl.font-bold.mb-2.text-gray-900 6. Rich Content
+					p.text-gray-600
+						span.font-semibold.text-gray-700 Feature:
+						|  Support for complex HTML content
 
-				.bg-white.p-6.rounded-lg.border.border-gray-200
-					p.mb-4 Hover to see a rich content card:
+				.bg-white.p-8.rounded-xl.border.border-gray-200.shadow-sm
+					p.text-base.mb-6 Hover to see a rich content card:
 
 					+hoverCard({id: 'rich-content', side: 'top', width: 'xl'})
 						+hoverCardTrigger()
 							button(type="button") View Breeding Setup
-						+hoverCardContent({width: 'xl'})
+						+hoverCardContent({width: 'xl', cardClasses: 'hovercard-bordered'})
 							h3 Breeding Setup for Corydoras paleatus
-							p.text-xs.text-gray-500.mb-2 Successful spawn on March 15, 2024
+							p.text-xs.text-gray-500 Successful spawn on March 15, 2024
 
 							hr
 
-							.grid.grid-cols-2.gap-4.text-xs
+							.grid.grid-cols-2.gap-4.text-sm
 								div
-									strong Tank Size:
-									p 20 gallons
+									div(class="text-xs text-gray-500 mb-0.5")= 'Tank Size'
+									div(class="font-medium text-gray-900")= '20 gallons'
 								div
-									strong Temperature:
-									p 72°F (cooled from 76°F)
+									div(class="text-xs text-gray-500 mb-0.5")= 'Temperature'
+									div(class="font-medium text-gray-900")= '72°F (cooled from 76°F)'
 								div
-									strong pH:
-									p 6.8
+									div(class="text-xs text-gray-500 mb-0.5")= 'pH'
+									div(class="font-medium text-gray-900")= '6.8'
 								div
-									strong Hardness:
-									p 150 ppm
-								div
-									strong Diet:
-									p Live blackworms, frozen bloodworms
-								div
-									strong Conditioning:
-									p 2 weeks of heavy feeding
+									div(class="text-xs text-gray-500 mb-0.5")= 'Hardness'
+									div(class="font-medium text-gray-900")= '150 ppm'
+								div.col-span-2
+									div(class="text-xs text-gray-500 mb-0.5")= 'Diet'
+									div(class="font-medium text-gray-900")= 'Live blackworms, frozen bloodworms'
+								div.col-span-2
+									div(class="text-xs text-gray-500 mb-0.5")= 'Conditioning'
+									div(class="font-medium text-gray-900")= '2 weeks of heavy feeding'
 
 							hr
 
-							p.text-xs
-								strong Results:
-								|  ~150 eggs, 80% hatch rate, 50+ fry to 1/4"
+							div
+								div(class="text-xs text-gray-500 mb-1")= 'Results'
+								div(class="text-sm font-medium text-green-700")= '~150 eggs, 80% hatch rate, 50+ fry to 1/4"'
 
 			//- Accessibility Example
-			section.mb-12
-				h2.text-2xl.font-semibold.mb-3.text-gray-800 7. Accessibility Features
-				p.text-sm.text-gray-600.mb-4
-					strong Built-in:
-					|  Keyboard navigation, ARIA attributes, focus management
+			section.mb-16
+				.mb-6
+					h2.text-3xl.font-bold.mb-2.text-gray-900 7. Accessibility Features
+					p.text-gray-600
+						span.font-semibold.text-gray-700 Built-in:
+						|  Keyboard navigation, ARIA attributes, focus management
 
-				.bg-white.p-6.rounded-lg.border.border-gray-200
+				.bg-white.p-8.rounded-xl.border.border-gray-200.shadow-sm
 					.space-y-4
 						div
 							strong Keyboard Support:
@@ -315,13 +325,14 @@ html
 									p.text-xs Each has independent hover state
 
 			//- Configuration Options
-			section.mb-12
-				h2.text-2xl.font-semibold.mb-3.text-gray-800 8. Configuration Options
-				p.text-sm.text-gray-600.mb-4
-					strong Customization:
-					|  Delays, widths, and positioning
+			section.mb-16
+				.mb-6
+					h2.text-3xl.font-bold.mb-2.text-gray-900 8. Configuration Options
+					p.text-gray-600
+						span.font-semibold.text-gray-700 Customization:
+						|  Delays, widths, and positioning
 
-				.bg-white.p-6.rounded-lg.border.border-gray-200
+				.bg-white.p-8.rounded-xl.border.border-gray-200.shadow-sm
 					.space-y-4
 						div
 							strong Instant (no delay):
@@ -370,10 +381,50 @@ html
 									+hoverCardContent({width: 'xl'})
 										p Extra large width (500px)
 
+						div
+							strong Border styles:
+							.flex.gap-4.mt-2.flex-wrap
+								+hoverCard({id: 'border-default', side: 'top'})
+									+hoverCardTrigger()
+										button.outline(type="button") Default
+									+hoverCardContent()
+										p Standard border (1px gray)
+
+								+hoverCard({id: 'border-thick', side: 'top'})
+									+hoverCardTrigger()
+										button.outline(type="button") Thick
+									+hoverCardContent({cardClasses: 'hovercard-bordered'})
+										p Thicker border (2px gray)
+
+								+hoverCard({id: 'border-blue', side: 'top'})
+									+hoverCardTrigger()
+										button.outline(type="button") Blue
+									+hoverCardContent({cardClasses: 'hovercard-blue-border'})
+										p Blue accent border
+
+								+hoverCard({id: 'border-green', side: 'top'})
+									+hoverCardTrigger()
+										button.outline(type="button") Green
+									+hoverCardContent({cardClasses: 'hovercard-green-border'})
+										p Green accent border
+
+								+hoverCard({id: 'border-purple', side: 'top'})
+									+hoverCardTrigger()
+										button.outline(type="button") Purple
+									+hoverCardContent({cardClasses: 'hovercard-purple-border'})
+										p Purple accent border
+
+								+hoverCard({id: 'border-amber', side: 'top'})
+									+hoverCardTrigger()
+										button.outline(type="button") Amber
+									+hoverCardContent({cardClasses: 'hovercard-amber-border'})
+										p Amber accent border
+
 			//- Implementation Guide
-			section.mb-8
-				h2.text-2xl.font-semibold.mb-3.text-gray-800 Implementation Guide
-				.bg-white.p-6.rounded-lg.border.border-gray-200
+			section.mb-16
+				.mb-6
+					h2.text-3xl.font-bold.mb-2.text-gray-900 Implementation Guide
+				.bg-white.p-8.rounded-xl.border.border-gray-200.shadow-sm
 
 					h3.font-semibold.mb-3 Architecture:
 					.text-sm.mb-4
