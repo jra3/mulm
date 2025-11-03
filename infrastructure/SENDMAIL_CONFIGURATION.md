@@ -138,7 +138,7 @@ Cron automatically emails output to the user if there's any stdout/stderr. With 
 
 **Explicit email recipient:**
 ```cron
-MAILTO=jallen@porcnick.com
+MAILTO=YOUR_EMAIL@example.com
 0 6 * * * /opt/basny/scripts/check-database-health.sh
 ```
 
