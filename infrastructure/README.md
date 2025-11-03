@@ -34,7 +34,8 @@ AWS EC2-based infrastructure deployed with AWS CDK.
 - **Platform**: AWS EC2 (t3.micro) with 20GB EBS volume
 - **IP**: 98.91.62.199 (Elastic IP)
 - **Data Volume**: vol-0aba5b85a1582b2c0 (8GB, persistent across all deployments)
-- **SSH**: Connect via `ssh BAP` (configured in ~/.ssh/config)
+- **SSH**: Connect via `ssh BAP` (Tailscale-only for security - see [Tailscale Migration Guide](TAILSCALE_MIGRATION.md))
+- **Emergency Access**: AWS Systems Manager Session Manager (no SSH needed)
 - **Location**: `/opt/basny` (application code), `/mnt/basny-data` (persistent data)
 - **CDK Stack**: Infrastructure defined in `infrastructure/` directory
 
@@ -332,6 +333,28 @@ aws --profile basny ec2 create-snapshot \
 4. Verify data integrity
 
 See [Infrastructure Guide](https://github.com/jra3/mulm/wiki/Infrastructure-Guide) for detailed steps.
+
+## SSH Access & Security
+
+**SSH access is Tailscale-only** for improved security. Public SSH (port 22) is closed to the internet.
+
+### Quick Start
+
+```bash
+# Connect via Tailscale (ensure Tailscale is running)
+ssh BAP
+
+# Emergency access (if Tailscale is down)
+aws --profile basny ssm start-session --target $(aws --profile basny ec2 describe-instances --filters "Name=tag:Name,Values=BASNY-Production" --query 'Reservations[0].Instances[0].InstanceId' --output text)
+```
+
+### First-Time Setup
+
+If you haven't migrated to Tailscale yet, see **[Tailscale Migration Guide](TAILSCALE_MIGRATION.md)** for:
+- Installing Tailscale on the server
+- Closing public SSH port
+- Configuring emergency SSM access
+- Rollback procedures
 
 ## CDK Infrastructure Deployment
 

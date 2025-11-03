@@ -57,12 +57,19 @@ export class InfrastructureStack extends cdk.Stack {
 			allowAllOutbound: true,
 		});
 
-		// Allow SSH access (restrict this to your IP in production)
-		securityGroup.addIngressRule(
-			ec2.Peer.anyIpv4(),
-			ec2.Port.tcp(22),
-			'Allow SSH access'
-		);
+		// ⚠️ SSH ACCESS VIA TAILSCALE ONLY ⚠️
+		// Public SSH access (port 22) is intentionally NOT allowed
+		// SSH is only accessible via Tailscale for improved security
+		// Emergency access: Use AWS Systems Manager Session Manager
+		//   aws ssm start-session --target <instance-id> --profile basny
+		//
+		// To re-enable public SSH temporarily (NOT RECOMMENDED):
+		//   Uncomment the following lines and redeploy:
+		// securityGroup.addIngressRule(
+		// 	ec2.Peer.anyIpv4(),
+		// 	ec2.Port.tcp(22),
+		// 	'Allow SSH access (TEMPORARY - REMOVE AFTER USE)'
+		// );
 
 		// Allow HTTP traffic
 		securityGroup.addIngressRule(
