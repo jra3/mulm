@@ -58,13 +58,6 @@ type SpeciesNameGroup = {
   is_cares_species: number;
 };
 
-type SpeciesName = {
-  name_id: number;
-  group_id: number;
-  common_name: string;
-  scientific_name: string;
-};
-
 // Tool argument types
 type CreateSpeciesGroupArgs = {
   program_class: string;
@@ -352,10 +345,8 @@ export function initializeSpeciesServer(server: Server): void {
         if (groups.length === 0) {
           throw new Error(`Species group ${groupId} not found`);
         }
-        const synonyms = await query<SpeciesName>(
-          "SELECT * FROM species_name WHERE group_id = ? ORDER BY common_name",
-          [groupId]
-        );
+        // Use getSynonymsForGroup which handles the split tables
+        const synonyms = await getSynonymsForGroup(groupId);
         return {
           contents: [
             {
@@ -432,20 +423,41 @@ export function initializeSpeciesServer(server: Server): void {
       const nameMatch = uri.match(/^species:\/\/names\/(\d+)$/);
       if (nameMatch) {
         const nameId = parseInt(nameMatch[1]);
-        const names = await query<
-          SpeciesName & {
-            program_class: string;
-            canonical_genus: string;
-            canonical_species_name: string;
-            species_type: string;
-          }
-        >(
-          `SELECT sn.*, sng.program_class, sng.canonical_genus, sng.canonical_species_name, sng.species_type
-           FROM species_name sn
-           JOIN species_name_group sng ON sn.group_id = sng.group_id
-           WHERE sn.name_id = ?`,
+
+        // Common type for both tables
+        type NameResult = {
+          name_id: number;
+          group_id: number;
+          common_name: string;
+          scientific_name: string;
+          program_class: string;
+          canonical_genus: string;
+          canonical_species_name: string;
+          species_type: string;
+        };
+
+        // Try common_name table first
+        let names = await query<NameResult>(
+          `SELECT cn.common_name_id as name_id, cn.group_id, cn.common_name, '' as scientific_name,
+                  sng.program_class, sng.canonical_genus, sng.canonical_species_name, sng.species_type
+           FROM species_common_name cn
+           JOIN species_name_group sng ON cn.group_id = sng.group_id
+           WHERE cn.common_name_id = ?`,
           [nameId]
         );
+
+        // If not found, try scientific_name table
+        if (names.length === 0) {
+          names = await query<NameResult>(
+            `SELECT sn.scientific_name_id as name_id, sn.group_id, '' as common_name, sn.scientific_name,
+                    sng.program_class, sng.canonical_genus, sng.canonical_species_name, sng.species_type
+             FROM species_scientific_name sn
+             JOIN species_name_group sng ON sn.group_id = sng.group_id
+             WHERE sn.scientific_name_id = ?`,
+            [nameId]
+          );
+        }
+
         if (names.length === 0) {
           throw new Error(`Species name ${nameId} not found`);
         }
@@ -1734,18 +1746,25 @@ async function handleUpdateCanonicalName(args: UpdateCanonicalNameArgs) {
     await updateStmt.run(...values);
     await updateStmt.finalize();
 
-    // Create synonym with old name
+    // Create synonym with old name in both split tables
     if (preserve_old_as_synonym) {
-      const insertStmt = await db.prepare(`
-        INSERT INTO species_name (group_id, common_name, scientific_name)
-        VALUES (?, ?, ?)
+      const oldName = `${oldGroup.canonical_genus} ${oldGroup.canonical_species_name}`;
+
+      // Insert into species_common_name
+      const insertCommonStmt = await db.prepare(`
+        INSERT INTO species_common_name (group_id, common_name)
+        VALUES (?, ?)
       `);
-      await insertStmt.run(
-        group_id,
-        `${oldGroup.canonical_genus} ${oldGroup.canonical_species_name}`,
-        `${oldGroup.canonical_genus} ${oldGroup.canonical_species_name}`
-      );
-      await insertStmt.finalize();
+      await insertCommonStmt.run(group_id, oldName);
+      await insertCommonStmt.finalize();
+
+      // Insert into species_scientific_name
+      const insertScientificStmt = await db.prepare(`
+        INSERT INTO species_scientific_name (group_id, scientific_name)
+        VALUES (?, ?)
+      `);
+      await insertScientificStmt.run(group_id, oldName);
+      await insertScientificStmt.finalize();
     }
   });
 

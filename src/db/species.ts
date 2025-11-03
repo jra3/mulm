@@ -774,20 +774,57 @@ export async function getNamesForGroup(groupId: number): Promise<SpeciesNames> {
  * After migration 030, returns empty array since species_name table no longer exists
  */
 export async function getSynonymsForGroup(groupId: number): Promise<SpeciesSynonym[]> {
-  try {
-    return await query<SpeciesSynonym>(
-      `
-      SELECT name_id, group_id, common_name, scientific_name
-      FROM species_name
-      WHERE group_id = ?
-      ORDER BY common_name, scientific_name
-    `,
+  // Post-migration 030: species_name table no longer exists
+  // Return data from split tables (species_common_name and species_scientific_name)
+
+  const [commonNames, scientificNames] = await Promise.all([
+    query<{ common_name_id: number; group_id: number; common_name: string }>(
+      "SELECT common_name_id, group_id, common_name FROM species_common_name WHERE group_id = ? ORDER BY common_name",
       [groupId]
-    );
-  } catch {
-    // Table doesn't exist (post-migration 030)
-    return [];
+    ),
+    query<{ scientific_name_id: number; group_id: number; scientific_name: string }>(
+      "SELECT scientific_name_id, group_id, scientific_name FROM species_scientific_name WHERE group_id = ? ORDER BY scientific_name",
+      [groupId]
+    ),
+  ]);
+
+  // Return cross-product of common names × scientific names
+  // This maintains backward compatibility with the old paired model
+  const results: SpeciesSynonym[] = [];
+
+  if (commonNames.length === 0 || scientificNames.length === 0) {
+    // If either is empty, pair whatever exists with empty string
+    for (const cn of commonNames) {
+      results.push({
+        name_id: cn.common_name_id,
+        group_id: cn.group_id,
+        common_name: cn.common_name,
+        scientific_name: "",
+      });
+    }
+    for (const sn of scientificNames) {
+      results.push({
+        name_id: sn.scientific_name_id,
+        group_id: sn.group_id,
+        common_name: "",
+        scientific_name: sn.scientific_name,
+      });
+    }
+  } else {
+    // Create cross product of all common names with all scientific names
+    for (const cn of commonNames) {
+      for (const sn of scientificNames) {
+        results.push({
+          name_id: cn.common_name_id, // Use common_name_id as the ID
+          group_id: cn.group_id,
+          common_name: cn.common_name,
+          scientific_name: sn.scientific_name,
+        });
+      }
+    }
   }
+
+  return results;
 }
 
 /**
@@ -1028,7 +1065,9 @@ export async function addSynonym(
   commonName: string,
   scientificName: string
 ): Promise<number> {
-  // Validate inputs
+  // Post-migration 030: Insert into both split tables
+  // Returns the common_name_id as the primary identifier
+
   const trimmedCommon = commonName.trim();
   const trimmedScientific = scientificName.trim();
 
@@ -1047,37 +1086,23 @@ export async function addSynonym(
   }
 
   try {
-    const conn = writeConn;
-    const stmt = await conn.prepare(`
-      INSERT INTO species_name (group_id, common_name, scientific_name)
-      VALUES (?, ?, ?)
-      RETURNING name_id
-    `);
+    // Add common name
+    const commonNameId = await addCommonName(groupId, trimmedCommon);
 
+    // Add scientific name (ignore duplicates since it might already exist)
     try {
-      const result = await stmt.get<{ name_id: number }>(groupId, trimmedCommon, trimmedScientific);
-
-      if (!result || !result.name_id) {
-        throw new Error("Failed to insert synonym");
+      await addScientificName(groupId, trimmedScientific);
+    } catch (err) {
+      // If scientific name already exists, that's OK - we still added the common name
+      if (!(err instanceof Error && err.message.includes("already exists"))) {
+        throw err;
       }
+    }
 
-      return result.name_id;
-    } finally {
-      await stmt.finalize();
-    }
+    return commonNameId;
   } catch (err) {
-    // Check for duplicate constraint error
-    if (err instanceof Error && err.message.includes("UNIQUE constraint")) {
+    if (err instanceof Error && err.message.includes("already exists")) {
       throw new Error(`Synonym "${trimmedCommon} (${trimmedScientific})" already exists`);
-    }
-    // After migration 030, table won't exist
-    if (
-      err instanceof Error &&
-      (err.message.includes("no such table") || err.message.includes("SQLITE_ERROR"))
-    ) {
-      throw new Error(
-        "Legacy species_name table has been removed. Use addCommonName() and addScientificName() instead."
-      );
     }
     logger.error("Failed to add synonym", err);
     throw new Error("Failed to add synonym");
@@ -1098,6 +1123,9 @@ export async function updateSynonym(
     scientificName?: string;
   }
 ): Promise<number> {
+  // Post-migration 030: nameId is always a common_name_id (from getSynonymsForGroup)
+  // This function only updates common names for backward compatibility
+
   const { commonName, scientificName } = updates;
 
   // At least one field must be provided
@@ -1105,50 +1133,19 @@ export async function updateSynonym(
     throw new Error("At least one field (commonName or scientificName) must be provided");
   }
 
-  const fields: string[] = [];
-  const values: unknown[] = [];
+  // Only common name updates are supported via this wrapper
+  // (nameId comes from getSynonymsForGroup which returns common_name_id)
+  if (scientificName !== undefined) {
+    throw new Error(
+      "updateSynonym() only supports updating common names. Use updateScientificName() directly to update scientific names."
+    );
+  }
 
   if (commonName !== undefined) {
-    const trimmed = commonName.trim();
-    if (!trimmed) {
-      throw new Error("Common name cannot be empty");
-    }
-    fields.push("common_name = ?");
-    values.push(trimmed);
+    return await updateCommonName(nameId, commonName);
   }
 
-  if (scientificName !== undefined) {
-    const trimmed = scientificName.trim();
-    if (!trimmed) {
-      throw new Error("Scientific name cannot be empty");
-    }
-    fields.push("scientific_name = ?");
-    values.push(trimmed);
-  }
-
-  values.push(nameId);
-
-  try {
-    const conn = writeConn;
-    const stmt = await conn.prepare(`
-      UPDATE species_name
-      SET ${fields.join(", ")}
-      WHERE name_id = ?
-    `);
-
-    try {
-      const result = await stmt.run(...values);
-      return result.changes || 0;
-    } finally {
-      await stmt.finalize();
-    }
-  } catch (err) {
-    if (err instanceof Error && err.message.includes("UNIQUE constraint")) {
-      throw new Error("This name combination already exists");
-    }
-    logger.error("Failed to update synonym", err);
-    throw new Error("Failed to update synonym");
-  }
+  return 0;
 }
 
 /**
@@ -1159,64 +1156,37 @@ export async function updateSynonym(
  * @throws Error if trying to delete last synonym without force flag
  */
 export async function deleteSynonym(nameId: number, force = false): Promise<number> {
-  // Get the synonym to check its group
-  const synonyms = await query<{ group_id: number; common_name: string; scientific_name: string }>(
-    "SELECT group_id, common_name, scientific_name FROM species_name WHERE name_id = ?",
+  // Post-migration 030: nameId is always a common_name_id (from getSynonymsForGroup)
+  // This function only deletes common names for backward compatibility
+
+  // Verify the common name exists and get its group
+  const commonNameRecords = await query<{ common_name_id: number; group_id: number }>(
+    "SELECT common_name_id, group_id FROM species_common_name WHERE common_name_id = ?",
     [nameId]
   );
 
-  if (synonyms.length === 0) {
-    throw new Error(`Synonym ${nameId} not found`);
+  if (commonNameRecords.length === 0) {
+    throw new Error(`Common name ID ${nameId} not found`);
   }
 
-  const synonym = synonyms[0];
+  const groupId = commonNameRecords[0].group_id;
 
-  // Check if this is the last synonym for the group
-  const groupSynonyms = await query<{ count: number }>(
-    "SELECT COUNT(*) as count FROM species_name WHERE group_id = ?",
-    [synonym.group_id]
-  );
-
-  const synonymCount = groupSynonyms[0]?.count || 0;
-
-  if (synonymCount <= 1 && !force) {
-    throw new Error(
-      "Cannot delete the last synonym for a species. Each species must have at least one name. Use force=true to delete anyway."
+  // Check if this is the last common name for the group (only if not force)
+  if (!force) {
+    const groupCommonNames = await query<{ count: number }>(
+      "SELECT COUNT(*) as count FROM species_common_name WHERE group_id = ?",
+      [groupId]
     );
-  }
 
-  // Check if any submissions use this specific name_id
-  const submissions = await query<{ count: number }>(
-    "SELECT COUNT(*) as count FROM submissions WHERE species_name_id = ?",
-    [nameId]
-  );
-
-  const submissionCount = submissions[0]?.count || 0;
-
-  try {
-    const conn = writeConn;
-    const stmt = await conn.prepare("DELETE FROM species_name WHERE name_id = ?");
-
-    try {
-      const result = await stmt.run(nameId);
-
-      if (submissionCount > 0) {
-        logger.warn("Deleted synonym used by submissions", {
-          nameId,
-          commonName: synonym.common_name,
-          scientificName: synonym.scientific_name,
-          submissionCount,
-        });
-      }
-
-      return result.changes || 0;
-    } finally {
-      await stmt.finalize();
+    const count = groupCommonNames[0]?.count || 0;
+    if (count <= 1) {
+      throw new Error(
+        "Cannot delete the last common name for a species. Each species must have at least one common name. Use force=true to delete anyway."
+      );
     }
-  } catch (err) {
-    logger.error("Failed to delete synonym", err);
-    throw new Error("Failed to delete synonym");
   }
+
+  return await deleteCommonName(nameId);
 }
 
 /**
