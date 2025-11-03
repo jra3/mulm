@@ -18,13 +18,12 @@ import { initializeMemberServer } from "./member-server-core";
 import { logger } from "../utils/logger";
 import config from "@/config.json";
 import path from "path";
-import { db } from "../db/conn";
 
 let serverInstance: ReturnType<typeof express.application.listen> | null = null;
 
-// Environment information from config and database
+// Environment information from config
 const domain = config.domain;
-const dbPath = String(db().name);
+const dbPath = config.databaseFile;
 const dbName = path.basename(dbPath);
 
 // Store transports by session ID for each server type

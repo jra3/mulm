@@ -1,0 +1,448 @@
+include header.pug
+include mixins/hoverCard.pug
+include mixins/iucnBadge.pug
+include mixins/caresBadge.pug
+
+doctype html
+html
+	+headTag("HoverCard Demo")
+		//- Include HoverCard styles and script
+		link(rel='stylesheet', href='/hoverCard.css')
+		script(src='/js/hoverCard.js')
+
+	body.bg-gray-50.text-gray-800
+		+pageHeader(false, "HoverCard Component Demo")
+
+		.container.mx-auto.px-4.py-8.max-w-4xl
+
+			h1.text-3xl.font-bold.mb-2 HoverCard Component Demo
+			p.text-gray-600.mb-4
+				| A rich tooltip-like component inspired by shadcn's HoverCard,
+				| built with the native Popover API, HTMX, and minimal JavaScript.
+
+			//- Architecture Highlight
+			.bg-blue-50.border.border-blue-200.rounded-lg.p-4.mb-8
+				h3.font-semibold.text-blue-900.mb-2 🎯 HTMX-First Architecture
+				.text-sm.text-blue-800.space-y-1
+					p
+						strong Native Popover API:
+						|  Show/hide state, focus management, ESC key handling
+					p
+						strong HTMX (hx-on:):
+						|  Hover events, timers, user interactions
+					p
+						strong Lightweight JS:
+						|  Just positioning logic (~115 lines vs ~300 lines vanilla)
+					p.mt-2.text-xs.text-blue-600
+						| ✨ Result: Leverages browser features + HTMX patterns for a clean, maintainable solution
+
+			//- Basic Example
+			section.mb-12
+				h2.text-2xl.font-semibold.mb-3.text-gray-800 1. Basic HoverCard
+				p.text-sm.text-gray-600.mb-4
+					strong Usage:
+					|  Simple hover card with text content
+
+				.bg-white.p-6.rounded-lg.border.border-gray-200
+					p.mb-4 Hover over the link below to see a basic hover card:
+
+					+hoverCard({id: 'basic-example', side: 'top'})
+						+hoverCardTrigger()
+							a.link(href="#") @brooklynaquarium
+						+hoverCardContent()
+							h3 Brooklyn Aquarium Society
+							p Founded in 1911, BASNY is one of the oldest aquarium societies in North America.
+
+			//- Species Info Example
+			section.mb-12
+				h2.text-2xl.font-semibold.mb-3.text-gray-800 2. Species Information
+				p.text-sm.text-gray-600.mb-4
+					strong Use case:
+					|  Hover over a species name to see detailed information
+
+				.bg-white.p-6.rounded-lg.border.border-gray-200
+					p.mb-4 I recently bred
+						|
+						+hoverCard({id: 'species-example', side: 'top', width: 'lg'})
+							+hoverCardTrigger()
+								a.link(href="#")
+									em Corydoras paleatus
+							+hoverCardContent({width: 'lg'})
+								.flex.items-start.gap-3
+									.flex-1
+										h3 Peppered Corydoras
+										p.italic.text-xs.text-gray-500.mb-2 Corydoras paleatus
+										p
+											| A popular armored catfish from South America.
+											| Hardy and peaceful, ideal for beginners.
+										hr
+										.text-xs.space-y-1
+											div
+												strong Class:
+												|  B (15 points)
+											div
+												strong Origin:
+												|  Brazil, Argentina, Uruguay
+											div
+												strong Max Size:
+												|  2.5 inches
+						|
+						| and
+						|
+						+hoverCard({id: 'species-example-2', side: 'bottom', width: 'lg'})
+							+hoverCardTrigger()
+								a.link(href="#")
+									em Apistogramma cacatuoides
+							+hoverCardContent({width: 'lg'})
+								h3 Cockatoo Dwarf Cichlid
+								p.italic.text-xs.text-gray-500.mb-2 Apistogramma cacatuoides
+								p
+									| A colorful dwarf cichlid from the Amazon basin.
+									| Males display spectacular fin extensions.
+								hr
+								.text-xs.space-y-1
+									div
+										strong Class:
+										|  C (30 points)
+									div
+										strong Origin:
+										|  Peru, Colombia, Brazil
+									div
+										strong Max Size:
+										|  3-4 inches (male), 2 inches (female)
+						|  this year.
+
+			//- Member Profile Example
+			section.mb-12
+				h2.text-2xl.font-semibold.mb-3.text-gray-800 3. Member Profile Preview
+				p.text-sm.text-gray-600.mb-4
+					strong Use case:
+					|  Preview member information without navigation
+
+				.bg-white.p-6.rounded-lg.border.border-gray-200
+					p.mb-4 Top contributors this month:
+
+					.flex.flex-wrap.gap-4
+						+hoverCard({id: 'member-1', side: 'bottom', openDelay: 300})
+							+hoverCardTrigger()
+								button.outline(type="button") John Smith
+							+hoverCardContent()
+								h3 John Smith
+								p.text-xs.text-gray-500.mb-2 Member since 2015
+								hr
+								.space-y-1.text-xs
+									div
+										strong Fish Level:
+										|  Gold (450 pts)
+									div
+										strong Plant Level:
+										|  Silver (120 pts)
+									div
+										strong Submissions:
+										|  89 approved
+
+						+hoverCard({id: 'member-2', side: 'bottom', openDelay: 300})
+							+hoverCardTrigger()
+								button.outline(type="button") Jane Doe
+							+hoverCardContent()
+								h3 Jane Doe
+								p.text-xs.text-gray-500.mb-2 Member since 2018
+								hr
+								.space-y-1.text-xs
+									div
+										strong Fish Level:
+										|  Silver (250 pts)
+									div
+										strong Plant Level:
+										|  Bronze (45 pts)
+									div
+										strong Submissions:
+										|  52 approved
+
+			//- Badge Explanation Example
+			section.mb-12
+				h2.text-2xl.font-semibold.mb-3.text-gray-800 4. Badge Explanations
+				p.text-sm.text-gray-600.mb-4
+					strong Use case:
+					|  Explain badges and icons on hover
+
+				.bg-white.p-6.rounded-lg.border.border-gray-200
+					p.mb-4 Species status indicators:
+
+					.flex.items-center.gap-4
+						.flex.items-center.gap-2
+							span Betta splendens
+							+hoverCard({id: 'iucn-badge', side: 'top', openDelay: 100})
+								+hoverCardTrigger()
+									+iucnBadge('VU')
+								+hoverCardContent({width: 'sm'})
+									h4 IUCN Status: Vulnerable
+									p
+										| This species is considered vulnerable in the wild
+										| according to the International Union for Conservation of Nature.
+
+						.flex.items-center.gap-2
+							span Hypancistrus zebra
+							+hoverCard({id: 'cares-badge', side: 'top', openDelay: 100})
+								+hoverCardTrigger()
+									+caresBadge()
+								+hoverCardContent({width: 'sm'})
+									h4 CARES Priority Species
+									p
+										| This species is part of the CARES preservation program
+										| due to threats in its natural habitat.
+
+			//- Different Positions Example
+			section.mb-12
+				h2.text-2xl.font-semibold.mb-3.text-gray-800 5. Positioning
+				p.text-sm.text-gray-600.mb-4
+					strong Feature:
+					|  Smart positioning with fallback sides
+
+				.bg-white.p-12.rounded-lg.border.border-gray-200
+					.grid.grid-cols-3.gap-8.place-items-center
+
+						//- Top
+						+hoverCard({id: 'pos-top', side: 'top'})
+							+hoverCardTrigger()
+								button.outline(type="button") Top
+							+hoverCardContent()
+								p Position: Top
+								p.text-xs Will flip if no space
+
+						//- Right
+						+hoverCard({id: 'pos-right', side: 'right'})
+							+hoverCardTrigger()
+								button.outline(type="button") Right
+							+hoverCardContent()
+								p Position: Right
+								p.text-xs Will flip if no space
+
+						//- Bottom
+						+hoverCard({id: 'pos-bottom', side: 'bottom'})
+							+hoverCardTrigger()
+								button.outline(type="button") Bottom
+							+hoverCardContent()
+								p Position: Bottom
+								p.text-xs Will flip if no space
+
+						.col-start-2
+							//- Left
+							+hoverCard({id: 'pos-left', side: 'left'})
+								+hoverCardTrigger()
+									button.outline(type="button") Left
+								+hoverCardContent()
+									p Position: Left
+									p.text-xs Will flip if no space
+
+			//- Rich Content Example
+			section.mb-12
+				h2.text-2xl.font-semibold.mb-3.text-gray-800 6. Rich Content
+				p.text-sm.text-gray-600.mb-4
+					strong Feature:
+					|  Support for complex HTML content
+
+				.bg-white.p-6.rounded-lg.border.border-gray-200
+					p.mb-4 Hover to see a rich content card:
+
+					+hoverCard({id: 'rich-content', side: 'top', width: 'xl'})
+						+hoverCardTrigger()
+							button(type="button") View Breeding Setup
+						+hoverCardContent({width: 'xl'})
+							h3 Breeding Setup for Corydoras paleatus
+							p.text-xs.text-gray-500.mb-2 Successful spawn on March 15, 2024
+
+							hr
+
+							.grid.grid-cols-2.gap-4.text-xs
+								div
+									strong Tank Size:
+									p 20 gallons
+								div
+									strong Temperature:
+									p 72°F (cooled from 76°F)
+								div
+									strong pH:
+									p 6.8
+								div
+									strong Hardness:
+									p 150 ppm
+								div
+									strong Diet:
+									p Live blackworms, frozen bloodworms
+								div
+									strong Conditioning:
+									p 2 weeks of heavy feeding
+
+							hr
+
+							p.text-xs
+								strong Results:
+								|  ~150 eggs, 80% hatch rate, 50+ fry to 1/4"
+
+			//- Accessibility Example
+			section.mb-12
+				h2.text-2xl.font-semibold.mb-3.text-gray-800 7. Accessibility Features
+				p.text-sm.text-gray-600.mb-4
+					strong Built-in:
+					|  Keyboard navigation, ARIA attributes, focus management
+
+				.bg-white.p-6.rounded-lg.border.border-gray-200
+					.space-y-4
+						div
+							strong Keyboard Support:
+							ul.list-disc.list-inside.text-sm.mt-2
+								li Tab to focus trigger elements
+								li Hover card shows on focus
+								li Press Escape to close
+								li Hover card stays open when mousing into it
+
+						div
+							strong Try it:
+							|
+							+hoverCard({id: 'keyboard-1', side: 'top'})
+								+hoverCardTrigger()
+									button(type="button") First Item
+								+hoverCardContent()
+									p This card responds to keyboard focus
+									p.text-xs Try pressing Tab and Escape
+							|
+							+hoverCard({id: 'keyboard-2', side: 'top'})
+								+hoverCardTrigger()
+									button(type="button") Second Item
+								+hoverCardContent()
+									p Tab through multiple items
+									p.text-xs Each has independent hover state
+
+			//- Configuration Options
+			section.mb-12
+				h2.text-2xl.font-semibold.mb-3.text-gray-800 8. Configuration Options
+				p.text-sm.text-gray-600.mb-4
+					strong Customization:
+					|  Delays, widths, and positioning
+
+				.bg-white.p-6.rounded-lg.border.border-gray-200
+					.space-y-4
+						div
+							strong Instant (no delay):
+							|
+							+hoverCard({id: 'instant', side: 'top', openDelay: 0, closeDelay: 0})
+								+hoverCardTrigger()
+									button.outline(type="button") Hover me
+								+hoverCardContent()
+									p Opens instantly
+									p.text-xs openDelay: 0, closeDelay: 0
+
+						div
+							strong Slow (1 second delay):
+							|
+							+hoverCard({id: 'slow', side: 'top', openDelay: 1000, closeDelay: 500})
+								+hoverCardTrigger()
+									button.outline(type="button") Hover me
+								+hoverCardContent()
+									p Opens after 1 second
+									p.text-xs openDelay: 1000, closeDelay: 500
+
+						div
+							strong Different widths:
+							.flex.gap-4.mt-2
+								+hoverCard({id: 'width-sm', side: 'top', width: 'sm'})
+									+hoverCardTrigger()
+										button.outline(type="button") Small
+									+hoverCardContent({width: 'sm'})
+										p Small width (200px)
+
+								+hoverCard({id: 'width-md', side: 'top', width: 'md'})
+									+hoverCardTrigger()
+										button.outline(type="button") Medium
+									+hoverCardContent({width: 'md'})
+										p Medium width (300px)
+
+								+hoverCard({id: 'width-lg', side: 'top', width: 'lg'})
+									+hoverCardTrigger()
+										button.outline(type="button") Large
+									+hoverCardContent({width: 'lg'})
+										p Large width (400px)
+
+								+hoverCard({id: 'width-xl', side: 'top', width: 'xl'})
+									+hoverCardTrigger()
+										button.outline(type="button") X-Large
+									+hoverCardContent({width: 'xl'})
+										p Extra large width (500px)
+
+			//- Implementation Guide
+			section.mb-8
+				h2.text-2xl.font-semibold.mb-3.text-gray-800 Implementation Guide
+				.bg-white.p-6.rounded-lg.border.border-gray-200
+
+					h3.font-semibold.mb-3 Architecture:
+					.text-sm.mb-4
+						p.mb-2
+							| This component uses a modern, layered approach:
+						ul.list-disc.list-inside.space-y-1
+							li
+								strong Native Popover API:
+								|  Handles visibility, layering, focus, ESC key
+							li
+								strong HTMX hx-on::
+								|  Manages hover events and timing
+							li
+								strong Minimal JS:
+								|  Only positioning logic (~115 lines)
+
+					h3.font-semibold.mb-3 Required Files:
+					ul.list-disc.list-inside.text-sm.space-y-1.mb-4
+						li
+							code.bg-gray-100.px-2.py-1.rounded src/views/mixins/hoverCard.pug
+							|  - Pug mixin (uses Popover API)
+						li
+							code.bg-gray-100.px-2.py-1.rounded src/components/hoverCard.css
+							|  - Styles (with :popover-open)
+						li
+							code.bg-gray-100.px-2.py-1.rounded public/js/hoverCard.js
+							|  - Positioning utility only
+
+					h3.font-semibold.mb-3 Basic Usage:
+					pre.bg-gray-100.p-4.rounded.text-xs.overflow-x-auto
+						code.
+							include mixins/hoverCard.pug
+
+							+hoverCard({id: 'my-card', side: 'top'})
+								+hoverCardTrigger()
+									button Hover me
+								+hoverCardContent()
+									h3 Title
+									p Content goes here
+
+					h3.font-semibold.mt-4.mb-3 Options:
+					ul.list-disc.list-inside.text-sm.space-y-1
+						li
+							code.bg-gray-100.px-1.rounded id
+							|  - Unique identifier (required)
+						li
+							code.bg-gray-100.px-1.rounded side
+							|  - Preferred position: 'top', 'bottom', 'left', 'right' (default: 'top')
+						li
+							code.bg-gray-100.px-1.rounded openDelay
+							|  - Delay before showing in ms (default: 200)
+						li
+							code.bg-gray-100.px-1.rounded closeDelay
+							|  - Delay before hiding in ms (default: 300)
+						li
+							code.bg-gray-100.px-1.rounded width
+							|  - Card width: 'sm', 'md', 'lg', 'xl' (default: 'md')
+
+					h3.font-semibold.mt-4.mb-3 Features:
+					ul.list-disc.list-inside.text-sm.space-y-1
+						li Smart positioning with automatic viewport collision detection
+						li Smooth CSS transitions with direction-aware animations
+						li Fully keyboard accessible (Tab focus, ESC to close via Popover API)
+						li Native focus management and layering
+						li Stays open when mousing over card content
+						li HTMX-first: declarative hover events with hx-on:
+						li Lightweight: ~115 lines of JS (positioning only)
+						li No external dependencies (uses native browser features)
+
+					h3.font-semibold.mt-4.mb-3 Browser Support:
+					p.text-sm.text-gray-600
+						| Requires Popover API support: Chrome 114+, Safari 17+, Firefox 125+

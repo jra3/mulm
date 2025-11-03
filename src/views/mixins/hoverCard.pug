@@ -1,0 +1,139 @@
+//- HoverCard Mixin - Fancy tooltip with rich content
+//-
+//- Creates a tooltip-like component using the native Popover API + HTMX
+//- Similar to shadcn's HoverCard but leveraging browser features and HTMX patterns
+//-
+//- @param {Object} options - Configuration options
+//- @param {String} options.id - Required unique ID for the hovercard
+//- @param {String} options.side - Preferred side: 'top', 'right', 'bottom', 'left' (default: 'top')
+//- @param {Number} options.openDelay - Delay before showing in ms (default: 200)
+//- @param {Number} options.closeDelay - Delay before hiding in ms (default: 300)
+//- @param {String} options.width - Card width: 'sm'(200px), 'md'(300px), 'lg'(400px), 'xl'(500px) (default: 'md')
+//-
+//- Usage:
+//-   +hoverCard({id: 'user-info'})
+//-     +hoverCardTrigger()
+//-       button Hover me
+//-     +hoverCardContent()
+//-       h3 User Details
+//-       p Rich content here
+//-
+//- Note: Requires hoverCard.css and hoverCard.js (lightweight positioning only)
+//- Uses native Popover API (Chrome 114+, Safari 17+, Firefox 125+)
+
+mixin hoverCard(options = {})
+	- if (!options.id) throw new Error('HoverCard requires an id option')
+	- const id = options.id
+	- const side = options.side || 'top'
+	- const openDelay = options.openDelay !== undefined ? options.openDelay : 200
+	- const closeDelay = options.closeDelay !== undefined ? options.closeDelay : 300
+	- const width = options.width || 'md'
+	- const hovercardId = `hovercard-${id}`
+	- const popoverId = `popover-${hovercardId}`
+
+	.hovercard-root(
+		id=hovercardId
+		data-hovercard-id=id
+		data-side=side
+		data-popover-id=popoverId
+		data-open-delay=openDelay
+		data-close-delay=closeDelay
+		data-width=width
+	)
+		block
+
+//- HoverCard Trigger - Uses HTMX hx-on: for hover events
+mixin hoverCardTrigger()
+	.hovercard-trigger(
+		hx-on:mouseenter=`
+			const root = this.closest('.hovercard-root');
+			const popoverId = root.dataset.popoverId;
+			const openDelay = parseInt(root.dataset.openDelay);
+			const popover = document.getElementById(popoverId);
+			clearTimeout(root._closeTimer);
+			root._openTimer = setTimeout(() => {
+				popover.showPopover();
+				window.HoverCard?.position(root, popover);
+			}, openDelay);
+		`
+		hx-on:mouseleave=`
+			const root = this.closest('.hovercard-root');
+			const popoverId = root.dataset.popoverId;
+			const closeDelay = parseInt(root.dataset.closeDelay);
+			const popover = document.getElementById(popoverId);
+			clearTimeout(root._openTimer);
+			root._closeTimer = setTimeout(() => {
+				if (popover.matches(':popover-open')) popover.hidePopover();
+			}, closeDelay);
+		`
+		hx-on:focus=`
+			const root = this.closest('.hovercard-root');
+			const popoverId = root.dataset.popoverId;
+			const popover = document.getElementById(popoverId);
+			clearTimeout(root._closeTimer);
+			popover.showPopover();
+			window.HoverCard?.position(root, popover);
+		`
+		hx-on:blur=`
+			const root = this.closest('.hovercard-root');
+			const popoverId = root.dataset.popoverId;
+			const closeDelay = parseInt(root.dataset.closeDelay);
+			const popover = document.getElementById(popoverId);
+			root._closeTimer = setTimeout(() => {
+				if (popover.matches(':popover-open')) popover.hidePopover();
+			}, closeDelay);
+		`
+	)
+		block
+
+//- HoverCard Content - The popover content with hover-to-stay-open
+//- Must be called within a hoverCard block - reads config from parent data attributes
+mixin hoverCardContent(options = {})
+	- const overrideWidth = options.width || ''
+	- const cardClasses = options.cardClasses || ''
+
+	div(
+		popover="manual"
+		role="tooltip"
+		class=`hovercard-content ${cardClasses}`
+		hx-on:mouseenter=`
+			const root = document.querySelector('[data-popover-id="' + this.id + '"]');
+			if (root) clearTimeout(root._closeTimer);
+		`
+		hx-on:mouseleave=`
+			const root = document.querySelector('[data-popover-id="' + this.id + '"]');
+			if (root) {
+				const closeDelay = parseInt(root.dataset.closeDelay);
+				const popover = this;
+				root._closeTimer = setTimeout(() => {
+					if (popover.matches(':popover-open')) popover.hidePopover();
+				}, closeDelay);
+			}
+		`
+	)
+		.hovercard-arrow
+		.hovercard-content-inner
+			block
+
+	script.
+		// Initialize popover with config from parent root element
+		// This runs immediately when the script tag is parsed
+		(() => {
+			const script = document.currentScript;
+			const popover = script.previousElementSibling;
+			const root = script.closest('.hovercard-root');
+
+			if (!root) {
+				console.error('hoverCardContent must be used within hoverCard');
+				return;
+			}
+
+			const popoverId = root.dataset.popoverId;
+			const side = root.dataset.side;
+			const width = '#{overrideWidth}' || root.dataset.width;
+			const widthMap = { sm: 'w-[200px]', md: 'w-[300px]', lg: 'w-[400px]', xl: 'w-[500px]' };
+
+			popover.id = popoverId;
+			popover.setAttribute('data-side', side);
+			popover.classList.add(widthMap[width] || widthMap.md);
+		})();
