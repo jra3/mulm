@@ -17,8 +17,15 @@ import { initializeSpeciesServer } from "./species-server-core";
 import { initializeMemberServer } from "./member-server-core";
 import { logger } from "../utils/logger";
 import config from "@/config.json";
+import path from "path";
+import { db } from "../db/conn";
 
 let serverInstance: ReturnType<typeof express.application.listen> | null = null;
+
+// Environment information from config and database
+const domain = config.domain;
+const dbPath = String(db().name);
+const dbName = path.basename(dbPath);
 
 // Store transports by session ID for each server type
 const speciesTransports: Record<string, StreamableHTTPServerTransport> = {};
@@ -32,6 +39,13 @@ function createSpeciesServer(): Server {
     {
       name: "species-database",
       version: "1.0.0",
+      vendor: "mulm",
+      protocolVersion: "2024-11-05",
+      metadata: {
+        domain,
+        database: dbName,
+        databasePath: dbPath,
+      },
     },
     {
       capabilities: {
@@ -53,6 +67,13 @@ function createMemberServer(): Server {
     {
       name: "member-management",
       version: "1.0.0",
+      vendor: "mulm",
+      protocolVersion: "2024-11-05",
+      metadata: {
+        domain,
+        database: dbName,
+        databasePath: dbPath,
+      },
     },
     {
       capabilities: {
@@ -86,7 +107,7 @@ function createMcpHandler(
         await transport.handleRequest(req, res, req.body);
       } else if (!sessionId && isInitializeRequest(req.body)) {
         // New initialization request - create new transport and session
-        logger.info(`${serverName} MCP client initializing new session`);
+        logger.info(`${serverName} MCP client initializing new session [${domain}]`);
 
         transport = new StreamableHTTPServerTransport({
           sessionIdGenerator: () => randomUUID(),
@@ -154,7 +175,13 @@ export async function startMcpHttpServer(): Promise<void> {
 
   // Health check endpoint
   app.get("/health", (_req, res) => {
-    res.json({ status: "ok", servers: ["species", "members"] });
+    res.json({
+      status: "ok",
+      domain,
+      database: dbName,
+      databasePath: dbPath,
+      servers: ["species", "members"],
+    });
   });
 
   // Species MCP Server - POST for main communication
@@ -185,6 +212,8 @@ export async function startMcpHttpServer(): Promise<void> {
     try {
       serverInstance = app.listen(mcpPort, mcpHost, () => {
         logger.info(`MCP HTTP server listening on ${mcpHost}:${mcpPort}`);
+        logger.info(`  Domain: ${domain}`);
+        logger.info(`  Database: ${dbName}`);
         logger.info(`  Species MCP: http://${mcpHost}:${mcpPort}/mcp/species`);
         logger.info(`  Members MCP: http://${mcpHost}:${mcpPort}/mcp/members`);
         resolve();
