@@ -27,7 +27,11 @@
 		"format": "prettier --write \"src/**/*.{ts,js,json}\" \"scripts/**/*.{ts,js}\"",
 		"format:check": "prettier --check \"src/**/*.{ts,js,json}\" \"scripts/**/*.{ts,js}\"",
 		"script": "ts-node",
-		"prepare": "husky || true"
+		"prepare": "husky || true",
+		"cdk:deploy": "echo '⚠️  WARNING: Use npm run cdk:deploy:safe instead for safety checks!' && sleep 3 && cd infrastructure && npx cdk deploy",
+		"cdk:deploy:safe": "./scripts/validate-cdk-changes.sh",
+		"cdk:diff": "cd infrastructure && npx cdk diff",
+		"cdk:synth": "cd infrastructure && npx cdk synth"
 	},
 	"repository": {
 		"type": "git",

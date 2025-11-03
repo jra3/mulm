@@ -152,6 +152,8 @@ export class InfrastructureStack extends cdk.Stack {
 		});
 
 		// EC2 Instance (root volume only - data volume attached separately)
+		// ⚠️ CRITICAL PROTECTION: This instance must never be replaced in production
+		// UpdateReplacePolicy and DeletionPolicy protect against accidental recreation
 		const instance = new ec2.Instance(this, 'BasnyInstance', {
 			vpc,
 			vpcSubnets: {
@@ -177,6 +179,11 @@ export class InfrastructureStack extends cdk.Stack {
 			userData: ec2.UserData.custom(userDataScript),
 			userDataCausesReplacement: false,
 		});
+
+		// Add protection policies to prevent instance replacement
+		const cfnInstance = instance.node.defaultChild as ec2.CfnInstance;
+		cfnInstance.cfnOptions.updateReplacePolicy = cdk.CfnDeletionPolicy.RETAIN;
+		cfnInstance.cfnOptions.deletionPolicy = cdk.CfnDeletionPolicy.RETAIN;
 
 		// ⚠️ CRITICAL: Attach existing persistent data volume
 		// This volume contains the production database, config, and SSL certificates
