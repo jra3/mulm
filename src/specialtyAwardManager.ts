@@ -154,3 +154,107 @@ export async function checkAllSpecialtyAwards(
 ): Promise<string[]> {
   return checkAndGrantSpecialtyAwards(memberId, options);
 }
+
+export interface SpecialtyAwardProgress {
+  name: string;
+  requiredSpecies: number;
+  currentSpecies: number;
+  percentage: number;
+  isCompleted: boolean;
+  isLimitationMet: boolean;
+  limitationDescription: string | null;
+  speciesList: string[];
+}
+
+export interface MetaAwardProgress {
+  name: string;
+  requiredAwards: number;
+  currentAwards: number;
+  percentage: number;
+  isCompleted: boolean;
+  completedSpecialtyAwards: string[];
+}
+
+/**
+ * Get detailed progress for all specialty awards for a member
+ * Shows current progress even if not completed
+ */
+export async function getSpecialtyAwardProgress(
+  memberId: number
+): Promise<{
+  specialtyProgress: SpecialtyAwardProgress[];
+  metaProgress: MetaAwardProgress[];
+}> {
+  // Get all approved submissions for this member
+  const allSubmissions = await getSubmissionsWithGenus(memberId);
+
+  // Get existing awards
+  const existingAwards = await getExistingSpecialtyAwards(memberId);
+
+  const { specialtyAwards, metaAwards } = await import("./specialtyAwards");
+
+  // Calculate progress for each specialty award
+  const specialtyProgress: SpecialtyAwardProgress[] = specialtyAwards.map((award) => {
+    // Filter submissions that match this award's eligibility criteria
+    const eligibleSubmissions = allSubmissions.filter((sub) => award.eligibilityFilter(sub));
+
+    // Get unique species (by latin name)
+    const uniqueSpecies = new Set(
+      eligibleSubmissions.map((sub) => sub.species_latin_name.toLowerCase())
+    );
+
+    const currentSpecies = uniqueSpecies.size;
+    const requiredSpecies = award.requiredSpecies;
+    const percentage = Math.min(100, Math.round((currentSpecies / requiredSpecies) * 100));
+
+    // Check if limitation is met (if applicable)
+    let isLimitationMet = true;
+    if (award.limitations && currentSpecies >= requiredSpecies) {
+      isLimitationMet = award.limitations.validator(eligibleSubmissions);
+    }
+
+    const isCompleted =
+      currentSpecies >= requiredSpecies && isLimitationMet && existingAwards.includes(award.name);
+
+    return {
+      name: award.name,
+      requiredSpecies,
+      currentSpecies,
+      percentage,
+      isCompleted,
+      isLimitationMet,
+      limitationDescription: award.limitations?.description || null,
+      speciesList: Array.from(uniqueSpecies),
+    };
+  });
+
+  // Calculate meta-award progress
+  const { getCountableSpecialtyAwards } = await import("./specialtyAwards");
+  const countableAwards = getCountableSpecialtyAwards();
+
+  // Count completed specialty awards (excluding Marine Invertebrates for meta-awards)
+  const completedSpecialtyAwards = specialtyProgress
+    .filter((sp) => sp.isCompleted && countableAwards.includes(sp.name))
+    .map((sp) => sp.name);
+
+  const metaProgress: MetaAwardProgress[] = metaAwards.map((metaAward) => {
+    const requiredAwards = metaAward.name === "Senior Specialist Award" ? 4 : 7;
+    const currentAwards = completedSpecialtyAwards.length;
+    const percentage = Math.min(100, Math.round((currentAwards / requiredAwards) * 100));
+    const isCompleted = existingAwards.includes(metaAward.name);
+
+    return {
+      name: metaAward.name,
+      requiredAwards,
+      currentAwards,
+      percentage,
+      isCompleted,
+      completedSpecialtyAwards,
+    };
+  });
+
+  return {
+    specialtyProgress,
+    metaProgress,
+  };
+}

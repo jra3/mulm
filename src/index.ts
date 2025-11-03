@@ -202,6 +202,9 @@ router.get("/account/tanks/:name/edit", account.editTankPresetForm);
 router.get("/account/tanks/:name", account.viewTankPresetCard);
 router.delete("/account/tanks/:name", account.deleteTankPresetRoute);
 
+// Specialty awards progress
+router.get("/account/awards", account.viewSpecialtyAwards);
+
 router.use("/admin", adminRouter);
 
 // Display screen for club meetings (public, no auth required)

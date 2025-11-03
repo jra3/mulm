@@ -1,0 +1,137 @@
+include ../header.pug
+
+doctype html
+html
+	+headTag(title)
+
+	body.bg-white.text-gray-800
+		+pageHeader(viewer, title)
+
+		section.bg-gray-100.py-6
+			div.max-w-6xl.mx-auto.px-4
+
+				//- Breadcrumb / Back link
+				.mb-6
+					a(href="/account" class="text-blue-600 hover:text-blue-800 text-sm font-medium")
+						| ← Back to Account Settings
+
+				h1.text-3xl.font-bold.text-gray-900.mb-6 Specialty Species Awards Progress
+
+				//- Meta Awards Overview
+				if metaProgress && metaProgress.length > 0
+					.mb-8.bg-gradient-to-r.from-amber-50.to-yellow-50.rounded-lg.shadow-md.p-6.border.border-amber-200
+						h2.text-2xl.font-bold.text-gray-900.mb-4 Achievement Awards
+
+						.grid.gap-4(class="md:grid-cols-2")
+							each meta in metaProgress
+								.bg-white.rounded-lg.p-4.border-2(class=meta.isCompleted ? 'border-green-500' : 'border-gray-300')
+									.flex.items-center.justify-between.mb-2
+										.flex.items-center.gap-2
+											if meta.isCompleted
+												span.text-2xl ✅
+											else if meta.percentage >= 50
+												span.text-2xl 🎯
+											else
+												span.text-2xl 🔒
+
+											h3.text-lg.font-bold.text-gray-900= meta.name
+
+										span.text-sm.font-semibold(class=meta.isCompleted ? 'text-green-600' : 'text-gray-600')= meta.currentAwards + ' / ' + meta.requiredAwards
+
+									//- Progress bar
+									.w-full.bg-gray-200.rounded-full.h-3.mb-2
+										.bg-gradient-to-r.from-blue-500.to-blue-600.h-3.rounded-full.transition-all.duration-300(
+											style=`width: ${meta.percentage}%`
+										)
+
+									.text-xs.text-gray-600
+										if meta.isCompleted
+											span.text-green-600.font-semibold Completed!
+										else
+											| Complete #{meta.requiredAwards - meta.currentAwards} more specialty award#{meta.requiredAwards - meta.currentAwards === 1 ? '' : 's'}
+
+				//- Specialty Awards Grid
+				.mb-6
+					h2.text-2xl.font-bold.text-gray-900.mb-4 Specialty Species Groups
+
+				.grid.gap-4(class="md:grid-cols-2 lg:grid-cols-3")
+					each award in specialtyProgress
+						//- Award Card
+						.bg-white.rounded-lg.shadow-md.border-2.transition-all.duration-200(
+							class=award.isCompleted ? 'border-green-500 hover:shadow-lg' : 'border-gray-200 hover:shadow-lg hover:border-blue-300'
+						)
+							.p-4
+								//- Header with icon and completion status
+								.flex.items-start.justify-between.mb-3
+									.flex.items-center.gap-2.flex-1
+										//- Icon based on species group
+										span.text-2xl
+											- const iconMap = { 'Anabantoids Specialist': '🐠', 'Brackish Water Specialist': '🌊', 'Catfish Specialist': '🐱', 'Characins Specialist': '🐟', 'New World Cichlids Specialist': '🐡', 'Old World Cichlids Specialist': '🦈', 'Cyprinids Specialist': '🎏', 'Killifish Specialist': '🐠', 'Livebearers Specialist': '🦐', 'Marine Fish Specialist': '🌊', 'Marine Invertebrates & Corals Specialist': '🪸' };
+											= iconMap[award.name] || '🏆'
+
+										div
+											h3.font-bold.text-gray-900.text-sm.leading-tight= award.name.replace(' Specialist', '')
+											.text-xs.text-gray-500.mt-0.5
+												span.font-semibold(class=award.isCompleted ? 'text-green-600' : '')= award.currentSpecies
+												|  / #{award.requiredSpecies} species
+
+									//- Completion badge
+									if award.isCompleted
+										span.flex-shrink-0.bg-green-100.text-green-800.text-xs.font-semibold.px-2.py-1.rounded.border.border-green-300 ✓ Complete
+
+								//- Progress bar
+								.w-full.bg-gray-200.rounded-full.h-2.mb-3
+									.h-2.rounded-full.transition-all.duration-300(
+										class=award.isCompleted ? 'bg-gradient-to-r from-green-500 to-green-600' : 'bg-gradient-to-r from-blue-500 to-blue-600',
+										style=`width: ${award.percentage}%`
+									)
+
+								//- Status message
+								.text-xs.text-gray-600.mb-2
+									if award.isCompleted
+										span.text-green-600.font-semibold Award earned!
+									else if award.currentSpecies === 0
+										span Get started by breeding species in this category
+									else
+										| #{award.requiredSpecies - award.currentSpecies} more species needed
+
+								//- Special limitation indicator
+								if award.limitationDescription && award.currentSpecies > 0
+									.mt-2.pt-2.border-t.border-gray-200
+										.text-xs.text-gray-600
+											span.font-semibold Requirement:
+											|  #{award.limitationDescription}
+											if award.currentSpecies >= award.requiredSpecies && !award.isLimitationMet
+												span.ml-2.text-orange-600.font-semibold ⚠ Not met
+
+								//- Expandable species list (if any species bred)
+								if award.speciesList && award.speciesList.length > 0
+									details.mt-3.pt-3.border-t.border-gray-200
+										summary.cursor-pointer.text-xs.text-blue-600.hover:text-blue-800.font-semibold View species bred (#{award.speciesList.length})
+
+										.mt-2.space-y-1
+											each species in award.speciesList
+												.text-xs.text-gray-700.italic.pl-2= species
+
+				//- Help text
+				.mt-8.bg-blue-50.border.border-blue-200.rounded-lg.p-4
+					h3.text-sm.font-bold.text-blue-900.mb-2 About Specialty Species Awards
+
+					.text-sm.text-blue-800.space-y-2
+						p Complete the required number of species in each category to earn specialty awards. Some categories have special requirements (hover over cards for details).
+
+						p
+							strong Meta Awards:
+							|  Earn multiple specialty awards to unlock:
+						ul.list-disc.list-inside.pl-4
+							li
+								strong Senior Specialist Award:
+								|  Complete 4 different specialty groups
+							li
+								strong Expert Specialist Award:
+								|  Complete 7 different specialty groups
+
+						p.text-xs.text-blue-700.mt-3
+							em Note: Only approved breeding submissions count toward specialty awards. Marine Invertebrates & Corals does not count toward meta-awards.
+
+		+footer()

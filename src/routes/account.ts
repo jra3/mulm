@@ -266,3 +266,26 @@ export const deleteTankPresetRoute = async (req: MulmRequest, res: Response) => 
     res.status(500).send("Failed to delete preset");
   }
 };
+
+export const viewSpecialtyAwards = async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+  if (!viewer) {
+    res.status(401).send();
+    return;
+  }
+
+  try {
+    const { getSpecialtyAwardProgress } = await import("@/specialtyAwardManager");
+    const { specialtyProgress, metaProgress } = await getSpecialtyAwardProgress(viewer.id);
+
+    res.render("account/specialtyAwards", {
+      title: "Specialty Species Awards Progress",
+      viewer,
+      specialtyProgress,
+      metaProgress,
+    });
+  } catch (err) {
+    logger.error("Failed to load specialty awards progress", err);
+    res.status(500).send("Failed to load awards progress");
+  }
+};

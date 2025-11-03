@@ -14,4 +14,17 @@ html
 				include tankPresets.pug
 		section.bg-gray-100.py-4
 			div.max-w-4xl.mx-auto.text-left.px-4
+				//- Specialty Awards Link Card
+				h2.text-xl.font-bold.mb-4(class="sm:text-2xl") Achievements & Progress
+				a(href="/account/awards" class="block bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg shadow-md p-6 transition-all duration-200 hover:shadow-lg")
+					.flex.items-center.justify-between
+						div
+							.flex.items-center.gap-3.mb-2
+								span.text-3xl 🏆
+								h3.text-xl.font-bold Specialty Species Awards
+							p.text-blue-100.text-sm Track your progress towards specialty breeding achievements
+						svg.w-8.h-8.text-white(fill="none" stroke="currentColor" viewBox="0 0 24 24")
+							path(stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7")
+		section.bg-gray-100.py-4
+			div.max-w-4xl.mx-auto.text-left.px-4
 				include links.pug
