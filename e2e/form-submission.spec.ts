@@ -338,6 +338,10 @@ test.describe("Form Submission Flow", () => {
 		const submissionId = parseInt(submissionIdMatch![1]);
 		console.log(`Found draft submission ID to delete: ${submissionId}`);
 
+		// Navigate to the submission page to delete it
+		await page.goto(`/submissions/${submissionId}`);
+		await page.waitForSelector("#bapForm");
+
 		// Listen for confirm dialog and accept it
 		page.on("dialog", (dialog) => dialog.accept());
 
