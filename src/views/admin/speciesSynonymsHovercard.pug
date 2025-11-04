@@ -4,14 +4,14 @@
 if commonNames && commonNames.length > 0
 	div
 		h4.font-semibold.text-gray-900.mb-1 Common Names
-		ul.list-disc.list-inside.text-sm.space-y-0.5
+		ul(class="list-disc list-inside text-sm space-y-0.5")
 			each name in commonNames
 				li= name.common_name
 
 if scientificNames && scientificNames.length > 0
 	div
 		h4.font-semibold.text-gray-900.mb-1 Scientific Names
-		ul.list-disc.list-inside.text-sm.space-y-0.5.italic
+		ul(class="list-disc list-inside text-sm space-y-0.5 italic")
 			each name in scientificNames
 				li= name.scientific_name
 
