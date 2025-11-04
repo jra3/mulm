@@ -60,40 +60,42 @@ cd mulm
 npm install
 
 # Create configuration file
-cp src/config.example.json src/config.json
+cp src/config.sample.json src/config.json
 # Edit src/config.json with your settings
 ```
 
 ### Configuration
 
-Create `src/config.json` with the following structure:
+Create `src/config.json` with the following structure (see `src/config.sample.json` for complete example):
 
 ```json
 {
-  "databaseFile": "./database/database.db",
-  "sessionSecret": "your-session-secret-here",
-  "smtp": {
-    "host": "smtp.example.com",
-    "port": 587,
-    "secure": false,
-    "auth": {
-      "user": "your-email@example.com",
-      "pass": "your-password"
-    }
+  "databaseFile": "db/database.db",
+  "domain": "localhost:4200",
+  "disableEmails": true,
+  "googleClientId": "",
+  "googleClientSecret": "",
+  "adminsEmail": "admin@example.com",
+  "bugReportEmail": "bugs@example.com",
+  "fromEmail": "noreply@example.com",
+  "smtpPassword": "",
+  "smtpHost": "",
+  "smtpPort": 465,
+  "smtpSecure": true,
+  "s3AccessKeyId": "",
+  "s3Secret": "",
+  "s3Url": "",
+  "s3Bucket": "",
+  "r2PublicUrl": "",
+  "webauthn": {
+    "rpName": "BAP Portal",
+    "rpID": "localhost",
+    "origin": "http://localhost:4200"
   },
-  "oauth": {
-    "google": {
-      "clientId": "your-client-id",
-      "clientSecret": "your-client-secret",
-      "redirectUri": "http://localhost:4200/auth/google/callback"
-    }
-  },
-  "r2": {
-    "accountId": "your-r2-account-id",
-    "accessKeyId": "your-access-key",
-    "secretAccessKey": "your-secret-key",
-    "bucketName": "your-bucket-name",
-    "publicUrl": "https://your-bucket.r2.dev"
+  "mcp": {
+    "enabled": false,
+    "port": 3001,
+    "host": "127.0.0.1"
   }
 }
 ```
@@ -176,8 +178,9 @@ npm test -- --watch
 - Integration tests for witness workflow and database operations
 - Template rendering tests for all Pug templates
 - Rate limiter middleware tests
+- E2E tests for critical user flows
 
-**Current Status**: 153/153 tests passing (100%)
+**Current Status**: All tests passing. Run `npm test` and `npm run test:e2e` to verify.
 
 ## Database
 
@@ -185,7 +188,9 @@ npm test -- --watch
 
 - `members` - User accounts and profiles
 - `submissions` - Breeding achievement records
-- `species_name` - Species catalog with classifications
+- `species_name_group` - Species groups with canonical taxonomic names
+- `species_common_name` - Common name variants for species
+- `species_scientific_name` - Scientific name variants for species
 - `tank_presets` - User-saved tank configurations
 - `awards` - Award definitions and point thresholds
 - `sessions` - Cookie-based session storage
@@ -197,7 +202,8 @@ Migrations run automatically on startup. To create a new migration:
 
 ```bash
 # Create migration file in db/migrations/
-# Format: YYYY-description.sql
+# Format: NNN-description.sql (where NNN is next sequential 3-digit number)
+# Example: 039-add-my-feature.sql
 ```
 
 ## Documentation
@@ -246,7 +252,7 @@ The application uses RESTful conventions:
 - `POST /admin/submissions/:id/approve` - Approve submission
 - `POST /admin/submissions/:id/deny` - Deny submission
 
-See `CLAUDE.md` for complete route documentation.
+See `src/routes/README.md` for complete route documentation and API reference.
 
 ## Contributing
 
@@ -271,7 +277,7 @@ See `CLAUDE.md` for complete route documentation.
 - Use class attribute for modifiers (hover:, md:, focus:)
 - Simple utilities only with dot notation
 
-See `CLAUDE.md` for detailed Pug best practices.
+See `src/views/README.md` for detailed Pug template guidelines and Tailwind best practices.
 
 ## License
 

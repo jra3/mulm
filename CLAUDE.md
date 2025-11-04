@@ -15,7 +15,7 @@ Mulm is a Breeder Awards Program (BAP) management platform for aquarium societie
 - **Frontend**: Pug templates with HTMX for interactivity
 - **Styling**: Tailwind CSS with PostCSS
 - **Infrastructure**: AWS EC2 with Docker Compose, nginx reverse proxy, Let's Encrypt SSL
-- **Testing**: Jest with ts-jest
+- **Testing**: Node.js native test runner with tsx, Playwright for E2E
 - **Storage**: Cloudflare R2 for image storage
 
 ## Quick Start
@@ -43,9 +43,17 @@ npm start          # Start production server (requires build first)
 ### Testing Commands
 
 ```bash
+# Unit/Integration tests (Node.js native test runner)
 npm test                      # Run all tests
 npm test -- path/to/test.ts   # Run specific test file
 npm test -- --watch           # Run tests in watch mode
+
+# E2E tests (Playwright)
+npm run test:e2e              # Run E2E tests
+npm run test:e2e:headed       # Run E2E tests with browser UI
+npm run test:e2e:debug        # Debug E2E tests
+npm run test:e2e:ui           # Open Playwright UI mode
+npm run test:e2e:report       # View test report
 ```
 
 ## Documentation by Area
