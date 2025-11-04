@@ -4,62 +4,117 @@ include ../mixins/errorMessage.pug
 +dialog()
 	h2.text-2xl.font-bold.mb-4 Edit Collection Entry
 
-	//- Show species info (can't change species once added)
-	.bg-gray-50.border-l-4.border-gray-400.p-4.mb-4
-		if entry.common_name
-			p.font-semibold.text-gray-900= entry.common_name
-		if entry.scientific_name
-			p.italic.text-sm.text-gray-700= entry.scientific_name
-		if entry.species && entry.species.program_class
-			p.text-xs.text-gray-600= entry.species.program_class
-		if !entry.group_id
-			p.text-xs.text-gray-500.mt-1 (Custom entry - not in database)
-
 	form(
 		hx-patch=`/api/collection/${entry.id}`
 		hx-target="#dialogContent"
 		hx-swap="innerHTML"
 	)
-		.flex.flex-col.gap-4
+		.flex.flex-col.gap-3
+
+			//- Species names (editable)
+			.grid.gap-3(class="grid-cols-1 sm:grid-cols-2")
+				.space-y-1
+					label.input-label(for="common_name") Common Name
+					input.text-input(
+						type="text"
+						id="common_name"
+						name="common_name"
+						maxlength="200"
+						value=entry.common_name || ''
+						placeholder="e.g., Fancy Guppy"
+					)
+					+errorMessage('common_name')
+
+				.space-y-1
+					label.input-label(for="scientific_name") Scientific Name
+					input.text-input(
+						type="text"
+						id="scientific_name"
+						name="scientific_name"
+						maxlength="200"
+						value=entry.scientific_name || ''
+						placeholder="e.g., Poecilia reticulata"
+					)
+					+errorMessage('scientific_name')
+
+			if entry.group_id
+				.bg-yellow-50.border-l-4.border-yellow-400.p-2.text-xs.text-yellow-700
+					| Note: Editing names will convert this to a custom entry (unlinked from database)
+
+			//- Date and visibility in compact grid
+			.grid.gap-3(class="grid-cols-1 sm:grid-cols-2")
+				.space-y-1
+					.flex.items-center.justify-between
+						label.input-label(for="acquired_date") Acquired Date
+						a.link.text-xs(
+							href="#"
+							onclick="event.preventDefault(); document.getElementById('acquired_date').value = '';"
+						) clear
+					input.text-input(
+						type="date"
+						id="acquired_date"
+						name="acquired_date"
+						max=new Date().toISOString().split('T')[0]
+						value=entry.acquired_date || ''
+					)
+					+errorMessage('acquired_date')
+
+				.space-y-1
+					label.input-label(for="visibility") Visibility
+					select.text-input(
+						id="visibility"
+						name="visibility"
+					)
+						option(value="public" selected=entry.visibility === 'public') Public
+						option(value="private" selected=entry.visibility === 'private') Private
 
 			//- Notes
-			.space-y-2
-				label.input-label(for="notes") Notes (optional)
-				textarea.text-input(
+			.space-y-1
+				label.input-label(for="notes") Notes
+				textarea.text-input.h-32(
 					id="notes"
 					name="notes"
-					rows="3"
 					maxlength="500"
-					placeholder="Notes about these specimens, tank conditions, breeding behavior, etc."
+					placeholder="Notes about specimens..."
 				)= entry.notes || ''
-				p.text-sm.text-gray-600 Max 500 characters
 				+errorMessage('notes')
 
-			//- Visibility toggle
-			.flex.items-start.gap-2
-				input(
-					type="checkbox"
-					id="visibility_private"
-					name="visibility"
-					value="private"
-					checked=entry.visibility === 'private'
+			//- Image upload section
+			.space-y-1
+				label.input-label Photos (up to 5)
+
+				//- Upload zone (compact)
+				div#image-upload-zone.border-2.border-dashed.border-gray-300.rounded-lg.p-3.text-center.hover_border-gray-400.transition-colors.cursor-pointer(
+					onclick="document.getElementById('image-input-edit').click()"
 				)
-				label.text-sm(for="visibility_private")
-					strong Keep this entry private
-					br
-					span.text-gray-600 Private entries are only visible to you
+					.text-gray-400.text-2xl ↑
+					p.mt-1.text-xs.text-gray-600
+						span.font-semibold Click to upload
+						|  (PNG, JPG, WebP)
 
-			//- Show dates
-			.bg-blue-50.p-3.rounded
-				p.text-sm.text-gray-700
-					strong Acquired:
-					= new Date(entry.acquired_date).toLocaleDateString()
-				if entry.removed_date
-					p.text-sm.text-gray-700.mt-1
-						strong Removed:
-						= new Date(entry.removed_date).toLocaleDateString()
+					input#image-input-edit.hidden(
+						type="file"
+						accept="image/jpeg,image/png,image/webp"
+						multiple
+						onchange=`uploadCollectionImages(${entry.id}, this.files)`
+					)
 
-			.flex.gap-2.justify-end
+				//- Image preview grid
+				if entry.images && entry.images.length > 0
+					div#image-preview-grid.grid.gap-1.mt-2(class="grid-cols-3")
+						each img, idx in entry.images
+							.relative.group
+								img.w-full.h-20.object-cover.rounded(
+									src=img.url.replace('-original', '-thumb')
+									alt=`Image ${idx + 1}`
+								)
+								button.absolute.top-0.right-0.bg-red-500.text-white.rounded-full.w-5.h-5.flex.items-center.justify-center.opacity-0.group-hover_opacity-100.transition-opacity.text-xs.font-bold(
+									type="button"
+									onclick=`removeCollectionImage(${entry.id}, ${idx}, '${img.key}')`
+									aria-label="Remove"
+								) ×
+
+			.flex.gap-2.justify-end.pt-2.border-t.border-gray-300
 				button.outline(
 					type="button"
 					hx-on:click="document.getElementById('dialog').remove()"
@@ -69,9 +124,45 @@ include ../mixins/errorMessage.pug
 					button.destructive(
 						type="button"
 						hx-delete=`/api/collection/${entry.id}`
-						hx-confirm="Mark this species as removed from your collection?"
-						hx-target="#collection-section"
-						hx-swap="outerHTML"
-					) Remove from Collection
+						hx-confirm="Remove this species from your collection?"
+						hx-target="#dialogContent"
+						hx-swap="innerHTML"
+					) Remove
 
-				button.primary(type="submit") Save Changes
+				button.primary(type="submit") Save
+
+	//- JavaScript for image upload
+	script.
+		async function uploadCollectionImages(entryId, files) {
+			if (!files || files.length === 0) return;
+
+			const formData = new FormData();
+			for (let i = 0; i < files.length; i++) {
+				formData.append('images', files[i]);
+			}
+
+			try {
+				const response = await fetch(`/api/collection/${entryId}/images`, {
+					method: 'POST',
+					body: formData
+				});
+
+				const result = await response.json();
+
+				if (result.success) {
+					window.location.reload();
+				} else {
+					alert('Upload failed: ' + (result.error || 'Unknown error'));
+				}
+			} catch (error) {
+				console.error('Upload error:', error);
+				alert('Upload failed. Please try again.');
+			} finally {
+				document.getElementById('image-input-edit').value = '';
+			}
+		}
+
+		async function removeCollectionImage(entryId, index, key) {
+			if (!confirm('Remove this image?')) return;
+			alert('Image deletion will be implemented in a future update');
+		}

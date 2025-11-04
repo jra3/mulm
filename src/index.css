@@ -110,6 +110,12 @@ select {
 	@apply border-2 bg-white flex h-9 w-full min-w-0 px-3 py-1 text-base shadow-xs border-gray-300 rounded-lg;
 }
 
+/* Allow textareas to have custom heights (override h-9 from .text-input) */
+textarea.text-input {
+	height: auto;
+	min-height: 2.25rem;
+}
+
 /* Fix date input styling on mobile and desktop */
 input[type="date"].text-input {
 	display: block;

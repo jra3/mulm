@@ -6,7 +6,6 @@ include mixins/caresBadge.pug
 include mixins/emptyState.pug
 include mixins/progressBar.pug
 include mixins/hoverCard.pug
-include mixins/collectionCard.pug
 
 - const stringCell = ['p-3', 'text-left', 'border-b', 'border-gray-200'];
 - const heading = ['p-3', 'text-left', 'font-bold', 'text-gray-900', 'border-b-2', 'border-gray-300', 'bg-gray-50', 'cursor-pointer', 'select-none', 'hover:bg-gray-100'];
@@ -155,42 +154,31 @@ html
 											else
 												span ⚠ Requires: #{award.specialRequirement.description}
 
-		//- Species Collection Section
-		if collection && (collection.length > 0 || isSelf)
-			section.bg-white.py-8#collection-section
+		//- Species Collection Link
+		if collectionStats && (collectionStats.current > 0 || isSelf)
+			section.bg-gradient-to-r.from-blue-50.to-green-50.py-8
 				div(class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8")
-					.flex.justify-between.items-center.mb-6
-						div
-							h3(class="text-xl lg:text-3xl font-extrabold text-gray-900") Species Collection
-							if collectionStats
-								p.text-sm.text-gray-600.mt-1
+					a.block.bg-white.rounded-lg.shadow-md.p-6.hover_shadow-lg.transition-shadow(
+						href=`/member/${member.id}/collection`
+					)
+						.flex.items-center.justify-between.flex-wrap.gap-4
+							.flex.items-center.gap-4
+								.bg-blue-100.rounded-full.p-4
+									i.fas.fa-fish.text-blue-600.text-3xl
+								div
+									h3.text-2xl.font-bold.text-gray-900 Species Collection
 									if collectionStats.current > 0
-										span.font-medium.text-blue-600= collectionStats.current
-										span  current species
-									if collectionStats.lifetime && collectionStats.lifetime > collectionStats.current
-										span.mx-2 •
-										span.text-gray-500= collectionStats.lifetime
-										span.text-gray-500  total (lifetime)
-						if isSelf
-							button.inline-flex.items-center.px-4.py-2.border.border-transparent.text-sm.font-medium.rounded-md.text-white.bg-blue-600.hover_bg-blue-700.focus_outline-none(
-								hx-get="/dialog/collection/add"
-								hx-target="body"
-								hx-swap="beforeend"
-							)
-								i.fas.fa-plus.mr-2
-								| Add Species
-
-					if collection.length > 0
-						.grid.gap-4(class="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4")
-							each entry in collection
-								+collectionCard(entry, isSelf)
-					else if isSelf
-						.text-center.py-12
-							+emptyState("No Species in Collection", {
-								emoji: "🐟",
-								size: "lg",
-								subtitle: "Start tracking the species you currently keep. This helps other members find keepers and potential breeding partners."
-							})
+										p.text-lg.text-gray-600.mt-1
+											span.font-semibold.text-blue-600= collectionStats.current
+											span  species
+											if collectionStats.lifetime && collectionStats.lifetime > collectionStats.current
+												span.text-gray-400.mx-2 •
+												span.text-gray-500= `${collectionStats.lifetime} lifetime`
+									else if isSelf
+										p.text-gray-600.mt-1 Start tracking species you keep
+							.flex.items-center.gap-2
+								span.text-blue-600.font-medium View Collection
+								i.fas.fa-arrow-right.text-blue-600
 
 		- const hasAnySubmissions = fishSubs.length > 0 || plantSubs.length > 0 || coralSubs.length > 0;
 

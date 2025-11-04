@@ -9,19 +9,22 @@ include ./caresBadge.pug
 //-
 //- @param {Object} entry - Collection entry
 //- @param {Boolean} canEdit - Whether the viewer can edit this entry
-//- @param {Boolean} options.compact - Use compact layout (default: false)
+//- @param {Object} options - Display options
+//- @param {String} options.variant - 'compact'|'default'|'large' (default: 'default')
 
 mixin collectionCard(entry, canEdit = false, options = {})
-	- const compact = options.compact || false
+	- const variant = options.variant || 'default'
 	- const species = entry.species || {}
 	- const hovercardId = `collection-${entry.id}-species`
 	- const isCanonical = Boolean(entry.group_id)
+	- const padding = variant === 'large' ? 'lg' : (variant === 'compact' ? 'sm' : 'md')
+	- const hasImages = entry.images && entry.images.length > 0
 
-	+card({variant: 'default', padding: compact ? 'sm' : 'md', shadow: true, extraClasses: 'hover:shadow-md transition-shadow'})
+	+card({variant: 'default', padding, shadow: true, extraClasses: 'hover:shadow-lg transition-shadow'})
 		.flex.flex-col.h-full
 
 			//- Header: Species info
-			.flex.justify-between.items-start.mb-3
+			.flex.justify-between.items-start.mb-4
 				.flex-1.min-w-0
 					if isCanonical
 						//- Canonical species - with hover card and link
@@ -29,11 +32,11 @@ mixin collectionCard(entry, canEdit = false, options = {})
 							+hoverCardTrigger()
 								a.link.font-medium(href=`/species/${entry.group_id}`)
 									if entry.common_name
-										.text-base.text-gray-900.truncate= entry.common_name
+										div(class=variant === 'large' ? 'text-xl' : 'text-base' class="text-gray-900 truncate")= entry.common_name
 									if entry.scientific_name
-										.text-sm.italic.text-gray-600= entry.scientific_name
+										div(class=variant === 'large' ? 'text-base' : 'text-sm' class="italic text-gray-600")= entry.scientific_name
 									else
-										.text-base.text-gray-900 Unknown Species
+										div(class=variant === 'large' ? 'text-xl' : 'text-base' class="text-gray-900") Unknown Species
 							+hoverCardContent({cardClasses: 'hovercard-green-border'})
 								if entry.common_name
 									h3.font-semibold.text-lg= entry.common_name
@@ -50,22 +53,61 @@ mixin collectionCard(entry, canEdit = false, options = {})
 						//- Non-canonical species - no link or hover card
 						.font-medium
 							if entry.common_name
-								.text-base.text-gray-900.truncate= entry.common_name
+								div(class=variant === 'large' ? 'text-xl' : 'text-base' class="text-gray-900 truncate")= entry.common_name
 							if entry.scientific_name
-								.text-sm.italic.text-gray-600= entry.scientific_name
-							.text-xs.text-gray-500.mt-1 (Custom entry)
+								div(class=variant === 'large' ? 'text-base' : 'text-sm' class="italic text-gray-600")= entry.scientific_name
+							if canEdit
+								a.link(
+									class=variant === 'large' ? 'text-sm' : 'text-xs'
+									class="mt-1 inline-block"
+									href="#"
+									hx-get=`/dialog/collection/link/${entry.id}`
+									hx-target="body"
+									hx-swap="beforeend"
+								) Link to database species
+							else
+								div(class=variant === 'large' ? 'text-sm' : 'text-xs' class="text-gray-500 mt-1") (Custom entry)
 
 				if canEdit
-					button.ml-2.text-gray-400.hover_text-gray-600.transition(
+					button.ml-2.inline-flex.items-center.justify-center.px-3.py-2.text-sm.font-medium.text-blue-600.bg-blue-50.hover_bg-blue-100.rounded-md.border.border-blue-200.transition(
 						hx-get=`/dialog/collection/edit/${entry.id}`
 						hx-target="body"
 						hx-swap="beforeend"
 						title="Edit entry"
-					)
-						i.fas.fa-edit
+					) Edit
+
+			//- Images - larger display for 'large' variant
+			if hasImages
+				div(class=variant === 'large' ? 'mb-4' : 'mb-3')
+					if variant === 'large'
+						//- Large variant: Show all images in a nice grid
+						div(class=entry.images.length === 1 ? 'grid grid-cols-1' : entry.images.length === 2 ? 'grid grid-cols-2 gap-2' : 'grid grid-cols-2 gap-2' class="sm:grid-cols-3")
+							each img, idx in entry.images
+								.relative.aspect-video.overflow-hidden.rounded-lg
+									img.w-full.h-full.object-cover(
+										src=img.url.replace('-original', '-medium')
+										alt=`${entry.common_name || 'Species'} photo ${idx + 1}`
+										loading="lazy"
+										class="cursor-pointer"
+										onclick=`window.open('${img.url}', '_blank')`
+									)
+					else
+						//- Compact/default: Show up to 3 thumbnails
+						.grid.gap-1(class=entry.images.length === 1 ? 'grid-cols-1' : 'grid-cols-3')
+							- const displayImages = entry.images.slice(0, 3)
+							each img, idx in displayImages
+								.relative.aspect-video.overflow-hidden.rounded
+									img.w-full.h-full.object-cover(
+										src=img.url.replace('-original', '-thumb')
+										alt=`${entry.common_name || 'Species'} photo ${idx + 1}`
+										loading="lazy"
+									)
+							if entry.images.length > 3
+								.flex.items-center.justify-center.bg-gray-100.rounded.aspect-video
+									span.text-sm.font-medium.text-gray-600= `+${entry.images.length - 3}`
 
 			//- Details: dates, visibility
-			.text-sm.text-gray-600.mb-3.space-y-1
+			div(class=variant === 'large' ? 'text-base' : 'text-sm' class="text-gray-600 mb-3 space-y-2")
 				if entry.acquired_date
 					.flex.items-center.gap-2
 						i.fas.fa-calendar-plus.w-4
@@ -83,27 +125,19 @@ mixin collectionCard(entry, canEdit = false, options = {})
 						i.fas.fa-lock.w-4
 						span
 							strong Private
-
-			//- Images (if any)
-			if entry.images && entry.images.length > 0
-				.mb-3
-					.grid.gap-1(class=entry.images.length === 1 ? 'grid-cols-1' : 'grid-cols-3')
-						- const displayImages = entry.images.slice(0, 3)
-						each img, idx in displayImages
-							.relative.aspect-video.overflow-hidden.rounded
-								img.w-full.h-full.object-cover(
-									src=img.url.replace('-original', '-thumb')
-									alt=`${entry.common_name || 'Species'} photo ${idx + 1}`
-									loading="lazy"
-								)
-						if entry.images.length > 3
-							.flex.items-center.justify-center.bg-gray-100.rounded.aspect-video
-								span.text-sm.font-medium.text-gray-600= `+${entry.images.length - 3}`
+				if isCanonical && species.program_class
+					.flex.items-center.gap-2
+						i.fas.fa-tag.w-4
+						span
+							= species.program_class
+							if species.is_cares_species
+								|
+								+caresBadge('sm')
 
 			//- Notes (if any)
 			if entry.notes
-				.text-sm.text-gray-700.mt-auto.pt-2.border-t.border-gray-200
-					p.line-clamp-3= entry.notes
+				div(class=variant === 'large' ? 'text-base' : 'text-sm' class="text-gray-700 mt-auto pt-3 border-t border-gray-200")
+					p(class=variant === 'large' ? '' : 'line-clamp-3')= entry.notes
 
 
 //- Collection Summary Card - Shows stats

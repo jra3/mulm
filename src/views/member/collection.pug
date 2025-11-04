@@ -1,0 +1,68 @@
+include ../header.pug
+include ../mixins/collectionCard.pug
+include ../mixins/emptyState.pug
+include ../mixins/trophy.pug
+
+doctype html
+html
+	+headTag(`${member.display_name}'s Collection`)
+
+	body.bg-gray-50.text-gray-800
+		//- Custom header with back link
+		header.bg-white.shadow
+			div.max-w-7xl.mx-auto.px-4.py-4.flex.justify-between.items-center
+				.flex.items-center.gap-4
+					a.text-blue-600.hover_text-blue-800.text-2xl.font-bold(href=`/member/${member.id}` title="Back to Profile") ←
+					.flex.items-center.gap-2
+						h2.text-2xl.font-bold= `${member.display_name}'s Collection`
+						+trophy(trophyData)
+				.space-x-4.flex.items-center
+					a.link(href="/") Home
+					a.link(href="/species") Species
+					if isLoggedIn
+						a.link(href="/me") Me
+					a.link(href=`mailto:${bugReportEmail}` title="Report a bug") 🐛
+					if isLoggedIn
+						a.link(href="/account") ⚙️
+
+		main.max-w-7xl.mx-auto.px-4.py-8(class="sm:px-6 lg:px-8")
+
+			//- Stats and add button bar
+			.mb-6
+				.flex.justify-between.items-center.flex-wrap.gap-4
+					if collectionStats
+						.text-lg.text-gray-600
+							if collectionStats.current > 0
+								span.font-semibold.text-blue-600= collectionStats.current
+								span  current species
+							if collectionStats.lifetime && collectionStats.lifetime > collectionStats.current
+								span.text-gray-400.mx-2 •
+								span.text-gray-500= `${collectionStats.lifetime} lifetime`
+
+					if isSelf
+						button.px-4.py-2.text-sm.font-medium.rounded-md.text-white.bg-blue-600.hover_bg-blue-700(
+							hx-get="/dialog/collection/add"
+							hx-target="body"
+							hx-swap="beforeend"
+						) Add Species
+
+			//- Collection content
+			if collection && collection.length > 0
+				//- 2 columns on desktop, 1 on mobile
+				.grid.gap-6(class="grid-cols-1 lg:grid-cols-2")
+					each entry in collection
+						+collectionCard(entry, isSelf, {variant: 'large'})
+			else if isSelf
+				.text-center.py-16
+					+emptyState("No Species in Collection", {
+						emoji: "🐟",
+						size: "xl",
+						subtitle: "Start tracking the species you currently keep. This helps other members find keepers and potential breeding partners."
+					})
+			else
+				.text-center.py-16
+					+emptyState("No Public Collection", {
+						emoji: "🔒",
+						size: "xl",
+						subtitle: "This member hasn't added any species to their public collection yet."
+					})

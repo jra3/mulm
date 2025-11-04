@@ -43,6 +43,9 @@ export interface AddCollectionData {
 }
 
 export interface UpdateCollectionData {
+  common_name?: string | null;
+  scientific_name?: string | null;
+  acquired_date?: string | null;
   notes?: string;
   visibility?: 'public' | 'private';
   removed_date?: string | null;
@@ -107,7 +110,7 @@ export async function getCollectionForMember(
   let sql = `
     SELECT
       c.*,
-      sng.canonical_species_name || ' ' || sng.canonical_genus AS canonical_scientific_name,
+      sng.canonical_genus || ' ' || sng.canonical_species_name AS canonical_scientific_name,
       (SELECT common_name FROM species_common_name
        WHERE group_id = c.group_id LIMIT 1) AS canonical_common_name,
       sng.program_class,
@@ -227,6 +230,27 @@ export async function updateCollectionEntry(
   // Build dynamic update query
   const updateFields: string[] = ['updated_at = CURRENT_TIMESTAMP'];
   const params: (string | number | null)[] = [];
+
+  // If updating names, convert to custom entry (set group_id to NULL)
+  if (updates.common_name !== undefined || updates.scientific_name !== undefined) {
+    updateFields.push('group_id = ?');
+    params.push(null);
+
+    if (updates.common_name !== undefined) {
+      updateFields.push('common_name = ?');
+      params.push(updates.common_name || null);
+    }
+
+    if (updates.scientific_name !== undefined) {
+      updateFields.push('scientific_name = ?');
+      params.push(updates.scientific_name || null);
+    }
+  }
+
+  if (updates.acquired_date !== undefined) {
+    updateFields.push('acquired_date = ?');
+    params.push(updates.acquired_date || null);
+  }
 
   if (updates.notes !== undefined) {
     updateFields.push('notes = ?');

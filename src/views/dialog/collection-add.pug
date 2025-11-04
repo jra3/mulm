@@ -24,6 +24,7 @@ include ../mixins/errorMessage.pug
 					data-min-query-length="2"
 					data-max-items="1"
 					data-placeholder="Search species..."
+					hx-on:change="const item = this.tomselect?.options[this.value]; if (item) { document.getElementById('common_name').value = item.common_name || ''; document.getElementById('scientific_name').value = item.scientific_name || ''; }"
 				)
 				+errorMessage('group_id')
 
@@ -54,7 +55,7 @@ include ../mixins/errorMessage.pug
 						)
 						+errorMessage('scientific_name')
 
-			//- Other fields in a compact grid
+			//- Date and visibility in a compact grid
 			.grid.gap-3(class="grid-cols-1 sm:grid-cols-2")
 				.space-y-1
 					label.input-label(for="acquired_date") Acquired Date (optional)
@@ -65,17 +66,21 @@ include ../mixins/errorMessage.pug
 					)
 					+errorMessage('acquired_date')
 
-				.flex.items-center.gap-2.pt-6
-					input(type="checkbox" id="visibility_private" name="visibility" value="private")
-					label.text-sm(for="visibility_private") Keep private
+				.space-y-1
+					label.input-label(for="visibility") Visibility
+					select.text-input(
+						id="visibility"
+						name="visibility"
+					)
+						option(value="public" selected) Public
+						option(value="private") Private
 
 			//- Notes
 			.space-y-1
 				label.input-label(for="notes") Notes (optional)
-				textarea.text-input(
+				textarea.text-input.h-32(
 					id="notes"
 					name="notes"
-					rows="2"
 					maxlength="500"
 					placeholder="Notes about specimens..."
 				)

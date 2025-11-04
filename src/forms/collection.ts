@@ -63,6 +63,30 @@ export const addToCollectionSchema = z.object({
  * Note: HTML forms send all data as strings, so we use coerce for numbers
  */
 export const updateCollectionSchema = z.object({
+  common_name: z
+    .string()
+    .min(1, "Common name is required")
+    .max(200, "Common name too long")
+    .optional()
+    .or(z.literal("")),
+
+  scientific_name: z
+    .string()
+    .max(200, "Scientific name too long")
+    .optional()
+    .or(z.literal("")),
+
+  acquired_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
+    .refine((date) => {
+      const d = new Date(date);
+      const today = new Date();
+      return d <= today;
+    }, "Acquisition date cannot be in the future")
+    .optional()
+    .or(z.literal("")),
+
   notes: z
     .string()
     .max(500, "Notes cannot exceed 500 characters")
@@ -80,7 +104,13 @@ export const updateCollectionSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
     .nullable()
     .optional(),
-});
+}).refine(
+  (data) => data.common_name || data.scientific_name,
+  {
+    message: "Must have at least a common name or scientific name",
+    path: ["common_name"],
+  }
+);
 
 /**
  * Schema for collection view query parameters

@@ -53,13 +53,7 @@ export const view = async (req: MulmRequest, res: Response) => {
   // Get specialty award progress
   const progressData = await getSpecialtyAwardProgress(memberId);
 
-  // Get collection data
-  const includePrivate = isSelf || isAdmin;
-  const collection = await getCollectionForMember(memberId, {
-    includeRemoved: false,
-    includePrivate,
-    viewerId: viewer?.id,
-  });
+  // Get collection stats (just for link/badge, not full collection)
   const collectionStats = await getCollectionStats(memberId);
 
   res.render("member", {
@@ -75,7 +69,46 @@ export const view = async (req: MulmRequest, res: Response) => {
     isAdmin,
     trophyData: getTrophyData(member.awards),
     progressData,
+    collectionStats,
+  });
+};
+
+/**
+ * View a member's species collection on dedicated page
+ */
+export const viewCollection = async (req: MulmRequest, res: Response) => {
+  const memberId = parseInt(req.params.memberId);
+  if (isNaN(memberId)) {
+    res.status(400).send("Invalid member ID");
+    return;
+  }
+
+  const member = await getMemberWithAwards(memberId);
+  if (!member) {
+    res.status(404).send("Member not found");
+    return;
+  }
+
+  const { viewer } = req;
+  const isSelf = Boolean(viewer?.id == member.id);
+  const isAdmin = Boolean(viewer?.is_admin);
+
+  // Get full collection data
+  const includePrivate = isSelf || isAdmin;
+  const collection = await getCollectionForMember(memberId, {
+    includeRemoved: false,
+    includePrivate,
+    viewerId: viewer?.id,
+  });
+  const collectionStats = await getCollectionStats(memberId);
+
+  res.render("member/collection", {
+    member,
     collection,
     collectionStats,
+    isLoggedIn: Boolean(viewer),
+    isSelf,
+    isAdmin,
+    trophyData: getTrophyData(member.awards),
   });
 };

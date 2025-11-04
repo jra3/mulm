@@ -1,0 +1,8 @@
+//- Simple message partial for HTMX responses
+//- Expects: message (string), type ('error'|'warning'|'success')
+
+- const colors = { error: 'red', warning: 'yellow', success: 'green' }
+- const color = colors[type] || 'red'
+
+div(class=`bg-${color}-50 border-l-4 border-${color}-400 p-3 mb-4`)
+	p(class=`text-${color}-700 text-sm`)= message

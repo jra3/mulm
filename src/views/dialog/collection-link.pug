@@ -1,0 +1,60 @@
+include ../header.pug
+include ../mixins/errorMessage.pug
+
++dialog()
+	h2.text-2xl.font-bold.mb-2 Link to Database Species
+	p.text-gray-600.text-sm.mb-4 Connect this custom entry to an existing species in our database.
+
+	//- Show current entry info
+	.bg-gray-50.border-l-4.border-gray-400.p-3.mb-4
+		if entry.common_name
+			p.font-semibold.text-gray-900= entry.common_name
+		if entry.scientific_name
+			p.italic.text-sm.text-gray-700= entry.scientific_name
+
+	//- Error message area
+	div#link-error
+
+	form(
+		hx-post=`/api/collection/${entry.id}/link`
+		hx-target="#link-error"
+		hx-swap="innerHTML"
+	)
+		.flex.flex-col.gap-3
+
+			//- Species search
+			.space-y-2
+				label.input-label(for="species-search") Search Database
+				select#species-search.tom-select-typeahead(
+					name="group_id"
+					data-api-url="/api/species/search"
+					data-value-field="group_id"
+					data-label-field="text"
+					data-search-fields="text,common_name,scientific_name"
+					data-min-query-length="2"
+					data-max-items="1"
+					data-placeholder="Search for species to link..."
+					required
+				)
+				+errorMessage('group_id')
+
+			.flex.gap-2.justify-end.pt-2
+				button.outline(
+					type="button"
+					hx-on:click="document.getElementById('dialog').remove()"
+				) Cancel
+				button.primary(type="submit") Link Species
+
+	//- Initialize typeahead after dialog is in DOM
+	script.
+		(function() {
+			const typeahead = document.getElementById('species-search');
+			if (typeahead && typeof TomSelect !== 'undefined' && typeof getTypeaheadConfig === 'function') {
+				const config = getTypeaheadConfig(typeahead);
+				const options = buildTomSelectOptions(typeahead, config);
+				const instance = new TomSelect(typeahead, options);
+				if (config.maxItems === 1) {
+					instance.control.classList.add('single-value');
+				}
+			}
+		})();

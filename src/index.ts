@@ -160,6 +160,7 @@ router.patch("/tanks/:name", tank.update);
 router.delete("/tanks/:name", tank.remove);
 
 router.get("/member/:memberId", member.view);
+router.get("/member/:memberId/collection", member.viewCollection);
 router.get("/me", (req: MulmRequest, res) => {
   const { viewer } = req;
   if (!viewer) {
