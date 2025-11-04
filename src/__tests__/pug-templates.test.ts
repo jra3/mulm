@@ -603,6 +603,32 @@ void describe("Pug Template Rendering", () => {
             };
             break;
 
+          case "account/specialtyAwards.pug":
+            templateData.specialtyProgress = [
+              {
+                name: "Cichlid Specialist",
+                isCompleted: true,
+                currentSpecies: 10,
+                requiredSpecies: 10,
+                speciesList: ["Pelvicachromis pulcher", "Apistogramma cacatuoides", "Microgeophagus ramirezi"],
+              },
+              {
+                name: "Catfish Specialist",
+                isCompleted: false,
+                currentSpecies: 5,
+                requiredSpecies: 10,
+                speciesList: ["Corydoras paleatus", "Ancistrus sp."],
+              },
+            ];
+            break;
+
+          case "admin/createSpeciesDialog.pug":
+            templateData.prefilled = {
+              canonical_genus: "Puntius",
+              canonical_species_name: "conchonius",
+            };
+            break;
+
           default:
             // Apply any additional common data for unhandled templates
             break;
