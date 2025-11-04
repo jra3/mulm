@@ -320,8 +320,12 @@ export const create = async (req: MulmRequest, res: Response) => {
     }
   }
 
-  // Redirect to the submission view page after successful creation
-  res.set("HX-Redirect", `/submissions/${subId}`).status(200).send();
+  // Redirect after successful creation
+  // When saving drafts for yourself (member or admin), go to /me
+  // When admin saves draft for another member, go to submission view
+  const isSavingForSelf = viewer.id === memberId;
+  const redirectUrl = draft && isSavingForSelf ? "/me" : `/submissions/${subId}`;
+  res.set("HX-Redirect", redirectUrl).status(200).send();
 };
 
 export const update = async (req: MulmRequest, res: Response) => {
@@ -391,8 +395,12 @@ export const update = async (req: MulmRequest, res: Response) => {
     await onSubmissionSend(sub, member);
   }
 
-  // Redirect to the submission view page after successful update
-  res.set("HX-Redirect", `/submissions/${submission.id}`).status(200).send();
+  // Redirect after successful update
+  // When saving drafts for yourself (member or admin), go to /me
+  // When admin saves draft for another member, go to submission view
+  const isSavingForSelf = viewer.id === submission.member_id;
+  const redirectUrl = draft && isSavingForSelf ? "/me" : `/submissions/${submission.id}`;
+  res.set("HX-Redirect", redirectUrl).status(200).send();
 };
 
 export const remove = async (req: MulmRequest, res: Response) => {
