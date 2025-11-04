@@ -5,6 +5,7 @@ include mixins/trophy.pug
 include mixins/caresBadge.pug
 include mixins/emptyState.pug
 include mixins/progressBar.pug
+include mixins/hoverCard.pug
 
 - const stringCell = ['p-3', 'text-left', 'border-b', 'border-gray-200'];
 - const heading = ['p-3', 'text-left', 'font-bold', 'text-gray-900', 'border-b-2', 'border-gray-300', 'bg-gray-50', 'cursor-pointer', 'select-none', 'hover:bg-gray-100'];
@@ -79,6 +80,8 @@ mixin submissionTable(submissions, totalPoints)
 doctype html
 html
 	+headTag(member.display_name)
+		link(rel='stylesheet', href='/components/hoverCard.css')
+		script(src='/js/hoverCard.js')
 		script(src='/tablesort.min.js')
 		script(src='/tablesort.number.min.js')
 		script(src='/tablesort.date.min.js')
@@ -129,10 +132,22 @@ html
 								- const borderColor = award.isComplete ? 'border-blue-500' : 'border-gray-300'
 								div(class=`bg-white rounded-lg shadow-md p-4 border-l-4 ${borderColor}`)
 									div.mb-3
-										h4(class="font-semibold text-gray-800 mb-1")= award.awardName.replace(' Specialist', '')
-										div(class="text-sm text-gray-600 mb-2")
-											span(class="text-lg font-bold")= award.currentSpecies
-											span  of #{award.requiredSpecies} species
+										+hoverCard({id: `progress-${award.awardName.replace(/\s+/g, '-')}`, side: 'top', width: 'md', openDelay: 150})
+											+hoverCardTrigger()
+												div(class="cursor-help")
+													h4(class="font-semibold text-gray-800 mb-1")= award.awardName.replace(' Specialist', '')
+													div(class="text-sm text-gray-600 mb-2")
+														span(class="text-lg font-bold")= award.currentSpecies
+														span  of #{award.requiredSpecies} species
+											+hoverCardContent({cardClasses: 'hovercard-blue-border'})
+												h4.text-sm.font-bold.text-gray-900.mb-2= award.awardName
+												if award.speciesBred && award.speciesBred.length > 0
+													p.text-xs.text-gray-700.mb-2 Species that count toward this award:
+													.space-y-1
+														each species in award.speciesBred
+															.text-xs.text-gray-700.italic= species
+												else
+													p.text-xs.text-gray-700 No species bred yet in this category
 										+progressBar(award.currentSpecies, award.requiredSpecies, {variant: progressVariant, size: 'md'})
 									if award.specialRequirement
 										div(class=award.specialRequirement.isMet ? 'text-xs bg-green-100 text-green-800 p-2 rounded' : 'text-xs bg-yellow-100 text-yellow-800 p-2 rounded')
