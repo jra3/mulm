@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { login, logout } from "./helpers/auth";
 import { TEST_USER, cleanupTestUserSubmissions, getSubmissionsForMember, getTestDatabase } from "./helpers/testData";
-import { fillTomSelectTypeahead, selectTomSelectMultiple } from "./helpers/tomSelect";
+import { fillTomSelectTypeahead, selectTomSelectMultiple, clearTomSelect } from "./helpers/tomSelect";
 
 test.describe.configure({ mode: 'serial' });
 
@@ -221,24 +221,21 @@ test.describe("Form Submission Flow", () => {
 		await draftButton.click();
 		await page.waitForLoadState("networkidle");
 
-		// Give HTMX time to process the save and redirect
+		// After saving draft, should redirect to /me (which redirects to /member/{id})
 		await page.waitForTimeout(2000);
+		expect(page.url()).toMatch(/\/member\/\d+/);
 
-		// Get the submission ID from the URL
-		const url = page.url();
-		console.log(`Current URL after save: ${url}`);
-		const submissionIdMatch = url.match(/submissions\/(\d+)/);
+		// Find the draft submission in the member page - it should be the first row with "Draft" status
+		// The draft status badge (📝) is a link to the submission
+		const draftLink = page.locator('a[href^="/submissions/"]:has-text("📝")').first();
+		const href = await draftLink.getAttribute("href");
+		expect(href).toBeTruthy();
 
-		// If URL doesn't have ID, try getting it from the form's hidden ID field
-		let submissionId: string;
-		if (submissionIdMatch) {
-			submissionId = submissionIdMatch[1];
-		} else {
-			const idInput = await page.locator('input[name="id"]').inputValue();
-			submissionId = idInput;
-			console.log(`Got submission ID from form input: ${submissionId}`);
-		}
-		expect(submissionId).toBeTruthy();
+		// Extract submission ID from href
+		const submissionIdMatch = href!.match(/\/submissions\/(\d+)/);
+		expect(submissionIdMatch).toBeTruthy();
+		const submissionId = submissionIdMatch![1];
+		console.log(`Found draft submission ID: ${submissionId}`);
 
 		// Edit the draft
 		await page.goto(`/submissions/${submissionId}`);
@@ -250,6 +247,9 @@ test.describe("Form Submission Flow", () => {
 		// Wait a bit before changing species name (which might trigger swaps)
 		await page.waitForTimeout(500);
 
+		// Clear the existing Tom Select value first, then fill with new value
+		await clearTomSelect(page, "species_common_name");
+		await page.waitForTimeout(300);
 		await fillTomSelectTypeahead(page, "species_common_name", "Updated Guppy");
 
 		// Wait for any HTMX swaps from species name change to complete
