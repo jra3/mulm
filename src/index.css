@@ -110,6 +110,30 @@ select {
 	@apply border-2 bg-white flex h-9 w-full min-w-0 px-3 py-1 text-base shadow-xs border-gray-300 rounded-lg;
 }
 
+/* Fix date input styling on mobile and desktop */
+input[type="date"].text-input {
+	display: block;
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	appearance: none;
+	line-height: normal;
+	height: 2.25rem; /* h-9 */
+	min-height: 2.25rem;
+	max-width: 100%;
+	box-sizing: border-box;
+}
+
+/* Ensure date input icon doesn't overflow */
+input[type="date"].text-input::-webkit-calendar-picker-indicator {
+	cursor: pointer;
+	position: relative;
+	right: 0;
+}
+
+input[type="date"].text-input::-webkit-date-and-time-value {
+	text-align: left;
+}
+
 .text-input:disabled {
 	@apply bg-gray-300;
 }

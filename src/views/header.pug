@@ -57,12 +57,12 @@ mixin footer()
 			span(class="text-base") Educating Aquarists since 1911
 
 mixin dialog()
-	.fixed.inset-0.flex.items-center.justify-center.p-4.z-50(hx-on:click="document.getElementById('dialog').remove()")#dialog
-		// The modal box
-		.w-lg.relative.inset-4.shadow-lg.bg-gray-200.rounded-lg(hx-on:click="event.stopPropagation()")
+	div(class="fixed inset-0 z-50 bg-black/0 sm:bg-black/50 sm:flex sm:items-center sm:justify-center sm:p-4" hx-on:click="document.getElementById('dialog').remove()")#dialog
+		// The modal box - full screen on mobile, centered card on desktop
+		div(class="w-full h-full sm:w-auto sm:h-auto sm:max-w-lg sm:max-h-[90vh] relative shadow-lg bg-gray-200 sm:rounded-lg overflow-y-auto" hx-on:click="event.stopPropagation()")
 			// Close button absolutely positioned inside the modal
-			a.link.absolute.top-2.right-4.font-bold(hx-on:click="document.getElementById('dialog').remove()") &times;
-			.w-full.flex.flex-col.items-center.gap-2.p-6#dialogContent
+			a.link.absolute.top-2.right-4.font-bold.z-10(hx-on:click="document.getElementById('dialog').remove()") &times;
+			div(class="w-full flex flex-col p-4 sm:p-6")#dialogContent
 				block
 
 mixin sidebar()

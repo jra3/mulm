@@ -2,21 +2,19 @@ include ../header.pug
 include ../mixins/errorMessage.pug
 
 +dialog()
-	h2.text-2xl.font-bold.mb-4 Add to Collection
-
-	.bg-blue-50.border-l-4.border-blue-400.p-4.mb-4
-		p.text-blue-700.text-sm Track species you currently keep in your tanks, independent of breeding achievements.
+	h2.text-2xl.font-bold.mb-2 Add to Collection
+	p.text-gray-600.text-sm.mb-4 Track species you currently keep in your tanks.
 
 	form(
 		hx-post="/api/collection"
 		hx-target="#dialogContent"
 		hx-swap="innerHTML"
 	)
-		.flex.flex-col.gap-4
+		.flex.flex-col.gap-3
 
-			//- Option 1: Select canonical species from database
+			//- Option 1: Select from database
 			.space-y-2
-				label.input-label(for="species-search") Search Database Species
+				label.input-label(for="species-search") Select from Database
 				select#species-search.tom-select-typeahead(
 					name="group_id"
 					data-api-url="/api/species/search"
@@ -25,74 +23,65 @@ include ../mixins/errorMessage.pug
 					data-search-fields="text,common_name,scientific_name"
 					data-min-query-length="2"
 					data-max-items="1"
-					data-placeholder="Start typing to search database..."
-					hx-on:change="document.getElementById('common_name').value = ''; document.getElementById('scientific_name').value = ''; document.getElementById('common_name').disabled = this.value !== ''; document.getElementById('scientific_name').disabled = this.value !== '';"
+					data-placeholder="Search species..."
 				)
-				p.text-sm.text-gray-600 Search for species already in our database
 				+errorMessage('group_id')
 
-			.text-center.text-sm.text-gray-500.font-medium.my-2 — OR —
-
-			//- Option 2: Enter free-text names
+			//- Option 2: Manual entry
 			.space-y-2
-				label.input-label(for="common_name") Common Name
-				input.text-input(
-					type="text"
-					id="common_name"
-					name="common_name"
-					maxlength="200"
-					placeholder="e.g., Fancy Guppy"
-					hx-on:input="if(this.value) { document.getElementById('species-search').tomselect?.clear(); }"
-				)
-				p.text-sm.text-gray-600 Enter a common name if species is not in database
-				+errorMessage('common_name')
+				.text-center.text-xs.text-gray-500.my-2 Or enter manually:
 
-			.space-y-2
-				label.input-label(for="scientific_name") Scientific Name (optional)
-				input.text-input(
-					type="text"
-					id="scientific_name"
-					name="scientific_name"
-					maxlength="200"
-					placeholder="e.g., Poecilia reticulata"
-				)
-				p.text-sm.text-gray-600 Optional scientific/Latin name
-				+errorMessage('scientific_name')
+				.grid.gap-3(class="grid-cols-1 sm:grid-cols-2")
+					.space-y-1
+						label.input-label(for="common_name") Common Name
+						input.text-input(
+							type="text"
+							id="common_name"
+							name="common_name"
+							maxlength="200"
+							placeholder="e.g., Fancy Guppy"
+						)
+						+errorMessage('common_name')
 
-			//- Acquired date (optional)
-			.space-y-2
-				label.input-label(for="acquired_date") Acquired Date (optional)
-				input.text-input(
-					type="date"
-					id="acquired_date"
-					name="acquired_date"
-					max=new Date().toISOString().split('T')[0]
-				)
-				p.text-sm.text-gray-600 When did you acquire this species?
-				+errorMessage('acquired_date')
+					.space-y-1
+						label.input-label(for="scientific_name") Scientific (optional)
+						input.text-input(
+							type="text"
+							id="scientific_name"
+							name="scientific_name"
+							maxlength="200"
+							placeholder="e.g., Poecilia reticulata"
+						)
+						+errorMessage('scientific_name')
+
+			//- Other fields in a compact grid
+			.grid.gap-3(class="grid-cols-1 sm:grid-cols-2")
+				.space-y-1
+					label.input-label(for="acquired_date") Acquired Date (optional)
+					input.text-input(
+						type="date"
+						id="acquired_date"
+						name="acquired_date"
+					)
+					+errorMessage('acquired_date')
+
+				.flex.items-center.gap-2.pt-6
+					input(type="checkbox" id="visibility_private" name="visibility" value="private")
+					label.text-sm(for="visibility_private") Keep private
 
 			//- Notes
-			.space-y-2
+			.space-y-1
 				label.input-label(for="notes") Notes (optional)
 				textarea.text-input(
 					id="notes"
 					name="notes"
-					rows="3"
+					rows="2"
 					maxlength="500"
-					placeholder="Notes about these specimens, tank conditions, breeding behavior, etc."
+					placeholder="Notes about specimens..."
 				)
-				p.text-sm.text-gray-600 Max 500 characters
 				+errorMessage('notes')
 
-			//- Visibility toggle
-			.flex.items-start.gap-2
-				input(type="checkbox" id="visibility_private" name="visibility" value="private")
-				label.text-sm(for="visibility_private")
-					strong Keep this entry private
-					br
-					span.text-gray-600 Private entries are only visible to you
-
-			.flex.gap-2.justify-end
+			.flex.gap-2.justify-end.pt-2
 				button.outline(
 					type="button"
 					hx-on:click="document.getElementById('dialog').remove()"
