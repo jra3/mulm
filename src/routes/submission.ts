@@ -27,6 +27,7 @@ import { getWaitingPeriodStatus } from "@/utils/waitingPeriod";
 import { getNotesForSubmission } from "@/db/submission_notes";
 import { formatShortDate } from "@/utils/dateFormat";
 import { parseVideoUrlWithOEmbed, isValidVideoUrl } from "@/utils/videoParser";
+import config from "@/config.json";
 
 async function getFormTemplateData(isAdmin: boolean, speciesType: string) {
   const members = isAdmin ? await getMembersList() : [];
@@ -184,6 +185,37 @@ export const view = async (req: MulmRequest, res: Response) => {
     videoMetadata = await parseVideoUrlWithOEmbed(submission.video_url);
   }
 
+  // Prepare Open Graph data for social media sharing (approved submissions only)
+  let ogData = null;
+  if (aspect.isApproved) {
+    let firstImageUrl: string | null = null;
+    try {
+      const images: unknown = JSON.parse(submission.images || "[]");
+      if (Array.isArray(images) && images.length > 0) {
+        // Images are stored as objects with {url, key, size, etc}
+        const firstImage: unknown = images[0];
+        if (
+          firstImage &&
+          typeof firstImage === "object" &&
+          firstImage !== null &&
+          "url" in firstImage &&
+          typeof firstImage.url === "string"
+        ) {
+          firstImageUrl = firstImage.url;
+        }
+      }
+    } catch {
+      // Invalid JSON, ignore
+    }
+
+    ogData = {
+      title: `${submission.member_name} bred ${canonicalName}`,
+      description: `BAP submission - ${submission.points || 0} points - ${submission.species_common_name}`,
+      url: `${config.domain}/submissions/${submission.id}`,
+      image: firstImageUrl,
+    };
+  }
+
   res.render("submission/review", {
     submission: {
       ...submission,
@@ -209,6 +241,7 @@ export const view = async (req: MulmRequest, res: Response) => {
     waitingPeriodStatus,
     adminNotes,
     videoMetadata,
+    ogData,
     ...aspect,
   });
 };

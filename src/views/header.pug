@@ -1,7 +1,7 @@
 include mixins/trophy.pug
 include mixins/loadingSpinner.pug
 
-mixin headTag(title)
+mixin headTag(title, ogData)
 	head
 		title= title
 		link(rel='stylesheet', href='/index.css')
@@ -10,6 +10,25 @@ mixin headTag(title)
 		script(src='/tom-select.complete.min.js')
 		script(src=`/typeahead.js?v=${Date.now()}`)
 		meta(name="viewport" content="width=device-width, initial-scale=1.0")
+
+		// Open Graph tags for social media sharing
+		if ogData
+			meta(property="og:type" content="article")
+			meta(property="og:title" content=ogData.title)
+			meta(property="og:description" content=ogData.description)
+			meta(property="og:url" content=ogData.url)
+			if ogData.image
+				meta(property="og:image" content=ogData.image)
+				meta(property="og:image:width" content="1200")
+				meta(property="og:image:height" content="630")
+
+			// Twitter Card tags
+			meta(name="twitter:card" content=ogData.image ? "summary_large_image" : "summary")
+			meta(name="twitter:title" content=ogData.title)
+			meta(name="twitter:description" content=ogData.description)
+			if ogData.image
+				meta(name="twitter:image" content=ogData.image)
+
 		block
 
 mixin pageHeader(loggedIn, title, subtitle, trophyData)

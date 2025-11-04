@@ -17,7 +17,7 @@ mixin reviewTextInput(labelText, name, type="text")
 
 doctype html
 html
-    +headTag
+    +headTag(`${canonicalName} - BAS BAP`, ogData)
 
     body.bg-white.text-gray-800
         +pageHeader(isLoggedIn, canonicalName, submission.member_name)
