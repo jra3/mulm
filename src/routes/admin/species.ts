@@ -32,6 +32,9 @@ import { db } from "@/db/conn";
 import { getQueryString, getQueryNumber, getQueryBoolean, getBodyString } from "@/utils/request";
 import { getClassOptions } from "@/forms/submission";
 import { mergeSpeciesSchema } from "@/forms/speciesMerge";
+import { speciesCreateForm } from "@/forms/speciesCreate";
+import { getSubmissionById } from "@/db/submissions";
+import { createSpeciesGroup } from "@/db/species";
 import { logger } from "@/utils/logger";
 import * as z from "zod";
 
@@ -693,6 +696,129 @@ export const mergeSpeciesAction = async (req: MulmRequest, res: Response) => {
     res.set("HX-Redirect", `/admin/species/${canonical_group_id}/edit`).status(200).send();
   } catch {
     res.status(500).send("Failed to merge species");
+  }
+};
+
+/**
+ * GET /admin/dialog/species/new?submission_id=123
+ * Render create species dialog with pre-filled data from submission
+ */
+export const createSpeciesDialog = async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+
+  if (!viewer?.is_admin) {
+    res.status(403).send("Admin access required");
+    return;
+  }
+
+  const submissionId = parseInt(req.query.submission_id as string);
+  if (!submissionId) {
+    res.status(400).send("Invalid submission ID");
+    return;
+  }
+
+  const submission = await getSubmissionById(submissionId);
+
+  if (!submission) {
+    res.status(404).send("Submission not found");
+    return;
+  }
+
+  // Parse scientific name into genus and species
+  // Expected format: "Genus species" (binomial nomenclature)
+  const latinName = submission.species_latin_name || "";
+  const parts = latinName.trim().split(/\s+/);
+  const canonical_genus = parts[0] || "";
+  const canonical_species_name = parts[1] || "";
+
+  // Get class options for this species type
+  const classOptions = getClassOptions(submission.species_type || "Fish");
+
+  res.render("admin/createSpeciesDialog", {
+    submission,
+    prefilled: {
+      canonical_genus,
+      canonical_species_name,
+      program_class: submission.species_class || "",
+    },
+    classOptions,
+    errors: new Map(),
+  });
+};
+
+/**
+ * POST /admin/species
+ * Create a new species group
+ */
+export const createSpeciesRoute = async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+
+  if (!viewer?.is_admin) {
+    res.status(403).send("Admin access required");
+    return;
+  }
+
+  // Validate form data
+  const parsed = speciesCreateForm.safeParse(req.body);
+
+  if (!parsed.success) {
+    const errors = new Map<string, string>();
+    parsed.error.issues.forEach((issue) => {
+      errors.set(String(issue.path[0]), issue.message);
+    });
+
+    // Return errors as JSON for HTMX to handle
+    res.status(400).json({
+      success: false,
+      errors: Object.fromEntries(errors),
+    });
+    return;
+  }
+
+  const {
+    canonical_genus,
+    canonical_species_name,
+    program_class,
+    species_type,
+    base_points,
+    is_cares_species,
+  } = parsed.data;
+
+  try {
+    const groupId = await createSpeciesGroup({
+      canonicalGenus: canonical_genus,
+      canonicalSpeciesName: canonical_species_name,
+      programClass: program_class,
+      speciesType: species_type,
+      basePoints: base_points,
+      isCaresSpecies: is_cares_species,
+    });
+
+    const canonicalName = `${canonical_genus} ${canonical_species_name}`;
+
+    // Return JSON with the new group_id for HTMX event handling
+    res.status(200).json({
+      success: true,
+      group_id: groupId,
+      canonical_name: canonicalName,
+    });
+  } catch (err) {
+    // Handle errors (e.g., duplicate canonical name)
+    if (err instanceof Error && err.message.includes("already exists")) {
+      res.status(400).json({
+        success: false,
+        errors: {
+          canonical_genus: err.message,
+        },
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        errors: {
+          _general: "Failed to create species",
+        },
+      });
+    }
   }
 };
 

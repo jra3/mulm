@@ -35,6 +35,10 @@ adminRouter.post("/species/bulk-sync-iucn", speciesAdmin.bulkSyncIucn);
 adminRouter.get("/dialog/species/:groupId/merge", speciesAdmin.mergeSpeciesDialog);
 adminRouter.post("/species/:groupId/merge", speciesAdmin.mergeSpeciesAction);
 
+// Create species
+adminRouter.get("/dialog/species/new", speciesAdmin.createSpeciesDialog);
+adminRouter.post("/species", speciesAdmin.createSpeciesRoute);
+
 // Split name management (new schema)
 adminRouter.get("/species/:groupId/common-names/new", speciesAdmin.addCommonNameForm);
 adminRouter.post("/species/:groupId/common-names", speciesAdmin.addCommonNameRoute);

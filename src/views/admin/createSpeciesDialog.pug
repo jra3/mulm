@@ -1,0 +1,100 @@
+include ../header.pug
+include ../mixins/errorMessage.pug
+
++dialog()
+	h2.text-2xl.font-bold.mb-4 Create New Species
+
+	.bg-blue-50.border-l-4.border-blue-400.p-4.mb-4
+		p.text-blue-800.font-semibold.mb-2 Creating species for submission:
+		.text-blue-700.text-sm.space-y-1
+			if submission.species_common_name
+				p
+					strong Common Name:
+					| #{submission.species_common_name}
+			if submission.species_latin_name
+				p
+					strong Scientific Name:
+					| #{submission.species_latin_name}
+			if submission.species_type
+				p
+					strong Type:
+					| #{submission.species_type}
+			if submission.species_class
+				p
+					strong Class:
+					| #{submission.species_class}
+
+	form(
+		hx-post="/admin/species"
+		hx-on--after-request="if(event.detail.successful) { const data = JSON.parse(event.detail.xhr.response); htmx.trigger('#species-search', 'species-created', {group_id: data.group_id, canonical_name: data.canonical_name}); document.getElementById('dialog').remove(); }"
+	)
+		input(type="hidden" name="species_type" value=submission.species_type)
+
+		.flex.flex-col.gap-4
+			//- Canonical genus
+			.space-y-2
+				label.input-label(for="canonical_genus") Canonical Genus
+				input.text-input(
+					type="text"
+					id="canonical_genus"
+					name="canonical_genus"
+					value=prefilled.canonical_genus || ""
+					required
+					maxlength="100"
+					placeholder="e.g., Puntius"
+				)
+				+errorMessage('canonical_genus')
+
+			//- Canonical species name
+			.space-y-2
+				label.input-label(for="canonical_species_name") Canonical Species Name
+				input.text-input(
+					type="text"
+					id="canonical_species_name"
+					name="canonical_species_name"
+					value=prefilled.canonical_species_name || ""
+					required
+					maxlength="100"
+					placeholder="e.g., conchonius"
+				)
+				+errorMessage('canonical_species_name')
+
+			//- Program class
+			.space-y-2
+				label.input-label(for="program_class") Program Class
+				.select-wrapper
+					select#program_class(
+						name="program_class"
+						required
+					)
+						option(value="" disabled selected=!prefilled.program_class) Select class...
+						each classOption in classOptions
+							option(
+								value=classOption.value
+								selected=classOption.value === prefilled.program_class
+							)= classOption.text
+				+errorMessage('program_class')
+
+			//- Optional: Base points
+			.space-y-2
+				label.input-label(for="base_points") Base Points (optional)
+				.select-wrapper
+					select#base_points(name="base_points")
+						option(value="") Not set
+						option(value="5") 5
+						option(value="10") 10
+						option(value="15") 15
+						option(value="20") 20
+				+errorMessage('base_points')
+
+			//- Optional: CARES species
+			.flex.items-start.gap-2
+				input(type="checkbox" id="is_cares_species" name="is_cares_species")
+				label.text-sm(for="is_cares_species") CARES Species
+
+			.flex.gap-2.justify-end
+				button.outline(
+					type="button"
+					hx-on:click="document.getElementById('dialog').remove()"
+				) Cancel
+				button.primary(type="submit") Create Species
