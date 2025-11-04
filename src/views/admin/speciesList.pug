@@ -80,8 +80,8 @@ mixin speciesTable(speciesList)
 
             td(class=stringCell)
               .flex.items-center.gap-1
-                +iucnBadge(item.iucn_redlist_category, 'sm', false, true, item.iucn_redlist_url)
-                if item.iucn_population_trend
+                +iucnBadgeWithHover(item, item.group_id, 'sm')
+                if item.iucn_population_trend && !item.iucn_redlist_category
                   +populationTrend(item.iucn_population_trend, 'sm')
 
             td(class=stringCell)
@@ -93,8 +93,6 @@ mixin speciesTable(speciesList)
 doctype html
 html
   +headTag(title)
-    link(rel='stylesheet', href='/components/hoverCard.css')
-    script(src='/js/hoverCard.js')
     script(src='/tablesort.min.js')
     script(src='/tablesort.number.min.js')
     script.

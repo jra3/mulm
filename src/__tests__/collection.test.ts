@@ -14,7 +14,7 @@ import {
   getRecentCollectionAdditions,
   updateCollectionImages,
 } from "../db/collection";
-import type { ImageMetadata } from "../utils/upload";
+import type { ImageMetadata } from "../utils/r2-client";
 
 void describe("Species Collection Database Module", () => {
   let db: Database;
@@ -108,16 +108,13 @@ void describe("Species Collection Database Module", () => {
       );
       assert.equal(entry.member_id, memberId1);
       assert.equal(entry.group_id, speciesId1);
-      assert.equal(entry.quantity, 1);
       assert.equal(entry.visibility, "public");
-      assert.ok(entry.acquired_date);
       assert.equal(entry.removed_date, null);
     });
 
     void test("should add species with custom values", async () => {
       const id = await addToCollection(memberId1, {
         group_id: speciesId2,
-        quantity: 5,
         acquired_date: "2024-01-15",
         notes: "Breeding pair plus juveniles",
         visibility: "private",
@@ -127,7 +124,6 @@ void describe("Species Collection Database Module", () => {
         "SELECT * FROM species_collection WHERE id = ?",
         id
       );
-      assert.equal(entry.quantity, 5);
       assert.equal(entry.acquired_date, "2024-01-15");
       assert.equal(entry.notes, "Breeding pair plus juveniles");
       assert.equal(entry.visibility, "private");
@@ -165,17 +161,17 @@ void describe("Species Collection Database Module", () => {
       );
     });
 
-    void test("should handle maximum quantity", async () => {
+    void test("should always set quantity to 1", async () => {
       const id = await addToCollection(memberId1, {
         group_id: speciesId1,
-        quantity: 999,
       });
 
       const entry = await db.get(
         "SELECT * FROM species_collection WHERE id = ?",
         id
       );
-      assert.equal(entry.quantity, 999);
+      assert.ok(entry);
+      assert.equal(entry.group_id, speciesId1);
     });
   });
 
@@ -199,7 +195,7 @@ void describe("Species Collection Database Module", () => {
     void test("should get current public entries by default", async () => {
       const collection = await getCollectionForMember(memberId1);
       assert.equal(collection.length, 1);
-      assert.equal(collection[0].species?.common_name, "Test Cichlid 1");
+      assert.equal(collection[0].common_name, "Test Cichlid 1");
     });
 
     void test("should include private entries for owner", async () => {
@@ -236,9 +232,11 @@ void describe("Species Collection Database Module", () => {
       });
 
       const entry = collection[0];
+      // Names are now on entry directly
+      assert.equal(entry.common_name, "Test Cichlid 1");
+      assert.equal(entry.scientific_name, "testspecies1 TestGenus");
+      // Species object contains only canonical metadata (if group_id is set)
       assert.ok(entry.species);
-      assert.equal(entry.species.common_name, "Test Cichlid 1");
-      assert.equal(entry.species.scientific_name, "testspecies1 TestGenus");
       assert.equal(entry.species.program_class, "Cichlids");
       assert.equal(entry.species.species_type, "Fish");
       assert.equal(entry.species.is_cares_species, false);
@@ -283,26 +281,12 @@ void describe("Species Collection Database Module", () => {
     beforeEach(async () => {
       entryId = await addToCollection(memberId1, {
         group_id: speciesId1,
-        quantity: 2,
         notes: "Initial notes",
       });
     });
 
-    void test("should update quantity", async () => {
-      await updateCollectionEntry(entryId, memberId1, { quantity: 5 });
-
-      const entry = await db.get(
-        "SELECT * FROM species_collection WHERE id = ?",
-        entryId
-      );
-      assert.equal(entry.quantity, 5);
-      assert.equal(entry.notes, "Initial notes"); // Unchanged
-    });
-
     void test("should update notes", async () => {
-      await updateCollectionEntry(entryId, memberId1, {
-        notes: "Updated notes",
-      });
+      await updateCollectionEntry(entryId, memberId1, { notes: "Updated notes" });
 
       const entry = await db.get(
         "SELECT * FROM species_collection WHERE id = ?",
@@ -337,7 +321,6 @@ void describe("Species Collection Database Module", () => {
 
     void test("should update multiple fields at once", async () => {
       await updateCollectionEntry(entryId, memberId1, {
-        quantity: 10,
         notes: "Bulk update",
         visibility: "private",
       });
@@ -346,7 +329,6 @@ void describe("Species Collection Database Module", () => {
         "SELECT * FROM species_collection WHERE id = ?",
         entryId
       );
-      assert.equal(entry.quantity, 10);
       assert.equal(entry.notes, "Bulk update");
       assert.equal(entry.visibility, "private");
     });
@@ -377,7 +359,7 @@ void describe("Species Collection Database Module", () => {
       // Wait a full second to ensure timestamp changes (SQLite CURRENT_TIMESTAMP has second precision)
       await new Promise(resolve => setTimeout(resolve, 1100));
 
-      await updateCollectionEntry(entryId, memberId1, { quantity: 3 });
+      await updateCollectionEntry(entryId, memberId1, { notes: "Updated" });
 
       const after = await db.get(
         "SELECT updated_at FROM species_collection WHERE id = ?",
@@ -389,14 +371,14 @@ void describe("Species Collection Database Module", () => {
 
     void test("should throw error if entry not found", async () => {
       await assert.rejects(
-        async () => await updateCollectionEntry(99999, memberId1, { quantity: 5 }),
+        async () => await updateCollectionEntry(99999, memberId1, { notes: "Test" }),
         /Collection entry not found or access denied/
       );
     });
 
     void test("should throw error if member doesn't own entry", async () => {
       await assert.rejects(
-        async () => await updateCollectionEntry(entryId, memberId2, { quantity: 5 }),
+        async () => await updateCollectionEntry(entryId, memberId2, { notes: "Test" }),
         /Collection entry not found or access denied/
       );
     });
@@ -504,8 +486,10 @@ void describe("Species Collection Database Module", () => {
 
     void test("should include species details", async () => {
       const entry = await getCollectionEntry(publicEntryId);
-      assert.ok(entry?.species);
-      assert.equal(entry.species.common_name, "Test Cichlid 1");
+      assert.ok(entry);
+      assert.equal(entry.common_name, "Test Cichlid 1");
+      assert.ok(entry.species); // Should have canonical species metadata
+      assert.equal(entry.species.program_class, "Cichlids");
     });
 
     void test("should return null for non-existent entry", async () => {
@@ -567,12 +551,10 @@ void describe("Species Collection Database Module", () => {
       // Multiple members keeping same species
       await addToCollection(memberId1, {
         group_id: speciesId1,
-        quantity: 2,
         visibility: "public",
       });
       await addToCollection(memberId2, {
         group_id: speciesId1,
-        quantity: 5,
         visibility: "public",
       });
       // Private entry shouldn't be counted by default
@@ -592,11 +574,10 @@ void describe("Species Collection Database Module", () => {
       assert.equal(result.members.length, 2);
     });
 
-    void test("should include member details and quantities", async () => {
+    void test("should include member details", async () => {
       const result = await getSpeciesKeepers(speciesId1);
       const member1Data = result.members.find(m => m.id === memberId1);
       assert.equal(member1Data?.display_name, "Test User 1");
-      assert.equal(member1Data?.quantity, 2);
     });
 
     void test("should include private entries when requested", async () => {
@@ -703,9 +684,7 @@ void describe("Species Collection Database Module", () => {
       assert.ok(entry.id);
       assert.ok(entry.member_id);
       assert.ok(entry.group_id);
-      assert.ok(entry.quantity);
-      assert.ok(entry.acquired_date);
-      assert.ok(entry.species);
+      assert.ok(entry.common_name || entry.scientific_name);
       assert.ok(entry.member);
       assert.equal(entry.removed_date, null);
     });
@@ -919,24 +898,23 @@ void describe("Species Collection Database Module", () => {
       assert.equal(entry2?.acquired_date, "2030-12-31");
     });
 
-    void test("should handle quantity boundaries", async () => {
-      // Minimum quantity
+    void test("should store species without quantity field", async () => {
+      // Quantity field removed entirely
       const id1 = await addToCollection(memberId1, {
         group_id: speciesId1,
-        quantity: 1,
       });
 
-      // Maximum quantity
       const id2 = await addToCollection(memberId1, {
         group_id: speciesId2,
-        quantity: 999,
       });
 
       const entry1 = await getCollectionEntry(id1);
       const entry2 = await getCollectionEntry(id2);
 
-      assert.equal(entry1?.quantity, 1);
-      assert.equal(entry2?.quantity, 999);
+      assert.ok(entry1);
+      assert.ok(entry2);
+      assert.equal(entry1.group_id, speciesId1);
+      assert.equal(entry2.group_id, speciesId2);
     });
 
     void test("should handle CARES species flag correctly", async () => {

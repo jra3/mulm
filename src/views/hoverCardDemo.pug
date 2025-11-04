@@ -6,9 +6,7 @@ include mixins/caresBadge.pug
 doctype html
 html
 	+headTag("HoverCard Demo")
-		//- Include HoverCard styles and script
-		link(rel='stylesheet', href='/components/hoverCard.css')
-		script(src='/js/hoverCard.js')
+		//- HoverCard styles and script now loaded globally via header.pug
 
 	body.bg-gray-50.text-gray-800
 		+pageHeader(false, "HoverCard Component Demo")

@@ -1,5 +1,6 @@
 import { getMemberWithAwards, getSpecialtyAwardProgress } from "@/db/members";
 import { getSubmissionsByMember } from "@/db/submissions";
+import { getCollectionForMember, getCollectionStats } from "@/db/collection";
 import { MulmRequest } from "@/sessions";
 import { Response } from "express";
 import { getSubmissionStatus } from "@/utils/submissionStatus";
@@ -52,6 +53,15 @@ export const view = async (req: MulmRequest, res: Response) => {
   // Get specialty award progress
   const progressData = await getSpecialtyAwardProgress(memberId);
 
+  // Get collection data
+  const includePrivate = isSelf || isAdmin;
+  const collection = await getCollectionForMember(memberId, {
+    includeRemoved: false,
+    includePrivate,
+    viewerId: viewer?.id,
+  });
+  const collectionStats = await getCollectionStats(memberId);
+
   res.render("member", {
     member,
     fishSubs,
@@ -65,5 +75,7 @@ export const view = async (req: MulmRequest, res: Response) => {
     isAdmin,
     trophyData: getTrophyData(member.awards),
     progressData,
+    collection,
+    collectionStats,
   });
 };

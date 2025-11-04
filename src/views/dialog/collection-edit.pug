@@ -1,0 +1,77 @@
+include ../header.pug
+include ../mixins/errorMessage.pug
+
++dialog()
+	h2.text-2xl.font-bold.mb-4 Edit Collection Entry
+
+	//- Show species info (can't change species once added)
+	.bg-gray-50.border-l-4.border-gray-400.p-4.mb-4
+		if entry.common_name
+			p.font-semibold.text-gray-900= entry.common_name
+		if entry.scientific_name
+			p.italic.text-sm.text-gray-700= entry.scientific_name
+		if entry.species && entry.species.program_class
+			p.text-xs.text-gray-600= entry.species.program_class
+		if !entry.group_id
+			p.text-xs.text-gray-500.mt-1 (Custom entry - not in database)
+
+	form(
+		hx-patch=`/api/collection/${entry.id}`
+		hx-target="#dialogContent"
+		hx-swap="innerHTML"
+	)
+		.flex.flex-col.gap-4
+
+			//- Notes
+			.space-y-2
+				label.input-label(for="notes") Notes (optional)
+				textarea.text-input(
+					id="notes"
+					name="notes"
+					rows="3"
+					maxlength="500"
+					placeholder="Notes about these specimens, tank conditions, breeding behavior, etc."
+				)= entry.notes || ''
+				p.text-sm.text-gray-600 Max 500 characters
+				+errorMessage('notes')
+
+			//- Visibility toggle
+			.flex.items-start.gap-2
+				input(
+					type="checkbox"
+					id="visibility_private"
+					name="visibility"
+					value="private"
+					checked=entry.visibility === 'private'
+				)
+				label.text-sm(for="visibility_private")
+					strong Keep this entry private
+					br
+					span.text-gray-600 Private entries are only visible to you
+
+			//- Show dates
+			.bg-blue-50.p-3.rounded
+				p.text-sm.text-gray-700
+					strong Acquired:
+					= new Date(entry.acquired_date).toLocaleDateString()
+				if entry.removed_date
+					p.text-sm.text-gray-700.mt-1
+						strong Removed:
+						= new Date(entry.removed_date).toLocaleDateString()
+
+			.flex.gap-2.justify-end
+				button.outline(
+					type="button"
+					hx-on:click="document.getElementById('dialog').remove()"
+				) Cancel
+
+				if !entry.removed_date
+					button.destructive(
+						type="button"
+						hx-delete=`/api/collection/${entry.id}`
+						hx-confirm="Mark this species as removed from your collection?"
+						hx-target="#collection-section"
+						hx-swap="outerHTML"
+					) Remove from Collection
+
+				button.primary(type="submit") Save Changes

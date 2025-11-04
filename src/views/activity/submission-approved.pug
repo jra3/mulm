@@ -1,4 +1,5 @@
 include ../mixins/trophy.pug
+include ../mixins/caresBadge.pug
 
 - const sp = " ";
 
@@ -8,6 +9,9 @@ include ../mixins/trophy.pug
     span.text-gray-600 successfully bred
     = sp
     a.font-medium.text-gray-900.hover_underline(href=`/submissions/${activity.related_id}`)= data.species_common_name
+    if data.cares_species == 1
+        = sp
+        +caresBadge('sm')
     if data.species_type
         span.text-gray-500  (#{data.species_type})
 

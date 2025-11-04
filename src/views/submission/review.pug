@@ -32,10 +32,10 @@ html
             div.max-w-4xl.mx-auto.text-left.pt-4.px-4
                 .flex.items-center.gap-2.mb-4
                     h2(class="text-l font-bold") Species Details
-                    if name && name.is_cares_species == 1
+                    if submission.cares_species == 1
                         +caresBadge('sm')
                     if name && name.iucn_redlist_category
-                        +iucnBadge(name.iucn_redlist_category, 'sm', false, true, name.iucn_redlist_url)
+                        +iucnBadgeWithHover(name, name.group_id, 'sm')
                     if name && name.iucn_population_trend
                         +populationTrend(name.iucn_population_trend, 'sm')
                 div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")

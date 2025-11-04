@@ -367,6 +367,52 @@ void describe("Pug Template Rendering", () => {
       species_type: "Fish",
       award_name: "Level 1 Breeder Award",
     },
+
+    // Collection data
+    entry: {
+      id: faker.number.int({ min: 1, max: 1000 }),
+      member_id: 1,
+      group_id: 1,
+      common_name: faker.animal.fish(),
+      scientific_name: `${faker.science.chemicalElement().name} ${faker.science.chemicalElement().name}`,
+      acquired_date: faker.date.past().toISOString().split("T")[0],
+      removed_date: null,
+      notes: faker.lorem.sentence(),
+      images: null,
+      visibility: "public",
+      species: {
+        program_class: "Cichlids",
+        species_type: "Fish",
+        is_cares_species: false,
+      },
+    },
+    collection: Array.from({ length: 3 }, () => ({
+      id: faker.number.int({ min: 1, max: 1000 }),
+      member_id: 1,
+      group_id: faker.number.int({ min: 1, max: 100 }),
+      common_name: faker.animal.fish(),
+      scientific_name: `${faker.science.chemicalElement().name} ${faker.science.chemicalElement().name}`,
+      acquired_date: faker.date.past().toISOString().split("T")[0],
+      removed_date: null,
+      notes: faker.lorem.sentence(),
+      images: null,
+      visibility: "public",
+      species: {
+        program_class: faker.helpers.arrayElement(["Cichlids", "Catfish", "Livebearers"]),
+        species_type: "Fish",
+        is_cares_species: faker.datatype.boolean(),
+      },
+    })),
+    collectionStats: {
+      current: 3,
+      lifetime: 5,
+    },
+    isSelf: true,
+    keeperCount: faker.number.int({ min: 1, max: 20 }),
+    keepers: Array.from({ length: 3 }, () => ({
+      id: faker.number.int({ min: 1, max: 100 }),
+      display_name: faker.person.fullName(),
+    })),
   };
 
   // Get all pug files recursively
@@ -415,6 +461,7 @@ void describe("Pug Template Rendering", () => {
       /^mixins\/progressBar\.pug$/, // Mixin-only template
       /^mixins\/hoverCard\.pug$/, // Mixin-only template
       /^mixins\/errorMessage\.pug$/, // Mixin-only template
+      /^mixins\/collectionCard\.pug$/, // Mixin-only template
       /^activity\/activity-item\.pug$/, // Mixin-only template
       /^activity\/activity-list-partial\.pug$/, // Partial template for HTMX pagination
       /^activity\/award-granted\.pug$/, // Include-only template

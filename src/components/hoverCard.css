@@ -9,7 +9,7 @@
 
 /* Root container */
 .hovercard-root {
-	@apply relative inline-block;
+	@apply relative inline-flex items-center;
 }
 
 /* Trigger wrapper */

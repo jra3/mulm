@@ -5,8 +5,10 @@ import {
   getSpeciesDetail,
   getBreedersForSpecies,
   getFilterOptions,
+  getNamesForGroup,
   SpeciesFilters,
 } from "@/db/species";
+import { getSpeciesKeepers } from "@/db/collection";
 import { getClassOptions } from "@/forms/submission";
 import { speciesExplorerQuerySchema } from "@/forms/species-explorer";
 import { validateQueryWithFallback } from "@/forms/utils";
@@ -72,9 +74,11 @@ export async function detail(req: MulmRequest, res: Response) {
   }
 
   try {
-    const [speciesDetail, breeders] = await Promise.all([
+    const [speciesDetail, breeders, names, keepers] = await Promise.all([
       getSpeciesDetail(groupId),
       getBreedersForSpecies(groupId),
+      getNamesForGroup(groupId),
+      getSpeciesKeepers(groupId),
     ]);
 
     if (!speciesDetail) {
@@ -93,9 +97,13 @@ export async function detail(req: MulmRequest, res: Response) {
       isLoggedIn,
       species: speciesDetail,
       breeders,
+      commonNames: names.common_names,
+      scientificNames: names.scientific_names,
       displayName,
       totalBreeds: breeders.reduce((sum, breeder) => sum + breeder.breed_count, 0),
       totalBreeders: breeders.length,
+      keeperCount: keepers.count,
+      keepers: keepers.members,
     });
   } catch (error) {
     logger.error("Error loading species detail", error);

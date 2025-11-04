@@ -8,6 +8,9 @@
 //-   link - If true, links to IUCN Red List
 //-   iucnUrl - Direct IUCN URL (preferred) or scientific name for search fallback
 
+include hoverCard.pug
+include date.pug
+
 mixin iucnBadge(category, size, showLabel, link, iucnUrl)
   - size = size || 'md'
   - showLabel = showLabel || false
@@ -121,3 +124,96 @@ mixin populationTrend(trend, size)
     span(class=`${sizeClass} text-gray-400` title="Population Trend Unknown") ?
   else
     span(class=`${sizeClass} text-gray-300`) —
+
+//- IUCN Badge with HoverCard Enhancement
+//- Wraps the standard IUCN badge with a rich HoverCard tooltip
+//-
+//- Parameters:
+//-   species - Species object with IUCN data
+//-     Required: iucn_redlist_category
+//-     Optional: iucn_population_trend, iucn_last_updated, iucn_redlist_url
+//-   uniqueId - Unique identifier for this instance (e.g., species ID or group ID)
+//-   size - Badge size: 'sm', 'md' (default: 'md')
+//-
+//- Usage:
+//-   +iucnBadgeWithHover(species, species.group_id)
+
+mixin iucnBadgeWithHover(species, uniqueId, size)
+  - if (!species.iucn_redlist_category) return
+  - size = size || 'md'
+  - const category = species.iucn_redlist_category
+  - const trend = species.iucn_population_trend
+  - const lastUpdated = species.iucn_last_updated
+  - const iucnUrl = species.iucn_redlist_url
+  -
+  - // Get category info
+  - let categoryName = 'Unknown'
+  - let categoryDesc = 'Status unknown.'
+  - if (category === 'CR') { categoryName = 'Critically Endangered'; categoryDesc = 'Faces an extremely high risk of extinction in the wild.'; }
+  - else if (category === 'EN') { categoryName = 'Endangered'; categoryDesc = 'Faces a very high risk of extinction in the wild.'; }
+  - else if (category === 'VU') { categoryName = 'Vulnerable'; categoryDesc = 'Faces a high risk of extinction in the wild.'; }
+  - else if (category === 'NT') { categoryName = 'Near Threatened'; categoryDesc = 'Likely to become threatened in the near future.'; }
+  - else if (category === 'LC') { categoryName = 'Least Concern'; categoryDesc = 'Widespread and abundant, lowest conservation concern.'; }
+  - else if (category === 'DD') { categoryName = 'Data Deficient'; categoryDesc = 'Not enough data available to assess extinction risk.'; }
+  - else if (category === 'NE') { categoryName = 'Not Evaluated'; categoryDesc = 'Has not yet been evaluated against the criteria.'; }
+  - else if (category === 'EW') { categoryName = 'Extinct in the Wild'; categoryDesc = 'Known only to survive in captivity or as naturalized populations.'; }
+  - else if (category === 'EX') { categoryName = 'Extinct'; categoryDesc = 'No known individuals remaining.'; }
+
+  +hoverCard({id: `iucn-${uniqueId}`, side: 'top', width: 'lg', openDelay: 200, closeDelay: 300})
+    +hoverCardTrigger()
+      +iucnBadge(category, size, false, false)
+
+    +hoverCardContent({cardClasses: 'border-2 border-green-400'})
+      .space-y-3
+        //- Header: Category name and badge
+        .flex.items-center.gap-3
+          +iucnBadge(category, 'md', false, false)
+          div
+            .font-bold.text-gray-900= categoryName
+            .text-xs.text-gray-500 IUCN Red List Status
+
+        //- Divider
+        .border-t.border-gray-200
+
+        //- Description
+        .text-sm.text-gray-700= categoryDesc
+
+        //- Population Trend
+        if trend
+          .flex.items-center.gap-2
+            .text-sm.font-semibold.text-gray-700 Population Trend:
+            if trend === 'Increasing'
+              .flex.items-center.gap-1.text-green-600
+                span ↑
+                span.text-sm Increasing
+            else if trend === 'Decreasing'
+              .flex.items-center.gap-1.text-red-600
+                span ↓
+                span.text-sm Decreasing
+            else if trend === 'Stable'
+              .flex.items-center.gap-1.text-blue-600
+                span ↔
+                span.text-sm Stable
+            else if trend === 'Unknown'
+              .flex.items-center.gap-1.text-gray-500
+                span ?
+                span.text-sm Unknown
+
+        //- Last Assessment
+        if lastUpdated
+          .text-xs.text-gray-600
+            span.font-semibold Last assessed:
+            +shortDate(lastUpdated, "Last IUCN assessment")
+
+        //- Link to IUCN Red List
+        if iucnUrl
+          .border-t.border-gray-200.pt-2
+            a(
+              href=iucnUrl
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800"
+            )
+              span View on IUCN Red List
+              svg.w-4.h-4(fill="none" stroke="currentColor" viewBox="0 0 24 24")
+                path(stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14")

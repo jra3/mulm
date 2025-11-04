@@ -133,7 +133,7 @@ html
                   div
                     label.input-label Conservation Status
                     .mt-2
-                      +iucnBadge(species.iucn_redlist_category, 'md', true, true, species.iucn_redlist_url)
+                      +iucnBadgeWithHover(species, species.group_id, 'md')
 
                   div
                     label.input-label Population Trend

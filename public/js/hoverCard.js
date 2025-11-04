@@ -11,6 +11,31 @@
 
 window.HoverCard = {
 	/**
+	 * Initialize all HoverCard popovers on the page
+	 * Finds uninitialized .hovercard-content elements and sets them up
+	 */
+	initializeAll() {
+		const popovers = document.querySelectorAll('.hovercard-content:not([data-initialized])');
+		popovers.forEach(popover => {
+			const root = popover.closest('.hovercard-root');
+			if (!root) {
+				console.error('hoverCardContent must be used within hoverCard');
+				return;
+			}
+
+			const popoverId = root.dataset.popoverId;
+			const side = root.dataset.side;
+			const width = popover.dataset.width || root.dataset.width;
+			const widthMap = { sm: 'w-[200px]', md: 'w-[300px]', lg: 'w-[400px]', xl: 'w-[500px]' };
+
+			popover.id = popoverId;
+			popover.setAttribute('data-side', side);
+			popover.classList.add(widthMap[width] || widthMap.md);
+			popover.setAttribute('data-initialized', 'true');
+		});
+	},
+
+	/**
 	 * Position a popover relative to its trigger with smart collision detection
 	 * @param {HTMLElement} root - The .hovercard-root element
 	 * @param {HTMLElement} popover - The popover content element
@@ -112,3 +137,13 @@ window.HoverCard = {
 		popover.setAttribute('data-positioned-side', side);
 	},
 };
+
+// Initialize all HoverCards on page load
+document.addEventListener('DOMContentLoaded', () => {
+	window.HoverCard.initializeAll();
+});
+
+// Re-initialize after HTMX swaps content
+document.addEventListener('htmx:afterSwap', () => {
+	window.HoverCard.initializeAll();
+});

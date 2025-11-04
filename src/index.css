@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./components/hoverCard.css";
 
 /* Common component classes to avoid long Tailwind chains in Pug templates */
 .status-panel {

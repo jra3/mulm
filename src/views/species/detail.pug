@@ -40,7 +40,7 @@ html
 								if species.is_cares_species == 1
 									+caresBadge()
 								if species.iucn_redlist_category
-									+iucnBadge(species.iucn_redlist_category, 'md', false, true, species.iucn_redlist_url)
+									+iucnBadgeWithHover(species, species.group_id, 'md')
 							p.text-lg.text-gray-600
 								span.inline-block.px-3.py-1.text-sm.font-medium.bg-blue-100.text-blue-800.rounded-full
 									= species.program_class
@@ -53,20 +53,70 @@ html
 									strong Total Reports: 
 									span.text-green-600.font-semibold= totalBreeds
 								div
-									strong Expert Breeders: 
+									strong Expert Breeders:
 									span.text-purple-600.font-semibold= totalBreeders
 
-				// Name Variations
-				if species.synonyms && species.synonyms.length > 0
+				// Current Keepers
+				if keeperCount > 0
+					.bg-blue-50.border.border-blue-200.rounded-lg.p-4.mb-6
+						.flex.items-center.justify-between.mb-3
+							.flex.items-center.gap-2
+								i.fas.fa-users.text-blue-600.text-xl
+								span.font-medium.text-blue-900
+									= `${keeperCount} member${keeperCount === 1 ? '' : 's'} currently keep${keeperCount === 1 ? 's' : ''} this species`
+							if viewer && viewer.id
+								button.px-3.py-1.text-sm.font-medium.text-white.bg-blue-600.hover_bg-blue-700.rounded-md(
+									hx-get="/dialog/collection/add"
+									hx-target="body"
+									hx-swap="beforeend"
+									title="Add to my collection"
+								)
+									i.fas.fa-plus.mr-1
+									| Add to Collection
+
+						if keepers && keepers.length > 0
+							.border-t.border-blue-200.pt-3
+								.text-sm.text-blue-700.mb-2 Keepers:
+								.flex.flex-wrap.gap-2
+									each keeper in keepers.slice(0, 10)
+										a.inline-flex.items-center.px-2.py-1.text-sm.text-blue-700.bg-white.hover_bg-blue-100.rounded.border.border-blue-300.transition(
+											href=`/member/${keeper.id}`
+											title=`View ${keeper.display_name}'s profile`
+										)
+											i.fas.fa-user.mr-1
+											= keeper.display_name
+									if keepers.length > 10
+										span.text-sm.text-blue-600= `+${keepers.length - 10} more`
+
+				// Name Variations - Split by Type
+				if (commonNames && commonNames.length > 0) || (scientificNames && scientificNames.length > 0)
 					.bg-white.rounded-lg.shadow-md.p-6.mb-6
-						h2.text-xl.font-bold.text-gray-900.mb-4 Known Names & Synonyms
-						.grid.grid-cols-1.gap-4(class="md:grid-cols-2")
-							each synonym in species.synonyms
-								+card({variant: 'content', margin: ''})
-									if synonym.common_name
-										.font-medium.text-gray-900= synonym.common_name
-									if synonym.scientific_name
-										.text-sm.text-gray-600.italic= synonym.scientific_name
+						h2.text-xl.font-bold.text-gray-900.mb-4 Known Names
+						.grid.grid-cols-1.gap-6(class="md:grid-cols-2")
+
+							// Common Names
+							div
+								h3.text-base.font-semibold.text-gray-700.mb-3 Common Names
+								if commonNames && commonNames.length > 0
+									.space-y-2
+										each name in commonNames
+											.p-3.bg-gray-50.rounded.border.border-gray-200
+												.font-medium.text-gray-900= name.common_name
+								else
+									.text-center.py-4
+										.text-sm.text-gray-500 No common names recorded
+
+							// Scientific Names
+							div
+								h3.text-base.font-semibold.text-gray-700.mb-3 Scientific Names
+								if scientificNames && scientificNames.length > 0
+									.space-y-2
+										each name in scientificNames
+											.p-3.bg-gray-50.rounded.border.border-gray-200
+												.font-medium.text-gray-900.italic= name.scientific_name
+								else
+									.text-center.py-4
+										.text-sm.text-gray-500 No scientific names recorded
 
 				// Expert Breeders
 				if breeders.length > 0

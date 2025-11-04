@@ -88,6 +88,7 @@ mixin hoverCardTrigger()
 
 //- HoverCard Content - The popover content with hover-to-stay-open
 //- Must be called within a hoverCard block - reads config from parent data attributes
+//- Note: Initialization happens automatically via hoverCard.js on DOMContentLoaded/htmx:afterSwap
 mixin hoverCardContent(options = {})
 	- const overrideWidth = options.width || ''
 	- const cardClasses = options.cardClasses || ''
@@ -96,6 +97,7 @@ mixin hoverCardContent(options = {})
 		popover="manual"
 		role="tooltip"
 		class=`hovercard-content ${cardClasses}`
+		data-width=overrideWidth
 		hx-on:mouseenter=`
 			const root = document.querySelector('[data-popover-id="' + this.id + '"]');
 			if (root) clearTimeout(root._closeTimer);
@@ -114,26 +116,3 @@ mixin hoverCardContent(options = {})
 		.hovercard-arrow
 		.hovercard-content-inner
 			block
-
-	script.
-		// Initialize popover with config from parent root element
-		// This runs immediately when the script tag is parsed
-		(() => {
-			const script = document.currentScript;
-			const popover = script.previousElementSibling;
-			const root = script.closest('.hovercard-root');
-
-			if (!root) {
-				console.error('hoverCardContent must be used within hoverCard');
-				return;
-			}
-
-			const popoverId = root.dataset.popoverId;
-			const side = root.dataset.side;
-			const width = '#{overrideWidth}' || root.dataset.width;
-			const widthMap = { sm: 'w-[200px]', md: 'w-[300px]', lg: 'w-[400px]', xl: 'w-[500px]' };
-
-			popover.id = popoverId;
-			popover.setAttribute('data-side', side);
-			popover.classList.add(widthMap[width] || widthMap.md);
-		})();
