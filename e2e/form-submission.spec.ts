@@ -323,20 +323,20 @@ test.describe("Form Submission Flow", () => {
 		await draftButton.click();
 		await page.waitForLoadState("networkidle");
 
-		// Give HTMX time to process
+		// After saving draft, should redirect to /me (which redirects to /member/{id})
 		await page.waitForTimeout(2000);
+		expect(page.url()).toMatch(/\/member\/\d+/);
 
-		// Get submission ID from URL or form
-		const url = page.url();
-		const submissionIdMatch = url.match(/submissions\/(\d+)/);
-		let submissionId: number;
-		if (submissionIdMatch) {
-			submissionId = parseInt(submissionIdMatch[1]);
-		} else {
-			const idInput = await page.locator('input[name="id"]').inputValue();
-			submissionId = parseInt(idInput);
-		}
-		expect(submissionId).toBeTruthy();
+		// Find the draft submission in the member page by the draft badge
+		const draftLink = page.locator('a[href^="/submissions/"]:has-text("📝")').first();
+		const href = await draftLink.getAttribute("href");
+		expect(href).toBeTruthy();
+
+		// Extract submission ID from href
+		const submissionIdMatch = href!.match(/\/submissions\/(\d+)/);
+		expect(submissionIdMatch).toBeTruthy();
+		const submissionId = parseInt(submissionIdMatch![1]);
+		console.log(`Found draft submission ID to delete: ${submissionId}`);
 
 		// Listen for confirm dialog and accept it
 		page.on("dialog", (dialog) => dialog.accept());
