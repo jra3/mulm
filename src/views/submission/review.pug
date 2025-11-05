@@ -20,7 +20,23 @@ html
     +headTag(`${canonicalName} - BAS BAP`, ogData)
 
     body.bg-white.text-gray-800
-        +pageHeader(isLoggedIn, canonicalName, submission.member_name)
+        header.bg-white.shadow
+            div.max-w-7xl.mx-auto.px-4.py-4.flex.justify-between.items-center
+                .flex.text-center.gap-2.items-center
+                    if name && name.group_id
+                        a.link(href=`/species/${name.group_id}`)
+                            h2.text-2xl.font-bold.p2= canonicalName
+                    else
+                        h2.text-2xl.font-bold.p2= canonicalName
+                    h3.text-2xl.p2(class="text-gray-500")= submission.member_name
+                .space-x-4.flex.items-center
+                    a.link(href="/") Home
+                    a.link(href="/species") Species
+                    if isLoggedIn
+                        a.link(href="/me") Me
+                    a.link(href=`mailto:${bugReportEmail}` title="Report a bug") 🐛
+                    if isLoggedIn
+                        a.link(href="/account") ⚙️
 
         section.bg-gray-100.py-4
 
