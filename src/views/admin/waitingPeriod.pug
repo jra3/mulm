@@ -26,7 +26,8 @@ mixin waitingPeriodTable(submissions)
 			tbody
 				each sub in submissions
 					tr(class="hover:bg-gray-50")
-						td(class=stringCell)= sub.member_name
+						td(class=stringCell)
+							a.link(href=`/member/${sub.member_id}`)= sub.member_name
 						td(class=stringCell)= sub.species_class
 						td(class=stringCell)= sub.species_common_name
 						td(class=stringCell)

@@ -40,7 +40,8 @@ mixin approvalQueueTable(submissions)
 										span.ml-1.font-normal= `(${sub.statusInfo.daysRemaining}d)`
 							else
 								span.text-gray-500 Unknown
-						td(class=stringCell)= sub.member_name
+						td(class=stringCell)
+							a.link(href=`/member/${sub.member_id}`)= sub.member_name
 						td(class=stringCell)= sub.species_class
 						td(class=stringCell)= sub.species_common_name
 						td(class=stringCell)

@@ -19,7 +19,8 @@ if submissions && submissions.length > 0
                     .flex.gap-8.flex-shrink-0
                         .text-center
                             p.text-2xl.text-gray-600.mb-2 Breeder
-                            p.text-4xl.font-bold.text-blue-700= submission.member_name
+                            a.link(href=`/member/${submission.member_id}`)
+                                p.text-4xl.font-bold.text-blue-700= submission.member_name
 
                         .text-center
                             p.text-2xl.text-gray-600.mb-2 Points
