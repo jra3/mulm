@@ -1,3 +1,5 @@
+include ../mixins/memberPointsHover.pug
+
 mixin memberRow(member)
     - const stringCell = ['p-3', 'text-left', 'border-b', 'border-gray-200'];
     - const numberCell = ['p-3', 'text-right', 'border-b', 'border-gray-200'];
@@ -11,9 +13,15 @@ mixin memberRow(member)
         td(class=stringCell)
             a.link(href=`/member/${member.id}`)= member.display_name
         td(class=stringCell)= member.contact_email
-        td(class=numberCell title=`Level: ${member.fish_level || 'None'}`)= member.fishTotalPoints || 0
-        td(class=numberCell title=`Level: ${member.plant_level || 'None'}`)= member.plantTotalPoints || 0
-        td(class=numberCell title=`Level: ${member.coral_level || 'None'}`)= member.coralTotalPoints || 0
+        td(class=numberCell)
+            - const fishNext = getNextLevel('fish', member.fish_level, member.fishTotalPoints || 0)
+            +memberPointsHover(member, 'fish', fishNext, programMetadata.fish)
+        td(class=numberCell)
+            - const plantNext = getNextLevel('plant', member.plant_level, member.plantTotalPoints || 0)
+            +memberPointsHover(member, 'plant', plantNext, programMetadata.plant)
+        td(class=numberCell)
+            - const coralNext = getNextLevel('coral', member.coral_level, member.coralTotalPoints || 0)
+            +memberPointsHover(member, 'coral', coralNext, programMetadata.coral)
         td(class=centerCell)
             .flex.gap-2.items-center.justify-center
                 a.link(

@@ -1506,6 +1506,9 @@
   .underline {
     text-decoration-line: underline;
   }
+  .decoration-dotted {
+    text-decoration-style: dotted;
+  }
   .opacity-0 {
     opacity: 0%;
   }

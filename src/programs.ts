@@ -165,3 +165,107 @@ export function calculateLevel(rules: LevelRules[], submissions: number[]) {
   }
   return levelAchieved;
 }
+
+/**
+ * Level Progress Utilities for HoverCard Display
+ */
+
+export type ProgramType = "fish" | "plant" | "coral";
+
+export interface NextLevelInfo {
+  name: string;
+  pointsRequired: number;
+  pointsNeeded: number;
+  progressPercent: number;
+  hasExtraRules: boolean;
+  extraRulesDescription?: string;
+}
+
+/**
+ * Program display metadata (names, colors, icons)
+ */
+export const programMetadata: Record<
+  ProgramType,
+  { name: string; icon: string; badge: string; border: string; accent: string }
+> = {
+  fish: {
+    name: "Breeders Awards Program",
+    icon: "🐠",
+    badge: "bg-blue-100 text-blue-800",
+    border: "border-blue-400",
+    accent: "text-blue-600",
+  },
+  plant: {
+    name: "Horticultural Awards Program",
+    icon: "🌱",
+    badge: "bg-green-100 text-green-800",
+    border: "border-green-400",
+    accent: "text-green-600",
+  },
+  coral: {
+    name: "Coral Awards Program",
+    icon: "🪸",
+    badge: "bg-purple-100 text-purple-800",
+    border: "border-purple-400",
+    accent: "text-purple-600",
+  },
+};
+
+/**
+ * Human-readable descriptions of extra rules for specific levels
+ */
+const extraRulesDescriptions: Record<string, string> = {
+  // Fish program
+  Breeder: "At least 20 points from 10/15/20 point categories",
+  "Advanced Breeder": "At least 40 points from 15/20 point categories",
+  "Master Breeder": "30+ points each from 5/10/15 categories, 40+ from 20 category",
+  "Advanced Grand Master Breeder": "60+ points from 5/10/15 categories, 80+ from 20 category",
+  "Senior Grand Master Breeder": "80+ points from 5/10/15 categories, 100+ from 20 category",
+
+  // Plant program
+  "Aquatic Horticulturist": "At least 20 points from 10/15/20 point categories",
+  "Senior Aquatic Horticulturist": "At least 40 points from 15/20 point categories",
+  "Expert Aquatic Horticulturist": "30+ points each from 5/10/15 categories, 40+ from 20 category",
+  "Grand Master Aquatic Horticulturist": "60+ points from 5/10/15 categories, 80+ from 20 category",
+  "Senior Grand Master Aquatic Horticulturist":
+    "80+ points from 5/10/15 categories, 100+ from 20 category",
+};
+
+/**
+ * Get the next level in progression for a member
+ * @param program - Program type (fish, plant, coral)
+ * @param currentLevelName - Current level name (or undefined if no level yet)
+ * @param currentPoints - Total points the member has
+ * @returns Next level info or null if at max level
+ */
+export function getNextLevel(
+  program: ProgramType,
+  currentLevelName: string | undefined,
+  currentPoints: number
+): NextLevelInfo | null {
+  const rules = levelRules[program];
+
+  // Find current level index (default to 0 if no level yet)
+  const currentIndex = currentLevelName ? rules.findIndex(([name]) => name === currentLevelName) : 0;
+
+  // Get next level (or null if at max)
+  if (currentIndex === -1 || currentIndex >= rules.length - 1) {
+    return null; // Max level reached or invalid current level
+  }
+
+  const nextLevelRule = rules[currentIndex + 1];
+  const [name, pointsRequired, extraRules] = nextLevelRule;
+
+  const pointsNeeded = Math.max(0, pointsRequired - currentPoints);
+  const progressPercent =
+    pointsRequired > 0 ? Math.min(100, Math.round((currentPoints / pointsRequired) * 100)) : 0;
+
+  return {
+    name,
+    pointsRequired,
+    pointsNeeded,
+    progressPercent,
+    hasExtraRules: extraRules !== undefined,
+    extraRulesDescription: extraRules ? extraRulesDescriptions[name] : undefined,
+  };
+}

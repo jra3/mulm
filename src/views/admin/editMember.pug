@@ -1,4 +1,5 @@
 include ../mixins/loadingSpinner.pug
+include ../mixins/memberPointsHover.pug
 
 tr(class="bg-blue-50")
 	- const stringCell = ['p-3', 'text-left', 'border-b', 'border-gray-200'];
@@ -21,13 +22,16 @@ tr(class="bg-blue-50")
 		input(name="contact_email" value=member.contact_email class="w-full px-2 py-1 border rounded")
 
 	td(class=numberCell)
-		span(class="text-gray-600" title=`Level: ${member.fish_level || 'None'}`)= member.fishTotalPoints || 0
+		- const fishNext = getNextLevel('fish', member.fish_level, member.fishTotalPoints || 0)
+		+memberPointsHover(member, 'fish', fishNext, programMetadata.fish)
 
 	td(class=numberCell)
-		span(class="text-gray-600" title=`Level: ${member.plant_level || 'None'}`)= member.plantTotalPoints || 0
+		- const plantNext = getNextLevel('plant', member.plant_level, member.plantTotalPoints || 0)
+		+memberPointsHover(member, 'plant', plantNext, programMetadata.plant)
 
 	td(class=numberCell)
-		span(class="text-gray-600" title=`Level: ${member.coral_level || 'None'}`)= member.coralTotalPoints || 0
+		- const coralNext = getNextLevel('coral', member.coral_level, member.coralTotalPoints || 0)
+		+memberPointsHover(member, 'coral', coralNext, programMetadata.coral)
 
 	td(class=centerCell)
 		.flex.gap-2.items-center.justify-center

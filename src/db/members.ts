@@ -242,6 +242,83 @@ export async function getRosterWithPoints() {
 }
 
 /**
+ * Get a single member with calculated points for all programs
+ * More efficient than getMemberWithPoints() in admin routes - uses SQL aggregation
+ */
+export async function getMemberWithPoints(memberId: number) {
+  const rows = await query<
+    MemberRecord & {
+      fishTotalPoints: number;
+      plantTotalPoints: number;
+      coralTotalPoints: number;
+      hasPassword: number;
+      hasGoogleAccount: number;
+    }
+  >(
+    `
+		SELECT
+			m.*,
+			COALESCE(fish_points.total, 0) as fishTotalPoints,
+			COALESCE(plant_points.total, 0) as plantTotalPoints,
+			COALESCE(coral_points.total, 0) as coralTotalPoints,
+			CASE WHEN pa.member_id IS NOT NULL THEN 1 ELSE 0 END as hasPassword,
+			CASE WHEN ga.member_id IS NOT NULL THEN 1 ELSE 0 END as hasGoogleAccount
+		FROM members m
+		LEFT JOIN password_account pa ON m.id = pa.member_id
+		LEFT JOIN google_account ga ON m.id = ga.member_id
+		LEFT JOIN (
+			SELECT
+				member_id,
+				SUM(
+					points +
+					IFNULL(article_points, 0) +
+					(IFNULL(first_time_species, 0) * 5)
+				) as total
+			FROM submissions
+			WHERE approved_on IS NOT NULL
+				AND submitted_on IS NOT NULL
+				AND (species_type = 'Fish' OR species_type = 'Invert')
+			GROUP BY member_id
+		) fish_points ON m.id = fish_points.member_id
+		LEFT JOIN (
+			SELECT
+				member_id,
+				SUM(
+					points +
+					IFNULL(article_points, 0) +
+					(IFNULL(first_time_species, 0) * 5) +
+					(IFNULL(flowered, 0) * points) +
+					(IFNULL(sexual_reproduction, 0) * points)
+				) as total
+			FROM submissions
+			WHERE approved_on IS NOT NULL
+				AND submitted_on IS NOT NULL
+				AND species_type = 'Plant'
+			GROUP BY member_id
+		) plant_points ON m.id = plant_points.member_id
+		LEFT JOIN (
+			SELECT
+				member_id,
+				SUM(
+					points +
+					IFNULL(article_points, 0) +
+					(IFNULL(first_time_species, 0) * 5)
+				) as total
+			FROM submissions
+			WHERE approved_on IS NOT NULL
+				AND submitted_on IS NOT NULL
+				AND species_type = 'Coral'
+			GROUP BY member_id
+		) coral_points ON m.id = coral_points.member_id
+		WHERE m.id = ?
+	`,
+    [memberId]
+  );
+
+  return rows[0] || null;
+}
+
+/**
  * Search for members by name or email with database-level filtering
  * @param searchQuery - The search term to match against display_name and contact_email
  * @param limit - Maximum number of results to return (default: 10)

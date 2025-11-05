@@ -1,0 +1,98 @@
+//- Member Points/Levels HoverCard Mixin
+//- Displays member's current level, points, and progress to next level
+//-
+//- Parameters:
+//-   member - Member object with points and level data
+//-   program - Program type: 'fish', 'plant', or 'coral'
+//-
+//- Required member properties:
+//-   - id: number
+//-   - fishTotalPoints/plantTotalPoints/coralTotalPoints: number
+//-   - fish_level/plant_level/coral_level: string | undefined
+//-
+//- Usage:
+//-   +memberPointsHover(member, 'fish')
+//-
+include hoverCard.pug
+include progressBar.pug
+
+mixin memberPointsHover(member, program, nextLevelInfo, metadata)
+	- // Calculate which points/level fields to use
+	- const pointsField = program + 'TotalPoints'
+	- const levelField = program + '_level'
+	- const currentPoints = member[pointsField] || 0
+	- const currentLevel = member[levelField]
+	-
+	- // Build unique ID for this hovercard
+	- const hovercardId = `member-${member.id}-${program}-points`
+
+	+hoverCard({id: hovercardId, side: 'top', width: 'lg', openDelay: 200, closeDelay: 300})
+		+hoverCardTrigger()
+			span.cursor-help.text-gray-600.hover_text-gray-900.transition-colors.underline.decoration-dotted(
+				aria-label=`View ${metadata.name} progress`
+			)= currentPoints
+
+		+hoverCardContent({cardClasses: `border-2 ${metadata.border}`})
+			.space-y-3
+				//- Header: Program icon and name
+				.flex.flex-col.items-center.gap-2
+					span.text-2xl= metadata.icon
+					div.text-center
+						.font-bold.text-gray-900= metadata.name
+						.text-xs.text-gray-500 Member Progress
+
+				//- Divider
+				.border-t.border-gray-200
+
+				//- Current Level
+				.flex.items-center.justify-between
+					.text-sm.font-semibold.text-gray-700 Current Level:
+					if currentLevel
+						span(class=`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${metadata.badge}`)= currentLevel
+					else
+						span.text-sm.text-gray-500.italic Participant
+
+				//- Current Points
+				.flex.items-center.justify-between
+					.text-sm.font-semibold.text-gray-700 Total Points:
+					.text-lg.font-bold(class=metadata.accent)= currentPoints
+
+				//- Next Level Section
+				if nextLevelInfo
+					//- Divider
+					.border-t.border-gray-200
+
+					//- Next Level Name
+					.text-sm
+						.font-semibold.text-gray-700.mb-1 Next Level:
+						.text-gray-900.font-medium= nextLevelInfo.name
+
+					//- Progress Bar
+					- const progressColor = program === 'fish' ? 'blue' : program === 'plant' ? 'green' : 'purple'
+					+progressBar(currentPoints, nextLevelInfo.pointsRequired, {
+						variant: progressColor,
+						size: 'md',
+						showPercentage: true
+					})
+
+					//- Points Needed
+					.text-sm.text-gray-600.mt-2
+						strong= nextLevelInfo.pointsNeeded
+						|  points needed
+						span.text-gray-500
+							| (
+							= nextLevelInfo.pointsRequired
+							|  total required)
+
+					//- Extra Rules (if applicable)
+					if nextLevelInfo.hasExtraRules && nextLevelInfo.extraRulesDescription
+						.text-xs.text-gray-600.mt-2.p-2.bg-yellow-50.rounded.border.border-yellow-200
+							.font-semibold.text-yellow-800 Special Requirements:
+							.text-yellow-700.italic.mt-1= nextLevelInfo.extraRulesDescription
+
+				else
+					//- Max Level Reached
+					.border-t.border-gray-200
+					.text-center.py-3
+						.text-lg.font-bold.text-yellow-600 🏆 Maximum Level Achieved!
+						.text-sm.text-gray-600.mt-1 Congratulations on reaching the highest level!

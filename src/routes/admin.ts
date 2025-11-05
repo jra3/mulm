@@ -3,8 +3,8 @@ import {
   getMember,
   getMemberByEmail,
   getRosterWithPoints,
+  getMemberWithPoints,
   updateMember,
-  type MemberRecord,
   getMemberPassword,
   getGoogleAccountByMemberId,
 } from "@/db/members";
@@ -74,47 +74,6 @@ import {
 } from "@/db/submission_notes";
 import { submissionNoteForm } from "@/forms/submissionNote";
 
-// Helper function to calculate total points for a member
-async function getMemberWithPoints(
-  member: MemberRecord | null
-): Promise<
-  | (MemberRecord & { fishTotalPoints: number; plantTotalPoints: number; coralTotalPoints: number })
-  | null
-> {
-  if (!member) return null;
-
-  const submissions: Submission[] = await getSubmissionsByMember(
-    member.id,
-    false, // don't include unsubmitted
-    false // don't include unapproved
-  );
-
-  const fishSubmissions = submissions.filter(
-    (sub: Submission) => sub.species_type === "Fish" || sub.species_type === "Invert"
-  );
-  const plantSubmissions = submissions.filter((sub: Submission) => sub.species_type === "Plant");
-  const coralSubmissions = submissions.filter((sub: Submission) => sub.species_type === "Coral");
-
-  const fishTotalPoints = fishSubmissions.reduce(
-    (sum: number, sub: Submission) => sum + (sub.total_points || 0),
-    0
-  );
-  const plantTotalPoints = plantSubmissions.reduce(
-    (sum: number, sub: Submission) => sum + (sub.total_points || 0),
-    0
-  );
-  const coralTotalPoints = coralSubmissions.reduce(
-    (sum: number, sub: Submission) => sum + (sub.total_points || 0),
-    0
-  );
-
-  return {
-    ...member,
-    fishTotalPoints,
-    plantTotalPoints,
-    coralTotalPoints,
-  };
-}
 
 export function requireAdmin(req: MulmRequest, res: Response, next: NextFunction) {
   if (!req.viewer) {
@@ -131,9 +90,14 @@ export function requireAdmin(req: MulmRequest, res: Response, next: NextFunction
 export const viewMembers = async (req: MulmRequest, res: Response) => {
   const members = await getRosterWithPoints();
 
+  // Import level utilities for member points HoverCards
+  const { getNextLevel, programMetadata } = await import("@/programs");
+
   res.render("admin/members", {
     title: "Member Roster",
     members,
+    getNextLevel,
+    programMetadata,
   });
 };
 
@@ -173,12 +137,16 @@ export const viewMemberUpdate = async (req: MulmRequest, res: Response) => {
     res.status(422).send("Invalid member ID");
     return;
   }
-  const member = await getMember(id);
-  const memberWithPoints = await getMemberWithPoints(member || null);
+  const memberWithPoints = await getMemberWithPoints(id);
+
+  // Import level utilities for member points HoverCards
+  const { getNextLevel, programMetadata } = await import("@/programs");
 
   // Render one table row for editing
   res.render("admin/editMember", {
     member: memberWithPoints,
+    getNextLevel,
+    programMetadata,
   });
 };
 
@@ -189,11 +157,15 @@ export const viewMemberRow = async (req: MulmRequest, res: Response) => {
     res.status(422).send("Invalid member ID");
     return;
   }
-  const member = await getMember(id);
-  const memberWithPoints = await getMemberWithPoints(member || null);
+  const memberWithPoints = await getMemberWithPoints(id);
+
+  // Import level utilities for member points HoverCards
+  const { getNextLevel, programMetadata } = await import("@/programs");
 
   res.render("admin/singleMemberRow", {
     member: memberWithPoints,
+    getNextLevel,
+    programMetadata,
   });
 };
 
@@ -218,11 +190,15 @@ export const updateMemberFields = async (req: MulmRequest, res: Response) => {
   });
 
   // Get the updated member with total points
-  const member = await getMember(id);
-  const memberWithPoints = await getMemberWithPoints(member || null);
+  const memberWithPoints = await getMemberWithPoints(id);
+
+  // Import level utilities for member points HoverCards
+  const { getNextLevel, programMetadata } = await import("@/programs");
 
   res.render("admin/singleMemberRow", {
     member: memberWithPoints,
+    getNextLevel,
+    programMetadata,
   });
 };
 
@@ -748,7 +724,7 @@ export const sendWelcomeEmail = async (req: MulmRequest, res: Response) => {
     );
 
     // Return updated member row
-    const memberWithPoints = await getMemberWithPoints(member);
+    const memberWithPoints = await getMemberWithPoints(member.id);
     res.render("admin/singleMemberRow", {
       member: memberWithPoints,
     });
