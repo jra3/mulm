@@ -46,10 +46,10 @@ mixin trophyWithHover(trophyData, uniqueId)
 
 				+hoverCardContent({cardClasses: `border-2 ${borderColor}`})
 					.space-y-3
-						//- Header: Trophy icon and level
-						.flex.items-center.gap-3
+						//- Header: Trophy icon and level (centered)
+						.flex.flex-col.items-center.gap-2
 							span.text-3xl= trophyData.icon
-							div
+							div.text-center
 								.font-bold.text-gray-900= levelLabel
 								.text-xs.text-gray-500 Specialty Awards Achievement
 
