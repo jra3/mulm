@@ -1,6 +1,9 @@
 //- Trophy icon mixin for displaying specialty award achievements
 //- Expects trophyData object with { icon, tooltip } or null
 
+include hoverCard.pug
+include date.pug
+
 mixin trophy(trophyData)
 	if trophyData
 		span.inline-block.ml-1.cursor-help(
@@ -9,3 +12,59 @@ mixin trophy(trophyData)
 			role="img"
 			aria-hidden="false"
 		)= trophyData.icon
+
+//- Enhanced Trophy with HoverCard
+//- Displays trophy icon with rich HoverCard showing award details
+//-
+//- Parameters:
+//-   trophyData - Trophy data object with { icon, level, tooltip, awards }
+//-     Required: icon, level, tooltip
+//-     Optional: awards array for HoverCard (if present, shows HoverCard)
+//-   uniqueId - Unique identifier for this instance (e.g., member ID)
+//-
+//- Usage:
+//-   +trophyWithHover(trophyData, member.id)
+
+mixin trophyWithHover(trophyData, uniqueId)
+	if trophyData
+		//- If no awards array, fall back to simple trophy
+		if !trophyData.awards || trophyData.awards.length === 0
+			+trophy(trophyData)
+		else
+			//- Trophy with HoverCard
+			- const levelColors = { gold: 'border-yellow-400', silver: 'border-gray-400', bronze: 'border-orange-400' }
+			- const levelLabels = { gold: 'Gold Level', silver: 'Silver Level', bronze: 'Bronze Level' }
+			- const borderColor = levelColors[trophyData.level] || 'border-purple-400'
+			- const levelLabel = levelLabels[trophyData.level] || 'Trophy'
+
+			+hoverCard({id: `trophy-${uniqueId}`, side: 'bottom', width: 'lg', openDelay: 200, closeDelay: 300})
+				+hoverCardTrigger()
+					span.inline-block.ml-1.cursor-help(
+						role="img"
+						aria-label=trophyData.tooltip
+					)= trophyData.icon
+
+				+hoverCardContent({cardClasses: `border-2 ${borderColor}`})
+					.space-y-3
+						//- Header: Trophy icon and level
+						.flex.items-center.gap-3
+							span.text-3xl= trophyData.icon
+							div
+								.font-bold.text-gray-900= levelLabel
+								.text-xs.text-gray-500 Specialty Awards Achievement
+
+						//- Divider
+						.border-t.border-gray-200
+
+						//- Awards List
+						.text-sm
+							.font-semibold.text-gray-700.mb-2= `${trophyData.awards.length} Specialty Award${trophyData.awards.length !== 1 ? 's' : ''}:`
+							ul.space-y-1.pl-4
+								each award in trophyData.awards
+									li.text-gray-700
+										span.font-medium= award.award_name
+										if award.date_awarded
+											span.text-gray-500.text-xs.ml-2
+												| (
+												+shortDate(award.date_awarded, "Award date")
+												| )

@@ -17,6 +17,13 @@ export type TrophyData = {
   tooltip: string;
 } | null;
 
+export type TrophyDataWithAwards = {
+  icon: string;
+  level: TrophyLevel;
+  tooltip: string;
+  awards: Award[];
+} | null;
+
 /**
  * Determine trophy level based on specialty awards earned
  *
@@ -99,5 +106,34 @@ export function getTrophyData(awards: Award[] | undefined): TrophyData {
     icon: getTrophyIcon(level),
     level,
     tooltip: `Specialty Awards: ${formatAwardsList(awards)}`,
+  };
+}
+
+/**
+ * Get trophy data with full awards array for HoverCard display
+ * Includes all awards for rich tooltip content
+ *
+ * @param awards - Array of all awards for a member
+ * @returns Trophy data with awards array or null if no trophy should be shown
+ */
+export function getTrophyDataWithAwards(awards: Award[] | undefined): TrophyDataWithAwards {
+  if (!awards || awards.length === 0) {
+    return null;
+  }
+
+  const level = getTrophyLevel(awards);
+  if (!level) {
+    return null;
+  }
+
+  const specialtyAwards = awards.filter(
+    (a) => a.award_type === "species" || a.award_type === "meta_species"
+  );
+
+  return {
+    icon: getTrophyIcon(level),
+    level,
+    tooltip: `Specialty Awards: ${formatAwardsList(awards)}`,
+    awards: specialtyAwards,
   };
 }

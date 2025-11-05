@@ -15,7 +15,7 @@ html
 					a.text-blue-600.hover_text-blue-800.text-2xl.font-bold(href=`/member/${member.id}` title="Back to Profile") ←
 					.flex.items-center.gap-2
 						h2.text-2xl.font-bold= `${member.display_name}'s Collection`
-						+trophy(trophyData)
+						+trophyWithHover(trophyData, member.id)
 				.space-x-4.flex.items-center
 					a.link(href="/") Home
 					a.link(href="/species") Species
