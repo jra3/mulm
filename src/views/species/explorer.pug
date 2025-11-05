@@ -126,7 +126,7 @@ html
 													a.link.font-semibold(href=`/species/${item.group_id}`)
 														= `${item.canonical_genus} ${item.canonical_species_name}`
 													if item.is_cares_species == 1
-														+caresBadge('sm')
+														+caresBadgeWithHover('sm', item, item.group_id)
 													if item.iucn_redlist_category
 														+iucnBadgeWithHover(item, item.group_id, 'sm')
 

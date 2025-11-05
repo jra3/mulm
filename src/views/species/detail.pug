@@ -38,7 +38,7 @@ html
 							.flex.items-center.gap-2.mb-2
 								h1.text-3xl.font-bold.text-gray-900= displayName
 								if species.is_cares_species == 1
-									+caresBadge()
+									+caresBadgeWithHover('md', species, species.group_id)
 								if species.iucn_redlist_category
 									+iucnBadgeWithHover(species, species.group_id, 'md')
 							p.text-lg.text-gray-600

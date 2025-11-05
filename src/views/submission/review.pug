@@ -50,7 +50,7 @@ html
                 .flex.items-center.gap-2.mb-4
                     h2(class="text-l font-bold") Species Details
                     if submission.cares_species == 1
-                        +caresBadge('sm')
+                        +caresBadgeWithHover('sm', name, name.group_id)
                     if name && name.iucn_redlist_category
                         +iucnBadgeWithHover(name, name.group_id, 'sm')
                     if name && name.iucn_population_trend
