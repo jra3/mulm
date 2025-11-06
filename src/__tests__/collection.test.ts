@@ -234,7 +234,7 @@ void describe("Species Collection Database Module", () => {
       const entry = collection[0];
       // Names are now on entry directly
       assert.equal(entry.common_name, "Test Cichlid 1");
-      assert.equal(entry.scientific_name, "testspecies1 TestGenus");
+      assert.equal(entry.scientific_name, "TestGenus testspecies1");
       // Species object contains only canonical metadata (if group_id is set)
       assert.ok(entry.species);
       assert.equal(entry.species.program_class, "Cichlids");
