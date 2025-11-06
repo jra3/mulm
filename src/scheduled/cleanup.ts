@@ -1,12 +1,128 @@
 import { deleteExpiredAuthCodes } from "@/db/auth";
 import { deleteExpiredChallenges } from "@/db/webauthn";
-import { db } from "@/db/conn";
+import { db, query } from "@/db/conn";
 import { logger } from "@/utils/logger";
+import { listAllObjects, deleteImage, isR2Enabled, type ImageMetadata } from "@/utils/r2-client";
+
+/**
+ * Cleanup orphaned images from R2 that are not referenced in the database
+ * Only deletes images older than 7 days as a safety measure
+ */
+async function cleanupOrphanedImages(): Promise<{ deleted: number; skipped: number }> {
+  if (!isR2Enabled()) {
+    logger.info("R2 not enabled, skipping orphaned image cleanup");
+    return { deleted: 0, skipped: 0 };
+  }
+
+  logger.info("Starting orphaned image cleanup");
+
+  try {
+    // Step 1: Get all referenced image keys from database
+    const referencedKeys = new Set<string>();
+
+    // Query submissions
+    const submissions = await query<{ images: string | null }>(
+      "SELECT images FROM submissions WHERE images IS NOT NULL"
+    );
+
+    for (const row of submissions) {
+      if (row.images) {
+        try {
+          const imageArray = JSON.parse(row.images) as ImageMetadata[];
+          for (const img of imageArray) {
+            // Add original key
+            referencedKeys.add(img.key);
+
+            // Add derived variants (medium and thumb)
+            const mediumKey = img.key.replace("-original.", "-medium.");
+            const thumbKey = img.key.replace("-original.", "-thumb.");
+            referencedKeys.add(mediumKey);
+            referencedKeys.add(thumbKey);
+          }
+        } catch (parseErr) {
+          logger.warn(`Failed to parse images JSON for submission`, { error: parseErr });
+        }
+      }
+    }
+
+    // Query collection entries
+    const collections = await query<{ images: string | null }>(
+      "SELECT images FROM species_collection WHERE images IS NOT NULL"
+    );
+
+    for (const row of collections) {
+      if (row.images) {
+        try {
+          const imageArray = JSON.parse(row.images) as ImageMetadata[];
+          for (const img of imageArray) {
+            // Add original key
+            referencedKeys.add(img.key);
+
+            // Add derived variants
+            const mediumKey = img.key.replace("-original.", "-medium.");
+            const thumbKey = img.key.replace("-original.", "-thumb.");
+            referencedKeys.add(mediumKey);
+            referencedKeys.add(thumbKey);
+          }
+        } catch (parseErr) {
+          logger.warn(`Failed to parse images JSON for collection entry`, { error: parseErr });
+        }
+      }
+    }
+
+    logger.info(`Found ${referencedKeys.size} referenced image keys in database`);
+
+    // Step 2: List all objects in R2 with "submissions/" prefix
+    const r2Objects = await listAllObjects("submissions/");
+    logger.info(`Found ${r2Objects.length} objects in R2`);
+
+    // Step 3: Identify orphans (objects not in referenced set and older than 7 days)
+    const orphans: Array<{ key: string; age: number }> = [];
+    const SAFETY_AGE_DAYS = 7;
+
+    for (const obj of r2Objects) {
+      if (!referencedKeys.has(obj.key)) {
+        // Object is not referenced in database
+        const ageMs = Date.now() - obj.lastModified.getTime();
+        const ageDays = ageMs / (1000 * 60 * 60 * 24);
+
+        if (ageDays > SAFETY_AGE_DAYS) {
+          orphans.push({ key: obj.key, age: ageDays });
+        }
+      }
+    }
+
+    logger.info(`Identified ${orphans.length} orphaned images older than ${SAFETY_AGE_DAYS} days`);
+
+    // Step 4: Delete orphans with error handling
+    let deleted = 0;
+    let skipped = 0;
+
+    for (const orphan of orphans) {
+      try {
+        await deleteImage(orphan.key);
+        deleted++;
+        logger.info(`Deleted orphaned image: ${orphan.key} (age: ${orphan.age.toFixed(1)} days)`);
+      } catch (deleteErr) {
+        skipped++;
+        logger.error(`Failed to delete orphaned image: ${orphan.key}`, deleteErr);
+      }
+    }
+
+    logger.info(`Orphaned image cleanup complete: deleted=${deleted}, skipped=${skipped}`);
+
+    return { deleted, skipped };
+  } catch (err) {
+    logger.error("Error during orphaned image cleanup", err);
+    return { deleted: 0, skipped: 0 };
+  }
+}
 
 /**
  * Run daily cleanup tasks for expired data
  * - Deletes expired password reset tokens (auth_codes)
  * - Deletes expired WebAuthn challenges
+ * - Deletes orphaned images from R2 (older than 7 days)
  */
 export async function runDailyCleanup(): Promise<void> {
   try {
@@ -26,6 +142,12 @@ export async function runDailyCleanup(): Promise<void> {
     // Delete expired WebAuthn challenges
     const challengesDeleted = await deleteExpiredChallenges();
     logger.info(`Deleted ${challengesDeleted} expired WebAuthn challenges`);
+
+    // Delete orphaned images from R2
+    const imageCleanup = await cleanupOrphanedImages();
+    logger.info(
+      `Orphaned image cleanup: ${imageCleanup.deleted} deleted, ${imageCleanup.skipped} skipped`
+    );
 
     logger.info("Daily cleanup tasks completed successfully");
   } catch (err) {

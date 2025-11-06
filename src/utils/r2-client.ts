@@ -3,6 +3,8 @@ import {
   PutObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
+  ListObjectsV2Command,
+  HeadObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import crypto from "crypto";
@@ -198,4 +200,105 @@ export async function uploadToR2(key: string, buffer: Buffer, contentType: strin
 
   await s3Client.send(command);
   logger.info(`Uploaded to R2: ${key}`);
+}
+
+/**
+ * List all objects in R2 bucket with optional prefix
+ * Handles pagination automatically
+ */
+export async function listAllObjects(
+  prefix?: string
+): Promise<Array<{ key: string; lastModified: Date; size: number }>> {
+  const s3Client = ensureInitialized();
+  const bucketName = getBucketName();
+  const objects: Array<{ key: string; lastModified: Date; size: number }> = [];
+
+  let continuationToken: string | undefined;
+
+  do {
+    const command = new ListObjectsV2Command({
+      Bucket: bucketName,
+      Prefix: prefix,
+      ContinuationToken: continuationToken,
+      MaxKeys: 1000, // Maximum per request
+    });
+
+    const response = await s3Client.send(command);
+
+    if (response.Contents) {
+      for (const obj of response.Contents) {
+        if (obj.Key && obj.LastModified) {
+          objects.push({
+            key: obj.Key,
+            lastModified: obj.LastModified,
+            size: obj.Size || 0,
+          });
+        }
+      }
+    }
+
+    continuationToken = response.NextContinuationToken;
+  } while (continuationToken);
+
+  logger.info(`Listed ${objects.length} objects from R2`, { prefix });
+  return objects;
+}
+
+/**
+ * Check if an object is older than specified number of days
+ */
+export async function isObjectOlderThan(key: string, days: number): Promise<boolean> {
+  const s3Client = ensureInitialized();
+
+  try {
+    const command = new HeadObjectCommand({
+      Bucket: getBucketName(),
+      Key: key,
+    });
+
+    const response = await s3Client.send(command);
+
+    if (!response.LastModified) {
+      return false;
+    }
+
+    const ageMs = Date.now() - response.LastModified.getTime();
+    const ageDays = ageMs / (1000 * 60 * 60 * 24);
+
+    return ageDays > days;
+  } catch (error) {
+    logger.error(`Failed to check age of object ${key}:`, error);
+    return false; // Assume not old enough if we can't check
+  }
+}
+
+/**
+ * Get object metadata including last modified date
+ */
+export async function getObjectMetadata(
+  key: string
+): Promise<{ lastModified: Date; size: number; contentType?: string } | null> {
+  const s3Client = ensureInitialized();
+
+  try {
+    const command = new HeadObjectCommand({
+      Bucket: getBucketName(),
+      Key: key,
+    });
+
+    const response = await s3Client.send(command);
+
+    if (!response.LastModified) {
+      return null;
+    }
+
+    return {
+      lastModified: response.LastModified,
+      size: response.ContentLength || 0,
+      contentType: response.ContentType,
+    };
+  } catch (error) {
+    logger.error(`Failed to get metadata for object ${key}:`, error);
+    return null;
+  }
 }
