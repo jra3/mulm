@@ -4,6 +4,7 @@ import pug from "pug";
 import path from "path";
 import fs from "fs";
 import { faker } from "@faker-js/faker";
+import { getNextLevel, programMetadata } from "../programs";
 
 void describe("Pug Template Rendering", () => {
   const viewsPath = path.join(__dirname, "../views");
@@ -13,7 +14,14 @@ void describe("Pug Template Rendering", () => {
     id: faker.number.int({ min: 1, max: 1000 }),
     display_name: faker.person.fullName(),
     email: faker.internet.email(),
+    contact_email: faker.internet.email(),
     is_admin: faker.datatype.boolean(),
+    fish_level: "Hobbyist",
+    fishTotalPoints: 75,
+    plant_level: "Beginner Aquatic Horticulturist",
+    plantTotalPoints: 30,
+    coral_level: "Participant",
+    coralTotalPoints: 10,
     awards: Array.from({ length: faker.number.int({ min: 0, max: 5 }) }, () => ({
       award_name: faker.helpers.arrayElement([
         "Breeder Award Level 1",
@@ -413,6 +421,10 @@ void describe("Pug Template Rendering", () => {
       id: faker.number.int({ min: 1, max: 100 }),
       display_name: faker.person.fullName(),
     })),
+
+    // Helper functions for templates
+    getNextLevel,
+    programMetadata,
   };
 
   // Get all pug files recursively
@@ -460,6 +472,7 @@ void describe("Pug Template Rendering", () => {
       /^mixins\/errorAlert\.pug$/, // Mixin-only template
       /^mixins\/progressBar\.pug$/, // Mixin-only template
       /^mixins\/hoverCard\.pug$/, // Mixin-only template
+      /^mixins\/memberPointsHover\.pug$/, // Mixin-only template
       /^mixins\/errorMessage\.pug$/, // Mixin-only template
       /^mixins\/collectionCard\.pug$/, // Mixin-only template
       /^activity\/activity-item\.pug$/, // Mixin-only template
