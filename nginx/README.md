@@ -60,7 +60,7 @@ Defined in `nginx.conf`:
 
 **Upload endpoints** (`/submission`, `/tank`, `/upload`): 5 req/sec (burst 10)
 - Lower limit to prevent abuse
-- 52MB max upload size (aligned with app limit: 5 files × 10MB + overhead)
+- 110MB max upload size (aligned with app limit: 5 files × 20MB + overhead)
 - 300s timeout for large uploads
 
 ### Rate Limit Configuration

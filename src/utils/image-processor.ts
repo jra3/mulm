@@ -79,9 +79,7 @@ export async function validateImageBuffer(buffer: Buffer): Promise<void> {
       throw new ImageValidationError("Image too small. Minimum dimensions are 400x400 pixels.");
     }
 
-    if (metadata.width > 4000 || metadata.height > 4000) {
-      throw new ImageValidationError("Image too large. Maximum dimensions are 4000x4000 pixels.");
-    }
+    // No maximum dimension check - images will be resized during processing to MAX_DIMENSION
   } catch (error) {
     if (error instanceof ImageValidationError) {
       throw error;

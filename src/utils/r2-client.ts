@@ -25,7 +25,7 @@ export interface ImageMetadata {
   contentType?: string;
 }
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const PRESIGNED_URL_EXPIRY = 300; // 5 minutes
 

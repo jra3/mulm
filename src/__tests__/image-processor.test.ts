@@ -60,9 +60,9 @@ void describe("Image Processor", () => {
       await assert.rejects(async () => await validateImageBuffer(buffer), /Image too small/);
     });
 
-    void test("should reject images that are too large", async () => {
-      const buffer = await createTestImage(5000, 5000); // Above 4000x4000 maximum
-      await assert.rejects(async () => await validateImageBuffer(buffer), /Image too large/);
+    void test("should accept large images (processed to max dimensions)", async () => {
+      const buffer = await createTestImage(5000, 5000); // Will be resized during processing
+      await assert.doesNotReject(async () => await validateImageBuffer(buffer));
     });
   });
 
