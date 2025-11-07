@@ -56,7 +56,7 @@ html
         // Main content area with auto-refresh (full height minus header)
         main.p-8(style="height: calc(100vh - 96px);")
             #submissions-feed.h-full(
-                hx-get="/live/feed"
+                hx-get=feedUrl || "/live/feed"
                 hx-trigger="every 90s"
                 hx-swap="innerHTML"
             )
