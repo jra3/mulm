@@ -19,8 +19,7 @@
   "webauthn": {
     "rpName": "BAP Portal",
     "rpID": "localhost",
-    "origin": "http://localhost:4200",
-    "comment": "For production, use eTLD+1 as rpID (e.g., 'basny.org' not 'bap.basny.org') for better cross-subdomain support"
+    "origin": "http://localhost:4200"
   },
   "mcp": {
     "enabled": false,
