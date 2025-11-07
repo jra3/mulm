@@ -62,9 +62,9 @@ export async function generateRegistrationOptionsForMember(
         : undefined,
     })),
     authenticatorSelection: {
-      residentKey: "preferred", // Discoverable credentials preferred
+      residentKey: "required", // Require discoverable credentials for iCloud Keychain sync
       userVerification: "preferred",
-      authenticatorAttachment: "platform", // Prefer platform authenticators (Touch ID, Face ID)
+      // No authenticatorAttachment - let user/browser choose (better compatibility)
     },
   });
 
