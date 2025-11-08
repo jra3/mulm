@@ -25,9 +25,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M  # Hard limit - OOM kill if exceeded (prevents system freeze)
+          memory: 768M  # Hard limit - OOM kill if exceeded (prevents system freeze)
         reservations:
-          memory: 256M  # Soft limit - guaranteed allocation
+          memory: 384M  # Soft limit - guaranteed allocation
 
   # Nginx reverse proxy with SSL
   nginx:
