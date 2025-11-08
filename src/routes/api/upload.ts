@@ -24,8 +24,8 @@ const router = express.Router();
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 20 * 1024 * 1024, // 20MB
-    files: 5, // Max 5 files at once
+    fileSize: 20 * 1024 * 1024, // 20MB per file - supports up to 48MP 8K images
+    files: 5, // Max 5 files per upload
   },
   fileFilter: (req, file, cb) => {
     // Basic MIME type check (will validate magic bytes later)
