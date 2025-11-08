@@ -8,6 +8,7 @@ export type WebAuthnCredential = {
   counter: number;
   transports: string | null;
   device_name: string | null;
+  authenticator_attachment: string | null;
   created_on: string;
   last_used_on: string | null;
 };
@@ -32,12 +33,13 @@ export async function saveCredential(data: {
   counter: number;
   transports?: string;
   device_name?: string;
+  authenticator_attachment?: string;
 }): Promise<number> {
   const conn = writeConn;
   const stmt = await conn.prepare(`
     INSERT INTO webauthn_credentials (
-      member_id, credential_id, public_key, counter, transports, device_name
-    ) VALUES (?, ?, ?, ?, ?, ?)
+      member_id, credential_id, public_key, counter, transports, device_name, authenticator_attachment
+    ) VALUES (?, ?, ?, ?, ?, ?, ?)
     RETURNING id
   `);
 
@@ -48,7 +50,8 @@ export async function saveCredential(data: {
       data.public_key,
       data.counter,
       data.transports || null,
-      data.device_name || null
+      data.device_name || null,
+      data.authenticator_attachment || null
     );
 
     if (!result) {

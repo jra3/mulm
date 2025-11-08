@@ -21,14 +21,24 @@ include ../mixins/emptyState.pug
 	h3.text-lg.font-bold.mb-2 Passkeys
 	p.text-sm.text-gray-600.mb-4 Manage your passwordless authentication methods (Touch ID, Face ID, Windows Hello, etc.)
 
+	//- Passkey suggestion banner (only shown if no passkeys and not dismissed)
+	if !credentials || credentials.length === 0
+		#passkeyPrompt.bg-blue-50.border.border-blue-200.rounded-lg.p-4.mb-4.flex.items-start.gap-3(style="display: none;")
+			.flex-grow
+				p.font-semibold.text-blue-900.mb-1 Try passwordless login!
+				p.text-sm.text-blue-700 Add a passkey to log in quickly and securely with Touch ID, Face ID, or Windows Hello. No password needed.
+			button.text-blue-600.hover_text-blue-800.font-bold(type="button" onclick="dismissPasskeyPrompt()") ✕
+
 	button#addPasskeyBtn.primary.mb-4(type="button") Add New Passkey
 
 	#passkeysList.space-y-2
 		if credentials && credentials.length > 0
 			each cred in credentials
+				- const passkeyType = cred.authenticator_attachment === 'platform' ? 'Platform authenticator (Touch ID, Face ID, Windows Hello)' : cred.authenticator_attachment === 'cross-platform' ? 'Security Key' : 'Passkey'
 				.flex.gap-4.items-center.p-3.bg-gray-50.rounded(id=`passkey-${cred.id}`)
 					.flex-grow
 						.font-bold= cred.device_name || 'Unnamed Device'
+						.text-sm.text-gray-600= passkeyType
 						.text-sm.text-gray-500 Added #{new Date(cred.created_on).toLocaleDateString()}
 						if cred.last_used_on
 							.text-xs.text-gray-400 Last used #{new Date(cred.last_used_on).toLocaleDateString()}
@@ -42,6 +52,20 @@ include ../mixins/emptyState.pug
 			+emptyState("No passkeys registered yet")
 
 	script(type="module").
+		// Passkey prompt banner - show if not dismissed
+		const prompt = document.getElementById('passkeyPrompt');
+		if (prompt && !localStorage.getItem('passkeyPromptDismissed')) {
+			prompt.style.display = 'flex';
+		}
+
+		window.dismissPasskeyPrompt = function() {
+			const prompt = document.getElementById('passkeyPrompt');
+			if (prompt) {
+				prompt.style.display = 'none';
+				localStorage.setItem('passkeyPromptDismissed', 'true');
+			}
+		};
+
 		// Use SimpleWebAuthn browser helpers for proper credential encoding
 		import { startRegistration } from 'https://esm.sh/@simplewebauthn/browser@13.2.2';
 
@@ -58,7 +82,7 @@ include ../mixins/emptyState.pug
 					btn.textContent = 'Registering...';
 
 					// Prompt for device name first
-					const deviceName = prompt('Name this passkey (e.g., "iPhone", "MacBook Pro"):');
+					const deviceName = window.prompt('Name this passkey (e.g., "iPhone", "MacBook Pro"):');
 					if (!deviceName) {
 						btn.disabled = false;
 						btn.textContent = 'Add New Passkey';

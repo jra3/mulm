@@ -125,6 +125,7 @@ export async function verifyAndSaveCredential(
     counter: credential.counter,
     transports: transportsStr,
     device_name: deviceName,
+    authenticator_attachment: response.authenticatorAttachment,
   });
 
   return {
