@@ -548,9 +548,6 @@
   .h-screen {
     height: 100vh;
   }
-  .max-h-64 {
-    max-height: calc(var(--spacing) * 64);
-  }
   .max-h-96 {
     max-height: calc(var(--spacing) * 96);
   }
@@ -568,9 +565,6 @@
   }
   .w-2\/5 {
     width: calc(2/5 * 100%);
-  }
-  .w-3 {
-    width: calc(var(--spacing) * 3);
   }
   .w-4 {
     width: calc(var(--spacing) * 4);
@@ -748,9 +742,6 @@
   }
   .justify-end {
     justify-content: flex-end;
-  }
-  .gap-0\.5 {
-    gap: calc(var(--spacing) * 0.5);
   }
   .gap-1 {
     gap: calc(var(--spacing) * 1);
@@ -1025,9 +1016,6 @@
   }
   .border-yellow-600 {
     border-color: var(--color-yellow-600);
-  }
-  .border-t-transparent {
-    border-top-color: transparent;
   }
   .bg-amber-50 {
     background-color: var(--color-amber-50);
