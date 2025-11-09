@@ -377,10 +377,14 @@ void describe("Species Group CRUD Operations", () => {
 
       assert.strictEqual(changes, 1);
 
-      const updated = await db.get<SpeciesGroupRow>("SELECT * FROM species_name_group WHERE group_id = ?", [
-        testGroupId,
-      ]);
-      assert.deepStrictEqual(JSON.parse(updated?.external_references ?? "null"), refs);
+      // Query from normalized table
+      const { getSpeciesExternalReferences } = await import("../db/species");
+      const updatedRefs = await getSpeciesExternalReferences(testGroupId);
+      assert.strictEqual(updatedRefs.length, 2);
+      assert.deepStrictEqual(
+        updatedRefs.map((r) => r.reference_url),
+        refs
+      );
     });
 
     void test("should clear external references with empty array", async () => {
@@ -390,10 +394,10 @@ void describe("Species Group CRUD Operations", () => {
 
       assert.strictEqual(changes, 1);
 
-      const updated = await db.get<SpeciesGroupRow>("SELECT * FROM species_name_group WHERE group_id = ?", [
-        testGroupId,
-      ]);
-      assert.strictEqual(updated?.external_references, null);
+      // Query from normalized table
+      const { getSpeciesExternalReferences } = await import("../db/species");
+      const updatedRefs = await getSpeciesExternalReferences(testGroupId);
+      assert.strictEqual(updatedRefs.length, 0);
     });
 
     void test("should update multiple fields at once", async () => {

@@ -199,18 +199,25 @@ type SpeciesAdminFilters = {
   search?: string;
 };
 
-// Helper function to parse JSON fields
-function parseJsonField<T>(jsonString: string | null): T | null {
-  if (!jsonString) return null;
-  try {
-    return JSON.parse(jsonString) as T;
-  } catch {
-    return null;
-  }
-}
-
 // Helper function to format species group for response
-function formatSpeciesGroup(group: SpeciesNameGroup) {
+async function formatSpeciesGroup(group: SpeciesNameGroup): Promise<{
+  group_id: number;
+  program_class: string;
+  canonical_genus: string;
+  canonical_species_name: string;
+  species_type: string;
+  base_points: number | null;
+  is_cares_species: boolean;
+  external_references: string[];
+  image_links: string[];
+}> {
+  // Fetch normalized data
+  const { getSpeciesExternalReferences, getSpeciesImages } = await import("../db/species.js");
+  const [externalRefs, images] = await Promise.all([
+    getSpeciesExternalReferences(group.group_id),
+    getSpeciesImages(group.group_id),
+  ]);
+
   return {
     group_id: group.group_id,
     program_class: group.program_class,
@@ -219,8 +226,8 @@ function formatSpeciesGroup(group: SpeciesNameGroup) {
     species_type: group.species_type,
     base_points: group.base_points,
     is_cares_species: Boolean(group.is_cares_species),
-    external_references: parseJsonField<string[]>(group.external_references) || [],
-    image_links: parseJsonField<string[]>(group.image_links) || [],
+    external_references: externalRefs.map((ref) => ref.reference_url),
+    image_links: images.map((img) => img.image_url),
   };
 }
 
@@ -329,7 +336,7 @@ export function initializeSpeciesServer(server: Server): void {
             {
               uri,
               mimeType: "application/json",
-              text: JSON.stringify(groups.map(formatSpeciesGroup), null, 2),
+              text: JSON.stringify(await Promise.all(groups.map(formatSpeciesGroup)), null, 2),
             },
           ],
         };
@@ -355,7 +362,7 @@ export function initializeSpeciesServer(server: Server): void {
               mimeType: "application/json",
               text: JSON.stringify(
                 {
-                  ...formatSpeciesGroup(groups[0]),
+                  ...(await formatSpeciesGroup(groups[0])),
                   synonyms,
                 },
                 null,
@@ -379,7 +386,7 @@ export function initializeSpeciesServer(server: Server): void {
             {
               uri,
               mimeType: "application/json",
-              text: JSON.stringify(groups.map(formatSpeciesGroup), null, 2),
+              text: JSON.stringify(await Promise.all(groups.map(formatSpeciesGroup)), null, 2),
             },
           ],
         };
@@ -398,7 +405,7 @@ export function initializeSpeciesServer(server: Server): void {
             {
               uri,
               mimeType: "application/json",
-              text: JSON.stringify(groups.map(formatSpeciesGroup), null, 2),
+              text: JSON.stringify(await Promise.all(groups.map(formatSpeciesGroup)), null, 2),
             },
           ],
         };
@@ -414,7 +421,7 @@ export function initializeSpeciesServer(server: Server): void {
             {
               uri,
               mimeType: "application/json",
-              text: JSON.stringify(groups.map(formatSpeciesGroup), null, 2),
+              text: JSON.stringify(await Promise.all(groups.map(formatSpeciesGroup)), null, 2),
             },
           ],
         };
@@ -581,7 +588,7 @@ export function initializeSpeciesServer(server: Server): void {
             {
               uri,
               mimeType: "application/json",
-              text: JSON.stringify(groups.map(formatSpeciesGroup), null, 2),
+              text: JSON.stringify(await Promise.all(groups.map(formatSpeciesGroup)), null, 2),
             },
           ],
         };

@@ -1590,36 +1590,50 @@ export async function updateSpeciesGroup(
     values.push(isCaresSpecies ? 1 : 0);
   }
 
-  if (externalReferences !== undefined) {
-    fields.push("external_references = ?");
-    values.push(externalReferences.length > 0 ? JSON.stringify(externalReferences) : null);
-  }
-
-  if (imageLinks !== undefined) {
-    fields.push("image_links = ?");
-    values.push(imageLinks.length > 0 ? JSON.stringify(imageLinks) : null);
-  }
-
-  if (fields.length === 0) {
+  if (fields.length === 0 && externalReferences === undefined && imageLinks === undefined) {
     throw new Error("No valid fields to update");
   }
 
   values.push(groupId);
 
   try {
-    const conn = writeConn;
-    const stmt = await conn.prepare(`
-      UPDATE species_name_group
-      SET ${fields.join(", ")}
-      WHERE group_id = ?
-    `);
+    let rowsChanged = 0;
 
-    try {
-      const result = await stmt.run(...values);
-      return result.changes || 0;
-    } finally {
-      await stmt.finalize();
+    // Update main species_name_group table if there are fields to update
+    if (fields.length > 0) {
+      const stmt = await writeConn.prepare(`
+        UPDATE species_name_group
+        SET ${fields.join(", ")}
+        WHERE group_id = ?
+      `);
+
+      try {
+        const result = await stmt.run(...values);
+        rowsChanged = result.changes || 0;
+      } finally {
+        await stmt.finalize();
+      }
+
+      // If no rows changed and we had fields to update, the group doesn't exist
+      if (rowsChanged === 0 && (externalReferences === undefined && imageLinks === undefined)) {
+        return 0;
+      }
     }
+
+    // Update external references in normalized table (has its own transaction)
+    if (externalReferences !== undefined) {
+      await setSpeciesExternalReferences(groupId, externalReferences);
+    }
+
+    // Update image links in normalized table (has its own transaction)
+    if (imageLinks !== undefined) {
+      await setSpeciesImages(groupId, imageLinks);
+    }
+
+    // Return 1 if we updated anything
+    return rowsChanged > 0 || externalReferences !== undefined || imageLinks !== undefined
+      ? 1
+      : 0;
   } catch (err) {
     // Check for unique constraint on canonical_genus + canonical_species_name
     if (err instanceof Error && err.message.includes("UNIQUE constraint")) {

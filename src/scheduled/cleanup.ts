@@ -20,29 +20,20 @@ async function cleanupOrphanedImages(): Promise<{ deleted: number; skipped: numb
     // Step 1: Get all referenced image keys from database
     const referencedKeys = new Set<string>();
 
-    // Query submissions
-    const submissions = await query<{ images: string | null }>(
-      "SELECT images FROM submissions WHERE images IS NOT NULL"
+    // Query submission_images table (normalized)
+    const submissionImages = await query<{ r2_key: string }>(
+      "SELECT r2_key FROM submission_images"
     );
 
-    for (const row of submissions) {
-      if (row.images) {
-        try {
-          const imageArray = JSON.parse(row.images) as ImageMetadata[];
-          for (const img of imageArray) {
-            // Add original key
-            referencedKeys.add(img.key);
+    for (const row of submissionImages) {
+      // Add original key
+      referencedKeys.add(row.r2_key);
 
-            // Add derived variants (medium and thumb)
-            const mediumKey = img.key.replace("-original.", "-medium.");
-            const thumbKey = img.key.replace("-original.", "-thumb.");
-            referencedKeys.add(mediumKey);
-            referencedKeys.add(thumbKey);
-          }
-        } catch (parseErr) {
-          logger.warn(`Failed to parse images JSON for submission`, { error: parseErr });
-        }
-      }
+      // Add derived variants (medium and thumb)
+      const mediumKey = row.r2_key.replace("-original.", "-medium.");
+      const thumbKey = row.r2_key.replace("-original.", "-thumb.");
+      referencedKeys.add(mediumKey);
+      referencedKeys.add(thumbKey);
     }
 
     // Query collection entries
