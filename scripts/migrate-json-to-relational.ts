@@ -341,6 +341,9 @@ async function verifyMigration(): Promise<void> {
 async function main() {
   logger.info("=== Starting JSON to Relational Migration ===\n");
 
+  // Wait for database connection to initialize
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+
   try {
     // Run all migrations
     await migrateSubmissionImages();
