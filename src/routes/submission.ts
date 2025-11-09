@@ -556,21 +556,9 @@ export const updateMedia = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  // Get images and video_url from form
-  const images = getBodyString(req, "images", "[]");
+  // Get video_url from form
+  // Note: Images are managed via /api/upload endpoints, not this form
   const video_url = getBodyString(req, "video_url", "");
-
-  // Validate images JSON
-  try {
-    const parsed: unknown = JSON.parse(images);
-    if (!Array.isArray(parsed)) {
-      res.status(400).send("Invalid images data");
-      return;
-    }
-  } catch {
-    res.status(400).send("Invalid images format");
-    return;
-  }
 
   // Validate video URL if provided
   const trimmedVideoUrl = video_url.trim();
@@ -583,9 +571,8 @@ export const updateMedia = async (req: MulmRequest, res: Response) => {
     }
   }
 
-  // Update only images and video_url
+  // Update only video_url (images managed via /api/upload endpoints)
   await db.updateSubmission(submission.id, {
-    images,
     video_url: trimmedVideoUrl || null,
   });
 

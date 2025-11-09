@@ -131,8 +131,9 @@ export function formToDB(memberId: number, form: FormValues, submit: boolean) {
     member_email: undefined,
     foods: arrayToJSON(form.foods),
     spawn_locations: arrayToJSON(form.spawn_locations),
-    supplement_type: arrayToJSON(form.supplement_type),
-    supplement_regimen: arrayToJSON(form.supplement_regimen),
+    // Note: supplements are excluded - they're saved to submission_supplements table
+    supplement_type: undefined,
+    supplement_regimen: undefined,
   };
 }
 
