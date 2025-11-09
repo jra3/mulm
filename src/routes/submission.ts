@@ -402,6 +402,14 @@ export const update = async (req: MulmRequest, res: Response) => {
   // Prepare updates from form
   const formUpdates = db.formToDB(submission.member_id, form, !draft);
 
+  // Extract supplements to save separately
+  const supplementTypes = form.supplement_type;
+  const supplementRegimens = form.supplement_regimen;
+
+  // Remove supplements from formUpdates (they'll go to normalized table)
+  delete formUpdates.supplement_type;
+  delete formUpdates.supplement_regimen;
+
   // If resubmitting after changes were requested, clear those fields AND preserve witness/submit data
   if (!draft && submission.changes_requested_on) {
     await db.updateSubmission(submission.id, {
@@ -417,6 +425,21 @@ export const update = async (req: MulmRequest, res: Response) => {
   } else {
     await db.updateSubmission(submission.id, formUpdates);
   }
+
+  // Save supplements to normalized table
+  if (Array.isArray(supplementTypes) && Array.isArray(supplementRegimens)) {
+    const supplements = [];
+    const maxLength = Math.max(supplementTypes.length, supplementRegimens.length);
+    for (let i = 0; i < maxLength; i++) {
+      const type = supplementTypes[i] || "";
+      const regimen = supplementRegimens[i] || "";
+      if (type || regimen) {
+        supplements.push({ type, regimen });
+      }
+    }
+    await db.setSubmissionSupplements(submission.id, supplements);
+  }
+
   const sub = await db.getSubmissionById(submission.id);
   const member = await getMember(submission.member_id);
   if (!draft && sub && member) {

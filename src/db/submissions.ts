@@ -138,33 +138,59 @@ export function formToDB(memberId: number, form: FormValues, submit: boolean) {
 
 export async function createSubmission(memberId: number, form: FormValues, submit: boolean) {
   try {
-    const conn = writeConn;
-    const entries = formToDB(memberId, form, submit);
+    return await withTransaction(async (db) => {
+      // Prepare submission data (excluding supplements - they go to normalized table)
+      const entries = formToDB(memberId, form, submit);
 
-    const fields = [];
-    const values = [];
-    const marks = [];
-    for (const [field, value] of Object.entries(entries)) {
-      if (value === undefined) {
-        continue;
+      // Extract supplements before inserting
+      const supplementTypes = form.supplement_type;
+      const supplementRegimens = form.supplement_regimen;
+
+      // Remove supplements from entries (they'll go to normalized table)
+      delete entries.supplement_type;
+      delete entries.supplement_regimen;
+
+      const fields = [];
+      const values = [];
+      const marks = [];
+      for (const [field, value] of Object.entries(entries)) {
+        if (value === undefined) {
+          continue;
+        }
+        fields.push(field);
+        values.push(value);
+        marks.push("?");
       }
-      fields.push(field);
-      values.push(value);
-      marks.push("?");
-    }
 
-    const stmt = await conn.prepare(`
-			INSERT INTO submissions
-			(${fields.join(", ")})
-			VALUES
-			(${marks.join(", ")})`);
+      const stmt = await db.prepare(`
+        INSERT INTO submissions
+        (${fields.join(", ")})
+        VALUES
+        (${marks.join(", ")})`);
 
-    try {
       const result = await stmt.run(values);
-      return result.lastID as number;
-    } finally {
       await stmt.finalize();
-    }
+
+      const submissionId = result.lastID as number;
+
+      // Save supplements to normalized table
+      if (Array.isArray(supplementTypes) && Array.isArray(supplementRegimens)) {
+        const supplements = [];
+        const maxLength = Math.max(supplementTypes.length, supplementRegimens.length);
+        for (let i = 0; i < maxLength; i++) {
+          const type = supplementTypes[i] || "";
+          const regimen = supplementRegimens[i] || "";
+          if (type || regimen) {
+            supplements.push({ type, regimen });
+          }
+        }
+        if (supplements.length > 0) {
+          await setSubmissionSupplements(submissionId, supplements);
+        }
+      }
+
+      return submissionId;
+    });
   } catch (err) {
     logger.error("Failed to add submission", err);
     throw new Error("Failed to add submission");
