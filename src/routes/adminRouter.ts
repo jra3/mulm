@@ -13,6 +13,8 @@ adminRouter.get("/species/:id/synonyms", speciesAdmin.getSpeciesSynonyms);
 adminRouter.get("/species/:groupId/edit", speciesAdmin.editSpeciesSidebar);
 adminRouter.patch("/species/:groupId", speciesAdmin.updateSpecies);
 adminRouter.delete("/species/:groupId", speciesAdmin.deleteSpecies);
+adminRouter.get("/species/:groupId/submissions", speciesAdmin.getSubmissions);
+adminRouter.post("/species/:groupId/sync-submissions", speciesAdmin.syncSubmissions);
 
 // IUCN canonical name recommendations
 adminRouter.get("/species/canonical-recommendations", speciesAdmin.listCanonicalRecommendations);

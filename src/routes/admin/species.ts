@@ -17,6 +17,9 @@ import {
   deleteSynonym as deleteSynonymDb,
   bulkSetPoints,
   mergeSpecies,
+  getSubmissionsForSpecies,
+  getSubmissionSyncStats,
+  syncSubmissionsForSpecies,
 } from "@/db/species";
 import {
   updateIucnData,
@@ -228,6 +231,15 @@ export const updateSpecies = async (req: MulmRequest, res: Response) => {
   } = parsed.data;
 
   try {
+    // Get current species data to check if program_class changed
+    const currentSpecies = await getSpeciesDetail(groupId);
+    if (!currentSpecies) {
+      res.status(404).send("Species not found");
+      return;
+    }
+
+    const programClassChanged = currentSpecies.program_class !== program_class;
+
     const changes = await updateSpeciesGroup(groupId, {
       canonicalGenus: canonical_genus,
       canonicalSpeciesName: canonical_species_name,
@@ -241,6 +253,19 @@ export const updateSpecies = async (req: MulmRequest, res: Response) => {
     if (changes === 0) {
       res.status(404).send("Species not found");
       return;
+    }
+
+    // If program_class changed, auto-sync all submissions for this species
+    if (programClassChanged) {
+      try {
+        const syncedCount = await syncSubmissionsForSpecies(groupId);
+        logger.info(
+          `Auto-synced ${syncedCount} submissions for species ${groupId} after program_class change from "${currentSpecies.program_class}" to "${program_class}"`
+        );
+      } catch (syncErr) {
+        logger.error(`Failed to auto-sync submissions for species ${groupId}`, syncErr);
+        // Don't fail the update if sync fails - just log it
+      }
     }
 
     // Success - redirect back to list
@@ -1280,3 +1305,77 @@ async function processRemainingBatches(
 
   logger.info(`Background IUCN sync completed for ${species.length} species`);
 }
+
+/**
+ * GET /admin/species/:groupId/submissions
+ * Get submissions for a species (for display on edit page)
+ */
+export const getSubmissions = async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+
+  if (!viewer?.is_admin) {
+    res.status(403).send("Admin access required");
+    return;
+  }
+
+  const groupId = parseInt(req.params.groupId);
+  if (!groupId) {
+    res.status(400).send("Invalid species ID");
+    return;
+  }
+
+  try {
+    const [submissions, stats] = await Promise.all([
+      getSubmissionsForSpecies(groupId),
+      getSubmissionSyncStats(groupId),
+    ]);
+
+    res.render("admin/speciesSubmissions", {
+      submissions,
+      stats,
+      groupId,
+    });
+  } catch (err) {
+    logger.error(`Failed to get submissions for species ${groupId}`, err);
+    res.status(500).send("Failed to load submissions");
+  }
+};
+
+/**
+ * POST /admin/species/:groupId/sync-submissions
+ * Manually sync submissions for a species
+ */
+export const syncSubmissions = async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+
+  if (!viewer?.is_admin) {
+    res.status(403).send("Admin access required");
+    return;
+  }
+
+  const groupId = parseInt(req.params.groupId);
+  if (!groupId) {
+    res.status(400).send("Invalid species ID");
+    return;
+  }
+
+  try {
+    const syncedCount = await syncSubmissionsForSpecies(groupId);
+
+    // Return updated stats and submissions
+    const [submissions, stats] = await Promise.all([
+      getSubmissionsForSpecies(groupId),
+      getSubmissionSyncStats(groupId),
+    ]);
+
+    res.render("admin/speciesSubmissions", {
+      submissions,
+      stats,
+      groupId,
+      syncMessage: `Successfully synced ${syncedCount} submission${syncedCount !== 1 ? "s" : ""}`,
+    });
+  } catch (err) {
+    logger.error(`Failed to sync submissions for species ${groupId}`, err);
+    res.status(500).send("Failed to sync submissions");
+  }
+};
