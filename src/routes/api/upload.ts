@@ -17,6 +17,7 @@ import {
   deleteRateLimiter,
   progressRateLimiter,
 } from "../../middleware/rateLimiter";
+import { addSubmissionImage, deleteSubmissionImage } from "../../db/submissions";
 
 const router = express.Router();
 
@@ -204,33 +205,16 @@ router.post(
       // If this is for a submission, update the database
       if (submissionId && processedImages.length > 0) {
         try {
-          // Wrap database operations in a transaction for atomicity
-          await withTransaction(async (db) => {
-            // Get existing images
-            const stmt = await db.prepare("SELECT images FROM submissions WHERE id = ?");
-            try {
-              const submission = await stmt.get<{ images: string | null }>(submissionId);
-
-              if (submission) {
-                const existingImages = submission.images
-                  ? (JSON.parse(submission.images) as ImageMetadata[])
-                  : [];
-                const allImages = [...existingImages, ...processedImages];
-
-                // Update submission with new images
-                const updateStmt = await db.prepare(
-                  "UPDATE submissions SET images = ? WHERE id = ?"
-                );
-                try {
-                  await updateStmt.run(JSON.stringify(allImages), submissionId);
-                } finally {
-                  await updateStmt.finalize();
-                }
-              }
-            } finally {
-              await stmt.finalize();
-            }
-          });
+          // Add images to submission_images table
+          for (const img of processedImages) {
+            await addSubmissionImage(submissionId, {
+              r2_key: img.key,
+              public_url: img.url,
+              file_size: img.size,
+              uploaded_at: img.uploadedAt,
+              content_type: img.contentType || "image/jpeg",
+            });
+          }
         } catch (error) {
           logger.error("Failed to update submission with images", error);
 
@@ -318,30 +302,30 @@ router.delete("/image/:key", deleteRateLimiter, async (req: MulmRequest, res): P
   const { key } = req.params;
 
   try {
-    // Verify the user owns this image and get submission data in a transaction
+    // Verify the user owns this image and get submission data
     let submissionId: number | undefined;
-    let existingImages: ImageMetadata[] | undefined;
 
     await withTransaction(async (db) => {
       const stmt = await db.prepare(`
-        SELECT id, images FROM submissions
-        WHERE member_id = ? AND images LIKE ?
+        SELECT s.id
+        FROM submissions s
+        JOIN submission_images si ON s.id = si.submission_id
+        WHERE s.member_id = ? AND si.r2_key = ?
       `);
       try {
-        const submission = await stmt.get<{ id: number; images: string }>(viewer.id, `%${key}%`);
+        const submission = await stmt.get<{ id: number }>(viewer.id, key);
 
         if (!submission) {
           throw new Error("Image not found or access denied");
         }
 
         submissionId = submission.id;
-        existingImages = JSON.parse(submission.images) as ImageMetadata[];
       } finally {
         await stmt.finalize();
       }
     });
 
-    if (!submissionId || !existingImages) {
+    if (!submissionId) {
       res.status(403).json({ error: "Image not found or access denied" });
       return;
     }
@@ -357,19 +341,8 @@ router.delete("/image/:key", deleteRateLimiter, async (req: MulmRequest, res): P
       deleteImage(thumbKey).catch(() => {}),
     ]);
 
-    // Update submission to remove this image in a transaction
-    await withTransaction(async (db) => {
-      const updatedImages = existingImages!.filter((img) => img.key !== key);
-
-      const stmt = await db.prepare(
-        "UPDATE submissions SET images = ? WHERE id = ? AND member_id = ?"
-      );
-      try {
-        await stmt.run(JSON.stringify(updatedImages), submissionId, viewer.id);
-      } finally {
-        await stmt.finalize();
-      }
-    });
+    // Delete from submission_images table
+    await deleteSubmissionImage(submissionId, key);
 
     res.json({ success: true });
   } catch (error) {

@@ -1,6 +1,21 @@
 import { query, writeConn, withTransaction } from "./conn";
 import { logger } from "@/utils/logger";
 
+// New normalized table types
+export type SpeciesExternalReference = {
+  id: number;
+  group_id: number;
+  reference_url: string;
+  display_order: number;
+};
+
+export type SpeciesImage = {
+  id: number;
+  group_id: number;
+  image_url: string;
+  display_order: number;
+};
+
 type NameSynonym = {
   /** Not a phylogenetic class. The species class for the BAP program */
   program_class: string;
@@ -1940,5 +1955,108 @@ export async function bulkDeleteCommonNames(
   } catch (err) {
     logger.error("Failed to bulk delete common names", err);
     throw new Error("Failed to bulk delete common names");
+  }
+}
+
+// ============================================================================
+// Species External References - New normalized table functions
+// ============================================================================
+
+/**
+ * Get all external references for a species group
+ */
+export function getSpeciesExternalReferences(
+  groupId: number
+): Promise<SpeciesExternalReference[]> {
+  return query<SpeciesExternalReference>(
+    `SELECT * FROM species_external_references
+     WHERE group_id = ?
+     ORDER BY display_order ASC`,
+    [groupId]
+  );
+}
+
+/**
+ * Set external references for a species group (replaces all existing)
+ */
+export async function setSpeciesExternalReferences(
+  groupId: number,
+  references: string[]
+): Promise<void> {
+  try {
+    return await withTransaction(async (db) => {
+      // Delete existing references
+      const deleteStmt = await db.prepare(
+        "DELETE FROM species_external_references WHERE group_id = ?"
+      );
+      await deleteStmt.run(groupId);
+      await deleteStmt.finalize();
+
+      // Insert new references
+      if (references.length > 0) {
+        const insertStmt = await db.prepare(`
+          INSERT INTO species_external_references
+          (group_id, reference_url, display_order)
+          VALUES (?, ?, ?)
+        `);
+
+        for (let i = 0; i < references.length; i++) {
+          await insertStmt.run(groupId, references[i], i);
+        }
+
+        await insertStmt.finalize();
+      }
+    });
+  } catch (err) {
+    logger.error("Failed to set species external references", err);
+    throw new Error("Failed to set species external references");
+  }
+}
+
+// ============================================================================
+// Species Images - New normalized table functions
+// ============================================================================
+
+/**
+ * Get all image links for a species group
+ */
+export function getSpeciesImages(groupId: number): Promise<SpeciesImage[]> {
+  return query<SpeciesImage>(
+    `SELECT * FROM species_images
+     WHERE group_id = ?
+     ORDER BY display_order ASC`,
+    [groupId]
+  );
+}
+
+/**
+ * Set image links for a species group (replaces all existing)
+ */
+export async function setSpeciesImages(groupId: number, imageUrls: string[]): Promise<void> {
+  try {
+    return await withTransaction(async (db) => {
+      // Delete existing images
+      const deleteStmt = await db.prepare("DELETE FROM species_images WHERE group_id = ?");
+      await deleteStmt.run(groupId);
+      await deleteStmt.finalize();
+
+      // Insert new images
+      if (imageUrls.length > 0) {
+        const insertStmt = await db.prepare(`
+          INSERT INTO species_images
+          (group_id, image_url, display_order)
+          VALUES (?, ?, ?)
+        `);
+
+        for (let i = 0; i < imageUrls.length; i++) {
+          await insertStmt.run(groupId, imageUrls[i], i);
+        }
+
+        await insertStmt.finalize();
+      }
+    });
+  } catch (err) {
+    logger.error("Failed to set species images", err);
+    throw new Error("Failed to set species images");
   }
 }

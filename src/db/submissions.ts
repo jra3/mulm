@@ -4,6 +4,26 @@ import { writeConn, query, withTransaction } from "./conn";
 import { logger } from "@/utils/logger";
 import { ValidationError, AuthorizationError, StateError } from "@/utils/errors";
 
+// New normalized table types
+export type SubmissionImage = {
+  id: number;
+  submission_id: number;
+  r2_key: string;
+  public_url: string;
+  file_size: number;
+  uploaded_at: string;
+  content_type: string;
+  display_order: number;
+};
+
+export type SubmissionSupplement = {
+  id: number;
+  submission_id: number;
+  supplement_type: string;
+  supplement_regimen: string;
+  display_order: number;
+};
+
 export type Submission = {
   id: number;
   program: string;
@@ -852,4 +872,142 @@ export function getLast30DaysApprovedSubmissions() {
 		ORDER BY approved_on DESC`,
     []
   );
+}
+
+// ============================================================================
+// Submission Images - New normalized table functions
+// ============================================================================
+
+/**
+ * Get all images for a submission
+ */
+export function getSubmissionImages(submissionId: number): Promise<SubmissionImage[]> {
+  return query<SubmissionImage>(
+    `SELECT * FROM submission_images
+     WHERE submission_id = ?
+     ORDER BY display_order ASC`,
+    [submissionId]
+  );
+}
+
+/**
+ * Add an image to a submission
+ */
+export async function addSubmissionImage(
+  submissionId: number,
+  imageData: Omit<SubmissionImage, "id" | "submission_id" | "display_order">
+): Promise<number> {
+  try {
+    // Get current max display order
+    const maxOrder = await query<{ max_order: number | null }>(
+      "SELECT MAX(display_order) as max_order FROM submission_images WHERE submission_id = ?",
+      [submissionId]
+    );
+    const nextOrder = (maxOrder[0]?.max_order ?? -1) + 1;
+
+    const stmt = await writeConn.prepare(`
+      INSERT INTO submission_images
+      (submission_id, r2_key, public_url, file_size, uploaded_at, content_type, display_order)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    try {
+      const result = await stmt.run(
+        submissionId,
+        imageData.r2_key,
+        imageData.public_url,
+        imageData.file_size,
+        imageData.uploaded_at,
+        imageData.content_type,
+        nextOrder
+      );
+      return result.lastID as number;
+    } finally {
+      await stmt.finalize();
+    }
+  } catch (err) {
+    logger.error("Failed to add submission image", err);
+    throw new Error("Failed to add submission image");
+  }
+}
+
+/**
+ * Delete an image from a submission by R2 key
+ */
+export async function deleteSubmissionImage(
+  submissionId: number,
+  r2Key: string
+): Promise<void> {
+  try {
+    const stmt = await writeConn.prepare(
+      "DELETE FROM submission_images WHERE submission_id = ? AND r2_key = ?"
+    );
+    try {
+      await stmt.run(submissionId, r2Key);
+    } finally {
+      await stmt.finalize();
+    }
+  } catch (err) {
+    logger.error("Failed to delete submission image", err);
+    throw new Error("Failed to delete submission image");
+  }
+}
+
+// ============================================================================
+// Submission Supplements - New normalized table functions
+// ============================================================================
+
+/**
+ * Get all supplements for a submission
+ */
+export function getSubmissionSupplements(
+  submissionId: number
+): Promise<SubmissionSupplement[]> {
+  return query<SubmissionSupplement>(
+    `SELECT * FROM submission_supplements
+     WHERE submission_id = ?
+     ORDER BY display_order ASC`,
+    [submissionId]
+  );
+}
+
+/**
+ * Set supplements for a submission (replaces all existing)
+ */
+export async function setSubmissionSupplements(
+  submissionId: number,
+  supplements: Array<{ type: string; regimen: string }>
+): Promise<void> {
+  try {
+    return await withTransaction(async (db) => {
+      // Delete existing supplements
+      const deleteStmt = await db.prepare(
+        "DELETE FROM submission_supplements WHERE submission_id = ?"
+      );
+      await deleteStmt.run(submissionId);
+      await deleteStmt.finalize();
+
+      // Insert new supplements
+      if (supplements.length > 0) {
+        const insertStmt = await db.prepare(`
+          INSERT INTO submission_supplements
+          (submission_id, supplement_type, supplement_regimen, display_order)
+          VALUES (?, ?, ?, ?)
+        `);
+
+        for (let i = 0; i < supplements.length; i++) {
+          const supp = supplements[i];
+          if (supp.type || supp.regimen) {
+            // Only insert if at least one field is non-empty
+            await insertStmt.run(submissionId, supp.type, supp.regimen, i);
+          }
+        }
+
+        await insertStmt.finalize();
+      }
+    });
+  } catch (err) {
+    logger.error("Failed to set submission supplements", err);
+    throw new Error("Failed to set submission supplements");
+  }
 }
