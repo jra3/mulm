@@ -194,11 +194,12 @@ export const view = async (req: MulmRequest, res: Response) => {
     videoMetadata = await parseVideoUrlWithOEmbed(submission.video_url);
   }
 
+  // Fetch images from normalized table
+  const images = await getSubmissionImages(submission.id);
+
   // Prepare Open Graph data for social media sharing (approved submissions only)
   let ogData = null;
   if (aspect.isApproved) {
-    // Fetch first image from normalized table
-    const images = await getSubmissionImages(submission.id);
     const firstImageUrl = images.length > 0 ? images[0].public_url : null;
 
     ogData = {
@@ -228,6 +229,7 @@ export const view = async (req: MulmRequest, res: Response) => {
 
       foods: parseStringArray(submission.foods).join(","),
       spawn_locations: parseStringArray(submission.spawn_locations).join(","),
+      images, // Pass array of image objects instead of JSON string
     },
     canonicalName,
     name: nameGroup,

@@ -180,7 +180,7 @@ html
                   name="external_references"
                   rows="4"
                   placeholder="One URL per line (e.g., https://fishbase.org/...)"
-                )= species.external_references ? JSON.parse(species.external_references).join('\n') : ''
+                )= Array.isArray(species.external_references) ? species.external_references.join('\n') : ''
                 p.text-xs.text-gray-500.mt-1 External reference links (one per line)
 
               div
@@ -190,7 +190,7 @@ html
                   name="image_links"
                   rows="4"
                   placeholder="One URL per line (e.g., https://example.com/image.jpg)"
-                )= species.image_links ? JSON.parse(species.image_links).join('\n') : ''
+                )= Array.isArray(species.image_links) ? species.image_links.join('\n') : ''
                 p.text-xs.text-gray-500.mt-1 Image links (one per line)
 
           //- Name Variants - Split Lists

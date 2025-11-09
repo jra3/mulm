@@ -555,8 +555,8 @@ export type SpeciesDetail = {
   iucn_last_updated: string | null;
   iucn_redlist_id: number | null;
   iucn_redlist_url: string | null;
-  external_references: string | null;
-  image_links: string | null;
+  external_references: string[]; // Changed from string | null to array
+  image_links: string[]; // Changed from string | null to array
   synonyms: Array<{
     name_id: number;
     common_name: string;
@@ -614,8 +614,16 @@ export async function getSpeciesDetail(groupId: number) {
       scientificNames[idx]?.scientific_name || scientificNames[0]?.scientific_name || "",
   }));
 
+  // Fetch normalized data
+  const [externalRefs, images] = await Promise.all([
+    getSpeciesExternalReferences(groupId),
+    getSpeciesImages(groupId),
+  ]);
+
   const detail: SpeciesDetail = {
     ...groupRows[0],
+    external_references: externalRefs.map((ref) => ref.reference_url),
+    image_links: images.map((img) => img.image_url),
     synonyms: synonymRows,
   };
 

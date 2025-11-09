@@ -1,8 +1,25 @@
 import { Router, Response } from "express";
 import { MulmRequest } from "@/sessions";
-import { getTodayApprovedSubmissions, getLast30DaysApprovedSubmissions } from "@/db/submissions";
+import {
+  getTodayApprovedSubmissions,
+  getLast30DaysApprovedSubmissions,
+  getSubmissionImages,
+  type Submission,
+} from "@/db/submissions";
 
 const router = Router();
+
+/**
+ * Helper to attach images to submissions
+ */
+async function attachImages<T extends Submission>(submissions: T[]): Promise<T[]> {
+  return Promise.all(
+    submissions.map(async (sub) => ({
+      ...sub,
+      images: await getSubmissionImages(sub.id),
+    }))
+  );
+}
 
 /**
  * Main display page - full HTML view for large screens
@@ -10,7 +27,7 @@ const router = Router();
  * No authentication required (public display)
  */
 router.get("/live", async (_req: MulmRequest, res: Response) => {
-  const submissions = await getTodayApprovedSubmissions();
+  const submissions = await attachImages(await getTodayApprovedSubmissions());
 
   res.render("display", {
     submissions,
@@ -24,7 +41,7 @@ router.get("/live", async (_req: MulmRequest, res: Response) => {
  * Used for auto-refresh polling
  */
 router.get("/live/feed", async (_req: MulmRequest, res: Response) => {
-  const submissions = await getTodayApprovedSubmissions();
+  const submissions = await attachImages(await getTodayApprovedSubmissions());
 
   res.render("partials/display-feed", {
     submissions,
@@ -37,7 +54,7 @@ router.get("/live/feed", async (_req: MulmRequest, res: Response) => {
  * No authentication required (public display)
  */
 router.get("/live/demo", async (_req: MulmRequest, res: Response) => {
-  const submissions = await getLast30DaysApprovedSubmissions();
+  const submissions = await attachImages(await getLast30DaysApprovedSubmissions());
 
   res.render("display", {
     submissions,
@@ -51,7 +68,7 @@ router.get("/live/demo", async (_req: MulmRequest, res: Response) => {
  * Used for auto-refresh polling on demo page
  */
 router.get("/live/demo/feed", async (_req: MulmRequest, res: Response) => {
-  const submissions = await getLast30DaysApprovedSubmissions();
+  const submissions = await attachImages(await getLast30DaysApprovedSubmissions());
 
   res.render("partials/display-feed", {
     submissions,
