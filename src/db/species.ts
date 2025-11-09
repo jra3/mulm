@@ -1964,14 +1964,14 @@ export async function getSubmissionsForSpecies(groupId: number) {
       SELECT
         s.id AS submission_id,
         s.member_id,
-        m.name AS member_name,
+        m.display_name AS member_name,
         s.species_common_name,
         s.species_latin_name,
         s.species_class AS submission_class,
         sng.program_class AS species_group_class,
         CASE WHEN s.species_class = sng.program_class THEN 1 ELSE 0 END AS is_synced,
         s.approved_on,
-        approver.name AS approved_by_name
+        approver.display_name AS approved_by_name
       FROM submissions s
       LEFT JOIN members m ON s.member_id = m.id
       LEFT JOIN members approver ON s.approved_by = approver.id
