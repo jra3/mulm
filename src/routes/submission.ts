@@ -22,6 +22,10 @@ import { MulmRequest } from "@/sessions";
 import { MemberRecord, getMember, getMembersList } from "@/db/members";
 import { onSubmissionSend } from "@/notifications";
 import * as db from "@/db/submissions";
+import {
+  getSubmissionImages,
+  getSubmissionSupplements,
+} from "@/db/submissions";
 import { getSpeciesGroup, getGroupIdFromNameId } from "@/db/species";
 import { getWaitingPeriodStatus } from "@/utils/waitingPeriod";
 import { getNotesForSubmission } from "@/db/submission_notes";
@@ -127,6 +131,11 @@ export const view = async (req: MulmRequest, res: Response) => {
       };
     }
 
+    // Fetch supplements from normalized table
+    const supplements = await getSubmissionSupplements(submission.id);
+    const supplement_type = supplements.map((s) => s.supplement_type);
+    const supplement_regimen = supplements.map((s) => s.supplement_regimen);
+
     res.render("submit", {
       title: `Edit ${getBapFormTitle(submission.program)}`,
       form: {
@@ -135,8 +144,8 @@ export const view = async (req: MulmRequest, res: Response) => {
         member_name: viewer.display_name,
         foods: parseStringArray(submission.foods),
         spawn_locations: parseStringArray(submission.spawn_locations),
-        supplement_type: parseStringArray(submission.supplement_type),
-        supplement_regimen: parseStringArray(submission.supplement_regimen),
+        supplement_type,
+        supplement_regimen,
       },
       errors: new Map(),
       changesRequested,
@@ -188,25 +197,9 @@ export const view = async (req: MulmRequest, res: Response) => {
   // Prepare Open Graph data for social media sharing (approved submissions only)
   let ogData = null;
   if (aspect.isApproved) {
-    let firstImageUrl: string | null = null;
-    try {
-      const images: unknown = JSON.parse(submission.images || "[]");
-      if (Array.isArray(images) && images.length > 0) {
-        // Images are stored as objects with {url, key, size, etc}
-        const firstImage: unknown = images[0];
-        if (
-          firstImage &&
-          typeof firstImage === "object" &&
-          firstImage !== null &&
-          "url" in firstImage &&
-          typeof firstImage.url === "string"
-        ) {
-          firstImageUrl = firstImage.url;
-        }
-      }
-    } catch {
-      // Invalid JSON, ignore
-    }
+    // Fetch first image from normalized table
+    const images = await getSubmissionImages(submission.id);
+    const firstImageUrl = images.length > 0 ? images[0].public_url : null;
 
     ogData = {
       title: `${submission.member_name} bred ${canonicalName}`,
@@ -495,16 +488,8 @@ export const renderEditMedia = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  // Parse images JSON
-  let images: unknown[] = [];
-  try {
-    const parsed: unknown = JSON.parse(submission.images || "[]");
-    if (Array.isArray(parsed)) {
-      images = parsed;
-    }
-  } catch {
-    images = [];
-  }
+  // Fetch images from normalized table
+  const images = await getSubmissionImages(submission.id);
 
   res.render("submission/editMedia", {
     title: "Edit Photos & Video",

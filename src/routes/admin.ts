@@ -1126,6 +1126,12 @@ export const editApprovedSubmissionForm = async (req: MulmRequest, res: Response
     currentGroupId = await getGroupIdFromNameId(submission.scientific_name_id, false);
   }
 
+  // Fetch supplements from normalized table
+  const { getSubmissionSupplements } = await import("@/db/submissions");
+  const supplements = await getSubmissionSupplements(submission.id);
+  const supplement_type = supplements.map((s) => s.supplement_type).join(", ");
+  const supplement_regimen = supplements.map((s) => s.supplement_regimen).join(", ");
+
   res.render("admin/editApprovedSubmission", {
     submission: {
       ...submission,
@@ -1139,8 +1145,8 @@ export const editApprovedSubmissionForm = async (req: MulmRequest, res: Response
     currentGroupId,
     foodTypes,
     spawnLocations,
-    supplement_type: parseStringArray(submission.supplement_type || "[]").join(", "),
-    supplement_regimen: parseStringArray(submission.supplement_regimen || "[]").join(", "),
+    supplement_type,
+    supplement_regimen,
     // Conditional field visibility based on species type
     isLivestock: isLivestock(submission.species_type),
     hasFoods: hasFoods(submission.species_type),
