@@ -927,6 +927,10 @@ export async function addSubmissionImage(
     }
   } catch (err) {
     logger.error("Failed to add submission image", err);
+    // Preserve constraint errors for better error messages
+    if (err instanceof Error && err.message.includes("UNIQUE constraint")) {
+      throw err;
+    }
     throw new Error("Failed to add submission image");
   }
 }
