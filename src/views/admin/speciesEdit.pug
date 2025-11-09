@@ -267,19 +267,6 @@ html
                         hx-swap="beforeend"
                       ) Add First Scientific Name
 
-          //- Submissions Section
-          .bg-white.rounded-lg.shadow-md.p-6.mb-6
-            h3.text-lg.font-bold.text-gray-900.mb-4 Approved Submissions
-
-            div(
-              hx-get=`/admin/species/${species.group_id}/submissions`
-              hx-trigger="load"
-              hx-swap="innerHTML"
-            )
-              .flex.items-center.justify-center.py-6
-                .animate-spin.w-6.h-6.border-2.border-blue-500.border-t-transparent.rounded-full
-                .ml-2.text-sm.text-gray-500 Loading submissions...
-
           //- Actions
           .flex.gap-3.justify-center
             button.primary(type="submit" hx-disabled-elt="this") Save Changes
