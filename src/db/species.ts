@@ -198,8 +198,6 @@ export async function getSpeciesGroup(groupId: number) {
     canonical_species_name: string;
     base_points: number | null;
     is_cares_species: number;
-    external_references: string | null;
-    image_links: string | null;
   }>(
     `
 		SELECT * FROM species_name_group WHERE group_id = ?`,
@@ -234,91 +232,6 @@ export async function getGroupIdFromNameId(
   }
 }
 
-/**
- * DEPRECATED: Get canonical species group data from a legacy name ID
- *
- * **This function is deprecated and will be removed.** Use getSpeciesGroup(groupId) instead.
- * For submissions, get group_id from common_name_id or scientific_name_id first.
- *
- * @param speciesNameId - Legacy name_id from species_name table
- * @returns Species group data or undefined if not found
- */
-export async function getCanonicalSpeciesName(speciesNameId: number) {
-  // Try legacy table first (if it exists) to avoid ID collisions
-  // After migration 030, this will fail gracefully and fall through to new tables
-  try {
-    const legacyRows = await query<{
-      group_id: number;
-      program_class: string;
-      species_type: string;
-      canonical_genus: string;
-      canonical_species_name: string;
-      base_points: number | null;
-      is_cares_species: number;
-      external_references: string | null;
-      image_links: string | null;
-    }>(
-      `
-      SELECT species_name_group.*
-      FROM species_name JOIN species_name_group
-      ON species_name.group_id = species_name_group.group_id
-      WHERE species_name.name_id = ?`,
-      [speciesNameId]
-    );
-
-    if (legacyRows.length > 0) {
-      return legacyRows[0];
-    }
-  } catch {
-    // Table doesn't exist (post-migration 030) - fall through to new schema
-  }
-
-  // Try new common name table
-  const commonNameRows = await query<{
-    group_id: number;
-    program_class: string;
-    species_type: string;
-    canonical_genus: string;
-    canonical_species_name: string;
-    base_points: number | null;
-    is_cares_species: number;
-    external_references: string | null;
-    image_links: string | null;
-  }>(
-    `
-		SELECT species_name_group.*
-		FROM species_common_name cn
-		JOIN species_name_group ON cn.group_id = species_name_group.group_id
-		WHERE cn.common_name_id = ?`,
-    [speciesNameId]
-  );
-
-  if (commonNameRows.length > 0) {
-    return commonNameRows[0];
-  }
-
-  // Try new scientific name table
-  const scientificNameRows = await query<{
-    group_id: number;
-    program_class: string;
-    species_type: string;
-    canonical_genus: string;
-    canonical_species_name: string;
-    base_points: number | null;
-    is_cares_species: number;
-    external_references: string | null;
-    image_links: string | null;
-  }>(
-    `
-		SELECT species_name_group.*
-		FROM species_scientific_name sn
-		JOIN species_name_group ON sn.group_id = species_name_group.group_id
-		WHERE sn.scientific_name_id = ?`,
-    [speciesNameId]
-  );
-
-  return scientificNameRows.pop();
-}
 
 export type SpeciesFilters = {
   species_type?: string;
@@ -578,11 +491,9 @@ export async function getSpeciesDetail(groupId: number) {
     iucn_last_updated: string | null;
     iucn_redlist_id: number | null;
     iucn_redlist_url: string | null;
-    external_references: string | null;
-    image_links: string | null;
   }>(
     `
-		SELECT group_id, program_class, species_type, canonical_genus, canonical_species_name, base_points, is_cares_species, iucn_redlist_category, iucn_population_trend, iucn_last_updated, iucn_redlist_id, iucn_redlist_url, external_references, image_links
+		SELECT group_id, program_class, species_type, canonical_genus, canonical_species_name, base_points, is_cares_species, iucn_redlist_category, iucn_population_trend, iucn_last_updated, iucn_redlist_id, iucn_redlist_url
 		FROM species_name_group
 		WHERE group_id = ?
 	`,

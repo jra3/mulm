@@ -226,6 +226,16 @@ script.
   }
 
   // Initialize grid if there are existing images
-  if (window.uploadState.uploadedImages.length > 0) {
-    updateImageGrid();
+  // Wait for DOM to be ready since script runs before form elements
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.uploadState.uploadedImages.length > 0) {
+        updateImageGrid();
+      }
+    });
+  } else {
+    // DOM already loaded
+    if (window.uploadState.uploadedImages.length > 0) {
+      updateImageGrid();
+    }
   }

@@ -3,22 +3,29 @@ import { MulmRequest } from "@/sessions";
 import {
   getTodayApprovedSubmissions,
   getLast30DaysApprovedSubmissions,
-  getSubmissionImages,
+  getSubmissionImagesForMultiple,
   type Submission,
 } from "@/db/submissions";
 
 const router = Router();
 
 /**
- * Helper to attach images to submissions
+ * Helper to attach images to submissions (optimized to avoid N+1 queries)
  */
 async function attachImages<T extends Submission>(submissions: T[]): Promise<T[]> {
-  return Promise.all(
-    submissions.map(async (sub) => ({
-      ...sub,
-      images: await getSubmissionImages(sub.id),
-    }))
-  );
+  if (submissions.length === 0) {
+    return submissions;
+  }
+
+  // Fetch all images in one query
+  const submissionIds = submissions.map((sub) => sub.id);
+  const imagesBySubmission = await getSubmissionImagesForMultiple(submissionIds);
+
+  // Attach images to each submission
+  return submissions.map((sub) => ({
+    ...sub,
+    images: imagesBySubmission.get(sub.id) || [],
+  }));
 }
 
 /**

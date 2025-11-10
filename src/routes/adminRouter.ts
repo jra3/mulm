@@ -53,11 +53,6 @@ adminRouter.delete(
   speciesAdmin.deleteScientificNameRoute
 );
 
-// Deprecated synonym routes (old paired schema - keep for backwards compatibility)
-adminRouter.get("/species/:groupId/synonyms/new", speciesAdmin.addSynonymForm);
-adminRouter.post("/species/:groupId/synonyms", speciesAdmin.addSynonymRoute);
-adminRouter.delete("/species/:groupId/synonyms/:nameId", speciesAdmin.deleteSynonym);
-
 adminRouter.get("/queue{/:program}", admin.showQueue);
 adminRouter.get("/witness-queue{/:program}", admin.showWitnessQueue);
 adminRouter.get("/waiting-period{/:program}", admin.showWaitingPeriod);

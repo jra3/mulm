@@ -136,6 +136,18 @@ export const view = async (req: MulmRequest, res: Response) => {
     const supplement_type = supplements.map((s) => s.supplement_type);
     const supplement_regimen = supplements.map((s) => s.supplement_regimen);
 
+    // Fetch images from normalized table and convert to old JSON format for the form
+    const images = await getSubmissionImages(submission.id);
+    const imagesJson = JSON.stringify(
+      images.map((img) => ({
+        key: img.r2_key,
+        url: img.public_url,
+        size: img.file_size,
+        uploadedAt: img.uploaded_at,
+        contentType: img.content_type,
+      }))
+    );
+
     res.render("submit", {
       title: `Edit ${getBapFormTitle(submission.program)}`,
       form: {
@@ -146,6 +158,7 @@ export const view = async (req: MulmRequest, res: Response) => {
         spawn_locations: parseStringArray(submission.spawn_locations),
         supplement_type,
         supplement_regimen,
+        images: imagesJson, // Override with normalized table data
       },
       errors: new Map(),
       changesRequested,
@@ -402,13 +415,9 @@ export const update = async (req: MulmRequest, res: Response) => {
   // Prepare updates from form
   const formUpdates = db.formToDB(submission.member_id, form, !draft);
 
-  // Extract supplements to save separately
+  // Extract supplements for normalized table
   const supplementTypes = form.supplement_type;
   const supplementRegimens = form.supplement_regimen;
-
-  // Remove supplements from formUpdates (they'll go to normalized table)
-  delete formUpdates.supplement_type;
-  delete formUpdates.supplement_regimen;
 
   // If resubmitting after changes were requested, clear those fields AND preserve witness/submit data
   if (!draft && submission.changes_requested_on) {

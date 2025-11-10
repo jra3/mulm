@@ -3,6 +3,7 @@ import { FormValues } from "@/forms/submission";
 import { writeConn, query, withTransaction } from "./conn";
 import { logger } from "@/utils/logger";
 import { ValidationError, AuthorizationError, StateError } from "@/utils/errors";
+import type { Database } from "sqlite";
 
 // New normalized table types
 export type SubmissionImage = {
@@ -131,25 +132,19 @@ export function formToDB(memberId: number, form: FormValues, submit: boolean) {
     member_email: undefined,
     foods: arrayToJSON(form.foods),
     spawn_locations: arrayToJSON(form.spawn_locations),
-    // Note: supplements are excluded - they're saved to submission_supplements table
-    supplement_type: undefined,
-    supplement_regimen: undefined,
+    // Note: supplements are handled separately via setSubmissionSupplements()
   };
 }
 
 export async function createSubmission(memberId: number, form: FormValues, submit: boolean) {
   try {
     return await withTransaction(async (db) => {
-      // Prepare submission data (excluding supplements - they go to normalized table)
+      // Prepare submission data (supplements handled separately)
       const entries = formToDB(memberId, form, submit);
 
-      // Extract supplements before inserting
+      // Extract supplements for normalized table
       const supplementTypes = form.supplement_type;
       const supplementRegimens = form.supplement_regimen;
-
-      // Remove supplements from entries (they'll go to normalized table)
-      delete entries.supplement_type;
-      delete entries.supplement_regimen;
 
       const fields = [];
       const values = [];
@@ -186,7 +181,7 @@ export async function createSubmission(memberId: number, form: FormValues, submi
           }
         }
         if (supplements.length > 0) {
-          await setSubmissionSupplements(submissionId, supplements);
+          await setSubmissionSupplements(submissionId, supplements, db);
         }
       }
 
@@ -918,6 +913,36 @@ export function getSubmissionImages(submissionId: number): Promise<SubmissionIma
 }
 
 /**
+ * Get all images for multiple submissions in one query (avoids N+1 problem)
+ * Returns a Map of submissionId -> images[]
+ */
+export async function getSubmissionImagesForMultiple(
+  submissionIds: number[]
+): Promise<Map<number, SubmissionImage[]>> {
+  if (submissionIds.length === 0) {
+    return new Map();
+  }
+
+  const placeholders = submissionIds.map(() => "?").join(",");
+  const allImages = await query<SubmissionImage>(
+    `SELECT * FROM submission_images
+     WHERE submission_id IN (${placeholders})
+     ORDER BY submission_id, display_order ASC`,
+    submissionIds
+  );
+
+  // Group images by submission_id
+  const imagesBySubmission = new Map<number, SubmissionImage[]>();
+  for (const image of allImages) {
+    const existing = imagesBySubmission.get(image.submission_id) || [];
+    existing.push(image);
+    imagesBySubmission.set(image.submission_id, existing);
+  }
+
+  return imagesBySubmission;
+}
+
+/**
  * Add an image to a submission
  */
 export async function addSubmissionImage(
@@ -1003,40 +1028,89 @@ export function getSubmissionSupplements(
 }
 
 /**
- * Set supplements for a submission (replaces all existing)
+ * Get all supplements for multiple submissions in one query (avoids N+1 problem)
+ * Returns a Map of submissionId -> supplements[]
  */
-export async function setSubmissionSupplements(
+export async function getSubmissionSupplementsForMultiple(
+  submissionIds: number[]
+): Promise<Map<number, SubmissionSupplement[]>> {
+  if (submissionIds.length === 0) {
+    return new Map();
+  }
+
+  const placeholders = submissionIds.map(() => "?").join(",");
+  const allSupplements = await query<SubmissionSupplement>(
+    `SELECT * FROM submission_supplements
+     WHERE submission_id IN (${placeholders})
+     ORDER BY submission_id, display_order ASC`,
+    submissionIds
+  );
+
+  // Group supplements by submission_id
+  const supplementsBySubmission = new Map<number, SubmissionSupplement[]>();
+  for (const supplement of allSupplements) {
+    const existing = supplementsBySubmission.get(supplement.submission_id) || [];
+    existing.push(supplement);
+    supplementsBySubmission.set(supplement.submission_id, existing);
+  }
+
+  return supplementsBySubmission;
+}
+
+/**
+ * Internal helper to set supplements within an existing transaction
+ */
+async function setSubmissionSupplementsInTransaction(
+  db: Database,
   submissionId: number,
   supplements: Array<{ type: string; regimen: string }>
 ): Promise<void> {
-  try {
-    return await withTransaction(async (db) => {
-      // Delete existing supplements
-      const deleteStmt = await db.prepare(
-        "DELETE FROM submission_supplements WHERE submission_id = ?"
-      );
-      await deleteStmt.run(submissionId);
-      await deleteStmt.finalize();
+  // Delete existing supplements
+  const deleteStmt = await db.prepare(
+    "DELETE FROM submission_supplements WHERE submission_id = ?"
+  );
+  await deleteStmt.run(submissionId);
+  await deleteStmt.finalize();
 
-      // Insert new supplements
-      if (supplements.length > 0) {
-        const insertStmt = await db.prepare(`
-          INSERT INTO submission_supplements
-          (submission_id, supplement_type, supplement_regimen, display_order)
-          VALUES (?, ?, ?, ?)
-        `);
+  // Insert new supplements
+  if (supplements.length > 0) {
+    const insertStmt = await db.prepare(`
+      INSERT INTO submission_supplements
+      (submission_id, supplement_type, supplement_regimen, display_order)
+      VALUES (?, ?, ?, ?)
+    `);
 
-        for (let i = 0; i < supplements.length; i++) {
-          const supp = supplements[i];
-          if (supp.type || supp.regimen) {
-            // Only insert if at least one field is non-empty
-            await insertStmt.run(submissionId, supp.type, supp.regimen, i);
-          }
-        }
-
-        await insertStmt.finalize();
+    for (let i = 0; i < supplements.length; i++) {
+      const supp = supplements[i];
+      if (supp.type || supp.regimen) {
+        // Only insert if at least one field is non-empty
+        await insertStmt.run(submissionId, supp.type, supp.regimen, i);
       }
-    });
+    }
+
+    await insertStmt.finalize();
+  }
+}
+
+/**
+ * Set supplements for a submission (replaces all existing)
+ * Can be called standalone or within an existing transaction
+ */
+export async function setSubmissionSupplements(
+  submissionId: number,
+  supplements: Array<{ type: string; regimen: string }>,
+  db?: Database
+): Promise<void> {
+  try {
+    if (db) {
+      // Use existing transaction
+      return await setSubmissionSupplementsInTransaction(db, submissionId, supplements);
+    } else {
+      // Create new transaction
+      return await withTransaction(async (transactionDb) => {
+        return await setSubmissionSupplementsInTransaction(transactionDb, submissionId, supplements);
+      });
+    }
   } catch (err) {
     logger.error("Failed to set submission supplements", err);
     throw new Error("Failed to set submission supplements");

@@ -13,8 +13,6 @@ import {
   addScientificName,
   deleteCommonName,
   deleteScientificName,
-  addSynonym,
-  deleteSynonym as deleteSynonymDb,
   bulkSetPoints,
   mergeSpecies,
 } from "@/db/species";
@@ -368,42 +366,6 @@ export const deleteScientificNameRoute = async (req: MulmRequest, res: Response)
   }
 };
 
-/**
- * DEPRECATED: DELETE /admin/species/:groupId/synonyms/:nameId
- * Delete a synonym (old paired table)
- */
-export const deleteSynonym = async (req: MulmRequest, res: Response) => {
-  const { viewer } = req;
-
-  if (!viewer?.is_admin) {
-    res.status(403).send("Admin access required");
-    return;
-  }
-
-  const nameId = parseInt(req.params.nameId);
-  if (!nameId) {
-    res.status(400).send("Invalid synonym ID");
-    return;
-  }
-
-  try {
-    const force = req.query.force === "true";
-    const changes = await deleteSynonymDb(nameId, force);
-
-    if (changes === 0) {
-      res.status(404).send("Synonym not found");
-      return;
-    }
-
-    res.status(200).send("Synonym deleted");
-  } catch (err) {
-    if (err instanceof Error && err.message.includes("last synonym")) {
-      res.status(400).send(err.message);
-    } else {
-      res.status(500).send("Failed to delete synonym");
-    }
-  }
-};
 
 /**
  * POST /admin/species/:groupId/common-names
@@ -519,67 +481,6 @@ export const addScientificNameForm = (req: MulmRequest, res: Response) => {
   res.render("admin/addScientificNameForm", { groupId });
 };
 
-/**
- * DEPRECATED: POST /admin/species/:groupId/synonyms
- * Add a new paired synonym (old schema)
- */
-export const addSynonymRoute = async (req: MulmRequest, res: Response) => {
-  const { viewer } = req;
-
-  if (!viewer?.is_admin) {
-    res.status(403).send("Admin access required");
-    return;
-  }
-
-  const groupId = parseInt(req.params.groupId);
-  if (!groupId) {
-    res.status(400).send("Invalid species ID");
-    return;
-  }
-
-  const common_name = getBodyString(req, "common_name");
-  const scientific_name = getBodyString(req, "scientific_name");
-
-  try {
-    const nameId = await addSynonym(groupId, common_name, scientific_name);
-
-    // Return the new synonym HTML to be appended
-    res.render("admin/synonymRow", {
-      synonym: {
-        name_id: nameId,
-        common_name: common_name.trim(),
-        scientific_name: scientific_name.trim(),
-      },
-      groupId,
-    });
-  } catch (err) {
-    if (err instanceof Error) {
-      res.status(400).send(err.message);
-    } else {
-      res.status(500).send("Failed to add synonym");
-    }
-  }
-};
-
-/**
- * GET /admin/species/:groupId/synonyms/new
- * Render add synonym form (HTMX partial)
- */
-export const addSynonymForm = (req: MulmRequest, res: Response) => {
-  const { viewer } = req;
-
-  if (!viewer?.is_admin) {
-    res.status(403).send("Admin access required");
-    return;
-  }
-
-  const groupId = parseInt(req.params.groupId);
-
-  res.render("admin/addSynonymForm", {
-    groupId,
-    errors: new Map(),
-  });
-};
 
 /**
  * GET /admin/dialog/species/bulk-set-points

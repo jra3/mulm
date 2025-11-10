@@ -4,9 +4,9 @@
 include emptyState.pug
 
 mixin getImageUrl(imageMetadata, variant)
-	- const key = imageMetadata.key;
+	- const key = imageMetadata.r2_key || imageMetadata.key;
 	- const variantKey = key.replace('-original', `-${variant}`);
-	- const url = imageMetadata.url.replace(key, variantKey);
+	- const url = (imageMetadata.public_url || imageMetadata.url).replace(key, variantKey);
 	= url
 
 mixin submissionImages(imagesJson, layout='gallery')
@@ -25,8 +25,9 @@ mixin submissionImages(imagesJson, layout='gallery')
 				h3(class="text-lg font-bold mb-3 text-gray-900") Submission Photos
 				div(class="grid grid-cols-1 gap-4" class="sm:grid-cols-2" class="lg:grid-cols-3")
 					each image, index in images
-						- const mediumUrl = image.url.replace('-original', '-medium');
-						- const originalUrl = image.url;
+						- const imageUrl = image.public_url || image.url;
+						- const mediumUrl = imageUrl.replace('-original', '-medium');
+						- const originalUrl = imageUrl;
 						div(class="relative group overflow-hidden rounded-lg shadow-md bg-gray-100" +
 						          " hover:shadow-xl transition-shadow")
 							a(
@@ -51,8 +52,9 @@ mixin submissionImages(imagesJson, layout='gallery')
 			//- Thumbnail view for tables/lists
 			div(class="flex gap-2 flex-wrap")
 				each image, index in images
-					- const thumbUrl = image.url.replace('-original', '-thumb');
-					- const originalUrl = image.url;
+					- const imageUrl = image.public_url || image.url;
+					- const thumbUrl = imageUrl.replace('-original', '-thumb');
+					- const originalUrl = imageUrl;
 					a(
 						href=originalUrl
 						target="_blank"
@@ -72,8 +74,9 @@ mixin submissionImages(imagesJson, layout='gallery')
 		else if layout === 'single'
 			//- Single image view (first image only)
 			- const image = images[0];
-			- const mediumUrl = image.url.replace('-original', '-medium');
-			- const originalUrl = image.url;
+			- const imageUrl = image.public_url || image.url;
+			- const mediumUrl = imageUrl.replace('-original', '-medium');
+			- const originalUrl = imageUrl;
 			div(class="mb-4")
 				a(
 					href=originalUrl
