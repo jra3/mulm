@@ -37,14 +37,26 @@ export default defineConfig({
 		/* Base URL to use in actions like `await page.goto('/')`. */
 		baseURL: process.env.BASE_URL || "http://localhost:4200",
 
-		/* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-		trace: "on-first-retry",
+		/* Collect trace on failure AND retry (more useful locally) */
+		trace: process.env.CI ? "on-first-retry" : "retain-on-failure",
 
 		/* Screenshot only on failure */
 		screenshot: "only-on-failure",
 
 		/* Video only on failure */
 		video: "retain-on-failure",
+
+		/* Enable HAR recording locally for network debugging (disabled in CI to save space) */
+		...(process.env.CI ? {} : {
+			contextOptions: {
+				recordHar: {
+					path: 'test-results/network-latest.har',
+					mode: 'minimal',
+					// Omit large content like images to keep file size reasonable
+					omitContent: true
+				}
+			}
+		}),
 	},
 
 	/* Configure projects for major browsers */

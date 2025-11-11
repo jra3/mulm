@@ -40,3 +40,4 @@ db/database*.old
 db/database*.prod-*
 *.html
 *.db
+test-results/network-latest.har
