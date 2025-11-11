@@ -370,6 +370,9 @@ test.describe("Coral Submissions", () => {
 	});
 
 	test("should successfully submit complete Coral form", async ({ page }) => {
+		// Attach debugger for network and console logging
+		const debug = attachDebugger(page);
+
 		await login(page);
 		await page.goto("/submissions/new");
 		await page.waitForSelector("#bapForm");
@@ -394,6 +397,7 @@ test.describe("Coral Submissions", () => {
 
 		// Fill Coral-specific required fields
 		await page.selectOption('select[name="foods"]', ["Live"]);
+		await page.fill('input[name="propagation_method"]', "Fragmentation");
 		await page.fill('input[name="light_type"]', "T5");
 		await page.fill('input[name="light_strength"]', "400W");
 		await page.fill('input[name="light_hours"]', "12");
@@ -420,6 +424,14 @@ test.describe("Coral Submissions", () => {
 		await submitButton.click();
 		await page.waitForLoadState("networkidle");
 		await page.waitForTimeout(1000);
+
+		// Debug: Check submission request
+		const submissionReq = debug.findRequest('/submissions', 'POST');
+		console.log('Submission POST status:', submissionReq?.status);
+		if (submissionReq && submissionReq.status && submissionReq.status >= 400) {
+			console.error('Submission failed with:', submissionReq.responseBody);
+		}
+		debug.printSummary();
 
 		// Verify submission in database
 		const db = await getTestDatabase();
