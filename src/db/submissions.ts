@@ -132,7 +132,10 @@ export function formToDB(memberId: number, form: FormValues, submit: boolean) {
     member_email: undefined,
     foods: arrayToJSON(form.foods),
     spawn_locations: arrayToJSON(form.spawn_locations),
-    // Note: supplements are handled separately via setSubmissionSupplements()
+    // Note: images and supplements are handled separately via normalized tables
+    images: undefined,
+    supplement_type: undefined,
+    supplement_regimen: undefined,
   };
 }
 

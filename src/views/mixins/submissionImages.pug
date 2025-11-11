@@ -9,14 +9,8 @@ mixin getImageUrl(imageMetadata, variant)
 	- const url = (imageMetadata.public_url || imageMetadata.url).replace(key, variantKey);
 	= url
 
-mixin submissionImages(imagesJson, layout='gallery')
-	- let images = [];
-	if imagesJson
-		- try {
-		-   images = typeof imagesJson === 'string' ? JSON.parse(imagesJson) : imagesJson;
-		- } catch(e) {
-		-   images = [];
-		- }
+mixin submissionImages(images, layout='gallery')
+	- images = images || [];
 
 	if images && images.length > 0
 		if layout === 'gallery'
@@ -98,14 +92,8 @@ mixin submissionImages(imagesJson, layout='gallery')
 		if layout === 'gallery'
 			+emptyState("No photos attached", { size: "sm" })
 
-mixin imageCount(imagesJson)
-	- let images = [];
-	if imagesJson
-		- try {
-		-   images = typeof imagesJson === 'string' ? JSON.parse(imagesJson) : imagesJson;
-		- } catch(e) {
-		-   images = [];
-		- }
+mixin imageCount(images)
+	- images = images || [];
 
 	if images && images.length > 0
 		span(

@@ -27,10 +27,8 @@ if submissions && submissions.length > 0
                             p.text-4xl.font-extrabold.text-green-600= submission.total_points
 
                 // Images gallery (single row, no wrapping, evenly sized)
-                if submission.images
-                    - let images = [];
-                    - try { images = typeof submission.images === 'string' ? JSON.parse(submission.images) : submission.images; } catch(e) { images = []; }
-                    if images && images.length > 0
+                if submission.images && submission.images.length > 0
+                    - const images = submission.images;
                         - const photoCount = Math.min(images.length, 5);
                         - const photoWidth = photoCount === 1 ? 400 : photoCount === 2 ? 300 : photoCount === 3 ? 250 : photoCount === 4 ? 220 : 180;
                         .flex.flex-grow.mt-4.items-center.justify-center.overflow-hidden
