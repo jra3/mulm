@@ -1,0 +1,104 @@
+
+> mulm@1.0.0 test:e2e
+> playwright test plant-submissions.spec.ts coral-submissions.spec.ts
+
+Running global setup for E2E tests...
+Test user baptest+e2e@porcnick.com already exists (ID: 18)
+Global setup complete ✓
+
+Running 16 tests using 2 workers
+
+Cleaned up submissions for baptest+e2e@porcnick.com
+Cleaned up submissions for baptest+e2e@porcnick.com
+  ✓   1 [chromium] › e2e/plant-submissions.spec.ts:13:6 › Plant Submissions › should show Plant-specific fields (propagation method, lighting) and hide Fish fields (2.9s)
+Cleaned up submissions for baptest+e2e@porcnick.com
+  ✓   3 [chromium] › e2e/plant-submissions.spec.ts:39:6 › Plant Submissions › should show 'Date Propagated' label instead of 'Date Spawned' (1.8s)
+  -   4 [chromium] › e2e/plant-submissions.spec.ts:53:7 › Plant Submissions › should allow saving a draft with partial Plant data
+Cleaned up submissions for baptest+e2e@porcnick.com
+  ✘   2 [chromium] › e2e/coral-submissions.spec.ts:13:6 › Coral Submissions › should show Coral-specific fields (foods, lighting) and hide Fish/Plant fields (8.1s)
+  -   6 [chromium] › e2e/coral-submissions.spec.ts:41:6 › Coral Submissions › should show 'Date Propagated' label instead of 'Date Spawned'
+  -   7 [chromium] › e2e/coral-submissions.spec.ts:55:7 › Coral Submissions › should allow saving a draft with partial Coral data
+  -   8 [chromium] › e2e/coral-submissions.spec.ts:115:6 › Coral Submissions › should require foods for Coral submission
+  -   9 [chromium] › e2e/coral-submissions.spec.ts:192:6 › Coral Submissions › should require all lighting fields for Coral submission
+  -  10 [chromium] › e2e/coral-submissions.spec.ts:270:6 › Coral Submissions › should require CO2 description when CO2=yes
+  -  11 [chromium] › e2e/coral-submissions.spec.ts:352:6 › Coral Submissions › should successfully submit complete Coral form
+  -  12 [chromium] › e2e/coral-submissions.spec.ts:439:6 › Coral Submissions › should allow adding supplement rows dynamically
+  ✓   5 [chromium] › e2e/plant-submissions.spec.ts:113:6 › Plant Submissions › should require propagation_method for Plant submission (8.7s)
+Cleaned up submissions for baptest+e2e@porcnick.com
+  ✓  13 [chromium] › e2e/plant-submissions.spec.ts:189:6 › Plant Submissions › should require all lighting fields for Plant submission (8.9s)
+Cleaned up submissions for baptest+e2e@porcnick.com
+  ✓  14 [chromium] › e2e/plant-submissions.spec.ts:266:6 › Plant Submissions › should require CO2 description when CO2=yes (9.3s)
+Cleaned up submissions for baptest+e2e@porcnick.com
+  ✘  15 [chromium] › e2e/plant-submissions.spec.ts:347:6 › Plant Submissions › should successfully submit complete Plant form (8.9s)
+  -  16 [chromium] › e2e/plant-submissions.spec.ts:432:6 › Plant Submissions › should allow adding supplement rows dynamically
+
+
+  1) [chromium] › e2e/coral-submissions.spec.ts:13:6 › Coral Submissions › should show Coral-specific fields (foods, lighting) and hide Fish/Plant fields 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).not.[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator:  locator('input[name="propagation_method"]')
+    Expected: not visible
+    Received: visible
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "not toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for locator('input[name="propagation_method"]')[22m
+    [2m    9 × locator resolved to <input value="" type="text" class="text-input" aria-invalid="false" aria-required="true" id="propagation_method" name="propagation_method" placeholder="Cuttings, Runners, Seed..."/>[22m
+    [2m      - unexpected value "visible"[22m
+
+
+      36 |
+      37 | 		// Plant-specific fields should NOT be visible
+    > 38 | 		await expect(page.locator('input[name="propagation_method"]')).not.toBeVisible();
+         | 		                                                                   ^
+      39 | 	});
+      40 |
+      41 | 	test("should show 'Date Propagated' label instead of 'Date Spawned'", async ({ page }) => {
+        at /Users/john/mulm/e2e/coral-submissions.spec.ts:38:70
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/coral-submissions-Coral-Su-7cd47--and-hide-Fish-Plant-fields-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/coral-submissions-Coral-Su-7cd47--and-hide-Fish-Plant-fields-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/coral-submissions-Coral-Su-7cd47--and-hide-Fish-Plant-fields-chromium/error-context.md
+
+  2) [chromium] › e2e/plant-submissions.spec.ts:347:6 › Plant Submissions › should successfully submit complete Plant form 
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBeGreaterThan[2m([22m[32mexpected[39m[2m)[22m
+
+    Expected: > [32m0[39m
+    Received:   [31m0[39m
+
+      410 | 			);
+      411 |
+    > 412 | 			expect(submissions.length).toBeGreaterThan(0);
+          | 			                           ^
+      413 | 			const submission = submissions[0];
+      414 |
+      415 | 			// Verify it's a Plant submission
+        at /Users/john/mulm/e2e/plant-submissions.spec.ts:412:31
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/plant-submissions-Plant-Su-8e266--submit-complete-Plant-form-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/plant-submissions-Plant-Su-8e266--submit-complete-Plant-form-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/plant-submissions-Plant-Su-8e266--submit-complete-Plant-form-chromium/error-context.md
+
+  2 failed
+    [chromium] › e2e/coral-submissions.spec.ts:13:6 › Coral Submissions › should show Coral-specific fields (foods, lighting) and hide Fish/Plant fields 
+    [chromium] › e2e/plant-submissions.spec.ts:347:6 › Plant Submissions › should successfully submit complete Plant form 
+  2 skipped
+  7 did not run
+  5 passed (43.2s)
+
+[36m  Serving HTML report at http://localhost:54114. Press Ctrl+C to quit.[39m
