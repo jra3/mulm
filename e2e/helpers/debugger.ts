@@ -76,7 +76,7 @@ export class TestDebugger {
     this.page.on("response", async (response: Response) => {
       const request = response.request();
       const log = this.networkLogs.find(
-        (l) => l.url === request.url() && l.method === request.method() && !l.endTime
+        (l) => l.url === request.url() && l.method === request.method() && !l.timing.endTime
       );
 
       if (log) {
@@ -101,7 +101,7 @@ export class TestDebugger {
 
     this.page.on("requestfailed", (request: Request) => {
       const log = this.networkLogs.find(
-        (l) => l.url === request.url() && l.method === request.method() && !l.endTime
+        (l) => l.url === request.url() && l.method === request.method() && !l.timing.endTime
       );
 
       if (log) {
