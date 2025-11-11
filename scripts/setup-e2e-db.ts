@@ -65,6 +65,28 @@ async function seedTestSpecies(db: any) {
 			commonNames: ["Platy", "Southern Platyfish"],
 			scientificNames: ["Xiphophorus maculatus"]
 		},
+		// Plant species for E2E testing
+		{
+			group: { canonical_genus: "Cryptocoryne", canonical_species_name: "wendtii", program_class: "Cryptocoryne", species_type: "Plant" },
+			commonNames: ["Wendt's Cryptocoryne", "Wendt's Water Trumpet"],
+			scientificNames: ["Cryptocoryne wendtii"]
+		},
+		{
+			group: { canonical_genus: "Anubias", canonical_species_name: "barteri", program_class: "Anubias & Lagenandra", species_type: "Plant" },
+			commonNames: ["Anubias", "Anubias Barteri"],
+			scientificNames: ["Anubias barteri"]
+		},
+		// Coral species for E2E testing
+		{
+			group: { canonical_genus: "Acropora", canonical_species_name: "millepora", program_class: "Hard", species_type: "Coral" },
+			commonNames: ["Small Polyp Stony Coral", "Staghorn Coral"],
+			scientificNames: ["Acropora millepora"]
+		},
+		{
+			group: { canonical_genus: "Sinularia", canonical_species_name: "flexibilis", program_class: "Soft", species_type: "Coral" },
+			commonNames: ["Flexible Leather Coral", "Soft Coral"],
+			scientificNames: ["Sinularia flexibilis"]
+		},
 	];
 
 	for (const species of testSpecies) {

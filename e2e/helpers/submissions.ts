@@ -15,6 +15,30 @@ export interface TestSubmissionOptions {
 	approved?: boolean;
 	approvedBy?: number;
 	points?: number;
+
+	// Species identification (defaults to Fish: Guppy)
+	speciesType?: "Fish" | "Invert" | "Plant" | "Coral";
+	speciesClass?: string;
+	speciesCommonName?: string;
+	speciesLatinName?: string;
+	waterType?: string;
+
+	// Fish/Invert-specific fields
+	count?: string;
+	foods?: string[];
+	spawnLocations?: string[];
+
+	// Plant-specific fields
+	propagationMethod?: string;
+
+	// Plant/Coral-specific fields
+	lightType?: string;
+	lightStrength?: string;
+	lightHours?: string;
+	co2?: "yes" | "no";
+	co2Description?: string;
+	supplementTypes?: string[];
+	supplementRegimens?: string[];
 }
 
 /**
@@ -41,6 +65,37 @@ export async function createTestSubmission(options: TestSubmissionOptions): Prom
 
 		const approvedOn = options.approved ? now : null;
 
+		// Set defaults based on species type
+		const speciesType = options.speciesType || "Fish";
+		const isLivestock = speciesType === "Fish" || speciesType === "Invert";
+		const isPlant = speciesType === "Plant";
+		const isCoral = speciesType === "Coral";
+
+		// Species defaults
+		const programMap: Record<string, string> = { Fish: "fish", Invert: "fish", Plant: "plant", Coral: "coral" };
+		const program = programMap[speciesType];
+		const speciesClass = options.speciesClass || (isPlant ? "Cryptocoryne" : isCoral ? "Hard" : "Livebearers");
+		const speciesCommonName = options.speciesCommonName || (isPlant ? "Wendt's Cryptocoryne" : isCoral ? "Small Polyp Stony Coral" : "Guppy");
+		const speciesLatinName = options.speciesLatinName || (isPlant ? "Cryptocoryne wendtii" : isCoral ? "Acropora millepora" : "Poecilia reticulata");
+		const waterType = options.waterType || (isCoral ? "Salt" : "Fresh");
+
+		// Fish/Invert-specific fields
+		const count = options.count !== undefined ? options.count : (isLivestock ? "20" : null);
+		const foods = options.foods !== undefined ? JSON.stringify(options.foods) : (isLivestock || isCoral ? JSON.stringify(["Live"]) : "[]");
+		const spawnLocations = options.spawnLocations !== undefined ? JSON.stringify(options.spawnLocations) : (isLivestock ? JSON.stringify(["Plant"]) : "[]");
+
+		// Plant-specific fields
+		const propagationMethod = options.propagationMethod !== undefined ? options.propagationMethod : (isPlant ? "Cuttings" : null);
+
+		// Plant/Coral-specific fields
+		const lightType = options.lightType !== undefined ? options.lightType : (isPlant || isCoral ? "LED" : null);
+		const lightStrength = options.lightStrength !== undefined ? options.lightStrength : (isPlant || isCoral ? "200W" : null);
+		const lightHours = options.lightHours !== undefined ? options.lightHours : (isPlant || isCoral ? "16" : null);
+		const co2 = options.co2 !== undefined ? options.co2 : (isPlant || isCoral ? "no" : null);
+		const co2Description = options.co2Description || null;
+		const supplementTypes = options.supplementTypes !== undefined ? JSON.stringify(options.supplementTypes) : "[]";
+		const supplementRegimens = options.supplementRegimens !== undefined ? JSON.stringify(options.supplementRegimens) : "[]";
+
 		const result = await db.run(
 			`INSERT INTO submissions (
 				member_id,
@@ -54,6 +109,14 @@ export async function createTestSubmission(options: TestSubmissionOptions): Prom
 				reproduction_date,
 				foods,
 				spawn_locations,
+				propagation_method,
+				light_type,
+				light_strength,
+				light_hours,
+				co2,
+				co2_description,
+				supplement_type,
+				supplement_regimen,
 				tank_size,
 				filter_type,
 				water_change_volume,
@@ -71,18 +134,26 @@ export async function createTestSubmission(options: TestSubmissionOptions): Prom
 				approved_on,
 				approved_by,
 				points
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			options.memberId,
-			"fish",
-			"Fish",
-			"Livebearers",
-			"Guppy",
-			"Poecilia reticulata",
-			"Fresh",
-			"20",
+			program,
+			speciesType,
+			speciesClass,
+			speciesCommonName,
+			speciesLatinName,
+			waterType,
+			count,
 			reproductionDate,
-			JSON.stringify(["Live"]),
-			JSON.stringify(["Plant"]),
+			foods,
+			spawnLocations,
+			propagationMethod,
+			lightType,
+			lightStrength,
+			lightHours,
+			co2,
+			co2Description,
+			supplementTypes,
+			supplementRegimens,
 			"10 gallon",
 			"Sponge",
 			"25%",

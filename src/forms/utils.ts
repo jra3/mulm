@@ -37,6 +37,9 @@ export function extractValid<T extends z.ZodRawShape>(
 }
 
 export const multiSelect = z.union([z.string(), z.array(z.string())]).transform((val) => {
+  if (val === undefined || val === null) {
+    return undefined;
+  }
   const arr = typeof val === "string" ? [val] : val;
   return arr;
 });
