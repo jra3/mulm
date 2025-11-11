@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { login } from "./helpers/auth";
 import { TEST_USER, cleanupTestUserSubmissions, getTestDatabase } from "./helpers/testData";
 import { fillTomSelectTypeahead } from "./helpers/tomSelect";
+import { attachDebugger } from "./helpers/debugger";
 
 test.describe.configure({ mode: 'serial' });
 
@@ -366,9 +367,9 @@ test.describe("Plant Submissions", () => {
 	});
 
 	test("should successfully submit complete Plant form", async ({ page }) => {
-		// Listen for console messages
-		page.on('console', msg => console.log('PAGE LOG:', msg.text()));
-		page.on('pageerror', err => console.log('PAGE ERROR:', err.message));
+		// Attach debugger for network and console logging
+		const debug = attachDebugger(page);
+
 		await login(page);
 		await page.goto("/submissions/new");
 		await page.waitForSelector("#bapForm");
@@ -429,6 +430,14 @@ test.describe("Plant Submissions", () => {
 
 		const currentUrl = page.url();
 		console.log(`URL after submit: ${currentUrl}`);
+
+		// Debug: Check submission request
+		const submissionReq = debug.findRequest('/submissions', 'POST');
+		console.log('Submission POST status:', submissionReq?.status);
+		if (submissionReq && submissionReq.status && submissionReq.status >= 400) {
+			console.error('Submission failed with:', submissionReq.responseBody);
+		}
+		debug.printSummary();
 
 		// Verify submission in database
 		const db = await getTestDatabase();

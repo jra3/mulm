@@ -115,8 +115,9 @@ mixin CRUDForm()
                             - const selected = form.spawn_locations && form.spawn_locations.includes(loc);
                             option(value=loc selected=selected)= loc
 
-                if !isLivestock
-                    +bapTextInput("Propagation Method", "propagation_method", "Cuttings, Runners, Seed...")
+                if hasLighting
+                    - const propagationPlaceholder = form.species_type === 'Coral' ? 'Fragmentation, Budding, Division...' : 'Cuttings, Runners, Seed, Division...';
+                    +bapTextInput("Propagation Method", "propagation_method", propagationPlaceholder)
 
     section.bg-gray-100.py-4(aria-labelledby="tank-section")
         div.max-w-4xl.mx-auto.text-left.px-4

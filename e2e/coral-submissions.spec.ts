@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { login } from "./helpers/auth";
 import { TEST_USER, cleanupTestUserSubmissions, getTestDatabase } from "./helpers/testData";
 import { fillTomSelectTypeahead } from "./helpers/tomSelect";
+import { attachDebugger } from "./helpers/debugger";
 
 test.describe.configure({ mode: 'serial' });
 
@@ -32,13 +33,11 @@ test.describe("Coral Submissions", () => {
 		await expect(page.locator('input[name="light_strength"]')).toBeVisible();
 		await expect(page.locator('input[name="light_hours"]')).toBeVisible();
 		await expect(page.locator('select[name="co2"]')).toBeVisible();
+		await expect(page.locator('input[name="propagation_method"]')).toBeVisible(); // Corals have propagation methods too!
 
 		// Fish-specific fields should NOT be visible
 		await expect(page.locator('input[name="count"]')).not.toBeVisible();
 		await expect(page.locator('select[name="spawn_locations"]')).not.toBeVisible();
-
-		// Plant-specific fields should NOT be visible
-		await expect(page.locator('input[name="propagation_method"]')).not.toBeVisible();
 	});
 
 	test("should show 'Date Propagated' label instead of 'Date Spawned'", async ({ page }) => {

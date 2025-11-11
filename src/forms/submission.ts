@@ -158,7 +158,6 @@ export const bapForm = bapFields
   )
   .refine(
     (data) =>
-      data.species_type === "Coral" ||
       isLivestock(data.species_type) ||
       Boolean(data.propagation_method),
     { message: "Required", path: ["propagation_method"] }
