@@ -482,7 +482,7 @@ test.describe("Plant Submissions", () => {
 		await page.waitForLoadState("networkidle");
 
 		// Wait for the supplements section to be visible
-		await page.waitForSelector('#supplementsContainer', { state: "visible" });
+		await page.waitForSelector('#supplements', { state: "visible" });
 
 		// Check initial state - should have at least one row
 		const initialRows = await page.locator('input[name="supplement_type[]"]').count();
