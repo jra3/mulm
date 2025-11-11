@@ -485,7 +485,7 @@ test.describe("Plant Submissions", () => {
 		await page.waitForSelector('#supplements', { state: "visible" });
 
 		// Check initial state - should have at least one row
-		const initialRows = await page.locator('input[name="supplement_type[]"]').count();
+		const initialRows = await page.locator('input[name="supplement_type"]').count();
 		expect(initialRows).toBeGreaterThanOrEqual(1);
 
 		// Click "Add +" button to add more rows
@@ -494,7 +494,7 @@ test.describe("Plant Submissions", () => {
 		await page.waitForTimeout(300);
 
 		// Should now have more rows
-		const afterAddRows = await page.locator('input[name="supplement_type[]"]').count();
+		const afterAddRows = await page.locator('input[name="supplement_type"]').count();
 		expect(afterAddRows).toBe(initialRows + 1);
 	});
 });

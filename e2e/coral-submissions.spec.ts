@@ -460,9 +460,10 @@ test.describe("Coral Submissions", () => {
 			expect(submission.submitted_on).toBeTruthy();
 			expect(submission.witness_verification_status).toBe("pending");
 
-			// Verify Fish/Plant fields are null/empty
+			// Verify Fish fields are null/empty
 			expect(submission.count).toBeNull();
-			expect(submission.propagation_method).toBeNull();
+			// Corals have propagation_method now
+			expect(submission.propagation_method).toBe("Fragmentation");
 		} finally {
 			await db.close();
 		}
@@ -480,7 +481,7 @@ test.describe("Coral Submissions", () => {
 		await page.waitForSelector('#supplements', { state: "visible" });
 
 		// Check initial state - should have at least one row
-		const initialRows = await page.locator('input[name="supplement_type[]"]').count();
+		const initialRows = await page.locator('input[name="supplement_type"]').count();
 		expect(initialRows).toBeGreaterThanOrEqual(1);
 
 		// Click "Add +" button to add more rows
@@ -489,7 +490,7 @@ test.describe("Coral Submissions", () => {
 		await page.waitForTimeout(300);
 
 		// Should now have more rows
-		const afterAddRows = await page.locator('input[name="supplement_type[]"]').count();
+		const afterAddRows = await page.locator('input[name="supplement_type"]').count();
 		expect(afterAddRows).toBe(initialRows + 1);
 	});
 });
