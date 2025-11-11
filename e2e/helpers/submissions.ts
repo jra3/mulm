@@ -93,8 +93,7 @@ export async function createTestSubmission(options: TestSubmissionOptions): Prom
 		const lightHours = options.lightHours !== undefined ? options.lightHours : (isPlant || isCoral ? "16" : null);
 		const co2 = options.co2 !== undefined ? options.co2 : (isPlant || isCoral ? "no" : null);
 		const co2Description = options.co2Description || null;
-		const supplementTypes = options.supplementTypes !== undefined ? JSON.stringify(options.supplementTypes) : "[]";
-		const supplementRegimens = options.supplementRegimens !== undefined ? JSON.stringify(options.supplementRegimens) : "[]";
+		// Note: supplements/images now in normalized tables (submission_supplements, submission_images)
 
 		const result = await db.run(
 			`INSERT INTO submissions (
@@ -115,8 +114,6 @@ export async function createTestSubmission(options: TestSubmissionOptions): Prom
 				light_hours,
 				co2,
 				co2_description,
-				supplement_type,
-				supplement_regimen,
 				tank_size,
 				filter_type,
 				water_change_volume,
@@ -152,8 +149,6 @@ export async function createTestSubmission(options: TestSubmissionOptions): Prom
 			lightHours,
 			co2,
 			co2Description,
-			supplementTypes,
-			supplementRegimens,
 			"10 gallon",
 			"Sponge",
 			"25%",
