@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "./components/hoverCard.css";
 
 /* Common component classes to avoid long Tailwind chains in Pug templates */
 .status-panel {
@@ -357,4 +356,270 @@ th[role="columnheader"]:not([aria-sort]):after {
 	border-top: 3px solid #9ca3af;
 	border-bottom: 3px solid #9ca3af;
 	opacity: 0.7;
+}
+
+/**
+ * HoverCard Component Styles
+ *
+ * Uses native Popover API for show/hide state
+ * Provides positioning, animations, and arrow styling
+ */
+
+/* Root container */
+.hovercard-root {
+	@apply relative inline-flex items-center;
+}
+
+/* Trigger wrapper */
+.hovercard-trigger {
+	@apply inline-flex items-center cursor-pointer;
+}
+
+.hovercard-trigger:focus-visible {
+	outline: 2px solid rgb(59 130 246);
+	outline-offset: 2px;
+	border-radius: 0.25rem;
+}
+
+/* Content card - Uses Popover API for visibility */
+.hovercard-content {
+	@apply fixed z-50 bg-white rounded-lg;
+	@apply p-4;
+	@apply transition-all duration-200 ease-out;
+
+	/* Enhanced shadow and border for depth */
+	border: 1px solid rgb(226 232 240);
+	box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1),
+	            0 8px 10px -6px rgba(0, 0, 0, 0.1);
+
+	/* Remove default popover styles */
+	margin: 0;
+	inset: unset;
+
+	/* Prevent scrollbar */
+	overflow: visible;
+	max-height: none;
+	max-width: none;
+
+	/* Initial state - hidden via Popover API */
+	&:not(:popover-open) {
+		@apply invisible opacity-0;
+		transform: scale(0.95);
+	}
+
+	/* Open state - shown via Popover API */
+	&:popover-open {
+		@apply visible opacity-100;
+		transform: scale(1);
+	}
+}
+
+/* Border variants for visual emphasis */
+.hovercard-content.hovercard-bordered {
+	border-width: 2px;
+	border-color: rgb(203 213 225);
+}
+
+.hovercard-content.hovercard-blue-border {
+	border: 2px solid rgb(59 130 246);
+}
+
+.hovercard-content.hovercard-green-border {
+	border: 2px solid rgb(34 197 94);
+}
+
+.hovercard-content.hovercard-purple-border {
+	border: 2px solid rgb(168 85 247);
+}
+
+.hovercard-content.hovercard-amber-border {
+	border: 2px solid rgb(251 191 36);
+}
+
+/* Colored arrows - override border colors based on positioned side */
+.hovercard-content.hovercard-blue-border[data-positioned-side="top"] .hovercard-arrow {
+	border-right-color: rgb(59 130 246);
+	border-bottom-color: rgb(59 130 246);
+}
+
+.hovercard-content.hovercard-blue-border[data-positioned-side="bottom"] .hovercard-arrow {
+	border-left-color: rgb(59 130 246);
+	border-top-color: rgb(59 130 246);
+}
+
+.hovercard-content.hovercard-blue-border[data-positioned-side="left"] .hovercard-arrow {
+	border-right-color: rgb(59 130 246);
+	border-top-color: rgb(59 130 246);
+}
+
+.hovercard-content.hovercard-blue-border[data-positioned-side="right"] .hovercard-arrow {
+	border-left-color: rgb(59 130 246);
+	border-bottom-color: rgb(59 130 246);
+}
+
+.hovercard-content.hovercard-green-border[data-positioned-side="top"] .hovercard-arrow {
+	border-right-color: rgb(34 197 94);
+	border-bottom-color: rgb(34 197 94);
+}
+
+.hovercard-content.hovercard-green-border[data-positioned-side="bottom"] .hovercard-arrow {
+	border-left-color: rgb(34 197 94);
+	border-top-color: rgb(34 197 94);
+}
+
+.hovercard-content.hovercard-green-border[data-positioned-side="left"] .hovercard-arrow {
+	border-right-color: rgb(34 197 94);
+	border-top-color: rgb(34 197 94);
+}
+
+.hovercard-content.hovercard-green-border[data-positioned-side="right"] .hovercard-arrow {
+	border-left-color: rgb(34 197 94);
+	border-bottom-color: rgb(34 197 94);
+}
+
+.hovercard-content.hovercard-purple-border[data-positioned-side="top"] .hovercard-arrow {
+	border-right-color: rgb(168 85 247);
+	border-bottom-color: rgb(168 85 247);
+}
+
+.hovercard-content.hovercard-purple-border[data-positioned-side="bottom"] .hovercard-arrow {
+	border-left-color: rgb(168 85 247);
+	border-top-color: rgb(168 85 247);
+}
+
+.hovercard-content.hovercard-purple-border[data-positioned-side="left"] .hovercard-arrow {
+	border-right-color: rgb(168 85 247);
+	border-top-color: rgb(168 85 247);
+}
+
+.hovercard-content.hovercard-purple-border[data-positioned-side="right"] .hovercard-arrow {
+	border-left-color: rgb(168 85 247);
+	border-bottom-color: rgb(168 85 247);
+}
+
+.hovercard-content.hovercard-amber-border[data-positioned-side="top"] .hovercard-arrow {
+	border-right-color: rgb(251 191 36);
+	border-bottom-color: rgb(251 191 36);
+}
+
+.hovercard-content.hovercard-amber-border[data-positioned-side="bottom"] .hovercard-arrow {
+	border-left-color: rgb(251 191 36);
+	border-top-color: rgb(251 191 36);
+}
+
+.hovercard-content.hovercard-amber-border[data-positioned-side="left"] .hovercard-arrow {
+	border-right-color: rgb(251 191 36);
+	border-top-color: rgb(251 191 36);
+}
+
+.hovercard-content.hovercard-amber-border[data-positioned-side="right"] .hovercard-arrow {
+	border-left-color: rgb(251 191 36);
+	border-bottom-color: rgb(251 191 36);
+}
+
+/* Content inner wrapper for spacing */
+.hovercard-content-inner {
+	@apply space-y-3;
+}
+
+/* Arrow indicator */
+.hovercard-arrow {
+	@apply absolute w-3 h-3 bg-white rotate-45;
+	/* No border by default - added per side below */
+}
+
+.hovercard-content:not(:popover-open) .hovercard-arrow {
+	@apply invisible;
+}
+
+/* Arrow positioning based on side */
+.hovercard-content[data-positioned-side="top"] .hovercard-arrow {
+	@apply bottom-[-6px] left-1/2 -translate-x-1/2;
+	border-right: 1px solid rgb(226 232 240);
+	border-bottom: 1px solid rgb(226 232 240);
+}
+
+.hovercard-content[data-positioned-side="bottom"] .hovercard-arrow {
+	@apply top-[-6px] left-1/2 -translate-x-1/2;
+	border-left: 1px solid rgb(226 232 240);
+	border-top: 1px solid rgb(226 232 240);
+}
+
+.hovercard-content[data-positioned-side="left"] .hovercard-arrow {
+	@apply right-[-6px] top-1/2 -translate-y-1/2;
+	border-right: 1px solid rgb(226 232 240);
+	border-top: 1px solid rgb(226 232 240);
+}
+
+.hovercard-content[data-positioned-side="right"] .hovercard-arrow {
+	@apply left-[-6px] top-1/2 -translate-y-1/2;
+	border-left: 1px solid rgb(226 232 240);
+	border-bottom: 1px solid rgb(226 232 240);
+}
+
+/* Animation variants based on side */
+.hovercard-content[data-side="top"]:not(:popover-open) {
+	transform: scale(0.95) translateY(4px);
+}
+
+.hovercard-content[data-side="bottom"]:not(:popover-open) {
+	transform: scale(0.95) translateY(-4px);
+}
+
+.hovercard-content[data-side="left"]:not(:popover-open) {
+	transform: scale(0.95) translateX(4px);
+}
+
+.hovercard-content[data-side="right"]:not(:popover-open) {
+	transform: scale(0.95) translateX(-4px);
+}
+
+/* Typography defaults for content */
+.hovercard-content-inner h1,
+.hovercard-content-inner h2,
+.hovercard-content-inner h3,
+.hovercard-content-inner h4 {
+	@apply font-semibold text-gray-900 mb-1.5 leading-tight;
+}
+
+.hovercard-content-inner h3 {
+	@apply text-base;
+}
+
+.hovercard-content-inner h4 {
+	@apply text-sm;
+}
+
+.hovercard-content-inner p {
+	@apply text-sm text-gray-600 leading-relaxed;
+	margin-bottom: 0;
+}
+
+.hovercard-content-inner p + p {
+	@apply mt-2;
+}
+
+.hovercard-content-inner a {
+	@apply text-blue-600 hover:text-blue-700 underline;
+}
+
+/* Divider support */
+.hovercard-content-inner hr {
+	@apply border-gray-200 my-3;
+	border-top-width: 1px;
+}
+
+/* Image support */
+.hovercard-content-inner img {
+	@apply rounded border border-gray-200;
+}
+
+/* Data list styling for key-value pairs */
+.hovercard-content-inner strong {
+	@apply text-gray-700 font-medium;
+}
+
+/* Improve spacing in grid layouts */
+.hovercard-content-inner .grid {
+	@apply gap-3;
 }
