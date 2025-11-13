@@ -73,6 +73,8 @@ import {
   getNoteById,
 } from "@/db/submission_notes";
 import { submissionNoteForm } from "@/forms/submissionNote";
+import { getLiveCTAMessage, updateLiveCTAMessage } from "@/db/settings";
+import { marked } from "marked";
 
 
 export function requireAdmin(req: MulmRequest, res: Response, next: NextFunction) {
@@ -1373,5 +1375,59 @@ export const saveApprovedSubmissionEdits = async (req: MulmRequest, res: Respons
   } catch (error) {
     logger.error("Error saving approved submission edits", error);
     res.status(500).send("Failed to save changes. Please try again.");
+  }
+};
+
+/**
+ * Show live display settings page (admin only)
+ */
+export const showLiveSettings = async (req: MulmRequest, res: Response) => {
+  try {
+    const message = (await getLiveCTAMessage()) || "";
+    const renderedMessage = await marked(message);
+
+    res.render("admin/liveSettings", {
+      title: "Live Display Settings",
+      message,
+      renderedMessage,
+    });
+  } catch (error) {
+    logger.error("Error loading live settings", error);
+    res.status(500).send("Failed to load settings");
+  }
+};
+
+/**
+ * Update live CTA message
+ */
+export const updateLiveSettings = async (req: MulmRequest, res: Response) => {
+  try {
+    const message = getBodyString(req, "message") || "";
+
+    await updateLiveCTAMessage(message);
+    const renderedMessage = await marked(message);
+
+    logger.info("Live CTA message updated");
+
+    // Return rendered preview for HTMX swap
+    res.send(renderedMessage);
+  } catch (error) {
+    logger.error("Error updating live settings", error);
+    res.status(500).send("Failed to save settings");
+  }
+};
+
+/**
+ * Preview live CTA message (for live preview in admin)
+ */
+export const previewLiveCTA = async (req: MulmRequest, res: Response) => {
+  try {
+    const message = getBodyString(req, "message") || "";
+    const renderedMessage = await marked(message);
+
+    res.send(renderedMessage);
+  } catch (error) {
+    logger.error("Error previewing live CTA", error);
+    res.status(500).send("Failed to render preview");
   }
 };

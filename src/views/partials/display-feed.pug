@@ -4,43 +4,56 @@ include ../mixins/emptyState.pug
 if submissions && submissions.length > 0
     // Slideshow container - cards will be shown one at a time
     .h-full.flex.items-center.justify-center
-        each submission in submissions
-            // Individual submission card (controlled by JavaScript slideshow - fills available space)
-            .submission-card.bg-white.rounded-xl.shadow-xl.p-8.border-4.border-gray-200.flex.flex-col.w-full.max-h-full.overflow-hidden
-                // Compact header: Species Names | Breeder | Points
-                .flex.items-start.justify-between.gap-8.mb-6.border-b-4.border-gray-200.pb-4.flex-shrink-0
+        each slide in submissions
+            if slide.type === 'cta'
+                // CTA slide with markdown content
+                .submission-card.bg-gradient-to-br.from-blue-50.to-blue-100.rounded-xl.shadow-xl.p-12.border-4.border-blue-300.flex.items-center.justify-center.max-w-6xl.mx-auto
+                    .prose.prose-2xl.prose-headings_text-blue-900.prose-headings_font-bold.prose-p_text-gray-800.prose-strong_text-blue-700.text-center.max-w-4xl
+                        != slide.renderedMessage
+            else if slide.type === 'empty'
+                // Empty state slide - shown when there are no submissions
+                .submission-card.bg-gradient-to-br.from-gray-50.to-gray-100.rounded-xl.shadow-xl.p-12.border-4.border-gray-300.flex.items-center.justify-center.max-w-4xl.mx-auto
+                    .text-center
+                        .text-8xl.mb-6 🐠
+                        h2.text-5xl.font-bold.text-gray-900.mb-4 No awards yet tonight!
+                        p.text-3xl.text-gray-600 Submissions will appear here as they are approved
+            else
+                // Individual submission card (controlled by JavaScript slideshow - fills available space)
+                .submission-card.bg-white.rounded-xl.shadow-xl.p-8.border-4.border-gray-200.flex.flex-col.max-w-7xl.mx-auto.max-h-full.overflow-hidden
+                    // Compact header: Species Names | Breeder | Points
+                    .flex.items-start.justify-between.gap-8.mb-6.border-b-4.border-gray-200.pb-4.flex-shrink-0
 
-                    // Left: Species names
-                    .flex-grow.text-left
-                        h2.text-5xl.font-bold.text-gray-900.leading-tight= submission.species_common_name
-                        p.text-3xl.text-gray-600.italic.leading-tight= submission.species_latin_name
+                        // Left: Species names
+                        .flex-grow.text-left
+                            h2.text-5xl.font-bold.text-gray-900.leading-tight= slide.species_common_name
+                            p.text-3xl.text-gray-600.italic.leading-tight= slide.species_latin_name
 
-                    // Right: Breeder and Points with aligned labels
-                    .flex.gap-8.flex-shrink-0
-                        .text-center
-                            p.text-2xl.text-gray-600.mb-2 Breeder
-                            a.link(href=`/member/${submission.member_id}`)
-                                p.text-4xl.font-bold.text-blue-700= submission.member_name
+                        // Right: Breeder and Points with aligned labels
+                        .flex.gap-8.flex-shrink-0
+                            .text-center
+                                p.text-2xl.text-gray-600.mb-2 Breeder
+                                a.link(href=`/member/${slide.member_id}`)
+                                    p.text-4xl.font-bold.text-blue-700= slide.member_name
 
-                        .text-center
-                            p.text-2xl.text-gray-600.mb-2 Points
-                            p.text-4xl.font-extrabold.text-green-600= submission.total_points
+                            .text-center
+                                p.text-2xl.text-gray-600.mb-2 Points
+                                p.text-4xl.font-extrabold.text-green-600= slide.total_points
 
-                // Images gallery (single row, no wrapping, evenly sized)
-                if submission.images && submission.images.length > 0
-                    - const images = submission.images;
-                        - const photoCount = Math.min(images.length, 5);
-                        - const photoWidth = photoCount === 1 ? 400 : photoCount === 2 ? 300 : photoCount === 3 ? 250 : photoCount === 4 ? 220 : 180;
-                        .flex.flex-grow.mt-4.items-center.justify-center.overflow-hidden
-                            .flex.gap-3.justify-center.items-center
-                                each image, index in images.slice(0, 5)
-                                    - const imageUrl = image.url.includes('-original') ? image.url.replace('-original', '-medium') : image.url;
-                                    .rounded-lg.shadow-lg.overflow-hidden.bg-gray-100.flex-shrink-0
-                                        img.object-contain(
-                                            src=imageUrl
-                                            alt=`Photo ${index + 1}`
-                                            style=`height: 320px; width: auto; max-width: ${photoWidth}px;`
-                                        )
+                    // Images gallery (single row, no wrapping, evenly sized)
+                    if slide.images && slide.images.length > 0
+                        - const images = slide.images;
+                            - const photoCount = Math.min(images.length, 5);
+                            - const photoWidth = photoCount === 1 ? 400 : photoCount === 2 ? 300 : photoCount === 3 ? 250 : photoCount === 4 ? 220 : 180;
+                            .flex.flex-grow.mt-4.items-center.justify-center.overflow-hidden
+                                .flex.gap-3.justify-center.items-center
+                                    each image, index in images.slice(0, 5)
+                                        - const imageUrl = image.url.includes('-original') ? image.url.replace('-original', '-medium') : image.url;
+                                        .rounded-lg.shadow-lg.overflow-hidden.bg-gray-100.flex-shrink-0
+                                            img.object-contain(
+                                                src=imageUrl
+                                                alt=`Photo ${index + 1}`
+                                                style=`height: 320px; width: auto; max-width: ${photoWidth}px;`
+                                            )
 
 else
     // No submissions today

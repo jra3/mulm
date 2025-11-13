@@ -1,0 +1,83 @@
+include ../header.pug
+
+doctype html
+html
+    +headTag('Live Display Settings')
+        style.
+            .preview-container {
+                border: 2px solid #e5e7eb;
+                border-radius: 0.5rem;
+                padding: 2rem;
+                background: white;
+            }
+            .preview-container h1 {
+                font-size: 2.25rem;
+                font-weight: bold;
+                margin-bottom: 1rem;
+            }
+            .preview-container h2 {
+                font-size: 1.875rem;
+                font-weight: bold;
+                margin-bottom: 0.75rem;
+            }
+            .preview-container h3 {
+                font-size: 1.5rem;
+                font-weight: bold;
+                margin-bottom: 0.5rem;
+            }
+            .preview-container p {
+                margin-bottom: 1rem;
+                line-height: 1.75;
+            }
+            .preview-container strong {
+                font-weight: 600;
+            }
+            .preview-container em {
+                font-style: italic;
+            }
+            .preview-container ul, .preview-container ol {
+                margin-left: 1.5rem;
+                margin-bottom: 1rem;
+            }
+            .preview-container li {
+                margin-bottom: 0.5rem;
+            }
+
+    body.bg-white.text-gray-800
+        +pageHeader(true, 'Live Display Settings')
+
+        section.bg-gray-100.py-8
+            div(class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8")
+                .bg-white.rounded-lg.shadow.p-6.mb-6
+                    h2.text-xl.font-bold.mb-4.text-gray-900 Call-to-Action Slide Configuration
+                    p.text-gray-600.mb-6 This message will appear during the /live display rotation (every 5-6 submissions). Write your message in Markdown format.
+
+                    form(
+                        hx-post="/admin/live-settings"
+                        hx-target="#preview"
+                        hx-swap="innerHTML"
+                    )
+                        .mb-6
+                            label.input-label(for="message") Message (Markdown)
+                            textarea.text-input(
+                                id="message"
+                                name="message"
+                                rows="10"
+                                required
+                                placeholder="# Join Our Breeder Awards Program!\n\nShare your breeding successes..."
+                                hx-post="/admin/live-settings/preview"
+                                hx-trigger="input changed delay:500ms"
+                                hx-target="#preview"
+                                hx-swap="innerHTML"
+                            )= message
+
+                        .flex.gap-4
+                            button.primary(type="submit") Save Message
+                            a.link(href="/live/demo") Preview Live Display
+
+                .bg-white.rounded-lg.shadow.p-6
+                    h2.text-xl.font-bold.mb-4.text-gray-900 Live Preview
+                    p.text-sm.text-gray-500.mb-4 This shows how your message will appear on the TV display
+
+                    #preview.preview-container
+                        != renderedMessage

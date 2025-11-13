@@ -870,6 +870,36 @@ export function getTodayApprovedSubmissions() {
 }
 
 /**
+ * Get all submissions approved in the last 48 hours
+ * @returns Array of approved submissions from the last 48 hours with member names and total points
+ */
+export function getLast48HoursApprovedSubmissions() {
+  return query<
+    Submission &
+      Required<Pick<Submission, "submitted_on" | "approved_on" | "points" | "total_points">>
+  >(
+    `
+		SELECT
+			submissions.*,
+			submissions.points +
+				IFNULL(submissions.article_points, 0) +
+				(IFNULL(submissions.first_time_species, 0) * 5) +
+				(IFNULL(submissions.cares_species, 0) * 5) +
+				(IFNULL(submissions.flowered, 0) * submissions.points) +
+				(IFNULL(submissions.sexual_reproduction, 0) * submissions.points)
+				as total_points,
+			members.display_name as member_name
+		FROM submissions JOIN members
+		ON submissions.member_id == members.id
+		WHERE datetime(approved_on) >= datetime('now', '-2 days')
+		AND approved_on IS NOT NULL
+		AND points IS NOT NULL
+		ORDER BY approved_on DESC`,
+    []
+  );
+}
+
+/**
  * Get all submissions approved in the last 30 days
  * @returns Array of approved submissions from the last 30 days with member names and total points
  */

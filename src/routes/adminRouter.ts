@@ -84,4 +84,9 @@ adminRouter.delete("/submissions/:submissionId/notes/:noteId", admin.deleteSubmi
 adminRouter.get("/dialog/submissions/:id/decline-witness", admin.declineWitnessForm);
 adminRouter.get("/dialog/submissions/:id/request-changes", admin.requestChangesForm);
 
+// Live display settings
+adminRouter.get("/live-settings", admin.showLiveSettings);
+adminRouter.post("/live-settings", admin.updateLiveSettings);
+adminRouter.post("/live-settings/preview", admin.previewLiveCTA);
+
 export default adminRouter;
