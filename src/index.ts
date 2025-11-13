@@ -43,6 +43,7 @@ import * as hoverCardDemo from "./routes/hoverCardDemo";
 import testRouter from "./routes/test";
 import { startScheduledCleanup } from "./scheduled/cleanup";
 import { startMcpHttpServer } from "./mcp/http-server";
+import { logger } from "./utils/logger";
 
 const app = express();
 
@@ -381,8 +382,13 @@ app.listen(PORT, HOST, () => {
   console.log(`Server running at http://localhost:${PORT}`);
   console.log(`Server running at https://${config.domain}`);
 
-  // Start scheduled cleanup tasks (runs daily at 3 AM)
-  startScheduledCleanup();
+  // Start scheduled cleanup tasks (runs daily at 3 AM) - production only
+  if (process.env.NODE_ENV === "production") {
+    startScheduledCleanup();
+    logger.info("Scheduled cleanup enabled (production mode)");
+  } else {
+    logger.info("Scheduled cleanup disabled (non-production environment)");
+  }
 
   // Start MCP HTTP server if enabled in config
   void startMcpHttpServer().catch((error) => {
