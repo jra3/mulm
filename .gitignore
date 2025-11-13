@@ -13,7 +13,10 @@ db/database.db
 db/*.db
 db/*.db-shm
 db/*.db-wal
-public/index.css
+
+# Compiled CSS from PostCSS (src/ → public/)
+public/**/*.css
+!public/tom-select.css
 
 # SSL certificates
 nginx/certs/
