@@ -47,7 +47,7 @@ if submissions && submissions.length > 0
                             .flex.flex-grow.mt-4.items-center.justify-center.overflow-hidden
                                 .flex.gap-3.justify-center.items-center
                                     each image, index in images.slice(0, 5)
-                                        - const imageUrl = image.url.includes('-original') ? image.url.replace('-original', '-medium') : image.url;
+                                        - const imageUrl = image.public_url.includes('-original') ? image.public_url.replace('-original', '-medium') : image.public_url;
                                         .rounded-lg.shadow-lg.overflow-hidden.bg-gray-100.flex-shrink-0
                                             img.object-contain(
                                                 src=imageUrl
