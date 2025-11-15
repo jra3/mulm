@@ -51,10 +51,10 @@ form.bg-white.rounded-lg(
 					select.tom-select-typeahead(
 						id="species-search"
 						name="group_id"
-						data-endpoint="/api/typeahead/species"
+						data-api-url="/api/species/search"
 						data-value-field="group_id"
-						data-label-field="display"
-						data-search-field="display"
+						data-label-field="text"
+						data-search-field="text"
 						data-max-items="1"
 					)
 						if submission.common_name_id || submission.scientific_name_id
