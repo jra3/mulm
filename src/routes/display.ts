@@ -90,6 +90,15 @@ async function injectCTASlides(
     }
   }
 
+  // If we have submissions but haven't inserted any CTA yet, add one at the end
+  if (submissions.length > 0 && submissions.length < CTA_INTERVAL) {
+    result.push({
+      type: "cta",
+      message: ctaMessage,
+      renderedMessage,
+    });
+  }
+
   return result;
 }
 
