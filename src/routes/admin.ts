@@ -1203,33 +1203,22 @@ export const saveApprovedSubmissionEdits = async (req: MulmRequest, res: Respons
   const groupId = updates.group_id;
   delete (updates as Partial<typeof updates>).group_id;
 
-  // Handle reproduction_date: only update if the date portion actually changed
-  if (updates.reproduction_date) {
-    if (submission.reproduction_date) {
-      const oldDate = new Date(submission.reproduction_date);
-      const oldDateOnly = oldDate.toISOString().split("T")[0];
-      const newDateOnly = updates.reproduction_date; // YYYY-MM-DD format from form
+  // Preserve time component of reproduction_date if date changed
+  if (updates.reproduction_date && submission.reproduction_date) {
+    const oldDate = new Date(submission.reproduction_date);
+    const newDateOnly = updates.reproduction_date; // YYYY-MM-DD format from form
 
-      // If date portion unchanged, remove from updates to prevent unnecessary changes
-      if (oldDateOnly === newDateOnly) {
-        delete updates.reproduction_date;
-      } else {
-        // Date changed - preserve time component from old date
-        const hours = oldDate.getUTCHours();
-        const minutes = oldDate.getUTCMinutes();
-        const seconds = oldDate.getUTCSeconds();
+    // Extract time component from old date
+    const hours = oldDate.getUTCHours();
+    const minutes = oldDate.getUTCMinutes();
+    const seconds = oldDate.getUTCSeconds();
 
-        // Combine new date with old time
-        const [year, month, day] = newDateOnly.split("-").map(Number);
-        const newDateTime = new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds));
+    // Combine new date with old time
+    const [year, month, day] = newDateOnly.split("-").map(Number);
+    const newDateTime = new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds));
 
-        // Use ISO string for database storage
-        updates.reproduction_date = newDateTime.toISOString();
-      }
-    } else if (updates.reproduction_date === "") {
-      // Empty string means clear the date
-      delete updates.reproduction_date; // Don't update if trying to clear a null date
-    }
+    // Use ISO string for database storage
+    updates.reproduction_date = newDateTime.toISOString();
   }
 
   // Convert arrays from multi-select to JSON strings for database storage

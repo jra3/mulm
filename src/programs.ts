@@ -8,11 +8,10 @@ type PointsTally = {
   10: number;
   15: number;
   20: number;
-  25: number;
 };
 
 /**
- * returns the total points for each point category (5, 10, 15, 20, 25)
+ * returns the total points for each point category (5, 10, 15, 20)
  */
 function pointsByCategory(awards: number[]) {
   const tally: PointsTally = {
@@ -21,10 +20,9 @@ function pointsByCategory(awards: number[]) {
     10: 0,
     15: 0,
     20: 0,
-    25: 0,
   };
   for (const value of awards) {
-    if (value == 5 || value == 10 || value == 15 || value == 20 || value == 25) {
+    if (value == 5 || value == 10 || value == 15 || value == 20) {
       tally.total += value;
       tally[value] += value;
     } else {
