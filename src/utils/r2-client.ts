@@ -36,11 +36,11 @@ let config: R2Config | null = null;
 
 export function initR2() {
   // Try environment variables first, then fall back to config.json
-  const endpoint = process.env.R2_ENDPOINT || configFile.s3Url;
-  const accessKeyId = process.env.R2_ACCESS_KEY_ID || configFile.s3AccessKeyId;
-  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY || configFile.s3Secret;
-  const bucketName = process.env.R2_BUCKET_NAME || configFile.s3Bucket;
-  const publicUrl = process.env.R2_PUBLIC_URL || configFile.r2PublicUrl;
+  const endpoint = process.env.R2_ENDPOINT || configFile.storage.s3Url;
+  const accessKeyId = process.env.R2_ACCESS_KEY_ID || configFile.storage.s3AccessKeyId;
+  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY || configFile.storage.s3Secret;
+  const bucketName = process.env.R2_BUCKET_NAME || configFile.storage.s3Bucket;
+  const publicUrl = process.env.R2_PUBLIC_URL || configFile.storage.r2PublicUrl;
 
   if (!endpoint || !accessKeyId || !secretAccessKey || !bucketName) {
     logger.warn("R2 configuration not found. Image uploads will be disabled.");

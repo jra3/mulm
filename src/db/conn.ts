@@ -16,13 +16,13 @@ export function db(write = false) {
 
 export async function init() {
   readOnlyConn = await open({
-    filename: config.databaseFile,
+    filename: config.database.file,
     driver: sqlite3.Database,
     mode: sqlite3.OPEN_READONLY,
   });
 
   writeConn = await open({
-    filename: config.databaseFile,
+    filename: config.database.file,
     driver: sqlite3.Database,
     mode: sqlite3.OPEN_READWRITE,
   });
@@ -30,7 +30,7 @@ export async function init() {
 
 (async () => {
   const adminConn = await open({
-    filename: config.databaseFile,
+    filename: config.database.file,
     driver: sqlite3.Database,
     mode: sqlite3.OPEN_CREATE | sqlite3.OPEN_READWRITE,
   });

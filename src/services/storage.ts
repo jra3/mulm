@@ -5,10 +5,10 @@ import { logger } from "@/utils/logger";
 
 const s3Client = new S3Client({
   region: "auto",
-  endpoint: config.s3Url,
+  endpoint: config.storage.s3Url,
   credentials: {
-    accessKeyId: config.s3AccessKeyId,
-    secretAccessKey: config.s3Secret,
+    accessKeyId: config.storage.s3AccessKeyId,
+    secretAccessKey: config.storage.s3Secret,
   },
 });
 
@@ -37,7 +37,7 @@ export async function uploadPhoto(
 
     await s3Client.send(command);
 
-    const url = `${config.s3Url}/${BUCKET_NAME}/${key}`;
+    const url = `${config.storage.s3Url}/${BUCKET_NAME}/${key}`;
 
     logger.info(`Photo uploaded successfully: ${key}`);
     return { key, url };
@@ -63,5 +63,5 @@ export async function deletePhoto(key: string): Promise<void> {
 }
 
 export function getPhotoUrl(key: string): string {
-  return `${config.s3Url}/${BUCKET_NAME}/${key}`;
+  return `${config.storage.s3Url}/${BUCKET_NAME}/${key}`;
 }

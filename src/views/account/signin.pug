@@ -29,11 +29,13 @@ include ../mixins/loadingSpinner.pug
 			span.text-xs.text-slate-11.font-normal.mx-4 OR
 			.flex-grow.h-px.bg-gray-800
 
-		a(href=googleURL alt='Sign in with Google')
-			img(src='/google-signin-button.svg')
+		if googleURL
+			a(href=googleURL alt='Sign in with Google')
+				img(src='/google-signin-button.svg')
 
-		a(href=facebookURL alt='Sign in with Facebook')
-			img(src='/facebook-signin-button.svg')
+		if facebookURL
+			a(href=facebookURL alt='Sign in with Facebook')
+				img(src='/facebook-signin-button.svg')
 
 		button#passkeyLoginBtn(type="button" style="background: none; border: none; padding: 0; cursor: pointer;")
 			img(src='/passkey-signin-button.svg')

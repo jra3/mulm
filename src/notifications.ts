@@ -6,18 +6,18 @@ import * as pug from "pug";
 import { logger } from "@/utils/logger";
 
 const DEBUG_EMAIL = process.env.DEBUG_EMAIL;
-const fromEmail = `BASNY Breeder Awards ${config.fromEmail}`;
+const fromEmail = `BASNY Breeder Awards ${config.email.fromEmail}`;
 const EMAILS_DISABLED =
   process.env.NODE_ENV === "test" || // Disable emails in test mode
-  config.disableEmails === true; // Config killswitch for local development
+  config.email.disableEmails === true; // Config killswitch for local development
 
 const transporter = nodemailer.createTransport({
-  host: config.smtpHost,
-  port: config.smtpPort,
-  secure: config.smtpSecure,
+  host: config.email.smtp.host,
+  port: config.email.smtp.port,
+  secure: config.email.smtp.secure,
   auth: {
-    user: config.fromEmail,
-    pass: config.smtpPassword,
+    user: config.email.fromEmail,
+    pass: config.email.smtp.password,
   },
 });
 
@@ -39,7 +39,7 @@ export async function onSubmissionSend(sub: Submission, member: MemberRecord) {
     bcc: DEBUG_EMAIL,
     subject: `Submission Confirmation - ${sub.species_common_name}`,
     html: renderOnSubmission({
-      domain: config.domain,
+      domain: config.server.domain,
       submission: sub,
       member,
     }),
@@ -84,11 +84,11 @@ export async function onChangesRequested(
     bcc: DEBUG_EMAIL,
     subject: `Changes Requested - ${submission.species_common_name}`,
     html: renderOnChangesRequested({
-      domain: config.domain,
+      domain: config.server.domain,
       submission,
       member,
       reason,
-      programContactEmail: config.adminsEmail,
+      programContactEmail: config.email.adminsEmail,
     }),
   });
 }
@@ -106,7 +106,7 @@ export async function onSubmissionApprove(sub: Submission, member: MemberRecord)
     bcc: DEBUG_EMAIL,
     subject: `Submission Approved! - ${sub.species_common_name}`,
     html: renderOnApprove({
-      domain: config.domain,
+      domain: config.server.domain,
       submission: sub,
       member,
     }),
@@ -125,10 +125,10 @@ export async function sendResetEmail(email: string, display_name: string, code: 
     to: email,
     subject: "Reset Password",
     html: renderResetEmail({
-      domain: config.domain,
+      domain: config.server.domain,
       display_name,
       code,
-      programContactEmail: config.adminsEmail,
+      programContactEmail: config.email.adminsEmail,
     }),
   });
 }
@@ -152,7 +152,7 @@ export async function sendInviteEmail(
     bcc: DEBUG_EMAIL,
     subject: "Welcome to the BASNY Breeders Awards Program!",
     html: renderInviteEmail({
-      domain: config.domain,
+      domain: config.server.domain,
       display_name,
       code,
       member,
@@ -187,7 +187,7 @@ export async function onLevelUpgrade(
     bcc: DEBUG_EMAIL,
     subject: `Congratulations! New ${programNames[program]} Level: ${newLevel}`,
     html: renderLevelUpgrade({
-      domain: config.domain,
+      domain: config.server.domain,
       member,
       program,
       newLevel,
@@ -212,7 +212,7 @@ export async function onScreeningApproved(
     bcc: DEBUG_EMAIL,
     subject: `Screening Approved - ${submission.species_common_name}`,
     html: renderOnScreeningApproved({
-      domain: config.domain,
+      domain: config.server.domain,
       submission,
       member,
       witness,
@@ -236,11 +236,11 @@ export async function onScreeningRejected(
     bcc: DEBUG_EMAIL,
     subject: `Additional Information Needed - ${submission.species_common_name}`,
     html: renderOnScreeningRejected({
-      domain: config.domain,
+      domain: config.server.domain,
       submission,
       member,
       reason,
-      programContactEmail: config.adminsEmail,
+      programContactEmail: config.email.adminsEmail,
     }),
   });
 }

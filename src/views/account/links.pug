@@ -4,32 +4,34 @@ include ../mixins/emptyState.pug
 	h2.text-xl.font-bold.mb-4(class="sm:text-2xl") Linked Accounts
 
 	//- Google Account
-	.grid.grid-cols-1.w-full.gap-2.mb-4(class="md:grid-cols-2")
-		if googleAccount
-			.flex.gap-4.items-center#googleAccount
-				span.font-bold Google
-				span.font-base= googleAccount.google_email
-				button.destructive(
-					hx-target="#googleAccount"
-					hx-delete="/account/google"
-				) Unlink
-		else
-			a(href=googleURL alt='Continue with Google')
-				img(src='/google-continue-button.svg')
+	if googleURL
+		.grid.grid-cols-1.w-full.gap-2.mb-4(class="md:grid-cols-2")
+			if googleAccount
+				.flex.gap-4.items-center#googleAccount
+					span.font-bold Google
+					span.font-base= googleAccount.google_email
+					button.destructive(
+						hx-target="#googleAccount"
+						hx-delete="/account/google"
+					) Unlink
+			else
+				a(href=googleURL alt='Continue with Google')
+					img(src='/google-continue-button.svg')
 
 	//- Facebook Account
-	.grid.grid-cols-1.w-full.gap-2.mb-6(class="md:grid-cols-2")
-		if facebookAccount
-			.flex.gap-4.items-center#facebookAccount
-				span.font-bold Facebook
-				span.font-base= facebookAccount.facebook_email
-				button.destructive(
-					hx-target="#facebookAccount"
-					hx-delete="/account/facebook"
-				) Unlink
-		else
-			a(href=facebookURL alt='Continue with Facebook')
-				img(src='/facebook-signin-button.svg')
+	if facebookURL
+		.grid.grid-cols-1.w-full.gap-2.mb-6(class="md:grid-cols-2")
+			if facebookAccount
+				.flex.gap-4.items-center#facebookAccount
+					span.font-bold Facebook
+					span.font-base= facebookAccount.facebook_email
+					button.destructive(
+						hx-target="#facebookAccount"
+						hx-delete="/account/facebook"
+					) Unlink
+			else
+				a(href=facebookURL alt='Continue with Facebook')
+					img(src='/facebook-signin-button.svg')
 
 	//- Passkeys Section
 	h3.text-lg.font-bold.mb-2 Passkeys

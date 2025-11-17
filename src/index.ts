@@ -27,7 +27,7 @@ import { checkPassword } from "./auth";
 import { writeConn } from "./db/conn";
 
 import { MulmRequest, sessionMiddleware, generateSessionCookie } from "./sessions";
-import { getGoogleOAuthURL, getFacebookOAuthURL, setOAuthStateCookie } from "./oauth";
+import { getGoogleOAuthURL, getFacebookOAuthURL, setOAuthStateCookie, isGoogleOAuthEnabled, isFacebookOAuthEnabled } from "./oauth";
 import { getQueryString, getBodyString } from "./utils/request";
 import { initR2 } from "./utils/r2-client";
 import {
@@ -72,8 +72,8 @@ app.use(sessionMiddleware);
 
 // Make config available to all templates via res.locals
 app.use((_req, res, next) => {
-  res.locals.bugReportEmail = config.bugReportEmail;
-  res.locals.domain = config.domain;
+  res.locals.bugReportEmail = config.email.bugReportEmail;
+  res.locals.domain = config.server.domain;
   next();
 });
 
@@ -97,8 +97,8 @@ router.get("/", async (req: MulmRequest, res) => {
   const args = {
     title: "BAS BAP/HAP Portal",
     message: "Welcome to BAS!",
-    googleURL: getGoogleOAuthURL(oauthState),
-    facebookURL: getFacebookOAuthURL(oauthState),
+    googleURL: isGoogleOAuthEnabled() ? getGoogleOAuthURL(oauthState) : null,
+    facebookURL: isFacebookOAuthEnabled() ? getFacebookOAuthURL(oauthState) : null,
     isLoggedIn,
     isAdmin,
   };
@@ -247,8 +247,8 @@ router.get("/dialog/auth/signin", (req, res) => {
   res.render("account/signin", {
     viewer: {},
     errors: new Map(),
-    googleURL: getGoogleOAuthURL(oauthState),
-    facebookURL: getFacebookOAuthURL(oauthState),
+    googleURL: isGoogleOAuthEnabled() ? getGoogleOAuthURL(oauthState) : null,
+    facebookURL: isFacebookOAuthEnabled() ? getFacebookOAuthURL(oauthState) : null,
   });
 });
 
@@ -384,7 +384,7 @@ const PORT = parseInt(process.env.PORT || "4200");
 const HOST = "0.0.0.0"; // Listen on all interfaces
 app.listen(PORT, HOST, () => {
   console.log(`Server running at http://localhost:${PORT}`);
-  console.log(`Server running at https://${config.domain}`);
+  console.log(`Server running at https://${config.server.domain}`);
 
   // Start scheduled cleanup tasks (runs daily at 3 AM) - production only
   if (process.env.NODE_ENV === "production") {

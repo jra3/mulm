@@ -1,23 +1,46 @@
 // Type definition for config.json
 declare module "@/config.json" {
   interface Config {
-    databaseFile: string;
-    domain: string;
-    disableEmails?: boolean;
-    googleClientId: string;
-    googleClientSecret: string;
-    adminsEmail: string;
-    bugReportEmail: string;
-    fromEmail: string;
-    smtpPassword: string;
-    smtpHost: string;
-    smtpPort: number;
-    smtpSecure: boolean;
-    s3AccessKeyId: string;
-    s3Secret: string;
-    s3Url: string;
-    s3Bucket: string;
-    r2PublicUrl: string;
+    database: {
+      file: string;
+    };
+    server: {
+      domain: string;
+    };
+    email: {
+      disableEmails?: boolean;
+      adminsEmail: string;
+      bugReportEmail: string;
+      fromEmail: string;
+      smtp: {
+        host: string;
+        port: number;
+        secure: boolean;
+        password: string;
+      };
+    };
+    oauth?: {
+      google?: {
+        clientId: string;
+        clientSecret: string;
+      };
+      facebook?: {
+        appId: string;
+        appSecret: string;
+      };
+    };
+    storage: {
+      s3AccessKeyId: string;
+      s3Secret: string;
+      s3Url: string;
+      s3Bucket: string;
+      r2PublicUrl: string;
+    };
+    webauthn?: {
+      rpName: string;
+      rpID: string;
+      origin: string;
+    };
     iucn?: {
       apiToken: string;
       baseUrl: string;
@@ -25,6 +48,14 @@ declare module "@/config.json" {
       enableSync: boolean;
       maxRetries: number;
       timeoutMs: number;
+    };
+    fishbase?: {
+      baseUrl: string;
+      rateLimitMs: number;
+      enableSync: boolean;
+      maxRetries: number;
+      timeoutMs: number;
+      defaultLimit: number;
     };
     mcp?: {
       enabled: boolean;

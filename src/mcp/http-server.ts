@@ -22,8 +22,8 @@ import path from "path";
 let serverInstance: ReturnType<typeof express.application.listen> | null = null;
 
 // Environment information from config
-const domain = config.domain;
-const dbPath = config.databaseFile;
+const domain = config.server.domain;
+const dbPath = config.database.file;
 const dbName = path.basename(dbPath);
 
 // Store transports by session ID for each server type

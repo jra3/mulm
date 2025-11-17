@@ -3,6 +3,26 @@ import { Response } from "express";
 import { generateRandomCode } from "./auth";
 
 /**
+ * Check if Google OAuth is configured
+ */
+export function isGoogleOAuthEnabled(): boolean {
+  return Boolean(
+    config.oauth?.google?.clientId &&
+    config.oauth?.google?.clientSecret
+  );
+}
+
+/**
+ * Check if Facebook OAuth is configured
+ */
+export function isFacebookOAuthEnabled(): boolean {
+  return Boolean(
+    config.oauth?.facebook?.appId &&
+    config.oauth?.facebook?.appSecret
+  );
+}
+
+/**
  * Set OAuth state cookie for CSRF protection
  * Call this before redirecting user to OAuth provider (Google or Facebook)
  * Returns the generated state token
@@ -22,8 +42,8 @@ export function setOAuthStateCookie(res: Response): string {
 export function getGoogleOAuthURL(state: string): string {
   const endpoint = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   endpoint.searchParams.append("access_type", "offline");
-  endpoint.searchParams.append("client_id", config.googleClientId);
-  endpoint.searchParams.append("redirect_uri", `https://${config.domain}/oauth/google`);
+  endpoint.searchParams.append("client_id", config.oauth.google.clientId);
+  endpoint.searchParams.append("redirect_uri", `https://${config.server.domain}/oauth/google`);
   endpoint.searchParams.append("scope", "email profile");
   endpoint.searchParams.append("response_type", "code");
   endpoint.searchParams.append("state", state); // CSRF protection
@@ -36,10 +56,10 @@ export function getGoogleOAuthURL(state: string): string {
 export async function translateGoogleOAuthCode(code: string) {
   const endpoint = new URL("https://oauth2.googleapis.com/token");
   const body = new URLSearchParams({
-    client_id: config.googleClientId,
-    client_secret: config.googleClientSecret,
+    client_id: config.oauth.google.clientId,
+    client_secret: config.oauth.google.clientSecret,
     grant_type: "authorization_code",
-    redirect_uri: `https://${config.domain}/oauth/google`,
+    redirect_uri: `https://${config.server.domain}/oauth/google`,
     code,
   });
   return fetch(endpoint, { body, method: "POST" });
@@ -83,8 +103,8 @@ export async function getGoogleUser(
 
 export function getFacebookOAuthURL(state: string): string {
   const endpoint = new URL("https://www.facebook.com/v18.0/dialog/oauth");
-  endpoint.searchParams.append("client_id", config.facebookAppId);
-  endpoint.searchParams.append("redirect_uri", `https://${config.domain}/oauth/facebook`);
+  endpoint.searchParams.append("client_id", config.oauth.facebook.appId);
+  endpoint.searchParams.append("redirect_uri", `https://${config.server.domain}/oauth/facebook`);
   endpoint.searchParams.append("scope", "email,public_profile");
   endpoint.searchParams.append("response_type", "code");
   endpoint.searchParams.append("state", state); // CSRF protection
@@ -96,9 +116,9 @@ export function getFacebookOAuthURL(state: string): string {
  */
 export async function translateFacebookOAuthCode(code: string) {
   const endpoint = new URL("https://graph.facebook.com/v18.0/oauth/access_token");
-  endpoint.searchParams.append("client_id", config.facebookAppId);
-  endpoint.searchParams.append("client_secret", config.facebookAppSecret);
-  endpoint.searchParams.append("redirect_uri", `https://${config.domain}/oauth/facebook`);
+  endpoint.searchParams.append("client_id", config.oauth.facebook.appId);
+  endpoint.searchParams.append("client_secret", config.oauth.facebook.appSecret);
+  endpoint.searchParams.append("redirect_uri", `https://${config.server.domain}/oauth/facebook`);
   endpoint.searchParams.append("code", code);
   return fetch(endpoint, { method: "GET" });
 }

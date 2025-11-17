@@ -9,7 +9,7 @@ import {
   deleteFacebookAccount,
 } from "@/db/members";
 import { updateSchema } from "@/forms/login";
-import { getGoogleOAuthURL, getFacebookOAuthURL, setOAuthStateCookie } from "@/oauth";
+import { getGoogleOAuthURL, getFacebookOAuthURL, setOAuthStateCookie, isGoogleOAuthEnabled, isFacebookOAuthEnabled } from "@/oauth";
 import { MulmRequest } from "@/sessions";
 import { Response } from "express";
 import { logger } from "@/utils/logger";
@@ -30,9 +30,9 @@ export const viewAccountSettings = async (req: MulmRequest, res: Response) => {
   // Generate OAuth state for CSRF protection (stored in cookie)
   const oauthState = setOAuthStateCookie(res);
 
-  // Generate OAuth URLs synchronously
-  const googleURL = getGoogleOAuthURL(oauthState);
-  const facebookURL = getFacebookOAuthURL(oauthState);
+  // Generate OAuth URLs synchronously (only if configured)
+  const googleURL = isGoogleOAuthEnabled() ? getGoogleOAuthURL(oauthState) : null;
+  const facebookURL = isFacebookOAuthEnabled() ? getFacebookOAuthURL(oauthState) : null;
 
   // Fetch async data in parallel
   const [googleAccount, facebookAccount, presets, credentials] = await Promise.all([

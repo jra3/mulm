@@ -218,7 +218,7 @@ export const view = async (req: MulmRequest, res: Response) => {
     ogData = {
       title: `${submission.member_name} bred ${canonicalName}`,
       description: `BAP submission - ${submission.points || 0} points - ${submission.species_common_name}`,
-      url: `https://${config.domain}/submissions/${submission.id}`,
+      url: `https://${config.server.domain}/submissions/${submission.id}`,
       image: firstImageUrl,
     };
   }
