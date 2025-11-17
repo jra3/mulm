@@ -1,25 +1,59 @@
 {
-  "databaseFile": "db/database.db",
-  "domain": "localhost:4200",
-  "disableEmails": true,
-  "googleClientId": "",
-  "googleClientSecret": "",
-  "adminsEmail": "admin@example.com",
-  "bugReportEmail": "bugs@example.com",
-  "fromEmail": "noreply@example.com",
-  "smtpPassword": "",
-  "smtpHost": "",
-  "smtpPort": 465,
-  "smtpSecure": true,
-  "s3AccessKeyId": "",
-  "s3Secret": "",
-  "s3Url": "",
-  "s3Bucket": "",
-  "r2PublicUrl": "",
+  "database": {
+    "file": "db/database.db"
+  },
+  "server": {
+    "domain": "localhost:4200"
+  },
+  "email": {
+    "disableEmails": true,
+    "adminsEmail": "admin@example.com",
+    "bugReportEmail": "bugs@example.com",
+    "fromEmail": "noreply@example.com",
+    "smtp": {
+      "host": "",
+      "port": 465,
+      "secure": true,
+      "password": ""
+    }
+  },
+  "oauth": {
+    "google": {
+      "clientId": "",
+      "clientSecret": ""
+    },
+    "facebook": {
+      "appId": "",
+      "appSecret": ""
+    }
+  },
+  "storage": {
+    "s3AccessKeyId": "",
+    "s3Secret": "",
+    "s3Url": "",
+    "s3Bucket": "",
+    "r2PublicUrl": ""
+  },
   "webauthn": {
     "rpName": "BAP Portal",
     "rpID": "localhost",
     "origin": "http://localhost:4200"
+  },
+  "iucn": {
+    "apiToken": "",
+    "baseUrl": "https://api.iucnredlist.org/api/v4",
+    "rateLimitMs": 2000,
+    "enableSync": false,
+    "maxRetries": 3,
+    "timeoutMs": 10000
+  },
+  "fishbase": {
+    "baseUrl": "https://fishbase.ropensci.org",
+    "rateLimitMs": 1000,
+    "enableSync": false,
+    "maxRetries": 3,
+    "timeoutMs": 10000,
+    "defaultLimit": 10
   },
   "mcp": {
     "enabled": false,
