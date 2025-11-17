@@ -4,10 +4,12 @@ import {
   createOrUpdatePassword,
   updateMember,
   getGoogleAccountByMemberId,
+  getFacebookAccountByMemberId,
   deleteGoogleAccount,
+  deleteFacebookAccount,
 } from "@/db/members";
 import { updateSchema } from "@/forms/login";
-import { getGoogleOAuthURL, setOAuthStateCookie } from "@/oauth";
+import { getGoogleOAuthURL, getFacebookOAuthURL, setOAuthStateCookie } from "@/oauth";
 import { MulmRequest } from "@/sessions";
 import { Response } from "express";
 import { logger } from "@/utils/logger";
@@ -28,9 +30,14 @@ export const viewAccountSettings = async (req: MulmRequest, res: Response) => {
   // Generate OAuth state for CSRF protection (stored in cookie)
   const oauthState = setOAuthStateCookie(res);
 
-  const [googleURL, googleAccount, presets, credentials] = await Promise.all([
-    Promise.resolve(getGoogleOAuthURL(oauthState)),
+  // Generate OAuth URLs synchronously
+  const googleURL = getGoogleOAuthURL(oauthState);
+  const facebookURL = getFacebookOAuthURL(oauthState);
+
+  // Fetch async data in parallel
+  const [googleAccount, facebookAccount, presets, credentials] = await Promise.all([
     getGoogleAccountByMemberId(viewer.id),
+    getFacebookAccountByMemberId(viewer.id),
     queryTankPresets(viewer.id),
     getCredentialsByMember(viewer.id),
   ]);
@@ -39,7 +46,9 @@ export const viewAccountSettings = async (req: MulmRequest, res: Response) => {
     title: "Account Settings",
     viewer,
     googleURL,
+    facebookURL,
     googleAccount,
+    facebookAccount,
     presets,
     credentials,
     errors: new Map(),
@@ -119,6 +128,23 @@ export const unlinkGoogleAccount = async (req: MulmRequest, res: Response) => {
 
   await deleteGoogleAccount(googleAccount.google_sub, viewer.id);
   res.send("Unlinked Google account");
+};
+
+export const unlinkFacebookAccount = async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+  if (!viewer) {
+    res.status(401).send();
+    return;
+  }
+
+  const facebookAccount = await getFacebookAccountByMemberId(viewer.id);
+  if (!facebookAccount) {
+    res.status(404).send("No Facebook account linked");
+    return;
+  }
+
+  await deleteFacebookAccount(facebookAccount.facebook_id, viewer.id);
+  res.send("Unlinked Facebook account");
 };
 
 // Tank Preset Management Routes

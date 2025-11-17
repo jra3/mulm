@@ -27,7 +27,7 @@ import { checkPassword } from "./auth";
 import { writeConn } from "./db/conn";
 
 import { MulmRequest, sessionMiddleware, generateSessionCookie } from "./sessions";
-import { getGoogleOAuthURL, setOAuthStateCookie } from "./oauth";
+import { getGoogleOAuthURL, getFacebookOAuthURL, setOAuthStateCookie } from "./oauth";
 import { getQueryString, getBodyString } from "./utils/request";
 import { initR2 } from "./utils/r2-client";
 import {
@@ -98,6 +98,7 @@ router.get("/", async (req: MulmRequest, res) => {
     title: "BAS BAP/HAP Portal",
     message: "Welcome to BAS!",
     googleURL: getGoogleOAuthURL(oauthState),
+    facebookURL: getFacebookOAuthURL(oauthState),
     isLoggedIn,
     isAdmin,
   };
@@ -198,6 +199,7 @@ router.get("/species/:groupId", species.detail);
 router.get("/account", account.viewAccountSettings);
 router.patch("/account", account.updateAccountSettings);
 router.delete("/account/google", account.unlinkGoogleAccount);
+router.delete("/account/facebook", account.unlinkFacebookAccount);
 
 // Account tank preset management (RESTful routes)
 router.post("/account/tanks", account.saveTankPresetRoute);
@@ -234,8 +236,9 @@ router.post("/auth/passkey/login/verify", loginRateLimiter, auth.passkeyLoginVer
 router.delete("/auth/passkey/:id", auth.deletePasskey);
 router.patch("/auth/passkey/:id/name", auth.renamePasskey);
 
-// OAuth (external dependency - redirect_uri registered with Google)
+// OAuth (external dependency - redirect_uri registered with providers)
 router.get("/oauth/google", oauthRateLimiter, auth.googleOAuth);
+router.get("/oauth/facebook", oauthRateLimiter, auth.facebookOAuth);
 
 router.get("/dialog/auth/signin", (req, res) => {
   // Generate OAuth state for CSRF protection (stored in cookie)
@@ -245,6 +248,7 @@ router.get("/dialog/auth/signin", (req, res) => {
     viewer: {},
     errors: new Map(),
     googleURL: getGoogleOAuthURL(oauthState),
+    facebookURL: getFacebookOAuthURL(oauthState),
   });
 });
 

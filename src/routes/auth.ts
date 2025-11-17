@@ -2,9 +2,11 @@ import { AuthCode, checkPassword, generateRandomCode, makePasswordEntry } from "
 import { createAuthCode, deleteAuthCode, getAuthCode } from "@/db/auth";
 import {
   createGoogleAccount,
+  createFacebookAccount,
   createMember,
   createOrUpdatePassword,
   getGoogleAccount,
+  getFacebookAccount,
   getMember,
   getMemberByEmail,
   getMemberPassword,
@@ -13,7 +15,7 @@ import { forgotSchema, loginSchema, resetSchema, signupSchema } from "@/forms/lo
 import { validateFormResult } from "@/forms/utils";
 import { getBodyParam } from "@/utils/request";
 import { sendResetEmail } from "@/notifications";
-import { getGoogleUser, translateGoogleOAuthCode } from "@/oauth";
+import { getGoogleUser, getFacebookUser, translateGoogleOAuthCode, translateFacebookOAuthCode } from "@/oauth";
 import { regenerateSession, destroyUserSession, MulmRequest } from "@/sessions";
 import { Response } from "express";
 import { logger } from "@/utils/logger";
@@ -307,6 +309,82 @@ export const googleOAuth = async (req: MulmRequest, res: Response) => {
     }
 
     await createGoogleAccount(memberId, googleUser.sub, googleUser.email);
+  } else {
+    memberId = record.member_id;
+  }
+
+  if (memberId == undefined) {
+    res.status(401).send();
+    return;
+  }
+
+  await regenerateSession(req, res, memberId);
+  res.redirect("/");
+};
+
+export const facebookOAuth = async (req: MulmRequest, res: Response) => {
+  const { code, state } = req.query;
+
+  // Validate state parameter for CSRF protection
+  if (!state || typeof state !== "string") {
+    logger.warn("Missing OAuth state parameter");
+    res.status(400).send("Invalid OAuth request. Please try logging in again.");
+    return;
+  }
+
+  // Validate state parameter using cookie (works for both anonymous and logged-in users)
+  const storedState = String(req.cookies.oauth_state);
+
+  if (!storedState || storedState !== state) {
+    logger.warn("Invalid OAuth state parameter", {
+      storedState: storedState?.substring(0, 10) + "...",
+      receivedState: state?.substring(0, 10) + "...",
+    });
+    res
+      .status(403)
+      .send("Invalid OAuth state. This may be a CSRF attack. Please try logging in again.");
+    return;
+  }
+
+  // Clear the state cookie (one-time use)
+  res.clearCookie("oauth_state");
+
+  const resp = await translateFacebookOAuthCode(code as string);
+  const payload: unknown = await resp.json();
+
+  // Type narrowing with runtime checks
+  if (typeof payload !== "object" || payload === null || !("access_token" in payload)) {
+    logger.error("OAuth token exchange failed", payload);
+    res.status(401).send("Login Failed!");
+    return;
+  }
+
+  const tokenPayload = payload as { access_token: unknown };
+  const token = String(tokenPayload.access_token);
+  const facebookUser = await getFacebookUser(token);
+  const record = await getFacebookAccount(facebookUser.id);
+
+  let memberId: number | undefined = undefined;
+
+  if (!record) {
+    // We've never seen this Facebook ID before!
+    const { viewer } = req;
+    if (viewer) {
+      // if we are already logged in, we should link to the current member
+      memberId = viewer.id;
+    } else {
+      // We are not logged in, check if we can link to an existing member
+      const member = await getMemberByEmail(facebookUser.email);
+      if (member) {
+        // We found a member using the same email as this Facebook account. link it.
+        memberId = member.id;
+      } else {
+        // We need to create a new member and a new Facebook account
+        memberId = await createMember(facebookUser.email, facebookUser.name);
+      }
+    }
+
+    await createFacebookAccount(memberId, facebookUser.id, facebookUser.email);
   } else {
     memberId = record.member_id;
   }

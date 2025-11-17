@@ -27,6 +27,7 @@ type AwardRecord = {
 };
 
 const googleAccountTableName = "google_account";
+const facebookAccountTableName = "facebook_account";
 
 export async function getGoogleAccount(sub: string) {
   const members = await query<{
@@ -61,6 +62,43 @@ export async function createGoogleAccount(memberId: number, sub: string, email: 
 
 export async function deleteGoogleAccount(sub: string, memberId: number) {
   return deleteOne(googleAccountTableName, { google_sub: sub, member_id: memberId });
+}
+
+// ==================== Facebook Account ====================
+
+export async function getFacebookAccount(facebookId: string) {
+  const accounts = await query<{
+    facebook_id: string;
+    member_id: number;
+    facebook_email: string;
+  }>(
+    `SELECT facebook_id, member_id, facebook_email FROM ${facebookAccountTableName} WHERE facebook_id = ?`,
+    [facebookId]
+  );
+  return accounts.pop();
+}
+
+export async function getFacebookAccountByMemberId(member_id: number) {
+  const accounts = await query<{
+    facebook_id: string;
+    member_id: number;
+    facebook_email: string;
+  }>(`SELECT facebook_id, member_id, facebook_email FROM facebook_account WHERE member_id = ?`, [
+    member_id,
+  ]);
+  return accounts.pop();
+}
+
+export async function createFacebookAccount(memberId: number, facebookId: string, email: string) {
+  return insertOne(facebookAccountTableName, {
+    member_id: memberId,
+    facebook_id: facebookId,
+    facebook_email: email,
+  });
+}
+
+export async function deleteFacebookAccount(facebookId: string, memberId: number) {
+  return deleteOne(facebookAccountTableName, { facebook_id: facebookId, member_id: memberId });
 }
 
 export async function createOrUpdatePassword(memberId: number, passwordEntry: ScryptPassword) {
@@ -181,6 +219,7 @@ export async function getRosterWithPoints() {
       coralTotalPoints: number;
       hasPassword: number;
       hasGoogleAccount: number;
+      hasFacebookAccount: number;
     }
   >(`
 		SELECT
@@ -189,10 +228,12 @@ export async function getRosterWithPoints() {
 			COALESCE(plant_points.total, 0) as plantTotalPoints,
 			COALESCE(coral_points.total, 0) as coralTotalPoints,
 			CASE WHEN pa.member_id IS NOT NULL THEN 1 ELSE 0 END as hasPassword,
-			CASE WHEN ga.member_id IS NOT NULL THEN 1 ELSE 0 END as hasGoogleAccount
+			CASE WHEN ga.member_id IS NOT NULL THEN 1 ELSE 0 END as hasGoogleAccount,
+			CASE WHEN fa.member_id IS NOT NULL THEN 1 ELSE 0 END as hasFacebookAccount
 		FROM members m
 		LEFT JOIN password_account pa ON m.id = pa.member_id
 		LEFT JOIN google_account ga ON m.id = ga.member_id
+		LEFT JOIN facebook_account fa ON m.id = fa.member_id
 		LEFT JOIN (
 			SELECT
 				member_id,
@@ -253,6 +294,7 @@ export async function getMemberWithPoints(memberId: number) {
       coralTotalPoints: number;
       hasPassword: number;
       hasGoogleAccount: number;
+      hasFacebookAccount: number;
     }
   >(
     `
@@ -262,10 +304,12 @@ export async function getMemberWithPoints(memberId: number) {
 			COALESCE(plant_points.total, 0) as plantTotalPoints,
 			COALESCE(coral_points.total, 0) as coralTotalPoints,
 			CASE WHEN pa.member_id IS NOT NULL THEN 1 ELSE 0 END as hasPassword,
-			CASE WHEN ga.member_id IS NOT NULL THEN 1 ELSE 0 END as hasGoogleAccount
+			CASE WHEN ga.member_id IS NOT NULL THEN 1 ELSE 0 END as hasGoogleAccount,
+			CASE WHEN fa.member_id IS NOT NULL THEN 1 ELSE 0 END as hasFacebookAccount
 		FROM members m
 		LEFT JOIN password_account pa ON m.id = pa.member_id
 		LEFT JOIN google_account ga ON m.id = ga.member_id
+		LEFT JOIN facebook_account fa ON m.id = fa.member_id
 		LEFT JOIN (
 			SELECT
 				member_id,

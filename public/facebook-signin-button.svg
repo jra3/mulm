@@ -1,0 +1,14 @@
+<svg width="240" height="40" viewBox="0 0 240 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background with same border radius as Google button -->
+  <rect width="240" height="40" rx="2" fill="#1877F2"/>
+
+  <!-- Facebook 'f' logo - positioned consistently with Google logo -->
+  <g transform="translate(12, 10)">
+    <path d="M11 0C8.23858 0 6 2.23858 6 5V6H4C3.44772 6 3 6.44772 3 7V10C3 10.5523 3.44772 11 4 11H6V20C6 20.5523 6.44772 21 7 21H10C10.5523 21 11 20.5523 11 20V11H13C13.5523 11 14 10.5523 14 10V7C14 6.44772 13.5523 6 13 6H11V5C11 4.44772 11.4477 4 12 4H13C13.5523 4 14 3.55228 14 3V1C14 0.447715 13.5523 0 13 0H11Z" fill="white"/>
+  </g>
+
+  <!-- "Sign in with Facebook" text - left-aligned, same position as Google -->
+  <text x="48" y="20.5" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif" font-size="14" font-weight="500" fill="white" text-anchor="start" alignment-baseline="central">
+    Sign in with Facebook
+  </text>
+</svg>
