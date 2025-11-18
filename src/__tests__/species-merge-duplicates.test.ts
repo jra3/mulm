@@ -2,8 +2,6 @@
  * Tests for species merge function with duplicate synonym handling
  */
 
-/* eslint-disable @typescript-eslint/no-floating-promises */
-
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert";
 import { open, Database } from "sqlite";
@@ -11,10 +9,10 @@ import sqlite3 from "sqlite3";
 import { overrideConnection } from "../db/conn";
 import { mergeSpecies } from "../db/species";
 
-describe("Species merge with duplicate synonyms", () => {
+void describe("Species merge with duplicate synonyms", () => {
   let db: Database;
 
-  before(async () => {
+  void before(async () => {
     // Create in-memory database for testing
     db = await open({
       filename: ":memory:",
@@ -61,11 +59,11 @@ describe("Species merge with duplicate synonyms", () => {
     overrideConnection(db);
   });
 
-  after(async () => {
+  void after(async () => {
     await db.close();
   });
 
-  it("should merge species with exact duplicate common names (case differences)", async () => {
+  void it("should merge species with exact duplicate common names (case differences)", async () => {
     // Setup: Create two species with overlapping common names
     await db.run(
       "INSERT INTO species_name_group (group_id, program_class, canonical_genus, canonical_species_name, species_type) VALUES (?, ?, ?, ?, ?)",
@@ -129,7 +127,7 @@ describe("Species merge with duplicate synonyms", () => {
     );
   });
 
-  it("should merge species with all unique synonyms", async () => {
+  void it("should merge species with all unique synonyms", async () => {
     // Setup: Create two species with no overlapping names
     await db.run(
       "INSERT INTO species_name_group (group_id, program_class, canonical_genus, canonical_species_name, species_type) VALUES (?, ?, ?, ?, ?)",
