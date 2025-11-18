@@ -58,7 +58,12 @@ export abstract class BaseIntegrationClient {
 
   constructor(config: IntegrationClientConfig) {
     this.config = config;
+  }
 
+  /**
+   * Log initialization message (call from subclass constructor after serviceName is set)
+   */
+  protected logInit(): void {
     if (!this.config.enabled) {
       logger.info(`${this.serviceName} integration is disabled`);
     } else {

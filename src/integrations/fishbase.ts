@@ -99,9 +99,7 @@ export class FishBaseClient extends BaseIntegrationClient {
       ...clientConfig,
     });
 
-    if (!this.config.enabled) {
-      logger.info("FishBase integration is disabled");
-    }
+    this.logInit();
   }
 
   /**
