@@ -55,6 +55,21 @@
     "timeoutMs": 10000,
     "defaultLimit": 10
   },
+  "wikipedia": {
+    "baseUrl": "https://en.wikipedia.org/api/rest_v1",
+    "wikidataUrl": "https://www.wikidata.org/w/api.php",
+    "rateLimitMs": 100,
+    "enableSync": false,
+    "maxRetries": 3,
+    "timeoutMs": 10000
+  },
+  "gbif": {
+    "baseUrl": "https://api.gbif.org/v1",
+    "rateLimitMs": 100,
+    "enableSync": false,
+    "maxRetries": 3,
+    "timeoutMs": 10000
+  },
   "mcp": {
     "enabled": false,
     "port": 3001,

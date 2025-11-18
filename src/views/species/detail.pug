@@ -88,6 +88,62 @@ html
 									if keepers.length > 10
 										span.text-sm.text-blue-600= `+${keepers.length - 10} more`
 
+				// External References & Images
+				if (species.external_references && species.external_references.length > 0) || (species.image_links && species.image_links.length > 0)
+					.bg-white.rounded-lg.shadow-md.p-6.mb-6
+						h2.text-xl.font-bold.text-gray-900.mb-4 External Resources
+
+						// External Links
+						if species.external_references && species.external_references.length > 0
+							.mb-6
+								h3.text-base.font-semibold.text-gray-700.mb-3 Reference Links
+								.space-y-2
+									each url in species.external_references
+										a.flex.items-center.p-3.bg-gray-50.hover_bg-gray-100.rounded.border.border-gray-200.transition.group(
+											href=url
+											target="_blank"
+											rel="noopener noreferrer"
+										)
+											i.fas.fa-external-link-alt.text-blue-600.mr-3
+											.flex-1
+												.font-medium.text-blue-700.group-hover_text-blue-900
+													if url.includes('fishbase.se')
+														| FishBase Species Page
+													else if url.includes('wikipedia.org')
+														| Wikipedia Article
+													else if url.includes('gbif.org')
+														| GBIF Species Page
+													else
+														| External Reference
+												.text-sm.text-gray-500.truncate= url
+											i.fas.fa-arrow-right.text-gray-400.group-hover_text-blue-600.ml-2
+
+						// Species Images
+						if species.images && species.images.length > 0
+							div
+								h3.text-base.font-semibold.text-gray-700.mb-3 Species Images
+								.grid.grid-cols-2.gap-4(class="md:grid-cols-3 lg:grid-cols-4")
+									each image in species.images
+										.group
+											a.block.relative.aspect-square.bg-gray-100.rounded-lg.overflow-hidden.border.border-gray-200.hover_border-blue-500.transition(
+												href=image.image_url
+												target="_blank"
+												rel="noopener noreferrer"
+												title=image.title || "View full size image"
+											)
+												img.w-full.h-full.object-cover.transition(
+													src=image.image_url
+													alt=image.title || `${displayName} - Species Photo`
+													loading="lazy"
+													onerror="this.parentElement.innerHTML='<div class=\"flex items-center justify-center h-full text-gray-400\"><i class=\"fas fa-image-slash text-3xl\"></i></div>'"
+												)
+											if image.attribution || image.license
+												.mt-1.text-xs.text-gray-500.truncate
+													if image.attribution
+														span= image.attribution
+													if image.license
+														span.ml-1.text-gray-400= `(${image.license})`
+
 				// Name Variations - Split by Type
 				if (commonNames && commonNames.length > 0) || (scientificNames && scientificNames.length > 0)
 					.bg-white.rounded-lg.shadow-md.p-6.mb-6

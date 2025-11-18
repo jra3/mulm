@@ -14,6 +14,11 @@ export type SpeciesImage = {
   group_id: number;
   image_url: string;
   display_order: number;
+  title: string | null;
+  attribution: string | null;
+  license: string | null;
+  source: string | null;
+  original_url: string | null;
 };
 
 type NameSynonym = {
@@ -468,8 +473,9 @@ export type SpeciesDetail = {
   iucn_last_updated: string | null;
   iucn_redlist_id: number | null;
   iucn_redlist_url: string | null;
-  external_references: string[]; // Changed from string | null to array
-  image_links: string[]; // Changed from string | null to array
+  external_references: string[]; // Array of reference URLs
+  image_links: string[]; // Array of image URLs (backward compatibility)
+  images: SpeciesImage[]; // Full image objects with metadata
   synonyms: Array<{
     name_id: number;
     common_name: string;
@@ -534,7 +540,8 @@ export async function getSpeciesDetail(groupId: number) {
   const detail: SpeciesDetail = {
     ...groupRows[0],
     external_references: externalRefs.map((ref) => ref.reference_url),
-    image_links: images.map((img) => img.image_url),
+    image_links: images.map((img) => img.image_url), // Backward compatibility
+    images, // Full objects with metadata
     synonyms: synonymRows,
   };
 
