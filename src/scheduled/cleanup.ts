@@ -61,6 +61,19 @@ async function cleanupOrphanedImages(): Promise<{ deleted: number; skipped: numb
       }
     }
 
+    // Add species images to referenced keys (these should never be deleted)
+    const speciesImages = await query<{ image_url: string }>(
+      "SELECT image_url FROM species_images WHERE image_url LIKE '%r2.dev%'"
+    );
+
+    for (const row of speciesImages) {
+      // Extract R2 key from URL (everything after r2.dev/)
+      const match = row.image_url.match(/r2\.dev\/(.+)$/);
+      if (match) {
+        referencedKeys.add(match[1]);
+      }
+    }
+
     logger.info(`Found ${referencedKeys.size} referenced image keys in database`);
 
     // Step 2: List all objects in R2 with "submissions/" prefix
