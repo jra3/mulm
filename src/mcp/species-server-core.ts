@@ -28,6 +28,7 @@ import {
   deleteCommonName,
   getCommonNamesByText,
   bulkDeleteCommonNames,
+  mergeSpecies,
 } from "../db/species";
 import {
   updateIucnData,
@@ -1429,34 +1430,8 @@ async function handleMergeSpeciesGroups(args: MergeSpeciesGroupsArgs) {
     };
   }
 
-  // Execute merge
-  await withTransaction(async (db) => {
-    // Update common names
-    const updateCommonStmt = await db.prepare(`
-      UPDATE species_common_name
-      SET group_id = ?
-      WHERE group_id = ?
-    `);
-    await updateCommonStmt.run(canonical_group_id, defunct_group_id);
-    await updateCommonStmt.finalize();
-
-    // Update scientific names
-    const updateScientificStmt = await db.prepare(`
-      UPDATE species_scientific_name
-      SET group_id = ?
-      WHERE group_id = ?
-    `);
-    await updateScientificStmt.run(canonical_group_id, defunct_group_id);
-    await updateScientificStmt.finalize();
-
-    // Delete defunct group
-    const deleteStmt = await db.prepare(`
-      DELETE FROM species_name_group
-      WHERE group_id = ?
-    `);
-    await deleteStmt.run(defunct_group_id);
-    await deleteStmt.finalize();
-  });
+  // Execute merge using centralized function
+  await mergeSpecies(canonical_group_id, defunct_group_id);
 
   return {
     content: [

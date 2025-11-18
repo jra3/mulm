@@ -157,31 +157,72 @@ export async function mergeSpecies(
 ): Promise<void> {
   try {
     await withTransaction(async (db) => {
-      // Update common names to point to the canonical group
-      const updateCommonStmt = await db.prepare(`
-				UPDATE species_common_name
-				SET group_id = ?
-				WHERE group_id = ?
-			`);
-      await updateCommonStmt.run(canonicalGroupId, defunctGroupId);
-      await updateCommonStmt.finalize();
+      // Get all names from defunct group
+      const commonNamesDefunct = await db.all<Array<{ common_name_id: number; common_name: string }>>(
+        "SELECT common_name_id, common_name FROM species_common_name WHERE group_id = ?",
+        [defunctGroupId]
+      );
+      const scientificNamesDefunct = await db.all<Array<{ scientific_name_id: number; scientific_name: string }>>(
+        "SELECT scientific_name_id, scientific_name FROM species_scientific_name WHERE group_id = ?",
+        [defunctGroupId]
+      );
 
-      // Update scientific names to point to the canonical group
-      const updateScientificStmt = await db.prepare(`
-				UPDATE species_scientific_name
-				SET group_id = ?
-				WHERE group_id = ?
-			`);
-      await updateScientificStmt.run(canonicalGroupId, defunctGroupId);
-      await updateScientificStmt.finalize();
+      // For each defunct common name, update submissions and handle duplicates
+      for (const defunctName of commonNamesDefunct) {
+        // Find matching common name in canonical group (case-insensitive)
+        const matchingCanonical = await db.all<Array<{ common_name_id: number }>>(
+          "SELECT common_name_id FROM species_common_name WHERE group_id = ? AND LOWER(common_name) = LOWER(?)",
+          [canonicalGroupId, defunctName.common_name]
+        );
 
-      // Delete the defunct species group
-      const deleteStmt = await db.prepare(`
-				DELETE FROM species_name_group
-				WHERE group_id = ?
-			`);
-      await deleteStmt.run(defunctGroupId);
-      await deleteStmt.finalize();
+        if (matchingCanonical.length > 0) {
+          // Duplicate exists - update submissions to use canonical name, then delete defunct
+          await db.run(
+            "UPDATE submissions SET common_name_id = ? WHERE common_name_id = ?",
+            [matchingCanonical[0].common_name_id, defunctName.common_name_id]
+          );
+          await db.run(
+            "DELETE FROM species_common_name WHERE common_name_id = ?",
+            [defunctName.common_name_id]
+          );
+        } else {
+          // No duplicate - just update group_id to move it
+          await db.run(
+            "UPDATE species_common_name SET group_id = ? WHERE common_name_id = ?",
+            [canonicalGroupId, defunctName.common_name_id]
+          );
+        }
+      }
+
+      // For each defunct scientific name, update submissions and handle duplicates
+      for (const defunctName of scientificNamesDefunct) {
+        // Find matching scientific name in canonical group (case-insensitive)
+        const matchingCanonical = await db.all<Array<{ scientific_name_id: number }>>(
+          "SELECT scientific_name_id FROM species_scientific_name WHERE group_id = ? AND LOWER(scientific_name) = LOWER(?)",
+          [canonicalGroupId, defunctName.scientific_name]
+        );
+
+        if (matchingCanonical.length > 0) {
+          // Duplicate exists - update submissions to use canonical name, then delete defunct
+          await db.run(
+            "UPDATE submissions SET scientific_name_id = ? WHERE scientific_name_id = ?",
+            [matchingCanonical[0].scientific_name_id, defunctName.scientific_name_id]
+          );
+          await db.run(
+            "DELETE FROM species_scientific_name WHERE scientific_name_id = ?",
+            [defunctName.scientific_name_id]
+          );
+        } else {
+          // No duplicate - just update group_id to move it
+          await db.run(
+            "UPDATE species_scientific_name SET group_id = ? WHERE scientific_name_id = ?",
+            [canonicalGroupId, defunctName.scientific_name_id]
+          );
+        }
+      }
+
+      // Delete the defunct species group (CASCADE will handle any remaining references)
+      await db.run("DELETE FROM species_name_group WHERE group_id = ?", [defunctGroupId]);
     });
   } catch (err) {
     logger.error("Failed to merge species groups", err);
