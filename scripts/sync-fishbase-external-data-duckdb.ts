@@ -315,6 +315,11 @@ async function main() {
           WHERE edsl.group_id = sng.group_id
           AND edsl.source = 'fishbase'
           AND edsl.sync_date > datetime('now', '-90 days')
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM species_external_references ser
+          WHERE ser.group_id = sng.group_id
+          AND ser.reference_url LIKE 'https://www.fishbase.se/summary/%'
         )`}
       GROUP BY sng.group_id, sng.canonical_genus, sng.canonical_species_name, sng.last_external_sync
       ORDER BY submission_count DESC, sng.canonical_genus, sng.canonical_species_name
@@ -401,7 +406,7 @@ async function main() {
   console.log(`✗ Errors: ${stats.errors}`);
 
   // Show sample of what will be updated
-  // Include both 'success' (with data) and 'not_found' (to log the attempt)
+  // Include 'success' (with data) and 'not_found' (to log attempt)
   const needsUpdate = results.filter(r =>
     (r.status === 'success' && (r.new_links > 0 || r.new_images > 0)) ||
     r.status === 'not_found'
