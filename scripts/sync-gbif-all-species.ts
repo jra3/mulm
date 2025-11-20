@@ -29,6 +29,10 @@
 import sqlite3 from "sqlite3";
 import { open, type Database } from "sqlite";
 import { join } from "path";
+import { createHash } from "crypto";
+import sharp from "sharp";
+import { S3Client, PutObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
+import config from "../src/config.json";
 
 // GBIF API types (duplicated here to avoid import issues)
 interface GBIFSpeciesMatch {
@@ -92,6 +96,116 @@ const GBIF_API_BASE = "https://api.gbif.org/v1";
 const GBIF_SPECIES_URL = "https://www.gbif.org/species";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Image download and R2 configuration
+const IMAGE_CONFIG = {
+  maxWidth: 800,
+  maxHeight: 600,
+  quality: 85,
+};
+
+let s3Client: S3Client | null = null;
+
+function getS3Client(): S3Client {
+  if (!s3Client) {
+    s3Client = new S3Client({
+      region: "auto",
+      endpoint: config.storage.s3Url,
+      credentials: {
+        accessKeyId: config.storage.s3AccessKeyId,
+        secretAccessKey: config.storage.s3Secret,
+      },
+    });
+  }
+  return s3Client;
+}
+
+function getImageHash(url: string): string {
+  return createHash("md5").update(url).digest("hex");
+}
+
+function getR2Key(groupId: number, imageHash: string): string {
+  return `species-images/${groupId}/${imageHash}.jpg`;
+}
+
+function getR2Url(key: string): string {
+  return `${config.storage.r2PublicUrl}/${key}`;
+}
+
+async function checkR2Exists(r2Key: string): Promise<boolean> {
+  try {
+    await getS3Client().send(
+      new HeadObjectCommand({
+        Bucket: config.storage.s3Bucket,
+        Key: r2Key,
+      })
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function downloadAndStoreImage(
+  groupId: number,
+  externalUrl: string
+): Promise<{ r2Url: string; originalUrl: string } | null> {
+  try {
+    const imageHash = getImageHash(externalUrl);
+    const r2Key = getR2Key(groupId, imageHash);
+
+    const exists = await checkR2Exists(r2Key);
+    if (exists) {
+      return {
+        r2Url: getR2Url(r2Key),
+        originalUrl: externalUrl,
+      };
+    }
+
+    const response = await fetch(externalUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; BAS-BAP-Bot/1.0)",
+      },
+    });
+
+    if (!response.ok) {
+      console.warn(`    Failed to download ${externalUrl}: HTTP ${response.status}`);
+      return null;
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const imageBuffer = Buffer.from(arrayBuffer);
+
+    const optimizedBuffer = await sharp(imageBuffer)
+      .resize(IMAGE_CONFIG.maxWidth, IMAGE_CONFIG.maxHeight, {
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .jpeg({
+        quality: IMAGE_CONFIG.quality,
+        progressive: true,
+      })
+      .toBuffer();
+
+    await getS3Client().send(
+      new PutObjectCommand({
+        Bucket: config.storage.s3Bucket,
+        Key: r2Key,
+        Body: optimizedBuffer,
+        ContentType: "image/jpeg",
+        CacheControl: "public, max-age=31536000",
+      })
+    );
+
+    return {
+      r2Url: getR2Url(r2Key),
+      originalUrl: externalUrl,
+    };
+  } catch (error: any) {
+    console.warn(`    Error processing ${externalUrl}: ${error.message}`);
+    return null;
+  }
+}
 
 /**
  * Match species name to GBIF usage key
@@ -295,7 +409,11 @@ async function syncSpecies(
   }
 }
 
-async function applySync(sqlite: Database, result: SyncResult): Promise<void> {
+async function applySync(
+  sqlite: Database,
+  result: SyncResult,
+  downloadImages: boolean
+): Promise<void> {
   await sqlite.exec("BEGIN TRANSACTION");
 
   try {
@@ -331,11 +449,30 @@ async function applySync(sqlite: Database, result: SyncResult): Promise<void> {
       let nextOrder = (maxOrder?.max_order ?? -1) + 1;
 
       for (const imageUrl of result.image_urls) {
+        let finalImageUrl = imageUrl;
+        let originalUrl: string | null = null;
+        const source = "gbif";
+        const attribution = "GBIF";
+        const license = "Various (see source)";
+
+        // Download to R2 if flag is set
+        if (downloadImages) {
+          console.log(`    Downloading image to R2...`);
+          const downloadResult = await downloadAndStoreImage(result.group_id, imageUrl);
+          if (downloadResult) {
+            finalImageUrl = downloadResult.r2Url;
+            originalUrl = downloadResult.originalUrl;
+          } else {
+            console.warn(`    Keeping external URL due to download failure`);
+          }
+        }
+
+        // Insert with metadata
         await sqlite.run(
-          `INSERT INTO species_images (group_id, image_url, display_order)
-           VALUES (?, ?, ?)
+          `INSERT INTO species_images (group_id, image_url, display_order, source, attribution, license, original_url)
+           VALUES (?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT (group_id, image_url) DO NOTHING`,
-          [result.group_id, imageUrl, nextOrder++]
+          [result.group_id, finalImageUrl, nextOrder++, source, attribution, license, originalUrl]
         );
       }
     }
@@ -372,6 +509,7 @@ async function main() {
   const args = process.argv.slice(2);
   const execute = args.includes("--execute");
   const force = args.includes("--force");
+  const downloadImages = args.includes("--download-images");
   const limitArg = args.find((arg) => arg.startsWith("--limit="));
   const limit = limitArg ? parseInt(limitArg.split("=")[1]) : undefined;
   const speciesIdArg = args.find((arg) => arg.startsWith("--species-id="));
@@ -386,6 +524,7 @@ async function main() {
     `Mode: ${execute ? "🔴 EXECUTE (will modify database)" : "🟡 DRY-RUN (preview only)"}`
   );
   console.log(`Force resync: ${force}`);
+  console.log(`Download images to R2: ${downloadImages ? "YES" : "NO (store external URLs)"}`);
   if (limit) {
     console.log(`Limit: Processing first ${limit} species only`);
   }
@@ -513,7 +652,7 @@ async function main() {
 
     // Apply sync if executing
     if (execute && (result.status === "success" || result.status === "not_found")) {
-      await applySync(sqlite, result);
+      await applySync(sqlite, result, downloadImages);
     }
 
     // Small delay to be nice to the API

@@ -169,6 +169,7 @@ async function runSyncScript(
 async function main() {
   const args = process.argv.slice(2);
   const execute = args.includes("--execute");
+  const downloadImages = args.includes("--download-images");
   const batchSizeArg = args.find((arg) => arg.startsWith("--batch-size="));
   const batchSize = batchSizeArg ? batchSizeArg.split("=")[1] : undefined;
   const speciesTypeArg = args.find((arg) => arg.startsWith("--species-type="));
@@ -183,6 +184,7 @@ async function main() {
   console.log("🌐 Full Database External Data Sync Orchestrator");
   console.log("=".repeat(80));
   console.log(`Mode: ${execute ? "🔴 EXECUTE" : "🟡 DRY-RUN"}`);
+  console.log(`Download images to R2: ${downloadImages ? "YES" : "NO (store external URLs)"}`);
   console.log(`Started: ${new Date().toISOString()}`);
   if (batchSize) {
     console.log(`Batch size: ${batchSize} species per source`);
@@ -199,6 +201,7 @@ async function main() {
   // Build common args for all scripts
   const commonArgs: string[] = [];
   if (execute) commonArgs.push("--execute");
+  if (downloadImages) commonArgs.push("--download-images");
   if (batchSize) commonArgs.push(`--batch-size=${batchSize}`);
   if (speciesType) commonArgs.push(`--species-type=${speciesType}`);
 
