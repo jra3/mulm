@@ -231,18 +231,18 @@ async function applySync(sqlite: Database, result: SyncResult): Promise<void> {
       }
     }
 
-    // Update last_external_sync timestamp
+    // Update last_external_sync timestamp (even for not_found, to avoid retrying)
     await sqlite.run(
       'UPDATE species_name_group SET last_external_sync = ? WHERE group_id = ?',
       [now, result.group_id]
     );
 
-    // Record sync in log
+    // Record sync in log (record both success and not_found to avoid retries)
     await sqlite.run(
       `INSERT INTO external_data_sync_log
        (group_id, source, sync_date, status, links_added, images_added, error_message)
-       VALUES (?, 'fishbase', ?, 'success', ?, ?, NULL)`,
-      [result.group_id, now, result.new_links, result.new_images]
+       VALUES (?, 'fishbase', ?, ?, ?, ?, NULL)`,
+      [result.group_id, now, result.status, result.new_links, result.new_images]
     );
 
     await sqlite.exec('COMMIT');
@@ -296,7 +296,7 @@ async function main() {
     `;
     params = [speciesId];
   } else {
-    // Sync species with submissions that are missing external data
+    // Sync species with submissions that haven't been synced with FishBase
     query = `
       SELECT
         sng.group_id,
@@ -311,9 +311,10 @@ async function main() {
         AND s.approved_on IS NOT NULL
         ${force ? '' : `
         AND NOT EXISTS (
-          SELECT 1 FROM species_external_references ser
-          WHERE ser.group_id = sng.group_id
-          AND ser.reference_url LIKE 'https://www.fishbase.se/summary/%'
+          SELECT 1 FROM external_data_sync_log edsl
+          WHERE edsl.group_id = sng.group_id
+          AND edsl.source = 'fishbase'
+          AND edsl.sync_date > datetime('now', '-90 days')
         )`}
       GROUP BY sng.group_id, sng.canonical_genus, sng.canonical_species_name, sng.last_external_sync
       ORDER BY submission_count DESC, sng.canonical_genus, sng.canonical_species_name
@@ -400,7 +401,11 @@ async function main() {
   console.log(`✗ Errors: ${stats.errors}`);
 
   // Show sample of what will be updated
-  const needsUpdate = results.filter(r => r.status === 'success' && (r.new_links > 0 || r.new_images > 0));
+  // Include both 'success' (with data) and 'not_found' (to log the attempt)
+  const needsUpdate = results.filter(r =>
+    (r.status === 'success' && (r.new_links > 0 || r.new_images > 0)) ||
+    r.status === 'not_found'
+  );
   if (needsUpdate.length > 0) {
     console.log('\n=== Sample Updates (first 10) ===\n');
     needsUpdate.slice(0, 10).forEach(r => {
