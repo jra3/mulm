@@ -209,7 +209,7 @@ async function main() {
     const result = await runSyncScript(
       "scripts/sync-wikipedia-all-species.ts",
       commonArgs,
-      "Wikipedia/GBIF (All Species)"
+      "Wikipedia/Wikidata (All Species)"
     );
     results.push(result);
 

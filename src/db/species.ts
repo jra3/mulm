@@ -2055,3 +2055,66 @@ export async function setSpeciesImages(groupId: number, imageUrls: string[]): Pr
     throw new Error("Failed to set species images");
   }
 }
+
+/**
+ * Species image with metadata
+ */
+export interface SpeciesImageInput {
+  image_url: string;
+  display_order: number;
+  source?: string;
+  attribution?: string;
+  license?: string;
+  title?: string;
+  original_url?: string;
+}
+
+/**
+ * Set species images with metadata (source, attribution, license, etc.)
+ *
+ * Enhanced version of setSpeciesImages that supports full metadata tracking.
+ * Use this for external data sync scripts that download images from Wikipedia, GBIF, etc.
+ *
+ * @param groupId - Species group ID
+ * @param images - Array of images with metadata
+ */
+export async function setSpeciesImagesWithMetadata(
+  groupId: number,
+  images: SpeciesImageInput[]
+): Promise<void> {
+  try {
+    return await withTransaction(async (db) => {
+      // Delete existing images
+      const deleteStmt = await db.prepare("DELETE FROM species_images WHERE group_id = ?");
+      await deleteStmt.run(groupId);
+      await deleteStmt.finalize();
+
+      // Insert new images with metadata
+      if (images.length > 0) {
+        const insertStmt = await db.prepare(`
+          INSERT INTO species_images
+          (group_id, image_url, display_order, source, attribution, license, title, original_url)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+
+        for (const img of images) {
+          await insertStmt.run(
+            groupId,
+            img.image_url,
+            img.display_order,
+            img.source || null,
+            img.attribution || null,
+            img.license || null,
+            img.title || null,
+            img.original_url || null
+          );
+        }
+
+        await insertStmt.finalize();
+      }
+    });
+  } catch (err) {
+    logger.error("Failed to set species images with metadata", err);
+    throw new Error("Failed to set species images with metadata");
+  }
+}
