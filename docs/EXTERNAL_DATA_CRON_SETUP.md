@@ -54,35 +54,43 @@ Choose based on:
 
 ## What the Sync Does
 
-### Conservative Defaults
+### One-Step Workflow with Image Downloads
 
-The automated sync is configured to be **very conservative** to avoid overwhelming API providers:
+The automated sync uses the **full-database orchestrator** with integrated image downloading:
+
+**What Happens:**
+- Queries Wikipedia, GBIF, and FishBase for ALL species
+- Downloads ALL images to Cloudflare R2 (no external URLs)
+- Transcodes to 800×600 JPEG (85% quality)
+- Stores R2 URLs with full metadata
+- Avoids re-downloads via MD5 hash checking
 
 **Rate Limiting:**
-- Wikipedia/Wikidata: 150ms between requests (was 100ms)
+- Wikipedia/Wikidata: 150ms between requests
 - GBIF: 120ms between requests
 - FishBase: Local data (no API calls)
 - **30 second pause** between different sources
+- **Image downloads**: Included in API delay (no separate rate limit)
 
 **Batch Processing:**
-- Processes species with approved submissions only
-- Skips species synced within last 90 days (unless forced)
-- No hard limit on species count (syncs all that need updates)
+- Processes all species in database (full catalog coverage)
+- Skips species synced within last 90 days
+- Batch size: Syncs all that need updates per run
 
 **Respectful Behavior:**
 - User-Agent identifies the project
 - Follows robots.txt (Wikipedia/GBIF)
-- Graceful error handling
+- Graceful error handling (fallback to external URL on download failure)
 - Automatic retry with backoff
 
 ### Expected Duration
 
-Typical sync times:
-- **5-10 species**: ~2-3 minutes
-- **20-30 species**: ~5-8 minutes
-- **50-100 species**: ~15-25 minutes
+With image downloading enabled:
+- **10-20 species**: ~5-15 minutes
+- **50-100 species**: ~30-60 minutes
+- **Daily incremental**: Usually 0-50 species (~5-30 minutes)
 
-Running at 3 AM ensures plenty of time before users wake up.
+Running at 3 AM ensures plenty of time for processing.
 
 ## Monitoring
 
@@ -133,31 +141,31 @@ MAILTO=your-email@example.com
 ### Run Sync Manually
 
 ```bash
-# Full sync (execute)
+# Full sync with image download (recommended)
 cd /opt/basny
-npm run script scripts/sync-all-external-data.ts -- --execute
+npm run script scripts/sync-all-species-full-database.ts -- --execute --download-images --batch-size=500
 
 # Dry-run first (safe, no changes)
-npm run script scripts/sync-all-external-data.ts
+npm run script scripts/sync-all-species-full-database.ts -- --download-images --batch-size=500
 
-# Test with limited species
-npm run script scripts/sync-all-external-data.ts -- --execute --limit=5
+# Test with small batch
+npm run script scripts/sync-all-species-full-database.ts -- --execute --download-images --batch-size=10
 
 # Skip specific sources
-npm run script scripts/sync-all-external-data.ts -- --execute --skip-fishbase
+npm run script scripts/sync-all-species-full-database.ts -- --execute --download-images --skip-fishbase
 ```
 
 ### Run Individual Syncs
 
 ```bash
-# Wikipedia only
-npm run script scripts/sync-wikipedia-external-data.ts -- --execute
+# Wikipedia only (all species)
+npm run script scripts/sync-wikipedia-all-species.ts -- --execute --download-images --batch-size=500
 
-# GBIF only
-npm run script scripts/sync-gbif-external-data.ts -- --execute
+# GBIF only (all species)
+npm run script scripts/sync-gbif-all-species.ts -- --execute --download-images --batch-size=500
 
-# FishBase only
-npm run script scripts/sync-fishbase-external-data-duckdb.ts -- --execute
+# FishBase only (fish species)
+npm run script scripts/sync-fishbase-all-species.ts -- --execute --download-images --batch-size=500
 ```
 
 ## Troubleshooting

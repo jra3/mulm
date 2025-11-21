@@ -1,43 +1,40 @@
 # External Data Sync Scripts
 
-This directory contains scripts for syncing external species data from multiple sources.
+This directory contains scripts for syncing external species data from multiple sources with automatic image downloading to Cloudflare R2.
 
 ## Quick Reference
 
-### Master Orchestrator (Recommended)
+### The One Command (Recommended)
 
 ```bash
-# Dry-run all sources
-npm run script scripts/sync-all-external-data.ts
+# Sync all species with external data AND download images to R2
+npm run script scripts/sync-all-species-full-database.ts -- --execute --download-images --batch-size=500
 
-# Execute all sources
-npm run script scripts/sync-all-external-data.ts -- --execute
-
-# Test with limited species
-npm run script scripts/sync-all-external-data.ts -- --execute --limit=5
+# Run multiple times until "Found 0 species"
+npm run script scripts/sync-all-species-full-database.ts -- --execute --download-images --batch-size=500
 ```
 
 ### Individual Source Syncs
 
 ```bash
-# Wikipedia/Wikidata
-npm run script scripts/sync-wikipedia-external-data.ts -- --execute
+# Wikipedia/Wikidata (all species)
+npm run script scripts/sync-wikipedia-all-species.ts -- --execute --download-images --batch-size=500
 
-# GBIF
-npm run script scripts/sync-gbif-external-data.ts -- --execute
+# GBIF (all species)
+npm run script scripts/sync-gbif-all-species.ts -- --execute --download-images --batch-size=500
 
-# FishBase (DuckDB-based)
-npm run script scripts/sync-fishbase-external-data-duckdb.ts -- --execute
+# FishBase (fish only)
+npm run script scripts/sync-fishbase-all-species.ts -- --execute --download-images --batch-size=500
 ```
 
 ## Scripts
 
-| Script | Description | Species Coverage |
-|--------|-------------|------------------|
-| `sync-all-external-data.ts` | **Master orchestrator** - runs all syncs in sequence | All |
-| `sync-wikipedia-external-data.ts` | Wikipedia & Wikidata integration | Fish, Coral, Invert, Plant |
-| `sync-gbif-external-data.ts` | GBIF (Global Biodiversity Information Facility) | Fish, Coral, Invert, Plant |
-| `sync-fishbase-external-data-duckdb.ts` | FishBase (via local DuckDB cache) | Fish only |
+| Script | Description | Coverage |
+|--------|-------------|----------|
+| `sync-all-species-full-database.ts` | **Master orchestrator** - Syncs all sources with image download | All 2,279 species |
+| `sync-wikipedia-all-species.ts` | Wikipedia & Wikidata integration | All species types |
+| `sync-gbif-all-species.ts` | GBIF (Global Biodiversity Information Facility) | All species types |
+| `sync-fishbase-all-species.ts` | FishBase (via local DuckDB cache) | Fish only (~1,800 species) |
 
 ## Common Arguments
 
@@ -45,10 +42,12 @@ All scripts support these arguments:
 
 ```bash
 --execute           # Actually modify database (default is dry-run)
+--download-images   # Download images to R2 (recommended for production)
+--batch-size=N      # Process N species per run (for large syncs)
+--start-after=ID    # Resume from species ID (for interrupted syncs)
 --force             # Re-sync even if recently synced (<90 days)
---limit=N           # Limit to N species (for testing)
---species-id=ID     # Sync specific species by ID
 --species-type=TYPE # Filter by type (Fish, Coral, Invert, Plant)
+--species-id=ID     # Sync specific species by ID
 --db=/path/to/db    # Custom database path
 ```
 
@@ -79,44 +78,52 @@ See [docs/EXTERNAL_DATA_CRON_SETUP.md](../docs/EXTERNAL_DATA_CRON_SETUP.md) for 
 
 ## Workflow Examples
 
-### Initial Sync (First Time)
+### Initial Sync (Full Database)
 
 ```bash
-# 1. Dry-run to preview
-npm run script scripts/sync-all-external-data.ts
+# Sync all 2,279 species with images downloaded to R2
+npm run script scripts/sync-all-species-full-database.ts -- --execute --download-images --batch-size=500
 
-# 2. If results look good, execute
-npm run script scripts/sync-all-external-data.ts -- --execute
+# Continue until complete (run ~5 times for full database)
+npm run script scripts/sync-all-species-full-database.ts -- --execute --download-images --batch-size=500
 ```
 
 ### Regular Updates (Automated)
 
-Set up cron job to run daily at 3 AM - syncs only species that:
-- Have approved submissions
-- Haven't been synced in 90 days
-- Are newly added
-
-### Manual Update
+Set up cron job to run daily at 3 AM - automatically syncs species not updated in 90 days:
 
 ```bash
-# Sync all sources for species that need it
-npm run script scripts/sync-all-external-data.ts -- --execute
+# On production server
+./scripts/setup-external-data-cron.sh
+```
 
-# Force re-sync everything
-npm run script scripts/sync-all-external-data.ts -- --execute --force
+The cron job uses the full-database orchestrator with `--download-images`.
 
-# Sync only new coral species
-npm run script scripts/sync-gbif-external-data.ts -- --execute --species-type=Coral
+### Sync Specific Species Types
+
+```bash
+# Sync all corals with images
+npm run script scripts/sync-wikipedia-all-species.ts -- --execute --download-images --species-type=Coral
+
+# Sync all plants
+npm run script scripts/sync-gbif-all-species.ts -- --execute --download-images --species-type=Plant
 ```
 
 ### Testing
 
 ```bash
-# Test with 1 species per source
-npm run script scripts/sync-all-external-data.ts -- --limit=1
+# Test with small batch (2 species)
+npm run script scripts/sync-all-species-full-database.ts -- --execute --download-images --batch-size=2
 
-# Test specific species
-npm run script scripts/sync-wikipedia-external-data.ts -- --species-id=61  # Guppy
+# Test specific species (guppy)
+npm run script scripts/sync-wikipedia-all-species.ts -- --execute --download-images --species-id=61
+```
+
+### Resume from Interruption
+
+```bash
+# If interrupted at species ID 1500
+npm run script scripts/sync-all-species-full-database.ts -- --execute --download-images --batch-size=500 --start-after=1500
 ```
 
 ## How It Works
