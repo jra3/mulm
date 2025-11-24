@@ -46,7 +46,7 @@
 	"dependencies": {
 		"@aws-sdk/client-s3": "^3.828.0",
 		"@aws-sdk/s3-request-presigner": "^3.864.0",
-		"@modelcontextprotocol/sdk": "^1.20.2",
+		"@modelcontextprotocol/sdk": "^1.22.0",
 		"@simplewebauthn/browser": "^13.2.2",
 		"@simplewebauthn/server": "^13.2.2",
 		"@types/multer": "^1.4.13",
