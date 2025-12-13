@@ -43,9 +43,22 @@ jobs:
       - name: Setup config file
         run: cp src/config.sample.json src/config.json
 
-      # Note: FishBase tests require local Parquet data files
-      # For now, these tests will be skipped in CI until data is available
-      # To enable: Download FishBase Parquet files to data/fishbase/
+      - name: Cache FishBase Parquet files
+        id: cache-fishbase
+        uses: actions/cache@v4
+        with:
+          path: scripts/fishbase/cache
+          key: fishbase-parquet-v24.07-${{ hashFiles('scripts/fishbase/download-cache.ts') }}
+          restore-keys: |
+            fishbase-parquet-v24.07-
+            fishbase-parquet-
+
+      - name: Download FishBase core tables (if not cached)
+        if: steps.cache-fishbase.outputs.cache-hit != 'true'
+        run: |
+          echo "📦 Downloading FishBase Parquet files from HuggingFace..."
+          npm run script scripts/fishbase/download-cache.ts
+          echo "✅ FishBase cache ready"
 
       - name: Run Wikipedia integration tests
         run: npm test -- src/__tests__/wikipedia-integration.test.ts

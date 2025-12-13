@@ -10,19 +10,20 @@ import { join } from "path";
  * These tests query the local FishBase DuckDB/Parquet database.
  * Run with: npm test -- src/__tests__/fishbase-integration.test.ts
  *
- * Note: Requires FishBase Parquet files to be present in data/fishbase/
+ * Note: Requires FishBase Parquet files to be present in scripts/fishbase/cache/
+ * Download with: npm run script scripts/fishbase/download-cache.ts
  */
 
-// Check if FishBase data is available
-const fishbaseDataPath = join(process.cwd(), "data", "fishbase");
+// Check if FishBase data is available (cache directory where download script puts files)
+const fishbaseDataPath = join(process.cwd(), "scripts", "fishbase", "cache");
 const hasFishBaseData = existsSync(fishbaseDataPath);
 
 void describe("FishBase Integration", () => {
   before(() => {
     if (!hasFishBaseData) {
-      console.log("\n⚠️  FishBase data not found at data/fishbase/");
+      console.log("\n⚠️  FishBase data not found at scripts/fishbase/cache/");
       console.log("   FishBase integration tests will be skipped");
-      console.log("   To enable: Download FishBase Parquet files to data/fishbase/\n");
+      console.log("   To enable: npm run script scripts/fishbase/download-cache.ts\n");
     }
   });
 
