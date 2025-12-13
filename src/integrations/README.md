@@ -338,3 +338,199 @@ logger.error("IUCN API connection test failed", error);
 - [Terms of Use](https://www.iucnredlist.org/terms/terms-of-use)
 - [Issue #179](https://github.com/jra3/mulm/issues/179) - Implementation tracking
 - [Wiki Documentation](https://github.com/jra3/mulm/wiki/IUCN-Red-List-Integration)
+
+---
+
+## Wikipedia/Wikidata Integration
+
+**File:** `wikipedia.ts`
+**Purpose:** Fetch species data, articles, and images from Wikipedia and Wikidata
+**Documentation:** [Wiki - External Data Sources](https://github.com/jra3/mulm/wiki/External-Data-Sources)
+
+### Quick Start
+
+```typescript
+import { getExternalData } from "@/integrations/wikipedia";
+
+const result = await getExternalData("Poecilia", "reticulata");
+
+if (result.found) {
+  console.log(`Wikidata ID: ${result.wikidata_id}`);
+  console.log(`Wikipedia URL: ${result.wikipedia_url}`);
+  console.log(`Images: ${result.images?.length ?? 0}`);
+}
+```
+
+### Features
+
+- SPARQL queries to Wikidata for species lookup
+- Wikipedia REST API for article summaries
+- Wikimedia Commons images with licensing
+- Support for all species types (fish, coral, invert, plant)
+
+### Rate Limiting
+
+- **150ms delay** between requests to be respectful to Wikipedia/Wikidata APIs
+
+---
+
+## GBIF Integration
+
+**File:** `gbif.ts`
+**Purpose:** Fetch species data from Global Biodiversity Information Facility (GBIF)
+**Documentation:** [Wiki - External Data Sources](https://github.com/jra3/mulm/wiki/External-Data-Sources)
+
+### Quick Start
+
+```typescript
+import { getExternalData } from "@/integrations/gbif";
+
+const result = await getExternalData("Poecilia", "reticulata");
+
+if (result.found) {
+  console.log(`GBIF ID: ${result.gbif_id}`);
+  console.log(`Species URL: ${result.species_url}`);
+  console.log(`Confidence: ${result.confidence}%`);
+  console.log(`Occurrence Map: ${result.occurrence_map_url}`);
+}
+```
+
+### Features
+
+- Species matching with confidence scores
+- Specimen images and occurrence maps
+- Taxonomic validation
+- Support for all species types
+
+### Rate Limiting
+
+- **120ms delay** between requests to respect GBIF API guidelines
+
+---
+
+## FishBase Integration
+
+**File:** `fishbase.ts`
+**Purpose:** Fetch fish species data from FishBase local DuckDB database
+**Documentation:** [Wiki - External Data Sources](https://github.com/jra3/mulm/wiki/External-Data-Sources)
+
+### Quick Start
+
+```typescript
+import { getExternalData } from "@/integrations/fishbase";
+
+const result = await getExternalData("Poecilia", "reticulata");
+
+if (result.found) {
+  console.log(`SpecCode: ${result.spec_code}`);
+  console.log(`FishBase URL: ${result.species_url}`);
+  console.log(`Images: ${result.images?.length ?? 0}`);
+}
+```
+
+### Features
+
+- Local DuckDB queries (no API calls)
+- Fish-only coverage (~1,800 species)
+- Images with CC BY-NC licensing
+- Fast lookups
+
+### Rate Limiting
+
+- None (local database queries)
+
+---
+
+## Integration Tests
+
+All integration clients have comprehensive test coverage to ensure reliability.
+
+### Running Tests
+
+**Run all integration tests:**
+```bash
+npm test -- src/__tests__/*-integration.test.ts
+```
+
+**Run individual integration tests:**
+```bash
+npm test -- src/__tests__/wikipedia-integration.test.ts
+npm test -- src/__tests__/gbif-integration.test.ts
+npm test -- src/__tests__/fishbase-integration.test.ts
+```
+
+### Test Files
+
+- `src/__tests__/wikipedia-integration.test.ts` - Wikipedia/Wikidata client tests
+- `src/__tests__/gbif-integration.test.ts` - GBIF client tests
+- `src/__tests__/fishbase-integration.test.ts` - FishBase client tests
+
+### What Tests Cover
+
+**Wikipedia Integration Tests:**
+- Species data lookup (fish, coral, invert, plant)
+- SPARQL query handling
+- Image retrieval with metadata
+- Error handling (not found, malformed names)
+- Rate limiting compliance
+
+**GBIF Integration Tests:**
+- Species matching with confidence scores
+- Occurrence map URL generation
+- Image retrieval from GBIF API
+- Match type validation (EXACT, FUZZY, etc.)
+- Coverage across all species types
+
+**FishBase Integration Tests:**
+- Local DuckDB queries
+- SpecCode lookup
+- Image retrieval with CC licensing
+- Performance (local queries should be fast)
+- Fish-only filtering
+
+### GitHub Actions
+
+Integration tests run automatically:
+
+- **Nightly at 2 AM UTC** - Comprehensive test suite
+- **On demand** - Via workflow_dispatch
+- **On PRs** (optional) - When integration code changes
+
+View workflow: `.github/workflows/integration-tests.yml`
+
+### Test Characteristics
+
+**Real API Calls:**
+- Wikipedia and GBIF tests make REAL API calls
+- FishBase tests query local DuckDB database
+- Rate limiting is enforced in tests
+
+**Conservative Rate Limits:**
+- Wikipedia: 150ms between requests
+- GBIF: 120ms between requests
+- Tests are respectful to external APIs
+
+**Test Duration:**
+- Wikipedia: ~2-3 minutes (10+ API calls)
+- GBIF: ~2-3 minutes (10+ API calls)
+- FishBase: <1 minute (local queries)
+
+### CI/CD Integration
+
+Integration tests are **informational only** and do not block merges:
+
+```yaml
+# .github/workflows/integration-tests.yml
+continue-on-error: true  # Don't fail the build
+```
+
+This allows tests to run continuously while handling:
+- Temporary API outages
+- Network issues
+- Rate limiting from external services
+
+### Related Documentation
+
+- [Wiki - External Data Sources](https://github.com/jra3/mulm/wiki/External-Data-Sources) - Complete integration guide
+- [scripts/README_EXTERNAL_DATA.md](../../scripts/README_EXTERNAL_DATA.md) - Sync script documentation
+- [docs/EXTERNAL_DATA_CRON_SETUP.md](../../docs/EXTERNAL_DATA_CRON_SETUP.md) - Production automation
