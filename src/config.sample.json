@@ -50,7 +50,7 @@
   "fishbase": {
     "baseUrl": "https://fishbase.ropensci.org",
     "rateLimitMs": 1000,
-    "enableSync": false,
+    "enableSync": true,
     "maxRetries": 3,
     "timeoutMs": 10000,
     "defaultLimit": 10
@@ -59,14 +59,14 @@
     "baseUrl": "https://en.wikipedia.org/api/rest_v1",
     "wikidataUrl": "https://www.wikidata.org/w/api.php",
     "rateLimitMs": 100,
-    "enableSync": false,
+    "enableSync": true,
     "maxRetries": 3,
     "timeoutMs": 10000
   },
   "gbif": {
     "baseUrl": "https://api.gbif.org/v1",
     "rateLimitMs": 100,
-    "enableSync": false,
+    "enableSync": true,
     "maxRetries": 3,
     "timeoutMs": 10000
   },
