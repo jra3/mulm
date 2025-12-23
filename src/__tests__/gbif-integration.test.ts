@@ -1,6 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert";
 import { getGBIFClient } from "../integrations/gbif";
+import config from "@/config.json";
 
 /**
  * Integration tests for GBIF (Global Biodiversity Information Facility) client
@@ -9,11 +10,19 @@ import { getGBIFClient } from "../integrations/gbif";
  * Run with: npm test -- src/__tests__/gbif-integration.test.ts
  *
  * Note: Tests are conservative with rate limiting to be respectful to GBIF.
+ * Tests are skipped in CI (NODE_ENV=test) or when GBIF sync is disabled.
  */
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-void describe("GBIF Integration", () => {
+// Skip these tests in CI as they require real API calls
+const skipReason = !config.gbif?.enableSync
+  ? "GBIF integration is disabled"
+  : process.env.CI
+    ? "Skipping external API tests in CI"
+    : undefined;
+
+void describe("GBIF Integration", { skip: skipReason }, () => {
   void describe("getExternalData", () => {
     void test("should find data for Poecilia reticulata (guppy)", async () => {
       const client = getGBIFClient();

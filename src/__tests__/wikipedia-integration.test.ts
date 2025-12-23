@@ -1,6 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert";
 import { getWikipediaClient } from "../integrations/wikipedia";
+import config from "@/config.json";
 
 /**
  * Integration tests for Wikipedia/Wikidata client
@@ -9,11 +10,19 @@ import { getWikipediaClient } from "../integrations/wikipedia";
  * Run with: npm test -- src/__tests__/wikipedia-integration.test.ts
  *
  * Note: Tests are conservative with rate limiting to be respectful to APIs.
+ * Tests are skipped in CI (NODE_ENV=test) or when Wikipedia sync is disabled.
  */
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-void describe("Wikipedia Integration", () => {
+// Skip these tests in CI as they require real API calls
+const skipReason = !config.wikipedia?.enableSync
+  ? "Wikipedia integration is disabled"
+  : process.env.CI
+    ? "Skipping external API tests in CI"
+    : undefined;
+
+void describe("Wikipedia Integration", { skip: skipReason }, () => {
   void describe("getExternalData", () => {
     void test("should find data for Poecilia reticulata (guppy)", async () => {
       const client = getWikipediaClient();
