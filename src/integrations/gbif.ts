@@ -11,22 +11,12 @@
  * No authentication required for read-only access
  */
 
+import config from "@/config.json";
 import { logger } from "@/utils/logger";
 import {
   BaseIntegrationClient,
   type IntegrationClientConfig,
 } from "./base-integration-client";
-
-// Dynamically load config to support both runtime and script usage
-function loadConfig() {
-  try {
-    // Try runtime path first (when running in src/)
-    return require("@/config.json");
-  } catch {
-    // Fall back to relative path (when running from scripts/)
-    return require("../config.json");
-  }
-}
 
 /**
  * GBIF Species Match Response
@@ -130,7 +120,6 @@ export class GBIFClient extends BaseIntegrationClient {
   protected serviceName = "GBIF";
 
   constructor(clientConfig?: Partial<IntegrationClientConfig>) {
-    const config = loadConfig();
     const defaultConfig = config.gbif;
 
     if (!defaultConfig) {
@@ -315,7 +304,6 @@ let clientInstance: GBIFClient | null = null;
  */
 export function getGBIFClient(): GBIFClient {
   if (!clientInstance) {
-    const config = loadConfig();
     if (!config.gbif?.enableSync) {
       throw new Error("GBIF integration is disabled in configuration");
     }

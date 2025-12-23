@@ -13,22 +13,12 @@
  * - Wikimedia Commons for images
  */
 
+import config from "@/config.json";
 import { logger } from "@/utils/logger";
 import {
   BaseIntegrationClient,
   type IntegrationClientConfig,
 } from "./base-integration-client";
-
-// Dynamically load config to support both runtime and script usage
-function loadConfig() {
-  try {
-    // Try runtime path first (when running in src/)
-    return require("@/config.json");
-  } catch {
-    // Fall back to relative path (when running from scripts/)
-    return require("../config.json");
-  }
-}
 
 /**
  * Wikidata SPARQL query result for species
@@ -140,7 +130,6 @@ export class WikipediaClient extends BaseIntegrationClient {
   private wikidataUrl: string;
 
   constructor(clientConfig?: Partial<IntegrationClientConfig>) {
-    const config = loadConfig();
     const defaultConfig = config.wikipedia;
 
     if (!defaultConfig) {
@@ -161,7 +150,7 @@ export class WikipediaClient extends BaseIntegrationClient {
       ...clientConfig,
     });
 
-    this.wikidataUrl = defaultConfig.wikidataUrl || "https://www.wikidata.org/w/api.php";
+    this.wikidataUrl = defaultConfig.wikidataUrl ?? "https://www.wikidata.org/w/api.php";
     this.logInit();
   }
 
@@ -210,32 +199,6 @@ LIMIT 5
 
       logger.info(`Wikidata SPARQL query for: ${scientificName}`);
 
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), this.config.timeoutMs);
-
-      const response = await fetch(sparqlEndpoint, {
-        method: "GET",
-        headers: {
-          Accept: "application/sparql-results+json",
-          "User-Agent": "BAP-Species-Database/1.0 (mulm project)",
-        },
-        signal: controller.signal,
-        // Use URLSearchParams for proper encoding
-        ...{
-          // Add query as URL parameter
-          url:
-            sparqlEndpoint +
-            "?" +
-            new URLSearchParams({
-              query: sparqlQuery,
-              format: "json",
-            }).toString(),
-        },
-      });
-
-      clearTimeout(timeout);
-
-      // Actually need to pass the URL with query params
       const actualUrl =
         sparqlEndpoint +
         "?" +
@@ -244,8 +207,6 @@ LIMIT 5
           format: "json",
         }).toString();
 
-      // Re-do the fetch with the correct URL
-      await this.enforceRateLimit();
       const correctResponse = await fetch(actualUrl, {
         method: "GET",
         headers: {
@@ -428,7 +389,6 @@ let clientInstance: WikipediaClient | null = null;
  */
 export function getWikipediaClient(): WikipediaClient {
   if (!clientInstance) {
-    const config = loadConfig();
     if (!config.wikipedia?.enableSync) {
       throw new Error("Wikipedia integration is disabled in configuration");
     }

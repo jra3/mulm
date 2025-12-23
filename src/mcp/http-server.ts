@@ -38,13 +38,6 @@ function createSpeciesServer(): Server {
     {
       name: "species-database",
       version: "1.0.0",
-      vendor: "mulm",
-      protocolVersion: "2024-11-05",
-      metadata: {
-        domain,
-        database: dbName,
-        databasePath: dbPath,
-      },
     },
     {
       capabilities: {
@@ -66,13 +59,6 @@ function createMemberServer(): Server {
     {
       name: "member-management",
       version: "1.0.0",
-      vendor: "mulm",
-      protocolVersion: "2024-11-05",
-      metadata: {
-        domain,
-        database: dbName,
-        databasePath: dbPath,
-      },
     },
     {
       capabilities: {

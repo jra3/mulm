@@ -57,6 +57,21 @@ declare module "@/config.json" {
       timeoutMs: number;
       defaultLimit: number;
     };
+    gbif?: {
+      baseUrl: string;
+      rateLimitMs: number;
+      enableSync: boolean;
+      maxRetries: number;
+      timeoutMs: number;
+    };
+    wikipedia?: {
+      baseUrl: string;
+      rateLimitMs: number;
+      enableSync: boolean;
+      maxRetries: number;
+      timeoutMs: number;
+      wikidataUrl?: string;
+    };
     mcp?: {
       enabled: boolean;
       port: number;
