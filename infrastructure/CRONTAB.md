@@ -53,7 +53,7 @@ Backup jobs run with `sudo` to:
 
 ## Root Crontab
 
-Manages database health monitoring with automated corruption detection.
+Manages database health monitoring, system health metrics, and Docker cleanup.
 
 **View:**
 ```bash
@@ -62,17 +62,25 @@ ssh BAP "sudo crontab -l"
 
 **Configuration:**
 ```cron
-# BASNY Database Health Monitoring (runs as root to access config)
+# BASNY System Monitoring and Maintenance (runs as root)
 
 # Database health check - runs daily at 6 AM EST
 0 6 * * * /opt/basny/scripts/check-database-health.sh >> /mnt/basny-data/backups/health-check.log 2>&1
+
+# Application health check - pushes metric to CloudWatch every 5 minutes
+*/5 * * * * /opt/basny/scripts/check-health-metric.sh >> /mnt/basny-data/logs/health-metric.log 2>&1
+
+# Docker cleanup - Sundays at 1 AM EST (before weekly backup)
+0 1 * * 0 docker system prune -af --filter "until=48h" >> /mnt/basny-data/logs/docker-cleanup.log 2>&1
 ```
 
 ### Health Check Schedule
 
 | Check | Schedule | Purpose | Alerts |
 |-------|----------|---------|--------|
-| Integrity Check | 6:00 AM EST daily | Detect database corruption | Email on failure |
+| Database Integrity | 6:00 AM EST daily | Detect database corruption | Email on failure |
+| App Health Metric | Every 5 minutes | Push health status to CloudWatch | CloudWatch Alarm → SNS |
+| Docker Cleanup | 1:00 AM EST Sundays | Remove old Docker images | Logged only |
 
 ### Why root?
 
@@ -86,7 +94,9 @@ Health checks run as root to:
 ```
 Time (EST) │ Action
 ───────────┼────────────────────────────────────────
+*/5        │ 🔄 Health metric to CloudWatch (every 5 min)
 00:00      │ Hourly backup (every 6 hours)
+01:00      │ 🧹 Docker cleanup (Sundays only)
 02:00      │ Daily backup
 03:00      │ Weekly backup (Sundays only)
 04:00      │ Monthly backup (1st of month only)
@@ -129,7 +139,9 @@ All cron jobs write logs for troubleshooting:
 | Job | Log File | Description |
 |-----|----------|-------------|
 | Backups | `/mnt/basny-data/backups/backup.log` | All backup operations |
-| Health Checks | `/mnt/basny-data/backups/health-check.log` | Daily integrity checks |
+| DB Health Checks | `/mnt/basny-data/backups/health-check.log` | Daily integrity checks |
+| App Health Metric | `/mnt/basny-data/logs/health-metric.log` | CloudWatch metric pushes |
+| Docker Cleanup | `/mnt/basny-data/logs/docker-cleanup.log` | Weekly cleanup results |
 | Cron Errors | `/var/log/cron` | System cron daemon logs |
 
 **View logs:**

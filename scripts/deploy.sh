@@ -64,6 +64,9 @@ echo "→ Pulling latest code from git..."
 sudo git fetch origin
 sudo git reset --hard origin/main
 
+echo "→ Cleaning old Docker images to free disk space..."
+sudo docker image prune -af --filter "until=24h"
+
 echo "→ Building Docker images..."
 sudo docker-compose -f docker-compose.prod.yml build
 
@@ -73,7 +76,7 @@ sudo docker-compose -f docker-compose.prod.yml down
 echo "→ Starting new containers..."
 sudo docker-compose -f docker-compose.prod.yml up -d
 
-echo "→ Cleaning up old images..."
+echo "→ Cleaning up unused images..."
 sudo docker image prune -f
 
 echo "→ Checking container status..."
