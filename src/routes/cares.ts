@@ -535,7 +535,7 @@ router.post("/api/cares/fry-share", async (req: MulmRequest, res: Response) => {
 });
 
 // Landing page
-router.get("/", async (req: MulmRequest, res: Response) => {
+router.get("/cares", async (req: MulmRequest, res: Response) => {
   const { viewer } = req;
   const isLoggedIn = Boolean(viewer);
 
