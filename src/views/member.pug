@@ -6,6 +6,7 @@ include mixins/caresBadge.pug
 include mixins/emptyState.pug
 include mixins/progressBar.pug
 include mixins/hoverCard.pug
+include member/caresSection.pug
 
 - const stringCell = ['p-3', 'text-left', 'border-b', 'border-gray-200'];
 - const heading = ['p-3', 'text-left', 'font-bold', 'text-gray-900', 'border-b-2', 'border-gray-300', 'bg-gray-50', 'cursor-pointer', 'select-none', 'hover:bg-gray-100'];
@@ -179,6 +180,10 @@ html
 							.flex.items-center.gap-2
 								span.text-blue-600.font-medium View Collection
 								i.fas.fa-arrow-right.text-blue-600
+
+		//- CARES Program Section
+		if caresProfile
+			+caresSection(caresProfile)
 
 		- const hasAnySubmissions = fishSubs.length > 0 || plantSubs.length > 0 || coralSubs.length > 0;
 
