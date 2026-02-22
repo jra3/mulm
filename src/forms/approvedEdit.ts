@@ -49,6 +49,9 @@ export const approvedEditSchema = z.object({
   video_url: z.string().url().optional().or(z.literal("")),
   article_link: z.string().url().optional().or(z.literal("")),
 
+  // Notes
+  notes: z.string().max(2000).optional().or(z.literal("")),
+
   // Required reason (not stored in submissions table, goes to audit log)
   reason: z.string().min(3, "Please provide a reason (at least 3 characters)").max(2000),
 });

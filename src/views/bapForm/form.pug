@@ -236,6 +236,23 @@ mixin CRUDForm()
                 )
                 span#article-link-hint.text-xs.text-gray-500 Link to an article or blog post about this breeding
 
+    //- Breeder Notes Section
+    section.bg-gray-100.py-4(aria-labelledby="notes-section")
+        div.max-w-4xl.mx-auto.text-left.px-4
+            h2#notes-section(class="text-xl sm:text-2xl font-bold mb-4") Breeder Notes (Optional)
+            p.text-sm.text-gray-600.mb-4 Add any additional notes about this breeding — collection data, lineage info, breeding conditions, etc.
+            div.grid.gap-2
+                textarea.text-input(
+                    id="notes"
+                    name="notes"
+                    rows="4"
+                    maxlength="2000"
+                    placeholder="e.g. Direct descendants from the 1975 John Endler collection, no outcrosses..."
+                    aria-label="Breeder notes"
+                    aria-describedby="notes-hint"
+                )= form.notes || ""
+                span#notes-hint.text-xs.text-gray-500 Up to 2000 characters
+
     unless form.submitted_on || editing
         section.bg-blue-50.py-4.border-l-4.border-blue-400(aria-labelledby="screening-info")
             div.max-w-4xl.mx-auto.px-4
