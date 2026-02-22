@@ -88,7 +88,33 @@ html
 									if keepers.length > 10
 										span.text-sm.text-blue-600= `+${keepers.length - 10} more`
 
-				// External References & Images
+				// CARES Maintainers
+			if species.is_cares_species == 1
+				.bg-green-50.border.border-green-200.rounded-lg.p-4.mb-6
+					.flex.items-center.gap-2.mb-3
+						span.inline-flex.items-center.rounded-full.font-semibold.bg-green-100.text-green-800.px-2.py-1.text-xs C.A.R.E.S.
+						span.font-medium.text-green-900
+							if caresMaintainers.length > 0
+								= `${caresMaintainers.length} BAS member${caresMaintainers.length === 1 ? '' : 's'} maintaining this species`
+							else
+								| No BAS members currently maintaining this species
+
+					if caresMaintainers.length > 0
+						.border-t.border-green-200.pt-3
+							.text-sm.text-green-700.mb-2 Maintainers:
+							.flex.flex-wrap.gap-2
+								each maintainer in caresMaintainers
+									a.inline-flex.items-center.px-2.py-1.text-sm.text-green-700.bg-white.hover_bg-green-100.rounded.border.border-green-300.transition(
+										href=`/member/${maintainer.id}`
+										title=`View ${maintainer.display_name}'s profile`
+									)
+										i.fas.fa-user.mr-1
+										= maintainer.display_name
+					else
+						.border-t.border-green-200.pt-3
+							p.text-sm.text-green-700 This species is on the C.A.R.E.S. priority list but needs hobbyist maintainers. Consider adding it to your collection!
+
+			// External References & Images
 				if (species.external_references && species.external_references.length > 0) || (species.image_links && species.image_links.length > 0)
 					.bg-white.rounded-lg.shadow-md.p-6.mb-6
 						h2.text-xl.font-bold.text-gray-900.mb-4 External Resources

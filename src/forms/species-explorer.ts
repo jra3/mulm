@@ -14,6 +14,7 @@ export const speciesExplorerQuerySchema = z.object({
   search: trimmedString(100, "Search query too long (maximum 100 characters)").optional(),
   sort: sortFieldEnum.optional().default("reports"),
   sortDirection: sortDirectionEnum.optional().default("desc"),
+  cares_only: z.enum(["true", "false"]).optional(),
 });
 
 // Export the inferred type

@@ -75,17 +75,66 @@ html
 										option(value="reports" selected=(filters.sort === 'reports')) Most Reports
 										option(value="name" selected=(filters.sort === 'name')) Name A-Z
 
+						// CARES Filter
+						.mt-4
+							label.inline-flex.items-center.gap-2.cursor-pointer
+								input#cares_only(
+									type="checkbox"
+									name="cares_only"
+									value="true"
+									checked=filters.cares_only
+									onchange="this.form.submit()"
+									class="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500")
+								span.text-sm.font-medium.text-gray-700 C.A.R.E.S. species only
+
 						.flex.justify-between.items-center.mt-4
 							button.primary(type="submit") Apply Filters
-							if filters.species_type || filters.species_class || filters.search
+							if filters.species_type || filters.species_class || filters.search || filters.cares_only
 								a.link(href="/species") Clear All Filters
+
+				// CARES Coverage Stats
+				if caresStats
+					.bg-green-50.border.border-green-200.rounded-lg.p-6.mb-6
+						h3.text-lg.font-bold.text-green-900.mb-4
+							| C.A.R.E.S. Coverage Dashboard
+						.grid.grid-cols-1.gap-4(class="md:grid-cols-3")
+							.text-center
+								.text-3xl.font-bold.text-green-700= caresStats.total_cares_species
+								.text-sm.text-green-600 Total CARES Species
+							.text-center
+								.text-3xl.font-bold.text-green-700= caresStats.maintained_species
+								.text-sm.text-green-600 Maintained by BAS Members
+							.text-center
+								.text-3xl.font-bold.text-green-700= caresStats.coverage_percent + '%'
+								.text-sm.text-green-600 Coverage Rate
+
+						if caresStats.most_maintained.length > 0
+							.mt-4.border-t.border-green-200.pt-4
+								.grid.grid-cols-1.gap-4(class="md:grid-cols-2")
+									div
+										h4.text-sm.font-semibold.text-green-800.mb-2 Most Maintained
+										.space-y-1
+											each sp in caresStats.most_maintained
+												.flex.justify-between.items-center.text-sm
+													a.text-green-700.hover_text-green-900(href=`/species/${sp.group_id}`)
+														i= sp.canonical_genus + ' ' + sp.canonical_species_name
+													span.text-green-600.font-medium= sp.keeper_count + ' keepers'
+
+									if caresStats.unmaintained.length > 0
+										div
+											h4.text-sm.font-semibold.text-green-800.mb-2 Needs Maintainers
+											.space-y-1
+												each sp in caresStats.unmaintained
+													.text-sm
+														a.text-green-700.hover_text-green-900(href=`/species/${sp.group_id}`)
+															i= sp.canonical_genus + ' ' + sp.canonical_species_name
 
 				// Results Summary
 				.mb-4
 					p.text-gray-600
 						strong= totalSpecies
 						|  species found
-						if filters.species_type || filters.species_class || filters.search
+						if filters.species_type || filters.species_class || filters.search || filters.cares_only
 							|  with current filters
 
 				// Species Table
@@ -100,6 +149,7 @@ html
 											- if (filters.species_type) nameUrl += `&species_type=${filters.species_type}`;
 											- if (filters.species_class) nameUrl += `&species_class=${filters.species_class}`;
 											- if (filters.search) nameUrl += `&search=${encodeURIComponent(filters.search)}`;
+											- if (filters.cares_only) nameUrl += `&cares_only=true`;
 											a(class="text-gray-700 hover:text-gray-900 no-underline" + (filters.sort === 'name' ? ' font-bold' : '') href=nameUrl)
 												| Species Name
 												if filters.sort === 'name'
@@ -112,6 +162,7 @@ html
 											- if (filters.species_type) reportsUrl += `&species_type=${filters.species_type}`;
 											- if (filters.species_class) reportsUrl += `&species_class=${filters.species_class}`;
 											- if (filters.search) reportsUrl += `&search=${encodeURIComponent(filters.search)}`;
+											- if (filters.cares_only) reportsUrl += `&cares_only=true`;
 											a(class="text-gray-700 hover:text-gray-900 no-underline" + (filters.sort === 'reports' ? ' font-bold' : '') href=reportsUrl)
 												| Reports
 												if filters.sort === 'reports'

@@ -6,6 +6,8 @@ import {
   getBreedersForSpecies,
   getFilterOptions,
   getNamesForGroup,
+  getCaresCoverageStats,
+  getCaresMaintenersForSpecies,
   SpeciesFilters,
 } from "@/db/species";
 import { getSpeciesKeepers } from "@/db/collection";
@@ -24,17 +26,21 @@ export async function explorer(req: MulmRequest, res: Response) {
     "Species explorer query"
   );
 
+  const caresOnly = validation.data.cares_only === "true";
+
   const filters: SpeciesFilters = {
     species_type: validation.data.species_type,
     species_class: validation.data.species_class,
     search: validation.data.search,
     sort: validation.data.sort,
+    cares_only: caresOnly || undefined,
   };
 
   try {
-    const [species, filterOptions] = await Promise.all([
+    const [species, filterOptions, caresStats] = await Promise.all([
       getSpeciesForExplorer(filters),
       getFilterOptions(),
+      caresOnly ? getCaresCoverageStats() : Promise.resolve(null),
     ]);
 
     const classOptions = filters.species_type ? getClassOptions(filters.species_type) : [];
@@ -48,6 +54,7 @@ export async function explorer(req: MulmRequest, res: Response) {
       classOptions,
       totalSpecies: species.length,
       validationErrors: validation.errors,
+      caresStats,
     });
   } catch (error) {
     logger.error("Error loading species explorer", error);
@@ -90,6 +97,10 @@ export async function detail(req: MulmRequest, res: Response) {
       return;
     }
 
+    const caresMaintainers = speciesDetail.is_cares_species
+      ? await getCaresMaintenersForSpecies(groupId)
+      : [];
+
     const displayName = `${speciesDetail.canonical_genus} ${speciesDetail.canonical_species_name}`;
 
     res.render("species/detail", {
@@ -104,6 +115,7 @@ export async function detail(req: MulmRequest, res: Response) {
       totalBreeders: breeders.length,
       keeperCount: keepers.count,
       keepers: keepers.members,
+      caresMaintainers,
     });
   } catch (error) {
     logger.error("Error loading species detail", error);
