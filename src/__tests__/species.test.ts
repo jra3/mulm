@@ -3,6 +3,7 @@ import assert from "node:assert";
 import {
   getSpeciesForExplorer,
   getSpeciesDetail,
+  getCaresCoverageStats,
   type SpeciesFilters,
 } from "../db/species";
 import {
@@ -279,5 +280,85 @@ void describe("Species Detail Functionality", () => {
   void test("Returns null for non-existent species", async () => {
     const detail = await getSpeciesDetail(99999);
     assert.strictEqual(detail, null);
+  });
+});
+
+void describe("CARES Species Filter", () => {
+  let ctx: TestContext;
+
+  beforeEach(async () => {
+    ctx = await setupTestDatabase();
+
+    const species1 = await createTestSpeciesName(
+      ctx.db,
+      "Cockatoo Dwarf Cichlid",
+      "Apistogramma cacatuoides",
+      "Apistogramma",
+      "cacatuoides",
+      "Cichlids - New World"
+    );
+
+    const species2 = await createTestSpeciesName(
+      ctx.db,
+      "Neon Tetra",
+      "Paracheirodon innesi",
+      "Neon",
+      "tetra",
+      "Characins"
+    );
+
+    // Mark species1 as CARES
+    await ctx.db.run(
+      `UPDATE species_name_group SET is_cares_species = 1 WHERE group_id = ?`,
+      [species1.group_id]
+    );
+
+    // Create submissions so species appear in explorer (HAVING total_breeds > 0)
+    for (const sp of [species1, species2]) {
+      await ctx.db.run(
+        `INSERT INTO submissions (
+          member_id, common_name_id, scientific_name_id, program, species_type, species_class,
+          species_common_name, species_latin_name, approved_on, points
+        ) VALUES (?, ?, ?, 'fish', 'Fish', 'Test', 'test', 'test', '2024-01-01', 10)`,
+        [ctx.member.id, sp.common_name_id, sp.scientific_name_id]
+      );
+    }
+  });
+
+  afterEach(async () => {
+    await teardownTestDatabase(ctx);
+  });
+
+  void test("Filters to CARES species only", async () => {
+    const all = await getSpeciesForExplorer();
+    assert.strictEqual(all.length, 2);
+
+    const caresOnly = await getSpeciesForExplorer({ cares_only: true });
+    assert.strictEqual(caresOnly.length, 1);
+    assert.strictEqual(caresOnly[0].canonical_genus, "Apistogramma");
+    assert.strictEqual(caresOnly[0].is_cares_species, 1);
+  });
+
+  void test("CARES filter combines with other filters", async () => {
+    const results = await getSpeciesForExplorer({
+      cares_only: true,
+      search: "Apisto",
+    });
+    assert.strictEqual(results.length, 1);
+
+    const noResults = await getSpeciesForExplorer({
+      cares_only: true,
+      search: "Neon",
+    });
+    assert.strictEqual(noResults.length, 0);
+  });
+
+  void test("Coverage stats return correct values", async () => {
+    const stats = await getCaresCoverageStats();
+    assert.ok(stats.total_cares_species >= 1, "Should have at least 1 CARES species");
+    assert.ok(stats.coverage_percent >= 0 && stats.coverage_percent <= 100);
+    assert.ok(Array.isArray(stats.most_maintained));
+    assert.ok(Array.isArray(stats.unmaintained));
+    assert.ok(stats.unmaintained.length <= 10, "Unmaintained list should be capped at 10");
   });
 });
