@@ -690,6 +690,18 @@ void describe("Pug Template Rendering", () => {
             };
             break;
 
+          case "cares.pug":
+            templateData.stats = { speciesCount: 42, memberCount: 12 };
+            templateData.isParticipant = false;
+            templateData.memberSpeciesCount = 0;
+            break;
+
+          case "dialog/cares-fry-share.pug":
+            templateData.registrations = [
+              { group_id: 1, common_name: "Cockatoo Dwarf Cichlid", scientific_name: "Apistogramma cacatuoides" },
+            ];
+            break;
+
           default:
             // Apply any additional common data for unhandled templates
             break;
