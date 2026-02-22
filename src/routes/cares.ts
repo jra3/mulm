@@ -8,6 +8,9 @@ import {
   updateCaresPhoto,
   getCaresRegistrations,
   getCaresEligibility,
+  getCaresStats,
+  isMemberCaresParticipant,
+  getMemberCaresCount,
 } from "@/db/cares";
 import { getCollectionEntry } from "@/db/collection";
 import { caresRegistrationSchema } from "@/forms/cares";
@@ -394,6 +397,32 @@ router.get("/api/cares/registrations/:memberId", async (req: MulmRequest, res: R
     logger.error("Failed to get CARES registrations", error);
     res.status(500).json({ error: "Failed to load registrations" });
   }
+});
+
+// Landing page
+router.get("/", async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+  const isLoggedIn = Boolean(viewer);
+
+  const stats = await getCaresStats();
+
+  let isParticipant = false;
+  let memberSpeciesCount = 0;
+
+  if (viewer) {
+    [isParticipant, memberSpeciesCount] = await Promise.all([
+      isMemberCaresParticipant(viewer.id),
+      getMemberCaresCount(viewer.id),
+    ]);
+  }
+
+  res.render("cares", {
+    title: "CARES Fish Preservation Program",
+    isLoggedIn,
+    stats,
+    isParticipant,
+    memberSpeciesCount,
+  });
 });
 
 export default router;

@@ -19,6 +19,7 @@ import * as standings from "@/routes/standings";
 import * as tank from "@/routes/tank";
 import * as species from "@/routes/species";
 import * as typeahead from "@/routes/typeahead";
+import * as cares from "@/routes/cares";
 import uploadRouter from "@/routes/api/upload";
 
 import { getOutstandingSubmissionsCounts, getWitnessQueueCounts } from "./db/submissions";
@@ -176,6 +177,7 @@ router.get("/me", (req: MulmRequest, res) => {
 });
 
 router.get("/species", species.explorer);
+router.get("/cares", cares.landing);
 
 // Middleware to restrict demo routes to development only
 const devOnly = (_req: MulmRequest, res: express.Response, next: express.NextFunction) => {
