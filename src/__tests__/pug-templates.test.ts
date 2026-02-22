@@ -488,6 +488,7 @@ void describe("Pug Template Rendering", () => {
       /^bapForm\/supplementSingleLine\.pug$/, // Mixin-only template
       /^mixins\/submissionImages\.pug$/, // Mixin-only template
       /^onSelectType\.pug$/, // Include-only template
+      /^member\/caresSection\.pug$/, // Mixin-only template (included by member.pug)
     ];
 
     return !skipPatterns.some((pattern) => pattern.test(relativePath));

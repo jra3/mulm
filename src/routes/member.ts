@@ -1,6 +1,7 @@
 import { getMemberWithAwards, getSpecialtyAwardProgress } from "@/db/members";
 import { getSubmissionsByMember } from "@/db/submissions";
 import { getCollectionForMember, getCollectionStats } from "@/db/collection";
+import { getCaresProfile } from "@/db/cares";
 import { MulmRequest } from "@/sessions";
 import { Response } from "express";
 import { getSubmissionStatus } from "@/utils/submissionStatus";
@@ -56,6 +57,9 @@ export const view = async (req: MulmRequest, res: Response) => {
   // Get collection stats (just for link/badge, not full collection)
   const collectionStats = await getCollectionStats(memberId);
 
+  // Get CARES profile data
+  const caresProfile = await getCaresProfile(memberId);
+
   res.render("member", {
     member,
     fishSubs,
@@ -70,6 +74,7 @@ export const view = async (req: MulmRequest, res: Response) => {
     trophyData: getTrophyDataWithAwards(member.awards),
     progressData,
     collectionStats,
+    caresProfile,
   });
 };
 

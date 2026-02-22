@@ -1,0 +1,143 @@
+include ../mixins/caresBadge.pug
+include ../mixins/date.pug
+
+//- Seal pill mixin
+//- Displays a colored pill for a CARES seal
+mixin sealPill(label, color, icon, earned)
+	- const bgClass = earned ? `bg-${color}-100 text-${color}-800` : 'bg-gray-100 text-gray-400'
+	span(
+		class=`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${bgClass}`
+		title=earned ? `${label} seal earned` : `${label} seal not yet earned`
+	)
+		span= icon
+		span= label
+
+//- CARES species card
+mixin caresSpeciesCard(reg)
+	- const parsedImages = reg.images ? JSON.parse(reg.images) : []
+	- const hasImage = parsedImages.length > 0
+	.bg-white.rounded-lg.shadow-md.p-4.border-l-4.border-green-500
+		.flex.gap-4
+			//- Photo thumbnail
+			if hasImage
+				.flex-shrink-0
+					.w-20.h-20.rounded-lg.overflow-hidden
+						img.w-full.h-full.object-cover(
+							src=parsedImages[0].url.replace('-original', '-thumb')
+							alt=`${reg.common_name || reg.scientific_name || 'Species'} photo`
+							loading="lazy"
+						)
+			else
+				.flex-shrink-0
+					.w-20.h-20.rounded-lg.bg-gray-100.flex.items-center.justify-center
+						span.text-3xl.text-gray-400 🐟
+
+			//- Species info and seals
+			.flex-1.min-w-0
+				.flex.items-start.justify-between.gap-2
+					div
+						if reg.common_name
+							a.font-semibold.text-gray-900.hover_text-blue-600(href=`/species/${reg.group_id}`)= reg.common_name
+						if reg.scientific_name
+							.text-sm.italic.text-gray-600= reg.scientific_name
+					+caresBadge('sm')
+
+				//- Seals row
+				div(class="flex flex-wrap gap-1.5 mt-2")
+					+sealPill('Gold', 'yellow', '🥇', reg.has_photo)
+					+sealPill('Green', 'green', '📝', reg.has_article)
+					+sealPill('Blue', 'blue', '🐠', reg.has_internal_share)
+					+sealPill('Red', 'red', '🌐', reg.has_external_share)
+					+sealPill('Longevity', 'purple', '⏳', reg.is_longevity)
+
+				//- Registration date
+				.text-xs.text-gray-500.mt-2
+					span Registered:
+					= ' '
+					+shortDate(reg.cares_registered_at, "Registered on")
+					if reg.cares_last_confirmed
+						span.mx-1 ·
+						span Last confirmed:
+						= ' '
+						+shortDate(reg.cares_last_confirmed, "Last confirmed on")
+
+//- Main CARES section (called from member.pug)
+mixin caresSection(caresProfile)
+	- const { registrations, articles, fryShares } = caresProfile
+	- const hasData = registrations.length > 0 || articles.length > 0 || fryShares.length > 0
+
+	if hasData
+		section.bg-green-50.py-8
+			div(class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8")
+				h3(class="text-xl lg:text-3xl font-extrabold text-center mb-2 text-green-900") C.A.R.E.S. Program
+				p.text-center.text-green-700.mb-6 Conservation, Awareness, Recognition, Encouragement &amp; Support
+
+				//- Registrations
+				if registrations.length > 0
+					details(open)
+						summary.cursor-pointer.text-lg.font-bold.text-green-900.mb-4.select-none.hover_text-green-700
+							= `Registered Species (${registrations.length})`
+						div(class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6")
+							each reg in registrations
+								+caresSpeciesCard(reg)
+
+				//- Articles
+				if articles.length > 0
+					details
+						summary.cursor-pointer.text-lg.font-bold.text-green-900.mb-4.select-none.hover_text-green-700
+							= `Articles Published (${articles.length})`
+						.bg-white.rounded-lg.shadow-sm.overflow-hidden.mb-6
+							each article, idx in articles
+								- const borderClass = idx > 0 ? 'border-t border-gray-200' : ''
+								div(class=`p-4 ${borderClass}`)
+									.flex.items-start.justify-between.gap-3
+										div
+											if article.url
+												a.font-medium.text-blue-600.hover_text-blue-800(
+													href=article.url
+													target="_blank"
+													rel="noopener noreferrer"
+												)= article.title
+											else
+												span.font-medium.text-gray-900= article.title
+											.text-sm.text-gray-600.mt-1
+												if article.species_common_name
+													span= article.species_common_name
+													if article.species_scientific_name
+														span.italic.ml-1= `(${article.species_scientific_name})`
+												else if article.species_scientific_name
+													span.italic= article.species_scientific_name
+										if article.published_date
+											.text-sm.text-gray-500.flex-shrink-0
+												+shortDate(article.published_date, "Published on")
+
+				//- Fry Sharing
+				if fryShares.length > 0
+					details
+						summary.cursor-pointer.text-lg.font-bold.text-green-900.mb-4.select-none.hover_text-green-700
+							= `Fry Shared (${fryShares.length})`
+						.bg-white.rounded-lg.shadow-sm.overflow-hidden.mb-6
+							each share, idx in fryShares
+								- const borderClass = idx > 0 ? 'border-t border-gray-200' : ''
+								div(class=`p-4 ${borderClass}`)
+									.flex.items-start.justify-between.gap-3
+										div
+											.font-medium.text-gray-900
+												if share.species_common_name
+													span= share.species_common_name
+												else if share.species_scientific_name
+													span.italic= share.species_scientific_name
+												else
+													span Unknown species
+											.text-sm.text-gray-600.mt-1
+												span Shared with:
+												= ' '
+												span.font-medium= share.recipient_name
+												if share.recipient_club
+													span.text-gray-500.ml-1= `(${share.recipient_club})`
+												if share.is_external
+													span(class="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800") External
+											if share.notes
+												.text-sm.text-gray-500.mt-1= share.notes
+										.text-sm.text-gray-500.flex-shrink-0
+											+shortDate(share.share_date, "Shared on")

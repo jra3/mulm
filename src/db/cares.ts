@@ -1,0 +1,224 @@
+import { query } from "./conn";
+
+export interface CaresRegistration {
+  collection_id: number;
+  group_id: number;
+  common_name: string | null;
+  scientific_name: string | null;
+  cares_registered_at: string;
+  cares_last_confirmed: string | null;
+  images: string | null; // JSON array of ImageMetadata from species_collection
+  // Seal flags
+  has_photo: boolean;
+  has_article: boolean;
+  has_internal_share: boolean;
+  has_external_share: boolean;
+  is_longevity: boolean;
+  // Counts
+  article_count: number;
+  fry_share_count: number;
+}
+
+export interface CaresArticle {
+  id: number;
+  title: string;
+  url: string | null;
+  published_date: string | null;
+  species_common_name: string | null;
+  species_scientific_name: string | null;
+  group_id: number;
+}
+
+export interface CaresFryShare {
+  id: number;
+  recipient_name: string;
+  recipient_club: string | null;
+  share_date: string;
+  notes: string | null;
+  species_common_name: string | null;
+  species_scientific_name: string | null;
+  group_id: number;
+  is_external: boolean;
+}
+
+export interface CaresProfile {
+  registrations: CaresRegistration[];
+  articles: CaresArticle[];
+  fryShares: CaresFryShare[];
+}
+
+interface RegistrationRow {
+  collection_id: number;
+  group_id: number;
+  common_name: string | null;
+  scientific_name: string | null;
+  cares_registered_at: string;
+  cares_last_confirmed: string | null;
+  images: string | null;
+  has_photo: number;
+  article_count: number;
+  internal_share_count: number;
+  external_share_count: number;
+  years_confirmed: number;
+}
+
+interface ArticleRow {
+  id: number;
+  title: string;
+  url: string | null;
+  published_date: string | null;
+  common_name: string | null;
+  scientific_name: string | null;
+  species_group_id: number;
+}
+
+interface FryShareRow {
+  id: number;
+  recipient_name: string;
+  recipient_club: string | null;
+  share_date: string;
+  notes: string | null;
+  common_name: string | null;
+  scientific_name: string | null;
+  species_group_id: number;
+  is_external: number;
+}
+
+/**
+ * Get CARES profile data for a member: registrations with seal info,
+ * articles, and fry sharing history.
+ */
+export async function getCaresProfile(memberId: number): Promise<CaresProfile> {
+  // Get CARES registrations with seal calculations
+  const registrations = await query<RegistrationRow>(
+    `SELECT
+      c.id AS collection_id,
+      c.group_id,
+      COALESCE(
+        (SELECT common_name FROM species_common_name WHERE group_id = c.group_id LIMIT 1),
+        c.common_name
+      ) AS common_name,
+      COALESCE(
+        sng.canonical_genus || ' ' || sng.canonical_species_name,
+        c.scientific_name
+      ) AS scientific_name,
+      c.cares_registered_at,
+      c.cares_last_confirmed,
+      c.images,
+      CASE WHEN c.images IS NOT NULL AND c.images != '[]' THEN 1 ELSE 0 END AS has_photo,
+      COALESCE((
+        SELECT COUNT(*) FROM cares_article ca
+        WHERE ca.member_id = c.member_id AND ca.species_group_id = c.group_id
+      ), 0) AS article_count,
+      COALESCE((
+        SELECT COUNT(*) FROM cares_fry_share fs
+        WHERE fs.member_id = c.member_id AND fs.species_group_id = c.group_id
+          AND fs.recipient_member_id IS NOT NULL
+      ), 0) AS internal_share_count,
+      COALESCE((
+        SELECT COUNT(*) FROM cares_fry_share fs
+        WHERE fs.member_id = c.member_id AND fs.species_group_id = c.group_id
+          AND fs.recipient_club IS NOT NULL AND fs.recipient_member_id IS NULL
+      ), 0) AS external_share_count,
+      CASE
+        WHEN c.cares_last_confirmed IS NOT NULL
+          AND julianday(c.cares_last_confirmed) - julianday(c.cares_registered_at) >= 730
+        THEN 1
+        ELSE 0
+      END AS years_confirmed
+    FROM species_collection c
+    LEFT JOIN species_name_group sng ON c.group_id = sng.group_id
+    WHERE c.member_id = ?
+      AND c.cares_registered_at IS NOT NULL
+      AND c.removed_date IS NULL
+    ORDER BY c.cares_registered_at DESC`,
+    [memberId]
+  );
+
+  // Get articles
+  const articles = await query<ArticleRow>(
+    `SELECT
+      ca.id,
+      ca.title,
+      ca.url,
+      ca.published_date,
+      COALESCE(
+        (SELECT common_name FROM species_common_name WHERE group_id = ca.species_group_id LIMIT 1),
+        NULL
+      ) AS common_name,
+      COALESCE(
+        sng.canonical_genus || ' ' || sng.canonical_species_name,
+        NULL
+      ) AS scientific_name,
+      ca.species_group_id
+    FROM cares_article ca
+    LEFT JOIN species_name_group sng ON ca.species_group_id = sng.group_id
+    WHERE ca.member_id = ?
+    ORDER BY ca.published_date DESC, ca.created_at DESC`,
+    [memberId]
+  );
+
+  // Get fry shares
+  const fryShares = await query<FryShareRow>(
+    `SELECT
+      fs.id,
+      fs.recipient_name,
+      fs.recipient_club,
+      fs.share_date,
+      fs.notes,
+      COALESCE(
+        (SELECT common_name FROM species_common_name WHERE group_id = fs.species_group_id LIMIT 1),
+        NULL
+      ) AS common_name,
+      COALESCE(
+        sng.canonical_genus || ' ' || sng.canonical_species_name,
+        NULL
+      ) AS scientific_name,
+      fs.species_group_id,
+      CASE WHEN fs.recipient_member_id IS NULL AND fs.recipient_club IS NOT NULL THEN 1 ELSE 0 END AS is_external
+    FROM cares_fry_share fs
+    LEFT JOIN species_name_group sng ON fs.species_group_id = sng.group_id
+    WHERE fs.member_id = ?
+    ORDER BY fs.share_date DESC, fs.created_at DESC`,
+    [memberId]
+  );
+
+  return {
+    registrations: registrations.map((r) => ({
+      collection_id: r.collection_id,
+      group_id: r.group_id,
+      common_name: r.common_name,
+      scientific_name: r.scientific_name,
+      cares_registered_at: r.cares_registered_at,
+      cares_last_confirmed: r.cares_last_confirmed,
+      images: r.images,
+      has_photo: Boolean(r.has_photo),
+      has_article: r.article_count > 0,
+      has_internal_share: r.internal_share_count > 0,
+      has_external_share: r.external_share_count > 0,
+      is_longevity: Boolean(r.years_confirmed),
+      article_count: r.article_count,
+      fry_share_count: r.internal_share_count + r.external_share_count,
+    })),
+    articles: articles.map((a) => ({
+      id: a.id,
+      title: a.title,
+      url: a.url,
+      published_date: a.published_date,
+      species_common_name: a.common_name,
+      species_scientific_name: a.scientific_name,
+      group_id: a.species_group_id,
+    })),
+    fryShares: fryShares.map((f) => ({
+      id: f.id,
+      recipient_name: f.recipient_name,
+      recipient_club: f.recipient_club,
+      share_date: f.share_date,
+      notes: f.notes,
+      species_common_name: f.common_name,
+      species_scientific_name: f.scientific_name,
+      group_id: f.species_group_id,
+      is_external: Boolean(f.is_external),
+    })),
+  };
+}
