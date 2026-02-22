@@ -1,0 +1,166 @@
+include ../header.pug
+
++dialog()
+	if isUpdate
+		h2.text-2xl.font-bold.mb-2 Update CARES Photo
+		p.text-gray-600.text-sm.mb-4
+			| Update the registration photo for #[strong= entry.common_name || entry.scientific_name]
+	else
+		h2.text-2xl.font-bold.mb-2 Register for CARES
+		p.text-gray-600.text-sm.mb-4
+			| Register #[strong= entry.common_name || entry.scientific_name] for the C.A.R.E.S. preservation program.
+
+	//- Info box about CARES
+	if !isUpdate
+		.bg-green-50.border.border-green-200.rounded-lg.p-3.mb-4
+			.flex.items-start.gap-2
+				.text-lg.flex-shrink-0 🐟
+				div
+					.text-sm.font-semibold.text-green-800 C.A.R.E.S. Fish Preservation
+					.text-xs.text-green-700.mt-1 By registering, you're helping document captive populations of at-risk species. A Gold seal will be awarded upon registration.
+
+	if isUpdate
+		form(
+			hx-post=`/api/cares/${entry.id}/photo`
+			hx-target="#dialogContent"
+			hx-swap="innerHTML"
+			hx-encoding="multipart/form-data"
+		)
+			.flex.flex-col.gap-4
+				//- Current photo
+				if photoUrl
+					.space-y-1
+						label.input-label Current Photo
+						.rounded-lg.overflow-hidden.border.border-gray-200
+							img.w-full.h-48.object-cover(
+								src=photoUrl.replace('-original', '-medium')
+								alt="Current CARES photo"
+							)
+
+				//- New photo upload
+				.space-y-1
+					label.input-label(for="cares-photo") New Photo
+					.text-xs.text-gray-500.mb-1 Side-view photo showing identifying characteristics (JPEG, PNG, or WebP)
+					div#cares-upload-zone.border-2.border-dashed.border-gray-300.rounded-lg.p-4.text-center.hover_border-green-400.transition-colors.cursor-pointer(
+						onclick="document.getElementById('cares-photo-input').click()"
+					)
+						div#cares-preview.hidden
+							img#cares-preview-img.max-h-48.mx-auto.rounded(alt="Preview")
+							p.text-xs.text-gray-500.mt-1#cares-preview-name
+						div#cares-placeholder
+							.text-gray-400.text-3xl 📷
+							p.mt-2.text-sm.text-gray-600
+								span.font-semibold Click to select photo
+							p.text-xs.text-gray-400 or drag and drop
+
+					input#cares-photo-input.hidden(
+						type="file"
+						name="photo"
+						accept="image/jpeg,image/png,image/webp"
+						required
+						onchange="previewCaresPhoto(this)"
+					)
+
+				.flex.gap-2.justify-end.pt-2.border-t.border-gray-300
+					button.outline(
+						type="button"
+						hx-on:click="document.getElementById('dialog').remove()"
+					) Cancel
+					button.primary(type="submit") Update Photo
+	else
+		form(
+			hx-post="/api/cares/register"
+			hx-target="#dialogContent"
+			hx-swap="innerHTML"
+			hx-encoding="multipart/form-data"
+		)
+			input(type="hidden" name="collection_entry_id" value=entry.id)
+
+			.flex.flex-col.gap-4
+				//- Species info (read-only)
+				.bg-gray-50.rounded-lg.p-3
+					.flex.items-center.gap-3
+						.flex-1
+							if entry.common_name
+								.font-medium.text-gray-900= entry.common_name
+							if entry.scientific_name
+								.text-sm.italic.text-gray-600= entry.scientific_name
+
+				//- Photo upload
+				.space-y-1
+					label.input-label(for="cares-photo") Registration Photo #[span.text-red-500 *]
+					.text-xs.text-gray-500.mb-1 Side-view photo showing identifying characteristics (JPEG, PNG, or WebP)
+					div#cares-upload-zone.border-2.border-dashed.border-gray-300.rounded-lg.p-4.text-center.hover_border-green-400.transition-colors.cursor-pointer(
+						onclick="document.getElementById('cares-photo-input').click()"
+					)
+						div#cares-preview.hidden
+							img#cares-preview-img.max-h-48.mx-auto.rounded(alt="Preview")
+							p.text-xs.text-gray-500.mt-1#cares-preview-name
+						div#cares-placeholder
+							.text-gray-400.text-3xl 📷
+							p.mt-2.text-sm.text-gray-600
+								span.font-semibold Click to select photo
+							p.text-xs.text-gray-400 or drag and drop
+
+					input#cares-photo-input.hidden(
+						type="file"
+						name="photo"
+						accept="image/jpeg,image/png,image/webp"
+						required
+						onchange="previewCaresPhoto(this)"
+					)
+
+				.flex.gap-2.justify-end.pt-2.border-t.border-gray-300
+					button.outline(
+						type="button"
+						hx-on:click="document.getElementById('dialog').remove()"
+					) Cancel
+					button.primary(type="submit") Register for CARES
+
+	//- Photo preview and drag-drop script
+	script.
+		function previewCaresPhoto(input) {
+			var file = input.files && input.files[0];
+			if (!file) return;
+
+			var reader = new FileReader();
+			reader.onload = function(e) {
+				var preview = document.getElementById('cares-preview');
+				var previewImg = document.getElementById('cares-preview-img');
+				var previewName = document.getElementById('cares-preview-name');
+				var placeholder = document.getElementById('cares-placeholder');
+
+				previewImg.src = e.target.result;
+				previewName.textContent = file.name;
+				preview.classList.remove('hidden');
+				placeholder.classList.add('hidden');
+			};
+			reader.readAsDataURL(file);
+		}
+
+		// Drag and drop support
+		(function() {
+			var zone = document.getElementById('cares-upload-zone');
+			if (!zone) return;
+
+			zone.addEventListener('dragover', function(e) {
+				e.preventDefault();
+				zone.classList.add('border-green-400', 'bg-green-50');
+			});
+
+			zone.addEventListener('dragleave', function(e) {
+				e.preventDefault();
+				zone.classList.remove('border-green-400', 'bg-green-50');
+			});
+
+			zone.addEventListener('drop', function(e) {
+				e.preventDefault();
+				zone.classList.remove('border-green-400', 'bg-green-50');
+
+				var input = document.getElementById('cares-photo-input');
+				if (e.dataTransfer.files.length > 0) {
+					input.files = e.dataTransfer.files;
+					previewCaresPhoto(input);
+				}
+			});
+		})();

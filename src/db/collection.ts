@@ -14,6 +14,9 @@ export interface CollectionEntry {
   visibility: 'public' | 'private';
   created_at: string;
   updated_at: string;
+  // CARES registration data
+  cares_registered_at: string | null;
+  cares_photo_url: string | null;
   // Joined canonical species data (if group_id is set)
   species?: {
     program_class: string | null;
@@ -66,6 +69,8 @@ interface CollectionRow {
   visibility: 'public' | 'private';
   created_at: string;
   updated_at: string;
+  cares_registered_at: string | null;
+  cares_photo_url: string | null;
   // Joined fields from canonical species (if group_id is set)
   canonical_common_name?: string;
   canonical_scientific_name?: string;
@@ -146,6 +151,8 @@ export async function getCollectionForMember(
     common_name: row.canonical_common_name || row.common_name || null,
     scientific_name: row.canonical_scientific_name || row.scientific_name || null,
     images: row.images ? JSON.parse(row.images) as ImageMetadata[] : null,
+    cares_registered_at: row.cares_registered_at || null,
+    cares_photo_url: row.cares_photo_url || null,
     species: row.group_id ? {
       program_class: row.program_class || null,
       species_type: row.species_type || null,
@@ -357,6 +364,8 @@ export async function getCollectionEntry(
     common_name: row.canonical_common_name || row.common_name || null,
     scientific_name: row.canonical_scientific_name || row.scientific_name || null,
     images: row.images ? JSON.parse(row.images) as ImageMetadata[] : null,
+    cares_registered_at: row.cares_registered_at || null,
+    cares_photo_url: row.cares_photo_url || null,
     species: row.group_id ? {
       program_class: row.program_class || null,
       species_type: row.species_type || null,

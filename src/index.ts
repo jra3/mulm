@@ -10,6 +10,7 @@ import cookieParser from "cookie-parser";
 import * as account from "@/routes/account";
 import adminRouter from "@/routes/adminRouter";
 import * as auth from "@/routes/auth";
+import caresRouter from "@/routes/cares";
 import collectionRouter from "@/routes/collection";
 import displayRouter from "@/routes/display";
 import * as member from "@/routes/member";
@@ -214,6 +215,9 @@ router.use("/admin", adminRouter);
 
 // Collection routes (member species inventory)
 router.use("/", collectionRouter);
+
+// CARES registration routes
+router.use("/", caresRouter);
 
 // Display screen for club meetings (public, no auth required)
 router.use("/", displayRouter);

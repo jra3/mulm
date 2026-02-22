@@ -106,6 +106,32 @@ mixin collectionCard(entry, canEdit = false, options = {})
 								.flex.items-center.justify-center.bg-gray-100.rounded.aspect-video
 									span.text-sm.font-medium.text-gray-600= `+${entry.images.length - 3}`
 
+			//- CARES Gold Seal (if registered)
+			if entry.cares_registered_at
+				.flex.items-center.gap-2.mb-3.bg-yellow-50.border.border-yellow-200.rounded-lg.px-3.py-2
+					.text-xl.flex-shrink-0 🟡
+					.flex-1
+						.text-sm.font-semibold.text-yellow-800 CARES Registered
+						.text-xs.text-yellow-600= `Since ${new Date(entry.cares_registered_at).toLocaleDateString()}`
+					if canEdit
+						button.text-xs.text-yellow-700.hover_text-yellow-900.underline(
+							hx-get=`/dialog/cares/register/${entry.id}`
+							hx-target="body"
+							hx-swap="beforeend"
+						) Edit Photo
+
+			//- CARES photo (if registered and has photo)
+			if entry.cares_registered_at && entry.cares_photo_url
+				.mb-3
+					.relative.aspect-video.overflow-hidden.rounded-lg.border.border-yellow-200
+						img.w-full.h-full.object-cover(
+							src=entry.cares_photo_url.replace('-original', '-medium')
+							alt=`${entry.common_name || 'Species'} CARES photo`
+							loading="lazy"
+							class="cursor-pointer"
+							onclick=`window.open('${entry.cares_photo_url}', '_blank')`
+						)
+
 			//- Details: dates, visibility
 			div(class=variant === 'large' ? 'text-base' : 'text-sm' class="text-gray-600 mb-3 space-y-2")
 				if entry.acquired_date
@@ -133,6 +159,17 @@ mixin collectionCard(entry, canEdit = false, options = {})
 							if species.is_cares_species
 								|
 								+caresBadge('sm')
+
+			//- CARES registration CTA (for eligible, unregistered species)
+			if canEdit && isCanonical && species.is_cares_species && !entry.cares_registered_at
+				.mb-3
+					button.w-full.inline-flex.items-center.justify-center.gap-2.px-3.py-2.text-sm.font-medium.text-green-700.bg-green-50.hover_bg-green-100.rounded-md.border.border-green-200.transition(
+						hx-get=`/dialog/cares/register/${entry.id}`
+						hx-target="body"
+						hx-swap="beforeend"
+					)
+						span 🐟
+						span Register for CARES
 
 			//- Notes (if any)
 			if entry.notes
