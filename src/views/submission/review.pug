@@ -81,6 +81,11 @@ html
                             rel="noopener noreferrer"
                         )= submission.article_link
 
+            if submission.notes
+                div.max-w-4xl.mx-auto.text-left.pt-4.px-4
+                    h2(class="text-l font-bold pt-2 mb-4") Breeder Notes
+                    p.text-gray-700.whitespace-pre-wrap= submission.notes
+
             div.max-w-4xl.mx-auto.text-left.pt-4.px-4
                 h2(class="text-l font-bold pt-2 mb-4") Tank Details
                 div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")

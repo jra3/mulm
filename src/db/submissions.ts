@@ -67,6 +67,7 @@ export type Submission = {
   supplement_type: string;
   supplement_regimen: string;
 
+  notes: string | null;
   images: string | null;
   video_url: string | null;
 

@@ -172,6 +172,16 @@ form.bg-white.rounded-lg(
 						placeholder="https://example.com/my-breeding-article"
 					)
 
+				.form-group.col-span-2
+					label.input-label(for="notes") Breeder Notes
+					textarea.text-input(
+						id="notes"
+						name="notes"
+						rows="3"
+						maxlength="2000"
+						placeholder="Collection data, lineage info, breeding notes..."
+					)= submission.notes || ""
+
 		// Tab 3: Tank Info
 		.tab-content.hidden(data-tab-content="tank")
 			.grid.gap-4(class="md:grid-cols-2")
