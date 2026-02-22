@@ -1,0 +1,137 @@
+include header.pug
+include mixins/card.pug
+
+doctype html
+html
+	+headTag(title)
+
+	body.bg-white.text-gray-800
+		+pageHeader(isLoggedIn, 'CARES Program')
+
+		//- Hero Section
+		section.bg-green-50.py-12
+			.max-w-4xl.mx-auto.px-4.text-center
+				.text-5xl.mb-4 🐟
+				h1.text-4xl.font-extrabold.text-gray-900.mb-4 CARES Fish Preservation Program
+				p.text-lg.text-gray-600.max-w-2xl.mx-auto.mb-6 Help preserve endangered freshwater fish species by maintaining them in your home aquarium.
+				.flex.gap-4.justify-center.flex-wrap
+					if isLoggedIn && !isParticipant
+						a(href="/collection/new")
+							button.primary Register Your First Species
+					else if isLoggedIn && isParticipant
+						a(href="/me")
+							button.primary View Your CARES Profile
+					else
+						button.primary(
+							hx-get="/dialog/auth/signin"
+							hx-target="closest body"
+							hx-swap="beforeend") Sign In to Participate
+					a(href="https://caresforfish.org/" target="_blank" rel="noopener noreferrer")
+						button.outline Learn More at caresforfish.org
+
+		//- BAS Coverage Statistics
+		section.bg-white.py-12
+			.max-w-4xl.mx-auto.px-4.text-center
+				h2.text-2xl.font-bold.text-gray-900.mb-8 BAS Coverage
+				.flex.justify-center.gap-12.flex-wrap
+					.flex.flex-col.items-center
+						.text-5xl.font-extrabold.text-green-700= stats.speciesCount
+						.text-gray-600.mt-2 species maintained
+						.text-gray-500.text-sm by BAS members
+					.flex.flex-col.items-center
+						.text-5xl.font-extrabold.text-green-700= stats.memberCount
+						.text-gray-600.mt-2 participating members
+
+		//- What is CARES?
+		section.bg-gray-50.py-12
+			.max-w-4xl.mx-auto.px-4
+				h2.text-2xl.font-bold.text-gray-900.mb-6.text-center What is CARES?
+				.grid.gap-6(class="md:grid-cols-2")
+					+card({padding: 'lg', shadow: true, margin: ''})
+						h3.font-semibold.text-lg.text-gray-900.mb-2 Conservation Through Aquarists
+						p.text-gray-700 CARES — Conservation, Awareness, Recognition, Encouragement, Support — is an international initiative founded in 2004 that enlists hobbyists to maintain populations of at-risk freshwater fish species in home aquariums.
+					+card({padding: 'lg', shadow: true, margin: ''})
+						h3.font-semibold.text-lg.text-gray-900.mb-2 A Living Gene Bank
+						p.text-gray-700 By distributing breeding populations across hundreds of hobbyist tanks worldwide, CARES creates a decentralized "living gene bank" — a safety net against extinction in the wild.
+					+card({padding: 'lg', shadow: true, margin: ''})
+						h3.font-semibold.text-lg.text-gray-900.mb-2 BAS Participation
+						p.text-gray-700 The Brooklyn Aquarium Society is a proud participating member club. Our breeders help preserve species listed on the CARES priority list through the BAP program.
+					+card({padding: 'lg', shadow: true, margin: ''})
+						h3.font-semibold.text-lg.text-gray-900.mb-2 Learn More
+						p.text-gray-700.mb-3 Visit the official CARES website for the full species priority list, program guidelines, and educational resources.
+						a.link.font-semibold(href="https://caresforfish.org/" target="_blank" rel="noopener noreferrer") caresforfish.org →
+
+		//- How to Participate
+		section.bg-white.py-12
+			.max-w-4xl.mx-auto.px-4
+				h2.text-2xl.font-bold.text-gray-900.mb-8.text-center How to Participate
+				.grid.gap-6(class="md:grid-cols-2")
+					.flex.gap-4.items-start
+						.flex-shrink-0.w-10.h-10.rounded-full.bg-green-100.text-green-800.flex.items-center.justify-center.font-bold 1
+						div
+							h3.font-semibold.text-gray-900 Register a CARES Species
+							p.text-gray-600 Add a CARES-listed species you're currently maintaining to your collection.
+					.flex.gap-4.items-start
+						.flex-shrink-0.w-10.h-10.rounded-full.bg-green-100.text-green-800.flex.items-center.justify-center.font-bold 2
+						div
+							h3.font-semibold.text-gray-900 Upload a Photo
+							p.text-gray-600 Provide a photo for species identification and record-keeping.
+					.flex.gap-4.items-start
+						.flex-shrink-0.w-10.h-10.rounded-full.bg-green-100.text-green-800.flex.items-center.justify-center.font-bold 3
+						div
+							h3.font-semibold.text-gray-900 Earn Seals
+							p.text-gray-600 Share fry and publish articles to earn recognition seals for your contributions.
+					.flex.gap-4.items-start
+						.flex-shrink-0.w-10.h-10.rounded-full.bg-green-100.text-green-800.flex.items-center.justify-center.font-bold 4
+						div
+							h3.font-semibold.text-gray-900 Confirm Annually
+							p.text-gray-600 Confirm each year that you're still maintaining the species to keep your registration active.
+
+		//- Seal Explanation
+		section.bg-gray-50.py-12
+			.max-w-4xl.mx-auto.px-4
+				h2.text-2xl.font-bold.text-gray-900.mb-8.text-center CARES Seals
+				p.text-center.text-gray-600.mb-8 Seals recognize different levels of contribution to species preservation.
+				.grid.gap-4(class="md:grid-cols-5")
+					.text-center.p-4
+						.text-3xl.mb-2 🟡
+						.font-semibold.text-gray-900 Gold
+						.text-sm.text-gray-600 Species registered
+					.text-center.p-4
+						.text-3xl.mb-2 🟢
+						.font-semibold.text-gray-900 Green
+						.text-sm.text-gray-600 Article published
+					.text-center.p-4
+						.text-3xl.mb-2 🔵
+						.font-semibold.text-gray-900 Blue
+						.text-sm.text-gray-600 Fry shared within BAS
+					.text-center.p-4
+						.text-3xl.mb-2 🔴
+						.font-semibold.text-gray-900 Red
+						.text-sm.text-gray-600 Fry shared externally
+					.text-center.p-4
+						.text-3xl.mb-2 ⭐
+						.font-semibold.text-gray-900 Longevity
+						.text-sm.text-gray-600 Multi-year maintenance
+
+		//- CTA Footer
+		section.bg-green-50.py-10
+			.max-w-4xl.mx-auto.px-4.text-center
+				if isLoggedIn && !isParticipant
+					p.text-lg.text-gray-700.mb-4 Ready to help preserve endangered species?
+					a(href="/collection/new")
+						button.primary Register Your First Species
+				else if isLoggedIn && isParticipant
+					p.text-lg.text-gray-700.mb-2
+						span.font-semibold= memberSpeciesCount
+						|  #{memberSpeciesCount === 1 ? 'species' : 'species'} registered
+					a(href="/me")
+						button.primary View Your CARES Profile
+				else
+					p.text-lg.text-gray-700.mb-4 Join BAS members preserving endangered fish species.
+					button.primary(
+						hx-get="/dialog/auth/signin"
+						hx-target="closest body"
+						hx-swap="beforeend") Sign In to Participate
+
+		+footer()

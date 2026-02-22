@@ -46,6 +46,7 @@ mixin pageHeader(loggedIn, title, subtitle, trophyData, trophyUniqueId)
 			.space-x-4.flex.items-center
 				a.link(href="/") Home
 				a.link(href="/species") Species
+				a.link(href="/cares") CARES
 				if loggedIn
 					a.link(href="/me") Me
 				a.link(href=`mailto:${bugReportEmail}` title="Report a bug") 🐛
