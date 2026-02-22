@@ -11,9 +11,11 @@ import {
   getCaresStats,
   isMemberCaresParticipant,
   getMemberCaresCount,
+  createFryShare,
 } from "@/db/cares";
 import { getCollectionEntry } from "@/db/collection";
-import { caresRegistrationSchema } from "@/forms/cares";
+import { searchMembers as searchMembersDb } from "@/db/members";
+import { caresRegistrationSchema, caresFryShareSchema } from "@/forms/cares";
 import { logger } from "@/utils/logger";
 import { processImage, ImageValidationError } from "@/utils/image-processor";
 import {
@@ -396,6 +398,139 @@ router.get("/api/cares/registrations/:memberId", async (req: MulmRequest, res: R
   } catch (error) {
     logger.error("Failed to get CARES registrations", error);
     res.status(500).json({ error: "Failed to load registrations" });
+  }
+});
+
+/**
+ * GET /dialog/cares/fry-share
+ * Show the fry sharing dialog for recording distribution of CARES species
+ */
+router.get("/dialog/cares/fry-share", async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+  if (!viewer) {
+    res.status(401).send("Not authenticated");
+    return;
+  }
+
+  try {
+    const registrations = await getCaresRegistrations(viewer.id);
+    if (registrations.length === 0) {
+      res.status(400).send(`
+        <div class="alert alert-warning" role="alert">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          You need to register at least one CARES species before recording a fry share.
+        </div>
+      `);
+      return;
+    }
+
+    res.render("dialog/cares-fry-share", {
+      viewer,
+      registrations,
+    });
+  } catch (error) {
+    logger.error("Failed to load fry sharing dialog", error);
+    res.status(500).send("Failed to load fry sharing form");
+  }
+});
+
+/**
+ * POST /api/cares/fry-share
+ * Record a fry share for a CARES species
+ */
+router.post("/api/cares/fry-share", async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+  if (!viewer) {
+    res.status(401).send(`
+      <div class="alert alert-danger" role="alert">
+        <i class="fas fa-times-circle me-2"></i>
+        Not authenticated. Please log in.
+      </div>
+    `);
+    return;
+  }
+
+  try {
+    const data = caresFryShareSchema.parse(req.body);
+
+    // Look up recipient member ID if they're a known BAS member
+    let recipientMemberId: number | null = null;
+    if (!data.recipient_club) {
+      // Internal share - try to find member by name
+      const members = await searchMembersDb(data.recipient_name, 1);
+      const exactMatch = members.find(
+        (m) => m.display_name.toLowerCase() === data.recipient_name.toLowerCase()
+      );
+      if (exactMatch) {
+        recipientMemberId = exactMatch.id;
+      }
+    }
+
+    await createFryShare(
+      viewer.id,
+      data.species_group_id,
+      data.recipient_name,
+      recipientMemberId,
+      data.recipient_club,
+      data.share_date,
+      data.notes
+    );
+
+    const sealType = data.recipient_club ? "Red" : "Blue";
+    logger.info("Fry share recorded", {
+      memberId: viewer.id,
+      speciesGroupId: data.species_group_id,
+      recipientName: data.recipient_name,
+      sealType,
+    });
+
+    res.send(`
+      <div class="alert alert-success" role="alert">
+        <i class="fas fa-check-circle me-2"></i>
+        Fry share recorded! ${sealType} seal earned.
+      </div>
+      <script>
+        setTimeout(function() {
+          var dialog = document.getElementById('dialog');
+          if (dialog) dialog.remove();
+          window.location.reload();
+        }, 1500);
+      </script>
+    `);
+  } catch (error) {
+    if (error instanceof ZodError) {
+      const errorMessages = error.issues.map((issue) => issue.message).join(", ");
+      res.status(400).send(`
+        <div class="alert alert-warning" role="alert">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          ${errorMessages}
+        </div>
+      `);
+      return;
+    }
+
+    if (error instanceof Error) {
+      if (
+        error.message.includes("must have this species") ||
+        error.message.includes("not registered")
+      ) {
+        res.status(400).send(`
+          <div class="alert alert-warning" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            ${error.message}
+          </div>
+        `);
+        return;
+      }
+    }
+
+    logger.error("Fry share recording failed", error);
+    res.status(500).send(`
+      <div class="alert alert-danger" role="alert">
+        <i class="fas fa-times-circle me-2"></i>
+        Failed to record fry share. Please try again.
+      </div>
+    `);
   }
 });
 

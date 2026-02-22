@@ -370,6 +370,82 @@ export async function getCaresProfile(memberId: number): Promise<CaresProfile> {
   };
 }
 
+/**
+ * Get a member's CARES registrations (species they've registered).
+ * Used by the fry sharing dialog to populate the species dropdown.
+ */
+export async function getCaresRegistrations(memberId: number): Promise<Array<{
+  collection_id: number;
+  group_id: number;
+  common_name: string | null;
+  scientific_name: string | null;
+}>> {
+  return query<{
+    collection_id: number;
+    group_id: number;
+    common_name: string | null;
+    scientific_name: string | null;
+  }>(
+    `SELECT
+      c.id AS collection_id,
+      c.group_id,
+      COALESCE(
+        (SELECT common_name FROM species_common_name WHERE group_id = c.group_id LIMIT 1),
+        c.common_name
+      ) AS common_name,
+      COALESCE(
+        sng.canonical_genus || ' ' || sng.canonical_species_name,
+        c.scientific_name
+      ) AS scientific_name
+    FROM species_collection c
+    LEFT JOIN species_name_group sng ON c.group_id = sng.group_id
+    WHERE c.member_id = ?
+      AND c.cares_registered_at IS NOT NULL
+      AND c.removed_date IS NULL
+    ORDER BY common_name, scientific_name`,
+    [memberId]
+  );
+}
+
+/**
+ * Record a fry share for a CARES-registered species.
+ */
+export async function createFryShare(
+  memberId: number,
+  speciesGroupId: number,
+  recipientName: string,
+  recipientMemberId: number | null,
+  recipientClub: string | null,
+  shareDate: string,
+  notes: string | null
+): Promise<number> {
+  // Verify member has this species registered for CARES
+  const registered = await query<{ cnt: number }>(
+    `SELECT COUNT(*) AS cnt FROM species_collection
+     WHERE member_id = ? AND group_id = ? AND cares_registered_at IS NOT NULL AND removed_date IS NULL`,
+    [memberId, speciesGroupId]
+  );
+
+  if ((registered[0]?.cnt ?? 0) === 0) {
+    throw new Error('You must have this species registered for CARES to record a fry share');
+  }
+
+  const stmt = await writeConn.prepare(`
+    INSERT INTO cares_fry_share (member_id, species_group_id, recipient_name, recipient_member_id, recipient_club, share_date, notes)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  try {
+    const result = await stmt.run(
+      memberId, speciesGroupId, recipientName,
+      recipientMemberId, recipientClub, shareDate, notes
+    );
+    return result.lastID as number;
+  } finally {
+    await stmt.finalize();
+  }
+}
+
 export interface CaresStats {
   speciesCount: number;
   memberCount: number;

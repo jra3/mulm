@@ -70,7 +70,14 @@ mixin caresSection(caresProfile)
 		section.bg-green-50.py-8
 			div(class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8")
 				h3(class="text-xl lg:text-3xl font-extrabold text-center mb-2 text-green-900") C.A.R.E.S. Program
-				p.text-center.text-green-700.mb-6 Conservation, Awareness, Recognition, Encouragement &amp; Support
+				p.text-center.text-green-700.mb-4 Conservation, Awareness, Recognition, Encouragement &amp; Support
+				if isSelf && registrations.length > 0
+					.flex.justify-center.mb-6
+						button.primary.text-sm(
+							hx-get="/dialog/cares/fry-share"
+							hx-target="body"
+							hx-swap="beforeend"
+						) Record Fry Share
 
 				//- Registrations
 				if registrations.length > 0

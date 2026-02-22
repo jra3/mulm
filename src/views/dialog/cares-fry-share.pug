@@ -1,0 +1,112 @@
+include ../header.pug
+
++dialog()
+	h2.text-2xl.font-bold.mb-2 Record Fry Share
+	p.text-gray-600.text-sm.mb-4
+		| Record distribution of fry from your CARES-registered species.
+
+	//- Info about seals
+	.bg-blue-50.border.border-blue-200.rounded-lg.p-3.mb-4
+		.flex.items-start.gap-2
+			.text-lg.flex-shrink-0 🐠
+			div
+				.text-sm.font-semibold.text-blue-800 Seal Awards
+				.text-xs.text-blue-700.mt-1 Sharing with a BAS member earns a #[strong Blue seal]. Sharing with someone from another club earns a #[strong Red seal].
+
+	form(
+		hx-post="/api/cares/fry-share"
+		hx-target="#dialogContent"
+		hx-swap="innerHTML"
+	)
+		.flex.flex-col.gap-3
+
+			//- Species selection
+			.space-y-1
+				label.input-label(for="species_group_id") Species #[span.text-red-500 *]
+				select.text-input(
+					id="species_group_id"
+					name="species_group_id"
+					required
+				)
+					option(value="" disabled selected) Select a registered species...
+					each reg in registrations
+						- const label = reg.common_name ? `${reg.common_name} (${reg.scientific_name || ''})` : (reg.scientific_name || 'Unknown')
+						option(value=reg.group_id)= label
+
+			//- Recipient name with typeahead
+			.space-y-1
+				label.input-label(for="recipient_name") Recipient #[span.text-red-500 *]
+				select#recipient-name-typeahead.tom-select-typeahead(
+					name="recipient_name"
+					data-api-url="/api/members/search"
+					data-value-field="value"
+					data-label-field="text"
+					data-search-fields="text,email"
+					data-min-query-length="2"
+					data-max-items="1"
+					data-placeholder="Search BAS members or type a name..."
+					data-create="true"
+				)
+
+			//- External club checkbox and field
+			.space-y-2
+				label.flex.items-center.gap-2.cursor-pointer
+					input#external-toggle.rounded.border-gray-300(
+						type="checkbox"
+						onchange="document.getElementById('club-field').classList.toggle('hidden', !this.checked); if (!this.checked) document.getElementById('recipient_club').value = '';"
+					)
+					span.text-sm.text-gray-700 Recipient is from another club (external share)
+				div#club-field.hidden.space-y-1
+					label.input-label(for="recipient_club") Club Name
+					input.text-input(
+						type="text"
+						id="recipient_club"
+						name="recipient_club"
+						maxlength="200"
+						placeholder="e.g., Greater City Aquarium Society"
+					)
+
+			//- Date
+			.space-y-1
+				label.input-label(for="share_date") Date #[span.text-red-500 *]
+				input.text-input(
+					type="date"
+					id="share_date"
+					name="share_date"
+					required
+					value=new Date().toISOString().split('T')[0]
+				)
+
+			//- Notes
+			.space-y-1
+				label.input-label(for="notes") Notes (optional)
+				textarea.text-input.h-20(
+					id="notes"
+					name="notes"
+					maxlength="500"
+					placeholder="e.g., 10 fry, F2 generation"
+				)
+
+			.flex.gap-2.justify-end.pt-2.border-t.border-gray-300
+				button.outline(
+					type="button"
+					hx-on:click="document.getElementById('dialog').remove()"
+				) Cancel
+				button.primary(type="submit") Record Share
+
+	//- Initialize typeahead after dialog is in DOM
+	script.
+		(function() {
+			var typeahead = document.getElementById('recipient-name-typeahead');
+			if (typeahead && typeof TomSelect !== 'undefined' && typeof getTypeaheadConfig === 'function') {
+				var config = getTypeaheadConfig(typeahead);
+				var options = buildTomSelectOptions(typeahead, config);
+				options.create = true;
+				options.createOnBlur = true;
+				options.createFilter = function(input) { return input.length >= 1; };
+				var instance = new TomSelect(typeahead, options);
+				if (config.maxItems === 1) {
+					instance.control.classList.add('single-value');
+				}
+			}
+		})();
