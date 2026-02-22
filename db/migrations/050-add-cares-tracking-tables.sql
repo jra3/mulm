@@ -6,7 +6,6 @@
 
 -- Extend species_collection with CARES columns
 ALTER TABLE species_collection ADD COLUMN cares_registered_at DATETIME;
-ALTER TABLE species_collection ADD COLUMN cares_photo_id INTEGER REFERENCES uploads(id);
 ALTER TABLE species_collection ADD COLUMN cares_last_confirmed DATE;
 
 -- Articles written about CARES species
@@ -16,10 +15,8 @@ CREATE TABLE cares_article (
   species_group_id INTEGER NOT NULL REFERENCES species_name_group(group_id),
   title TEXT NOT NULL,
   url TEXT,
-  file_id INTEGER REFERENCES uploads(id),
   published_date DATE,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  CHECK (url IS NOT NULL OR file_id IS NOT NULL)
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Fry sharing records for CARES species
