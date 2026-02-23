@@ -1,5 +1,0 @@
-# Ignore cached parquet files and DuckDB databases
-cache/
-*.duckdb
-*.duckdb.wal
-*.duckdb.tmp

@@ -111,8 +111,5 @@
 			"eslint --fix"
 		]
 	},
-	"optionalDependencies": {
-		"duckdb": "^1.4.3"
-	},
 	"keywords": []
 }
