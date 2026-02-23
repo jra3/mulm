@@ -84,7 +84,6 @@
 		"autoprefixer": "^10.4.23",
 		"aws-cdk-lib": "^2.233.0",
 		"concurrently": "^9.2.1",
-		"duckdb": "^1.4.3",
 		"eslint": "^9.39.2",
 		"eslint-config-prettier": "^10.1.8",
 		"globals": "^16.5.0",
@@ -111,6 +110,9 @@
 		"scripts/**/*.ts": [
 			"eslint --fix"
 		]
+	},
+	"optionalDependencies": {
+		"duckdb": "^1.4.3"
 	},
 	"keywords": []
 }
