@@ -22,6 +22,7 @@
 		"sync-db": "./infrastructure/sync-db-from-production.sh",
 		"mcp:species": "tsx src/mcp/species-server.ts",
 		"mcp:members": "tsx src/mcp/member-server.ts",
+		"mcp:backfill": "tsx src/mcp/backfill-server.ts",
 		"lint": "eslint 'src/**/*.ts'",
 		"lint:fix": "eslint 'src/**/*.ts' --fix",
 		"format": "prettier --write \"src/**/*.{ts,js,json}\" \"scripts/**/*.{ts,js}\"",

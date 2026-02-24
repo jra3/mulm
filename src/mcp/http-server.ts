@@ -15,6 +15,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { initializeSpeciesServer } from "./species-server-core";
 import { initializeMemberServer } from "./member-server-core";
+import { initializeBackfillServer } from "./backfill-server-core";
 import { logger } from "../utils/logger";
 import config from "@/config.json";
 import path from "path";
@@ -29,6 +30,7 @@ const dbName = path.basename(dbPath);
 // Store transports by session ID for each server type
 const speciesTransports: Record<string, StreamableHTTPServerTransport> = {};
 const memberTransports: Record<string, StreamableHTTPServerTransport> = {};
+const backfillTransports: Record<string, StreamableHTTPServerTransport> = {};
 
 /**
  * Create a species MCP server instance
@@ -69,6 +71,27 @@ function createMemberServer(): Server {
   );
 
   initializeMemberServer(server);
+  return server;
+}
+
+/**
+ * Create a backfill MCP server instance
+ */
+function createBackfillServer(): Server {
+  const server = new Server(
+    {
+      name: "backfill",
+      version: "1.0.0",
+    },
+    {
+      capabilities: {
+        resources: {},
+        tools: {},
+      },
+    }
+  );
+
+  initializeBackfillServer(server);
   return server;
 }
 
@@ -165,7 +188,7 @@ export async function startMcpHttpServer(): Promise<void> {
       domain,
       database: dbName,
       databasePath: dbPath,
-      servers: ["species", "members"],
+      servers: ["species", "members", "backfill"],
     });
   });
 
@@ -186,6 +209,15 @@ export async function startMcpHttpServer(): Promise<void> {
   );
   app.post("/mcp/members", memberHandler);
   app.get("/mcp/members", memberHandler); // Also support GET for SSE
+
+  // Backfill MCP Server - POST for main communication
+  const backfillHandler = createMcpHandler(
+    "Backfill",
+    backfillTransports,
+    createBackfillServer
+  );
+  app.post("/mcp/backfill", backfillHandler);
+  app.get("/mcp/backfill", backfillHandler); // Also support GET for SSE
 
   // 404 handler
   app.use((_req, res) => {
@@ -236,6 +268,15 @@ export async function stopMcpHttpServer(): Promise<void> {
       delete memberTransports[sessionId];
     } catch (error) {
       logger.error(`Error closing member transport ${sessionId}:`, error);
+    }
+  }
+
+  for (const sessionId in backfillTransports) {
+    try {
+      await backfillTransports[sessionId].close();
+      delete backfillTransports[sessionId];
+    } catch (error) {
+      logger.error(`Error closing backfill transport ${sessionId}:`, error);
     }
   }
 
