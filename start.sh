@@ -7,8 +7,12 @@ export LITESTREAM_SECRET_ACCESS_KEY=$(jq -r '.storage.s3Secret' /app/src/config.
 
 # Restore DB from Litestream replica if not present (e.g., fresh VPS, disaster recovery)
 if [ ! -f /mnt/app-data/database/database.db ]; then
-  echo "No database found, restoring from Litestream replica..."
-  litestream restore -config /etc/litestream.yml /mnt/app-data/database/database.db
+  echo "No database found, attempting restore from Litestream replica..."
+  if litestream restore -config /etc/litestream.yml /mnt/app-data/database/database.db; then
+    echo "Restore complete."
+  else
+    echo "No replica found in R2 (first deploy or empty bucket), starting fresh."
+  fi
 fi
 
 # Start app with continuous WAL replication to R2
