@@ -1,0 +1,10 @@
+dbs:
+  - path: /mnt/app-data/database/database.db
+    replicas:
+      - type: s3
+        bucket: basny-db-replica
+        path: database
+        endpoint: https://9a4b5befcd92efdc63933faccb6c388f.r2.cloudflarestorage.com
+        access-key-id: ${LITESTREAM_ACCESS_KEY_ID}
+        secret-access-key: ${LITESTREAM_SECRET_ACCESS_KEY}
+        region: auto
