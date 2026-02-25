@@ -16,4 +16,4 @@ if [ ! -f /mnt/app-data/database/database.db ]; then
 fi
 
 # Start app with continuous WAL replication to R2
-exec litestream run -config /etc/litestream.yml -- node src/index.js
+exec litestream replicate -config /etc/litestream.yml -exec "node src/index.js"
