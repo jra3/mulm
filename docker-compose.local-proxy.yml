@@ -8,6 +8,8 @@ services:
     volumes:
       - ./nginx/nginx.local-proxy.conf:/etc/nginx/conf.d/default.conf:ro
       - ./nginx/certs:/etc/nginx/certs:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
     networks:
       - default
