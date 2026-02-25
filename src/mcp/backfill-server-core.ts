@@ -156,7 +156,7 @@ function normalizeDateString(input: string | undefined): string | null {
   }
 
   // "June/July 2024" or "June-July 2024" → midpoint of first month
-  const rangeMatch = lower.match(/^(\w+)\s*[/\-]\s*(\w+)\s+(\d{4})$/);
+  const rangeMatch = lower.match(/^(\w+)\s*[-/]\s*(\w+)\s+(\d{4})$/);
   if (rangeMatch) {
     const month = MONTH_MAP[rangeMatch[1]];
     if (month) {

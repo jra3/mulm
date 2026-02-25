@@ -189,8 +189,8 @@ void describe("activity.ts", () => {
 
       const activities = await getRecentActivity(1);
       assert.ok(Array.isArray(activities[0].awards));
-      assert.equal(activities[0].awards!.length, 1);
-      assert.equal(activities[0].awards![0].award_name, "Fish Expert");
+      assert.equal(activities[0].awards.length, 1);
+      assert.equal(activities[0].awards[0].award_name, "Fish Expert");
     });
 
     void test("should return empty array when no activities exist", async () => {
