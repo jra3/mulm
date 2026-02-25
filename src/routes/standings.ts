@@ -63,7 +63,7 @@ export const annual = async (req: MulmRequest, res: Response) => {
     names,
     trophies,
     program,
-    maxYear: 2025,
+    maxYear: new Date().getFullYear(),
     minYear,
     year,
     isLoggedIn: Boolean(req.viewer),
