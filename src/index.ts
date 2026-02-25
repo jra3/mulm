@@ -137,6 +137,8 @@ router.get("/", async (req: MulmRequest, res) => {
     witnessProgram,
     witnessCount,
     recentActivity,
+    currentYear: new Date().getFullYear(),
+    minStandingsYear: 2020,
   });
 });
 

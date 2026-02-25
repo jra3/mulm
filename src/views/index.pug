@@ -45,15 +45,13 @@ html
 					div.max-w-l.mx-auto.text-center.p-4
 						h3(class="text-3xl font-bold mb-4") Annual Standings
 						.flex.gap-4.items-center.justify-center.h-9
-							a.link(href='/annual/2025') 2025
-							a.link(href='/annual/2024') 2024
+							a.link(href=`/annual/${currentYear}`)= currentYear
+							a.link(href=`/annual/${currentYear - 1}`)= currentYear - 1
 							.select-wrapper.max-w-35.inline
 								select(hx-get="/annual" hx-trigger="change" name="year")
 									option(value="" disabled selected) Past years...
-									option(value="2023") 2023
-									option(value="2022") 2022
-									option(value="2021") 2021
-									option(value="2020") 2020
+									- for (let y = currentYear - 2; y >= minStandingsYear; y--)
+										option(value=y)= y
 
 					div.max-w-l.mx-auto.text-center.p-4
 						h3(class="text-3xl font-bold mb-4") Species
