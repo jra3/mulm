@@ -119,7 +119,7 @@ html
 										div(class="text-sm text-gray-500")
 											+shortDate(award.date_awarded, "Award granted on")
 
-		if progressData && progressData.awards
+		if (isSelf || isAdmin) && progressData && progressData.awards
 			- const incompleteAwards = progressData.awards.filter(a => !a.isGranted && a.currentSpecies > 0)
 			if incompleteAwards.length > 0
 				section.bg-gray-50.py-8
