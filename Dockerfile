@@ -36,12 +36,9 @@ COPY --from=builder /app/dist/src/views ./src/views
 COPY start.sh ./
 COPY db ./db
 
-# Install curl for health checks and Litestream for continuous replication
-RUN apk --no-cache add curl wget jq && \
-    wget -O /tmp/litestream.tar.gz \
-        https://github.com/benbjohnson/litestream/releases/download/v0.3.13/litestream-v0.3.13-linux-amd64.tar.gz && \
-    tar -xzf /tmp/litestream.tar.gz -C /usr/local/bin && \
-    rm /tmp/litestream.tar.gz && \
+# Install curl, jq, and Litestream for continuous replication
+COPY --from=litestream/litestream /usr/local/bin/litestream /usr/local/bin/litestream
+RUN apk --no-cache add curl jq && \
     chmod +x start.sh
 COPY litestream.yml /etc/litestream.yml
 
