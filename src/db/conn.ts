@@ -28,7 +28,7 @@ export async function init() {
   });
 }
 
-(async () => {
+export const ready = (async () => {
   const adminConn = await open({
     filename: config.database.file,
     driver: sqlite3.Database,

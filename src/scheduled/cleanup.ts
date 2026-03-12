@@ -1,6 +1,6 @@
 import { deleteExpiredAuthCodes } from "@/db/auth";
 import { deleteExpiredChallenges } from "@/db/webauthn";
-import { db, query } from "@/db/conn";
+import { ready, query } from "@/db/conn";
 import { logger } from "@/utils/logger";
 import { listAllObjects, deleteImage, isR2Enabled, type ImageMetadata } from "@/utils/r2-client";
 import { sweepMemberLevels } from "./level-sweep";
@@ -131,11 +131,8 @@ async function cleanupOrphanedImages(): Promise<{ deleted: number; skipped: numb
  */
 export async function runDailyCleanup(): Promise<void> {
   try {
-    // Check if database is initialized before running cleanup
-    if (!db(true)) {
-      logger.warn("Database not yet initialized, skipping cleanup");
-      return;
-    }
+    // Wait for database to be initialized and migrations to complete
+    await ready;
 
     logger.info("Starting daily cleanup tasks");
 
