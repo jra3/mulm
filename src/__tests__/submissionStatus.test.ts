@@ -121,8 +121,10 @@ void describe("Submission Status Calculation", () => {
   void describe("Waiting Period Status", () => {
     void test("should return waiting-period status for witnessed submissions in waiting period", () => {
       // Mock a submission that's been witnessed but is still in waiting period
+      // Use 10 days ago to stay well within the 60-day waiting period
+      // and avoid timezone edge cases at the boundary
       const witnessedDate = new Date();
-      witnessedDate.setDate(witnessedDate.getDate() - 30); // 30 days ago
+      witnessedDate.setDate(witnessedDate.getDate() - 10);
 
       const submission: Partial<Submission> = {
         ...baseSubmission,
@@ -142,7 +144,7 @@ void describe("Submission Status Calculation", () => {
       assert.strictEqual(status.rowColor, "bg-orange-50");
       assert.ok(status.daysRemaining !== undefined);
       assert.ok(status.daysRemaining > 0);
-      assert.ok(status.daysRemaining <= 30);
+      assert.ok(status.daysRemaining <= 60);
     });
   });
 

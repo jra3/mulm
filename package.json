@@ -11,7 +11,7 @@
 		"build": "tsc && npm run postcss && npm run copy-files",
 		"postcss": "postcss 'src/**/*.css' 'src/*.css' --base src --dir public",
 		"copy-files": "cp -r ./public ./dist/ && cp -r ./src/views ./dist/src/",
-		"test": "NODE_ENV=test tsx --test src/__tests__/*.test.ts",
+		"test": "NODE_ENV=test tsx --test --test-concurrency 1 src/__tests__/*.test.ts",
 		"test:watch": "NODE_ENV=test tsx --test --watch 'src/**/*.test.ts'",
 		"test:e2e": "playwright test",
 		"test:e2e:headed": "playwright test --headed",
