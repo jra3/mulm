@@ -3,6 +3,7 @@ import { deleteExpiredChallenges } from "@/db/webauthn";
 import { db, query } from "@/db/conn";
 import { logger } from "@/utils/logger";
 import { listAllObjects, deleteImage, isR2Enabled, type ImageMetadata } from "@/utils/r2-client";
+import { sweepMemberLevels } from "./level-sweep";
 
 /**
  * Cleanup orphaned images from R2 that are not referenced in the database
@@ -151,6 +152,12 @@ export async function runDailyCleanup(): Promise<void> {
     const imageCleanup = await cleanupOrphanedImages();
     logger.info(
       `Orphaned image cleanup: ${imageCleanup.deleted} deleted, ${imageCleanup.skipped} skipped`
+    );
+
+    // Sweep member levels to catch any that are out of sync
+    const levelSweep = await sweepMemberLevels();
+    logger.info(
+      `Level sweep: ${levelSweep.checked} checked, ${levelSweep.updated} updated, ${levelSweep.errors} errors`
     );
 
     logger.info("Daily cleanup tasks completed successfully");

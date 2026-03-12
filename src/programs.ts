@@ -152,8 +152,9 @@ export const levelRules: Record<string, LevelRules[]> = {
   ],
 };
 
-export function calculateLevel(rules: LevelRules[], submissions: number[]) {
-  const tally = pointsByCategory(submissions);
+export function calculateLevel(rules: LevelRules[], basePoints: number[], bonusPoints = 0) {
+  const tally = pointsByCategory(basePoints);
+  tally.total += bonusPoints;
   let levelAchieved = "Participant";
   // Apply level rules in order to find the hightest level achieved
   for (const [level, points, extraRules] of rules) {

@@ -35,10 +35,14 @@ export async function checkAndUpdateMemberLevel(
 
     // Filter submissions by program and extract points
     const programSubmissions = submissions.filter((sub) => sub.program === program);
-    const pointsArray = programSubmissions.map((sub) => sub.total_points || sub.points || 0);
+    const basePointsArray = programSubmissions.map((sub) => sub.points || 0);
+    const totalPoints = programSubmissions.reduce((sum, sub) => sum + (sub.total_points || sub.points || 0), 0);
+    const baseTotal = basePointsArray.reduce((sum, p) => sum + p, 0);
+    const bonusPoints = totalPoints - baseTotal;
 
     // Calculate what level they should be
-    const calculatedLevel = calculateLevel(levelRules[program], pointsArray);
+    // Base points determine category distribution, bonus points add to total for threshold checks
+    const calculatedLevel = calculateLevel(levelRules[program], basePointsArray, bonusPoints);
 
     // Get current stored level
     const currentLevel = getCurrentLevel(member, program);
@@ -62,7 +66,6 @@ export async function checkAndUpdateMemberLevel(
 
       // Send email notification if they actually upgraded (not downgraded)
       if (!options?.disableEmails && shouldSendUpgradeEmail(currentLevel, calculatedLevel)) {
-        const totalPoints = pointsArray.reduce((sum, points) => sum + points, 0);
         await onLevelUpgrade(member, program, calculatedLevel, totalPoints);
         logger.info(
           `Level upgrade email sent to ${member.contact_email} for ${program} level: ${calculatedLevel}`
