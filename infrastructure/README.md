@@ -356,7 +356,34 @@ If you haven't migrated to Tailscale yet, see **[Tailscale Migration Guide](TAIL
 - Configuring emergency SSM access
 - Rollback procedures
 
-## CDK Infrastructure Deployment
+## CDK Stack Architecture
+
+The CDK infrastructure is split into two stacks to separate stateful and stateless resources:
+
+| Stack | Purpose | Deploy frequency | Protection |
+|-------|---------|-----------------|------------|
+| **PersistentStack** | EC2, VPC, EBS, EIP, SG, IAM, logs | Rarely (manual) | Termination protection, RETAIN policies |
+| **MonitoringStack** | SNS topics, CloudWatch alarms | Freely (CI/CD safe) | None (stateless, recreatable) |
+
+**Cross-stack communication** uses SSM Parameter Store (`/basny/production/instance-id`),
+not CloudFormation exports. This avoids coupling between stacks.
+
+### Deployment Commands
+
+```bash
+cd infrastructure
+npm run build
+
+# Deploy only monitoring (safe, frequent)
+AWS_PROFILE=basny npx cdk deploy MonitoringStack
+
+# Deploy only infrastructure (rare, careful - requires snapshot first!)
+AWS_PROFILE=basny npx cdk deploy PersistentStack --require-approval broadening
+
+# Preview changes before deploying
+AWS_PROFILE=basny npx cdk diff PersistentStack
+AWS_PROFILE=basny npx cdk diff MonitoringStack
+```
 
 ### Initial Deployment
 
@@ -372,9 +399,10 @@ If you haven't migrated to Tailscale yet, see **[Tailscale Migration Guide](TAIL
 cd infrastructure
 npm run cdk bootstrap -- --profile basny
 
-# 2. Build and deploy
+# 2. Build and deploy both stacks
 npm run build
-npm run cdk deploy -- --profile basny
+AWS_PROFILE=basny npx cdk deploy PersistentStack --require-approval broadening
+AWS_PROFILE=basny npx cdk deploy MonitoringStack
 ```
 
 **Retrieve SSH key**:
@@ -386,7 +414,7 @@ cd infrastructure
 
 ### CDK Redeployment
 
-When updating infrastructure (instance type, security groups, etc.):
+When updating persistent infrastructure (instance type, security groups, etc.):
 
 ```bash
 # 1. Create snapshot FIRST (CRITICAL)
@@ -399,10 +427,10 @@ cd infrastructure
 npm run build
 
 # 3. Preview changes
-npm run cdk diff -- --profile basny
+AWS_PROFILE=basny npx cdk diff PersistentStack
 
 # 4. Deploy
-npm run cdk deploy -- --profile basny
+AWS_PROFILE=basny npx cdk deploy PersistentStack --require-approval broadening
 
 # 5. Verify
 aws --profile basny ec2 describe-instances --filters "Name=tag:Name,Values=BASNY-Production"
@@ -424,9 +452,13 @@ ssh BAP "sudo docker ps"
 
 See [Infrastructure Guide](https://github.com/jra3/mulm/wiki/Infrastructure-Guide) for safe testing procedures.
 
+### Migration from Single Stack
+
+If migrating from the old single `InfrastructureStack`, see **[MIGRATION_RUNBOOK.md](MIGRATION_RUNBOOK.md)** for the step-by-step process.
+
 ### Pre-Deployment Checklist
 
-Before ANY `cdk deploy` or infrastructure changes:
+Before ANY `cdk deploy PersistentStack` or infrastructure changes:
 - [ ] Create snapshot of production EBS volume
 - [ ] Verify production volume is NOT attached to test instance
 - [ ] Review UserData script for safety checks
