@@ -1,0 +1,46 @@
+# Staging companion to fly.toml.
+# Differences from prod:
+#   - app name: basny-bap-staging
+#   - STAGING=1 env: start.sh skips `litestream replicate`, so staging can
+#     restore from prod's R2 generation but never writes back to it.
+#   - separate volume (basny_staging_data).
+# Deploy with: flyctl deploy --config fly.staging.toml --app basny-bap-staging
+app = "basny-bap-staging"
+primary_region = "ewr"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "4200"
+  STAGING = "1"
+
+[[mounts]]
+  source = "basny_staging_data"
+  destination = "/mnt/app-data"
+  initial_size = "1gb"
+
+[http_service]
+  internal_port = 4200
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 100
+    hard_limit = 200
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "30s"
+    method = "get"
+    path = "/health"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "2gb"
+  cpus = 1

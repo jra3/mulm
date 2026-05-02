@@ -38,13 +38,18 @@ COPY db ./db
 
 # Install curl, jq, and Litestream for continuous replication
 COPY --from=litestream/litestream /usr/local/bin/litestream /usr/local/bin/litestream
-RUN apk --no-cache add curl jq && \
+RUN apk --no-cache add curl jq sqlite && \
     chmod +x start.sh
 COPY litestream.yml /etc/litestream.yml
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
+
+# Pre-create the data mount point owned by nodejs so Fly volumes (and local
+# docker volumes) inherit ownership on first init.
+RUN mkdir -p /mnt/app-data/database && \
+    chown -R nodejs:nodejs /mnt/app-data
 
 # Set ownership
 RUN chown -R nodejs:nodejs /app
