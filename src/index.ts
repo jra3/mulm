@@ -25,7 +25,7 @@ import { getOutstandingSubmissionsCounts, getWitnessQueueCounts } from "./db/sub
 import { getRecentActivity } from "./db/activity";
 import { getMemberByEmail, getMemberPassword } from "./db/members";
 import { checkPassword } from "./auth";
-import { writeConn } from "./db/conn";
+import { ready, writeConn } from "./db/conn";
 
 import { MulmRequest, sessionMiddleware, generateSessionCookie } from "./sessions";
 import { getGoogleOAuthURL, getFacebookOAuthURL, setOAuthStateCookie, isGoogleOAuthEnabled, isFacebookOAuthEnabled } from "./oauth";
@@ -388,20 +388,30 @@ app.use(router);
 
 const PORT = parseInt(process.env.PORT || "4200");
 const HOST = "0.0.0.0"; // Listen on all interfaces
-app.listen(PORT, HOST, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-  console.log(`Server running at https://${config.server.domain}`);
 
-  // Start scheduled cleanup tasks (runs daily at 3 AM) - production only
-  if (process.env.NODE_ENV === "production") {
-    startScheduledCleanup();
-    logger.info("Scheduled cleanup enabled (production mode)");
-  } else {
-    logger.info("Scheduled cleanup disabled (non-production environment)");
-  }
+// Wait for DB migrations + connection init before accepting traffic. Without
+// this, requests that hit during cold-start can dereference an undefined
+// connection in `query()` / `writeConn`.
+async function main() {
+  await ready;
+  app.listen(PORT, HOST, () => {
+    console.log(`Server running at http://localhost:${PORT}`);
+    console.log(`Server running at https://${config.server.domain}`);
 
-  // Start MCP HTTP server if enabled in config
-  void startMcpHttpServer().catch((error) => {
-    console.error("Failed to start MCP HTTP server:", error);
+    if (process.env.NODE_ENV === "production") {
+      startScheduledCleanup();
+      logger.info("Scheduled cleanup enabled (production mode)");
+    } else {
+      logger.info("Scheduled cleanup disabled (non-production environment)");
+    }
+
+    void startMcpHttpServer().catch((error) => {
+      console.error("Failed to start MCP HTTP server:", error);
+    });
   });
+}
+
+void main().catch((error) => {
+  logger.error("Failed to start server", error);
+  process.exit(1);
 });
