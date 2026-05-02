@@ -135,3 +135,4 @@ litestream restore -config litestream.yml -o db/database.db
 
 - [`FLY_MIGRATION.md`](./FLY_MIGRATION.md) — full migration playbook (phases, rollback, prose rationale)
 - [`FLY_MIGRATION_EXECUTION.md`](./FLY_MIGRATION_EXECUTION.md) — locked decision record + progress log for the EC2→Fly cutover
+- [`../scripts/cutover.sh`](../scripts/cutover.sh) — interactive Phase 3 cutover runbook
