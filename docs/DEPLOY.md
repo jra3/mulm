@@ -27,15 +27,38 @@ git checkout main && git pull
 
 # 1. Stage
 flyctl deploy --config fly.staging.toml --app basny-bap-staging
-open https://basny-bap-staging.fly.dev      # exercise the change
+# Smoke check (see one-liner below), exercise the change at
+# https://basny-bap-staging.fly.dev, then proceed to prod.
 
 # 2. Prod
 flyctl deploy --app basny-bap
-flyctl logs --app basny-bap                 # watch until traffic looks normal
+flyctl status --app basny-bap               # confirm checks are passing
 curl -sf https://bap.basny.org/health       # 200 = good
+flyctl logs --app basny-bap                 # tail for ~1 min
 ```
 
 `flyctl deploy` builds the `Dockerfile` remotely, releases a new machine version, runs the `/health` check, and only flips traffic once the new machine is healthy. A failed health check leaves the previous version serving.
+
+### Smoke check one-liner
+
+Use the same curl block for staging and prod, just swap the host:
+
+```bash
+HOST=https://bap.basny.org    # or https://basny-bap-staging.fly.dev
+curl -sf -o /dev/null -w "health %{http_code}\n" "$HOST/health"
+curl -s -o /tmp/home.html -w "/ %{http_code}\n" "$HOST/"
+curl -s -o /tmp/activity.html -w "/activity %{http_code}\n" "$HOST/activity"
+```
+
+### Expected warnings
+
+On a deploy to a scale-to-zero app whose machine was cold, you'll see this once during rollout:
+
+```
+WARNING The app is not listening on the expected address and will not be reachable by fly-proxy.
+```
+
+It's transient — `flyctl` is checking the listener before Node has bound to `0.0.0.0:4200`. As long as the subsequent line is `✔ Machine <id> is now in a good state` and `flyctl status` shows `1 total, 1 passing` checks, ignore it. If checks stay failing past a minute, that's a real problem — see Rollback below.
 
 ## Refreshing Staging Data First (optional)
 
