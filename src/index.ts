@@ -179,6 +179,16 @@ router.get("/me", (req: MulmRequest, res) => {
 
 router.get("/species", species.explorer);
 
+router.get("/activity", async (req: MulmRequest, res) => {
+  const { viewer } = req;
+  const activities = await getRecentActivity(50);
+  res.render("activity", {
+    title: "Recent Activity",
+    isLoggedIn: Boolean(viewer),
+    activities,
+  });
+});
+
 // Middleware to restrict demo routes to development only
 const devOnly = (_req: MulmRequest, res: express.Response, next: express.NextFunction) => {
   if (process.env.NODE_ENV === "production") {

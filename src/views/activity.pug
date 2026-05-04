@@ -1,0 +1,22 @@
+include header.pug
+include activity/activity-item.pug
+
+doctype html
+html
+    +headTag
+
+    body.bg-gray-50.text-gray-800
+        +pageHeader(isLoggedIn, "Recent Activity")
+
+        section.bg-white.py-8
+            .max-w-4xl.mx-auto.px-4
+                h1.text-3xl.font-bold.text-gray-900.mb-6.text-center Recent Activity
+
+                if activities && activities.length > 0
+                    .space-y-4
+                        each activity in activities
+                            +activityItem(activity)
+                else
+                    p.text-center.text-gray-600 No activity yet.
+
+        +footer()
