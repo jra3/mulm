@@ -216,14 +216,17 @@ Comprehensive documentation is available in the [GitHub Wiki](https://github.com
 
 ## Deployment
 
-### Quick Deploy
+Production runs on Fly.io. From `main` with a clean tree:
 
 ```bash
-# Deploy latest code from main branch
-ssh BAP "cd /opt/basny && git pull && sudo docker-compose -f docker-compose.prod.yml up -d --build"
+# Stage first
+flyctl deploy --config fly.staging.toml --app basny-bap-staging
+
+# Then prod
+flyctl deploy --app basny-bap
 ```
 
-For detailed deployment procedures, troubleshooting, and infrastructure management, see the [Production Deployment](https://github.com/jra3/mulm/wiki/Production-Deployment) and [Infrastructure Guide](https://github.com/jra3/mulm/wiki/Infrastructure-Guide) wiki pages.
+See [`docs/DEPLOY.md`](docs/DEPLOY.md) for the full bugfix-to-prod runbook (rollback, staging refresh, migrations) and [`docs/INFRASTRUCTURE.md`](docs/INFRASTRUCTURE.md) for topology and costs.
 
 ## Configuration Management
 
