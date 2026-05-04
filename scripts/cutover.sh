@@ -122,7 +122,7 @@ confirm "Volume ready. Ready to begin USER-VISIBLE DOWNTIME at STEP 3?"
 step "STEP 3: Stop EC2 app container (begins user-visible downtime)"
 
 cutover_start=$(date +%s)
-ssh "$EC2_SSH" "cd $EC2_COMPOSE_DIR && sudo docker compose -f docker-compose.prod.yml stop app"
+ssh "$EC2_SSH" "cd $EC2_COMPOSE_DIR && sudo docker-compose -f docker-compose.prod.yml stop app"
 ok "EC2 app stopped"
 
 # ---------- step 4: wait for Litestream to flush ---------------------------
