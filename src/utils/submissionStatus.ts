@@ -5,6 +5,7 @@ export type SubmissionStatus =
   | "draft"
   | "pending-witness"
   | "waiting-period"
+  | "awaiting-final-submission"
   | "pending-approval"
   | "changes-requested"
   | "approved"
@@ -99,6 +100,19 @@ export function getSubmissionStatus(submission: Partial<Submission>): StatusInfo
         daysRemaining: waitingPeriodStatus.daysRemaining,
       };
     }
+
+    // Past waiting period but submitter hasn't confirmed the fish was brought
+    // to a meeting yet, so it shouldn't be in the approval queue.
+    if (!submission.final_submission_on) {
+      return {
+        status: "awaiting-final-submission",
+        label: "Bring to Meeting",
+        color: "text-teal-800",
+        bgColor: "bg-teal-100",
+        rowColor: "bg-teal-50",
+        description: "Bring to a monthly meeting and confirm to enter the approval queue",
+      };
+    }
   }
 
   // Submissions ready for approval
@@ -135,6 +149,8 @@ function getStatusIcon(status: SubmissionStatus): string {
       return "👁️";
     case "waiting-period":
       return "⏳";
+    case "awaiting-final-submission":
+      return "🐟";
     case "pending-approval":
       return "🔵";
     case "changes-requested":

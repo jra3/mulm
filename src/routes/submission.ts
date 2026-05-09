@@ -29,6 +29,7 @@ import {
 import { getSpeciesGroup, getGroupIdFromNameId } from "@/db/species";
 import { getWaitingPeriodStatus } from "@/utils/waitingPeriod";
 import { getNotesForSubmission } from "@/db/submission_notes";
+import { AuthorizationError, StateError, ValidationError } from "@/utils/errors";
 import { formatShortDate } from "@/utils/dateFormat";
 import { parseVideoUrlWithOEmbed, isValidVideoUrl } from "@/utils/videoParser";
 import config from "@/config.json";
@@ -230,6 +231,9 @@ export const view = async (req: MulmRequest, res: Response) => {
       submitted_on: formatShortDate(submission.submitted_on),
       witnessed_on: formatShortDate(submission.witnessed_on),
       approved_on: formatShortDate(submission.approved_on),
+      final_submission_on: submission.final_submission_on
+        ? formatShortDate(submission.final_submission_on)
+        : null,
       approved_by: approver?.display_name,
       witnessed:
         witness && submission.witnessed_on
@@ -491,6 +495,76 @@ export const remove = async (req: MulmRequest, res: Response) => {
 
   // Not authorized
   res.status(403).send("Cannot delete approved submissions");
+};
+
+export const finalSubmit = async (req: MulmRequest, res: Response) => {
+  const submission = await validateSubmission(req, res);
+  if (!submission) {
+    return;
+  }
+
+  const { viewer } = req;
+  if (!viewer) {
+    res.status(401).send();
+    return;
+  }
+
+  const isAdmin = Boolean(viewer.is_admin);
+  if (!isAdmin && viewer.id !== submission.member_id) {
+    res.status(403).send("Not authorized");
+    return;
+  }
+
+  try {
+    await db.setFinalSubmission(submission.id, viewer.id, isAdmin);
+  } catch (err) {
+    if (err instanceof AuthorizationError) {
+      res.status(403).send(err.message);
+      return;
+    }
+    if (err instanceof StateError || err instanceof ValidationError) {
+      res.status(400).send(err.message);
+      return;
+    }
+    throw err;
+  }
+
+  res.set("HX-Redirect", `/submissions/${submission.id}`).status(200).send();
+};
+
+export const unfinalSubmit = async (req: MulmRequest, res: Response) => {
+  const submission = await validateSubmission(req, res);
+  if (!submission) {
+    return;
+  }
+
+  const { viewer } = req;
+  if (!viewer) {
+    res.status(401).send();
+    return;
+  }
+
+  const isAdmin = Boolean(viewer.is_admin);
+  if (!isAdmin && viewer.id !== submission.member_id) {
+    res.status(403).send("Not authorized");
+    return;
+  }
+
+  try {
+    await db.clearFinalSubmission(submission.id, viewer.id, isAdmin);
+  } catch (err) {
+    if (err instanceof AuthorizationError) {
+      res.status(403).send(err.message);
+      return;
+    }
+    if (err instanceof StateError || err instanceof ValidationError) {
+      res.status(400).send(err.message);
+      return;
+    }
+    throw err;
+  }
+
+  res.set("HX-Redirect", `/submissions/${submission.id}`).status(200).send();
 };
 
 /**

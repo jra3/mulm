@@ -189,8 +189,8 @@ html
                             type="button"
                         ) Delete
 
-        // Unified Admin Section (action panels + notes + edit button)
-        if isAdmin
+        // Unified Status / Action Section - visible to submitter and admins
+        if isAdmin || isSelf
             section.bg-gray-100
                 // Screening Actions Panel - only show for pending screening
                 if submission.witness_verification_status === 'pending'
@@ -202,7 +202,7 @@ html
                                 - const speciesText = submission.species_type === 'Plant' || submission.species_type === 'Coral' ? 'propagation' : 'spawn'
                                 p.text-yellow-700.mb-2= `Your ${speciesText} needs to be screened by a different program admin for completeness.`
                                 p.text-yellow-600.text-sm You cannot screen your own submissions. Please contact another admin to review this submission.
-                    else
+                    else if isAdmin
                         // Show screening action buttons for other admins
                         .status-panel.status-panel-admin#witnessPanel
                             .container.mx-auto.max-w-4xl
@@ -251,66 +251,92 @@ html
                                             hx-delete=`/submissions/${submission.id}`
                                             hx-confirm="Are you sure you want to permanently delete this submission? This cannot be undone."
                                         ) Delete
-                    else if isSelf
-                        // Show message for self-approval prevention
+                    else if !submission.final_submission_on
+                        // Past waiting period but submitter hasn't confirmed the fish was brought to a meeting yet
+                        - const speciesText = submission.species_type === 'Plant' || submission.species_type === 'Coral' ? 'propagation' : 'spawn'
+                        - const offspringText = submission.species_type === 'Plant' ? 'plants' : submission.species_type === 'Coral' ? 'corals' : 'fry'
                         .status-panel.status-panel-warning
                             .container.mx-auto.max-w-4xl
-                                h3.text-yellow-800.text-lg.font-semibold.mb-2 ✅ Ready for Points Award
+                                h3.text-yellow-800.text-lg.font-semibold.mb-2 🐟 Bring to Meeting
+                                p.text-yellow-700.mb-2= `This ${speciesText} is past its waiting period. Bring the ${offspringText} to a monthly meeting, then click below to enter the approval queue.`
+                                p.text-yellow-600.text-sm.mb-4 Until you confirm, admins won't see this submission in the approval queue.
+                                if isSelf || isAdmin
+                                    .flex.justify-center
+                                        form(hx-post=`/submissions/${submission.id}/final-submit`)
+                                            button.primary(type="submit")
+                                                if isAdmin && !isSelf
+                                                    | Confirm on Submitter's Behalf
+                                                else
+                                                    | Confirm: Brought to Meeting
+                    else if isSelf
+                        // Submitter (or admin viewing own submission) has confirmed and is now in the queue
+                        .status-panel.status-panel-warning
+                            .container.mx-auto.max-w-4xl
+                                h3.text-yellow-800.text-lg.font-semibold.mb-2 ✅ In Approval Queue
                                 - const speciesText = submission.species_type === 'Plant' || submission.species_type === 'Coral' ? 'propagation' : 'spawn'
-                                - const offspringText = submission.species_type === 'Plant' ? 'plants' : submission.species_type === 'Coral' ? 'corals' : 'fry'
-                                p.text-yellow-700.mb-2= `Your ${speciesText} is auction-eligible. Bring ${offspringText} to the next meeting to receive points!`
-                                p.text-yellow-600.text-sm You cannot award points to your own submissions. Please contact another admin at the meeting to complete the award process.
+                                p.text-yellow-700.mb-2= `Your ${speciesText} is in the approval queue and awaiting admin review.`
+                                p.text-yellow-600.text-sm.mb-4 You cannot award points to your own submissions. If you need to remove this from the queue (e.g. you weren't able to bring it to the meeting), use the button below.
+                                .flex.justify-center
+                                    form(hx-delete=`/submissions/${submission.id}/final-submit` hx-confirm="Remove this submission from the approval queue? You can re-queue it later.")
+                                        button.destructive(type="submit") Remove from Queue
                     else
-                        // Show approval panel for other admins
+                        // Admin viewing someone else's queued submission - show approval panel
                         .status-panel.status-panel-admin#adminPanel
                             include ../admin/approvalPanel.pug
+                        .status-panel.status-panel-admin
+                            .container.mx-auto.max-w-4xl
+                                p.text-white.text-sm.mb-2 Submitter confirmed this was brought to a meeting on #{submission.final_submission_on}.
+                                .flex.justify-center
+                                    form(hx-delete=`/submissions/${submission.id}/final-submit` hx-confirm="Remove this submission from the approval queue?")
+                                        button.destructive(type="submit") Remove from Queue
 
             // Admin Notes and Actions - shown after action panels
-            section.bg-gray-700.py-6
-                div.max-w-4xl.mx-auto.text-left.px-4
-                    h2.text-xl.font-bold.mb-2.text-white Admin Section
-                    p.text-sm.text-gray-300.mb-4 Private notes and actions visible only to program admins
+            if isAdmin
+                section.bg-gray-700.py-6
+                    div.max-w-4xl.mx-auto.text-left.px-4
+                        h2.text-xl.font-bold.mb-2.text-white Admin Section
+                        p.text-sm.text-gray-300.mb-4 Private notes and actions visible only to program admins
 
-                    // Edit Approved Submission button (for approved submissions only)
-                    if isApproved && !isSelf
-                        div.mb-6
-                            button.primary(
-                                type="button"
-                                onclick="document.getElementById('edit-approved-dialog').showModal()"
-                                hx-get=`/admin/submissions/${submission.id}/edit-approved`
-                                hx-target="#edit-approved-dialog"
-                                hx-swap="innerHTML"
-                            ) Edit Approved Submission
+                        // Edit Approved Submission button (for approved submissions only)
+                        if isApproved && !isSelf
+                            div.mb-6
+                                button.primary(
+                                    type="button"
+                                    onclick="document.getElementById('edit-approved-dialog').showModal()"
+                                    hx-get=`/admin/submissions/${submission.id}/edit-approved`
+                                    hx-target="#edit-approved-dialog"
+                                    hx-swap="innerHTML"
+                                ) Edit Approved Submission
 
-                    // Notes subsection
-                    div.mt-6
-                        h3.text-lg.font-semibold.text-white.mb-2 Notes
+                        // Notes subsection
+                        div.mt-6
+                            h3.text-lg.font-semibold.text-white.mb-2 Notes
 
-                        //- Notes feed
-                        div#notes-list.mb-6.space-y-3
-                            if adminNotes && adminNotes.length > 0
-                                each note in adminNotes
-                                    include ../admin/submissionNote.pug
-                            else
-                                +emptyState("No notes yet", { size: "sm" })
+                            //- Notes feed
+                            div#notes-list.mb-6.space-y-3
+                                if adminNotes && adminNotes.length > 0
+                                    each note in adminNotes
+                                        include ../admin/submissionNote.pug
+                                else
+                                    +emptyState("No notes yet", { size: "sm" })
 
-                        //- Note form
-                        form#note-form(
-                            hx-post=`/admin/submissions/${submission.id}/notes`
-                            hx-target="#notes-list"
-                            hx-swap="beforeend"
-                            hx-on--after-request="this.reset()"
-                        )
-                            div.mb-2
-                                textarea.text-input(
-                                    id="note_text"
-                                    name="note_text"
-                                    placeholder="Write a note..."
-                                    rows="3"
-                                    required
-                                    maxlength="2000"
-                                )
-                            button.primary(type="submit") Add Note
+                            //- Note form
+                            form#note-form(
+                                hx-post=`/admin/submissions/${submission.id}/notes`
+                                hx-target="#notes-list"
+                                hx-swap="beforeend"
+                                hx-on--after-request="this.reset()"
+                            )
+                                div.mb-2
+                                    textarea.text-input(
+                                        id="note_text"
+                                        name="note_text"
+                                        placeholder="Write a note..."
+                                        rows="3"
+                                        required
+                                        maxlength="2000"
+                                    )
+                                button.primary(type="submit") Add Note
 
         // Initialize typeahead for species selection in approval panel
         if isAdmin
