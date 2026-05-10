@@ -32,6 +32,49 @@ mixin headTag(title, ogData)
 
 		block
 
+mixin navMenu(loggedIn)
+	nav.space-x-4.items-center(class="hidden md:flex")
+		a.link(href="/") Home
+		a.link(href="/species") Species
+		a.link(href="/cares") CARES
+		if loggedIn
+			a.link(href="/me") Me
+		a.link(href=`mailto:${bugReportEmail}` title="Report a bug") 🐛
+		if loggedIn
+			a.link(href="/account") ⚙️
+	a.p-2.flex-shrink-0.cursor-pointer(
+		href="#"
+		role="button"
+		class="md:hidden text-gray-700 hover:text-black"
+		aria-label="Open menu"
+		hx-on:click="event.preventDefault(); document.getElementById('mobileNav').classList.remove('hidden')"
+	)
+		svg(xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7")
+			path(stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5")
+	div#mobileNav.hidden.fixed.inset-0.z-50(
+		class="md:hidden bg-black/50"
+		hx-on:click="document.getElementById('mobileNav').classList.add('hidden')"
+	)
+		div.absolute.top-0.right-0.h-screen.w-72.bg-white.shadow-lg.flex.flex-col.p-4.gap-1(
+			class="max-w-[80vw]"
+			hx-on:click="event.stopPropagation()"
+		)
+			a.self-end.p-2.text-3xl.leading-none.cursor-pointer.font-bold(
+				href="#"
+				role="button"
+				class="text-gray-500 hover:text-black"
+				aria-label="Close menu"
+				hx-on:click="event.preventDefault(); document.getElementById('mobileNav').classList.add('hidden')"
+			) &times;
+			a.link.text-lg.py-3.border-b.border-gray-100(href="/") Home
+			a.link.text-lg.py-3.border-b.border-gray-100(href="/species") Species
+			a.link.text-lg.py-3.border-b.border-gray-100(href="/cares") CARES
+			if loggedIn
+				a.link.text-lg.py-3.border-b.border-gray-100(href="/me") Me
+			a.link.text-lg.py-3.border-b.border-gray-100(href=`mailto:${bugReportEmail}`) 🐛 Report a bug
+			if loggedIn
+				a.link.text-lg.py-3(href="/account") ⚙️ Account
+
 mixin pageHeader(loggedIn, title, subtitle, trophyData, trophyUniqueId)
 	header.bg-white.shadow
 		div.max-w-7xl.mx-auto.px-4.py-4.flex.justify-between.items-center.gap-4
@@ -44,47 +87,7 @@ mixin pageHeader(loggedIn, title, subtitle, trophyData, trophyUniqueId)
 						+trophy(trophyData)
 				if subtitle
 					h3.p2.truncate(class="text-base md:text-2xl text-gray-500")= subtitle
-			nav.space-x-4.items-center(class="hidden md:flex")
-				a.link(href="/") Home
-				a.link(href="/species") Species
-				a.link(href="/cares") CARES
-				if loggedIn
-					a.link(href="/me") Me
-				a.link(href=`mailto:${bugReportEmail}` title="Report a bug") 🐛
-				if loggedIn
-					a.link(href="/account") ⚙️
-			a.p-2.flex-shrink-0.cursor-pointer(
-				href="#"
-				role="button"
-				class="md:hidden text-gray-700 hover:text-black"
-				aria-label="Open menu"
-				hx-on:click="event.preventDefault(); document.getElementById('mobileNav').classList.remove('hidden')"
-			)
-				svg(xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7")
-					path(stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5")
-		div#mobileNav.hidden.fixed.inset-0.z-50(
-			class="md:hidden bg-black/50"
-			hx-on:click="document.getElementById('mobileNav').classList.add('hidden')"
-		)
-			div.absolute.top-0.right-0.h-screen.w-72.bg-white.shadow-lg.flex.flex-col.p-4.gap-1(
-				class="max-w-[80vw]"
-				hx-on:click="event.stopPropagation()"
-			)
-				a.self-end.p-2.text-3xl.leading-none.cursor-pointer.font-bold(
-					href="#"
-					role="button"
-					class="text-gray-500 hover:text-black"
-					aria-label="Close menu"
-					hx-on:click="event.preventDefault(); document.getElementById('mobileNav').classList.add('hidden')"
-				) &times;
-				a.link.text-lg.py-3.border-b.border-gray-100(href="/") Home
-				a.link.text-lg.py-3.border-b.border-gray-100(href="/species") Species
-				a.link.text-lg.py-3.border-b.border-gray-100(href="/cares") CARES
-				if loggedIn
-					a.link.text-lg.py-3.border-b.border-gray-100(href="/me") Me
-				a.link.text-lg.py-3.border-b.border-gray-100(href=`mailto:${bugReportEmail}`) 🐛 Report a bug
-				if loggedIn
-					a.link.text-lg.py-3(href="/account") ⚙️ Account
+			+navMenu(loggedIn)
 
 mixin footer()
 	footer.bg-gray-300.py-6.text-center.text-sm.text-gray-500
