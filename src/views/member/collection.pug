@@ -10,20 +10,13 @@ html
 	body.bg-gray-50.text-gray-800
 		//- Custom header with back link
 		header.bg-white.shadow
-			div.max-w-7xl.mx-auto.px-4.py-4.flex.justify-between.items-center
-				.flex.items-center.gap-4
-					a.text-blue-600.hover_text-blue-800.text-2xl.font-bold(href=`/member/${member.id}` title="Back to Profile") ←
-					.flex.items-center.gap-2
-						h2.text-2xl.font-bold= `${member.display_name}'s Collection`
+			div.max-w-7xl.mx-auto.px-4.py-4.flex.justify-between.items-center.gap-4
+				.flex.items-center.gap-2.min-w-0.flex-1
+					a.text-blue-600.hover_text-blue-800.text-2xl.font-bold.flex-shrink-0(href=`/member/${member.id}` title="Back to Profile") ←
+					.flex.items-center.gap-2.min-w-0
+						h2.font-bold.truncate(class="text-xl md:text-2xl")= `${member.display_name}'s Collection`
 						+trophyWithHover(trophyData, member.id)
-				.space-x-4.flex.items-center
-					a.link(href="/") Home
-					a.link(href="/species") Species
-					if isLoggedIn
-						a.link(href="/me") Me
-					a.link(href=`mailto:${bugReportEmail}` title="Report a bug") 🐛
-					if isLoggedIn
-						a.link(href="/account") ⚙️
+				+navMenu(isLoggedIn)
 
 		main.max-w-7xl.mx-auto.px-4.py-8(class="sm:px-6 lg:px-8")
 
