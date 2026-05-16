@@ -3,6 +3,7 @@ import { FormValues } from "@/forms/submission";
 import { writeConn, query, withTransaction } from "./conn";
 import { logger } from "@/utils/logger";
 import { ValidationError, AuthorizationError, StateError } from "@/utils/errors";
+import { filterEligibleSubmissions, isEligibleForApproval } from "@/utils/waitingPeriod";
 import type { Database } from "sqlite";
 
 // New normalized table types
@@ -94,6 +95,8 @@ export type Submission = {
   changes_requested_on: string | null;
   changes_requested_by: number | null;
   changes_requested_reason: string | null;
+
+  final_submission_on: string | null;
 
   is_cares_species?: number | null;
 };
@@ -352,8 +355,6 @@ export function getApprovedSubmissionsInDateRange(startDate: Date, endDate: Date
 }
 
 export async function getOutstandingSubmissions(program: string) {
-  const { filterEligibleSubmissions } = await import("@/utils/waitingPeriod");
-
   const allWitnessed = await query<Submission>(
     `
 		SELECT
@@ -375,6 +376,7 @@ export async function getOutstandingSubmissions(program: string) {
 		WHERE submitted_on IS NOT NULL
 		AND approved_on IS NULL
 		AND witness_verification_status = 'confirmed'
+		AND final_submission_on IS NOT NULL
 		AND program = ?`,
     [program]
   );
@@ -433,6 +435,7 @@ export async function getOutstandingSubmissionsCounts() {
 		WHERE submitted_on IS NOT NULL
 		AND approved_on IS NULL
 		AND witness_verification_status = 'confirmed'
+		AND final_submission_on IS NOT NULL
 		GROUP BY program`);
   return Object.fromEntries(rows.map((row) => [row.program, row.count]));
 }
@@ -446,6 +449,135 @@ export async function getWitnessQueueCounts() {
 		AND witness_verification_status = 'pending'
 		GROUP BY program`);
   return Object.fromEntries(rows.map((row) => [row.program, row.count]));
+}
+
+/**
+ * Mark a submission as brought to a meeting and ready for the approval queue.
+ *
+ * Allowed when the caller is the submission owner or an admin, the submission
+ * has been screened (witness confirmed), the waiting period has elapsed, and
+ * the submission is not already approved or denied.
+ */
+export async function setFinalSubmission(
+  submissionId: number,
+  userId: number,
+  isAdmin: boolean
+): Promise<void> {
+  return await withTransaction(async (db) => {
+    const stmt = await db.prepare(`
+        SELECT id, member_id, submitted_on, witness_verification_status,
+               approved_on, denied_on, final_submission_on, reproduction_date,
+               species_type, species_class
+        FROM submissions WHERE id = ?`);
+    const current: Submission[] = await stmt.all(submissionId);
+    await stmt.finalize();
+
+    if (!current[0]) {
+      throw new ValidationError("Submission not found", "submissionId", submissionId);
+    }
+
+    const submission = current[0];
+
+    if (!isAdmin && submission.member_id !== userId) {
+      throw new AuthorizationError(
+        "Cannot modify another member's submission",
+        userId,
+        "set_final_submission"
+      );
+    }
+
+    if (!submission.submitted_on) {
+      throw new StateError("Submission is still a draft", "submitted", "draft");
+    }
+    if (submission.approved_on) {
+      throw new StateError("Submission already approved", "unapproved", "approved");
+    }
+    if (submission.denied_on) {
+      throw new StateError("Submission was denied", "unapproved", "denied");
+    }
+    if (submission.witness_verification_status !== "confirmed") {
+      throw new StateError(
+        "Submission has not been screened",
+        "confirmed",
+        submission.witness_verification_status
+      );
+    }
+    if (!isEligibleForApproval(submission)) {
+      throw new StateError(
+        "Waiting period has not elapsed",
+        "past_waiting_period",
+        "in_waiting_period"
+      );
+    }
+
+    if (submission.final_submission_on) {
+      return;
+    }
+
+    const updateStmt = await db.prepare(`
+        UPDATE submissions SET final_submission_on = ?
+        WHERE id = ? AND final_submission_on IS NULL AND approved_on IS NULL`);
+    const result = await updateStmt.run(new Date().toISOString(), submissionId);
+    await updateStmt.finalize();
+
+    if (result.changes === 0) {
+      throw new StateError("Submission state changed during operation", "queueable", "unknown");
+    }
+
+    logger.info("Submission queued for approval", { submissionId, userId, isAdmin });
+  });
+}
+
+/**
+ * Undo a final submission so the submission leaves the approval queue.
+ * Allowed for owner or admin while the submission is unapproved.
+ */
+export async function clearFinalSubmission(
+  submissionId: number,
+  userId: number,
+  isAdmin: boolean
+): Promise<void> {
+  return await withTransaction(async (db) => {
+    const stmt = await db.prepare(`
+        SELECT id, member_id, approved_on, denied_on, final_submission_on
+        FROM submissions WHERE id = ?`);
+    const current: Submission[] = await stmt.all(submissionId);
+    await stmt.finalize();
+
+    if (!current[0]) {
+      throw new ValidationError("Submission not found", "submissionId", submissionId);
+    }
+
+    const submission = current[0];
+
+    if (!isAdmin && submission.member_id !== userId) {
+      throw new AuthorizationError(
+        "Cannot modify another member's submission",
+        userId,
+        "clear_final_submission"
+      );
+    }
+
+    if (submission.approved_on) {
+      throw new StateError("Submission already approved", "unapproved", "approved");
+    }
+
+    if (!submission.final_submission_on) {
+      return;
+    }
+
+    const updateStmt = await db.prepare(`
+        UPDATE submissions SET final_submission_on = NULL
+        WHERE id = ? AND approved_on IS NULL`);
+    const result = await updateStmt.run(submissionId);
+    await updateStmt.finalize();
+
+    if (result.changes === 0) {
+      throw new StateError("Submission state changed during operation", "queued", "unknown");
+    }
+
+    logger.info("Submission removed from approval queue", { submissionId, userId, isAdmin });
+  });
 }
 
 export async function confirmWitness(submissionId: number, witnessAdminId: number) {

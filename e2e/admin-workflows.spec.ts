@@ -49,14 +49,15 @@ test.describe("Admin - Changes Requested Workflow", () => {
 
 			adminId = admin.id;
 
-			// Create submitted submission with witness confirmation
-			// Set witnessed date to 70 days ago to ensure waiting period is satisfied
+			// Create a submission already in the approval queue: witnessed past
+			// waiting period and submitter has clicked "Brought to Meeting"
 			submissionId = await createTestSubmission({
 				memberId: user.id,
 				submitted: true,
 				witnessed: true,
 				witnessedBy: admin.id,
 				witnessedDaysAgo: 70,
+				finalSubmitted: true,
 			});
 		} finally {
 			await db.close();
@@ -130,13 +131,15 @@ test.describe("Admin - Changes Requested Workflow", () => {
 				throw new Error("Test users not found in database");
 			}
 
-			// Create submission with witness confirmation (recently witnessed, still in waiting period)
+			// Create submission already in the approval queue (past waiting
+			// period and submitter has clicked "Brought to Meeting")
 			submissionId = await createTestSubmission({
 				memberId: user.id,
 				submitted: true,
 				witnessed: true,
 				witnessedBy: admin.id,
-				witnessedDaysAgo: 0, // Just witnessed today - still in waiting period
+				witnessedDaysAgo: 70,
+				finalSubmitted: true,
 			});
 		} finally {
 			await db.close();
@@ -236,13 +239,14 @@ test.describe("Admin - Changes Requested Workflow", () => {
 				throw new Error("Test users not found in database");
 			}
 
-			// Create submission with witness confirmation
+			// Create submission already in the approval queue
 			submissionId = await createTestSubmission({
 				memberId: user.id,
 				submitted: true,
 				witnessed: true,
 				witnessedBy: admin.id,
-				witnessedDaysAgo: 0, // Just witnessed today - still in waiting period
+				witnessedDaysAgo: 70,
+				finalSubmitted: true,
 			});
 
 			// Set changes_requested fields directly in database
