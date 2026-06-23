@@ -2,7 +2,7 @@
  * Tests for species merge function with duplicate synonym handling
  */
 
-import { describe, it, before, after } from "node:test";
+import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
 import { open, Database } from "sqlite";
 import sqlite3 from "sqlite3";
@@ -12,8 +12,8 @@ import { mergeSpecies } from "../db/species";
 void describe("Species merge with duplicate synonyms", () => {
   let db: Database;
 
-  void before(async () => {
-    // Create in-memory database for testing
+  void beforeEach(async () => {
+    // Fresh in-memory database per test for isolation
     db = await open({
       filename: ":memory:",
       driver: sqlite3.Database,
@@ -59,7 +59,7 @@ void describe("Species merge with duplicate synonyms", () => {
     overrideConnection(db);
   });
 
-  void after(async () => {
+  void afterEach(async () => {
     await db.close();
   });
 
@@ -127,9 +127,7 @@ void describe("Species merge with duplicate synonyms", () => {
     );
   });
 
-  // TODO: This test is failing due to test isolation issues - the merge function
-  // may not be properly deleting the defunct group. Investigate and fix.
-  void it.skip("should merge species with all unique synonyms", async () => {
+  void it("should merge species with all unique synonyms", async () => {
     // Setup: Create two species with no overlapping names
     await db.run(
       "INSERT INTO species_name_group (group_id, program_class, canonical_genus, canonical_species_name, species_type) VALUES (?, ?, ?, ?, ?)",
