@@ -14,10 +14,10 @@ export const signupSchema = z
     password: z
       .string()
       .max(100, "Password too long (max 100 characters)")
-      .refine(
-        (val) => validatePasswordComplexity(val).valid,
-        (val) => ({ message: validatePasswordComplexity(val).errors[0] || "Invalid password" })
-      ),
+      .refine((val) => validatePasswordComplexity(val).valid, {
+        error: (iss) =>
+          validatePasswordComplexity(iss.input as string).errors[0] || "Invalid password",
+      }),
     password_confirm: z.string().max(100, "Password too long (max 100 characters)"),
   })
   .refine((data) => data.password_confirm === data.password, {
@@ -34,10 +34,10 @@ export const updateSchema = z
       .string()
       .max(100, "Password too long (max 100 characters)")
       .optional()
-      .refine(
-        (val) => !val || validatePasswordComplexity(val).valid,
-        (val) => ({ message: val ? validatePasswordComplexity(val).errors[0] : undefined })
-      ),
+      .refine((val) => !val || validatePasswordComplexity(val).valid, {
+        error: (iss) =>
+          iss.input ? validatePasswordComplexity(iss.input as string).errors[0] : undefined,
+      }),
     password_confirm: z.string().max(100, "Password too long (max 100 characters)"),
   })
   .refine((data) => data.password_confirm === data.password, {
@@ -55,10 +55,10 @@ export const resetSchema = z
     password: z
       .string()
       .max(100, "Password too long (max 100 characters)")
-      .refine(
-        (val) => validatePasswordComplexity(val).valid,
-        (val) => ({ message: validatePasswordComplexity(val).errors[0] || "Invalid password" })
-      ),
+      .refine((val) => validatePasswordComplexity(val).valid, {
+        error: (iss) =>
+          validatePasswordComplexity(iss.input as string).errors[0] || "Invalid password",
+      }),
     password_confirm: z.string().max(100, "Password too long (max 100 characters)"),
   })
   .refine((data) => data.password_confirm === data.password, {

@@ -1,10 +1,10 @@
 import * as z from "zod";
 
 export function validateFormResult<T>(
-  parsed: z.SafeParseReturnType<unknown, T>,
+  parsed: z.ZodSafeParseResult<T>,
   errors: Map<string, string>,
   onError?: () => void
-): parsed is z.SafeParseSuccess<T> {
+): parsed is z.ZodSafeParseSuccess<T> {
   if (parsed.success) {
     return true;
   }
@@ -22,15 +22,14 @@ export function extractValid<T extends z.ZodRawShape>(
   const result: Partial<z.infer<typeof schema>> = {};
 
   for (const key in schema.shape) {
-    const subSchema = schema.shape[key];
+    const subSchema = schema.shape[key] as unknown as z.ZodType;
     const value =
       data && typeof data === "object" && key in data
         ? (data as Record<string, unknown>)[key]
         : undefined;
     const parsed = subSchema.safeParse(value);
     if (parsed.success) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      result[key] = parsed.data;
+      (result as Record<string, unknown>)[key] = parsed.data;
     }
   }
   return result;
