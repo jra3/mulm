@@ -3,6 +3,9 @@
 	"version": "1.0.0",
 	"description": "a Breeder Awards Program management platform",
 	"main": "index.js",
+	"engines": {
+		"node": ">=22 <23"
+	},
 	"_moduleAliases": {
 		"@": "dist/src"
 	},
