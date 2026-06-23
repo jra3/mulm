@@ -6,40 +6,41 @@ Before deploying the new upload limits to production:
 
 - [x] Local stress test passed (22/22 tests)
 - [x] CI tests passing
-- [ ] Deploy to production
-- [ ] Update nginx config with new limits
+- [ ] Deploy to staging, then production
 - [ ] Test with real device
 - [ ] Monitor for 24-48 hours
 
+> The upload body-size limit is enforced by the application (and Fly's own
+> request handling), not by an nginx `client_max_body_size` — there is no nginx
+> in prod. fly-proxy handles TLS and routing. See
+> [`docs/INFRASTRUCTURE.md`](docs/INFRASTRUCTURE.md).
+
 ## Deployment Steps
+
+Full runbook in [`docs/DEPLOY.md`](docs/DEPLOY.md). Deploy to staging first, then
+prod.
 
 ### 1. Deploy Application
 
 ```bash
-ssh BAP "cd /opt/basny && git pull && sudo docker-compose -f docker-compose.prod.yml pull && sudo docker-compose -f docker-compose.prod.yml up -d"
+# Staging first
+flyctl deploy --config fly.staging.toml --app basny-bap-staging
+
+# Then production
+flyctl deploy --app basny-bap
 ```
 
-### 2. Update Nginx Config
+### 2. Verify Deployment
 
 ```bash
-# Copy new nginx config
-scp nginx/conf.d/default.conf BAP:/tmp/
+# Confirm the running release and that health checks pass
+flyctl status --app basny-bap
 
-# Apply and reload
-ssh BAP "sudo cp /tmp/default.conf /opt/basny/nginx/conf.d/ && sudo docker exec basny-nginx nginx -t && sudo docker exec basny-nginx nginx -s reload"
-```
+# HTTP health endpoint (200 = good)
+curl -sf https://bap.basny.org/health
 
-### 3. Verify Deployment
-
-```bash
-# Check app is running
-ssh BAP "sudo docker ps | grep basny-app"
-
-# Check app logs
-ssh BAP "sudo docker logs basny-app --tail 50"
-
-# Check nginx config
-ssh BAP "sudo docker exec basny-nginx nginx -t"
+# Tail logs for ~1 minute
+flyctl logs --app basny-bap
 ```
 
 ## Real-World Testing
@@ -60,7 +61,7 @@ ssh BAP "sudo docker exec basny-nginx nginx -t"
 
 ```bash
 # Watch app logs in real-time
-ssh BAP "sudo docker logs basny-app -f | grep -i 'image\|upload\|process'"
+flyctl logs --app basny-bap | grep -i 'image\|upload\|process'
 ```
 
 Look for log messages like:
@@ -74,43 +75,46 @@ Look for log messages like:
 ### CPU and Memory Usage
 
 ```bash
-# Check container resource usage
-ssh BAP "sudo docker stats basny-app --no-stream"
+# Check machine state and resource sizing
+flyctl machine status --app basny-bap
 ```
 
+The machine is `shared-cpu-1x` @ 2GB RAM (see `docs/INFRASTRUCTURE.md`). For
+live CPU/memory graphs, use the Fly dashboard metrics for `basny-bap`.
+
 **What to watch:**
-- **CPU %** - Should spike briefly during uploads, then drop
-- **MEM USAGE** - Should stay under 1GB normally
-- **MEM %** - Watch for sustained high usage (>70%)
+- **CPU** - Should spike briefly during uploads, then drop
+- **Memory** - Should stay well under the 2GB machine limit
+- **Memory %** - Watch for sustained high usage (>70%)
 
 ### Application Logs
 
+fly-proxy logs requests alongside the app's own output, so `flyctl logs` covers
+both request-level and application-level events.
+
 ```bash
 # Watch for errors
-ssh BAP "sudo docker logs basny-app -f --tail 100 | grep -i error"
+flyctl logs --app basny-bap | grep -i error
 
 # Watch image processing
-ssh BAP "sudo docker logs basny-app -f --tail 100 | grep 'Processed image'"
+flyctl logs --app basny-bap | grep 'Processed image'
 
 # Watch upload completions
-ssh BAP "sudo docker logs basny-app -f --tail 100 | grep 'Image uploaded successfully'"
-```
+flyctl logs --app basny-bap | grep 'Image uploaded successfully'
 
-### Nginx Access Logs
-
-```bash
-# Monitor upload endpoints
-ssh BAP "tail -f /mnt/basny-data/nginx/logs/access.log | grep -E 'POST.*/upload'"
-
-# Check for errors
-ssh BAP "tail -f /mnt/basny-data/nginx/logs/error.log"
+# Watch upload requests at the proxy/app level
+flyctl logs --app basny-bap | grep -E 'POST.*/upload'
 ```
 
 ### R2/Cloudflare Storage
 
+Image uploads land in the Cloudflare R2 bucket `basny-bap-data` (see
+`docs/INFRASTRUCTURE.md`). Inspect usage via the Cloudflare dashboard, or with
+`rclone` configured against the R2 endpoint:
+
 ```bash
-# Check storage usage (if AWS CLI configured for R2)
-aws s3 ls s3://your-bucket-name/ --recursive --summarize | tail -5
+# Example with an rclone remote pointed at R2
+rclone size r2:basny-bap-data
 ```
 
 ## Alert Conditions
@@ -119,35 +123,36 @@ aws s3 ls s3://your-bucket-name/ --recursive --summarize | tail -5
 
 1. **Out of Memory (OOM) crashes**
    ```bash
-   ssh BAP "sudo docker logs basny-app | grep -i 'out of memory\|killed'"
+   flyctl logs --app basny-bap | grep -i 'out of memory\|killed'
    ```
 
 2. **Repeated upload failures**
    ```bash
-   ssh BAP "sudo docker logs basny-app | grep -c 'Upload failed'"
+   flyctl logs --app basny-bap | grep -c 'Upload failed'
    ```
    If count > 10 in short period, investigate
 
-3. **Nginx 5xx errors**
+3. **5xx errors**
    ```bash
-   ssh BAP "grep ' 5[0-9][0-9] ' /mnt/basny-data/nginx/logs/access.log | tail -20"
+   flyctl logs --app basny-bap | grep -E ' 5[0-9][0-9] '
    ```
 
 ### ⚠️ Warning Conditions (Monitor Closely)
 
 1. **Slow processing (>5s)**
    ```bash
-   ssh BAP "sudo docker logs basny-app | grep 'Processed image' | grep -E '[5-9][0-9]{3}ms'"
+   flyctl logs --app basny-bap | grep 'Processed image' | grep -E '[5-9][0-9]{3}ms'
    ```
 
 2. **High memory usage (>70%)**
    ```bash
-   ssh BAP "sudo docker stats basny-app --no-stream | awk 'NR==2 {print \$7}'"
+   flyctl machine status --app basny-bap
    ```
+   For a running graph, use the Fly dashboard metrics for `basny-bap`.
 
-3. **Disk space low (<10GB free)**
+3. **Volume space low**
    ```bash
-   ssh BAP "df -h /mnt/basny-data"
+   flyctl ssh console --app basny-bap -C "df -h /mnt/app-data"
    ```
 
 ## Performance Baselines
@@ -166,7 +171,7 @@ aws s3 ls s3://your-bucket-name/ --recursive --summarize | tail -5
 
 ```bash
 # Extract processing times from logs
-ssh BAP "sudo docker logs basny-app | grep 'Processed image' | tail -50"
+flyctl logs --app basny-bap | grep 'Processed image' | tail -50
 ```
 
 Should see lines like:
@@ -176,31 +181,29 @@ Should see lines like:
 
 ## Rollback Plan
 
-If you see critical issues:
+If you see critical issues, roll back to the previous Fly release. Fly keeps
+prior releases (details in [`docs/DEPLOY.md`](docs/DEPLOY.md)).
 
 ### Quick Rollback
 
 ```bash
-# Revert to previous commit
-ssh BAP "cd /opt/basny && git log --oneline -5"
-ssh BAP "cd /opt/basny && git reset --hard <previous-commit-hash>"
-ssh BAP "sudo docker-compose -f docker-compose.prod.yml up -d"
+# Find the previous version number
+flyctl releases --app basny-bap
+
+# Roll back to it
+flyctl releases rollback <version> --app basny-bap
 ```
 
-### Restore Old Nginx Config
+The previous machine version stays healthy until a new release is promoted, so a
+rollback simply re-points traffic at the known-good image. Verify with:
 
 ```bash
-# Get backup of old config
-ssh BAP "sudo cp /opt/basny/nginx/conf.d/default.conf /tmp/default.conf.backup"
-
-# Manually edit to restore 52M limit
-ssh BAP "sudo vi /opt/basny/nginx/conf.d/default.conf"
-
-# Change line 95: client_max_body_size 110M;
-# Back to:          client_max_body_size 52M;
-
-ssh BAP "sudo docker exec basny-nginx nginx -t && sudo docker exec basny-nginx nginx -s reload"
+flyctl status --app basny-bap
+curl -sf https://bap.basny.org/health
 ```
+
+Since the upload limit lives in application code (no nginx), reverting the
+release reverts the limit — there is no separate proxy config to restore.
 
 ## Success Metrics
 
@@ -257,7 +260,7 @@ If you want continuous monitoring, consider:
    - Track memory/CPU usage
 
 2. **Log aggregation:**
-   - Set up log shipping to CloudWatch/Datadog
+   - Ship `flyctl logs` output to a log service (e.g. Datadog)
    - Alert on error patterns
 
 3. **Uptime monitoring:**

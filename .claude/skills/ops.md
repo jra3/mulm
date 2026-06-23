@@ -4,25 +4,32 @@ Use this skill for production operations, deployment, and infrastructure tasks.
 
 ## Production Environment
 
-- **URL**: https://bap.basny.org
-- **Server**: AWS EC2
-- **Stack**: Docker Compose + nginx reverse proxy + Let's Encrypt SSL
-- **Docs**: See `infrastructure/README.md` and [GitHub Wiki](https://github.com/jra3/mulm/wiki)
+- **Host**: Fly.io — app `basny-bap` (staging: `basny-bap-staging`), region `ewr`
+- **URL**: https://bap.basny.org (staging: https://basny-bap-staging.fly.dev)
+- **Stack**: Dockerfile-based Fly Machine; TLS/ingress handled by fly-proxy
+- **Database**: SQLite on the `basny_data` volume at `/mnt/app-data/database/database.db`
+- **Backups**: Litestream continuous replication to Cloudflare R2 (`basny-db-replica`)
+- **Docs**: See `docs/DEPLOY.md` (runbook) and `docs/INFRASTRUCTURE.md` (topology)
 
 ## Quick Commands
 
 ```bash
-# SSH to production
-ssh BAP
+# Deploy to staging first, then prod (see docs/DEPLOY.md for the full flow)
+flyctl deploy --config fly.staging.toml --app basny-bap-staging
+flyctl deploy --app basny-bap
 
-# Deploy latest changes
-ssh BAP "cd /opt/basny && git pull && sudo docker-compose -f docker-compose.prod.yml pull && sudo docker-compose -f docker-compose.prod.yml up -d"
+# Status / health
+flyctl status --app basny-bap
+curl -sf https://bap.basny.org/health      # 200 = good
 
-# View logs
-ssh BAP "sudo docker logs basny-app --tail 100 -f"
+# Logs (tail)
+flyctl logs --app basny-bap
 
-# Health check
-curl https://bap.basny.org/health
+# SSH into the running machine
+flyctl ssh console --app basny-bap
+
+# Pull prod DB into local dev (Litestream restore from R2)
+./infrastructure/sync-db-from-production.sh
 ```
 
 ## Branch Protection
@@ -75,13 +82,13 @@ Repository settings in `.github/`:
 | Environment | Config Location |
 |-------------|-----------------|
 | Development | `src/config.json` (git-ignored) |
-| Production | `/mnt/basny-data/app/config/config.production.json` |
+| Production | Fly secret `CONFIG_JSON`, written to `src/config.json` on boot by `start.sh` |
 | Test | Uses in-memory SQLite |
 
 `NODE_ENV` controls behavior: `test`, `development`, `production`
 
 ## Infrastructure Documentation
 
-- `infrastructure/README.md` - Full deployment docs, monitoring, recovery
-- `nginx/README.md` - Nginx config, SSL, rate limiting, security
+- `docs/DEPLOY.md` - Day-to-day deploy runbook (staging → prod)
+- `docs/INFRASTRUCTURE.md` - Topology, costs, Fly/R2 reference
 - `src/db/README.md` - Database patterns, migrations

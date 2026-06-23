@@ -35,10 +35,10 @@ A web application for managing aquarium society Breeder Awards Programs (BAP), t
 - **Build Tools**: esbuild for bundling
 
 ### Infrastructure
-- **Hosting**: AWS EC2 (t3.micro)
-- **Reverse Proxy**: nginx with Let's Encrypt SSL
-- **Deployment**: Docker Compose
-- **IaC**: AWS CDK (TypeScript)
+- **Hosting**: Fly.io (app `basny-bap`, region `ewr`)
+- **TLS / Reverse Proxy**: fly-proxy (auto-managed)
+- **Deployment**: `flyctl deploy` (builds the `Dockerfile`)
+- **Database backups**: Litestream continuous replication to Cloudflare R2
 - **CI/CD**: GitHub Actions
 
 ## Getting Started
@@ -142,8 +142,8 @@ The server will start on http://localhost:4200 with:
 mulm/
 ├── db/
 │   └── migrations/          # Database migration files
-├── infrastructure/          # AWS CDK infrastructure code
-├── nginx/                   # nginx configuration for production
+├── docs/                    # Deploy runbook + infrastructure reference
+├── infrastructure/          # Ops notes + prod DB sync script
 ├── scripts/                 # Utility scripts
 ├── src/
 │   ├── __tests__/          # Test files
@@ -154,7 +154,8 @@ mulm/
 │   ├── views/              # Pug templates
 │   ├── config.json         # Configuration (git-ignored)
 │   └── index.ts            # Application entry point
-├── docker-compose.prod.yml # Production Docker Compose
+├── fly.toml                # Fly.io production app config
+├── litestream.yml          # Litestream → R2 replication config
 └── package.json
 ```
 
@@ -210,9 +211,9 @@ Migrations run automatically on startup. To create a new migration:
 
 Comprehensive documentation is available in the [GitHub Wiki](https://github.com/jra3/mulm/wiki):
 
+- **[Deploy runbook](docs/DEPLOY.md)** - Day-to-day bugfix-to-prod flow (staging → prod, rollback, migrations)
+- **[Infrastructure reference](docs/INFRASTRUCTURE.md)** - Fly.io topology, Litestream/R2 backups, costs
 - **[Security Overview](https://github.com/jra3/mulm/wiki/Security-Overview)** - Security posture, audits, and active initiatives
-- **[Production Deployment](https://github.com/jra3/mulm/wiki/Production-Deployment)** - Deploy code changes, troubleshooting, SSL management
-- **[Infrastructure Guide](https://github.com/jra3/mulm/wiki/Infrastructure-Guide)** - AWS resources, critical resource protection, CDK deployment
 
 ## Deployment
 
@@ -235,9 +236,9 @@ See [`docs/DEPLOY.md`](docs/DEPLOY.md) for the full bugfix-to-prod runbook (roll
 - Contains database path, OAuth credentials, SMTP settings, R2 storage keys
 
 ### Production
-- Config file: `/mnt/basny-data/app/config/config.production.json`
-- Mounted read-only into container at `/app/src/config.json`
-- Permissions: Must be 600 (owner-only) and owned by UID 1001 (nodejs user)
+- Delivered as the Fly secret `CONFIG_JSON`; `start.sh` writes it to `/app/src/config.json` on boot
+- Rotate with `flyctl secrets set CONFIG_JSON="$(cat config.production.json)" --app basny-bap`
+- See [`docs/INFRASTRUCTURE.md`](docs/INFRASTRUCTURE.md#configuration) for the staging overrides
 
 ## API Documentation
 

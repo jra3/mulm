@@ -118,8 +118,7 @@ litestream restore -config litestream.yml -o db/database.db
 
 ## Access
 
-- **Fly**: `flyctl auth login` (account: `nop@porcnick.com`, org `personal`).
-- **EC2 box** (legacy, until Phase 5 decommission): SSH alias `BAP` → `ec2-user@ip-10-0-0-218` over Tailscale.
+- **Fly**: `flyctl auth login` (account: `nop@porcnick.com`, org `personal`). Shell into a machine with `flyctl ssh console --app basny-bap`.
 - **R2**: credentials live in `config.production.json` under `storage.s3*`; same key used for Litestream and image uploads.
 - **DNS**: registrar (not Route53/Cloudflare); `bap` record is the cutover knob.
 
@@ -136,4 +135,3 @@ litestream restore -config litestream.yml -o db/database.db
 - [`DEPLOY.md`](./DEPLOY.md) — day-to-day bugfix-to-prod runbook
 - [`FLY_MIGRATION.md`](./FLY_MIGRATION.md) — full migration playbook (phases, rollback, prose rationale)
 - [`FLY_MIGRATION_EXECUTION.md`](./FLY_MIGRATION_EXECUTION.md) — locked decision record + progress log for the EC2→Fly cutover
-- [`../scripts/cutover.sh`](../scripts/cutover.sh) — interactive Phase 3 cutover runbook
