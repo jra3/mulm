@@ -28,11 +28,7 @@
 		"format": "prettier --write \"src/**/*.{ts,js,json}\" \"scripts/**/*.{ts,js}\"",
 		"format:check": "prettier --check \"src/**/*.{ts,js,json}\" \"scripts/**/*.{ts,js}\"",
 		"script": "ts-node",
-		"prepare": "husky || true",
-		"cdk:deploy": "echo '⚠️  WARNING: Use npm run cdk:deploy:safe instead for safety checks!' && sleep 3 && cd infrastructure && npx cdk deploy",
-		"cdk:deploy:safe": "./scripts/validate-cdk-changes.sh",
-		"cdk:diff": "cd infrastructure && npx cdk diff",
-		"cdk:synth": "cd infrastructure && npx cdk synth"
+		"prepare": "husky || true"
 	},
 	"repository": {
 		"type": "git",
@@ -83,7 +79,6 @@
 		"@typescript-eslint/eslint-plugin": "^8.58.2",
 		"@typescript-eslint/parser": "^8.58.2",
 		"autoprefixer": "^10.5.0",
-		"aws-cdk-lib": "^2.250.0",
 		"concurrently": "^9.2.1",
 		"eslint": "^9.39.2",
 		"eslint-config-prettier": "^10.1.8",

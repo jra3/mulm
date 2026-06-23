@@ -299,9 +299,7 @@ Config file: `src/config.json` (git-ignored)
 
 ### Production
 
-Config file: `/mnt/basny-data/app/config/config.production.json`
-
-Mounted read-only into container at `/app/src/config.json`
+Config is delivered as the Fly secret `CONFIG_JSON` and written to `/app/src/config.json` on boot by `start.sh`.
 
 Database path must be absolute: `"/mnt/app-data/database/database.db"`
 
