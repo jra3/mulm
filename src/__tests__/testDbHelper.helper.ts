@@ -79,7 +79,7 @@ export async function createTestMembers(count: number = 1): Promise<TestMember[]
       throw new Error(`Failed to retrieve created member with ID ${memberId}`);
     }
 
-    members.push(member as TestMember);
+    members.push(member);
   }
 
   return members;

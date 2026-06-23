@@ -283,7 +283,7 @@ export const googleOAuth = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const tokenPayload = payload as { access_token: unknown };
+  const tokenPayload = payload;
   const token = String(tokenPayload.access_token);
   const googleUser = await getGoogleUser(token);
   const record = await getGoogleAccount(googleUser.sub);
@@ -359,7 +359,7 @@ export const facebookOAuth = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const tokenPayload = payload as { access_token: unknown };
+  const tokenPayload = payload;
   const token = String(tokenPayload.access_token);
   const facebookUser = await getFacebookUser(token);
   const record = await getFacebookAccount(facebookUser.id);

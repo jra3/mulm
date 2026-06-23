@@ -669,7 +669,7 @@ void describe("Species Collection Database Module", () => {
           ) VALUES ('Test', 'Fish', 'Test', 'species${i}')
         `);
         await addToCollection(memberId1, {
-          group_id: species.lastID as number,
+          group_id: species.lastID,
         });
       }
 
@@ -826,7 +826,7 @@ void describe("Species Collection Database Module", () => {
       `);
 
       await addToCollection(memberId1, {
-        group_id: species.lastID as number,
+        group_id: species.lastID,
       });
 
       const collection = await getCollectionForMember(memberId1);

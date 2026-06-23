@@ -1,0 +1,2999 @@
+{
+  "member_id": 13,
+  "records": [
+    {
+      "line": 3,
+      "form": {
+        "species_type": "Coral",
+        "species_class": "Hard",
+        "water_type": "Salt",
+        "species_common_name": "red acans",
+        "species_latin_name": "Acanthastrea",
+        "reproduction_date": "2012-04-05",
+        "tank_size": "150gal",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "mh",
+        "light_strength": "175 w mh",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "splitting"
+      },
+      "species": {
+        "program_class": "Hard",
+        "canonical_genus": "Acanthastrea",
+        "canonical_species_name": "sp.",
+        "common_name": "red acans",
+        "latin_name": "Acanthastrea"
+      },
+      "existing_group_id": null,
+      "witness_id": 1,
+      "approval": {
+        "points": 20,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "genus-only / no species epithet ; defaulted (blank) -> David Manuel ; NEW species - will create species group"
+    },
+    {
+      "line": 4,
+      "form": {
+        "species_type": "Coral",
+        "species_class": "Hard",
+        "water_type": "Salt",
+        "species_common_name": "Candy Canes",
+        "species_latin_name": "caulastrea furcata",
+        "reproduction_date": "2012-01-06",
+        "tank_size": "150gal",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "mh",
+        "light_strength": "175 w mh",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "splitting"
+      },
+      "species": {
+        "program_class": "Hard",
+        "canonical_genus": "Caulastrea",
+        "canonical_species_name": "furcata",
+        "common_name": "Candy Canes",
+        "latin_name": "caulastrea furcata"
+      },
+      "existing_group_id": null,
+      "witness_id": 1,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "defaulted (blank) -> David Manuel ; NEW species - will create species group"
+    },
+    {
+      "line": 5,
+      "form": {
+        "species_type": "Coral",
+        "species_class": "Hard",
+        "water_type": "Salt",
+        "species_common_name": "sun polyps",
+        "species_latin_name": "tubestrea coccinea",
+        "reproduction_date": "2011-05-24",
+        "tank_size": "150gal",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "mh",
+        "light_strength": "175 w mh",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "splitting"
+      },
+      "species": {
+        "program_class": "Hard",
+        "canonical_genus": "Tubestrea",
+        "canonical_species_name": "coccinea",
+        "common_name": "sun polyps",
+        "latin_name": "tubestrea coccinea"
+      },
+      "existing_group_id": null,
+      "witness_id": 1,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": true,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "AMBIGUOUS: total 20 w/ first-time -> base 15? or base 20 no-bonus? ; defaulted (blank) -> David Manuel ; NEW species - will create species group"
+    },
+    {
+      "line": 6,
+      "form": {
+        "species_type": "Coral",
+        "species_class": "Hard",
+        "water_type": "Salt",
+        "species_common_name": "black sun polyps",
+        "species_latin_name": "tubestrea micrantha",
+        "reproduction_date": "2012-05-24",
+        "tank_size": "150gal",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "mh",
+        "light_strength": "175 w mh",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "Splitting"
+      },
+      "species": {
+        "program_class": "Hard",
+        "canonical_genus": "Tubestrea",
+        "canonical_species_name": "micrantha",
+        "common_name": "black sun polyps",
+        "latin_name": "tubestrea micrantha"
+      },
+      "existing_group_id": null,
+      "witness_id": 1,
+      "approval": {
+        "points": 20,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "defaulted (blank) -> David Manuel ; NEW species - will create species group"
+    },
+    {
+      "line": 7,
+      "form": {
+        "species_type": "Coral",
+        "species_class": "Hard",
+        "water_type": "Salt",
+        "species_common_name": "purple tip acros",
+        "species_latin_name": "acropora",
+        "reproduction_date": "2009-09-01",
+        "tank_size": "180G",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "LED",
+        "light_strength": "94watt",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "Cutting"
+      },
+      "species": {
+        "program_class": "Hard",
+        "canonical_genus": "Acropora",
+        "canonical_species_name": "sp.",
+        "common_name": "purple tip acros",
+        "latin_name": "acropora"
+      },
+      "existing_group_id": null,
+      "witness_id": 1,
+      "approval": {
+        "points": 20,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "genus-only / no species epithet ; defaulted (blank) -> David Manuel ; NEW species - will create species group"
+    },
+    {
+      "line": 9,
+      "form": {
+        "species_type": "Coral",
+        "species_class": "Soft",
+        "water_type": "Salt",
+        "species_common_name": "Green Stripped Mushroom",
+        "species_latin_name": "Actinodiscus sp",
+        "reproduction_date": "2012-12-20",
+        "tank_size": "150gal",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "mh",
+        "light_strength": "175 w mh",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "splitting"
+      },
+      "species": {
+        "program_class": "Soft",
+        "canonical_genus": "Actinodiscus",
+        "canonical_species_name": "sp.",
+        "common_name": "Green Stripped Mushroom",
+        "latin_name": "Actinodiscus sp"
+      },
+      "existing_group_id": 15,
+      "witness_id": 1,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "genus-only / no species epithet ; defaulted (blank) -> David Manuel"
+    },
+    {
+      "line": 10,
+      "form": {
+        "species_type": "Coral",
+        "species_class": "Soft",
+        "water_type": "Salt",
+        "species_common_name": "giant cup mushroom",
+        "species_latin_name": "amplexidiscus spp",
+        "reproduction_date": "2012-01-08",
+        "tank_size": "150gal",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "mh",
+        "light_strength": "175 w mh",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "cutting"
+      },
+      "species": {
+        "program_class": "Soft",
+        "canonical_genus": "Amplexidiscus",
+        "canonical_species_name": "sp.",
+        "common_name": "giant cup mushroom",
+        "latin_name": "amplexidiscus spp"
+      },
+      "existing_group_id": null,
+      "witness_id": 1,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "genus-only / no species epithet ; defaulted (blank) -> David Manuel ; NEW species - will create species group"
+    },
+    {
+      "line": 11,
+      "form": {
+        "species_type": "Coral",
+        "species_class": "Soft",
+        "water_type": "Salt",
+        "species_common_name": "antellia",
+        "species_latin_name": "antellia",
+        "reproduction_date": "2012-09-01",
+        "tank_size": "180G",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "LED",
+        "light_strength": "94watt",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "Cutting"
+      },
+      "species": {
+        "program_class": "Soft",
+        "canonical_genus": "Antellia",
+        "canonical_species_name": "sp.",
+        "common_name": "antellia",
+        "latin_name": "antellia"
+      },
+      "existing_group_id": null,
+      "witness_id": 1,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "genus-only / no species epithet ; defaulted (blank) -> David Manuel ; NEW species - will create species group"
+    },
+    {
+      "line": 12,
+      "form": {
+        "species_type": "Invert",
+        "species_class": "Other",
+        "water_type": "Salt",
+        "species_common_name": "asterinia",
+        "species_latin_name": "asterinia wega starfish",
+        "reproduction_date": "2009-11-09",
+        "tank_size": "150gal",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "mh",
+        "light_strength": "175 w mh",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "egg layers"
+      },
+      "species": {
+        "program_class": "Other",
+        "canonical_genus": "Asterinia",
+        "canonical_species_name": "wega",
+        "common_name": "asterinia",
+        "latin_name": "asterinia wega starfish"
+      },
+      "existing_group_id": null,
+      "witness_id": 1,
+      "approval": {
+        "points": 10,
+        "article_points": 0,
+        "first_time_species": true,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "echinoderm -> Other ; AMBIGUOUS: total 15 w/ first-time -> base 10? or base 15 no-bonus? ; defaulted (blank) -> David Manuel ; NEW species - will create species group"
+    },
+    {
+      "line": 13,
+      "form": {
+        "species_type": "Coral",
+        "species_class": "Hard",
+        "water_type": "Salt",
+        "species_common_name": "red blasto",
+        "species_latin_name": "Blastomussa",
+        "reproduction_date": "2012-05-05",
+        "tank_size": "150gal",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "mh",
+        "light_strength": "175 w mh",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "splitting"
+      },
+      "species": {
+        "program_class": "Hard",
+        "canonical_genus": "Blastomussa",
+        "canonical_species_name": "sp.",
+        "common_name": "red blasto",
+        "latin_name": "Blastomussa"
+      },
+      "existing_group_id": null,
+      "witness_id": 1,
+      "approval": {
+        "points": 20,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "genus-only / no species epithet ; defaulted (blank) -> David Manuel ; NEW species - will create species group"
+    },
+    {
+      "line": 15,
+      "form": {
+        "species_type": "Coral",
+        "species_class": "Soft",
+        "water_type": "Salt",
+        "species_common_name": "kenya tree",
+        "species_latin_name": "capaella species",
+        "reproduction_date": "2009-04-06",
+        "tank_size": "180G",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "LED",
+        "light_strength": "94watt",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "Cutting"
+      },
+      "species": {
+        "program_class": "Soft",
+        "canonical_genus": "Capaella",
+        "canonical_species_name": "sp.",
+        "common_name": "kenya tree",
+        "latin_name": "capaella species"
+      },
+      "existing_group_id": null,
+      "witness_id": 1,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "genus-only / no species epithet ; defaulted (blank) -> David Manuel ; NEW species - will create species group"
+    },
+    {
+      "line": 16,
+      "form": {
+        "species_type": "Coral",
+        "species_class": "Hard",
+        "water_type": "Salt",
+        "species_common_name": "green chalice",
+        "species_latin_name": "chalice",
+        "reproduction_date": "2019-05-22",
+        "tank_size": "200g",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "LED",
+        "light_strength": "94watt",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "Cutting"
+      },
+      "species": {
+        "program_class": "Hard",
+        "canonical_genus": "Echinopora",
+        "canonical_species_name": "lamellosa",
+        "common_name": "green chalice",
+        "latin_name": "chalice"
+      },
+      "existing_group_id": 7,
+      "witness_id": 1,
+      "approval": {
+        "points": 20,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "genus-only / no species epithet ; defaulted (blank) -> David Manuel"
+    },
+    {
+      "line": 17,
+      "form": {
+        "species_type": "Coral",
+        "species_class": "Soft",
+        "water_type": "Salt",
+        "species_common_name": "Clove Polyps",
+        "species_latin_name": "Clavularia sp",
+        "reproduction_date": "2012-01-06",
+        "tank_size": "150gal",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "mh",
+        "light_strength": "175 w mh",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "splitting"
+      },
+      "species": {
+        "program_class": "Soft",
+        "canonical_genus": "Clavularia",
+        "canonical_species_name": "sp.",
+        "common_name": "Clove Polyps",
+        "latin_name": "Clavularia sp"
+      },
+      "existing_group_id": null,
+      "witness_id": 1,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "genus-only / no species epithet ; defaulted (blank) -> David Manuel ; NEW species - will create species group"
+    },
+    {
+      "line": 18,
+      "form": {
+        "species_type": "Coral",
+        "species_class": "Soft",
+        "water_type": "Salt",
+        "species_common_name": "green star  polyp",
+        "species_latin_name": "clavularia viridis",
+        "reproduction_date": "2003-06-03",
+        "tank_size": "180G",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "LED",
+        "light_strength": "94watt",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "Cutting"
+      },
+      "species": {
+        "program_class": "Soft",
+        "canonical_genus": "Clavularia",
+        "canonical_species_name": "viridis",
+        "common_name": "green star  polyp",
+        "latin_name": "clavularia viridis"
+      },
+      "existing_group_id": null,
+      "witness_id": 1,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "defaulted (blank) -> David Manuel ; NEW species - will create species group"
+    },
+    {
+      "line": 19,
+      "form": {
+        "species_type": "Coral",
+        "species_class": "Soft",
+        "water_type": "Salt",
+        "species_common_name": "mushrooms",
+        "species_latin_name": "corallimorpharians",
+        "reproduction_date": "2009-04-06",
+        "tank_size": "180G",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "LED",
+        "light_strength": "94watt",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "Cutting"
+      },
+      "species": {
+        "program_class": "Soft",
+        "canonical_genus": "Corallimorpharians",
+        "canonical_species_name": "sp.",
+        "common_name": "mushrooms",
+        "latin_name": "corallimorpharians"
+      },
+      "existing_group_id": null,
+      "witness_id": 1,
+      "approval": {
+        "points": 10,
+        "article_points": 0,
+        "first_time_species": true,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "genus-only / no species epithet ; AMBIGUOUS: total 15 w/ first-time -> base 10? or base 15 no-bonus? ; defaulted (blank) -> David Manuel ; NEW species - will create species group"
+    },
+    {
+      "line": 20,
+      "form": {
+        "species_type": "Coral",
+        "species_class": "Soft",
+        "water_type": "Salt",
+        "species_common_name": "ricordia",
+        "species_latin_name": "corallimorphs",
+        "reproduction_date": "2019-05-05",
+        "tank_size": "180G",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "LED",
+        "light_strength": "94watt",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "splitting"
+      },
+      "species": {
+        "program_class": "Soft",
+        "canonical_genus": "Corallimorphs",
+        "canonical_species_name": "sp.",
+        "common_name": "ricordia",
+        "latin_name": "corallimorphs"
+      },
+      "existing_group_id": null,
+      "witness_id": 1,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "genus-only / no species epithet ; defaulted (blank) -> David Manuel ; NEW species - will create species group"
+    },
+    {
+      "line": 21,
+      "form": {
+        "species_type": "Coral",
+        "species_class": "Hard",
+        "water_type": "Salt",
+        "species_common_name": "Dentro",
+        "species_latin_name": "Dendrophyllia Fistula",
+        "reproduction_date": "2011-06-01",
+        "tank_size": "150gal",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "mh",
+        "light_strength": "175 w mh",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "splitting"
+      },
+      "species": {
+        "program_class": "Hard",
+        "canonical_genus": "Dendrophyllia",
+        "canonical_species_name": "fistula",
+        "common_name": "Dentro",
+        "latin_name": "Dendrophyllia Fistula"
+      },
+      "existing_group_id": null,
+      "witness_id": 1,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": true,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "AMBIGUOUS: total 20 w/ first-time -> base 15? or base 20 no-bonus? ; defaulted (blank) -> David Manuel ; NEW species - will create species group"
+    },
+    {
+      "line": 22,
+      "form": {
+        "species_type": "Coral",
+        "species_class": "Soft",
+        "water_type": "Salt",
+        "species_common_name": "elephant ear mushroom",
+        "species_latin_name": "Discosoma",
+        "reproduction_date": "2009-03-04",
+        "tank_size": "180G",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "LED",
+        "light_strength": "94watt",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "Cutting"
+      },
+      "species": {
+        "program_class": "Soft",
+        "canonical_genus": "Discosoma",
+        "canonical_species_name": "coerulea",
+        "common_name": "elephant ear mushroom",
+        "latin_name": "Discosoma"
+      },
+      "existing_group_id": 8,
+      "witness_id": 1,
+      "approval": {
+        "points": 10,
+        "article_points": 0,
+        "first_time_species": true,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "genus-only / no species epithet ; AMBIGUOUS: total 15 w/ first-time -> base 10? or base 15 no-bonus? ; defaulted (blank) -> David Manuel"
+    },
+    {
+      "line": 24,
+      "form": {
+        "species_type": "Coral",
+        "species_class": "Hard",
+        "water_type": "Salt",
+        "species_common_name": "duncan coral",
+        "species_latin_name": "Duncanopsammia Axifuga",
+        "reproduction_date": "2011-06-01",
+        "tank_size": "150gal",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "mh",
+        "light_strength": "175 w mh",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "splitting"
+      },
+      "species": {
+        "program_class": "Hard",
+        "canonical_genus": "Duncanopsammia",
+        "canonical_species_name": "axifuga",
+        "common_name": "duncan coral",
+        "latin_name": "Duncanopsammia Axifuga"
+      },
+      "existing_group_id": null,
+      "witness_id": 1,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": true,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "AMBIGUOUS: total 20 w/ first-time -> base 15? or base 20 no-bonus? ; defaulted (blank) -> David Manuel ; NEW species - will create species group"
+    },
+    {
+      "line": 25,
+      "form": {
+        "species_type": "Coral",
+        "species_class": "Soft",
+        "water_type": "Salt",
+        "species_common_name": "bubbble tip anamone",
+        "species_latin_name": "Entacmaea quadricolor",
+        "reproduction_date": "2009-03-04",
+        "tank_size": "180G",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "LED",
+        "light_strength": "94watt",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "spitting"
+      },
+      "species": {
+        "program_class": "Soft",
+        "canonical_genus": "Entacmaea",
+        "canonical_species_name": "quadricolor",
+        "common_name": "bubbble tip anamone",
+        "latin_name": "Entacmaea quadricolor"
+      },
+      "existing_group_id": null,
+      "witness_id": 1,
+      "approval": {
+        "points": 10,
+        "article_points": 0,
+        "first_time_species": true,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "anemone-ish, verify (Hard/Soft only options) ; AMBIGUOUS: total 15 w/ first-time -> base 10? or base 15 no-bonus? ; defaulted (blank) -> David Manuel ; NEW species - will create species group"
+    },
+    {
+      "line": 26,
+      "form": {
+        "species_type": "Coral",
+        "species_class": "Hard",
+        "water_type": "Salt",
+        "species_common_name": "Hammer coral",
+        "species_latin_name": "Euphyllia Ancora",
+        "reproduction_date": "2011-06-01",
+        "tank_size": "150gal",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "mh",
+        "light_strength": "175 w mh",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "splitting"
+      },
+      "species": {
+        "program_class": "Hard",
+        "canonical_genus": "Euphyllia",
+        "canonical_species_name": "ancora",
+        "common_name": "Hammer coral",
+        "latin_name": "Euphyllia Ancora"
+      },
+      "existing_group_id": null,
+      "witness_id": 1,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": true,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "AMBIGUOUS: total 20 w/ first-time -> base 15? or base 20 no-bonus? ; defaulted (blank) -> David Manuel ; NEW species - will create species group"
+    },
+    {
+      "line": 29,
+      "form": {
+        "species_type": "Coral",
+        "species_class": "Hard",
+        "water_type": "Salt",
+        "species_common_name": "lobophylia",
+        "species_latin_name": "Lobophylia",
+        "reproduction_date": "2012-06-01",
+        "tank_size": "150gal",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "mh",
+        "light_strength": "175 w mh",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "splitting"
+      },
+      "species": {
+        "program_class": "Hard",
+        "canonical_genus": "Lobophylia",
+        "canonical_species_name": "sp.",
+        "common_name": "lobophylia",
+        "latin_name": "Lobophylia"
+      },
+      "existing_group_id": null,
+      "witness_id": 1,
+      "approval": {
+        "points": 20,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "genus-only / no species epithet ; defaulted (blank) -> David Manuel ; NEW species - will create species group"
+    },
+    {
+      "line": 30,
+      "form": {
+        "species_type": "Coral",
+        "species_class": "Hard",
+        "water_type": "Salt",
+        "species_common_name": "pink tip monti",
+        "species_latin_name": "montipora",
+        "reproduction_date": "2009-03-04",
+        "tank_size": "180G",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "LED",
+        "light_strength": "94watt",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "Cutting"
+      },
+      "species": {
+        "program_class": "Hard",
+        "canonical_genus": "Montipora",
+        "canonical_species_name": "sp.",
+        "common_name": "pink tip monti",
+        "latin_name": "montipora"
+      },
+      "existing_group_id": null,
+      "witness_id": 1,
+      "approval": {
+        "points": 20,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "genus-only / no species epithet ; defaulted (blank) -> David Manuel ; NEW species - will create species group"
+    },
+    {
+      "line": 31,
+      "form": {
+        "species_type": "Coral",
+        "species_class": "Hard",
+        "water_type": "Salt",
+        "species_common_name": "yellow finger velvet",
+        "species_latin_name": "montipora digitata",
+        "reproduction_date": "2009-03-04",
+        "tank_size": "180G",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "LED",
+        "light_strength": "94watt",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "Cutting"
+      },
+      "species": {
+        "program_class": "Hard",
+        "canonical_genus": "Montipora",
+        "canonical_species_name": "digitata",
+        "common_name": "yellow finger velvet",
+        "latin_name": "montipora digitata"
+      },
+      "existing_group_id": null,
+      "witness_id": 1,
+      "approval": {
+        "points": 20,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "defaulted (blank) -> David Manuel ; NEW species - will create species group"
+    },
+    {
+      "line": 32,
+      "form": {
+        "species_type": "Invert",
+        "species_class": "Snail",
+        "water_type": "Salt",
+        "species_common_name": "snails",
+        "species_latin_name": "Nassarius",
+        "reproduction_date": "2011-01-01",
+        "tank_size": "180 gal",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "led",
+        "light_strength": "165 watt",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "egg layers"
+      },
+      "species": {
+        "program_class": "Snail",
+        "canonical_genus": "Nassarius",
+        "canonical_species_name": "sp.",
+        "common_name": "snails",
+        "latin_name": "Nassarius"
+      },
+      "existing_group_id": null,
+      "witness_id": 1,
+      "approval": {
+        "points": 10,
+        "article_points": 0,
+        "first_time_species": true,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "genus-only / no species epithet ; MISSING date ; AMBIGUOUS: total 15 w/ first-time -> base 10? or base 15 no-bonus? ; defaulted (blank) -> David Manuel ; PLACEHOLDER date (was blank) -> 2011-01-01, approximate ; NEW species - will create species group"
+    },
+    {
+      "line": 33,
+      "form": {
+        "species_type": "Coral",
+        "species_class": "Soft",
+        "water_type": "Salt",
+        "species_common_name": "califlower coral",
+        "species_latin_name": "Nephtea",
+        "reproduction_date": "2009-09-08",
+        "tank_size": "180G",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "LED",
+        "light_strength": "94watt",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "Cutting"
+      },
+      "species": {
+        "program_class": "Soft",
+        "canonical_genus": "Nephtea",
+        "canonical_species_name": "sp.",
+        "common_name": "califlower coral",
+        "latin_name": "Nephtea"
+      },
+      "existing_group_id": null,
+      "witness_id": 1,
+      "approval": {
+        "points": 10,
+        "article_points": 0,
+        "first_time_species": true,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "genus-only / no species epithet ; AMBIGUOUS: total 15 w/ first-time -> base 10? or base 15 no-bonus? ; defaulted (blank) -> David Manuel ; NEW species - will create species group"
+    },
+    {
+      "line": 34,
+      "form": {
+        "species_type": "Invert",
+        "species_class": "Other",
+        "water_type": "Salt",
+        "species_common_name": "snake starfish",
+        "species_latin_name": "ophiolepsis superba",
+        "reproduction_date": "2011-01-01",
+        "tank_size": "180 gal",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "led",
+        "light_strength": "165 watt",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "egg layers"
+      },
+      "species": {
+        "program_class": "Other",
+        "canonical_genus": "Ophiolepsis",
+        "canonical_species_name": "superba",
+        "common_name": "snake starfish",
+        "latin_name": "ophiolepsis superba"
+      },
+      "existing_group_id": null,
+      "witness_id": 1,
+      "approval": {
+        "points": 10,
+        "article_points": 0,
+        "first_time_species": true,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "echinoderm -> Other ; MISSING date ; AMBIGUOUS: total 15 w/ first-time -> base 10? or base 15 no-bonus? ; defaulted (blank) -> David Manuel ; PLACEHOLDER date (was blank) -> 2011-01-01, approximate ; NEW species - will create species group"
+    },
+    {
+      "line": 35,
+      "form": {
+        "species_type": "Coral",
+        "species_class": "Hard",
+        "water_type": "Salt",
+        "species_common_name": "birds nest",
+        "species_latin_name": "Orange Laptastrea",
+        "reproduction_date": "2012-05-04",
+        "tank_size": "150gal",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "mh",
+        "light_strength": "175 w mh",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "Cutting"
+      },
+      "species": {
+        "program_class": "Hard",
+        "canonical_genus": "Orange",
+        "canonical_species_name": "laptastrea",
+        "common_name": "birds nest",
+        "latin_name": "Orange Laptastrea"
+      },
+      "existing_group_id": null,
+      "witness_id": 1,
+      "approval": {
+        "points": 20,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "defaulted (blank) -> David Manuel ; NEW species - will create species group"
+    },
+    {
+      "line": 38,
+      "form": {
+        "species_type": "Coral",
+        "species_class": "Soft",
+        "water_type": "Salt",
+        "species_common_name": "Palys",
+        "species_latin_name": "Palythoas",
+        "reproduction_date": "2012-06-01",
+        "tank_size": "150gal",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "mh",
+        "light_strength": "175 w mh",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "Splitting"
+      },
+      "species": {
+        "program_class": "Soft",
+        "canonical_genus": "Palythoas",
+        "canonical_species_name": "sp.",
+        "common_name": "Palys",
+        "latin_name": "Palythoas"
+      },
+      "existing_group_id": null,
+      "witness_id": 1,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "genus-only / no species epithet ; defaulted (blank) -> David Manuel ; NEW species - will create species group"
+    },
+    {
+      "line": 39,
+      "form": {
+        "species_type": "Coral",
+        "species_class": "Hard",
+        "water_type": "Salt",
+        "species_common_name": "potato chip",
+        "species_latin_name": "Pavona decussata",
+        "reproduction_date": "2009-01-01",
+        "tank_size": "180G",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "LED",
+        "light_strength": "94watt",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "Cutting"
+      },
+      "species": {
+        "program_class": "Hard",
+        "canonical_genus": "Pavona",
+        "canonical_species_name": "decussata",
+        "common_name": "potato chip",
+        "latin_name": "Pavona decussata"
+      },
+      "existing_group_id": null,
+      "witness_id": 1,
+      "approval": {
+        "points": 20,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "FUZZY date '04/2//2009' -> year only, set to Jan 1 ; defaulted (blank) -> David Manuel ; NEW species - will create species group"
+    },
+    {
+      "line": 40,
+      "form": {
+        "species_type": "Coral",
+        "species_class": "Soft",
+        "water_type": "Salt",
+        "species_common_name": "Hairy Mushroom",
+        "species_latin_name": "Rhodactis indosinensis",
+        "reproduction_date": "2012-01-05",
+        "tank_size": "150gal",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "mh",
+        "light_strength": "175 w mh",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "splitting"
+      },
+      "species": {
+        "program_class": "Soft",
+        "canonical_genus": "Rhodactis",
+        "canonical_species_name": "indosinensis",
+        "common_name": "Hairy Mushroom",
+        "latin_name": "Rhodactis indosinensis"
+      },
+      "existing_group_id": null,
+      "witness_id": 1,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "defaulted (blank) -> David Manuel ; NEW species - will create species group"
+    },
+    {
+      "line": 41,
+      "form": {
+        "species_type": "Coral",
+        "species_class": "Soft",
+        "water_type": "Salt",
+        "species_common_name": "Cabbage corals",
+        "species_latin_name": "Sinularia Dura",
+        "reproduction_date": "2012-01-12",
+        "tank_size": "150gal",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "mh",
+        "light_strength": "175 w mh",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "cutting"
+      },
+      "species": {
+        "program_class": "Soft",
+        "canonical_genus": "Sinularia",
+        "canonical_species_name": "dura",
+        "common_name": "Cabbage corals",
+        "latin_name": "Sinularia Dura"
+      },
+      "existing_group_id": null,
+      "witness_id": 1,
+      "approval": {
+        "points": 20,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "defaulted (blank) -> David Manuel ; NEW species - will create species group"
+    },
+    {
+      "line": 42,
+      "form": {
+        "species_type": "Coral",
+        "species_class": "Hard",
+        "water_type": "Salt",
+        "species_common_name": "stylophora",
+        "species_latin_name": "stylophora",
+        "reproduction_date": "2013-11-26",
+        "tank_size": "180G",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "LED",
+        "light_strength": "94watt",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "Cutting"
+      },
+      "species": {
+        "program_class": "Hard",
+        "canonical_genus": "Stylophora",
+        "canonical_species_name": "sp.",
+        "common_name": "stylophora",
+        "latin_name": "stylophora"
+      },
+      "existing_group_id": null,
+      "witness_id": 1,
+      "approval": {
+        "points": 20,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "genus-only / no species epithet ; defaulted (blank) -> David Manuel ; NEW species - will create species group"
+    },
+    {
+      "line": 44,
+      "form": {
+        "species_type": "Coral",
+        "species_class": "Soft",
+        "water_type": "Salt",
+        "species_common_name": "pulshing xenia",
+        "species_latin_name": "xenia",
+        "reproduction_date": "2001-09-01",
+        "tank_size": "150gal",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "mh",
+        "light_strength": "175 w mh",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "splitting"
+      },
+      "species": {
+        "program_class": "Soft",
+        "canonical_genus": "Xenia",
+        "canonical_species_name": "sp.",
+        "common_name": "pulshing xenia",
+        "latin_name": "xenia"
+      },
+      "existing_group_id": null,
+      "witness_id": 1,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "genus-only / no species epithet ; defaulted (blank) -> David Manuel ; NEW species - will create species group"
+    },
+    {
+      "line": 46,
+      "form": {
+        "species_type": "Coral",
+        "species_class": "Soft",
+        "water_type": "Salt",
+        "species_common_name": "sunburst polyps",
+        "species_latin_name": "zoanthids",
+        "reproduction_date": "2009-03-04",
+        "tank_size": "180G",
+        "filter_type": "Sump",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "8.2",
+        "specific_gravity": "1.026",
+        "substrate_type": "Sand",
+        "light_type": "LED",
+        "light_strength": "94watt",
+        "light_hours": "10hrs",
+        "foods": [
+          "Phyto",
+          "Zooplan"
+        ],
+        "propagation_method": "Cutting"
+      },
+      "species": {
+        "program_class": "Soft",
+        "canonical_genus": "Zoanthids",
+        "canonical_species_name": "sp.",
+        "common_name": "sunburst polyps",
+        "latin_name": "zoanthids"
+      },
+      "existing_group_id": null,
+      "witness_id": 1,
+      "approval": {
+        "points": 10,
+        "article_points": 0,
+        "first_time_species": true,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "genus-only / no species epithet ; AMBIGUOUS: total 15 w/ first-time -> base 10? or base 15 no-bonus? ; defaulted (blank) -> David Manuel ; NEW species - will create species group"
+    },
+    {
+      "line": 54,
+      "form": {
+        "species_type": "Invert",
+        "species_class": "Shrimp",
+        "water_type": "Fresh",
+        "species_common_name": "cherry shrimp",
+        "species_latin_name": "neocaridina heteropoda",
+        "reproduction_date": "2011-11-12",
+        "tank_size": "38 gal",
+        "filter_type": "sump",
+        "water_change_volume": "40%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "6.8",
+        "substrate_type": "eco complete",
+        "light_type": "pc",
+        "light_strength": "68w",
+        "light_hours": "7 hrs",
+        "foods": [
+          "iron",
+          "trace elements",
+          "liq co2"
+        ],
+        "propagation_method": "egglayers"
+      },
+      "species": {
+        "program_class": "Shrimp",
+        "canonical_genus": "Neocaridina",
+        "canonical_species_name": "heteropoda",
+        "common_name": "cherry shrimp",
+        "latin_name": "neocaridina heteropoda"
+      },
+      "existing_group_id": 867,
+      "witness_id": 4,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "verify member match"
+    },
+    {
+      "line": 55,
+      "form": {
+        "species_type": "Invert",
+        "species_class": "Shrimp",
+        "water_type": "Fresh",
+        "species_common_name": "self cloning crawfish",
+        "species_latin_name": "self cloning crawfish",
+        "reproduction_date": "2012-06-12",
+        "tank_size": "38 gal",
+        "filter_type": "sump",
+        "water_change_volume": "40%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "6.8",
+        "substrate_type": "eco complete",
+        "light_type": "pc",
+        "light_strength": "68w",
+        "light_hours": "7 hrs",
+        "foods": [
+          "iron",
+          "trace elements",
+          "liq co2"
+        ],
+        "propagation_method": "egglayers"
+      },
+      "species": {
+        "program_class": "Shrimp",
+        "canonical_genus": "Self",
+        "canonical_species_name": "cloning",
+        "common_name": "self cloning crawfish",
+        "latin_name": "self cloning crawfish"
+      },
+      "existing_group_id": null,
+      "witness_id": 4,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "verify member match ; NEW species - will create species group"
+    },
+    {
+      "line": 56,
+      "form": {
+        "species_type": "Invert",
+        "species_class": "Shrimp",
+        "water_type": "Fresh",
+        "species_common_name": "Malawai shrimp",
+        "species_latin_name": "Caridina sp.",
+        "reproduction_date": "2011-01-01",
+        "tank_size": "38 gal",
+        "filter_type": "sump",
+        "water_change_volume": "40%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "6.8",
+        "substrate_type": "eco complete",
+        "light_type": "pc",
+        "light_strength": "68w",
+        "light_hours": "7 hrs",
+        "foods": [
+          "iron",
+          "trace elements",
+          "liq co2"
+        ],
+        "propagation_method": "egglayers"
+      },
+      "species": {
+        "program_class": "Shrimp",
+        "canonical_genus": "Caridina",
+        "canonical_species_name": "sp.",
+        "common_name": "Malawai shrimp",
+        "latin_name": "Caridina sp."
+      },
+      "existing_group_id": null,
+      "witness_id": 4,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "NO scientific name (common-name only) ; MISSING date ; verify member match ; PLACEHOLDER date (was blank) -> 2011-01-01, approximate ; NEW species - will create species group"
+    },
+    {
+      "line": 60,
+      "form": {
+        "species_type": "Plant",
+        "species_class": "Sword Plants",
+        "water_type": "Fresh",
+        "species_common_name": "Amazon Swords",
+        "species_latin_name": "Echinodorus grisebachii",
+        "reproduction_date": "2009-02-12",
+        "tank_size": "38 gal",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "6.8",
+        "substrate_type": "eco complete",
+        "light_type": "pc",
+        "light_strength": "68w",
+        "light_hours": "7 hrs",
+        "foods": [
+          "iron",
+          "trace elements",
+          "liq co2"
+        ]
+      },
+      "species": {
+        "program_class": "Sword Plants",
+        "canonical_genus": "Echinodorus",
+        "canonical_species_name": "grisebachii",
+        "common_name": "Amazon Swords",
+        "latin_name": "Echinodorus grisebachii"
+      },
+      "existing_group_id": null,
+      "witness_id": 4,
+      "approval": {
+        "points": 10,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "NO scientific name (common-name only) ; verify member match ; NEW species - will create species group"
+    },
+    {
+      "line": 61,
+      "form": {
+        "species_type": "Plant",
+        "species_class": "Anubias & Lagenandra",
+        "water_type": "Fresh",
+        "species_common_name": "anubius",
+        "species_latin_name": "Anubius Barteri Nana",
+        "reproduction_date": "2011-12-28",
+        "tank_size": "38 gal",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "6.8",
+        "substrate_type": "eco complete",
+        "light_type": "pc",
+        "light_strength": "68w",
+        "light_hours": "7 hrs",
+        "foods": [
+          "iron",
+          "trace elements",
+          "liq co2"
+        ]
+      },
+      "species": {
+        "program_class": "Anubias & Lagenandra",
+        "canonical_genus": "Anubius",
+        "canonical_species_name": "barteri",
+        "common_name": "anubius",
+        "latin_name": "Anubius Barteri Nana"
+      },
+      "existing_group_id": null,
+      "witness_id": 4,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "verify member match ; NEW species - will create species group"
+    },
+    {
+      "line": 62,
+      "form": {
+        "species_type": "Plant",
+        "species_class": "Anubias & Lagenandra",
+        "water_type": "Fresh",
+        "species_common_name": "anubius",
+        "species_latin_name": "Anubius congensis",
+        "reproduction_date": "2011-12-28",
+        "tank_size": "38 gal",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "6.8",
+        "substrate_type": "eco complete",
+        "light_type": "pc",
+        "light_strength": "68w",
+        "light_hours": "7 hrs",
+        "foods": [
+          "iron",
+          "trace elements",
+          "liq co2"
+        ]
+      },
+      "species": {
+        "program_class": "Anubias & Lagenandra",
+        "canonical_genus": "Anubius",
+        "canonical_species_name": "congensis",
+        "common_name": "anubius",
+        "latin_name": "Anubius congensis"
+      },
+      "existing_group_id": null,
+      "witness_id": 4,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "verify member match ; NEW species - will create species group"
+    },
+    {
+      "line": 63,
+      "form": {
+        "species_type": "Plant",
+        "species_class": "Stem Plants",
+        "water_type": "Fresh",
+        "species_common_name": "baby tears",
+        "species_latin_name": "Baby tears",
+        "reproduction_date": "2011-06-01",
+        "tank_size": "38 gal",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "6.8",
+        "substrate_type": "eco complete",
+        "light_type": "pc",
+        "light_strength": "68w",
+        "light_hours": "7 hrs",
+        "foods": [
+          "iron",
+          "trace elements",
+          "liq co2"
+        ]
+      },
+      "species": {
+        "program_class": "Stem Plants",
+        "canonical_genus": "Baby",
+        "canonical_species_name": "tears",
+        "common_name": "baby tears",
+        "latin_name": "Baby tears"
+      },
+      "existing_group_id": 1309,
+      "witness_id": 4,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "NO scientific name (common-name only) ; verify member match"
+    },
+    {
+      "line": 64,
+      "form": {
+        "species_type": "Plant",
+        "species_class": "Stem Plants",
+        "water_type": "Fresh",
+        "species_common_name": "combomba",
+        "species_latin_name": "Cabomba caroliniana",
+        "reproduction_date": "2010-12-14",
+        "tank_size": "38 gal",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "6.8",
+        "substrate_type": "eco complete",
+        "light_type": "pc",
+        "light_strength": "68w",
+        "light_hours": "7 hrs",
+        "foods": [
+          "iron",
+          "trace elements",
+          "liq co2"
+        ]
+      },
+      "species": {
+        "program_class": "Stem Plants",
+        "canonical_genus": "Cabomba",
+        "canonical_species_name": "caroliniana",
+        "common_name": "combomba",
+        "latin_name": "Cabomba caroliniana"
+      },
+      "existing_group_id": null,
+      "witness_id": 4,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "NO scientific name (common-name only) ; verify member match ; NEW species - will create species group"
+    },
+    {
+      "line": 65,
+      "form": {
+        "species_type": "Plant",
+        "species_class": "Cryptocoryne",
+        "water_type": "Fresh",
+        "species_common_name": "crypts",
+        "species_latin_name": "Cryptocoryne sp.",
+        "reproduction_date": "2011-12-28",
+        "tank_size": "38 gal",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "6.8",
+        "substrate_type": "eco complete",
+        "light_type": "pc",
+        "light_strength": "68w",
+        "light_hours": "7 hrs",
+        "foods": [
+          "iron",
+          "trace elements",
+          "liq co2"
+        ]
+      },
+      "species": {
+        "program_class": "Cryptocoryne",
+        "canonical_genus": "Cryptocoryne",
+        "canonical_species_name": "sp.",
+        "common_name": "crypts",
+        "latin_name": "Cryptocoryne sp."
+      },
+      "existing_group_id": null,
+      "witness_id": 4,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "NO scientific name (common-name only) ; verify member match ; NEW species - will create species group"
+    },
+    {
+      "line": 66,
+      "form": {
+        "species_type": "Plant",
+        "species_class": "Floating Plants",
+        "water_type": "Fresh",
+        "species_common_name": "duckweed",
+        "species_latin_name": "Lemna minor",
+        "reproduction_date": "2011-09-01",
+        "tank_size": "500 g pond",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "6.8",
+        "substrate_type": "eco complete",
+        "light_type": "pc",
+        "light_strength": "68w",
+        "light_hours": "7 hrs",
+        "foods": [
+          "iron",
+          "trace elements",
+          "liq co2"
+        ]
+      },
+      "species": {
+        "program_class": "Floating Plants",
+        "canonical_genus": "Lemna",
+        "canonical_species_name": "minor",
+        "common_name": "duckweed",
+        "latin_name": "Lemna minor"
+      },
+      "existing_group_id": null,
+      "witness_id": 4,
+      "approval": {
+        "points": 5,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "NO scientific name (common-name only) ; verify member match ; NEW species - will create species group"
+    },
+    {
+      "line": 67,
+      "form": {
+        "species_type": "Plant",
+        "species_class": "Rosette Plants",
+        "water_type": "Fresh",
+        "species_common_name": "java fern",
+        "species_latin_name": "Java fern",
+        "reproduction_date": "2008-01-06",
+        "tank_size": "38 gal",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "6.8",
+        "substrate_type": "eco complete",
+        "light_type": "pc",
+        "light_strength": "68w",
+        "light_hours": "7 hrs",
+        "foods": [
+          "iron",
+          "trace elements",
+          "liq co2"
+        ]
+      },
+      "species": {
+        "program_class": "Rosette Plants",
+        "canonical_genus": "Java",
+        "canonical_species_name": "fern",
+        "common_name": "java fern",
+        "latin_name": "Java fern"
+      },
+      "existing_group_id": 1568,
+      "witness_id": 4,
+      "approval": {
+        "points": 5,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "NO scientific name (common-name only) ; verify member match"
+    },
+    {
+      "line": 68,
+      "form": {
+        "species_type": "Plant",
+        "species_class": "Primitive Plants",
+        "water_type": "Fresh",
+        "species_common_name": "java moss",
+        "species_latin_name": "Java moss",
+        "reproduction_date": "2011-02-09",
+        "tank_size": "38 gal",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "6.8",
+        "substrate_type": "eco complete",
+        "light_type": "pc",
+        "light_strength": "68w",
+        "light_hours": "7 hrs",
+        "foods": [
+          "iron",
+          "trace elements",
+          "liq co2"
+        ]
+      },
+      "species": {
+        "program_class": "Primitive Plants",
+        "canonical_genus": "Java",
+        "canonical_species_name": "moss",
+        "common_name": "java moss",
+        "latin_name": "Java moss"
+      },
+      "existing_group_id": 1569,
+      "witness_id": 4,
+      "approval": {
+        "points": 5,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "NO scientific name (common-name only) ; verify member match"
+    },
+    {
+      "line": 69,
+      "form": {
+        "species_type": "Plant",
+        "species_class": "Water Lilles",
+        "water_type": "Fresh",
+        "species_common_name": "lilly",
+        "species_latin_name": "Nymphaea sp.",
+        "reproduction_date": "2020-07-10",
+        "tank_size": "500 pond",
+        "filter_type": "canister",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "6.8",
+        "substrate_type": "eco complete",
+        "light_strength": "sun",
+        "foods": [
+          "iron",
+          "trace elements",
+          "liq co2"
+        ]
+      },
+      "species": {
+        "program_class": "Water Lilles",
+        "canonical_genus": "Nymphaea",
+        "canonical_species_name": "sp.",
+        "common_name": "lilly",
+        "latin_name": "Nymphaea sp."
+      },
+      "existing_group_id": null,
+      "witness_id": 4,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": true,
+        "sexual_reproduction": false
+      },
+      "flags": "NO scientific name (common-name only) ; verify member match ; NEW species - will create species group"
+    },
+    {
+      "line": 70,
+      "form": {
+        "species_type": "Plant",
+        "species_class": "Stem Plants",
+        "water_type": "Fresh",
+        "species_common_name": "najas",
+        "species_latin_name": "Najas guadalupensis",
+        "reproduction_date": "2013-01-12",
+        "tank_size": "5 gal",
+        "filter_type": "box filter",
+        "water_change_volume": "10%",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "6.8",
+        "substrate_type": "eco complete",
+        "light_type": "pc",
+        "light_strength": "15w",
+        "light_hours": "7 hrs",
+        "foods": [
+          "iron",
+          "trace elements",
+          "liq co2"
+        ]
+      },
+      "species": {
+        "program_class": "Stem Plants",
+        "canonical_genus": "Najas",
+        "canonical_species_name": "guadalupensis",
+        "common_name": "najas",
+        "latin_name": "Najas guadalupensis"
+      },
+      "existing_group_id": null,
+      "witness_id": 4,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "NO scientific name (common-name only) ; verify member match ; NEW species - will create species group"
+    },
+    {
+      "line": 71,
+      "form": {
+        "species_type": "Plant",
+        "species_class": "Stem Plants",
+        "water_type": "Fresh",
+        "species_common_name": "parrot featers",
+        "species_latin_name": "Myriophyllum aquaticum",
+        "reproduction_date": "2010-06-14",
+        "tank_size": "38 gal",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "6.8",
+        "substrate_type": "eco complete",
+        "light_type": "pc",
+        "light_strength": "68w",
+        "light_hours": "7 hrs",
+        "foods": [
+          "iron",
+          "trace elements",
+          "liq co2"
+        ]
+      },
+      "species": {
+        "program_class": "Stem Plants",
+        "canonical_genus": "Myriophyllum",
+        "canonical_species_name": "aquaticum",
+        "common_name": "parrot featers",
+        "latin_name": "Myriophyllum aquaticum"
+      },
+      "existing_group_id": null,
+      "witness_id": 4,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "NO scientific name (common-name only) ; verify member match ; NEW species - will create species group"
+    },
+    {
+      "line": 72,
+      "form": {
+        "species_type": "Plant",
+        "species_class": "Sword Plants",
+        "water_type": "Fresh",
+        "species_common_name": "pygma swords",
+        "species_latin_name": "Helanthium tenellum",
+        "reproduction_date": "2011-02-09",
+        "tank_size": "38 gal",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "6.8",
+        "substrate_type": "eco complete",
+        "light_type": "pc",
+        "light_strength": "68w",
+        "light_hours": "7 hrs",
+        "foods": [
+          "iron",
+          "trace elements",
+          "liq co2"
+        ]
+      },
+      "species": {
+        "program_class": "Sword Plants",
+        "canonical_genus": "Helanthium",
+        "canonical_species_name": "tenellum",
+        "common_name": "pygma swords",
+        "latin_name": "Helanthium tenellum"
+      },
+      "existing_group_id": null,
+      "witness_id": 4,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "NO scientific name (common-name only) ; verify member match ; NEW species - will create species group"
+    },
+    {
+      "line": 73,
+      "form": {
+        "species_type": "Plant",
+        "species_class": "Stem Plants",
+        "water_type": "Fresh",
+        "species_common_name": "red nesea",
+        "species_latin_name": "Nesaea crassicaulis",
+        "reproduction_date": "2010-12-14",
+        "tank_size": "38 gal",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "6.8",
+        "substrate_type": "eco complete",
+        "light_type": "pc",
+        "light_strength": "68w",
+        "light_hours": "7 hrs",
+        "foods": [
+          "iron",
+          "trace elements",
+          "liq co2"
+        ]
+      },
+      "species": {
+        "program_class": "Stem Plants",
+        "canonical_genus": "Nesaea",
+        "canonical_species_name": "crassicaulis",
+        "common_name": "red nesea",
+        "latin_name": "Nesaea crassicaulis"
+      },
+      "existing_group_id": null,
+      "witness_id": 4,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "NO scientific name (common-name only) ; verify member match ; NEW species - will create species group"
+    },
+    {
+      "line": 74,
+      "form": {
+        "species_type": "Plant",
+        "species_class": "Rosette Plants",
+        "water_type": "Fresh",
+        "species_common_name": "red temple",
+        "species_latin_name": "Alternanthera reineckii",
+        "reproduction_date": "2009-04-06",
+        "tank_size": "38 gal",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "6.8",
+        "substrate_type": "eco complete",
+        "light_type": "pc",
+        "light_strength": "68w",
+        "light_hours": "7 hrs",
+        "foods": [
+          "iron",
+          "trace elements",
+          "liq co2"
+        ]
+      },
+      "species": {
+        "program_class": "Rosette Plants",
+        "canonical_genus": "Alternanthera",
+        "canonical_species_name": "reineckii",
+        "common_name": "red temple",
+        "latin_name": "Alternanthera reineckii"
+      },
+      "existing_group_id": 1239,
+      "witness_id": 4,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "verify member match"
+    },
+    {
+      "line": 75,
+      "form": {
+        "species_type": "Plant",
+        "species_class": "Rosette Plants",
+        "water_type": "Fresh",
+        "species_common_name": "valasanaria",
+        "species_latin_name": "Vallisneria sp.",
+        "reproduction_date": "2011-12-22",
+        "tank_size": "38 gal",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "6.8",
+        "substrate_type": "eco complete",
+        "light_type": "pc",
+        "light_strength": "68w",
+        "light_hours": "7 hrs",
+        "foods": [
+          "iron",
+          "trace elements",
+          "liq co2"
+        ]
+      },
+      "species": {
+        "program_class": "Rosette Plants",
+        "canonical_genus": "Vallisneria",
+        "canonical_species_name": "sp.",
+        "common_name": "valasanaria",
+        "latin_name": "Vallisneria sp."
+      },
+      "existing_group_id": null,
+      "witness_id": 4,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "NO scientific name (common-name only) ; verify member match ; NEW species - will create species group"
+    },
+    {
+      "line": 76,
+      "form": {
+        "species_type": "Plant",
+        "species_class": "Floating Plants",
+        "water_type": "Fresh",
+        "species_common_name": "water hyacinth",
+        "species_latin_name": "Water hyacinth",
+        "reproduction_date": "2012-07-05",
+        "tank_size": "500 g pond",
+        "filter_type": "canister",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "6.8",
+        "substrate_type": "eco complete",
+        "light_strength": "sun",
+        "foods": [
+          "none"
+        ]
+      },
+      "species": {
+        "program_class": "Floating Plants",
+        "canonical_genus": "Water",
+        "canonical_species_name": "hyacinth",
+        "common_name": "water hyacinth",
+        "latin_name": "Water hyacinth"
+      },
+      "existing_group_id": 1806,
+      "witness_id": 1,
+      "approval": {
+        "points": 10,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": true,
+        "sexual_reproduction": false
+      },
+      "flags": "NO scientific name (common-name only) ; defaulted (blank) -> David Manuel ; flowered bonus merged from dupe row"
+    },
+    {
+      "line": 77,
+      "form": {
+        "species_type": "Plant",
+        "species_class": "Floating Plants",
+        "water_type": "Fresh",
+        "species_common_name": "water lettuce",
+        "species_latin_name": "Water lettuce",
+        "reproduction_date": "2010-07-05",
+        "tank_size": "500 g pond",
+        "filter_type": "canister",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "6.8",
+        "substrate_type": "eco complete",
+        "light_strength": "sun",
+        "foods": [
+          "none"
+        ]
+      },
+      "species": {
+        "program_class": "Floating Plants",
+        "canonical_genus": "Water",
+        "canonical_species_name": "lettuce",
+        "common_name": "water lettuce",
+        "latin_name": "Water lettuce"
+      },
+      "existing_group_id": 1807,
+      "witness_id": 1,
+      "approval": {
+        "points": 10,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": true,
+        "sexual_reproduction": false
+      },
+      "flags": "NO scientific name (common-name only) ; defaulted (blank) -> David Manuel ; flowered bonus merged from dupe row"
+    },
+    {
+      "line": 78,
+      "form": {
+        "species_type": "Plant",
+        "species_class": "Stem Plants",
+        "water_type": "Fresh",
+        "species_common_name": "wisteria",
+        "species_latin_name": "Hygrophila difformis",
+        "reproduction_date": "2010-12-14",
+        "tank_size": "38 gal",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "6.8",
+        "substrate_type": "eco complete",
+        "light_type": "pc",
+        "light_strength": "68w",
+        "light_hours": "7 hrs",
+        "foods": [
+          "iron",
+          "trace elements",
+          "liq co2"
+        ]
+      },
+      "species": {
+        "program_class": "Stem Plants",
+        "canonical_genus": "Hygrophila",
+        "canonical_species_name": "difformis",
+        "common_name": "wisteria",
+        "latin_name": "Hygrophila difformis"
+      },
+      "existing_group_id": null,
+      "witness_id": 4,
+      "approval": {
+        "points": 10,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "NO scientific name (common-name only) ; verify member match ; NEW species - will create species group"
+    },
+    {
+      "line": 84,
+      "form": {
+        "species_type": "Fish",
+        "species_class": "Livebearers",
+        "water_type": "Fresh",
+        "species_common_name": "Balloon Mollie",
+        "species_latin_name": "Mollienesia species",
+        "reproduction_date": "2009-02-26",
+        "tank_size": "20g",
+        "filter_type": "hob",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "76",
+        "ph": "6.8",
+        "substrate_type": "gravel",
+        "light_type": "flor.",
+        "light_strength": "20w flor",
+        "light_hours": "5hrs",
+        "foods": [
+          "none"
+        ]
+      },
+      "species": {
+        "program_class": "Livebearers",
+        "canonical_genus": "Mollienesia",
+        "canonical_species_name": "sp.",
+        "common_name": "Balloon Mollie",
+        "latin_name": "Mollienesia species"
+      },
+      "existing_group_id": null,
+      "witness_id": 4,
+      "approval": {
+        "points": 5,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "genus-only / no species epithet ; verify member match ; NEW species - will create species group"
+    },
+    {
+      "line": 85,
+      "form": {
+        "species_type": "Fish",
+        "species_class": "Livebearers",
+        "water_type": "Fresh",
+        "species_common_name": "Half Black Guppy",
+        "species_latin_name": "Poecilia reticulata",
+        "reproduction_date": "2009-05-08",
+        "tank_size": "20g",
+        "filter_type": "hob",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "76",
+        "ph": "6.8",
+        "substrate_type": "gravel",
+        "light_type": "flor.",
+        "light_strength": "20w flor",
+        "light_hours": "5hrs",
+        "foods": [
+          "none"
+        ]
+      },
+      "species": {
+        "program_class": "Livebearers",
+        "canonical_genus": "Poecillia",
+        "canonical_species_name": "Reticulata",
+        "common_name": "Half Black Guppy",
+        "latin_name": "Poecilia reticulata"
+      },
+      "existing_group_id": 3,
+      "witness_id": 4,
+      "approval": {
+        "points": 5,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "verify member match"
+    },
+    {
+      "line": 86,
+      "form": {
+        "species_type": "Fish",
+        "species_class": "Cichlids - New World",
+        "water_type": "Fresh",
+        "species_common_name": "koi angels",
+        "species_latin_name": "Pterophyllum scalare",
+        "reproduction_date": "2008-12-02",
+        "tank_size": "38gal",
+        "filter_type": "sump",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "6.8",
+        "substrate_type": "gravel",
+        "light_type": "flor.",
+        "light_strength": "30w",
+        "light_hours": "5hrs",
+        "foods": [
+          "none"
+        ]
+      },
+      "species": {
+        "program_class": "Cichlids - New World",
+        "canonical_genus": "Pterophyllum",
+        "canonical_species_name": "scalare",
+        "common_name": "koi angels",
+        "latin_name": "Pterophyllum scalare"
+      },
+      "existing_group_id": 67,
+      "witness_id": 4,
+      "approval": {
+        "points": 15,
+        "article_points": 5,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "verify member match"
+    },
+    {
+      "line": 87,
+      "form": {
+        "species_type": "Fish",
+        "species_class": "Catfish & Loaches",
+        "water_type": "Fresh",
+        "species_common_name": "Bushynose Albino Pleco",
+        "species_latin_name": "Ancistrus multispinis",
+        "reproduction_date": "2008-09-04",
+        "tank_size": "10gal",
+        "filter_type": "Sponge filter",
+        "water_change_frequency": "weekly",
+        "temperature": "78",
+        "ph": "6.8",
+        "substrate_type": "bare bottom",
+        "light_type": "flor.",
+        "light_strength": "15watt",
+        "light_hours": "5hrs",
+        "foods": [
+          "none"
+        ]
+      },
+      "species": {
+        "program_class": "Catfish & Loaches",
+        "canonical_genus": "Ancistrus",
+        "canonical_species_name": "multispinis",
+        "common_name": "Bushynose Albino Pleco",
+        "latin_name": "Ancistrus multispinis"
+      },
+      "existing_group_id": null,
+      "witness_id": 4,
+      "approval": {
+        "points": 20,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "verify member match ; NEW species - will create species group"
+    },
+    {
+      "line": 88,
+      "form": {
+        "species_type": "Fish",
+        "species_class": "Livebearers",
+        "water_type": "Fresh",
+        "species_common_name": "Endlers Livebearer",
+        "species_latin_name": "Poecilia endlers",
+        "reproduction_date": "2009-10-01",
+        "tank_size": "10gal",
+        "filter_type": "box filter",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "6.8",
+        "substrate_type": "gravel",
+        "light_type": "flor.",
+        "light_strength": "15watt",
+        "light_hours": "5hrs",
+        "foods": [
+          "none"
+        ]
+      },
+      "species": {
+        "program_class": "Livebearers",
+        "canonical_genus": "Poecilia",
+        "canonical_species_name": "endlers",
+        "common_name": "Endlers Livebearer",
+        "latin_name": "Poecilia endlers"
+      },
+      "existing_group_id": null,
+      "witness_id": 4,
+      "approval": {
+        "points": 5,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "verify member match ; NEW species - will create species group"
+    },
+    {
+      "line": 89,
+      "form": {
+        "species_type": "Fish",
+        "species_class": "Miscellaneous",
+        "water_type": "Fresh",
+        "species_common_name": "Kribenses",
+        "species_latin_name": "Pelvicachromis pulcher",
+        "reproduction_date": "2009-05-06",
+        "tank_size": "15gal",
+        "filter_type": "Sponge filter",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "6.8",
+        "substrate_type": "gravel",
+        "light_type": "flor.",
+        "light_strength": "15watt",
+        "light_hours": "5hrs",
+        "foods": [
+          "none"
+        ]
+      },
+      "species": {
+        "program_class": "Miscellaneous",
+        "canonical_genus": "Pelvicachromis",
+        "canonical_species_name": "pulcher",
+        "common_name": "Kribenses",
+        "latin_name": "Pelvicachromis pulcher"
+      },
+      "existing_group_id": 964,
+      "witness_id": 4,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "West African dwarf cichlid ; verify member match"
+    },
+    {
+      "line": 90,
+      "form": {
+        "species_type": "Fish",
+        "species_class": "Livebearers",
+        "water_type": "Fresh",
+        "species_common_name": "Swordtail",
+        "species_latin_name": "Xiphophorus helleri",
+        "reproduction_date": "2001-01-03",
+        "tank_size": "10gal",
+        "filter_type": "box filter",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "6.8",
+        "substrate_type": "gravel",
+        "light_type": "flor.",
+        "light_strength": "15watt",
+        "light_hours": "5hrs",
+        "foods": [
+          "none"
+        ]
+      },
+      "species": {
+        "program_class": "Livebearers",
+        "canonical_genus": "Xiphophorus",
+        "canonical_species_name": "hellerii",
+        "common_name": "Swordtail",
+        "latin_name": "Xiphophorus helleri"
+      },
+      "existing_group_id": 1222,
+      "witness_id": 4,
+      "approval": {
+        "points": 5,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "verify member match"
+    },
+    {
+      "line": 91,
+      "form": {
+        "species_type": "Fish",
+        "species_class": "Cichlids - New World",
+        "water_type": "Fresh",
+        "species_common_name": "convicts",
+        "species_latin_name": "Amatitlania nigrofasciata",
+        "reproduction_date": "2011-12-04",
+        "tank_size": "15 gal",
+        "filter_type": "Sponge filter",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "6.8",
+        "substrate_type": "gravel",
+        "light_type": "flor.",
+        "light_strength": "15watt",
+        "light_hours": "5hrs",
+        "foods": [
+          "none"
+        ]
+      },
+      "species": {
+        "program_class": "Cichlids - New World",
+        "canonical_genus": "Amatitlania",
+        "canonical_species_name": "nigrofasciata",
+        "common_name": "convicts",
+        "latin_name": "Amatitlania nigrofasciata"
+      },
+      "existing_group_id": 113,
+      "witness_id": 4,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "verify member match"
+    },
+    {
+      "line": 92,
+      "form": {
+        "species_type": "Fish",
+        "species_class": "Livebearers",
+        "water_type": "Fresh",
+        "species_common_name": "eastern mosquitofish",
+        "species_latin_name": "Gambusia Holbrooki",
+        "reproduction_date": "2012-10-22",
+        "tank_size": "5 gal",
+        "filter_type": "box filter",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "7.2",
+        "substrate_type": "crushed coral",
+        "light_type": "flor.",
+        "light_strength": "15watt",
+        "light_hours": "5hrs",
+        "foods": [
+          "none"
+        ]
+      },
+      "species": {
+        "program_class": "Livebearers",
+        "canonical_genus": "Gambusia",
+        "canonical_species_name": "holbrooki",
+        "common_name": "eastern mosquitofish",
+        "latin_name": "Gambusia Holbrooki"
+      },
+      "existing_group_id": 533,
+      "witness_id": 4,
+      "approval": {
+        "points": 5,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "verify member match"
+    },
+    {
+      "line": 93,
+      "form": {
+        "species_type": "Fish",
+        "species_class": "Miscellaneous",
+        "water_type": "Fresh",
+        "species_common_name": "koi",
+        "species_latin_name": "Cyprinus rubrofuscus",
+        "reproduction_date": "2019-01-01",
+        "tank_size": "450 gal",
+        "filter_type": "canister",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "outside",
+        "ph": "7.2",
+        "substrate_type": "none",
+        "light_strength": "sunlight",
+        "foods": [
+          "none"
+        ]
+      },
+      "species": {
+        "program_class": "Miscellaneous",
+        "canonical_genus": "Cyprinus",
+        "canonical_species_name": "rubrofuscus",
+        "common_name": "koi",
+        "latin_name": "Cyprinus rubrofuscus"
+      },
+      "existing_group_id": 460,
+      "witness_id": 4,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "FUZZY date '2019 fall' -> year only, set to Jan 1 ; verify member match"
+    },
+    {
+      "line": 94,
+      "form": {
+        "species_type": "Fish",
+        "species_class": "Livebearers",
+        "water_type": "Fresh",
+        "species_common_name": "Least Killies",
+        "species_latin_name": "Heterandria formosa",
+        "reproduction_date": "2012-10-22",
+        "tank_size": "5 gal",
+        "filter_type": "box filter",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "78",
+        "ph": "7",
+        "substrate_type": "gravel",
+        "light_type": "flor.",
+        "light_strength": "15watt",
+        "light_hours": "5hrs",
+        "foods": [
+          "ammmo chips"
+        ]
+      },
+      "species": {
+        "program_class": "Livebearers",
+        "canonical_genus": "Heterandria",
+        "canonical_species_name": "formosa",
+        "common_name": "Least Killies",
+        "latin_name": "Heterandria formosa"
+      },
+      "existing_group_id": 47,
+      "witness_id": 4,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "verify member match"
+    },
+    {
+      "line": 95,
+      "form": {
+        "species_type": "Fish",
+        "species_class": "Cichlids - Old World",
+        "water_type": "Fresh",
+        "species_common_name": "Albino Peacocks",
+        "species_latin_name": "Aulonocara sp",
+        "reproduction_date": "2017-11-25",
+        "tank_size": "150gal",
+        "filter_type": "sump",
+        "water_change_frequency": "Bi-weekly",
+        "temperature": "76",
+        "ph": "7",
+        "substrate_type": "gravel",
+        "light_type": "flor.",
+        "light_strength": "60 watt",
+        "light_hours": "6 hrs",
+        "foods": [
+          "carbon",
+          "ph up"
+        ]
+      },
+      "species": {
+        "program_class": "Cichlids - Old World",
+        "canonical_genus": "Aulonocara",
+        "canonical_species_name": "sp.",
+        "common_name": "Albino Peacocks",
+        "latin_name": "Aulonocara sp"
+      },
+      "existing_group_id": null,
+      "witness_id": 4,
+      "approval": {
+        "points": 15,
+        "article_points": 0,
+        "first_time_species": false,
+        "cares_species": false,
+        "flowered": false,
+        "sexual_reproduction": false
+      },
+      "flags": "genus-only / no species epithet ; verify member match ; NEW species (genus-only candidate was group 191 Aulonocara baenschi)"
+    }
+  ]
+}
