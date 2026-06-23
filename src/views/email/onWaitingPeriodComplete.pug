@@ -1,0 +1,75 @@
+doctype html
+html
+	head
+		meta(charset="utf-8")
+		title Ready for the Next Meeting
+		style.
+			body {
+				font-family: Arial, sans-serif;
+				line-height: 1.6;
+				color: #333;
+				max-width: 600px;
+				margin: 0 auto;
+				padding: 20px;
+			}
+			.header {
+				background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+				color: white;
+				padding: 30px 20px;
+				text-align: center;
+				border-radius: 8px 8px 0 0;
+			}
+			.content {
+				background-color: #f8fafc;
+				padding: 20px;
+				border: 1px solid #e2e8f0;
+			}
+			.submission-details {
+				background-color: white;
+				padding: 15px;
+				border-radius: 6px;
+				margin: 15px 0;
+				border-left: 4px solid #3b82f6;
+			}
+			.button {
+				display: inline-block;
+				background: #2563eb;
+				color: white;
+				padding: 12px 24px;
+				border-radius: 6px;
+				margin: 15px 0;
+			}
+			.footer {
+				background-color: #1e293b;
+				color: white;
+				padding: 20px;
+				text-align: center;
+				border-radius: 0 0 8px 8px;
+				font-size: 14px;
+			}
+	body
+		.header
+			h1 Your waiting period is complete!
+		.content
+			p Hi #{member.display_name},
+			p
+				| The waiting period for your submission has elapsed — it's ready for the
+				| next step.
+			.submission-details
+				strong Species:
+				|  #{submission.species_common_name}
+			p
+				| Bring the fish, plant, or coral to the next monthly meeting, then open
+				| your submission and click
+				strong  “Brought to Meeting”
+				|  to enter the approval queue. Submissions wait here until you confirm,
+				| so this step is up to you.
+			p(style="text-align: center;")
+				a.button(href=`https://${domain}/submissions/${submission.id}` style="color: white; text-decoration: none;") View Your Submission
+			p
+				| If you've already brought it to a meeting and queued it, you can ignore
+				| this reminder.
+		.footer
+			p BASNY Breeder Awards Program
+			p
+				a(href="https://basny.org" style="color: white;") basny.org

@@ -130,6 +130,44 @@ export async function onSubmissionApprove(sub: Submission, member: MemberRecord)
   );
 }
 
+const renderWaitingPeriodComplete = pug.compileFile("src/views/email/onWaitingPeriodComplete.pug");
+/**
+ * Nudge sent when a submission's waiting period elapses, prompting the submitter
+ * to bring the fish/plant/coral to the next meeting and click "Brought to
+ * Meeting" so it enters the approval queue. Non-critical (the daily job logs and
+ * continues on failure; it will not be marked reminded, so it retries next run).
+ */
+export async function onWaitingPeriodComplete(
+  sub: Submission,
+  member: Pick<MemberRecord, "contact_email" | "display_name">
+): Promise<boolean> {
+  if (EMAILS_DISABLED) {
+    logger.info("Email disabled - would have sent waiting period complete reminder", {
+      submissionId: sub.id,
+    });
+    return true;
+  }
+
+  return sendEmailWithRetry(
+    () =>
+      transporter.sendMail({
+        from: fromEmail,
+        to: member.contact_email,
+        bcc: DEBUG_EMAIL,
+        subject: `Ready for the next meeting - ${sub.species_common_name}`,
+        html: renderWaitingPeriodComplete({
+          domain: config.server.domain,
+          submission: sub,
+          member,
+        }),
+      }),
+    {
+      type: "waiting_period_complete",
+      context: { submissionId: sub.id, recipient: member.contact_email },
+    }
+  );
+}
+
 const renderResetEmail = pug.compileFile("src/views/email/onForgotPassword.pug");
 export async function sendResetEmail(email: string, display_name: string, code: string) {
   if (EMAILS_DISABLED) {

@@ -43,6 +43,7 @@ import * as cardDemo from "./routes/cardDemo";
 import * as hoverCardDemo from "./routes/hoverCardDemo";
 import testRouter from "./routes/test";
 import { startScheduledCleanup } from "./scheduled/cleanup";
+import { startFinalSubmissionReminders } from "./scheduled/finalSubmissionReminder";
 import { startMcpHttpServer } from "./mcp/http-server";
 import { logger } from "./utils/logger";
 
@@ -412,9 +413,10 @@ async function main() {
 
     if (process.env.NODE_ENV === "production") {
       startScheduledCleanup();
-      logger.info("Scheduled cleanup enabled (production mode)");
+      startFinalSubmissionReminders();
+      logger.info("Scheduled tasks enabled (production mode)");
     } else {
-      logger.info("Scheduled cleanup disabled (non-production environment)");
+      logger.info("Scheduled tasks disabled (non-production environment)");
     }
 
     void startMcpHttpServer().catch((error) => {
