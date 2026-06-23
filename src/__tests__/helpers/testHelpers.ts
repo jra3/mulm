@@ -125,7 +125,7 @@ export async function setupTestDatabase(
   if (adminCount >= 2) {
     const otherAdminEmail = `admin2-${timestamp}@test.com`;
     const otherAdminId = await createMember(otherAdminEmail, "Other Admin");
-    context.otherAdmin = (await getMember(otherAdminId)) as TestMember;
+    context.otherAdmin = (await getMember(otherAdminId));
   }
 
   // Create additional members if requested

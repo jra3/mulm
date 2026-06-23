@@ -121,7 +121,7 @@ export async function verifyAndSaveCredential(
   await saveCredential({
     member_id: memberId,
     credential_id: credential.id,
-    public_key: Buffer.from(credential.publicKey) as Buffer,
+    public_key: Buffer.from(credential.publicKey),
     counter: credential.counter,
     transports: transportsStr,
     device_name: deviceName,

@@ -163,8 +163,8 @@ void describe("Species Group CRUD Operations", () => {
         async () =>
           await createSpeciesGroup({
             programClass: "Test",
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            speciesType: "Invalid" as any,
+             
+            speciesType: "Invalid",
             canonicalGenus: "Genus",
             canonicalSpeciesName: "species",
           }),
@@ -463,8 +463,8 @@ void describe("Species Group CRUD Operations", () => {
 
     void test("should throw error for invalid species type", async () => {
       await assert.rejects(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        async () => await updateSpeciesGroup(testGroupId, { speciesType: "InvalidType" as any }),
+         
+        async () => await updateSpeciesGroup(testGroupId, { speciesType: "InvalidType" }),
         { message: /must be Fish, Plant, Invert, or Coral/ }
       );
     });
