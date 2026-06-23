@@ -151,6 +151,8 @@ router.get("/submissions/:id", submission.view);
 router.post("/submissions", submission.create);
 router.patch("/submissions/:id", submission.update);
 router.delete("/submissions/:id", submission.remove);
+router.post("/submissions/:id/final-submit", submission.finalSubmit);
+router.delete("/submissions/:id/final-submit", submission.unfinalSubmit);
 router.get("/submissions/:id/edit-media", submission.renderEditMedia);
 router.patch("/submissions/:id/media", submission.updateMedia);
 

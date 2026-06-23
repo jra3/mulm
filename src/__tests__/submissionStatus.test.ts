@@ -18,6 +18,7 @@ void describe("Submission Status Calculation", () => {
     denied_on: null,
     denied_by: null,
     denied_reason: null,
+    final_submission_on: null,
   };
 
   void describe("Draft Status", () => {
@@ -183,10 +184,11 @@ void describe("Submission Status Calculation", () => {
   });
 
   void describe("Pending Approval Status", () => {
-    void test("should return pending-approval for witnessed submissions past waiting period", () => {
-      // Mock a submission that's been witnessed and past waiting period
+    void test("should return awaiting-final-submission for witnessed submissions past waiting period without final submission", () => {
+      // Past waiting period but submitter hasn't confirmed bringing the fish
+      // to a meeting yet, so it's not in the approval queue.
       const witnessedDate = new Date();
-      witnessedDate.setDate(witnessedDate.getDate() - 65); // 65 days ago (past 60-day waiting period)
+      witnessedDate.setDate(witnessedDate.getDate() - 65); // past 60-day waiting period
 
       const submission: Partial<Submission> = {
         ...baseSubmission,
@@ -195,6 +197,27 @@ void describe("Submission Status Calculation", () => {
         witnessed_on: witnessedDate.toISOString(),
         species_type: "Fish",
         reproduction_date: witnessedDate.toISOString(),
+        final_submission_on: null,
+      };
+
+      const status = getSubmissionStatus(submission);
+
+      assert.strictEqual(status.status, "awaiting-final-submission");
+      assert.strictEqual(status.label, "Bring to Meeting");
+    });
+
+    void test("should return pending-approval once submitter has marked final_submission_on", () => {
+      const witnessedDate = new Date();
+      witnessedDate.setDate(witnessedDate.getDate() - 65);
+
+      const submission: Partial<Submission> = {
+        ...baseSubmission,
+        submitted_on: witnessedDate.toISOString(),
+        witness_verification_status: "confirmed" as const,
+        witnessed_on: witnessedDate.toISOString(),
+        species_type: "Fish",
+        reproduction_date: witnessedDate.toISOString(),
+        final_submission_on: new Date().toISOString(),
       };
 
       const status = getSubmissionStatus(submission);

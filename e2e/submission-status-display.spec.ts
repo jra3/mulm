@@ -44,7 +44,9 @@ test.describe("Changes-Requested Status Display", () => {
 			memberId = user.id;
 			adminId = admin.id;
 
-			// Create witnessed submission with changes requested
+			// Create witnessed submission already in the approval queue, then
+			// add changes_requested fields to simulate an admin requesting
+			// changes during review.
 			submissionId = await createTestSubmission({
 				memberId: user.id,
 				submitted: true,
@@ -52,6 +54,7 @@ test.describe("Changes-Requested Status Display", () => {
 				witnessedBy: admin.id,
 				witnessedDaysAgo: 70,
 				reproductionDaysAgo: 70,
+				finalSubmitted: true,
 			});
 
 			// Set changes_requested fields
