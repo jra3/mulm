@@ -4,6 +4,7 @@ import { type Submission } from "./db/submissions";
 import { getAdminEmails, MemberRecord } from "./db/members";
 import * as pug from "pug";
 import { logger } from "@/utils/logger";
+import { sendEmailWithRetry } from "./services/emailService";
 
 const DEBUG_EMAIL = process.env.DEBUG_EMAIL;
 const fromEmail = `BASNY Breeder Awards ${config.email.fromEmail}`;
@@ -32,18 +33,22 @@ export async function onSubmissionSend(sub: Submission, member: MemberRecord) {
 
   const admins = await getAdminEmails();
 
-  return transporter.sendMail({
-    from: fromEmail,
-    to: member.contact_email,
-    cc: admins,
-    bcc: DEBUG_EMAIL,
-    subject: `Submission Confirmation - ${sub.species_common_name}`,
-    html: renderOnSubmission({
-      domain: config.server.domain,
-      submission: sub,
-      member,
-    }),
-  });
+  await sendEmailWithRetry(
+    () =>
+      transporter.sendMail({
+        from: fromEmail,
+        to: member.contact_email,
+        cc: admins,
+        bcc: DEBUG_EMAIL,
+        subject: `Submission Confirmation - ${sub.species_common_name}`,
+        html: renderOnSubmission({
+          domain: config.server.domain,
+          submission: sub,
+          member,
+        }),
+      }),
+    { type: "submission_created", context: { submissionId: sub.id, recipient: member.contact_email } }
+  );
 }
 
 export async function sendChangesRequest(sub: Submission, contact_email: string, content: string) {
@@ -54,14 +59,18 @@ export async function sendChangesRequest(sub: Submission, contact_email: string,
 
   const admins = await getAdminEmails();
 
-  return transporter.sendMail({
-    from: fromEmail,
-    to: contact_email,
-    cc: admins,
-    bcc: DEBUG_EMAIL,
-    subject: `Changes Requested - ${sub.species_common_name}`,
-    text: content,
-  });
+  await sendEmailWithRetry(
+    () =>
+      transporter.sendMail({
+        from: fromEmail,
+        to: contact_email,
+        cc: admins,
+        bcc: DEBUG_EMAIL,
+        subject: `Changes Requested - ${sub.species_common_name}`,
+        text: content,
+      }),
+    { type: "changes_request", context: { submissionId: sub.id, recipient: contact_email } }
+  );
 }
 
 const renderOnChangesRequested = pug.compileFile("src/views/email/onChangesRequested.pug");
@@ -77,20 +86,24 @@ export async function onChangesRequested(
 
   const admins = await getAdminEmails();
 
-  return transporter.sendMail({
-    from: fromEmail,
-    to: member.contact_email,
-    cc: admins,
-    bcc: DEBUG_EMAIL,
-    subject: `Changes Requested - ${submission.species_common_name}`,
-    html: renderOnChangesRequested({
-      domain: config.server.domain,
-      submission,
-      member,
-      reason,
-      programContactEmail: config.email.adminsEmail,
-    }),
-  });
+  await sendEmailWithRetry(
+    () =>
+      transporter.sendMail({
+        from: fromEmail,
+        to: member.contact_email,
+        cc: admins,
+        bcc: DEBUG_EMAIL,
+        subject: `Changes Requested - ${submission.species_common_name}`,
+        html: renderOnChangesRequested({
+          domain: config.server.domain,
+          submission,
+          member,
+          reason,
+          programContactEmail: config.email.adminsEmail,
+        }),
+      }),
+    { type: "changes_requested", context: { submissionId: submission.id, recipient: member.contact_email } }
+  );
 }
 
 const renderOnApprove = pug.compileFile("src/views/email/onApproval.pug");
@@ -100,17 +113,21 @@ export async function onSubmissionApprove(sub: Submission, member: MemberRecord)
     return;
   }
 
-  return transporter.sendMail({
-    from: fromEmail,
-    to: member.contact_email,
-    bcc: DEBUG_EMAIL,
-    subject: `Submission Approved! - ${sub.species_common_name}`,
-    html: renderOnApprove({
-      domain: config.server.domain,
-      submission: sub,
-      member,
-    }),
-  });
+  await sendEmailWithRetry(
+    () =>
+      transporter.sendMail({
+        from: fromEmail,
+        to: member.contact_email,
+        bcc: DEBUG_EMAIL,
+        subject: `Submission Approved! - ${sub.species_common_name}`,
+        html: renderOnApprove({
+          domain: config.server.domain,
+          submission: sub,
+          member,
+        }),
+      }),
+    { type: "submission_approved", context: { submissionId: sub.id, recipient: member.contact_email } }
+  );
 }
 
 const renderResetEmail = pug.compileFile("src/views/email/onForgotPassword.pug");
@@ -120,17 +137,22 @@ export async function sendResetEmail(email: string, display_name: string, code: 
     return;
   }
 
-  return transporter.sendMail({
-    from: fromEmail,
-    to: email,
-    subject: "Reset Password",
-    html: renderResetEmail({
-      domain: config.server.domain,
-      display_name,
-      code,
-      programContactEmail: config.email.adminsEmail,
-    }),
-  });
+  // Critical: the reset flow can't proceed without this email, so rethrow on failure.
+  await sendEmailWithRetry(
+    () =>
+      transporter.sendMail({
+        from: fromEmail,
+        to: email,
+        subject: "Reset Password",
+        html: renderResetEmail({
+          domain: config.server.domain,
+          display_name,
+          code,
+          programContactEmail: config.email.adminsEmail,
+        }),
+      }),
+    { type: "password_reset", critical: true, context: { recipient: email } }
+  );
 }
 
 const renderInviteEmail = pug.compileFile("src/views/email/invite.pug");
@@ -146,19 +168,23 @@ export async function sendInviteEmail(
     return;
   }
 
-  return transporter.sendMail({
-    from: fromEmail,
-    to: email,
-    bcc: DEBUG_EMAIL,
-    subject: "Welcome to the BASNY Breeders Awards Program!",
-    html: renderInviteEmail({
-      domain: config.server.domain,
-      display_name,
-      code,
-      member,
-      submissions,
-    }),
-  });
+  await sendEmailWithRetry(
+    () =>
+      transporter.sendMail({
+        from: fromEmail,
+        to: email,
+        bcc: DEBUG_EMAIL,
+        subject: "Welcome to the BASNY Breeders Awards Program!",
+        html: renderInviteEmail({
+          domain: config.server.domain,
+          display_name,
+          code,
+          member,
+          submissions,
+        }),
+      }),
+    { type: "member_invite", context: { recipient: email } }
+  );
 }
 
 const renderLevelUpgrade = pug.compileFile("src/views/email/onLevelUpgrade.pug");
@@ -181,19 +207,23 @@ export async function onLevelUpgrade(
     coral: "Coral Awards Program (CAP)",
   };
 
-  return transporter.sendMail({
-    from: fromEmail,
-    to: member.contact_email,
-    bcc: DEBUG_EMAIL,
-    subject: `Congratulations! New ${programNames[program]} Level: ${newLevel}`,
-    html: renderLevelUpgrade({
-      domain: config.server.domain,
-      member,
-      program,
-      newLevel,
-      totalPoints,
-    }),
-  });
+  await sendEmailWithRetry(
+    () =>
+      transporter.sendMail({
+        from: fromEmail,
+        to: member.contact_email,
+        bcc: DEBUG_EMAIL,
+        subject: `Congratulations! New ${programNames[program]} Level: ${newLevel}`,
+        html: renderLevelUpgrade({
+          domain: config.server.domain,
+          member,
+          program,
+          newLevel,
+          totalPoints,
+        }),
+      }),
+    { type: "level_upgrade", context: { memberId: member.id, newLevel, recipient: member.contact_email } }
+  );
 }
 
 export async function onScreeningApproved(
@@ -206,18 +236,22 @@ export async function onScreeningApproved(
     return;
   }
 
-  return transporter.sendMail({
-    from: fromEmail,
-    to: member.contact_email,
-    bcc: DEBUG_EMAIL,
-    subject: `Screening Approved - ${submission.species_common_name}`,
-    html: renderOnScreeningApproved({
-      domain: config.server.domain,
-      submission,
-      member,
-      witness,
-    }),
-  });
+  await sendEmailWithRetry(
+    () =>
+      transporter.sendMail({
+        from: fromEmail,
+        to: member.contact_email,
+        bcc: DEBUG_EMAIL,
+        subject: `Screening Approved - ${submission.species_common_name}`,
+        html: renderOnScreeningApproved({
+          domain: config.server.domain,
+          submission,
+          member,
+          witness,
+        }),
+      }),
+    { type: "screening_approved", context: { submissionId: submission.id, recipient: member.contact_email } }
+  );
 }
 
 export async function onScreeningRejected(
@@ -230,17 +264,21 @@ export async function onScreeningRejected(
     return;
   }
 
-  return transporter.sendMail({
-    from: fromEmail,
-    to: member.contact_email,
-    bcc: DEBUG_EMAIL,
-    subject: `Additional Information Needed - ${submission.species_common_name}`,
-    html: renderOnScreeningRejected({
-      domain: config.server.domain,
-      submission,
-      member,
-      reason,
-      programContactEmail: config.email.adminsEmail,
-    }),
-  });
+  await sendEmailWithRetry(
+    () =>
+      transporter.sendMail({
+        from: fromEmail,
+        to: member.contact_email,
+        bcc: DEBUG_EMAIL,
+        subject: `Additional Information Needed - ${submission.species_common_name}`,
+        html: renderOnScreeningRejected({
+          domain: config.server.domain,
+          submission,
+          member,
+          reason,
+          programContactEmail: config.email.adminsEmail,
+        }),
+      }),
+    { type: "screening_rejected", context: { submissionId: submission.id, recipient: member.contact_email } }
+  );
 }
