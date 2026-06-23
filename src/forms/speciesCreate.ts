@@ -9,7 +9,7 @@ export const speciesCreateForm = z.object({
   canonical_species_name: z.string().trim().min(1, "Species name cannot be empty").max(100),
   program_class: z.string().trim().min(1, "Program class cannot be empty").max(100),
   species_type: z.enum(["Fish", "Plant", "Invert", "Coral"], {
-    errorMap: () => ({ message: "Species type must be Fish, Plant, Invert, or Coral" }),
+    error: "Species type must be Fish, Plant, Invert, or Coral",
   }),
   base_points: z
     .string()

@@ -7,8 +7,10 @@ import * as z from "zod";
 export const caresRegistrationSchema = z.object({
   collection_entry_id: z.coerce
     .number({
-      required_error: "Collection entry ID is required",
-      invalid_type_error: "Collection entry ID must be a number",
+      error: (iss) =>
+        iss.input === undefined
+          ? "Collection entry ID is required"
+          : "Collection entry ID must be a number",
     })
     .int()
     .positive("Collection entry ID must be positive"),
@@ -21,11 +23,11 @@ export type CaresRegistrationInput = z.infer<typeof caresRegistrationSchema>;
  */
 export const caresFryShareSchema = z.object({
   species_group_id: z.coerce
-    .number({ required_error: "Species is required" })
+    .number({ error: "Species is required" })
     .int()
     .positive("Please select a species"),
   recipient_name: z
-    .string({ required_error: "Recipient name is required" })
+    .string({ error: "Recipient name is required" })
     .min(1, "Recipient name is required")
     .max(200, "Recipient name is too long"),
   recipient_club: z
@@ -34,7 +36,7 @@ export const caresFryShareSchema = z.object({
     .optional()
     .transform((v) => (v && v.trim() ? v.trim() : null)),
   share_date: z
-    .string({ required_error: "Date is required" })
+    .string({ error: "Date is required" })
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format"),
   notes: z
     .string()

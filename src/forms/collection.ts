@@ -120,7 +120,7 @@ export const collectionViewSchema = z.object({
     .string()
     .optional()
     .transform((val) => val === "true" || val === "1")
-    .default("false"),
+    .default(false),
 });
 
 /**
@@ -129,8 +129,8 @@ export const collectionViewSchema = z.object({
 export const memberIdParamSchema = z.object({
   memberId: z.coerce
     .number({
-      required_error: "Member ID is required",
-      invalid_type_error: "Member ID must be a number",
+      error: (iss) =>
+        iss.input === undefined ? "Member ID is required" : "Member ID must be a number",
     })
     .int()
     .positive("Member ID must be positive"),
@@ -139,8 +139,8 @@ export const memberIdParamSchema = z.object({
 export const entryIdParamSchema = z.object({
   id: z.coerce
     .number({
-      required_error: "Entry ID is required",
-      invalid_type_error: "Entry ID must be a number",
+      error: (iss) =>
+        iss.input === undefined ? "Entry ID is required" : "Entry ID must be a number",
     })
     .int()
     .positive("Entry ID must be positive"),
