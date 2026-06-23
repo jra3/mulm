@@ -97,6 +97,7 @@ export type Submission = {
   changes_requested_reason: string | null;
 
   final_submission_on: string | null;
+  final_submission_reminder_sent_on: string | null;
 
   is_cares_species?: number | null;
 };
@@ -578,6 +579,51 @@ export async function clearFinalSubmission(
 
     logger.info("Submission removed from approval queue", { submissionId, userId, isAdmin });
   });
+}
+
+export interface FinalReminderCandidate extends Submission {
+  contact_email: string;
+  member_name: string;
+}
+
+/**
+ * Submissions ready for the "waiting period complete" reminder: witnessed and
+ * confirmed, past their waiting period, not yet final-submitted, not approved
+ * or denied, and not already reminded. Joined with the member's contact info.
+ *
+ * The waiting-period length depends on species, so the SQL filters the simple
+ * boolean conditions and the per-species elapsed check is applied in JS via the
+ * shared `isEligibleForApproval` helper.
+ */
+export async function getSubmissionsAwaitingFinalReminder(): Promise<FinalReminderCandidate[]> {
+  const candidates = await query<FinalReminderCandidate>(
+    `SELECT submissions.*, members.contact_email, members.display_name AS member_name
+       FROM submissions
+       LEFT JOIN members ON submissions.member_id = members.id
+      WHERE submissions.submitted_on IS NOT NULL
+        AND submissions.approved_on IS NULL
+        AND submissions.denied_on IS NULL
+        AND submissions.witness_verification_status = 'confirmed'
+        AND submissions.final_submission_on IS NULL
+        AND submissions.final_submission_reminder_sent_on IS NULL`
+  );
+  return candidates.filter((submission) => isEligibleForApproval(submission));
+}
+
+/**
+ * Idempotently record that the final-submission reminder has been emailed.
+ * The `IS NULL` guard makes a concurrent/duplicate send a no-op.
+ */
+export async function markFinalSubmissionReminderSent(submissionId: number): Promise<void> {
+  const stmt = await writeConn.prepare(
+    `UPDATE submissions SET final_submission_reminder_sent_on = ?
+      WHERE id = ? AND final_submission_reminder_sent_on IS NULL`
+  );
+  try {
+    await stmt.run(new Date().toISOString(), submissionId);
+  } finally {
+    await stmt.finalize();
+  }
 }
 
 export async function confirmWitness(submissionId: number, witnessAdminId: number) {
