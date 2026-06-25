@@ -1,0 +1,18 @@
+include ../header.pug
+
+doctype html
+html
+  +headTag('External Data Sync')
+  body.bg-white.text-gray-800
+    +pageHeader(true, 'External Data Sync')
+
+    section.bg-gray-100.py-8
+      div(class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8")
+        .bg-white.rounded-lg.shadow.p-6
+          h2.text-xl.font-bold.mb-2.text-gray-900 Species Data Enrichment
+          p.text-gray-600.mb-6
+            | Pulls reference links and images from Wikipedia and GBIF for species whose
+            | data is stale (older than 90 days) or never synced. A manual run processes up
+            | to 25 species in the background; this page polls for progress.
+
+          include externalDataStatus.pug

@@ -2,10 +2,16 @@ import { Router } from "express";
 import { requireAdmin } from "./admin";
 import * as admin from "./admin";
 import * as speciesAdmin from "./admin/species";
+import * as externalData from "./admin/externalData";
 
 const adminRouter = Router();
 
 adminRouter.use(requireAdmin);
+
+// External species data sync (Wikipedia / GBIF)
+adminRouter.get("/external-data", externalData.externalDataPage);
+adminRouter.get("/external-data/status", externalData.externalDataStatus);
+adminRouter.post("/external-data/sync", externalData.triggerExternalDataSync);
 
 // Species management
 adminRouter.get("/species", speciesAdmin.listSpecies);

@@ -489,6 +489,7 @@ void describe("Pug Template Rendering", () => {
       /^mixins\/submissionImages\.pug$/, // Mixin-only template
       /^onSelectType\.pug$/, // Include-only template
       /^member\/caresSection\.pug$/, // Mixin-only template (included by member.pug)
+      /^admin\/externalDataStatus\.pug$/, // Partial included by externalData.pug + served via HTMX
     ];
 
     return !skipPatterns.some((pattern) => pattern.test(relativePath));
@@ -533,6 +534,23 @@ void describe("Pug Template Rendering", () => {
           case "bapForm/form.pug":
           case "submit.pug":
             templateData.formAction = "/submit";
+            break;
+
+          case "admin/externalData.pug":
+            templateData.state = {
+              running: false,
+              startedAt: null,
+              finishedAt: null,
+              lastSummary: { processed: 0, linksAdded: 0, imagesAdded: 0, notFound: 0, errors: 0 },
+              lastError: null,
+            };
+            templateData.stats = {
+              total_species: 0,
+              species_with_external_links: 0,
+              species_with_images: 0,
+              successful_syncs: 0,
+            };
+            templateData.recentLog = [];
             break;
 
           case "species/detail.pug":

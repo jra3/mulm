@@ -1,0 +1,76 @@
+mixin statusBadge(status)
+  - const colors = { success: 'bg-green-100 text-green-800', not_found: 'bg-gray-100 text-gray-700', error: 'bg-red-100 text-red-800', skipped: 'bg-yellow-100 text-yellow-800' }
+  span(class=`inline-block px-2 py-0.5 rounded text-xs font-medium ${colors[status] || 'bg-gray-100 text-gray-700'}`)= status
+
+#sync-status
+  if state.running
+    //- Poll while a run is in progress
+    .bg-blue-50.border.border-blue-200.rounded-lg.p-4.mb-4(
+      hx-get="/admin/external-data/status"
+      hx-trigger="every 5s"
+      hx-target="#sync-status"
+      hx-swap="outerHTML"
+    )
+      .flex.items-center.gap-3
+        .animate-spin.h-5.w-5.border-2.border-blue-500.border-t-transparent.rounded-full
+        div
+          p.font-semibold.text-blue-900 Sync running…
+          if state.startedAt
+            p.text-sm.text-blue-700 Started #{new Date(state.startedAt).toLocaleString()}
+  else
+    .bg-gray-50.border.border-gray-200.rounded-lg.p-4.mb-4
+      .flex.items-center.justify-between.gap-4
+        div
+          if state.lastError
+            p.font-semibold.text-red-800 Last run failed
+            p.text-sm.text-red-700= state.lastError
+          else if state.lastSummary
+            p.font-semibold.text-gray-900 Last run complete
+            p.text-sm.text-gray-700
+              | processed #{state.lastSummary.processed} · links +#{state.lastSummary.linksAdded} · images +#{state.lastSummary.imagesAdded} · not found #{state.lastSummary.notFound} · errors #{state.lastSummary.errors}
+          else
+            p.font-semibold.text-gray-900 Idle
+            p.text-sm.text-gray-600 No sync run this session.
+        button.primary(
+          hx-post="/admin/external-data/sync"
+          hx-target="#sync-status"
+          hx-swap="outerHTML"
+        ) Sync now
+
+  //- Coverage stats
+  .grid.grid-cols-2.gap-4.my-4(class="sm:grid-cols-4")
+    .bg-white.border.border-gray-200.rounded-lg.p-3.text-center
+      .text-2xl.font-bold.text-gray-900= stats.total_species
+      .text-xs.text-gray-600 Species
+    .bg-white.border.border-gray-200.rounded-lg.p-3.text-center
+      .text-2xl.font-bold.text-gray-900= stats.species_with_external_links
+      .text-xs.text-gray-600 With links
+    .bg-white.border.border-gray-200.rounded-lg.p-3.text-center
+      .text-2xl.font-bold.text-gray-900= stats.species_with_images
+      .text-xs.text-gray-600 With images
+    .bg-white.border.border-gray-200.rounded-lg.p-3.text-center
+      .text-2xl.font-bold.text-gray-900= stats.successful_syncs
+      .text-xs.text-gray-600 Successful syncs
+
+  //- Recent activity
+  h3.font-bold.text-gray-900.mt-6.mb-2 Recent sync activity
+  if recentLog.length === 0
+    p.text-sm.text-gray-600 No sync activity recorded yet.
+  else
+    .overflow-x-auto
+      table.w-full.text-sm.bg-white.rounded-lg.shadow-sm
+        thead
+          tr.bg-gray-50
+            th.p-2.text-left.border-b Source
+            th.p-2.text-left.border-b Status
+            th.p-2.text-right.border-b Links
+            th.p-2.text-right.border-b Images
+            th.p-2.text-left.border-b When
+        tbody
+          each entry in recentLog
+            tr.border-b.border-gray-100
+              td.p-2= entry.source
+              td.p-2: +statusBadge(entry.status)
+              td.p-2.text-right= entry.links_added
+              td.p-2.text-right= entry.images_added
+              td.p-2.text-gray-600= new Date(entry.sync_date).toLocaleString()
