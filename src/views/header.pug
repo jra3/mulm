@@ -4,9 +4,12 @@ include mixins/loadingSpinner.pug
 mixin headTag(title, ogData)
 	head
 		title= title
+		if csrfToken
+			meta(name="csrf-token" content=csrfToken)
 		link(rel='stylesheet', href='/index.css')
 		link(rel='stylesheet', href='/tom-select.css')
 		script(src='/htmx-2.0.4.js')
+		script(src='/js/csrf.js')
 		script(src='/tom-select.complete.min.js')
 		script(src=`/typeahead.js?v=${Date.now()}`)
 		script(src='/js/hoverCard.js')

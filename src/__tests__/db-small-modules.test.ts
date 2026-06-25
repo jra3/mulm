@@ -304,12 +304,13 @@ void describe("sessions.ts", () => {
 
   void describe("regenerateSessionInDB", () => {
     void test("should create a new session", async () => {
-      await regenerateSessionInDB(undefined, "new-session-1", memberId1, "2030-01-01T00:00:00Z");
+      await regenerateSessionInDB(undefined, "new-session-1", memberId1, "2030-01-01T00:00:00Z", "csrf-1");
 
       const row = await db.get("SELECT * FROM sessions WHERE session_id = ?", "new-session-1");
       assert.ok(row);
       assert.equal(row.member_id, memberId1);
       assert.equal(row.expires_on, "2030-01-01T00:00:00Z");
+      assert.equal(row.csrf_token, "csrf-1");
     });
 
     void test("should delete old session and create new one", async () => {
@@ -319,7 +320,7 @@ void describe("sessions.ts", () => {
         ["old-session", memberId1, "2030-01-01T00:00:00Z"]
       );
 
-      await regenerateSessionInDB("old-session", "new-session", memberId1, "2031-01-01T00:00:00Z");
+      await regenerateSessionInDB("old-session", "new-session", memberId1, "2031-01-01T00:00:00Z", "csrf-2");
 
       const old = await db.get("SELECT * FROM sessions WHERE session_id = ?", "old-session");
       const newS = await db.get("SELECT * FROM sessions WHERE session_id = ?", "new-session");
@@ -330,7 +331,7 @@ void describe("sessions.ts", () => {
 
     void test("should handle undefined old session ID gracefully", async () => {
       await assert.doesNotReject(async () => {
-        await regenerateSessionInDB(undefined, "fresh-session", memberId1, "2030-01-01T00:00:00Z");
+        await regenerateSessionInDB(undefined, "fresh-session", memberId1, "2030-01-01T00:00:00Z", "csrf-3");
       });
 
       const row = await db.get("SELECT * FROM sessions WHERE session_id = ?", "fresh-session");
@@ -343,7 +344,8 @@ void describe("sessions.ts", () => {
           "undefined",
           "session-after-undef",
           memberId1,
-          "2030-01-01T00:00:00Z"
+          "2030-01-01T00:00:00Z",
+          "csrf-4"
         );
       });
 
@@ -360,7 +362,7 @@ void describe("sessions.ts", () => {
         ["existing", memberId1, "2030-01-01T00:00:00Z"]
       );
 
-      await regenerateSessionInDB("existing", "replacement", memberId1, "2031-06-15T12:00:00Z");
+      await regenerateSessionInDB("existing", "replacement", memberId1, "2031-06-15T12:00:00Z", "csrf-5");
 
       const count = await db.get("SELECT COUNT(*) as cnt FROM sessions WHERE member_id = ?", memberId1);
       assert.equal(count.cnt, 1);

@@ -27,7 +27,18 @@ import { getMemberByEmail, getMemberPassword } from "./db/members";
 import { checkPassword } from "./auth";
 import { ready, writeConn } from "./db/conn";
 
-import { MulmRequest, sessionMiddleware, generateSessionCookie } from "./sessions";
+import {
+  MulmRequest,
+  sessionMiddleware,
+  generateSessionCookie,
+  generateCsrfToken,
+  SESSION_COOKIE_NAME,
+  SESSION_MAX_AGE_MS,
+  sessionCookieOptions,
+} from "./sessions";
+import { originValidation } from "./middleware/originValidation";
+import { csrfValidation } from "./middleware/csrfValidation";
+import helmet from "helmet";
 import { getGoogleOAuthURL, getFacebookOAuthURL, setOAuthStateCookie, isGoogleOAuthEnabled, isFacebookOAuthEnabled } from "./oauth";
 import { getQueryString, getBodyString } from "./utils/request";
 import { initR2 } from "./utils/r2-client";
@@ -52,6 +63,65 @@ const app = express();
 // Security: Hide Express version from X-Powered-By header
 app.disable("x-powered-by");
 
+// Behind Fly's proxy in production, trust the single proxy hop so req.protocol,
+// req.hostname and req.ip reflect the client-facing X-Forwarded-* values. We
+// trust exactly one hop (not `true`) so clients can't spoof X-Forwarded-For
+// past Fly's edge (matters for IP-keyed rate limiting and Origin validation).
+// https://fly.io/docs/networking/request-headers/
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
+}
+
+// Security headers (non-CSP subset only — CSP is deferred to issue #19 Phase 3,
+// blocked by existing inline JS). HSTS only in production (HTTPS); clickjacking
+// + MIME-sniffing protections everywhere.
+if (process.env.NODE_ENV === "production") {
+  app.use(helmet.hsts({ maxAge: 15552000 })); // 180 days
+}
+app.use(helmet.frameguard({ action: "deny" }));
+app.use(helmet.noSniff());
+
+// Content-Security-Policy in Report-Only mode (issue #19 Phase 3, first step).
+// Report-Only surfaces violations of the *target* policy without blocking, so
+// the inline scripts/handlers that currently power the UI can be found and
+// refactored before CSP is enforced. Enforcing today would break the app.
+//
+// The report collector is registered before the Origin/CSRF middleware (below)
+// so browser-sent reports — which carry no Origin or CSRF token — aren't rejected.
+app.post(
+  "/csp-report",
+  express.json({
+    type: ["application/csp-report", "application/reports+json", "application/json"],
+    limit: "64kb",
+  }),
+  (req, res) => {
+    logger.warn("CSP violation report", { report: req.body as unknown });
+    res.status(204).end();
+  }
+);
+
+app.use(
+  helmet.contentSecurityPolicy({
+    useDefaults: false,
+    reportOnly: true,
+    directives: {
+      defaultSrc: ["'self'"],
+      // esm.sh serves the SimpleWebAuthn passkey browser helper.
+      scriptSrc: ["'self'", "https://esm.sh"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      // R2-hosted submission images + Open Graph images over https; data: for inline svg.
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "https://esm.sh"],
+      fontSrc: ["'self'", "data:"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      frameAncestors: ["'none'"],
+      reportUri: ["/csp-report"],
+    },
+  })
+);
+
 // Initialize R2 client for image uploads
 initR2();
 
@@ -71,6 +141,17 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(cookieParser());
 app.use(sessionMiddleware);
+
+// CSRF backstop: reject state-changing requests (POST/PUT/PATCH/DELETE) whose
+// Origin/Referer isn't an allowlisted, same-site origin. This is the primary
+// gap closed by issue #19 — it makes our `SameSite=Lax` cookie sufficient even
+// against the sibling-subdomain SameSite carve-out.
+app.use(originValidation);
+
+// Defense-in-depth (issue #19 Phase 2): synchronizer-token CSRF check on
+// authenticated state-changing requests. Runs after sessionMiddleware so
+// req.viewer / req.csrfToken are populated.
+app.use(csrfValidation);
 
 // Make config available to all templates via res.locals
 app.use((_req, res, next) => {
@@ -286,16 +367,16 @@ router.get("/dialog/auth/forgot-password", (req, res) => {
 
 // Test-only login page (simpler, no HTMX, for e2e tests)
 // Available in dev/test environments for reliable automated testing
-router.get("/test-login", (req, res) => {
+router.get("/test-login", devOnly, (req, res) => {
   res.render("test-login", { error: null });
 });
 
-router.post("/test-login", async (req, res) => {
+router.post("/test-login", devOnly, async (req, res) => {
   // Simplified test login - no lockout check, no timing attack mitigation
   const email = getBodyString(req, "email");
   const password = getBodyString(req, "password");
   const cookies = req.cookies as Record<string, string> | undefined;
-  const oldSessionId = cookies?.session_id || "";
+  const oldSessionId = cookies?.[SESSION_COOKIE_NAME] || "";
 
   const member = await getMemberByEmail(email);
 
@@ -316,7 +397,7 @@ router.post("/test-login", async (req, res) => {
   if (isValid) {
     // Create session manually without nested transactions
     const sessionId = generateSessionCookie();
-    const expiry = new Date(Date.now() + 180 * 86400 * 1000).toISOString();
+    const expiry = new Date(Date.now() + SESSION_MAX_AGE_MS).toISOString();
 
     // Delete old session if exists
     if (oldSessionId && oldSessionId !== "undefined") {
@@ -329,22 +410,18 @@ router.post("/test-login", async (req, res) => {
     }
 
     // Create new session
+    const csrfToken = generateCsrfToken();
     const insertStmt = await writeConn.prepare(
-      "INSERT INTO sessions (session_id, member_id, expires_on) VALUES (?, ?, ?)"
+      "INSERT INTO sessions (session_id, member_id, expires_on, csrf_token) VALUES (?, ?, ?, ?)"
     );
     try {
-      await insertStmt.run(sessionId, member.id, expiry);
+      await insertStmt.run(sessionId, member.id, expiry, csrfToken);
     } finally {
       await insertStmt.finalize();
     }
 
     // Set cookie
-    res.cookie("session_id", sessionId, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 180 * 86400 * 1000,
-    });
+    res.cookie(SESSION_COOKIE_NAME, sessionId, sessionCookieOptions());
 
     res.redirect("/");
     return;
@@ -353,15 +430,16 @@ router.post("/test-login", async (req, res) => {
   res.render("test-login", { error: "Invalid email or password" });
 });
 
-router.get("/test-logout", async (req, res) => {
-  // Simple GET logout for e2e tests - destroys session and redirects
+router.get("/test-logout", devOnly, async (req, res) => {
+  // Simple GET logout for e2e tests - destroys session and redirects.
+  // Guarded by devOnly: a state-changing GET must not exist in production.
 
-  // Clear session cookie
-  res.cookie("session_id", "", { maxAge: 0 });
+  // Clear session cookie (matching attributes so the browser drops it)
+  res.clearCookie(SESSION_COOKIE_NAME, sessionCookieOptions(0));
 
   // Delete session from database
   const cookies = req.cookies as Record<string, string> | undefined;
-  const sessionId = cookies?.session_id || "";
+  const sessionId = cookies?.[SESSION_COOKIE_NAME] || "";
   if (sessionId && sessionId !== "undefined") {
     try {
       const deleteStmt = await writeConn.prepare("DELETE FROM sessions WHERE session_id = ?");
