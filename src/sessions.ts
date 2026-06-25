@@ -6,6 +6,9 @@ import { logger } from "./utils/logger";
 
 export const generateSessionCookie = () => generateRandomCode(64);
 
+/** Per-session CSRF token (issue #19 Phase 2): 32 random bytes, base64url. */
+export const generateCsrfToken = () => generateRandomCode(32);
+
 /**
  * Session lifetime. We deliberately keep the long-lived (180 day) cookie that
  * predates issue #19 — session IDs are rotated on every authentication event
@@ -55,12 +58,19 @@ type Viewer = {
   coral_level?: string;
 };
 
-export type MulmRequest = Request & { viewer?: Viewer };
+export type MulmRequest = Request & { viewer?: Viewer; csrfToken?: string };
 
-export async function sessionMiddleware(req: MulmRequest, _res: Response, next: NextFunction) {
+export async function sessionMiddleware(req: MulmRequest, res: Response, next: NextFunction) {
   const token = getSessionToken(req);
   if (token) {
-    req.viewer = await getLoggedInUser(token);
+    const session = await getLoggedInUser(token);
+    if (session) {
+      req.viewer = session;
+      req.csrfToken = session.csrf_token ?? undefined;
+      // Surface the CSRF token to templates so the layout can emit its
+      // <meta name="csrf-token"> tag (read back by /js/csrf.js).
+      res.locals.csrfToken = req.csrfToken;
+    }
   }
   next();
 }
@@ -74,7 +84,7 @@ function getSessionToken(req: Request): string {
 async function getLoggedInUser(token: string) {
   const now = new Date().toISOString();
   return (
-    await query<Viewer>(
+    await query<Viewer & { csrf_token: string | null }>(
       `
 				SELECT
 					members.id as id,
@@ -83,7 +93,8 @@ async function getLoggedInUser(token: string) {
 					members.is_admin as is_admin,
 					members.fish_level as fish_level,
 					members.plant_level as plant_level,
-					members.coral_level as coral_level
+					members.coral_level as coral_level,
+					sessions.csrf_token as csrf_token
 				FROM sessions JOIN members ON sessions.member_id = members.id
 				WHERE session_id = ? AND expires_on > ?;
 			`,
@@ -106,10 +117,11 @@ export async function regenerateSession(
 ): Promise<void> {
   const oldSessionId = getSessionToken(req);
   const newSessionId = generateSessionCookie();
+  const csrfToken = generateCsrfToken();
   const expiry = new Date(Date.now() + SESSION_MAX_AGE_MS).toISOString();
 
   // Delete old session and create new one atomically
-  await regenerateSessionInDB(oldSessionId, newSessionId, memberId, expiry);
+  await regenerateSessionInDB(oldSessionId, newSessionId, memberId, expiry, csrfToken);
 
   // Set new cookie
   res.cookie(SESSION_COOKIE_NAME, newSessionId, sessionCookieOptions());

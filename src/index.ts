@@ -31,11 +31,13 @@ import {
   MulmRequest,
   sessionMiddleware,
   generateSessionCookie,
+  generateCsrfToken,
   SESSION_COOKIE_NAME,
   SESSION_MAX_AGE_MS,
   sessionCookieOptions,
 } from "./sessions";
 import { originValidation } from "./middleware/originValidation";
+import { csrfValidation } from "./middleware/csrfValidation";
 import helmet from "helmet";
 import { getGoogleOAuthURL, getFacebookOAuthURL, setOAuthStateCookie, isGoogleOAuthEnabled, isFacebookOAuthEnabled } from "./oauth";
 import { getQueryString, getBodyString } from "./utils/request";
@@ -79,6 +81,47 @@ if (process.env.NODE_ENV === "production") {
 app.use(helmet.frameguard({ action: "deny" }));
 app.use(helmet.noSniff());
 
+// Content-Security-Policy in Report-Only mode (issue #19 Phase 3, first step).
+// Report-Only surfaces violations of the *target* policy without blocking, so
+// the inline scripts/handlers that currently power the UI can be found and
+// refactored before CSP is enforced. Enforcing today would break the app.
+//
+// The report collector is registered before the Origin/CSRF middleware (below)
+// so browser-sent reports — which carry no Origin or CSRF token — aren't rejected.
+app.post(
+  "/csp-report",
+  express.json({
+    type: ["application/csp-report", "application/reports+json", "application/json"],
+    limit: "64kb",
+  }),
+  (req, res) => {
+    logger.warn("CSP violation report", { report: req.body as unknown });
+    res.status(204).end();
+  }
+);
+
+app.use(
+  helmet.contentSecurityPolicy({
+    useDefaults: false,
+    reportOnly: true,
+    directives: {
+      defaultSrc: ["'self'"],
+      // esm.sh serves the SimpleWebAuthn passkey browser helper.
+      scriptSrc: ["'self'", "https://esm.sh"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      // R2-hosted submission images + Open Graph images over https; data: for inline svg.
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "https://esm.sh"],
+      fontSrc: ["'self'", "data:"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      frameAncestors: ["'none'"],
+      reportUri: ["/csp-report"],
+    },
+  })
+);
+
 // Initialize R2 client for image uploads
 initR2();
 
@@ -104,6 +147,11 @@ app.use(sessionMiddleware);
 // gap closed by issue #19 — it makes our `SameSite=Lax` cookie sufficient even
 // against the sibling-subdomain SameSite carve-out.
 app.use(originValidation);
+
+// Defense-in-depth (issue #19 Phase 2): synchronizer-token CSRF check on
+// authenticated state-changing requests. Runs after sessionMiddleware so
+// req.viewer / req.csrfToken are populated.
+app.use(csrfValidation);
 
 // Make config available to all templates via res.locals
 app.use((_req, res, next) => {
@@ -362,11 +410,12 @@ router.post("/test-login", devOnly, async (req, res) => {
     }
 
     // Create new session
+    const csrfToken = generateCsrfToken();
     const insertStmt = await writeConn.prepare(
-      "INSERT INTO sessions (session_id, member_id, expires_on) VALUES (?, ?, ?)"
+      "INSERT INTO sessions (session_id, member_id, expires_on, csrf_token) VALUES (?, ?, ?, ?)"
     );
     try {
-      await insertStmt.run(sessionId, member.id, expiry);
+      await insertStmt.run(sessionId, member.id, expiry, csrfToken);
     } finally {
       await insertStmt.finalize();
     }
