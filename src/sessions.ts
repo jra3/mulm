@@ -6,6 +6,44 @@ import { logger } from "./utils/logger";
 
 export const generateSessionCookie = () => generateRandomCode(64);
 
+/**
+ * Session lifetime. We deliberately keep the long-lived (180 day) cookie that
+ * predates issue #19 — session IDs are rotated on every authentication event
+ * (see {@link regenerateSession}) which is the important fixation defense.
+ */
+export const SESSION_MAX_AGE_MS = 180 * 86400 * 1000;
+
+/**
+ * Name of the session cookie.
+ *
+ * In production we use the `__Host-` prefix. The browser only accepts a
+ * `__Host-`-prefixed cookie when it is `Secure`, has **no** `Domain`
+ * attribute, and uses `Path=/`. That gives us cheap, browser-enforced defense
+ * against subdomain cookie-forgery (a sibling `*.basny.org` can't set our
+ * session cookie) and HTTPS-downgrade attacks.
+ *
+ * The prefix *requires* `Secure`, so we cannot use it in dev/test where the app
+ * is served over plain HTTP on localhost — there we fall back to the bare name.
+ */
+export const SESSION_COOKIE_NAME =
+  process.env.NODE_ENV === "production" ? "__Host-session_id" : "session_id";
+
+/**
+ * Cookie options for the session cookie. Centralized so the set/clear sites
+ * stay in sync (clearing a cookie requires matching attributes). `path: "/"`
+ * and the production-only `secure` flag are also what the `__Host-` prefix
+ * requires.
+ */
+export function sessionCookieOptions(maxAgeMs: number = SESSION_MAX_AGE_MS) {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    path: "/",
+    maxAge: maxAgeMs,
+  };
+}
+
 type Viewer = {
   id: number;
   display_name: string;
@@ -20,11 +58,17 @@ type Viewer = {
 export type MulmRequest = Request & { viewer?: Viewer };
 
 export async function sessionMiddleware(req: MulmRequest, _res: Response, next: NextFunction) {
-  const token = String(req.cookies.session_id);
+  const token = getSessionToken(req);
   if (token) {
     req.viewer = await getLoggedInUser(token);
   }
   next();
+}
+
+/** Read the raw session token from the request cookies, or "" if absent. */
+function getSessionToken(req: Request): string {
+  const cookies = req.cookies as Record<string, string> | undefined;
+  return cookies?.[SESSION_COOKIE_NAME] ?? "";
 }
 
 async function getLoggedInUser(token: string) {
@@ -60,26 +104,27 @@ export async function regenerateSession(
   res: Response,
   memberId: number
 ): Promise<void> {
-  const oldSessionId = String(req.cookies.session_id);
+  const oldSessionId = getSessionToken(req);
   const newSessionId = generateSessionCookie();
-  const expiry = new Date(Date.now() + 180 * 86400 * 1000).toISOString();
+  const expiry = new Date(Date.now() + SESSION_MAX_AGE_MS).toISOString();
 
   // Delete old session and create new one atomically
   await regenerateSessionInDB(oldSessionId, newSessionId, memberId, expiry);
 
   // Set new cookie
-  res.cookie("session_id", newSessionId, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 180 * 86400 * 1000,
-  });
+  res.cookie(SESSION_COOKIE_NAME, newSessionId, sessionCookieOptions());
 }
 
 export async function destroyUserSession(req: MulmRequest, res: Response) {
-  res.cookie("session_id", null);
-  const token = String(req.cookies.session_id);
-  if (token !== undefined) {
+  const token = getSessionToken(req);
+  // Clear with matching attributes (path/secure) so the browser actually drops it.
+  res.clearCookie(SESSION_COOKIE_NAME, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+  });
+  if (token) {
     try {
       const conn = writeConn;
       const deleteRow = await conn.prepare("DELETE FROM sessions WHERE session_id = ?");
