@@ -58,7 +58,7 @@
 		"marked": "^17.0.0",
 		"module-alias": "^2.2.3",
 		"multer": "^2.0.1",
-		"nodemailer": "^7.0.2",
+		"nodemailer": "^9.0.3",
 		"pug": "^3.0.3",
 		"sharp": "^0.34.3",
 		"sqlite": "^5.1.1",
