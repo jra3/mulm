@@ -86,7 +86,7 @@
 		"concurrently": "^9.2.1",
 		"eslint": "^9.39.2",
 		"eslint-config-prettier": "^10.1.8",
-		"globals": "^16.5.0",
+		"globals": "^17.7.0",
 		"husky": "^9.1.7",
 		"lightningcss": "^1.29.3",
 		"lint-staged": "^16.4.0",
