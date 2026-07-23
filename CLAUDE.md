@@ -64,3 +64,21 @@ This project uses **GitHub Issues only**. Linear is not used.
 
 - **`/frontend-design`** - UI patterns, Pug mixins, Tailwind conventions, HTMX patterns
 - **`/ops`** - Deployment, testing commands, branch protection, infrastructure
+
+### Matt Pocock's engineering skills (mattpocock/skills v1.1.0, MIT)
+
+Installed as editable files under `.claude/skills/` (full v1.1.0 set — see `.claude/skills/MATTPOCOCK-SKILLS.md` for provenance). Start with **`/ask-matt`**, the router that points you at the right skill/flow (grill → spec → tickets → implement; plus `research`, `code-review`, `diagnosing-bugs`, `domain-modeling`, `wayfinder`, `tdd`, `triage`, etc.). Run **`/setup-matt-pocock-skills`** only to re-configure the tracker/labels/doc layout (already configured below).
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues on `jra3/mulm` (via `gh`); external PRs are **not** a triage surface. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Five canonical triage roles mapped 1:1 (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`), alongside the existing `GITHUB_LABELS.md` scheme. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `CONTEXT.md` at the repo root, ADRs under `docs/adr/`. See `docs/agents/domain.md`.
