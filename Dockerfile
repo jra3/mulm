@@ -44,7 +44,7 @@ COPY litestream.yml /etc/litestream.yml
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
+    adduser -S nodejs -u 1001 -G nodejs
 
 # Pre-create the data mount point owned by nodejs so Fly volumes (and local
 # docker volumes) inherit ownership on first init.
