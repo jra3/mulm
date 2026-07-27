@@ -84,7 +84,7 @@
 		"@typescript-eslint/parser": "^8.64.0",
 		"autoprefixer": "^10.5.4",
 		"concurrently": "^9.2.1",
-		"eslint": "^9.39.2",
+		"eslint": "^10.8.0",
 		"eslint-config-prettier": "^10.1.8",
 		"globals": "^17.7.0",
 		"husky": "^9.1.7",
