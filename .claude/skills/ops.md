@@ -32,6 +32,48 @@ flyctl ssh console --app basny-bap
 ./infrastructure/sync-db-from-production.sh
 ```
 
+## Staging: Deploy, Refresh Data, and Test Accounts
+
+Staging (`basny-bap-staging`, https://basny-bap-staging.fly.dev) restores a
+read-only copy of prod data on boot and never replicates back (`STAGING=1`), so
+it's safe to break. Scale-to-zero: HTTP requests auto-wake it; `flyctl ssh` does not.
+
+```bash
+# 1. Deploy your branch/main to staging
+flyctl deploy --config fly.staging.toml --app basny-bap-staging
+
+# 2. (optional) Refresh prod data. NOTE: this WIPES seeded test users.
+MACHINE=$(flyctl machines list --app basny-bap-staging --json | jq -r '.[0].id')
+flyctl ssh console --app basny-bap-staging \
+  -C "rm -f /mnt/app-data/database/database.db /mnt/app-data/database/database.db-shm /mnt/app-data/database/database.db-wal"
+flyctl machine restart "$MACHINE" --app basny-bap-staging   # start.sh restores from prod R2
+
+# 3. (Re)create test logins — idempotent, run after every data refresh
+./scripts/seed-staging-users.sh
+```
+
+**Test accounts** (created by the seed script; same creds as `e2e/helpers/testData.ts`):
+
+| Role | Email | Password |
+|------|-------|----------|
+| admin | `baptest+admin@porcnick.com` | `AdminPassword123!` |
+| non-admin | `baptest+e2e@porcnick.com` | `TestPassword123!` |
+
+The seed script refuses to run against any machine without `STAGING=1` (prod safety),
+starts the scale-to-zero VM, and upserts via `ON CONFLICT`. Passkeys don't work on
+staging (wrong origin) — log in with a password.
+
+**Verify a login without a browser** (`POST /auth/login`, fields `email` + `password`):
+
+```bash
+HOST=https://basny-bap-staging.fly.dev
+curl -s -D - -o /dev/null -H "Origin: $HOST" \
+  --data-urlencode "email=baptest+admin@porcnick.com" \
+  --data-urlencode "password=AdminPassword123!" \
+  "$HOST/auth/login" | grep -iE '^HTTP/|^hx-redirect:|^set-cookie:'
+# Success = HX-Redirect: / + a session_id cookie. Failure = 200 body "Incorrect email or password".
+```
+
 ## Branch Protection
 
 The `main` branch is protected:
