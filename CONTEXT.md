@@ -142,8 +142,12 @@ The unit a submission is about, identified by scientific (Latin) name — color 
 _Avoid_: fish, variety, breed, strain
 
 **Species class**:
-The group a species belongs to for Specialty awards and classification (e.g. Anabantoids, Cichlids, Killifish) — distinct from **point class**. Represented as `species_class` (`src/specialtyAwards.ts`).
+The group a species belongs to for Specialty awards and classification (e.g. Anabantoids, Cichlids, Killifish) — distinct from **point class** and from **species type**. Represented as `species_class` (`src/specialtyAwards.ts`).
 _Avoid_: category, group, family (when you mean the `species_class` field)
+
+**Species type**:
+Which kind of organism a species is — Fish, Invert, Plant or Coral — and so which Program a submission counts toward (Fish and Invert to BAP, Plant to HAP, Coral to CAP). Represented as `species_type`; the type-to-Program mapping lives in `src/points.ts` (`SpeciesType`, `isInProgram`). Coarser than **species class**, which subdivides within a type.
+_Avoid_: species class, category, kind
 
 ## CARES
 

@@ -22,12 +22,16 @@ mixin errorMessage(name, customClass='')
 //- hidden for this Program, or lives in the collapsed Additional Bonuses section —
 //- so the messages are shown together beneath the bonus row.
 //-
+//- @param {string[]} fields - The bonus field names. `src/index.ts` puts
+//-   `bonusFields` (src/points.ts) on res.locals, so every render in the app
+//-   has it and adding a bonus there shows its errors here without touching
+//-   this file. Passed in rather than defaulted, so a caller that has no such
+//-   local fails loudly instead of quietly showing no errors at all.
+//-
 //- Example usage:
-//-   +bonusErrors()
+//-   +bonusErrors(bonusFields)
 
-mixin bonusErrors()
+mixin bonusErrors(fields)
   .flex.flex-col
-    +errorMessage('first_time_species')
-    +errorMessage('cares_species')
-    +errorMessage('flowered')
-    +errorMessage('sexual_reproduction')
+    each field in fields
+      +errorMessage(field)

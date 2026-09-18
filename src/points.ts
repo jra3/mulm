@@ -1,5 +1,5 @@
 import * as z from "zod";
-import { programMetadata, ProgramType } from "./programs";
+import { isProgramType, programMetadata, ProgramType } from "./programs";
 
 /**
  * The Points rule, in one place.
@@ -175,7 +175,12 @@ export const programBonuses: Record<ProgramType, readonly BonusField[]> = {
   coral: everyProgram,
 };
 
-/** How a bonus is named to a committee member in a validation message. */
+/**
+ * How a bonus is named to a committee member in a validation message. Declared
+ * in the order the formula states the bonuses in, and the only place the set is
+ * written out: the `Record` makes the compiler check it against `BonusField`,
+ * and `bonusFields` below reads its keys rather than repeating them.
+ */
 const bonusNames: Record<BonusField, string> = {
   article_points: "article",
   first_time_species: "first-time species",
@@ -184,14 +189,11 @@ const bonusNames: Record<BonusField, string> = {
   sexual_reproduction: "sexual reproduction",
 };
 
-/** Every bonus, in the order the formula states them. */
-const bonusFields: readonly BonusField[] = [
-  "article_points",
-  "first_time_species",
-  "cares_species",
-  "flowered",
-  "sexual_reproduction",
-];
+/**
+ * Every bonus, in the order the formula states them. Exported so the approval
+ * panel's error mixin loops over it instead of listing the fields a third time.
+ */
+export const bonusFields: readonly BonusField[] = Object.keys(bonusNames) as BonusField[];
 
 /** The bonus fields a refinement reads, as the form schemas produce them. */
 export type BonusFields = Partial<Record<BonusField, boolean | number | null>>;
@@ -233,25 +235,11 @@ export function refineProgramBonuses(program: string) {
 }
 
 function bonusesForProgram(program: string): readonly BonusField[] {
-  switch (program) {
-    case "fish":
-    case "plant":
-    case "coral":
-      return programBonuses[program];
-    default:
-      return everyProgram;
-  }
+  return isProgramType(program) ? programBonuses[program] : everyProgram;
 }
 
 function programName(program: string): string {
-  switch (program) {
-    case "fish":
-    case "plant":
-    case "coral":
-      return programMetadata[program].name;
-    default:
-      return program;
-  }
+  return isProgramType(program) ? programMetadata[program].name : program;
 }
 
 function flag(value: boolean | number | null | undefined): number {

@@ -4,7 +4,7 @@ import path from "path";
 import pug from "pug";
 import { approvalSchema } from "../forms/approval";
 import { approvedEditSchema } from "../forms/approvedEdit";
-import { programBonuses } from "../points";
+import { bonusFields, programBonuses } from "../points";
 import type { ProgramType } from "../programs";
 
 /**
@@ -171,6 +171,7 @@ void describe("Per-program bonuses - the approval panel shows the issue", () => 
     const message = "The flowered bonus does not apply to Breeders Awards Program submissions";
     const html = render("admin/approvalPanel.pug", {
       submission: { id: 1, points: 10, species_class: "Cichlids", program: "fish" },
+      bonusFields,
       errors: new Map([["flowered", message]]),
     });
 
@@ -187,6 +188,7 @@ void describe("Per-program bonuses - the approval panel shows the issue", () => 
       isFirstTime: true,
       isCaresSpecies: false,
       priorBreedCount: 0,
+      bonusFields,
       errors: new Map([["cares_species", message]]),
     });
 

@@ -106,7 +106,7 @@ html
 					li= `Base Points: ${submission.points}`
 					//- Itemised bonuses come from the Points module (src/points.ts), so the
 					//- lines always add up to the total printed above.
-					each bonus in bonusLines
+					each bonus in bonusLines || []
 						li= `${bonus.label}: +${bonus.amount} points`
 
 			p Your achievement has been recorded and these points contribute to your award level progression! Thank you for bringing your fry/plants/corals to the meeting and supporting the Brooklyn Aquarium Society auction!

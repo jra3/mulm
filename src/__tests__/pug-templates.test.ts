@@ -5,7 +5,7 @@ import path from "path";
 import fs from "fs";
 import { faker } from "@faker-js/faker";
 import { getNextLevel, programMetadata } from "../programs";
-import { bonusBreakdown } from "../points";
+import { bonusBreakdown, bonusFields } from "../points";
 
 void describe("Pug Template Rendering", () => {
   const viewsPath = path.join(__dirname, "../views");
@@ -200,6 +200,9 @@ void describe("Pug Template Rendering", () => {
     // Itemised bonuses for the approval email; the CARES suite at the bottom of
     // this file renders that template with a real breakdown
     bonusLines: [],
+
+    // The bonus fields the approval panel's error mixin loops over
+    bonusFields,
 
     // Tank data
     tanks: [
