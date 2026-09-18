@@ -38,6 +38,7 @@ import {
 } from "./sessions";
 import { originValidation } from "./middleware/originValidation";
 import { csrfValidation } from "./middleware/csrfValidation";
+import { bonusFields } from "@/points";
 import helmet from "helmet";
 import { getGoogleOAuthURL, getFacebookOAuthURL, setOAuthStateCookie, isGoogleOAuthEnabled, isFacebookOAuthEnabled } from "./oauth";
 import { getQueryString, getBodyString } from "./utils/request";
@@ -157,6 +158,10 @@ app.use(csrfValidation);
 app.use((_req, res, next) => {
   res.locals.bugReportEmail = config.email.bugReportEmail;
   res.locals.domain = config.server.domain;
+  // The bonus fields the approval panel's error mixin loops over. Set here
+  // rather than per-route so a new render site cannot forget it and quietly
+  // drop the per-Program bonus errors.
+  res.locals.bonusFields = bonusFields;
   next();
 });
 

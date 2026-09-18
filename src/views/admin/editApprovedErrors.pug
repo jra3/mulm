@@ -1,0 +1,9 @@
+//- Validation errors for the approved-submission edit dialog.
+//- Swapped into #edit-approved-errors, which sits above the Save button and is
+//- visible on every tab, so a rejected field is read where the save was tried.
+//-
+//- @param {string[]} messages - One message per offending field
+
+include ../mixins/errorAlert.pug
+
++errorAlertList('Could not save these changes:', messages)

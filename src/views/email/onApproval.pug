@@ -104,14 +104,10 @@ html
 				.points-large= submission.total_points || submission.points
 				ul
 					li= `Base Points: ${submission.points}`
-					if submission.article_points && submission.article_points > 0
-						li= `Article Points: +${submission.article_points}`
-					if submission.first_time_species
-						li First Time Species Bonus: +5 points
-					if submission.flowered
-						li= `Flowering Bonus: +${submission.points} points`
-					if submission.sexual_reproduction
-						li= `Sexual Reproduction Bonus: +${submission.points} points`
+					//- Itemised bonuses come from the Points module (src/points.ts), so the
+					//- lines always add up to the total printed above.
+					each bonus in bonusLines || []
+						li= `${bonus.label}: +${bonus.amount} points`
 
 			p Your achievement has been recorded and these points contribute to your award level progression! Thank you for bringing your fry/plants/corals to the meeting and supporting the Brooklyn Aquarium Society auction!
 

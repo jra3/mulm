@@ -60,6 +60,14 @@ void describe("Level Manager", () => {
         assert.strictEqual(level, "Breeder");
       });
 
+      void test("bonus points count toward the threshold", () => {
+        // Bonus points (article, first-time, CARES, flowered, sexual reproduction)
+        // are added to the total but carry no point category of their own
+        const basePoints = [5, 5, 10]; // 20 points: short of Hobbyist
+        assert.strictEqual(calculateLevel(levelRules.fish, basePoints), "Participant");
+        assert.strictEqual(calculateLevel(levelRules.fish, basePoints, 5), "Hobbyist");
+      });
+
       void test("should NOT return Breeder with 50 points but invalid distribution", () => {
         // All points from 5-point category doesn't meet requirements
         const level = calculateLevel(levelRules.fish, [5, 5, 5, 5, 5, 5, 5, 5, 5, 5]);

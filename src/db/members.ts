@@ -3,6 +3,8 @@ import { db, query, deleteOne, insertOne, updateOne } from "./conn";
 import { logger } from "@/utils/logger";
 import { createActivity } from "./activity";
 import { specialtyAwards, getCountableSpecialtyAwards } from "@/specialtyAwards";
+import { programSpeciesTypeSql, totalPointsSql } from "@/points";
+import { ProgramType } from "@/programs";
 
 // type as represented in the database
 export type MemberRecord = {
@@ -211,6 +213,23 @@ export async function getMembersList(): Promise<MemberRecord[]> {
   );
 }
 
+/**
+ * Per-program points sub-select: one row per member, totalling their approved
+ * submissions with the shared Points rule (src/points.ts).
+ */
+function programPointsSubquery(program: ProgramType) {
+  return `
+			SELECT
+				member_id,
+				SUM(${totalPointsSql("submissions")}) as total
+			FROM submissions
+			WHERE approved_on IS NOT NULL
+				AND submitted_on IS NOT NULL
+				AND ${programSpeciesTypeSql("submissions", program)}
+			GROUP BY member_id
+		`;
+}
+
 export async function getRosterWithPoints() {
   return query<
     MemberRecord & {
@@ -234,50 +253,9 @@ export async function getRosterWithPoints() {
 		LEFT JOIN password_account pa ON m.id = pa.member_id
 		LEFT JOIN google_account ga ON m.id = ga.member_id
 		LEFT JOIN facebook_account fa ON m.id = fa.member_id
-		LEFT JOIN (
-			SELECT
-				member_id,
-				SUM(
-					points +
-					IFNULL(article_points, 0) +
-					(IFNULL(first_time_species, 0) * 5)
-				) as total
-			FROM submissions
-			WHERE approved_on IS NOT NULL
-				AND submitted_on IS NOT NULL
-				AND (species_type = 'Fish' OR species_type = 'Invert')
-			GROUP BY member_id
-		) fish_points ON m.id = fish_points.member_id
-		LEFT JOIN (
-			SELECT
-				member_id,
-				SUM(
-					points +
-					IFNULL(article_points, 0) +
-					(IFNULL(first_time_species, 0) * 5) +
-					(IFNULL(flowered, 0) * points) +
-					(IFNULL(sexual_reproduction, 0) * points)
-				) as total
-			FROM submissions
-			WHERE approved_on IS NOT NULL
-				AND submitted_on IS NOT NULL
-				AND species_type = 'Plant'
-			GROUP BY member_id
-		) plant_points ON m.id = plant_points.member_id
-		LEFT JOIN (
-			SELECT
-				member_id,
-				SUM(
-					points +
-					IFNULL(article_points, 0) +
-					(IFNULL(first_time_species, 0) * 5)
-				) as total
-			FROM submissions
-			WHERE approved_on IS NOT NULL
-				AND submitted_on IS NOT NULL
-				AND species_type = 'Coral'
-			GROUP BY member_id
-		) coral_points ON m.id = coral_points.member_id
+		LEFT JOIN (${programPointsSubquery("fish")}) fish_points ON m.id = fish_points.member_id
+		LEFT JOIN (${programPointsSubquery("plant")}) plant_points ON m.id = plant_points.member_id
+		LEFT JOIN (${programPointsSubquery("coral")}) coral_points ON m.id = coral_points.member_id
 		ORDER BY m.display_name
 	`);
 }
@@ -310,50 +288,9 @@ export async function getMemberWithPoints(memberId: number) {
 		LEFT JOIN password_account pa ON m.id = pa.member_id
 		LEFT JOIN google_account ga ON m.id = ga.member_id
 		LEFT JOIN facebook_account fa ON m.id = fa.member_id
-		LEFT JOIN (
-			SELECT
-				member_id,
-				SUM(
-					points +
-					IFNULL(article_points, 0) +
-					(IFNULL(first_time_species, 0) * 5)
-				) as total
-			FROM submissions
-			WHERE approved_on IS NOT NULL
-				AND submitted_on IS NOT NULL
-				AND (species_type = 'Fish' OR species_type = 'Invert')
-			GROUP BY member_id
-		) fish_points ON m.id = fish_points.member_id
-		LEFT JOIN (
-			SELECT
-				member_id,
-				SUM(
-					points +
-					IFNULL(article_points, 0) +
-					(IFNULL(first_time_species, 0) * 5) +
-					(IFNULL(flowered, 0) * points) +
-					(IFNULL(sexual_reproduction, 0) * points)
-				) as total
-			FROM submissions
-			WHERE approved_on IS NOT NULL
-				AND submitted_on IS NOT NULL
-				AND species_type = 'Plant'
-			GROUP BY member_id
-		) plant_points ON m.id = plant_points.member_id
-		LEFT JOIN (
-			SELECT
-				member_id,
-				SUM(
-					points +
-					IFNULL(article_points, 0) +
-					(IFNULL(first_time_species, 0) * 5)
-				) as total
-			FROM submissions
-			WHERE approved_on IS NOT NULL
-				AND submitted_on IS NOT NULL
-				AND species_type = 'Coral'
-			GROUP BY member_id
-		) coral_points ON m.id = coral_points.member_id
+		LEFT JOIN (${programPointsSubquery("fish")}) fish_points ON m.id = fish_points.member_id
+		LEFT JOIN (${programPointsSubquery("plant")}) plant_points ON m.id = plant_points.member_id
+		LEFT JOIN (${programPointsSubquery("coral")}) coral_points ON m.id = coral_points.member_id
 		WHERE m.id = ?
 	`,
     [memberId]

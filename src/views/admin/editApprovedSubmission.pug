@@ -92,7 +92,9 @@ form.bg-white.rounded-lg(
 				if submission.program === 'fish'
 					+formCheckbox('cares_species', 'CARES Species (+5 points)', submission.cares_species)
 
-				if submission.species_type === 'Plant'
+				//- Keyed on program, like the CARES checkbox above and like the
+				//- per-Program rule the save route enforces (src/points.ts).
+				if submission.program === 'plant'
 					+formCheckbox('flowered', 'Flowered (double points)', submission.flowered)
 					+formCheckbox('sexual_reproduction', 'Sexual Reproduction (double points)', submission.sexual_reproduction)
 
@@ -345,6 +347,9 @@ form.bg-white.rounded-lg(
 				)
 				p.text-sm.text-gray-600.mt-1
 					| This will be recorded in the submission's edit history and may be visible to the member.
+
+		//- Validation errors, filled in by the save route (admin/editApprovedErrors)
+		#edit-approved-errors.mt-4
 
 		// Actions
 		.flex.justify-end.gap-3.mt-6

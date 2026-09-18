@@ -1,3 +1,5 @@
+include ../mixins/errorMessage.pug
+
 // Dynamic section - updated via HTMX when species is selected
 - const pointsJsonValue = JSON.stringify(basePoints || '');
 - const showFirstTime = priorBreedCount !== undefined;
@@ -40,3 +42,5 @@
 				label.text-white(for="cares") CARES Species
 				if isCaresSpecies
 					span.text-sm.text-green-400 (auto-detected)
+
+	+bonusErrors(bonusFields)

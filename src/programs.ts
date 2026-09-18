@@ -173,6 +173,15 @@ export function calculateLevel(rules: LevelRules[], basePoints: number[], bonusP
 
 export type ProgramType = "fish" | "plant" | "coral";
 
+/**
+ * Whether a stored program name is one of ours. `Submission.program` is a plain
+ * string, so every read of it has to ask; keeping the check beside the union
+ * keeps the two from drifting apart.
+ */
+export function isProgramType(program: string): program is ProgramType {
+  return program === "fish" || program === "plant" || program === "coral";
+}
+
 export interface NextLevelInfo {
   name: string;
   pointsRequired: number;

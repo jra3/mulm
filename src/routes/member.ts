@@ -6,6 +6,7 @@ import { MulmRequest } from "@/sessions";
 import { Response } from "express";
 import { getSubmissionStatus } from "@/utils/submissionStatus";
 import { getTrophyDataWithAwards } from "@/utils/awards";
+import { isInProgram } from "@/points";
 
 export const view = async (req: MulmRequest, res: Response) => {
   const memberId = parseInt(req.params.memberId);
@@ -33,11 +34,9 @@ export const view = async (req: MulmRequest, res: Response) => {
     statusInfo: getSubmissionStatus(sub),
   }));
 
-  const fishSubs = submissionsWithStatus.filter(
-    (sub) => sub.species_type === "Fish" || sub.species_type === "Invert"
-  );
-  const plantSubs = submissionsWithStatus.filter((sub) => sub.species_type === "Plant");
-  const coralSubs = submissionsWithStatus.filter((sub) => sub.species_type === "Coral");
+  const fishSubs = submissionsWithStatus.filter((sub) => isInProgram("fish", sub.species_type));
+  const plantSubs = submissionsWithStatus.filter((sub) => isInProgram("plant", sub.species_type));
+  const coralSubs = submissionsWithStatus.filter((sub) => isInProgram("coral", sub.species_type));
 
   const calculateTotalPoints = (subs: typeof submissions) => {
     let total = 0;

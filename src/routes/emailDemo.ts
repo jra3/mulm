@@ -1,5 +1,6 @@
 import { Response } from "express";
 import { MulmRequest } from "../sessions";
+import { bonusBreakdown, totalPoints } from "../points";
 
 /**
  * Demo route to preview all email templates
@@ -13,6 +14,27 @@ export const emailDemoPage = (req: MulmRequest, res: Response) => {
     res.status(404).send("Not found");
     return;
   }
+
+  // A first-time CARES fish that also earned article points, so the approval
+  // email's bonus breakdown shows every bonus a BAP submission may carry.
+  const sampleSubmission = {
+    id: 123,
+    species_common_name: "Endler Guppy",
+    species_latin_name: "Poecilia wingei",
+    species_class: "Livebearers",
+    species_type: "Fish",
+    reproduction_date: "2024-09-15T00:00:00.000Z",
+    submitted_on: "2024-10-01T14:30:00.000Z",
+    witnessed_on: "2024-10-02T10:15:00.000Z",
+    approved_on: "2024-11-16T09:00:00.000Z",
+    points: 15,
+    article_points: 5,
+    first_time_species: true,
+    cares_species: true,
+    flowered: false,
+    sexual_reproduction: false,
+    witness_verification_status: "confirmed" as const,
+  };
 
   // Sample data for all email types
   const sampleData = {
@@ -37,25 +59,9 @@ export const emailDemoPage = (req: MulmRequest, res: Response) => {
       id: 2,
     },
 
-    // Submission data
-    submission: {
-      id: 123,
-      species_common_name: "Endler Guppy",
-      species_latin_name: "Poecilia wingei",
-      species_class: "Livebearers",
-      species_type: "Fish",
-      reproduction_date: "2024-09-15T00:00:00.000Z",
-      submitted_on: "2024-10-01T14:30:00.000Z",
-      witnessed_on: "2024-10-02T10:15:00.000Z",
-      approved_on: "2024-11-16T09:00:00.000Z",
-      points: 15,
-      article_points: 5,
-      first_time_species: true,
-      flowered: false,
-      sexual_reproduction: false,
-      total_points: 25,
-      witness_verification_status: "confirmed" as const,
-    },
+    // Submission data, with the total taken from the Points rule so the preview
+    // cannot disagree with the breakdown beneath it
+    submission: { ...sampleSubmission, total_points: totalPoints(sampleSubmission) },
 
     // Auth code for password reset
     code: "demo_reset_code_12345678",
@@ -92,5 +98,6 @@ export const emailDemoPage = (req: MulmRequest, res: Response) => {
     sampleData,
     // Spread sample data for email templates to access
     ...sampleData,
+    bonusLines: bonusBreakdown(sampleSubmission),
   });
 };
