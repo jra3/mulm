@@ -65,9 +65,9 @@ This project uses **GitHub Issues only**. Linear is not used.
 - **`/frontend-design`** - UI patterns, Pug mixins, Tailwind conventions, HTMX patterns
 - **`/ops`** - Deployment, testing commands, branch protection, infrastructure
 
-### Matt Pocock's engineering skills (mattpocock/skills v1.1.0, MIT)
+### Matt Pocock's engineering skills (mattpocock/skills v1.2.3, MIT)
 
-Installed as editable files under `.claude/skills/` (full v1.1.0 set — see `.claude/skills/MATTPOCOCK-SKILLS.md` for provenance). Start with **`/ask-matt`**, the router that points you at the right skill/flow (grill → spec → tickets → implement; plus `research`, `code-review`, `diagnosing-bugs`, `domain-modeling`, `wayfinder`, `tdd`, `triage`, etc.). Run **`/setup-matt-pocock-skills`** only to re-configure the tracker/labels/doc layout (already configured below).
+Installed as editable files under `.claude/skills/` (full v1.2.3 set — see `.claude/skills/MATTPOCOCK-SKILLS.md` for provenance). Start with **`/ask-matt`**, the router that points you at the right skill/flow (grill → spec → tickets → implement; plus `research`, `code-review`, `diagnosing-bugs`, `domain-modeling`, `wayfinder`, `tdd`, `triage`, `wizard`, `to-questionnaire`, `wait-what`, etc.). Run **`/setup-matt-pocock-skills`** only to re-configure the tracker/labels/doc layout (already configured below).
 
 ## Agent skills
 

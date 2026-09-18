@@ -1,29 +1,44 @@
 # Matt Pocock's Skills — provenance
 
-The 21 skill directories in this folder (everything except mulm's own `frontend-design.md` and `ops.md`) are vendored from:
+The 25 skill directories in this folder (everything except mulm's own `frontend-design.md` and `ops.md`) are vendored from:
 
 - **Source**: https://github.com/mattpocock/skills
-- **Version**: **v1.1.0** (git tag `v1.1.0` → commit `d574778f94cf620fcc8ce741584093bc650a61d3`)
+- **Version**: **v1.2.3** (git tag `v1.2.3` → commit `835450ef244ab7335f75d95b83e7d979eae22a6d`)
 - **License**: MIT (see `MATTPOCOCK-SKILLS-LICENSE` in this folder)
 
 They are installed as **editable native files** — edit them freely to fit mulm; they are not a read-only plugin.
 
-## Why vendored by clone rather than left as the installer wrote them
+## Why vendored by clone rather than via the installer or the plugin
 
-The upstream installer (`npx skills@latest add mattpocock/skills@v1.1.0 --copy`) prints a `@v1.1.0` source label but, in the version used here, actually copies the tip of `main` (latest), not the v1.1.0 tag — and copies only each `SKILL.md`, dropping the skills' supporting reference files. Because the captain pinned **v1.1.0 specifically (not latest)**, the content here was instead taken from `git clone --branch v1.1.0` and verified byte-for-byte against that tag (full directory trees, not just `SKILL.md`).
+The upstream `npx skills add` installer, in the version tried at v1.1.0, copied the tip of `main` regardless of the `@tag` given and dropped each skill's supporting reference files. Upstream now also ships as a read-only Claude Code plugin (`claude plugins install mattpocock-skills`), but mulm keeps editable copies. So the content here is taken from `git clone --branch <tag>` and verified byte-for-byte against the tag (full directory trees, including each skill's `agents/openai.yaml` Codex metadata).
 
-## The v1.1.0 set (matches upstream `.claude-plugin/plugin.json`)
+## The v1.2.3 set (matches upstream `.claude-plugin/plugin.json`)
 
-Engineering: `ask-matt`, `diagnosing-bugs`, `grill-with-docs`, `triage`, `improve-codebase-architecture`, `setup-matt-pocock-skills`, `tdd`, `to-spec`, `to-tickets`, `wayfinder`, `implement`, `prototype`, `research`, `domain-modeling`, `codebase-design`, `code-review`.
+Engineering: `ask-matt`, `diagnosing-bugs`, `grill-with-docs`, `triage`, `improve-codebase-architecture`, `setup-matt-pocock-skills`, `tdd`, `to-spec`, `to-tickets`, `wayfinder`, `implement`, `prototype`, `research`, `domain-modeling`, `codebase-design`, `code-review`, `resolving-merge-conflicts`, `wizard`.
 
-Productivity: `grill-me`, `grilling`, `handoff`, `teach`, `writing-great-skills`.
+Productivity: `grill-me`, `grilling`, `handoff`, `teach`, `to-questionnaire`, `wait-what`, `writing-for-agents`.
 
-v1.1.0 markers (vs the prior release): adds `research` + `code-review`; renames `to-prd` → `to-spec`; merges `to-plan`/`to-issues` → `to-tickets` (`to-issues` is gone); renames `decision-mapping` → `wayfinder`.
+## Version history
+
+- **v1.2.3** (2026-09-17): adds `resolving-merge-conflicts`, `wizard`, `to-questionnaire`, `wait-what`; renames `writing-great-skills` → `writing-for-agents` (no alias; `GLOSSARY.md` merged into it); every skill gains `agents/openai.yaml`; `prototype` now emits a single HTML file on a `prototype/<name>` branch; `wayfinder` names its unit a "decision ticket"; `diagnosing-bugs` redacts secrets; `setup-matt-pocock-skills` no longer asks about external PRs as a triage surface. Full notes: upstream `CHANGELOG.md`.
+- **v1.1.0**: adds `research` + `code-review`; renames `to-prd` → `to-spec`; merges `to-plan`/`to-issues` → `to-tickets`; renames `decision-mapping` → `wayfinder`.
+
+## Local edits (diverge from the tag)
+
+Three skills are flipped from user-invoked to model-invoked, with trigger-style descriptions and the `policy` block dropped from their `agents/openai.yaml`: **`grill-me`**, **`grill-with-docs`**, **`implement`**. Reason: a user-invoked skill is invisible to subagents, so a parent agent cannot say "/implement issue 123", and the measured context cost of a listed skill is ~19 tokens each (see PR #380). `to-spec` and `to-tickets` stay user-invoked on purpose: they write to the issue tracker, so nothing should fire them autonomously. Re-apply these edits after the next bump.
 
 ## Configuration
 
-Wired for mulm by the `setup-matt-pocock-skills` steps — GitHub Issues (`jra3/mulm`) + mulm doc paths. See `../../CLAUDE.md` (`## Agent skills`) and `docs/agents/{issue-tracker,triage-labels,domain}.md`.
+Wired for mulm by the `setup-matt-pocock-skills` steps — GitHub Issues (`jra3/mulm`) + mulm doc paths. See `../../CLAUDE.md` (`## Agent skills`) and `docs/agents/{issue-tracker,triage-labels,domain}.md`. The v1.2.3 setup skill produces the same layout (GitHub tracker, default triage labels, single-context domain docs), so the existing config did not need re-running.
 
 ## Updating
 
-To re-pin or bump the version later, re-clone the desired tag and re-copy these directories, then re-verify against the tag. Keep this file's Version line in sync.
+```bash
+git clone --branch vX.Y.Z https://github.com/mattpocock/skills /tmp/mp-skills
+cd /path/to/mulm
+for d in .claude/skills/*/; do rm -rf "$d"; done
+for p in $(jq -r '.skills[]' /tmp/mp-skills/.claude-plugin/plugin.json); do cp -r "/tmp/mp-skills/$p" .claude/skills/; done
+for p in $(jq -r '.skills[]' /tmp/mp-skills/.claude-plugin/plugin.json); do diff -rq "/tmp/mp-skills/$p" ".claude/skills/$(basename "$p")"; done
+```
+
+Then update the Version line, the set list, and the version history above, and fix any renamed-skill references in `CLAUDE.md` / `docs/agents/`. Before wiping, `diff -rq` the current copies against their pinned tag so local edits aren't lost.
