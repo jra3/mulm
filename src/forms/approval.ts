@@ -1,6 +1,7 @@
 import * as z from "zod";
+import { refineProgramBonuses } from "@/points";
 
-export const approvalSchema = z.object({
+const approvalFields = z.object({
   id: z
     .string()
     .max(20, "ID too long")
@@ -42,4 +43,14 @@ export const approvalSchema = z.object({
     .transform((val) => Boolean(val)),
 });
 
-export type ApprovalFormValues = z.infer<typeof approvalSchema>;
+/**
+ * The approval form for a submission in `program`: the same fields whatever the
+ * program, plus the per-program bonus rule from src/points.ts. There is no
+ * program-less export, because a schema that does not know the program cannot
+ * tell a bonus that applies from one that does not.
+ */
+export function approvalSchema(program: string) {
+  return approvalFields.superRefine(refineProgramBonuses(program));
+}
+
+export type ApprovalFormValues = z.infer<ReturnType<typeof approvalSchema>>;

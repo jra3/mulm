@@ -46,9 +46,14 @@ The point-class value a submission earns before bonuses — the `points` column 
 _Avoid_: raw points, species points
 
 **Bonus points**:
-Committee-entered extras added on top of base points at approval time (`src/forms/approval.ts`, `src/forms/approvedEdit.ts`), stored on the submission and summed in SQL as
+Committee-entered extras added on top of base points at approval time (`src/forms/approval.ts`, `src/forms/approvedEdit.ts`), stored on the submission. The one rule for turning a submission's flags into a total lives in `src/points.ts`, which exports it both as a SQL fragment (composed into every query that reports a total) and as a TypeScript function (used for the itemised breakdown and tests):
 `total_points = points + article_points + first_time_species×5 + cares_species×5 + flowered×points + sexual_reproduction×points`
-(`src/db/submissions.ts`, `src/db/members.ts`). So: first-time species = flat +5; `article_points` = a committee-entered number (0–50, typically 5); CARES-listed species = +5; and HAP flowering / sexual reproduction each add the plant's own point value. (The manual's "+10 for a first-time spawn with an article" is realized here as first-time +5 plus article_points.)
+So: first-time species = flat +5; `article_points` = a committee-entered number (0–50, typically 5); CARES-listed species = +5; and flowering / sexual reproduction each add the plant's own point value. (The manual's "+10 for a first-time spawn with an article" is realized here as first-time +5 plus article_points.)
+Which bonuses a Program may carry (ruled 2026-09-17; enforced in the approval and approved-edit Zod schemas, which take the Program):
+- first-time species, article: **all Programs**
+- CARES: **BAP only**
+- flowered, sexual reproduction: **HAP only**
+The formula itself is uniform across Programs; the restriction is an invariant on write, not a condition in the sum.
 _Avoid_: extra credit, adjustments
 
 **Points**:

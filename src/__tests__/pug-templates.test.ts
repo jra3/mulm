@@ -5,6 +5,7 @@ import path from "path";
 import fs from "fs";
 import { faker } from "@faker-js/faker";
 import { getNextLevel, programMetadata } from "../programs";
+import { bonusBreakdown } from "../points";
 
 void describe("Pug Template Rendering", () => {
   const viewsPath = path.join(__dirname, "../views");
@@ -195,6 +196,10 @@ void describe("Pug Template Rendering", () => {
       canonical_genus: "Apistogramma",
       canonical_species: "cacatuoides",
     },
+
+    // Itemised bonuses for the approval email; the CARES suite at the bottom of
+    // this file renders that template with a real breakdown
+    bonusLines: [],
 
     // Tank data
     tanks: [
@@ -594,6 +599,12 @@ void describe("Pug Template Rendering", () => {
             };
             break;
 
+          case "admin/editApprovedErrors.pug":
+            templateData.messages = [
+              "The flowered bonus does not apply to Breeders Awards Program submissions",
+            ];
+            break;
+
           case "bapForm/loadTankList.pug":
             templateData.presets = [
               {
@@ -809,5 +820,83 @@ void describe("Pug Template Rendering", () => {
 
       assert.deepStrictEqual(undefinedMixins, []);
     });
+  });
+});
+
+/**
+ * The approval email itemises its bonuses from the Points module, so a CARES
+ * submission must show a CARES line - the omission that made the email's lines
+ * fail to add up to the total it printed.
+ */
+void describe("Approval email bonus breakdown", () => {
+  const renderApproval = pug.compileFile(
+    path.join(__dirname, "../views/email/onApproval.pug"),
+    { pretty: false }
+  );
+
+  const caresFish = {
+    id: 9,
+    species_common_name: "Endler Guppy",
+    species_latin_name: "Poecilia wingei",
+    species_class: "Livebearers",
+    approved_on: new Date().toISOString(),
+    points: 10,
+    article_points: 0,
+    first_time_species: false,
+    cares_species: true,
+    flowered: false,
+    sexual_reproduction: false,
+  };
+
+  function render(submission: Record<string, unknown>) {
+    return renderApproval({
+      domain: "bap.basny.org",
+      member: { display_name: "Jane Aquarist" },
+      submission: { ...submission, total_points: 15 },
+      bonusLines: bonusBreakdown(submission),
+    });
+  }
+
+  void test("shows the CARES line for a CARES submission", () => {
+    const html = render(caresFish);
+
+    assert.match(html, /<li>CARES Species Bonus: \+5 points<\/li>/);
+  });
+
+  void test("omits the CARES line when the flag is not set", () => {
+    const html = render({ ...caresFish, cares_species: false });
+
+    assert.doesNotMatch(html, /CARES/);
+  });
+
+  void test("lists every bonus a row carries, and nothing else", () => {
+    const html = render({
+      ...caresFish,
+      article_points: 5,
+      first_time_species: true,
+      flowered: true,
+      sexual_reproduction: true,
+    });
+
+    assert.match(html, /<li>Base Points: 10<\/li>/);
+    assert.match(html, /<li>Article Bonus: \+5 points<\/li>/);
+    assert.match(html, /<li>First Time Species Bonus: \+5 points<\/li>/);
+    assert.match(html, /<li>CARES Species Bonus: \+5 points<\/li>/);
+    assert.match(html, /<li>Flowering Bonus: \+10 points<\/li>/);
+    assert.match(html, /<li>Sexual Reproduction Bonus: \+10 points<\/li>/);
+  });
+
+  void test("shows only the base points when no bonus applies", () => {
+    const html = render({
+      ...caresFish,
+      cares_species: false,
+      article_points: null,
+      first_time_species: null,
+      flowered: null,
+      sexual_reproduction: null,
+    });
+
+    assert.match(html, /<li>Base Points: 10<\/li>/);
+    assert.doesNotMatch(html, /Bonus/);
   });
 });

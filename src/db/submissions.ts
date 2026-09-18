@@ -4,6 +4,7 @@ import { writeConn, query, withTransaction } from "./conn";
 import { logger } from "@/utils/logger";
 import { ValidationError, AuthorizationError, StateError } from "@/utils/errors";
 import { filterEligibleSubmissions, isEligibleForApproval } from "@/utils/waitingPeriod";
+import { totalPointsSql } from "@/points";
 import type { Database } from "sqlite";
 
 // New normalized table types
@@ -209,13 +210,7 @@ export function getSubmissionsByMember(
   let expr = `
 		SELECT
 			submissions.*,
-			submissions.points +
-				IFNULL(submissions.article_points, 0) +
-				(IFNULL(submissions.first_time_species, 0) * 5) +
-				(IFNULL(submissions.cares_species, 0) * 5) +
-				(IFNULL(submissions.flowered, 0) * submissions.points) +
-				(IFNULL(submissions.sexual_reproduction, 0) * submissions.points)
-				as total_points,
+			${totalPointsSql("submissions")} as total_points,
 			members.display_name as member_name,
 			sng.is_cares_species
 		FROM submissions
@@ -243,13 +238,7 @@ export async function getSubmissionById(id: number) {
     `
 		SELECT
 			submissions.*,
-			submissions.points +
-				IFNULL(submissions.article_points, 0) +
-				(IFNULL(submissions.first_time_species, 0) * 5) +
-				(IFNULL(submissions.cares_species, 0) * 5) +
-				(IFNULL(submissions.flowered, 0) * submissions.points) +
-				(IFNULL(submissions.sexual_reproduction, 0) * submissions.points)
-				as total_points,
+			${totalPointsSql("submissions")} as total_points,
 			members.display_name as member_name
 		FROM submissions LEFT JOIN members
 		ON submissions.member_id == members.id
@@ -337,13 +326,7 @@ export function getApprovedSubmissionsInDateRange(startDate: Date, endDate: Date
     `
 		SELECT
 			submissions.*,
-			submissions.points +
-				IFNULL(submissions.article_points, 0) +
-				(IFNULL(submissions.first_time_species, 0) * 5) +
-				(IFNULL(submissions.cares_species, 0) * 5) +
-				(IFNULL(submissions.flowered, 0) * submissions.points) +
-				(IFNULL(submissions.sexual_reproduction, 0) * submissions.points)
-				as total_points,
+			${totalPointsSql("submissions")} as total_points,
 			members.display_name as member_name
 		FROM submissions JOIN members
 		ON submissions.member_id == members.id
@@ -360,13 +343,7 @@ export async function getOutstandingSubmissions(program: string) {
     `
 		SELECT
 			submissions.*,
-			submissions.points +
-				IFNULL(submissions.article_points, 0) +
-				(IFNULL(submissions.first_time_species, 0) * 5) +
-				(IFNULL(submissions.cares_species, 0) * 5) +
-				(IFNULL(submissions.flowered, 0) * submissions.points) +
-				(IFNULL(submissions.sexual_reproduction, 0) * submissions.points)
-				as total_points,
+			${totalPointsSql("submissions")} as total_points,
 			members.display_name as member_name,
 			sng.is_cares_species
 		FROM submissions
@@ -891,13 +868,7 @@ export function getApprovedSubmissions(program: string) {
     `
 		SELECT
 			submissions.*,
-			submissions.points +
-				IFNULL(submissions.article_points, 0) +
-				(IFNULL(submissions.first_time_species, 0) * 5) +
-				(IFNULL(submissions.cares_species, 0) * 5) +
-				(IFNULL(submissions.flowered, 0) * submissions.points) +
-				(IFNULL(submissions.sexual_reproduction, 0) * submissions.points)
-				as total_points,
+			${totalPointsSql("submissions")} as total_points,
 			members.display_name as member_name
 		FROM submissions JOIN members
 		ON submissions.member_id == members.id
@@ -1030,13 +1001,7 @@ export function getTodayApprovedSubmissions() {
     `
 		SELECT
 			submissions.*,
-			submissions.points +
-				IFNULL(submissions.article_points, 0) +
-				(IFNULL(submissions.first_time_species, 0) * 5) +
-				(IFNULL(submissions.cares_species, 0) * 5) +
-				(IFNULL(submissions.flowered, 0) * submissions.points) +
-				(IFNULL(submissions.sexual_reproduction, 0) * submissions.points)
-				as total_points,
+			${totalPointsSql("submissions")} as total_points,
 			members.display_name as member_name
 		FROM submissions JOIN members
 		ON submissions.member_id == members.id
@@ -1060,13 +1025,7 @@ export function getLast48HoursApprovedSubmissions() {
     `
 		SELECT
 			submissions.*,
-			submissions.points +
-				IFNULL(submissions.article_points, 0) +
-				(IFNULL(submissions.first_time_species, 0) * 5) +
-				(IFNULL(submissions.cares_species, 0) * 5) +
-				(IFNULL(submissions.flowered, 0) * submissions.points) +
-				(IFNULL(submissions.sexual_reproduction, 0) * submissions.points)
-				as total_points,
+			${totalPointsSql("submissions")} as total_points,
 			members.display_name as member_name
 		FROM submissions JOIN members
 		ON submissions.member_id == members.id
@@ -1090,13 +1049,7 @@ export function getLast30DaysApprovedSubmissions() {
     `
 		SELECT
 			submissions.*,
-			submissions.points +
-				IFNULL(submissions.article_points, 0) +
-				(IFNULL(submissions.first_time_species, 0) * 5) +
-				(IFNULL(submissions.cares_species, 0) * 5) +
-				(IFNULL(submissions.flowered, 0) * submissions.points) +
-				(IFNULL(submissions.sexual_reproduction, 0) * submissions.points)
-				as total_points,
+			${totalPointsSql("submissions")} as total_points,
 			members.display_name as member_name
 		FROM submissions JOIN members
 		ON submissions.member_id == members.id

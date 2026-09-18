@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { refineProgramBonuses } from "@/points";
 import { formBoolean } from "./formBoolean";
 import { multiSelect } from "./utils";
 
@@ -6,7 +7,7 @@ import { multiSelect } from "./utils";
  * Validation schema for editing approved submissions
  * Allows admins to correct errors in already-approved submissions
  */
-export const approvedEditSchema = z.object({
+const approvedEditFields = z.object({
   // Species & Points
   group_id: z.coerce.number().int().positive().optional(),
   points: z.coerce.number().int().min(0).max(100).optional(),
@@ -56,4 +57,13 @@ export const approvedEditSchema = z.object({
   reason: z.string().min(3, "Please provide a reason (at least 3 characters)").max(2000),
 });
 
-export type ApprovedEditFormValues = z.infer<typeof approvedEditSchema>;
+/**
+ * The edit form for an approved submission in `program`, carrying the same
+ * per-program bonus rule as the approval form (src/points.ts): a correction
+ * cannot introduce a bonus the program does not carry either.
+ */
+export function approvedEditSchema(program: string) {
+  return approvedEditFields.superRefine(refineProgramBonuses(program));
+}
+
+export type ApprovedEditFormValues = z.infer<ReturnType<typeof approvedEditSchema>>;

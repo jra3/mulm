@@ -13,6 +13,7 @@ import {
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { query, withTransaction } from "../db/conn";
+import { anyProgramSpeciesTypeSql, totalPointsSql } from "../points";
 
 // Type definitions
 type Member = {
@@ -433,17 +434,17 @@ async function handleGetMemberDetail(args: GetMemberDetailArgs) {
     [member_id]
   );
 
+  // A cross-program grand total, filtered exactly as the per-program roster
+  // totals are (src/db/members.ts), so this equals fish + plant + coral rather
+  // than merely happening to match on today's data.
   const totalPoints = await query<{ total: number }>(
     `
-    SELECT SUM(
-      points +
-      IFNULL(article_points, 0) +
-      (IFNULL(first_time_species, 0) * 5) +
-      (IFNULL(flowered, 0) * points) +
-      (IFNULL(sexual_reproduction, 0) * points)
-    ) as total
+    SELECT SUM(${totalPointsSql("submissions")}) as total
     FROM submissions
-    WHERE member_id = ? AND approved_on IS NOT NULL
+    WHERE submissions.member_id = ?
+      AND submissions.approved_on IS NOT NULL
+      AND submissions.submitted_on IS NOT NULL
+      AND ${anyProgramSpeciesTypeSql("submissions")}
   `,
     [member_id]
   );

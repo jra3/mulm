@@ -16,3 +16,18 @@ mixin errorMessage(name, customClass='')
       aria-live="polite"
       class=customClass
     )= errors.get(name)
+
+//- Bonus validation errors for the approval form (src/points.ts rejects a bonus
+//- its Program cannot carry). Such a bonus has no checkbox to sit beside — it is
+//- hidden for this Program, or lives in the collapsed Additional Bonuses section —
+//- so the messages are shown together beneath the bonus row.
+//-
+//- Example usage:
+//-   +bonusErrors()
+
+mixin bonusErrors()
+  .flex.flex-col
+    +errorMessage('first_time_species')
+    +errorMessage('cares_species')
+    +errorMessage('flowered')
+    +errorMessage('sexual_reproduction')

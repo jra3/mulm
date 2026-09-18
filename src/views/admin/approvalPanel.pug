@@ -79,6 +79,8 @@ include ../mixins/errorMessage.pug
                                 checked=submission.cares_species == 1)
                             label.text-white(for="cares") CARES Species
 
+                +bonusErrors()
+
             // Action buttons (static, below dynamic section)
             .flex.gap-4.items-center
                 button.primary.p-4(type="submit") Approve

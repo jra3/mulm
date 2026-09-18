@@ -6,9 +6,11 @@ import {
   getMember,
   getMemberByEmail,
   getMembersList,
+  getMemberWithPoints,
   getRosterWithPoints,
 } from "../db/members";
-import { createSubmission, approveSubmission } from "../db/submissions";
+import { createSubmission, approveSubmission, getSubmissionsByMember } from "../db/submissions";
+import { totalPoints } from "../points";
 import { getErrorMessage } from "../utils/error";
 import {
   setupTestDatabase,
@@ -553,5 +555,86 @@ void describe("getRosterWithPoints", () => {
     assert.strictEqual(member.fishTotalPoints, 10); // 4 + 1 + 5 (Invert counts as fish program)
     assert.strictEqual(member.plantTotalPoints, 0);
     assert.strictEqual(member.coralTotalPoints, 0);
+  });
+});
+
+void describe("Points agreement across surfaces", () => {
+  let ctx: TestContext;
+
+  beforeEach(async () => {
+    ctx = await setupTestDatabase();
+  });
+
+  afterEach(async () => {
+    await teardownTestDatabase(ctx);
+  });
+
+  void test("roster, per-member query and submission list agree on a CARES bonus", async () => {
+    const adminId = await createMember("admin@test.com", "Admin", {}, true);
+    const memberId = await createMember("member@test.com", "CARES Breeder");
+
+    const submissionId = await createSubmission(
+      memberId,
+      {
+        species_type: "Fish",
+        species_class: "Cichlid",
+        species_common_name: "Zebra Mbuna",
+        species_latin_name: "Maylandia zebra",
+        water_type: "Fresh",
+        count: "12",
+        reproduction_date: "2024-03-01",
+        foods: ["flakes"],
+        spawn_locations: ["rocks"],
+        tank_size: "40",
+        filter_type: "sponge",
+      },
+      true
+    );
+
+    const speciesNameId = await createTestSpeciesName(
+      ctx.db,
+      "Zebra Mbuna",
+      "Maylandia zebra",
+      "Maylandia",
+      "zebra",
+      "Cichlid"
+    );
+    await approveSubmission(
+      adminId,
+      submissionId,
+      {
+        common_name_id: speciesNameId.common_name_id,
+        scientific_name_id: speciesNameId.scientific_name_id,
+      },
+      {
+        id: submissionId,
+        points: 10,
+        article_points: 3,
+        first_time_species: true,
+        cares_species: true,
+        flowered: false,
+        sexual_reproduction: false,
+        group_id: speciesNameId.group_id,
+      }
+    );
+
+    // 10 (base) + 3 (article) + 5 (first time) + 5 (CARES) = 23
+    const expected = 23;
+
+    const roster = await getRosterWithPoints();
+    const rosterMember = roster.find((m) => m.id === memberId);
+    assert.ok(rosterMember);
+
+    const singleMember = await getMemberWithPoints(memberId);
+    assert.ok(singleMember);
+
+    const submissions = await getSubmissionsByMember(memberId, false, false);
+    const listedTotal = submissions.reduce((sum, sub) => sum + (sub.total_points ?? 0), 0);
+    const ruleTotal = submissions.reduce((sum, sub) => sum + totalPoints(sub), 0);
+
+    assert.strictEqual(rosterMember.fishTotalPoints, expected);
+    assert.strictEqual(singleMember.fishTotalPoints, expected);
+    assert.strictEqual(listedTotal, expected);
+    assert.strictEqual(ruleTotal, expected);
   });
 });

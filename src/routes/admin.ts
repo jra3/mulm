@@ -802,7 +802,7 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
     });
   };
 
-  const parsed = approvalSchema.safeParse(req.body);
+  const parsed = approvalSchema(submission.program).safeParse(req.body);
   if (!validateFormResult(parsed, errors, onError)) {
     return;
   }
@@ -1181,7 +1181,7 @@ export const saveApprovedSubmissionEdits = async (req: MulmRequest, res: Respons
   }
 
   // Validate form
-  const parsed = approvedEditSchema.safeParse(req.body);
+  const parsed = approvedEditSchema(submission.program).safeParse(req.body);
   if (!parsed.success) {
     logger.error("Validation failed", { errors: parsed.error.issues });
     const errors = new Map<string, string>();
@@ -1189,7 +1189,12 @@ export const saveApprovedSubmissionEdits = async (req: MulmRequest, res: Respons
       errors.set(String(issue.path[0]), issue.message);
     });
 
-    res.status(400).send(`Validation error: ${parsed.error.issues[0].message}`);
+    // HTMX does not swap the body of a 4xx response, so a 400 here reached
+    // nobody: the dialog sat there as if nothing had happened. Retarget the
+    // dialog's error banner and list every message, so a rejected bonus names
+    // itself to the committee member instead of failing silently.
+    res.set("HX-Retarget", "#edit-approved-errors").set("HX-Reswap", "innerHTML");
+    res.render("admin/editApprovedErrors", { messages: [...errors.values()] });
     return;
   }
 

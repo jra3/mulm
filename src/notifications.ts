@@ -5,6 +5,7 @@ import { getAdminEmails, MemberRecord } from "./db/members";
 import * as pug from "pug";
 import { logger } from "@/utils/logger";
 import { sendEmailWithRetry } from "./services/emailService";
+import { bonusBreakdown } from "./points";
 
 const DEBUG_EMAIL = process.env.DEBUG_EMAIL;
 const fromEmail = `BASNY Breeder Awards ${config.email.fromEmail}`;
@@ -124,6 +125,7 @@ export async function onSubmissionApprove(sub: Submission, member: MemberRecord)
           domain: config.server.domain,
           submission: sub,
           member,
+          bonusLines: bonusBreakdown(sub),
         }),
       }),
     { type: "submission_approved", context: { submissionId: sub.id, recipient: member.contact_email } }

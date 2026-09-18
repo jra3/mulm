@@ -15,3 +15,25 @@ mixin errorAlert(errorKey, customClass='')
       aria-live="polite"
       class=customClass
     )= errors.get(errorKey)
+
+//- Same alert box, for several messages at once — used where the offending
+//- fields are spread across tabs and cannot each show their own inline error.
+//-
+//- @param {string} heading - Introduces the list
+//- @param {string[]} messages - One message per offending field
+//- @param {string} [customClass=''] - Optional additional CSS classes
+//-
+//- Example usage:
+//-   +errorAlertList('Could not save these changes:', messages)
+
+mixin errorAlertList(heading, messages, customClass='')
+  if messages && messages.length
+    .bg-red-50.border.border-red-200.text-red-800.px-4.py-3.rounded.mb-3(
+      role="alert"
+      aria-live="polite"
+      class=customClass
+    )
+      p.font-semibold= heading
+      ul.list-disc.ml-5
+        each message in messages
+          li= message
