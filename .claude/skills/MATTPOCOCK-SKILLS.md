@@ -23,6 +23,10 @@ Productivity: `grill-me`, `grilling`, `handoff`, `teach`, `to-questionnaire`, `w
 - **v1.2.3** (2026-09-17): adds `resolving-merge-conflicts`, `wizard`, `to-questionnaire`, `wait-what`; renames `writing-great-skills` → `writing-for-agents` (no alias; `GLOSSARY.md` merged into it); every skill gains `agents/openai.yaml`; `prototype` now emits a single HTML file on a `prototype/<name>` branch; `wayfinder` names its unit a "decision ticket"; `diagnosing-bugs` redacts secrets; `setup-matt-pocock-skills` no longer asks about external PRs as a triage surface. Full notes: upstream `CHANGELOG.md`.
 - **v1.1.0**: adds `research` + `code-review`; renames `to-prd` → `to-spec`; merges `to-plan`/`to-issues` → `to-tickets`; renames `decision-mapping` → `wayfinder`.
 
+## Local edits (diverge from the tag)
+
+Three skills are flipped from user-invoked to model-invoked, with trigger-style descriptions and the `policy` block dropped from their `agents/openai.yaml`: **`grill-me`**, **`grill-with-docs`**, **`implement`**. Reason: a user-invoked skill is invisible to subagents, so a parent agent cannot say "/implement issue 123", and the measured context cost of a listed skill is ~19 tokens each (see PR #380). `to-spec` and `to-tickets` stay user-invoked on purpose: they write to the issue tracker, so nothing should fire them autonomously. Re-apply these edits after the next bump.
+
 ## Configuration
 
 Wired for mulm by the `setup-matt-pocock-skills` steps — GitHub Issues (`jra3/mulm`) + mulm doc paths. See `../../CLAUDE.md` (`## Agent skills`) and `docs/agents/{issue-tracker,triage-labels,domain}.md`. The v1.2.3 setup skill produces the same layout (GitHub tracker, default triage labels, single-context domain docs), so the existing config did not need re-running.
