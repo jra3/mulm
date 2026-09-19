@@ -10,7 +10,8 @@ import {
   mockSpeciesIds,
   type TestContext,
 } from "./testHelpers";
-import { getSubmissionById, approveSubmission } from "../../db/submissions";
+import { getSubmissionById } from "../../db/submissions";
+import { approveSubmissionFixture } from "./testHelpers";
 
 /**
  * Example test file demonstrating the usage of test helpers
@@ -153,7 +154,7 @@ void describe("Example Test Using Helpers", () => {
         witnessedBy: ctx.admin.id,
       });
 
-      await approveSubmission(ctx.admin.id, submissionId, mockSpeciesIds, {
+      await approveSubmissionFixture(ctx.admin.id, submissionId, mockSpeciesIds, {
         ...mockApprovalData,
         points: 20,
       });

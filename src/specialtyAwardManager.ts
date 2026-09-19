@@ -1,5 +1,12 @@
-import { getMember, grantAward } from "./db/members";
-import { checkSpecialtyAwards, checkMetaAwards, SubmissionForAward } from "./specialtyAwards";
+import { getMember, grantAward, revokeAward } from "./db/members";
+import {
+  checkSpecialtyAwards,
+  checkMetaAwards,
+  getCountableSpecialtyAwards,
+  metaAwards,
+  specialtyAwards,
+  SubmissionForAward,
+} from "./specialtyAwards";
 import { query } from "./db/conn";
 import { logger } from "./utils/logger";
 
@@ -52,88 +59,90 @@ async function getSubmissionsWithGenus(memberId: number): Promise<SubmissionForA
 }
 
 /**
- * Check if a member has earned any new specialty awards and grant them
+ * Bring a member's Specialty Awards into line with their approved Submissions.
+ *
+ * Symmetric: it grants what they have earned and takes back what they no
+ * longer qualify for. The asymmetric version this replaced could only ever
+ * grant, so a committee member correcting a misidentified species left the
+ * Award it had earned standing on evidence that no longer existed.
+ *
+ * Meta-awards are recomputed from the resulting specialty set, so revoking a
+ * specialty award can revoke the Senior or Expert Specialist Award above it.
+ *
+ * Returns what changed. It sends nothing - the lifecycle module owns who is
+ * told, and the nightly sweep and the progress page reach this on their own.
  */
-export async function checkAndGrantSpecialtyAwards(
-  memberId: number,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  options?: { disableEmails?: boolean }
-): Promise<string[]> {
-  try {
-    const member = await getMember(memberId);
-    if (!member) {
-      throw new Error(`Member ${memberId} not found`);
-    }
-
-    // Get all approved submissions for this member with genus information
-    const allSubmissions = await getSubmissionsWithGenus(memberId);
-
-    // Check what specialty awards they've earned
-    const earnedSpecialtyAwards = checkSpecialtyAwards(allSubmissions);
-
-    // Get existing awards to avoid duplicates
-    const existingAwards = await getExistingSpecialtyAwards(memberId);
-
-    // Find new specialty awards
-    const newSpecialtyAwards = earnedSpecialtyAwards.filter(
-      (award) => !existingAwards.includes(award)
-    );
-
-    // Grant new specialty awards
-    const grantedAwards: string[] = [];
-
-    for (const awardName of newSpecialtyAwards) {
-      try {
-        await grantAward(memberId, awardName, new Date(), "species");
-        grantedAwards.push(awardName);
-        logger.info(
-          `Granted specialty award "${awardName}" to member ${memberId} (${member.display_name})`
-        );
-      } catch (error) {
-        logger.error(
-          `Failed to grant specialty award "${awardName}" to member ${memberId}:`,
-          error
-        );
-      }
-    }
-
-    // Check for meta-awards after granting new specialty awards
-    const updatedExistingAwards = [...existingAwards, ...grantedAwards];
-    const earnedMetaAwards = checkMetaAwards(updatedExistingAwards);
-
-    // Grant new meta-awards
-    for (const awardName of earnedMetaAwards) {
-      try {
-        await grantAward(memberId, awardName, new Date(), "meta_species");
-        grantedAwards.push(awardName);
-        logger.info(
-          `Granted meta-award "${awardName}" to member ${memberId} (${member.display_name}) - achieved through ${updatedExistingAwards.filter((a) => !a.includes("Specialist Award")).length} specialty awards`
-        );
-      } catch (error) {
-        logger.error(`Failed to grant meta-award "${awardName}" to member ${memberId}:`, error);
-      }
-    }
-
-    // TODO: Send email notification if not disabled
-    // if (!options?.disableEmails && grantedAwards.length > 0) {
-    //     for (const awardName of grantedAwards) {
-    //         await onSpecialtyAward(member, awardName);
-    //     }
-    // }
-
-    return grantedAwards;
-  } catch (error) {
-    logger.error(`Error checking specialty awards for member ${memberId}:`, error);
-    throw error;
+export async function recomputeSpecialtyAwards(
+  memberId: number
+): Promise<{ granted: string[]; revoked: string[] }> {
+  const member = await getMember(memberId);
+  if (!member) {
+    throw new Error(`Member ${memberId} not found`);
   }
+
+  const allSubmissions = await getSubmissionsWithGenus(memberId);
+  const existingAwards = await getExistingSpecialtyAwards(memberId);
+
+  const earnedSpecialty = checkSpecialtyAwards(allSubmissions);
+  const earnedMeta = checkMetaAwards(earnedSpecialty);
+  const earned = new Set([...earnedSpecialty, ...earnedMeta]);
+
+  // Only the awards this computation owns are candidates for revocation; an
+  // award granted by hand is not the recompute's to take back.
+  const computed = new Set(await getComputedAwardNames(memberId));
+
+  const granted: string[] = [];
+  const revoked: string[] = [];
+
+  for (const awardName of earned) {
+    if (existingAwards.includes(awardName)) {
+      continue;
+    }
+    const isMeta = earnedMeta.includes(awardName);
+    try {
+      await grantAward(memberId, awardName, new Date(), isMeta ? "meta_species" : "species");
+      granted.push(awardName);
+      logger.info(
+        `Granted ${isMeta ? "meta-award" : "specialty award"} "${awardName}" to member ${memberId} (${member.display_name})`
+      );
+    } catch (error) {
+      logger.error(`Failed to grant award "${awardName}" to member ${memberId}:`, error);
+    }
+  }
+
+  for (const awardName of existingAwards) {
+    if (earned.has(awardName) || !computed.has(awardName)) {
+      continue;
+    }
+    try {
+      await revokeAward(memberId, awardName);
+      revoked.push(awardName);
+      logger.info(
+        `Revoked award "${awardName}" from member ${memberId} (${member.display_name}): no longer qualified`
+      );
+    } catch (error) {
+      logger.error(`Failed to revoke award "${awardName}" from member ${memberId}:`, error);
+    }
+  }
+
+  return { granted, revoked };
 }
 
 /**
- * Get existing specialty award names for a member
+ * Check if a member has earned any new specialty awards and grant them.
+ * Kept for the surfaces that only ever want to top a member up - the admin
+ * "check specialty awards" button and the nightly sweep.
+ */
+export async function checkAndGrantSpecialtyAwards(memberId: number): Promise<string[]> {
+  const { granted } = await recomputeSpecialtyAwards(memberId);
+  return granted;
+}
+
+/**
+ * Get existing award names for a member, however they were granted.
  */
 async function getExistingSpecialtyAwards(memberId: number): Promise<string[]> {
   try {
-    const { query } = await import("./db/conn");
     const awards = await query<{ award_name: string }>(
       "SELECT award_name FROM awards WHERE member_id = ?",
       [memberId]
@@ -146,13 +155,27 @@ async function getExistingSpecialtyAwards(memberId: number): Promise<string[]> {
 }
 
 /**
+ * The awards this computation granted, as opposed to ones a committee member
+ * entered by hand. Only these may be revoked when a member stops qualifying.
+ */
+async function getComputedAwardNames(memberId: number): Promise<string[]> {
+  try {
+    const awards = await query<{ award_name: string }>(
+      "SELECT award_name FROM awards WHERE member_id = ? AND award_type IN ('species', 'meta_species')",
+      [memberId]
+    );
+    return awards.map((award) => award.award_name);
+  } catch (error) {
+    logger.error(`Failed to get computed awards for member ${memberId}:`, error);
+    return [];
+  }
+}
+
+/**
  * Check all specialty awards for a member (convenience function that calls checkAndGrantSpecialtyAwards)
  */
-export async function checkAllSpecialtyAwards(
-  memberId: number,
-  options?: { disableEmails?: boolean }
-): Promise<string[]> {
-  return checkAndGrantSpecialtyAwards(memberId, options);
+export async function checkAllSpecialtyAwards(memberId: number): Promise<string[]> {
+  return checkAndGrantSpecialtyAwards(memberId);
 }
 
 export interface SpecialtyAwardProgress {
@@ -191,8 +214,6 @@ export async function getSpecialtyAwardProgress(
   // Get existing awards
   const existingAwards = await getExistingSpecialtyAwards(memberId);
 
-  const { specialtyAwards, metaAwards } = await import("./specialtyAwards");
-
   // Calculate progress for each specialty award
   const specialtyProgress: SpecialtyAwardProgress[] = specialtyAwards.map((award) => {
     // Filter submissions that match this award's eligibility criteria
@@ -229,7 +250,6 @@ export async function getSpecialtyAwardProgress(
   });
 
   // Calculate meta-award progress
-  const { getCountableSpecialtyAwards } = await import("./specialtyAwards");
   const countableAwards = getCountableSpecialtyAwards();
 
   // Count completed specialty awards (excluding Marine Invertebrates for meta-awards)

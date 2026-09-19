@@ -617,3 +617,65 @@ export async function createTestSpeciesName(
     group_id: group.group_id,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Fixture writers
+//
+// These write rows directly. They are not the lifecycle - a suite that is
+// testing the lifecycle goes through `src/lifecycle`, and a suite that merely
+// needs an approved Submission to count points against uses these.
+// ---------------------------------------------------------------------------
+
+import { createSubmissionRow, formToRow } from "../../db/submissions";
+import { writeConn } from "../../db/conn";
+import type { FormValues } from "../../forms/submission";
+import type { ApprovalFormValues } from "../../forms/approval";
+
+/** Insert a Submission, as a Draft or already submitted. */
+export async function createSubmissionFixture(
+  memberId: number,
+  form: FormValues,
+  submit = false
+): Promise<number> {
+  return createSubmissionRow({
+    ...formToRow(memberId, form),
+    submitted_on: submit ? new Date().toISOString() : undefined,
+    witness_verification_status: submit ? "pending" : undefined,
+  });
+}
+
+/** Stamp a Submission approved, with the Points a committee member would enter. */
+export async function approveSubmissionFixture(
+  approvedBy: number,
+  submissionId: number,
+  speciesIds: { common_name_id: number; scientific_name_id: number },
+  approval: ApprovalFormValues
+): Promise<void> {
+  const stmt = await writeConn.prepare(`
+    UPDATE submissions SET
+      common_name_id = ?, scientific_name_id = ?,
+      points = ?, article_points = ?,
+      first_time_species = ?, cares_species = ?,
+      flowered = ?, sexual_reproduction = ?,
+      approved_by = ?, approved_on = ?, final_submission_on = COALESCE(final_submission_on, ?)
+    WHERE id = ?`);
+  const now = new Date().toISOString();
+  try {
+    await stmt.run(
+      speciesIds.common_name_id,
+      speciesIds.scientific_name_id,
+      approval.points,
+      approval.article_points,
+      approval.first_time_species ? 1 : 0,
+      approval.cares_species ? 1 : 0,
+      approval.flowered ? 1 : 0,
+      approval.sexual_reproduction ? 1 : 0,
+      approvedBy,
+      now,
+      now,
+      submissionId
+    );
+  } finally {
+    await stmt.finalize();
+  }
+}

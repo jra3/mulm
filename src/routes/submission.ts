@@ -20,16 +20,15 @@ import { extractValid } from "@/forms/utils";
 import { getQueryString, getBodyString } from "@/utils/request";
 import { MulmRequest } from "@/sessions";
 import { MemberRecord, getMember, getMembersList } from "@/db/members";
-import { onSubmissionSend } from "@/notifications";
 import * as db from "@/db/submissions";
 import {
   getSubmissionImages,
   getSubmissionSupplements,
 } from "@/db/submissions";
 import { getSpeciesGroup, getGroupIdFromNameId } from "@/db/species";
-import { getWaitingPeriodStatus } from "@/utils/waitingPeriod";
+import * as lifecycle from "@/lifecycle";
+import { sendLifecycleError } from "./lifecycleErrors";
 import { getNotesForSubmission } from "@/db/submission_notes";
-import { AuthorizationError, StateError, ValidationError } from "@/utils/errors";
 import { formatShortDate } from "@/utils/dateFormat";
 import { parseVideoUrlWithOEmbed, isValidVideoUrl } from "@/utils/videoParser";
 import config from "@/config.json";
@@ -103,68 +102,26 @@ export const view = async (req: MulmRequest, res: Response) => {
     witness = await getMember(submission.witnessed_by);
   }
 
+  const state = lifecycle.deriveState(submission);
   const aspect = {
     isSubmitted: submission.submitted_on != null,
     isApproved: submission.approved_on != null,
     isLoggedIn: Boolean(viewer),
     isSelf: viewer && submission.member_id === viewer.id,
     isAdmin: viewer && viewer.is_admin,
+    state,
+    changesRequested: lifecycle.hasChangesRequested(submission),
+    // Which moves this viewer may actually make, asked of the same table the
+    // transitions guard against - so nobody is shown a button that will refuse
+    // them.
+    allowed: allowedMoves(viewer, submission, state),
   };
 
-  // Allow editing if: not submitted yet (draft) OR changes were requested by admin
-  const canEdit = !aspect.isSubmitted || submission.changes_requested_on != null;
-
-  if (viewer && aspect.isSelf && canEdit) {
-    const templateData = await getFormTemplateData(Boolean(aspect.isAdmin), submission.species_type);
-
-    // Fetch changes_requested metadata if applicable
-    let changesRequested = null;
-    if (submission.changes_requested_on) {
-      const adminWhoRequested = submission.changes_requested_by
-        ? await getMember(submission.changes_requested_by)
-        : null;
-
-      changesRequested = {
-        reason: submission.changes_requested_reason,
-        requestedBy: adminWhoRequested?.display_name || "Admin",
-        requestedOn: formatShortDate(submission.changes_requested_on),
-        hasWitness: submission.witnessed_by != null,
-      };
-    }
-
-    // Fetch supplements from normalized table
-    const supplements = await getSubmissionSupplements(submission.id);
-    const supplement_type = supplements.map((s) => s.supplement_type);
-    const supplement_regimen = supplements.map((s) => s.supplement_regimen);
-
-    // Fetch images from normalized table and convert to old JSON format for the form
-    const images = await getSubmissionImages(submission.id);
-    const imagesJson = JSON.stringify(
-      images.map((img) => ({
-        key: img.r2_key,
-        url: img.public_url,
-        size: img.file_size,
-        uploadedAt: img.uploaded_at,
-        contentType: img.content_type,
-      }))
-    );
-
-    res.render("submit", {
-      title: `Edit ${getBapFormTitle(submission.program)}`,
-      form: {
-        ...submission,
-        member_id: viewer.id,
-        member_name: viewer.display_name,
-        foods: parseStringArray(submission.foods),
-        spawn_locations: parseStringArray(submission.spawn_locations),
-        supplement_type,
-        supplement_regimen,
-        images: imagesJson, // Override with normalized table data
-      },
-      errors: new Map(),
-      changesRequested,
-      ...templateData,
-    });
+  // A Draft has nothing to review, so its owner goes straight to the form.
+  // Everything else shows the review page, with an Edit link when editing is
+  // legal - so the member can see where their Submission stands.
+  if (viewer && aspect.isSelf && state === "draft") {
+    await renderEditForm(res, submission, viewer);
     return;
   }
 
@@ -197,7 +154,7 @@ export const view = async (req: MulmRequest, res: Response) => {
   const canonicalName = `${nameGroup.canonical_genus} ${nameGroup.canonical_species_name}`;
 
   // Calculate waiting period eligibility
-  const waitingPeriodStatus = getWaitingPeriodStatus(submission);
+  const waitingPeriodStatus = lifecycle.waitingPeriod(submission);
 
   // Fetch admin notes if viewer is an admin
   const adminNotes = aspect.isAdmin ? await getNotesForSubmission(submission.id) : [];
@@ -257,6 +214,136 @@ export const view = async (req: MulmRequest, res: Response) => {
     ...aspect,
   });
 };
+
+/**
+ * Render the Submission form over an existing Submission.
+ *
+ * The same form serves a Draft, an in-place edit and an answer to a request
+ * for changes; which buttons it offers follows from the Submission's own
+ * columns, and which move a save performs is decided in `update`.
+ */
+async function renderEditForm(
+  res: Response,
+  submission: db.Submission,
+  viewer: NonNullable<MulmRequest["viewer"]>
+): Promise<void> {
+  const templateData = await getFormTemplateData(
+    Boolean(viewer.is_admin),
+    submission.species_type
+  );
+
+  let changesRequested = null;
+  if (submission.changes_requested_on) {
+    const adminWhoRequested = submission.changes_requested_by
+      ? await getMember(submission.changes_requested_by)
+      : null;
+
+    changesRequested = {
+      reason: submission.changes_requested_reason,
+      requestedBy: adminWhoRequested?.display_name || "Admin",
+      requestedOn: formatShortDate(submission.changes_requested_on),
+      hasWitness: submission.witnessed_by != null,
+    };
+  }
+
+  const supplements = await getSubmissionSupplements(submission.id);
+  const images = await getSubmissionImages(submission.id);
+
+  res.render("submit", {
+    title: `Edit ${getBapFormTitle(submission.program)}`,
+    form: {
+      ...submission,
+      member_id: submission.member_id,
+      member_name: viewer.display_name,
+      foods: parseJsonStringArray(submission.foods),
+      spawn_locations: parseJsonStringArray(submission.spawn_locations),
+      supplement_type: supplements.map((s) => s.supplement_type),
+      supplement_regimen: supplements.map((s) => s.supplement_regimen),
+      images: JSON.stringify(
+        images.map((img) => ({
+          key: img.r2_key,
+          url: img.public_url,
+          size: img.file_size,
+          uploadedAt: img.uploaded_at,
+          contentType: img.content_type,
+        }))
+      ),
+    },
+    errors: new Map(),
+    changesRequested,
+    ...templateData,
+  });
+}
+
+/** A JSON-encoded string array column, or an empty array if it is not one. */
+function parseJsonStringArray(jsonString: string): string[] {
+  try {
+    const parsed: unknown = JSON.parse(jsonString);
+    if (Array.isArray(parsed) && parsed.every((item) => typeof item === "string")) {
+      return parsed;
+    }
+  } catch {
+    // Not a JSON array; treat it as empty.
+  }
+  return [];
+}
+
+/**
+ * GET /submissions/:id/edit
+ *
+ * The edit form, reached from the review page. Opening it changes nothing -
+ * which is the point: a member clicking Edit no longer has their Submission
+ * pulled out of the queue it is waiting in before they have typed anything.
+ */
+export const renderEdit = async (req: MulmRequest, res: Response) => {
+  const submission = await validateSubmission(req, res);
+  if (!submission) {
+    return;
+  }
+
+  const { viewer } = req;
+  if (!viewer) {
+    res.status(401).send();
+    return;
+  }
+
+  const allowed = allowedMoves(viewer, submission, lifecycle.deriveState(submission));
+  if (!allowed.saveDraft && !allowed.saveChanges && !allowed.resubmit) {
+    res.status(403).send("This submission can no longer be edited");
+    return;
+  }
+
+  await renderEditForm(res, submission, viewer);
+};
+
+/**
+ * The moves this viewer may make on this Submission right now, keyed by move
+ * id for the template. Asked of the transition table rather than restated, so
+ * the buttons shown and the guards enforced cannot drift apart.
+ */
+function allowedMoves(
+  viewer: MulmRequest["viewer"],
+  submission: db.Submission,
+  state: lifecycle.SubmissionState
+): Record<string, boolean> {
+  if (!viewer) {
+    return {};
+  }
+
+  const isOwner = submission.member_id === viewer.id;
+  const actor: lifecycle.Actor = isOwner ? "member" : viewer.is_admin ? "committee" : "member";
+  const context: lifecycle.MoveContext = {
+    state,
+    changesPending: lifecycle.hasChangesRequested(submission),
+    actor,
+    actorId: viewer.id,
+    isOwner,
+  };
+
+  return Object.fromEntries(
+    Object.values(lifecycle.moves).map((move) => [move.id, lifecycle.canMove(move, context)])
+  );
+}
 
 export async function validateSubmission(req: MulmRequest, res: Response) {
   // Support both :id and :subId for backward compatibility
@@ -332,37 +419,23 @@ export const create = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  // Determine which member this submission is for
-  let memberId: number;
+  // Determine which member this submission is for. A committee member may
+  // file on another member's behalf; the module enforces that.
+  const memberId = form.member_id ? parseInt(String(form.member_id)) : viewer.id;
 
-  if (form.member_id) {
-    // Admin specified a member via the dropdown
-    memberId = parseInt(String(form.member_id));
-
-    // Verify admin is allowed to submit for other members
-    if (memberId !== viewer.id && !viewer.is_admin) {
-      res.status(403).send("Not authorized to submit for other members");
+  let subId: number;
+  try {
+    subId = await lifecycle.createSubmission(
+      { id: viewer.id, isAdmin: Boolean(viewer.is_admin) },
+      memberId,
+      form,
+      { submit: !draft }
+    );
+  } catch (err) {
+    if (sendLifecycleError(res, err, { memberId, by: viewer.id })) {
       return;
     }
-  } else {
-    // No member_id specified, use logged-in user
-    memberId = viewer.id;
-  }
-
-  // TODO figure out how to avoid read after write
-  const subId = await db.createSubmission(memberId, form, !draft);
-  const sub = await db.getSubmissionById(subId);
-
-  if (!sub) {
-    res.status(500).send("Failed to create submission");
-    return;
-  }
-
-  if (!draft) {
-    const member = await getMember(memberId);
-    if (member) {
-      await onSubmissionSend(sub, member);
-    }
+    throw err;
   }
 
   // Redirect after successful creation
@@ -373,6 +446,14 @@ export const create = async (req: MulmRequest, res: Response) => {
   res.set("HX-Redirect", redirectUrl).status(200).send();
 };
 
+/**
+ * PATCH /submissions/:id
+ *
+ * One form, four moves. Which one it is follows from where the Submission
+ * already is, rather than from a hidden field: saving a Draft, submitting it,
+ * answering a request for changes, or editing in place. Editing no longer
+ * pulls a Submission out of the queue it is waiting in.
+ */
 export const update = async (req: MulmRequest, res: Response) => {
   const { viewer } = req;
   const submission = await validateSubmission(req, res);
@@ -385,25 +466,7 @@ export const update = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  if (!viewer.is_admin) {
-    if (viewer.id !== submission.member_id) {
-      res.status(403).send("Submission already submitted");
-      return;
-    }
-  }
-
-  if (viewer?.id !== submission?.member_id && !viewer.is_admin) {
-    res.status(403).send();
-    return;
-  }
-
-  if ("unsubmit" in req.body) {
-    await db.updateSubmission(submission.id, { submitted_on: null });
-    res.set("HX-Redirect", "/submissions/" + submission.id).send();
-    return;
-  }
-
-  const { form, draft, errors} = parseAndValidateForm(req);
+  const { form, draft, errors } = parseAndValidateForm(req);
   if (errors) {
     const selectedType = form.species_type || "Fish";
     const templateData = await getFormTemplateData(Boolean(viewer.is_admin), selectedType);
@@ -416,47 +479,30 @@ export const update = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  // Prepare updates from form
-  const formUpdates = db.formToDB(submission.member_id, form, !draft);
+  const caller = { id: viewer.id, isAdmin: Boolean(viewer.is_admin) };
+  const state = lifecycle.deriveState(submission);
 
-  // Extract supplements for normalized table
-  const supplementTypes = form.supplement_type;
-  const supplementRegimens = form.supplement_regimen;
-
-  // If resubmitting after changes were requested, clear those fields AND preserve witness/submit data
-  if (!draft && submission.changes_requested_on) {
-    await db.updateSubmission(submission.id, {
-      ...formUpdates,
-      changes_requested_on: null,
-      changes_requested_by: null,
-      changes_requested_reason: null,
-      // Preserve existing witness status when resubmitting (don't reset to pending)
-      witness_verification_status: submission.witness_verification_status,
-      // Preserve original submitted_on timestamp (don't update to now)
-      submitted_on: submission.submitted_on,
-    });
-  } else {
-    await db.updateSubmission(submission.id, formUpdates);
-  }
-
-  // Save supplements to normalized table
-  if (Array.isArray(supplementTypes) && Array.isArray(supplementRegimens)) {
-    const supplements = [];
-    const maxLength = Math.max(supplementTypes.length, supplementRegimens.length);
-    for (let i = 0; i < maxLength; i++) {
-      const type = supplementTypes[i] || "";
-      const regimen = supplementRegimens[i] || "";
-      if (type || regimen) {
-        supplements.push({ type, regimen });
-      }
+  try {
+    if (state === "draft") {
+      // On a Draft, "Save Draft" keeps it a Draft and "Submit" sends it.
+      await (draft
+        ? lifecycle.saveDraft(caller, submission.id, form)
+        : lifecycle.submit(caller, submission.id, form));
+    } else if (draft) {
+      // "Save Draft" on work the committee has sent back means "save my
+      // progress without answering them yet" - an edit in place, not a
+      // withdrawal. Returning to Draft is its own named action.
+      await lifecycle.saveChanges(caller, submission.id, form);
+    } else if (lifecycle.hasChangesRequested(submission)) {
+      await lifecycle.resubmit(caller, submission.id, form);
+    } else {
+      await lifecycle.saveChanges(caller, submission.id, form);
     }
-    await db.setSubmissionSupplements(submission.id, supplements);
-  }
-
-  const sub = await db.getSubmissionById(submission.id);
-  const member = await getMember(submission.member_id);
-  if (!draft && sub && member) {
-    await onSubmissionSend(sub, member);
+  } catch (err) {
+    if (sendLifecycleError(res, err, { submissionId: submission.id, by: viewer.id })) {
+      return;
+    }
+    throw err;
   }
 
   // Redirect after successful update
@@ -465,6 +511,39 @@ export const update = async (req: MulmRequest, res: Response) => {
   const isSavingForSelf = viewer.id === submission.member_id;
   const redirectUrl = draft && isSavingForSelf ? "/me" : `/submissions/${submission.id}`;
   res.set("HX-Redirect", redirectUrl).status(200).send();
+};
+
+/**
+ * POST /submissions/:id/return-to-draft
+ *
+ * Withdrawing, as its own named action. The confirmed Witness survives, so
+ * submitting again skips screening and re-enters the waiting period.
+ */
+export const returnToDraft = async (req: MulmRequest, res: Response) => {
+  const submission = await validateSubmission(req, res);
+  if (!submission) {
+    return;
+  }
+
+  const { viewer } = req;
+  if (!viewer) {
+    res.status(401).send();
+    return;
+  }
+
+  try {
+    await lifecycle.returnToDraft(
+      { id: viewer.id, isAdmin: Boolean(viewer.is_admin) },
+      submission.id
+    );
+  } catch (err) {
+    if (sendLifecycleError(res, err, { submissionId: submission.id, by: viewer.id })) {
+      return;
+    }
+    throw err;
+  }
+
+  res.set("HX-Redirect", `/submissions/${submission.id}`).status(200).send();
 };
 
 export const remove = async (req: MulmRequest, res: Response) => {
@@ -479,24 +558,22 @@ export const remove = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  // Admin can always delete
-  if (viewer.is_admin) {
-    await db.deleteSubmission(submission.id);
-    res.set("HX-Redirect", "/").send();
-    return;
+  try {
+    await lifecycle.deleteSubmission(
+      { id: viewer.id, isAdmin: Boolean(viewer.is_admin) },
+      submission.id
+    );
+  } catch (err) {
+    if (sendLifecycleError(res, err, { submissionId: submission.id, by: viewer.id })) {
+      return;
+    }
+    throw err;
   }
 
-  // Owner can delete if not approved (no points awarded yet)
-  if (viewer.id === submission.member_id && submission.approved_on === null) {
-    await db.deleteSubmission(submission.id);
-    res.set("HX-Redirect", "/").send();
-    return;
-  }
-
-  // Not authorized
-  res.status(403).send("Cannot delete approved submissions");
+  res.set("HX-Redirect", "/").send();
 };
 
+/** POST /submissions/:id/final-submit - brought to a meeting, now queue it. */
 export const finalSubmit = async (req: MulmRequest, res: Response) => {
   const submission = await validateSubmission(req, res);
   if (!submission) {
@@ -509,21 +586,13 @@ export const finalSubmit = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const isAdmin = Boolean(viewer.is_admin);
-  if (!isAdmin && viewer.id !== submission.member_id) {
-    res.status(403).send("Not authorized");
-    return;
-  }
-
   try {
-    await db.setFinalSubmission(submission.id, viewer.id, isAdmin);
+    await lifecycle.enterApprovalQueue(
+      { id: viewer.id, isAdmin: Boolean(viewer.is_admin) },
+      submission.id
+    );
   } catch (err) {
-    if (err instanceof AuthorizationError) {
-      res.status(403).send(err.message);
-      return;
-    }
-    if (err instanceof StateError || err instanceof ValidationError) {
-      res.status(400).send(err.message);
+    if (sendLifecycleError(res, err, { submissionId: submission.id, by: viewer.id })) {
       return;
     }
     throw err;
@@ -532,6 +601,7 @@ export const finalSubmit = async (req: MulmRequest, res: Response) => {
   res.set("HX-Redirect", `/submissions/${submission.id}`).status(200).send();
 };
 
+/** DELETE /submissions/:id/final-submit - take it back out of the queue. */
 export const unfinalSubmit = async (req: MulmRequest, res: Response) => {
   const submission = await validateSubmission(req, res);
   if (!submission) {
@@ -544,21 +614,13 @@ export const unfinalSubmit = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const isAdmin = Boolean(viewer.is_admin);
-  if (!isAdmin && viewer.id !== submission.member_id) {
-    res.status(403).send("Not authorized");
-    return;
-  }
-
   try {
-    await db.clearFinalSubmission(submission.id, viewer.id, isAdmin);
+    await lifecycle.removeFromQueue(
+      { id: viewer.id, isAdmin: Boolean(viewer.is_admin) },
+      submission.id
+    );
   } catch (err) {
-    if (err instanceof AuthorizationError) {
-      res.status(403).send(err.message);
-      return;
-    }
-    if (err instanceof StateError || err instanceof ValidationError) {
-      res.status(400).send(err.message);
+    if (sendLifecycleError(res, err, { submissionId: submission.id, by: viewer.id })) {
       return;
     }
     throw err;

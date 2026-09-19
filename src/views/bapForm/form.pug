@@ -290,9 +290,10 @@ mixin CRUDForm()
                     span Resubmit
                     +loadingSpinner()
             else if form.submitted_on || editing
-                //- Submitted/Admin edit: show single Save Edits button
-                button.primary(class="w-2/5 max-w-200" type="submit" title="Save changes to your submission" hx-disabled-elt="this")
-                    span Save Edits
+                //- Submitted: editing in place. The Submission keeps its state,
+                //- its place in the queue and its screening, and nobody is emailed.
+                button.primary(class="w-2/5 max-w-200" type="submit" title="Save changes without moving your submission" hx-disabled-elt="this")
+                    span Save Changes
                     +loadingSpinner()
             else
                 //- Draft: show Submit + Save Draft buttons

@@ -1,0 +1,20 @@
+include ../mixins/trophy.pug
+
+- const sp = " ";
+- const programNames = { fish: "Breeder Awards Program", plant: "Horticultural Awards Program", coral: "Coral Awards Program" };
+
+.text-sm
+    a.font-medium.text-gray-900.hover_underline(href=`/member/${activity.member_id}`)= activity.member_name
+    if activity.awards
+        = sp
+        +trophy(activity.awards)
+    span.text-gray-600  reached
+    = sp
+    span.font-medium.rounded.px-1.bg-blue-100.text-blue-800= data.level
+    = sp
+    span.text-gray-600 in the #{programNames[data.program] || data.program}
+
+    if data.total_points
+        .flex.items-center.space-x-2.mt-1
+            div(class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800")
+                | #{data.total_points} pts

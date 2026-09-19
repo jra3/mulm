@@ -1,0 +1,319 @@
+import { MIDDLE_STATES, SubmissionState } from "./state";
+import { AuthorizationError, StateError } from "./errors";
+
+/**
+ * The transition table: which moves are legal from which states, and for whom.
+ *
+ * This is the single statement of the rules. Every transition function checks
+ * itself against its row here, so a new surface cannot invent its own.
+ *
+ * | Move                    | From                                    | To                  | Actor              |
+ * |-------------------------|-----------------------------------------|---------------------|--------------------|
+ * | saveDraft               | draft                                   | draft               | member             |
+ * | submit                  | draft                                   | pendingWitness, or  | member             |
+ * |                         |                                         | waitingPeriod if a  |                    |
+ * |                         |                                         | Witness survived    |                    |
+ * | saveChanges             | the four middle states                  | same                | member             |
+ * | returnToDraft           | pendingWitness .. awaitingFinalSubmission| draft              | member             |
+ * | confirmWitness          | pendingWitness                          | waitingPeriod       | committee, not the submitter |
+ * | enterApprovalQueue      | awaitingFinalSubmission                 | inApprovalQueue     | member or committee|
+ * | removeFromQueue         | inApprovalQueue                         | awaitingFinalSubmission | member or committee |
+ * | requestChanges          | the four middle states                  | same, flag set      | committee          |
+ * | resubmit                | the four middle states                  | same, flag cleared  | member             |
+ * | approve                 | inApprovalQueue                         | approved            | committee          |
+ * | correctPoints           | approved                                | approved            | committee          |
+ * | deleteSubmission        | draft (member); draft .. inApprovalQueue (committee) | gone   | member or committee|
+ *
+ * The thirteenth move is the clock: the waiting period elapsing carries a
+ * Submission from waitingPeriod to awaitingFinalSubmission with nobody
+ * performing anything. It is computed in `state.ts` rather than listed here.
+ */
+
+/** Who is asking. A committee member is a member with `is_admin`. */
+export type Actor = "member" | "committee";
+
+export type MoveId =
+  | "saveDraft"
+  | "submit"
+  | "saveChanges"
+  | "returnToDraft"
+  | "confirmWitness"
+  | "enterApprovalQueue"
+  | "removeFromQueue"
+  | "requestChanges"
+  | "resubmit"
+  | "approve"
+  | "correctPoints"
+  | "deleteSubmission";
+
+export type MoveDefinition = {
+  /** What a refusal calls this move. */
+  readonly id: MoveId;
+  /** The states the move is legal from, for any actor not named in `fromByActor`. */
+  readonly from: readonly SubmissionState[];
+  /** Narrower `from` lists for particular actors. */
+  readonly fromByActor?: Partial<Record<Actor, readonly SubmissionState[]>>;
+  /** Who may perform it at all. */
+  readonly actors: readonly Actor[];
+  /** Illegal while the committee has changes outstanding. */
+  readonly requiresNoChangesPending?: boolean;
+  /** Legal only while the committee has changes outstanding. */
+  readonly requiresChangesPending?: boolean;
+  /** A member acting on this move must own the Submission. */
+  readonly ownerOnly?: boolean;
+  /** The submitter may never perform it, committee member or not. */
+  readonly neverSubmitter?: boolean;
+};
+
+const MEMBER_ONLY: readonly Actor[] = ["member"];
+const COMMITTEE_ONLY: readonly Actor[] = ["committee"];
+const EITHER: readonly Actor[] = ["member", "committee"];
+
+export const moves = {
+  /**
+   * The three moves that change a Submission's *contents* accept a committee
+   * member acting in the member's stead, because the Portal has an admin edit
+   * form that does exactly that. `ownerOnly` still binds members to their own
+   * work. Every move that changes the committee's relationship to a Submission
+   * - Return to Draft, Resubmit, and all four committee moves - keeps the
+   * narrower actor list the table states.
+   */
+  saveDraft: {
+    id: "saveDraft",
+    from: ["draft"],
+    actors: EITHER,
+    ownerOnly: true,
+  },
+
+  submit: {
+    id: "submit",
+    from: ["draft"],
+    actors: EITHER,
+    ownerOnly: true,
+  },
+
+  /**
+   * Editing in place. The Submission does not move, so a typo fix does not
+   * cost the member their place in the queue they are waiting in, and a
+   * confirmed Witness survives it.
+   */
+  saveChanges: {
+    id: "saveChanges",
+    from: MIDDLE_STATES,
+    actors: EITHER,
+    ownerOnly: true,
+  },
+
+  /**
+   * Withdrawing, as an explicit named action rather than a side effect of
+   * editing. Not legal from the approval queue: a member walks it back one
+   * named step at a time, so leaving the queue comes first.
+   */
+  returnToDraft: {
+    id: "returnToDraft",
+    from: ["pendingWitness", "waitingPeriod", "awaitingFinalSubmission"],
+    actors: MEMBER_ONLY,
+    ownerOnly: true,
+  },
+
+  confirmWitness: {
+    id: "confirmWitness",
+    from: ["pendingWitness"],
+    actors: COMMITTEE_ONLY,
+    requiresNoChangesPending: true,
+    neverSubmitter: true,
+  },
+
+  enterApprovalQueue: {
+    id: "enterApprovalQueue",
+    from: ["awaitingFinalSubmission"],
+    actors: EITHER,
+    requiresNoChangesPending: true,
+    ownerOnly: true,
+  },
+
+  removeFromQueue: {
+    id: "removeFromQueue",
+    from: ["inApprovalQueue"],
+    actors: EITHER,
+    ownerOnly: true,
+  },
+
+  requestChanges: {
+    id: "requestChanges",
+    from: MIDDLE_STATES,
+    actors: COMMITTEE_ONLY,
+    requiresNoChangesPending: true,
+  },
+
+  resubmit: {
+    id: "resubmit",
+    from: MIDDLE_STATES,
+    actors: MEMBER_ONLY,
+    requiresChangesPending: true,
+    ownerOnly: true,
+  },
+
+  approve: {
+    id: "approve",
+    from: ["inApprovalQueue"],
+    actors: COMMITTEE_ONLY,
+    requiresNoChangesPending: true,
+    neverSubmitter: true,
+  },
+
+  /** The only movement out of Approved. Approved is otherwise terminal. */
+  correctPoints: {
+    id: "correctPoints",
+    from: ["approved"],
+    actors: COMMITTEE_ONLY,
+    neverSubmitter: true,
+  },
+
+  /**
+   * Members delete only their own Drafts, so one confirmation dialog cannot
+   * destroy an inspection a committee member has already performed. The
+   * committee deletes duplicates and junk anywhere short of Approved.
+   */
+  deleteSubmission: {
+    id: "deleteSubmission",
+    from: ["draft", ...MIDDLE_STATES],
+    fromByActor: { member: ["draft"] },
+    actors: EITHER,
+    ownerOnly: true,
+  },
+} as const satisfies Record<MoveId, MoveDefinition>;
+
+/** What the guard is told about the Submission and the caller. */
+export type MoveContext = {
+  readonly state: SubmissionState;
+  readonly changesPending: boolean;
+  readonly actor: Actor;
+  /** The caller's member id, for the refusal's context. */
+  readonly actorId: number;
+  /** Whether the caller owns the Submission. */
+  readonly isOwner: boolean;
+};
+
+/** The states `move` is legal from for this actor. */
+export function legalFrom(move: MoveDefinition, actor: Actor): readonly SubmissionState[] {
+  return move.fromByActor?.[actor] ?? move.from;
+}
+
+/**
+ * Whether a move is legal right now - the question the Portal asks before it
+ * shows a button, so a member is never offered an action that will refuse them.
+ */
+export function canMove(move: MoveDefinition, context: MoveContext): boolean {
+  try {
+    assertMoveIsLegal(move, context);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The guard every transition runs. Authorization is checked before state, so a
+ * refusal names the wrong person before it names the wrong moment.
+ */
+export function assertMoveIsLegal(move: MoveDefinition, context: MoveContext): void {
+  const { state, changesPending, actor, actorId, isOwner } = context;
+
+  if (!move.actors.includes(actor)) {
+    throw new AuthorizationError(
+      `Only the ${move.actors.join(" or ")} may ${describe(move.id)}`,
+      actorId,
+      move.id
+    );
+  }
+
+  if (move.neverSubmitter && isOwner) {
+    throw new AuthorizationError(
+      `You cannot ${describe(move.id)} on your own submission`,
+      actorId,
+      move.id
+    );
+  }
+
+  if (move.ownerOnly && actor === "member" && !isOwner) {
+    throw new AuthorizationError(
+      "Cannot modify another member's submission",
+      actorId,
+      move.id
+    );
+  }
+
+  const from = legalFrom(move, actor);
+  if (!from.includes(state)) {
+    throw new StateError(
+      `Cannot ${describe(move.id)} a submission that is ${label(state)}`,
+      from.join(" or "),
+      state
+    );
+  }
+
+  if (move.requiresNoChangesPending && changesPending) {
+    throw new StateError(
+      `Cannot ${describe(move.id)} while requested changes are outstanding`,
+      "no changes outstanding",
+      "changes requested"
+    );
+  }
+
+  if (move.requiresChangesPending && !changesPending) {
+    throw new StateError(
+      `Cannot ${describe(move.id)} when no changes have been requested`,
+      "changes requested",
+      "no changes outstanding"
+    );
+  }
+}
+
+/** How a move is named in a refusal. */
+function describe(id: MoveId): string {
+  switch (id) {
+    case "saveDraft":
+      return "save a draft of";
+    case "submit":
+      return "submit";
+    case "saveChanges":
+      return "save changes to";
+    case "returnToDraft":
+      return "return to draft";
+    case "confirmWitness":
+      return "confirm the witness";
+    case "enterApprovalQueue":
+      return "queue for approval";
+    case "removeFromQueue":
+      return "remove from the approval queue";
+    case "requestChanges":
+      return "request changes on";
+    case "resubmit":
+      return "resubmit";
+    case "approve":
+      return "approve";
+    case "correctPoints":
+      return "correct the points on";
+    case "deleteSubmission":
+      return "delete";
+  }
+}
+
+/** How a state is named in a refusal. */
+export function label(state: SubmissionState): string {
+  switch (state) {
+    case "draft":
+      return "a draft";
+    case "pendingWitness":
+      return "pending screening";
+    case "waitingPeriod":
+      return "in its waiting period";
+    case "awaitingFinalSubmission":
+      return "awaiting confirmation it was brought to a meeting";
+    case "inApprovalQueue":
+      return "in the approval queue";
+    case "approved":
+      return "approved";
+  }
+}

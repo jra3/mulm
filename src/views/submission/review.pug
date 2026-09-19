@@ -155,38 +155,60 @@ html
                     background-color: rgba(0, 0, 0, 0.5);
                 }
 
-        // Member Edit Section - for unsubmitted submissions
-        if isSelf && !isApproved
+        //- Every button below is shown only when the transition table says the
+        //- move is legal for this viewer right now, so nobody is offered an
+        //- action that will refuse them.
+
+        //- What the committee has asked for, if anything
+        if (isSelf || isAdmin) && changesRequested
+            section.bg-gray-100.pt-6
+                .status-panel.status-panel-warning
+                    .container.mx-auto.max-w-4xl
+                        h3.text-orange-800.text-lg.font-semibold.mb-2 📝 Changes Requested
+                        p.text-orange-700.mb-2= submission.changes_requested_reason
+                        if allowed.resubmit
+                            p.text-orange-600.text-sm.mb-4 Make the changes and resubmit. Your screening and your place in the queue are kept.
+                            .flex.justify-center
+                                a.primary(class="px-4 py-2 text-sm" href=`/submissions/${submission.id}/edit`) Edit and Resubmit
+
+        //- Owner action buttons section
+        if isSelf
             section.bg-gray-100.py-6
                 div.max-w-4xl.mx-auto.text-center.px-4
-                    form.inline(hx-patch=`/submissions/${submission.id}`)
-                        button.primary(name="unsubmit" type="submit") Edit Submission
+                    .flex.justify-center.gap-4.flex-wrap
+                        if allowed.saveChanges && !changesRequested
+                            a.primary(
+                                class="px-4 py-2 text-sm"
+                                href=`/submissions/${submission.id}/edit`
+                            ) Edit Submission
 
-        // Owner action buttons section
-        if isSelf
-            section.bg-gray-100.pb-6
-                div.max-w-4xl.mx-auto.text-center.px-4
-                    .flex.justify-center.gap-4
-                        // Edit Media button - only for approved submissions
                         if isApproved
                             a.primary(
                                 class="px-4 py-2 text-sm"
                                 href=`/submissions/${submission.id}/edit-media`
-                            ) Edit Photos & Video
+                            ) Edit Photos &amp; Video
 
-                        // Delete button
-                        button.destructive(
-                            class="px-4 py-2 text-sm"
-                            hx-delete=`/submissions/${submission.id}`
-                            hx-confirm="Are you sure you want to permanently delete this submission? This cannot be undone."
-                            type="button"
-                        ) Delete
+                        if allowed.returnToDraft
+                            form.inline(hx-post=`/submissions/${submission.id}/return-to-draft`)
+                                button.destructive(
+                                    class="px-4 py-2 text-sm"
+                                    type="submit"
+                                    hx-confirm="Return this submission to draft? It leaves the committee's queue until you submit it again. Your screening is kept."
+                                ) Return to Draft
+
+                        if allowed.deleteSubmission
+                            button.destructive(
+                                class="px-4 py-2 text-sm"
+                                hx-delete=`/submissions/${submission.id}`
+                                hx-confirm="Are you sure you want to permanently delete this draft? This cannot be undone."
+                                type="button"
+                            ) Delete
 
         // Unified Status / Action Section - visible to submitter and admins
         if isAdmin || isSelf
             section.bg-gray-100
-                // Screening Actions Panel - only show for pending screening
-                if submission.witness_verification_status === 'pending'
+                // Screening Actions Panel - only show while awaiting a Witness
+                if state === 'pendingWitness'
                     if isSelf
                         // Show message for self-screening case
                         .status-panel.status-panel-warning
@@ -202,86 +224,88 @@ html
                                 h3.text-white.text-lg.font-semibold.mb-4 Admin Screening Required
                                 p.text-white.mb-4 Review the submission details above, including any photos/videos (when available), for completeness and credibility.
                                 div.flex.justify-center.max-w-4xl.mx-auto.text-center.gap-4
-                                    form(hx-post=`/admin/submissions/${submission.id}/confirm-witness`)
-                                        - const actionText = submission.species_type === 'Plant' ? 'Approve for Screening' : 'Approve for Screening'
-                                        button.primary(type="submit")= actionText
+                                    if allowed.confirmWitness
+                                        form(hx-post=`/admin/submissions/${submission.id}/confirm-witness`)
+                                            button.primary(type="submit") Approve for Screening
 
-                                    button.destructive(
-                                        type="button"
-                                        hx-get=`/admin/dialog/submissions/${submission.id}/decline-witness`
-                                        hx-target="closest body"
-                                        hx-swap="beforeend") Request More Info
-
-                // Show auction eligibility status for screened submissions
-                if submission.witness_verification_status === 'confirmed' && !isApproved
-                    if !waitingPeriodStatus.eligible
-                        // Show auction eligibility countdown
-                        .status-panel.status-panel-pending
-                            .container.mx-auto.max-w-4xl
-                                h3.text-blue-800.text-lg.font-semibold.mb-2 ⏳ Awaiting Auction Eligibility
-                                - const speciesText = submission.species_type === 'Plant' || submission.species_type === 'Coral' ? 'propagation' : 'spawn'
-                                - const offspringText = submission.species_type === 'Plant' ? 'plants' : submission.species_type === 'Coral' ? 'corals' : 'fry'
-                                p.text-blue-700.mb-2= `This ${speciesText} has been screened. Bring ${offspringText} to a monthly auction after ${waitingPeriodStatus.requiredDays} days.`
-                                .bg-blue-100.rounded.p-3.mt-2
-                                    p.text-blue-800.font-semibold Days until eligible for auction: #{waitingPeriodStatus.daysRemaining}
-                                    p.text-blue-600.text-sm.mt-1 Elapsed: #{waitingPeriodStatus.elapsedDays} of #{waitingPeriodStatus.requiredDays} days
-
-                        // Admin actions panel during waiting period
-                        if isAdmin && !isSelf
-                            .status-panel.status-panel-admin
-                                .container.mx-auto.max-w-4xl
-                                    h3.text-white.text-lg.font-semibold.mb-4 Admin Actions
-                                    p.text-white.mb-4 While awaiting auction eligibility, you can request changes or delete this submission.
-                                    .flex.justify-center.gap-4
+                                    if allowed.requestChanges
                                         button.destructive(
                                             type="button"
                                             hx-get=`/admin/dialog/submissions/${submission.id}/request-changes`
                                             hx-target="closest body"
-                                            hx-swap="beforeend"
-                                        ) Request Changes
-                                        button.destructive(
-                                            type="button"
-                                            hx-delete=`/submissions/${submission.id}`
-                                            hx-confirm="Are you sure you want to permanently delete this submission? This cannot be undone."
-                                        ) Delete
-                    else if !submission.final_submission_on
-                        // Past waiting period but submitter hasn't confirmed the fish was brought to a meeting yet
-                        - const speciesText = submission.species_type === 'Plant' || submission.species_type === 'Coral' ? 'propagation' : 'spawn'
-                        - const offspringText = submission.species_type === 'Plant' ? 'plants' : submission.species_type === 'Coral' ? 'corals' : 'fry'
-                        .status-panel.status-panel-warning
-                            .container.mx-auto.max-w-4xl
-                                h3.text-yellow-800.text-lg.font-semibold.mb-2 🐟 Bring to Meeting
-                                p.text-yellow-700.mb-2= `This ${speciesText} is past its waiting period. Bring the ${offspringText} to a monthly meeting, then click below to enter the approval queue.`
-                                p.text-yellow-600.text-sm.mb-4 Until you confirm, admins won't see this submission in the approval queue.
-                                if isSelf || isAdmin
-                                    .flex.justify-center
-                                        form(hx-post=`/submissions/${submission.id}/final-submit`)
-                                            button.primary(type="submit")
-                                                if isAdmin && !isSelf
-                                                    | Confirm on Submitter's Behalf
-                                                else
-                                                    | Confirm: Brought to Meeting
+                                            hx-swap="beforeend") Request Changes
+
+                // Waiting period: the clock has not run out yet
+                if state === 'waitingPeriod'
+                    .status-panel.status-panel-pending
+                        .container.mx-auto.max-w-4xl
+                            h3.text-blue-800.text-lg.font-semibold.mb-2 ⏳ Awaiting Auction Eligibility
+                            - const speciesText = submission.species_type === 'Plant' || submission.species_type === 'Coral' ? 'propagation' : 'spawn'
+                            - const offspringText = submission.species_type === 'Plant' ? 'plants' : submission.species_type === 'Coral' ? 'corals' : 'fry'
+                            p.text-blue-700.mb-2= `This ${speciesText} has been screened. Bring ${offspringText} to a monthly auction after ${waitingPeriodStatus.requiredDays} days.`
+                            .bg-blue-100.rounded.p-3.mt-2
+                                p.text-blue-800.font-semibold Days until eligible for auction: #{waitingPeriodStatus.daysRemaining}
+                                p.text-blue-600.text-sm.mt-1 Elapsed: #{waitingPeriodStatus.elapsedDays} of #{waitingPeriodStatus.requiredDays} days
+
+                // The clock has run out; the member brings it to a meeting
+                if state === 'awaitingFinalSubmission'
+                    - const speciesText = submission.species_type === 'Plant' || submission.species_type === 'Coral' ? 'propagation' : 'spawn'
+                    - const offspringText = submission.species_type === 'Plant' ? 'plants' : submission.species_type === 'Coral' ? 'corals' : 'fry'
+                    .status-panel.status-panel-warning
+                        .container.mx-auto.max-w-4xl
+                            h3.text-yellow-800.text-lg.font-semibold.mb-2 🐟 Bring to Meeting
+                            p.text-yellow-700.mb-2= `This ${speciesText} is past its waiting period. Bring the ${offspringText} to a monthly meeting, then click below to enter the approval queue.`
+                            p.text-yellow-600.text-sm.mb-4 Until you confirm, admins won't see this submission in the approval queue.
+                            if allowed.enterApprovalQueue
+                                .flex.justify-center
+                                    form(hx-post=`/submissions/${submission.id}/final-submit`)
+                                        button.primary(type="submit")
+                                            if isAdmin && !isSelf
+                                                | Confirm on Submitter's Behalf
+                                            else
+                                                | Confirm: Brought to Meeting
+
+                // In the approval queue
+                if state === 'inApprovalQueue'
+                    if isAdmin && !isSelf && !changesRequested
+                        .status-panel.status-panel-admin#adminPanel
+                            include ../admin/approvalPanel.pug
                     else if isSelf
-                        // Submitter (or admin viewing own submission) has confirmed and is now in the queue
                         .status-panel.status-panel-warning
                             .container.mx-auto.max-w-4xl
                                 h3.text-yellow-800.text-lg.font-semibold.mb-2 ✅ In Approval Queue
                                 - const speciesText = submission.species_type === 'Plant' || submission.species_type === 'Coral' ? 'propagation' : 'spawn'
                                 p.text-yellow-700.mb-2= `Your ${speciesText} is in the approval queue and awaiting admin review.`
-                                p.text-yellow-600.text-sm.mb-4 You cannot award points to your own submissions. If you need to remove this from the queue (e.g. you weren't able to bring it to the meeting), use the button below.
+                                p.text-yellow-600.text-sm.mb-4 You cannot award points to your own submissions.
+
+                    if allowed.removeFromQueue
+                        .status-panel.status-panel-admin
+                            .container.mx-auto.max-w-4xl
+                                if submission.final_submission_on
+                                    p.text-white.text-sm.mb-2 Confirmed as brought to a meeting on #{submission.final_submission_on}.
                                 .flex.justify-center
                                     form(hx-delete=`/submissions/${submission.id}/final-submit` hx-confirm="Remove this submission from the approval queue? You can re-queue it later.")
                                         button.destructive(type="submit") Remove from Queue
-                    else
-                        // Admin viewing someone else's queued submission - show approval panel
-                        .status-panel.status-panel-admin#adminPanel
-                            include ../admin/approvalPanel.pug
-                        .status-panel.status-panel-admin
-                            .container.mx-auto.max-w-4xl
-                                p.text-white.text-sm.mb-2 Submitter confirmed this was brought to a meeting on #{submission.final_submission_on}.
-                                .flex.justify-center
-                                    form(hx-delete=`/submissions/${submission.id}/final-submit` hx-confirm="Remove this submission from the approval queue?")
-                                        button.destructive(type="submit") Remove from Queue
+
+                // Committee actions available on in-flight work
+                if isAdmin && !isSelf && (allowed.requestChanges || allowed.deleteSubmission) && state !== 'pendingWitness'
+                    .status-panel.status-panel-admin
+                        .container.mx-auto.max-w-4xl
+                            h3.text-white.text-lg.font-semibold.mb-4 Admin Actions
+                            .flex.justify-center.gap-4
+                                if allowed.requestChanges
+                                    button.destructive(
+                                        type="button"
+                                        hx-get=`/admin/dialog/submissions/${submission.id}/request-changes`
+                                        hx-target="closest body"
+                                        hx-swap="beforeend"
+                                    ) Request Changes
+                                if allowed.deleteSubmission
+                                    button.destructive(
+                                        type="button"
+                                        hx-delete=`/submissions/${submission.id}`
+                                        hx-confirm="Are you sure you want to permanently delete this submission? This cannot be undone."
+                                    ) Delete
 
             // Admin Notes and Actions - shown after action panels
             if isAdmin

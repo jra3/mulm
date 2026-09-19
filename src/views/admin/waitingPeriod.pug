@@ -41,7 +41,7 @@ mixin waitingPeriodTable(submissions)
 							+shortDate(sub.witnessed_on, "Witnessed on")
 						td(class=stringCell)= sub.witnessed_by_name || 'Unknown'
 						td(class=stringCell)
-							if sub.waitingStatus.eligible
+							if sub.waitingStatus.elapsed
 								span(class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800") Ready
 							else
 								span(class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800")= `${sub.waitingStatus.daysRemaining} days`

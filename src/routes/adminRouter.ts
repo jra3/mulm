@@ -79,7 +79,6 @@ adminRouter.post("/members/:memberId/send-welcome", admin.sendWelcomeEmail);
 adminRouter.post("/members/invite", admin.inviteMember);
 
 adminRouter.post("/submissions/:id/confirm-witness", admin.confirmWitnessAction);
-adminRouter.post("/submissions/:id/decline-witness", admin.declineWitnessAction);
 adminRouter.post("/submissions/:id/request-changes", admin.sendRequestChanges);
 adminRouter.post("/submissions/:id/notes", admin.addSubmissionNote);
 adminRouter.get("/submissions/:submissionId/notes/:noteId/edit", admin.editSubmissionNoteForm);
@@ -87,7 +86,6 @@ adminRouter.get("/submissions/:submissionId/notes/:noteId/cancel", admin.cancelE
 adminRouter.patch("/submissions/:submissionId/notes/:noteId", admin.updateSubmissionNote);
 adminRouter.delete("/submissions/:submissionId/notes/:noteId", admin.deleteSubmissionNote);
 
-adminRouter.get("/dialog/submissions/:id/decline-witness", admin.declineWitnessForm);
 adminRouter.get("/dialog/submissions/:id/request-changes", admin.requestChangesForm);
 
 // Live display settings

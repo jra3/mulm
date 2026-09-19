@@ -1,0 +1,82 @@
+doctype html
+html
+	head
+		meta(charset="utf-8")
+		title Waiting on the Committee
+		style.
+			body {
+				font-family: Arial, sans-serif;
+				line-height: 1.6;
+				color: #333;
+				max-width: 600px;
+				margin: 0 auto;
+				padding: 20px;
+			}
+			.header {
+				background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+				color: white;
+				padding: 30px 20px;
+				text-align: center;
+				border-radius: 8px 8px 0 0;
+			}
+			.content {
+				background-color: #f8fafc;
+				padding: 20px;
+				border: 1px solid #e2e8f0;
+			}
+			.section {
+				background-color: white;
+				padding: 15px;
+				border-radius: 6px;
+				border: 1px solid #e2e8f0;
+				margin: 15px 0;
+			}
+			.section-title {
+				font-weight: bold;
+				color: #1e3a8a;
+				margin-bottom: 8px;
+			}
+			.item {
+				padding: 6px 0;
+				border-top: 1px solid #f1f5f9;
+			}
+			.member {
+				color: #475569;
+				font-size: 13px;
+			}
+			.footer {
+				background-color: #64748b;
+				color: white;
+				padding: 15px;
+				text-align: center;
+				border-radius: 0 0 8px 8px;
+				font-size: 12px;
+			}
+			h1, h2, h3 {
+				margin: 0;
+			}
+	body
+		.header
+			h1 Brooklyn Aquarium Society
+			h3 Waiting on the Committee
+
+		.content
+			p
+				strong #{digest.total} submission#{digest.total === 1 ? "" : "s"} #{digest.total === 1 ? "is" : "are"} waiting on the committee.
+
+			each section in digest.sections
+				.section
+					.section-title #{section.programName} — #{section.title} (#{section.submissions.length})
+					each item in section.submissions
+						.item
+							a(href=`https://${domain}/submissions/${item.id}`)= item.speciesCommonName
+							.member= item.memberName
+
+			p This digest arrives every day there is something in a queue, and not at all when the queues are empty.
+
+		.footer
+			p
+				strong Brooklyn Aquarium Society
+			p Educating Aquarists since 1911
+			p
+				a(href="https://basny.org" style="color: white;") basny.org

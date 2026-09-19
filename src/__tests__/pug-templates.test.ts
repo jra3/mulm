@@ -486,6 +486,7 @@ void describe("Pug Template Rendering", () => {
       /^activity\/activity-item\.pug$/, // Mixin-only template
       /^activity\/activity-list-partial\.pug$/, // Partial template for HTMX pagination
       /^activity\/award-granted\.pug$/, // Include-only template
+      /^activity\/level-up\.pug$/, // Include-only template
       /^activity\/submission-approved\.pug$/, // Include-only template
       /^admin\/adminNav\.pug$/, // Mixin-only template
       /^admin\/adminActionsPanel\.pug$/, // Mixin-only template
@@ -590,8 +591,63 @@ void describe("Pug Template Rendering", () => {
 
           case "submission/review.pug":
             templateData.photos = [];
-            templateData.canWitness = true;
-            templateData.canApprove = true;
+            templateData.state = "inApprovalQueue";
+            templateData.changesRequested = false;
+            // The moves the transition table would allow this viewer; the page
+            // shows a button only where this says yes.
+            templateData.allowed = {
+              saveDraft: false,
+              submit: false,
+              saveChanges: true,
+              returnToDraft: false,
+              confirmWitness: false,
+              enterApprovalQueue: false,
+              removeFromQueue: true,
+              requestChanges: true,
+              resubmit: false,
+              approve: true,
+              correctPoints: false,
+              deleteSubmission: true,
+            };
+            templateData.waitingPeriodStatus = {
+              requiredDays: 60,
+              elapsedDays: 70,
+              daysRemaining: 0,
+              elapsed: true,
+            };
+            break;
+
+          case "email/onSpecialtyAward.pug":
+            templateData.awardName = "Anabantoid Specialist Award";
+            break;
+
+          case "email/committeeDigest.pug":
+          case "demo/emails.pug":
+            templateData.awardName = "Anabantoid Specialist Award";
+            templateData.reason = "Please add a photo of the fry.";
+            templateData.program = "fish";
+            templateData.newLevel = "Breeder";
+            templateData.totalPoints = 75;
+            templateData.digest = {
+              total: 1,
+              sections: [
+                {
+                  program: "fish",
+                  programName: "Breeder Awards Program",
+                  queue: "witness",
+                  title: "Waiting to be screened",
+                  submissions: [
+                    {
+                      id: 1,
+                      memberName: "Jane Aquarist",
+                      speciesCommonName: "Endler Guppy",
+                      speciesLatinName: "Poecilia wingei",
+                      waitingSince: new Date().toISOString(),
+                    },
+                  ],
+                },
+              ],
+            };
             break;
 
           case "admin/approvalPanel.pug":

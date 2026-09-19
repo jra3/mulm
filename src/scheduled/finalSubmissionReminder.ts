@@ -1,15 +1,12 @@
 import { ready } from "@/db/conn";
 import { logger } from "@/utils/logger";
-import {
-  getSubmissionsAwaitingFinalReminder,
-  markFinalSubmissionReminderSent,
-} from "@/db/submissions";
-import { onWaitingPeriodComplete } from "@/notifications";
+import { markFinalSubmissionReminderSent } from "@/db/submissions";
+import { sendMeetingReminder, submissionsDueForMeetingReminder } from "@/lifecycle";
 
 /**
- * Find submissions whose waiting period has elapsed and that are sitting in the
- * awaiting-final-submission state, email each submitter a one-time nudge to
- * bring their entry to the next meeting, and record that the reminder was sent.
+ * The waiting period elapsing is the one move nobody performs, and telling the
+ * member is its consequence. The lifecycle module says who is due and what
+ * they are told; this job keeps only the cadence and the sent-flag.
  *
  * Idempotent: only emails submissions not yet reminded, and marks each as
  * reminded only after a successful send — so a transient email failure is
@@ -22,7 +19,7 @@ export async function runFinalSubmissionReminders(): Promise<{ sent: number; fai
   try {
     await ready;
 
-    const candidates = await getSubmissionsAwaitingFinalReminder();
+    const candidates = await submissionsDueForMeetingReminder();
     if (candidates.length === 0) {
       logger.info("No submissions awaiting final-submission reminder");
       return { sent, failed };
@@ -31,17 +28,7 @@ export async function runFinalSubmissionReminders(): Promise<{ sent: number; fai
     logger.info(`Sending final-submission reminders to ${candidates.length} submitter(s)`);
 
     for (const submission of candidates) {
-      if (!submission.contact_email) {
-        logger.warn("Skipping final-submission reminder: submitter has no contact email", {
-          submissionId: submission.id,
-        });
-        continue;
-      }
-
-      const delivered = await onWaitingPeriodComplete(submission, {
-        contact_email: submission.contact_email,
-        display_name: submission.member_name,
-      });
+      const delivered = await sendMeetingReminder(submission);
 
       if (delivered) {
         await markFinalSubmissionReminderSent(submission.id);

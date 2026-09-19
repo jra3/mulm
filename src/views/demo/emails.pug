@@ -57,12 +57,12 @@ html
 				div
 					include ../email/onScreeningApproved.pug
 
-			//- Email 2: Screening Rejected
+			//- Email 2: Changes Requested
 			.email-container.mb-8
-				.email-label 2. Additional Information Needed Email
+				.email-label 2. Changes Requested Email
 				div
 					- const reason = sampleData.reason
-					include ../email/onScreeningRejected.pug
+					include ../email/onChangesRequested.pug
 
 			//- Email 3: Forgot Password
 			.email-container.mb-8
@@ -92,9 +92,27 @@ html
 					- const totalPoints = 25
 					include ../email/onLevelUpgrade.pug
 
-			//- Email 7: Member Invitation (skip for now - complex)
+			//- Email 7: Specialty Award
 			.email-container.mb-8
-				.email-label 7. Member Invitation Email (Complex - See invite.pug)
+				.email-label 7. Specialty Award Email
+				div
+					include ../email/onSpecialtyAward.pug
+
+			//- Email 8: Submission Removed
+			.email-container.mb-8
+				.email-label 8. Submission Removed Email
+				div
+					include ../email/onSubmissionDeleted.pug
+
+			//- Email 9: Committee Digest
+			.email-container.mb-8
+				.email-label 9. Committee Daily Digest
+				div
+					include ../email/committeeDigest.pug
+
+			//- Email 10: Member Invitation (skip for now - complex)
+			.email-container.mb-8
+				.email-label 10. Member Invitation Email (Complex - See invite.pug)
 				div(style="padding: 20px; font-family: Arial, sans-serif;")
 					p Member invitation with full submission tables
 					p See src/views/email/invite.pug for current implementation
