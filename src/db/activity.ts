@@ -44,6 +44,8 @@ export interface AwardGrantedData {
 
 export interface LevelUpData {
   program: string;
+  /** The Program's member-facing name, so the feed template need not map it. */
+  program_name: string;
   level: string;
   total_points: number;
 }

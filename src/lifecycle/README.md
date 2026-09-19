@@ -14,7 +14,9 @@ the state derivation, the queue predicates and the consequence sink are the
 module's own business — and its own tests' seams.
 
 `src/db/submissions.ts` is row access: queries, the raw updater, the mapper. It
-is not where the rules live.
+is not where the rules live — its queue queries *compose* `queueSql` and
+`filterQueue` from here, the same way they already compose `totalPointsSql`
+from `src/points.ts`. One definition, many queries.
 
 ## What's where
 

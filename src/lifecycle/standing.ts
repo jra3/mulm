@@ -2,7 +2,7 @@ import { getMember, MemberRecord } from "@/db/members";
 import { recordActivity } from "@/db/activity";
 import { checkAndUpdateMemberLevel, type Program } from "@/levelManager";
 import { recomputeSpecialtyAwards } from "@/specialtyAwardManager";
-import { levelRules } from "@/programs";
+import { levelRules, programMetadata } from "@/programs";
 import { logger } from "@/utils/logger";
 import { notifier } from "./consequences";
 
@@ -58,8 +58,12 @@ async function recomputeLevel(member: MemberRecord, program: Program): Promise<v
     }
 
     const totalPoints = result.totalPoints ?? 0;
-    await recordActivity("level_up", member.id, program, {
+    // Keyed on the Level, not just the Program: each rise is its own thing to
+    // announce, so a second one adds an entry rather than overwriting the
+    // first. Reaching a Level already announced refreshes that entry.
+    await recordActivity("level_up", member.id, `${program}:${result.newLevel}`, {
       program,
+      program_name: programMetadata[program].name,
       level: result.newLevel,
       total_points: totalPoints,
     });

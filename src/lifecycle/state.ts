@@ -84,8 +84,13 @@ export function waitingPeriod(
   return { requiredDays, elapsedDays, daysRemaining, elapsed: daysRemaining === 0 };
 }
 
-/** The Changes requested overlay: a flag laid over whichever state it is in. */
-export function hasChangesRequested(row: Pick<Submission, "changes_requested_on">): boolean {
+/**
+ * The Changes requested overlay: a flag laid over whichever state it is in.
+ *
+ * A row that does not carry the column at all - a lean select that did not ask
+ * for it - reads as unflagged, the same as one that carries a null.
+ */
+export function hasChangesRequested(row: Partial<Pick<Submission, "changes_requested_on">>): boolean {
   return row.changes_requested_on != null;
 }
 

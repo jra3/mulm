@@ -27,6 +27,9 @@ import { Database, open } from "sqlite";
 import sqlite3 from "sqlite3";
 import { overrideConnection } from "../../db/conn";
 import { createMember, getMember } from "../../db/members";
+import { createSubmissionRow, formToRow, updateSubmission } from "../../db/submissions";
+import type { FormValues } from "../../forms/submission";
+import type { ApprovalFormValues } from "../../forms/approval";
 
 /**
  * Test context containing database and common test fixtures
@@ -626,11 +629,6 @@ export async function createTestSpeciesName(
 // needs an approved Submission to count points against uses these.
 // ---------------------------------------------------------------------------
 
-import { createSubmissionRow, formToRow } from "../../db/submissions";
-import { writeConn } from "../../db/conn";
-import type { FormValues } from "../../forms/submission";
-import type { ApprovalFormValues } from "../../forms/approval";
-
 /** Insert a Submission, as a Draft or already submitted. */
 export async function createSubmissionFixture(
   memberId: number,
@@ -651,31 +649,18 @@ export async function approveSubmissionFixture(
   speciesIds: { common_name_id: number; scientific_name_id: number },
   approval: ApprovalFormValues
 ): Promise<void> {
-  const stmt = await writeConn.prepare(`
-    UPDATE submissions SET
-      common_name_id = ?, scientific_name_id = ?,
-      points = ?, article_points = ?,
-      first_time_species = ?, cares_species = ?,
-      flowered = ?, sexual_reproduction = ?,
-      approved_by = ?, approved_on = ?, final_submission_on = COALESCE(final_submission_on, ?)
-    WHERE id = ?`);
   const now = new Date().toISOString();
-  try {
-    await stmt.run(
-      speciesIds.common_name_id,
-      speciesIds.scientific_name_id,
-      approval.points,
-      approval.article_points,
-      approval.first_time_species ? 1 : 0,
-      approval.cares_species ? 1 : 0,
-      approval.flowered ? 1 : 0,
-      approval.sexual_reproduction ? 1 : 0,
-      approvedBy,
-      now,
-      now,
-      submissionId
-    );
-  } finally {
-    await stmt.finalize();
-  }
+  await updateSubmission(submissionId, {
+    common_name_id: speciesIds.common_name_id,
+    scientific_name_id: speciesIds.scientific_name_id,
+    points: approval.points,
+    article_points: approval.article_points,
+    first_time_species: approval.first_time_species ? 1 : 0,
+    cares_species: approval.cares_species ? 1 : 0,
+    flowered: approval.flowered ? 1 : 0,
+    sexual_reproduction: approval.sexual_reproduction ? 1 : 0,
+    approved_by: approvedBy,
+    approved_on: now,
+    final_submission_on: now,
+  } as never);
 }

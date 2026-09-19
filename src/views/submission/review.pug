@@ -15,6 +15,11 @@ mixin reviewTextInput(labelText, name, type="text")
             name=name
             type=type)
 
+//- What a member of this species type produces, and what producing it is
+//- called. Worked out once here rather than in each panel that says it.
+- const isFlora = submission.species_type === 'Plant' || submission.species_type === 'Coral'
+- const speciesText = isFlora ? 'propagation' : 'spawn'
+
 doctype html
 html
     +headTag(`${canonicalName} - BAS BAP`, ogData)
@@ -214,7 +219,6 @@ html
                         .status-panel.status-panel-warning
                             .container.mx-auto.max-w-4xl
                                 h3.text-yellow-800.text-lg.font-semibold.mb-2 📋 Admin Screening Needed
-                                - const speciesText = submission.species_type === 'Plant' || submission.species_type === 'Coral' ? 'propagation' : 'spawn'
                                 p.text-yellow-700.mb-2= `Your ${speciesText} needs to be screened by a different program admin for completeness.`
                                 p.text-yellow-600.text-sm You cannot screen your own submissions. Please contact another admin to review this submission.
                     else if isAdmin
@@ -240,8 +244,6 @@ html
                     .status-panel.status-panel-pending
                         .container.mx-auto.max-w-4xl
                             h3.text-blue-800.text-lg.font-semibold.mb-2 ⏳ Awaiting Auction Eligibility
-                            - const speciesText = submission.species_type === 'Plant' || submission.species_type === 'Coral' ? 'propagation' : 'spawn'
-                            - const offspringText = submission.species_type === 'Plant' ? 'plants' : submission.species_type === 'Coral' ? 'corals' : 'fry'
                             p.text-blue-700.mb-2= `This ${speciesText} has been screened. Bring ${offspringText} to a monthly auction after ${waitingPeriodStatus.requiredDays} days.`
                             .bg-blue-100.rounded.p-3.mt-2
                                 p.text-blue-800.font-semibold Days until eligible for auction: #{waitingPeriodStatus.daysRemaining}
@@ -249,8 +251,6 @@ html
 
                 // The clock has run out; the member brings it to a meeting
                 if state === 'awaitingFinalSubmission'
-                    - const speciesText = submission.species_type === 'Plant' || submission.species_type === 'Coral' ? 'propagation' : 'spawn'
-                    - const offspringText = submission.species_type === 'Plant' ? 'plants' : submission.species_type === 'Coral' ? 'corals' : 'fry'
                     .status-panel.status-panel-warning
                         .container.mx-auto.max-w-4xl
                             h3.text-yellow-800.text-lg.font-semibold.mb-2 🐟 Bring to Meeting
@@ -274,7 +274,6 @@ html
                         .status-panel.status-panel-warning
                             .container.mx-auto.max-w-4xl
                                 h3.text-yellow-800.text-lg.font-semibold.mb-2 ✅ In Approval Queue
-                                - const speciesText = submission.species_type === 'Plant' || submission.species_type === 'Coral' ? 'propagation' : 'spawn'
                                 p.text-yellow-700.mb-2= `Your ${speciesText} is in the approval queue and awaiting admin review.`
                                 p.text-yellow-600.text-sm.mb-4 You cannot award points to your own submissions.
 

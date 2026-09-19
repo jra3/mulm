@@ -258,6 +258,19 @@ void describe("Submission lifecycle - transitions", () => {
       assert.strictEqual(await refusal(() => confirmWitness(committee, id)), "authorization");
     });
 
+    void test("refusing a committee member their own Submission says why", async () => {
+      const id = await submissionInState(ctx.db, "pendingWitness", { memberId: ctx.admin.id });
+      await assert.rejects(
+        () => confirmWitness(committee, id),
+        (err: Error) => {
+          assert.ok(err instanceof AuthorizationError);
+          // Not "only the committee may do this" - they are the committee.
+          assert.match(err.message, /your own submission/);
+          return true;
+        }
+      );
+    });
+
     void test("a committee member cannot approve their own Submission", async () => {
       const id = await submissionInState(ctx.db, "inApprovalQueue", {
         memberId: ctx.admin.id,

@@ -164,16 +164,6 @@ export function supplementsFromForm(form: FormValues): { type: string; regimen: 
   return supplements;
 }
 
-/** The member a letter would go to, or nothing if the row has gone. */
-async function recipient(memberId: number): Promise<MemberRecord | undefined> {
-  return getMember(memberId);
-}
-
-/** The reloaded Submission an email template needs, joins and totals included. */
-async function reload(submissionId: number): Promise<Submission | undefined> {
-  return getSubmissionById(submissionId);
-}
-
 // ---------------------------------------------------------------------------
 // Creating a Submission
 // ---------------------------------------------------------------------------
@@ -218,7 +208,7 @@ export async function createSubmission(
 
 /** Tell the member their Submission arrived. The committee learns from the digest. */
 async function announceSubmission(submissionId: number, memberId: number): Promise<void> {
-  const [submission, member] = await Promise.all([reload(submissionId), recipient(memberId)]);
+  const [submission, member] = await Promise.all([getSubmissionById(submissionId), getMember(memberId)]);
   if (submission && member) {
     await notifier().submissionReceived(submission, member);
   }
@@ -391,9 +381,9 @@ export async function confirmWitness(caller: Caller, submissionId: number): Prom
   });
 
   const [submission, member, witness] = await Promise.all([
-    reload(submissionId),
-    recipient(memberId),
-    recipient(caller.id),
+    getSubmissionById(submissionId),
+    getMember(memberId),
+    getMember(caller.id),
   ]);
   if (submission && member && witness) {
     await notifier().witnessConfirmed(submission, member, witness);
@@ -469,7 +459,7 @@ export async function requestChanges(
     return submission.member_id;
   });
 
-  const [submission, member] = await Promise.all([reload(submissionId), recipient(memberId)]);
+  const [submission, member] = await Promise.all([getSubmissionById(submissionId), getMember(memberId)]);
   if (submission && member) {
     await notifier().changesRequested(submission, member, trimmed);
   }
@@ -535,7 +525,7 @@ export async function approve(
     return submission.member_id;
   });
 
-  const [submission, member] = await Promise.all([reload(submissionId), recipient(memberId)]);
+  const [submission, member] = await Promise.all([getSubmissionById(submissionId), getMember(memberId)]);
   if (!submission || !member) {
     logger.error("Approved a submission whose row or member vanished", { submissionId });
     return;
@@ -610,7 +600,7 @@ export async function correctPoints(
     })
   );
 
-  const [submission, member] = await Promise.all([reload(submissionId), recipient(memberId)]);
+  const [submission, member] = await Promise.all([getSubmissionById(submissionId), getMember(memberId)]);
   if (submission && member) {
     await announceApproval(submission, member);
     await recomputeStanding(member.id, programOf(submission));
@@ -651,7 +641,7 @@ export async function deleteSubmission(caller: Caller, submissionId: number): Pr
   // Only when the committee deleted someone else's work: a member deleting
   // their own Draft does not need to be told they did it.
   if (byCommittee) {
-    const member = await recipient(memberId);
+    const member = await getMember(memberId);
     if (member && snapshot) {
       await notifier().deletedByCommittee(snapshot, member);
     }

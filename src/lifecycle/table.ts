@@ -154,6 +154,11 @@ export const moves = {
     ownerOnly: true,
   },
 
+  /**
+   * Never the submitter, as with the Witness: awarding yourself points is the
+   * same conflict as inspecting your own fry. The Portal already hid the
+   * approval panel from a Submission's owner; this makes it a rule.
+   */
   approve: {
     id: "approve",
     from: ["inApprovalQueue"],
@@ -216,21 +221,26 @@ export function canMove(move: MoveDefinition, context: MoveContext): boolean {
 /**
  * The guard every transition runs. Authorization is checked before state, so a
  * refusal names the wrong person before it names the wrong moment.
+ *
+ * Independence is checked first, and deliberately: a committee member acting on
+ * their own Submission wears the member's hat, so the actor check below would
+ * otherwise refuse them with "only the committee may do this" - which is both
+ * wrong and confusing, because they are on the committee.
  */
 export function assertMoveIsLegal(move: MoveDefinition, context: MoveContext): void {
   const { state, changesPending, actor, actorId, isOwner } = context;
 
-  if (!move.actors.includes(actor)) {
+  if (move.neverSubmitter && isOwner) {
     throw new AuthorizationError(
-      `Only the ${move.actors.join(" or ")} may ${describe(move.id)}`,
+      `You cannot ${describe(move.id)} your own submission`,
       actorId,
       move.id
     );
   }
 
-  if (move.neverSubmitter && isOwner) {
+  if (!move.actors.includes(actor)) {
     throw new AuthorizationError(
-      `You cannot ${describe(move.id)} on your own submission`,
+      `Only the ${move.actors.join(" or ")} may ${describe(move.id)}`,
       actorId,
       move.id
     );

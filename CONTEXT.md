@@ -90,7 +90,7 @@ _Avoid_: verify, screen (informal), confirm (that's one outcome), decline
 
 **Approved (Gate 2 — committee decision)**:
 The committee's acceptance: `approved_on` / `approved_by` set and `points` calculated — only then do points count toward standings, and approving is the only way points are ever awarded. **Approved is terminal and undeletable for everyone**; correcting the Points (`src/lifecycle` `correctPoints`, with a stated reason that goes to the changelog) is the only movement out of it.
-**Denied is deleted** — the state, its `denied_on` / `denied_by` / `denied_reason` columns, and the idea. Zero denials were ever recorded, and the 2009 manual contains no denial language. Requesting changes is the refusal path.
+**Denied is deleted** — the state, the move, and the idea. Zero denials were ever recorded, and the 2009 manual contains no denial language; requesting changes is the refusal path. Its `denied_on` / `denied_by` / `denied_reason` columns are **dead but still present**: nothing reads or writes them, and they are documented as dead on the `Submission` type rather than dropped, so this change needs no migration to the submissions table.
 _Avoid_: accepted/rejected, validated, confirmed (confirmed belongs to witnessing), denied
 
 **Changes requested**:

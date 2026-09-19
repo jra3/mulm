@@ -27,7 +27,7 @@ import {
 } from "@/db/submissions";
 import { getSpeciesGroup, getGroupIdFromNameId } from "@/db/species";
 import * as lifecycle from "@/lifecycle";
-import { sendLifecycleError } from "./lifecycleErrors";
+import { attempt, callerFor } from "./lifecycleErrors";
 import { getNotesForSubmission } from "@/db/submission_notes";
 import { formatShortDate } from "@/utils/dateFormat";
 import { parseVideoUrlWithOEmbed, isValidVideoUrl } from "@/utils/videoParser";
@@ -325,7 +325,7 @@ function allowedMoves(
   viewer: MulmRequest["viewer"],
   submission: db.Submission,
   state: lifecycle.SubmissionState
-): Record<string, boolean> {
+): Partial<Record<lifecycle.MoveId, boolean>> {
   if (!viewer) {
     return {};
   }
@@ -423,20 +423,13 @@ export const create = async (req: MulmRequest, res: Response) => {
   // file on another member's behalf; the module enforces that.
   const memberId = form.member_id ? parseInt(String(form.member_id)) : viewer.id;
 
-  let subId: number;
-  try {
-    subId = await lifecycle.createSubmission(
-      { id: viewer.id, isAdmin: Boolean(viewer.is_admin) },
-      memberId,
-      form,
-      { submit: !draft }
-    );
-  } catch (err) {
-    if (sendLifecycleError(res, err, { memberId, by: viewer.id })) {
-      return;
-    }
-    throw err;
+  const created = await attempt(res, { memberId, by: viewer.id }, () =>
+    lifecycle.createSubmission(callerFor(viewer), memberId, form, { submit: !draft })
+  );
+  if (!created.ran) {
+    return;
   }
+  const subId = created.value;
 
   // Redirect after successful creation
   // When saving drafts for yourself (member or admin), go to /me
@@ -479,30 +472,30 @@ export const update = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const caller = { id: viewer.id, isAdmin: Boolean(viewer.is_admin) };
+  const caller = callerFor(viewer);
   const state = lifecycle.deriveState(submission);
 
-  try {
+  const move = () => {
     if (state === "draft") {
       // On a Draft, "Save Draft" keeps it a Draft and "Submit" sends it.
-      await (draft
+      return draft
         ? lifecycle.saveDraft(caller, submission.id, form)
-        : lifecycle.submit(caller, submission.id, form));
-    } else if (draft) {
+        : lifecycle.submit(caller, submission.id, form);
+    }
+    if (draft) {
       // "Save Draft" on work the committee has sent back means "save my
       // progress without answering them yet" - an edit in place, not a
       // withdrawal. Returning to Draft is its own named action.
-      await lifecycle.saveChanges(caller, submission.id, form);
-    } else if (lifecycle.hasChangesRequested(submission)) {
-      await lifecycle.resubmit(caller, submission.id, form);
-    } else {
-      await lifecycle.saveChanges(caller, submission.id, form);
+      return lifecycle.saveChanges(caller, submission.id, form);
     }
-  } catch (err) {
-    if (sendLifecycleError(res, err, { submissionId: submission.id, by: viewer.id })) {
-      return;
+    if (lifecycle.hasChangesRequested(submission)) {
+      return lifecycle.resubmit(caller, submission.id, form);
     }
-    throw err;
+    return lifecycle.saveChanges(caller, submission.id, form);
+  };
+
+  if (!(await attempt(res, { submissionId: submission.id, by: viewer.id }, move)).ran) {
+    return;
   }
 
   // Redirect after successful update
@@ -531,16 +524,11 @@ export const returnToDraft = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  try {
-    await lifecycle.returnToDraft(
-      { id: viewer.id, isAdmin: Boolean(viewer.is_admin) },
-      submission.id
-    );
-  } catch (err) {
-    if (sendLifecycleError(res, err, { submissionId: submission.id, by: viewer.id })) {
-      return;
-    }
-    throw err;
+  const done = await attempt(res, { submissionId: submission.id, by: viewer.id }, () =>
+    lifecycle.returnToDraft(callerFor(viewer), submission.id)
+  );
+  if (!done.ran) {
+    return;
   }
 
   res.set("HX-Redirect", `/submissions/${submission.id}`).status(200).send();
@@ -558,16 +546,11 @@ export const remove = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  try {
-    await lifecycle.deleteSubmission(
-      { id: viewer.id, isAdmin: Boolean(viewer.is_admin) },
-      submission.id
-    );
-  } catch (err) {
-    if (sendLifecycleError(res, err, { submissionId: submission.id, by: viewer.id })) {
-      return;
-    }
-    throw err;
+  const done = await attempt(res, { submissionId: submission.id, by: viewer.id }, () =>
+    lifecycle.deleteSubmission(callerFor(viewer), submission.id)
+  );
+  if (!done.ran) {
+    return;
   }
 
   res.set("HX-Redirect", "/").send();
@@ -586,16 +569,11 @@ export const finalSubmit = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  try {
-    await lifecycle.enterApprovalQueue(
-      { id: viewer.id, isAdmin: Boolean(viewer.is_admin) },
-      submission.id
-    );
-  } catch (err) {
-    if (sendLifecycleError(res, err, { submissionId: submission.id, by: viewer.id })) {
-      return;
-    }
-    throw err;
+  const done = await attempt(res, { submissionId: submission.id, by: viewer.id }, () =>
+    lifecycle.enterApprovalQueue(callerFor(viewer), submission.id)
+  );
+  if (!done.ran) {
+    return;
   }
 
   res.set("HX-Redirect", `/submissions/${submission.id}`).status(200).send();
@@ -614,16 +592,11 @@ export const unfinalSubmit = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  try {
-    await lifecycle.removeFromQueue(
-      { id: viewer.id, isAdmin: Boolean(viewer.is_admin) },
-      submission.id
-    );
-  } catch (err) {
-    if (sendLifecycleError(res, err, { submissionId: submission.id, by: viewer.id })) {
-      return;
-    }
-    throw err;
+  const done = await attempt(res, { submissionId: submission.id, by: viewer.id }, () =>
+    lifecycle.removeFromQueue(callerFor(viewer), submission.id)
+  );
+  if (!done.ran) {
+    return;
   }
 
   res.set("HX-Redirect", `/submissions/${submission.id}`).status(200).send();

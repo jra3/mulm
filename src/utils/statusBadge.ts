@@ -1,5 +1,7 @@
-import type { Submission } from "@/db/submissions";
-import { deriveState, hasChangesRequested, waitingPeriod, SubmissionState } from "@/lifecycle";
+import { deriveState, hasChangesRequested, waitingPeriod, StateRow, SubmissionState } from "@/lifecycle";
+
+/** What the badge needs: enough of a row to derive its state, plus its Points. */
+export type BadgeRow = StateRow & { points?: number | null };
 
 /**
  * How a Submission's state is shown: its label, its colours and its icon.
@@ -33,8 +35,7 @@ const CHANGES_REQUESTED: StatusInfo = {
   description: "The committee asked for changes - edit and resubmit",
 };
 
-export function getStatusPresentation(submission: Partial<Submission>): StatusInfo {
-  const row = submission as Submission;
+export function getStatusPresentation(row: BadgeRow): StatusInfo {
   const state = deriveState(row);
 
   // An Approved Submission cannot carry outstanding changes, so the overlay
@@ -110,7 +111,7 @@ export function getStatusPresentation(submission: Partial<Submission>): StatusIn
         color: "text-green-800",
         bgColor: "bg-green-100",
         rowColor: "bg-green-50",
-        description: `${submission.points || 0} points awarded`,
+        description: `${row.points || 0} points awarded`,
       };
   }
 }

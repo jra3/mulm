@@ -13,12 +13,13 @@ import {
   getQueueCounts,
   getSubmissionById,
   getSubmissionsByMember,
+  getSubmissionSupplements,
 } from "@/db/submissions";
 import { approvalSchema } from "@/forms/approval";
 import { approvedEditSchema } from "@/forms/approvedEdit";
 import { inviteSchema } from "@/forms/member";
 import { sendInviteEmail } from "@/notifications";
-import { programs } from "@/programs";
+import { getNextLevel, programMetadata, programs } from "@/programs";
 import { MulmRequest } from "@/sessions";
 import { Response, NextFunction } from "express";
 import { createAuthCode } from "@/db/auth";
@@ -78,7 +79,6 @@ export const viewMembers = async (req: MulmRequest, res: Response) => {
   const members = await getRosterWithPoints();
 
   // Import level utilities for member points HoverCards
-  const { getNextLevel, programMetadata } = await import("@/programs");
 
   res.render("admin/members", {
     title: "Member Roster",
@@ -127,7 +127,6 @@ export const viewMemberUpdate = async (req: MulmRequest, res: Response) => {
   const memberWithPoints = await getMemberWithPoints(id);
 
   // Import level utilities for member points HoverCards
-  const { getNextLevel, programMetadata } = await import("@/programs");
 
   // Render one table row for editing
   res.render("admin/editMember", {
@@ -147,7 +146,6 @@ export const viewMemberRow = async (req: MulmRequest, res: Response) => {
   const memberWithPoints = await getMemberWithPoints(id);
 
   // Import level utilities for member points HoverCards
-  const { getNextLevel, programMetadata } = await import("@/programs");
 
   res.render("admin/singleMemberRow", {
     member: memberWithPoints,
@@ -180,7 +178,6 @@ export const updateMemberFields = async (req: MulmRequest, res: Response) => {
   const memberWithPoints = await getMemberWithPoints(id);
 
   // Import level utilities for member points HoverCards
-  const { getNextLevel, programMetadata } = await import("@/programs");
 
   res.render("admin/singleMemberRow", {
     member: memberWithPoints,
@@ -869,7 +866,6 @@ export const editApprovedSubmissionForm = async (req: MulmRequest, res: Response
   }
 
   // Fetch supplements from normalized table
-  const { getSubmissionSupplements } = await import("@/db/submissions");
   const supplements = await getSubmissionSupplements(submission.id);
   const supplement_type = supplements.map((s) => s.supplement_type).join(", ");
   const supplement_regimen = supplements.map((s) => s.supplement_regimen).join(", ");

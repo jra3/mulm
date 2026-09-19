@@ -78,6 +78,17 @@ void describe("Submission lifecycle - standing", () => {
   // -------------------------------------------------------------------------
 
   void describe("Levels", () => {
+    void test("reaching the same Level again refreshes its entry rather than adding one", async () => {
+      const ids = await approveAnabantoids(3, 10);
+      const before = (await feed()).filter((e) => e.activity_type === "level_up").length;
+
+      await correctPoints(committee, ids[0], { points: 5 }, "Wrong point class");
+      await correctPoints(committee, ids[0], { points: 10 }, "No, it was right");
+
+      const after = (await feed()).filter((e) => e.activity_type === "level_up");
+      assert.strictEqual(after.length, before);
+    });
+
     void test("a rise congratulates the member and posts to the feed", async () => {
       await approveAnabantoids(3, 10); // 30 points: past Hobbyist at 25
 
@@ -92,11 +103,15 @@ void describe("Submission lifecycle - standing", () => {
       ]);
       assert.deepStrictEqual(levelUps[0].to, [ctx.member.contact_email]);
 
-      // One feed entry per member and Program, refreshed rather than appended,
-      // so the front page shows where they stand and not how they got there.
+      // One feed entry per Level reached. Keying these on the Program alone
+      // would let the second rise overwrite the first, so a member's promotion
+      // would be emailed and never appear on the front page.
       const entries = (await feed()).filter((e) => e.activity_type === "level_up");
-      assert.strictEqual(entries.length, 1);
-      assert.match(entries[0].activity_data, /"level":"Hobbyist"/);
+      assert.deepStrictEqual(entries.map((e) => e.related_id), [
+        "fish:Participant",
+        "fish:Hobbyist",
+      ]);
+      assert.match(entries[1].activity_data, /"level":"Hobbyist"/);
     });
 
     void test("a drop tells nobody", async () => {
