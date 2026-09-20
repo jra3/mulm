@@ -16,6 +16,7 @@
 		"copy-files": "cp -r ./public ./dist/ && cp -r ./src/views ./dist/src/",
 		"test": "NODE_ENV=test tsx --test --test-concurrency 1 src/__tests__/*.test.ts",
 		"test:watch": "NODE_ENV=test tsx --test --watch 'src/**/*.test.ts'",
+		"test:external": "NODE_ENV=test RUN_EXTERNAL_TESTS=1 tsx --test --test-concurrency 1 'src/__tests__/*-integration.test.ts'",
 		"test:e2e": "playwright test",
 		"test:e2e:headed": "playwright test --headed",
 		"test:e2e:debug": "playwright test --debug",
