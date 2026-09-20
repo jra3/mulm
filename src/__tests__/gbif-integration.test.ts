@@ -2,6 +2,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert";
 import { getGBIFClient } from "../integrations/gbif";
 import config from "@/config.json";
+import { skipUnlessExternalTestsEnabled } from "./helpers/externalTests";
 
 /**
  * Integration tests for GBIF (Global Biodiversity Information Facility) client
@@ -10,17 +11,13 @@ import config from "@/config.json";
  * Run with: npm test -- src/__tests__/gbif-integration.test.ts
  *
  * Note: Tests are conservative with rate limiting to be respectful to GBIF.
- * Tests are skipped in CI (NODE_ENV=test) or when GBIF sync is disabled.
+ * Tests run only when RUN_EXTERNAL_TESTS is set, and when GBIF sync is
+ * enabled in config. See helpers/externalTests.ts.
  */
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Skip these tests in CI as they require real API calls
-const skipReason = !config.gbif?.enableSync
-  ? "GBIF integration is disabled"
-  : process.env.CI
-    ? "Skipping external API tests in CI"
-    : undefined;
+const skipReason = skipUnlessExternalTestsEnabled("GBIF", config.gbif?.enableSync);
 
 void describe("GBIF Integration", { skip: skipReason }, () => {
   void describe("getExternalData", () => {

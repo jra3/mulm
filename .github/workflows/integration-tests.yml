@@ -1,5 +1,14 @@
 name: Integration Tests
 
+# Tests that call somebody else's server: Wikipedia, GBIF, and the FishBase
+# Parquet dump. They belong to a cadence, not to every push — an upstream
+# outage is not a reason to redden a pull request — so this workflow runs
+# nightly and on demand, and never on a PR.
+#
+# The suites themselves are gated on RUN_EXTERNAL_TESTS (see
+# src/__tests__/helpers/externalTests.ts), which this workflow sets. Without
+# it they skip, which is what keeps `npm test` hermetic everywhere else.
+
 on:
   # Run nightly at 2 AM UTC
   schedule:
@@ -8,20 +17,9 @@ on:
   # Allow manual trigger
   workflow_dispatch:
 
-  # Optional: Run on PRs (but not required for merge)
-  pull_request:
-    branches: [ main ]
-    paths:
-      - 'src/integrations/**'
-      - 'src/__tests__/*-integration.test.ts'
-      - '.github/workflows/integration-tests.yml'
-
 jobs:
   integration-tests:
     runs-on: ubuntu-latest
-
-    # Don't block other workflows
-    continue-on-error: true
 
     strategy:
       matrix:
@@ -53,30 +51,20 @@ jobs:
             fishbase-parquet-v24.07-
             fishbase-parquet-
 
+      # A failed download must not take the other two suites with it: the
+      # FishBase tests skip on their own when the cache is absent.
       - name: Download FishBase core tables (if not cached)
         if: steps.cache-fishbase.outputs.cache-hit != 'true'
+        continue-on-error: true
         run: |
           echo "📦 Downloading FishBase Parquet files from HuggingFace..."
           npm run script scripts/fishbase/download-cache.ts
           echo "✅ FishBase cache ready"
 
-      - name: Run Wikipedia integration tests
-        run: npm test -- src/__tests__/wikipedia-integration.test.ts
+      - name: Run external integration tests
+        run: npm run test:external
         env:
           NODE_ENV: test
-        continue-on-error: true
-
-      - name: Run GBIF integration tests
-        run: npm test -- src/__tests__/gbif-integration.test.ts
-        env:
-          NODE_ENV: test
-        continue-on-error: true
-
-      - name: Run FishBase integration tests
-        run: npm test -- src/__tests__/fishbase-integration.test.ts
-        env:
-          NODE_ENV: test
-        continue-on-error: true
 
       - name: Upload test results
         if: always()
@@ -86,37 +74,3 @@ jobs:
           path: |
             test-results/
           retention-days: 7
-
-      - name: Comment on PR with results
-        if: github.event_name == 'pull_request' && always()
-        uses: actions/github-script@v9
-        with:
-          script: |
-            const fs = require('fs');
-
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `## Integration Test Results
-
-              Integration tests have completed. These tests verify external API integrations (Wikipedia, GBIF, FishBase).
-
-              **Note:** These tests make real API calls and may occasionally fail due to network issues or API rate limits.
-
-              Check the [Actions tab](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for detailed results.
-              `
-            });
-
-  # Summary job that checks all test suites
-  integration-test-summary:
-    runs-on: ubuntu-latest
-    needs: integration-tests
-    if: always()
-
-    steps:
-      - name: Check integration test results
-        run: |
-          echo "Integration tests completed"
-          echo "Check individual test job for detailed results"
-          echo "These tests are informational and do not block merges"
