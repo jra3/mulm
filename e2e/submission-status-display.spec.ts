@@ -95,32 +95,43 @@ test.describe("Changes-Requested Status Display", () => {
 		await expect(orangeRow).toBeVisible();
 	});
 
-	test("admin queue shows changes-requested badge with correct styling", async ({ page }) => {
+	test("work the committee has sent back leaves their approval queue", async ({ page }) => {
+		// While changes are outstanding the ball is with the member, and no
+		// committee action but Delete is legal — so the queue must not show it.
+		// It used to, which is how the committee's queue came to list work they
+		// had already sent back.
 		await login(page, TEST_ADMIN);
 
-		// Navigate to admin queue
 		await page.goto("/admin/queue/fish");
 		await page.waitForSelector("body");
 
-		// Verify status badge is visible in the queue table
-		const badge = page.locator('text=Changes Requested').first();
-		await expect(badge).toBeVisible();
+		await expect(page.locator(`a[href="/submissions/${submissionId}"]`)).toHaveCount(0);
+		await expect(page.locator('text=Changes Requested')).toHaveCount(0);
+	});
 
-		// Verify badge has orange color styling
-		const orangeBadge = page.locator('span.bg-orange-100.text-orange-800').first();
-		await expect(orangeBadge).toBeVisible();
-		await expect(orangeBadge).toContainText('Changes Requested');
+	test("the review page tells the member what to fix and offers the way back", async ({ page }) => {
+		await login(page, TEST_USER);
 
-		// Verify row has orange background color
-		const orangeRow = page.locator('tr.bg-orange-50').first();
-		await expect(orangeRow).toBeVisible();
+		await page.goto(`/submissions/${submissionId}`);
+		await page.waitForSelector("body");
+
+		await expect(page.locator('h3:has-text("Changes Requested")')).toBeVisible();
+		await expect(
+			page.locator('text=Please add more photos and details about water parameters')
+		).toBeVisible();
+
+		// Opening the form is its own step now: clicking Edit no longer pulls
+		// the Submission out of the queue it is waiting in.
+		await expect(
+			page.locator(`a[href="/submissions/${submissionId}/edit"]`)
+		).toBeVisible();
 	});
 
 	test("submission form shows changes-requested banner", async ({ page }) => {
 		await login(page, TEST_USER);
 
-		// Navigate to submission with changes requested
-		await page.goto(`/submissions/${submissionId}`);
+		// The form is reached explicitly, from the review page's Edit link.
+		await page.goto(`/submissions/${submissionId}/edit`);
 		await page.waitForSelector("body");
 
 		// Verify yellow warning banner appears

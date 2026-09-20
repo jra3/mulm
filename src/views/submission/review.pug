@@ -286,8 +286,11 @@ html
                                     form(hx-delete=`/submissions/${submission.id}/final-submit` hx-confirm="Remove this submission from the approval queue? You can re-queue it later.")
                                         button.destructive(type="submit") Remove from Queue
 
-                // Committee actions available on in-flight work
-                if isAdmin && !isSelf && (allowed.requestChanges || allowed.deleteSubmission) && state !== 'pendingWitness'
+                //- Committee actions on work between the Witness and the queue.
+                //- The screening panel and the approval panel carry their own
+                //- copies of these, so this covers only the two states in
+                //- between — otherwise the page offers the same button twice.
+                if isAdmin && !isSelf && (state === 'waitingPeriod' || state === 'awaitingFinalSubmission')
                     .status-panel.status-panel-admin
                         .container.mx-auto.max-w-4xl
                             h3.text-white.text-lg.font-semibold.mb-4 Admin Actions

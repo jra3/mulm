@@ -219,6 +219,9 @@ test.describe("Submission Complete Lifecycle", () => {
 		await login(page, TEST_USER);
 
 		await page.goto(`/submissions/${submissionId}`);
+		// Opening the form is its own step now: clicking Edit no longer pulls
+		// the Submission out of the queue it is waiting in.
+		await page.click(`a[href="/submissions/${submissionId}/edit"]`);
 		await page.waitForSelector("#bapForm");
 
 		// Verify changes requested banner is visible
@@ -370,6 +373,7 @@ test.describe("Submission Complete Lifecycle", () => {
 		await expect(page.locator(`a[href="/submissions/${submissionId}"]`)).toHaveCount(0);
 
 		// Step 5: And the member is told what to do next.
+		await logout(page);
 		await login(page, TEST_USER);
 		await page.goto(`/submissions/${submissionId}`);
 		await expect(page.locator('h3:has-text("Changes Requested")')).toBeVisible();
@@ -434,6 +438,9 @@ test.describe("Submission Complete Lifecycle", () => {
 		await login(page, TEST_USER);
 
 		await page.goto(`/submissions/${submissionId}`);
+		// Opening the form is its own step now: clicking Edit no longer pulls
+		// the Submission out of the queue it is waiting in.
+		await page.click(`a[href="/submissions/${submissionId}/edit"]`);
 		await page.waitForSelector("#bapForm");
 
 		await page.fill('input[name="ph"]', "7.5");
@@ -478,6 +485,9 @@ test.describe("Submission Complete Lifecycle", () => {
 		await login(page, TEST_USER);
 
 		await page.goto(`/submissions/${submissionId}`);
+		// Opening the form is its own step now: clicking Edit no longer pulls
+		// the Submission out of the queue it is waiting in.
+		await page.click(`a[href="/submissions/${submissionId}/edit"]`);
 		await page.waitForSelector("#bapForm");
 
 		await page.fill('input[name="substrate_type"]', "Sand");
