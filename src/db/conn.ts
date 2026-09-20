@@ -6,6 +6,22 @@ import { logger } from "@/utils/logger";
 export let readOnlyConn: Database;
 export let writeConn: Database;
 
+/**
+ * Whether a test has taken the connections over.
+ *
+ * Importing this module starts `ready` below, which opens the real database,
+ * runs every migration and then calls `init()`. A test that has already called
+ * `overrideConnection` is racing that: whichever finishes last wins, and when
+ * `ready` wins it silently repoints the module at the real file while the test
+ * goes on inspecting its in-memory one.
+ *
+ * The race is invisible until the migrations are slow enough to land in the
+ * middle of a run - a fresh CI checkout with no database file, say - and then
+ * it surfaces as an unrelated suite failing on a row that "should have been
+ * deleted". So `init()` stands down once a test owns the connections.
+ */
+let overriddenForTests = false;
+
 export function db(write = false) {
   if (write) {
     return writeConn;
@@ -15,6 +31,10 @@ export function db(write = false) {
 }
 
 export async function init() {
+  if (overriddenForTests) {
+    return;
+  }
+
   readOnlyConn = await open({
     filename: config.database.file,
     driver: sqlite3.Database,
@@ -44,9 +64,13 @@ export const ready = (async () => {
 });
 
 /**
- * Used only in testing to create and use in-memory databases
+ * Used only in testing to create and use in-memory databases.
+ *
+ * Takes the connections over for good: the bootstrap above will not reclaim
+ * them afterwards, however long its migrations take.
  */
 export function overrideConnection(conn: typeof readOnlyConn) {
+  overriddenForTests = true;
   readOnlyConn = conn;
   writeConn = conn;
 }
