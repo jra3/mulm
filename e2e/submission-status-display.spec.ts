@@ -152,6 +152,6 @@ test.describe("Changes-Requested Status Display", () => {
 
 		// Verify badge has descriptive title attribute
 		const badge = page.locator('span:has-text("Changes Requested")').first();
-		await expect(badge).toHaveAttribute('title', 'Admin requested changes - edit and resubmit');
+		await expect(badge).toHaveAttribute('title', 'The committee asked for changes - edit and resubmit');
 	});
 });

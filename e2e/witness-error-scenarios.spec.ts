@@ -4,15 +4,17 @@ import { createTestSubmission } from "./helpers/submissions";
 import { getTestDatabase, TEST_USER, TEST_ADMIN } from "./helpers/testData";
 
 /**
- * E2E tests for witness error scenarios
+ * E2E tests for the screening gate's error surfaces.
  *
- * Tests the error handling for:
+ * Tests:
  * - Self-witnessing attempts (UI prevents via warning message)
  * - Witnessing already-confirmed submissions (UI handles gracefully)
- * - Witnessing declined submissions (UI handles gracefully)
- * - Missing/invalid decline reasons (client-side validation)
+ * - Rows left `declined` by the deleted decline path being screenable again
+ * - Missing/invalid change-request reasons (client-side validation)
  *
- * These tests verify that error surfaces work correctly through the full stack
+ * Declining a Witness no longer exists: it emailed the member and left the
+ * Submission where nothing could move it out. A committee member who wants
+ * more requests changes instead, which states the problems and has a way back.
  */
 
 test.describe("Witness Error Scenarios", () => {
@@ -57,8 +59,8 @@ test.describe("Witness Error Scenarios", () => {
     const approveButton = page.locator('button:has-text("Approve for Screening")');
     await expect(approveButton).not.toBeVisible();
 
-    const requestInfoButton = page.locator('button:has-text("Request More Info")');
-    await expect(requestInfoButton).not.toBeVisible();
+    const requestChangesButton = page.locator('button:has-text("Request Changes")');
+    await expect(requestChangesButton).not.toBeVisible();
 
     // Step 5: Verify submission state unchanged
     const db2 = await getTestDatabase();
@@ -132,8 +134,14 @@ test.describe("Witness Error Scenarios", () => {
     }
   });
 
-  test("should handle declined submission state correctly", async ({ page }) => {
-    // Step 1: Create submission that's been declined
+  test("a submission left 'declined' by the deleted decline path is screenable again", async ({
+    page,
+  }) => {
+    // Declining set this status and left the submission where nothing could
+    // move it out - invisible in every committee queue while showing the
+    // member "Pending Review". Nothing writes the value any more, but
+    // production rows may still carry it, so the state derivation reads it as
+    // awaiting a Witness. This test pins that rescue.
     const db = await getTestDatabase();
     let submissionId: number;
     let adminId: number;
@@ -154,20 +162,19 @@ test.describe("Witness Error Scenarios", () => {
 
       adminId = admin.id;
 
-      // Create submitted submission
       submissionId = await createTestSubmission({
         memberId: user.id,
         submitted: true,
         witnessed: false,
       });
 
-      // Manually set to declined state
+      // A row as the deleted decline path would have left it.
       await db.run(
-        `UPDATE submissions 
-				SET witness_verification_status = 'declined',
-				    witnessed_by = ?,
-				    witnessed_on = ?
-				WHERE id = ?`,
+        `UPDATE submissions
+					SET witness_verification_status = 'declined',
+					    witnessed_by = ?,
+					    witnessed_on = ?
+					WHERE id = ?`,
         adminId,
         new Date().toISOString(),
         submissionId
@@ -176,30 +183,27 @@ test.describe("Witness Error Scenarios", () => {
       await db.close();
     }
 
-    // Step 2: Login as admin
     await login(page, TEST_ADMIN);
-
-    // Step 3: Navigate to the submission
     await page.goto(`/submissions/${submissionId}`);
     await page.waitForSelector("body");
 
-    // Step 4: Verify UI handles declined submission appropriately
-    // Declined submissions should not show the approve button
+    // The screening panel is offered again, so a committee member can move it.
     const approveButton = page.locator('button:has-text("Approve for Screening")');
-    await expect(approveButton).not.toBeVisible();
+    await expect(approveButton).toBeVisible({ timeout: 5000 });
 
-    // Step 5: Verify submission still in declined state
+    await approveButton.click();
+    await page.waitForURL(/\/admin\/witness-queue\//, { timeout: 10000 });
+
     const db2 = await getTestDatabase();
     try {
       const submission = await db2.get("SELECT * FROM submissions WHERE id = ?", submissionId);
-
-      expect(submission.witness_verification_status).toBe("declined");
+      expect(submission.witness_verification_status).toBe("confirmed");
     } finally {
       await db2.close();
     }
   });
 
-  test("should enforce client-side validation for decline reason", async ({ page }) => {
+  test("should enforce client-side validation for the change-request reason", async ({ page }) => {
     // Step 1: Create submitted submission
     const db = await getTestDatabase();
     let submissionId: number;
@@ -230,41 +234,40 @@ test.describe("Witness Error Scenarios", () => {
     await page.goto(`/submissions/${submissionId}`);
     await page.waitForSelector("body");
 
-    // Step 4: Click "Request More Info" button
-    const requestInfoButton = page.locator('button:has-text("Request More Info")');
-    await requestInfoButton.scrollIntoViewIfNeeded();
-    await requestInfoButton.click();
+    // Step 4: Open the Request Changes dialog
+    const requestChangesButton = page.locator('button:has-text("Request Changes")');
+    await requestChangesButton.scrollIntoViewIfNeeded();
+    await requestChangesButton.click();
 
     // Step 5: Wait for dialog and verify form validation
-    await page.waitForSelector("form#witnessForm", { timeout: 5000 });
+    await page.waitForSelector("form#feedbackForm", { timeout: 5000 });
 
-    // Get the textarea element and verify it has validation attributes
-    const reasonTextarea = page.locator('textarea[name="reason"]');
+    const reasonTextarea = page.locator('textarea[name="content"]');
     await expect(reasonTextarea).toBeVisible();
 
-    // Verify required attribute
     const isRequired = await reasonTextarea.getAttribute("required");
     expect(isRequired).not.toBeNull();
 
-    // Verify minlength attribute
     const minLength = await reasonTextarea.getAttribute("minlength");
     expect(minLength).toBe("10");
 
-    // Step 6: Fill with valid reason and submit successfully
+    // Step 6: Fill with a valid reason and send
     await reasonTextarea.fill("Additional documentation is needed to verify this spawn.");
+    await page.click("#feedbackSubmitBtn");
 
-    const submitButton = page.locator('form#witnessForm button[type="submit"]');
-    await submitButton.click();
+    // The committee is sent back to the approval queue for the Program.
+    await page.waitForURL(/\/admin\/queue\//, { timeout: 10000 });
 
-    // Should redirect to witness queue
-    await page.waitForURL(/\/admin\/witness-queue\//, { timeout: 10000 });
-
-    // Step 7: Verify submission was declined
+    // Step 7: The changes are outstanding, and the Witness is untouched: a
+    // request for changes is a refusal with a way back, not a dead end.
     const db2 = await getTestDatabase();
     try {
       const submission = await db2.get("SELECT * FROM submissions WHERE id = ?", submissionId);
 
-      expect(submission.witness_verification_status).toBe("declined");
+      expect(submission.changes_requested_on).toBeTruthy();
+      expect(submission.changes_requested_reason).toContain("Additional documentation");
+      expect(submission.witness_verification_status).toBe("pending");
+      expect(submission.witnessed_on).toBeNull();
     } finally {
       await db2.close();
     }

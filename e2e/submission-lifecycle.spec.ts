@@ -297,8 +297,10 @@ test.describe("Submission Complete Lifecycle", () => {
 		}
 	});
 
-	test("decline path: draft → submit → witness decline → verify declined state", async ({ page }) => {
-		// Step 1: Create a submitted submission (not yet witnessed)
+	test("refusal path: submit → committee requests changes → verify the way back", async ({ page }) => {
+		// Declining a Witness is deleted. A committee member who wants more
+		// requests changes instead: same message, and it leaves the Submission
+		// somewhere the member can act on rather than stranding it.
 		const db = await getTestDatabase();
 		let submissionId: number;
 		let adminId: number;
@@ -319,54 +321,59 @@ test.describe("Submission Complete Lifecycle", () => {
 
 			adminId = admin.id;
 
-			// Create submitted submission (pending witness)
-			// Set reproduction date to 70 days ago so it's eligible for approval after decline
+			// Submitted, awaiting a Witness.
 			submissionId = await createTestSubmission({
 				memberId: user.id,
 				submitted: true,
 				witnessed: false,
-				reproductionDaysAgo: 70, // Old enough to be past waiting period
+				reproductionDaysAgo: 70,
 			});
 		} finally {
 			await db.close();
 		}
 
-		// Step 2: Login as admin and decline witness
+		// Step 2: The committee asks for changes, with the problems stated.
 		await login(page, TEST_ADMIN);
 
 		await page.goto(`/submissions/${submissionId}`);
 		await page.waitForSelector("body");
 
-		// Click "Request More Info" button (opens a dialog)
-		const requestInfoButton = page.locator('button:has-text("Request More Info")');
-		await requestInfoButton.scrollIntoViewIfNeeded();
-		await requestInfoButton.click();
+		const requestChangesButton = page.locator('button:has-text("Request Changes")');
+		await requestChangesButton.scrollIntoViewIfNeeded();
+		await requestChangesButton.click();
 
-		// Wait for dialog to appear and fill the reason textarea (required field with minlength=10)
-		await page.waitForSelector('form#witnessForm', { timeout: 5000 });
-		await page.fill('textarea[name="reason"]', "Additional documentation is needed to verify this submission.");
-		await page.click('form#witnessForm button[type="submit"]');
+		await page.waitForSelector("form#feedbackForm", { timeout: 5000 });
+		await page.fill('textarea[name="content"]', "Please add photos that clearly show the fry.");
+		await page.click("#feedbackSubmitBtn");
 
-		// Wait for HTMX redirect (goes to witness-queue or approval queue depending on action)
-		await page.waitForURL(/\/admin\/(witness-queue|queue)\//, { timeout: 10000 });
+		await page.waitForURL(/\/admin\/queue\//, { timeout: 10000 });
 		await page.waitForLoadState("networkidle");
 
-		// Verify witness declined state
-		// Note: Declining witness does NOT skip the waiting period - submission still needs
-		// to be 60 days old (based on reproduction_date) before it can be approved
+		// Step 3: The changes are outstanding and the Submission has not moved.
 		const db2 = await getTestDatabase();
 		try {
 			const submission = await db2.get("SELECT * FROM submissions WHERE id = ?", submissionId);
-			expect(submission.witness_verification_status).toBe("declined");
-			expect(submission.witnessed_by).toBe(adminId);
-			expect(submission.witnessed_on).toBeTruthy();
-			expect(submission.approved_on).toBeNull(); // Not yet approved
-
-			// Verify decline reason was stored (in submission_notes table)
-			// The actual storage mechanism for decline reasons may vary
+			expect(submission.changes_requested_on).toBeTruthy();
+			expect(submission.changes_requested_by).toBe(adminId);
+			expect(submission.changes_requested_reason).toContain("photos");
+			expect(submission.approved_on).toBeNull();
+			// Still awaiting a Witness: asking for changes is not a screening outcome.
+			expect(submission.witness_verification_status).toBe("pending");
 		} finally {
 			await db2.close();
 		}
+
+		// Step 4: While changes are outstanding the ball is with the member, so
+		// the Submission has left the committee's screening queue.
+		await page.goto("/admin/witness-queue/fish");
+		await page.waitForLoadState("networkidle");
+		await expect(page.locator(`a[href="/submissions/${submissionId}"]`)).toHaveCount(0);
+
+		// Step 5: And the member is told what to do next.
+		await login(page, TEST_USER);
+		await page.goto(`/submissions/${submissionId}`);
+		await expect(page.locator('h3:has-text("Changes Requested")')).toBeVisible();
+		await expect(page.locator("text=Please add photos that clearly show the fry.")).toBeVisible();
 	});
 
 	test("complex path: witness → changes → resubmit → changes again → approve", async ({ page }) => {
