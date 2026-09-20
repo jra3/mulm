@@ -29,10 +29,7 @@ import { validateSubmission } from "./submission";
 import {
   isLivestock,
   foodTypes,
-  getClassOptions,
   spawnLocations,
-  speciesTypes,
-  waterTypes,
   hasLighting,
   hasSupplements,
   hasFoods,
@@ -86,35 +83,6 @@ export const viewMembers = async (req: MulmRequest, res: Response) => {
     getNextLevel,
     programMetadata,
   });
-};
-
-export const viewEditSubmission = async (req: MulmRequest, res: Response) => {
-  const submission = await validateSubmission(req, res);
-  if (!submission) {
-    return;
-  }
-  const submissionMember = await getMember(submission.member_id);
-
-  res.render("submit", {
-    title: `Edit Submission`,
-    subtitle: "Editing as admin",
-    submissionId: submission.id,
-    form: {
-      ...submission,
-      member_name: submissionMember?.display_name,
-      member_email: submissionMember?.contact_email,
-    },
-    errors: new Map(),
-    classOptions: getClassOptions(submission.species_type),
-    waterTypes,
-    speciesTypes,
-    foodTypes,
-    spawnLocations,
-    isLivestock: isLivestock(submission.species_type),
-    isAdmin: true,
-    editing: true,
-  });
-  return;
 };
 
 export const viewMemberUpdate = async (req: MulmRequest, res: Response) => {

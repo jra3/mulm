@@ -244,6 +244,23 @@ void describe("Submission lifecycle - transitions", () => {
       assert.strictEqual(await refusal(() => deleteSubmission(otherMember, id)), "authorization");
     });
 
+    void test("a committee member does not type into another member's Submission", async () => {
+      // The committee changes a Submission by asking for changes, not by
+      // editing it. The one exception is a correction to an Approved one,
+      // which carries a stated reason and goes on the record.
+      const draft = await at("draft");
+      assert.strictEqual(await refusal(() => saveDraft(committee, draft, form)), "authorization");
+      assert.strictEqual(await refusal(() => submit(committee, draft, form)), "authorization");
+
+      const inFlight = await at("waitingPeriod");
+      assert.strictEqual(
+        await refusal(() => saveChanges(committee, inFlight, form)),
+        "authorization"
+      );
+      assert.strictEqual(await refusal(() => resubmit(committee, inFlight, form)), "authorization");
+      assert.strictEqual(await refusal(() => returnToDraft(committee, inFlight)), "authorization");
+    });
+
     void test("a member cannot perform a committee move", async () => {
       const id = await at("pendingWitness");
       assert.strictEqual(await refusal(() => confirmWitness(otherMember, id)), "authorization");

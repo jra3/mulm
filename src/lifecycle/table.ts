@@ -71,24 +71,26 @@ const EITHER: readonly Actor[] = ["member", "committee"];
 
 export const moves = {
   /**
-   * The three moves that change a Submission's *contents* accept a committee
-   * member acting in the member's stead, because the Portal has an admin edit
-   * form that does exactly that. `ownerOnly` still binds members to their own
-   * work. Every move that changes the committee's relationship to a Submission
-   * - Return to Draft, Resubmit, and all four committee moves - keeps the
-   * narrower actor list the table states.
+   * A Submission's contents are the member's own. The committee changes a
+   * Submission by asking for changes, not by typing into it - the one
+   * exception being a correction to an Approved Submission, which carries a
+   * stated reason and goes on the record.
+   *
+   * Filing a new Submission on a member's behalf is a different matter and
+   * still allowed: creation is not a move from a state, so it is guarded in
+   * `createSubmission` rather than here.
    */
   saveDraft: {
     id: "saveDraft",
     from: ["draft"],
-    actors: EITHER,
+    actors: MEMBER_ONLY,
     ownerOnly: true,
   },
 
   submit: {
     id: "submit",
     from: ["draft"],
-    actors: EITHER,
+    actors: MEMBER_ONLY,
     ownerOnly: true,
   },
 
@@ -100,7 +102,7 @@ export const moves = {
   saveChanges: {
     id: "saveChanges",
     from: MIDDLE_STATES,
-    actors: EITHER,
+    actors: MEMBER_ONLY,
     ownerOnly: true,
   },
 
