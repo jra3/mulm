@@ -91,6 +91,53 @@ export const emailDemoPage = (req: MulmRequest, res: Response) => {
       award_name: "Level 2 Breeder Award",
       date_awarded: "2024-11-16T09:00:00.000Z",
     },
+
+    // A Specialty Award, which now announces itself by email as well as in the feed
+    awardName: "Anabantoid Specialist Award",
+
+    // The committee's daily digest of what is still waiting on them
+    digest: {
+      total: 3,
+      sections: [
+        {
+          program: "fish",
+          programName: "Breeder Awards Program",
+          queue: "witness",
+          title: "Waiting to be screened",
+          submissions: [
+            {
+              id: 401,
+              memberName: "Jane Aquarist",
+              speciesCommonName: "Endler Guppy",
+              speciesLatinName: "Poecilia wingei",
+              waitingSince: "2024-10-01T14:30:00.000Z",
+            },
+            {
+              id: 402,
+              memberName: "Sam Keeper",
+              speciesCommonName: "Cherry Barb",
+              speciesLatinName: "Puntius titteya",
+              waitingSince: "2024-10-03T09:12:00.000Z",
+            },
+          ],
+        },
+        {
+          program: "plant",
+          programName: "Horticultural Awards Program",
+          queue: "approval",
+          title: "Ready for points",
+          submissions: [
+            {
+              id: 403,
+              memberName: "Alex Grower",
+              speciesCommonName: "Java Fern",
+              speciesLatinName: "Microsorum pteropus",
+              waitingSince: "2024-08-11T18:00:00.000Z",
+            },
+          ],
+        },
+      ],
+    },
   };
 
   res.render("demo/emails", {

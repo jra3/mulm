@@ -72,7 +72,7 @@ _Avoid_: leaderboard, rankings, results
 ### Submissions & lifecycle
 
 **Submission**:
-A member's single claim of a breeding/propagation achievement for one species, moving through a state machine to approval and points. Source of truth: the `Submission` record in `src/db/submissions.ts`; lifecycle documented in `docs/TESTING_STRATEGY_SUBMISSION_STATE_MACHINE.md`.
+A member's single claim of a breeding/propagation achievement for one species, moving through a state machine to approval and points. The row is the `Submission` record in `src/db/submissions.ts`; **when it may change state, who may change it and what follows is owned by `src/lifecycle/`**, whose transition table (`src/lifecycle/table.ts`) is the one statement of which moves are legal from which states. Spec: [#398](https://github.com/jra3/mulm/issues/398).
 _Avoid_: entry, claim, report, spawn record (when you mean the DB row)
 
 **Spawn**:
@@ -80,20 +80,22 @@ A qualifying reproduction event: for fish, a minimum of six (6) fry maintained f
 _Avoid_: breeding, birth, propagation (use _propagation_ specifically for plants/corals)
 
 **Waiting period**:
-The minimum age (from `reproduction_date`) a submission must reach before approval — **30 days for marine, 60 days otherwise** (`src/utils/waitingPeriod.ts`). A declined witness does not skip it.
+The minimum age (from `reproduction_date`) a submission must reach before it may enter the approval queue — **30 days for marine fish, 60 days otherwise** (`src/lifecycle/state.ts`). This is the one edge the lifecycle module computes rather than performs: the two states either side of it are stored identically and separated only by a date comparison.
 _Avoid_: holding period, cooldown
 
 **Witness (Gate 1 — physical verification)**:
-A committee member's inspection of the fry/parents (or cutting). Carried on the submission as `witnessed_by` / `witnessed_on` and `witness_verification_status: pending | confirmed | declined`. A member cannot witness their own submission. **Crucially, a `declined` witness does NOT reject the submission** — it still proceeds to the approval decision (PENDING-WITNESS → PENDING-APPROVAL).
-_Avoid_: verify, screen (informal), confirm (that's one outcome)
+A committee member's inspection of the fry/parents (or cutting). Carried on the submission as `witnessed_by` / `witnessed_on` and `witness_verification_status: pending | confirmed`. A member cannot witness their own submission, and no Witness may be confirmed while requested changes are outstanding. A **confirmed Witness survives the member's edits and a trip back to Draft** — it attested to the fry, not to the form — so resubmitting skips screening and re-enters the waiting period.
+The `declined` value is **dead**: declining a Witness stranded the submission where nothing could move it out, and is deleted. A committee member who wants more **requests changes** instead. Rows still carrying `'declined'` derive as awaiting a Witness, which makes them actionable again.
+_Avoid_: verify, screen (informal), confirm (that's one outcome), decline
 
-**Approved / Denied (Gate 2 — committee decision)**:
-The final acceptance or rejection, separate from witnessing. **Approved**: `approved_on` / `approved_by` set and `points` calculated — only then do points count toward standings. **Denied**: `denied_on` / `denied_by` / `denied_reason` — the committee's final rejection. These two states are the second gate; witnessing is the first.
-_Avoid_: accepted/rejected, validated, confirmed (confirmed belongs to witnessing)
+**Approved (Gate 2 — committee decision)**:
+The committee's acceptance: `approved_on` / `approved_by` set and `points` calculated — only then do points count toward standings, and approving is the only way points are ever awarded. **Approved is terminal and undeletable for everyone**; correcting the Points (`src/lifecycle` `correctPoints`, with a stated reason that goes to the changelog) is the only movement out of it.
+**Denied is deleted** — the state, the move, and the idea. Zero denials were ever recorded, and the 2009 manual contains no denial language; requesting changes is the refusal path. Its `denied_on` / `denied_by` / `denied_reason` columns are **dead but still present**: nothing reads or writes them, and they are documented as dead on the `Submission` type rather than dropped, so this change needs no migration to the submissions table.
+_Avoid_: accepted/rejected, validated, confirmed (confirmed belongs to witnessing), denied
 
 **Changes requested**:
-An intermediate state where the committee asks the member to edit and resubmit (`changes_requested_*`); resubmitting preserves witness data.
-_Avoid_: revision, rework
+The committee asking the member to edit and resubmit, with the problems stated (`changes_requested_*`). It is an **overlay over the state a submission is already in, not a state of its own**: the submission keeps its place in the pipeline and its Witness, and resubmitting clears the flag without restarting anything. While the flag is set the ball is with the member — flagged work **leaves the committee's queues**, and no committee action but Delete is legal.
+_Avoid_: revision, rework, denied
 
 ### Awards & recognition
 

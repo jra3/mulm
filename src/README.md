@@ -10,6 +10,7 @@ src/
 ├── auth/             # Authentication logic (password hashing, tokens, OAuth)
 ├── db/               # Database layer (See src/db/README.md)
 ├── forms/            # Zod schemas for form validation
+├── lifecycle/        # The Submission lifecycle (See src/lifecycle/README.md)
 ├── middleware/       # Express middleware (auth, session, error handling)
 ├── routes/           # Route handlers (See src/routes/README.md)
 ├── services/         # Business logic (email, submissions, levels, etc.)
@@ -310,3 +311,4 @@ File permissions: Must be 600 (owner-only) and owned by UID 1001 (nodejs user)
 - **[src/db/README.md](db/README.md)** - Database patterns, queries, transactions
 - **[src/routes/README.md](routes/README.md)** - Routing conventions, API reference
 - **[src/views/README.md](views/README.md)** - Pug templates, design system
+- **[src/lifecycle/README.md](lifecycle/README.md)** - Submission states, transitions, consequences

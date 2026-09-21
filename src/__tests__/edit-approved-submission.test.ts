@@ -3,7 +3,6 @@ import assert from "node:assert";
 import {
   getSubmissionById,
   updateSubmission,
-  approveSubmission as approve,
 } from "../db/submissions";
 import {
   setupTestDatabase,
@@ -11,6 +10,7 @@ import {
   createTestSubmission,
   mockApprovalData,
   mockSpeciesIds,
+  approveSubmissionFixture,
   type TestContext,
 } from "./helpers/testHelpers";
 
@@ -44,7 +44,7 @@ void describe("Edit Approved Submission", () => {
     });
 
     // Approve the submission
-    await approve(ctx.admin.id, submissionId, mockSpeciesIds, {
+    await approveSubmissionFixture(ctx.admin.id, submissionId, mockSpeciesIds, {
       ...mockApprovalData,
       points: options.points || 10,
       article_points: options.articlePoints || 0,

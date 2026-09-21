@@ -169,6 +169,9 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await login(page, TEST_USER);
 
 		await page.goto(`/submissions/${submissionId}`);
+		// Opening the form is its own step now: clicking Edit no longer pulls
+		// the Submission out of the queue it is waiting in.
+		await page.click(`a[href="/submissions/${submissionId}/edit"]`);
 		await page.waitForSelector("#bapForm");
 
 		// Verify changes requested banner is visible
@@ -265,6 +268,9 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await login(page, TEST_USER);
 
 		await page.goto(`/submissions/${submissionId}`);
+		// Opening the form is its own step now: clicking Edit no longer pulls
+		// the Submission out of the queue it is waiting in.
+		await page.click(`a[href="/submissions/${submissionId}/edit"]`);
 		await page.waitForSelector("#bapForm");
 
 		// Verify changes requested banner is visible

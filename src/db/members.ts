@@ -1,7 +1,7 @@
 import { makePasswordEntry, ScryptPassword } from "../auth";
 import { db, query, deleteOne, insertOne, updateOne } from "./conn";
 import { logger } from "@/utils/logger";
-import { createActivity } from "./activity";
+import { recordActivity, removeActivity } from "./activity";
 import { specialtyAwards, getCountableSpecialtyAwards } from "@/specialtyAwards";
 import { programSpeciesTypeSql, totalPointsSql } from "@/points";
 import { ProgramType } from "@/programs";
@@ -551,7 +551,7 @@ export async function grantAward(
       const isMetaAward =
         awardName.includes("Senior Specialist") || awardName.includes("Expert Specialist");
 
-      await createActivity("award_granted", memberId, awardName, {
+      await recordActivity("award_granted", memberId, awardName, {
         award_name: awardName,
         award_type: isMetaAward ? "meta" : "specialty",
       });
@@ -562,6 +562,32 @@ export async function grantAward(
   } catch (err) {
     logger.error("Failed to grant award", err);
     throw new Error("Failed to grant award");
+  }
+}
+
+/**
+ * Take an Award back, and with it the feed entry announcing it.
+ *
+ * The mirror of `grantAward`: a member who no longer qualifies - because a
+ * committee member corrected the species on one of their Submissions - stops
+ * holding the Award, and the front page stops advertising it.
+ */
+export async function revokeAward(memberId: number, awardName: string) {
+  try {
+    const conn = db(true);
+    const stmt = await conn.prepare(
+      "DELETE FROM awards WHERE member_id = ? AND award_name = ?"
+    );
+    try {
+      await stmt.run(memberId, awardName);
+    } finally {
+      await stmt.finalize();
+    }
+
+    await removeActivity("award_granted", memberId, awardName);
+  } catch (err) {
+    logger.error("Failed to revoke award", err);
+    throw new Error("Failed to revoke award");
   }
 }
 

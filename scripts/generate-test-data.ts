@@ -3,20 +3,18 @@ import path from "path";
 moduleAlias.addAlias("@", path.join(__dirname, "..", "src"));
 
 import { createMember, getMemberByEmail, updateMember } from "@/db/members";
+import { updateSubmission, getSubmissionById } from "@/db/submissions";
 import {
-  createSubmission,
-  approveSubmission,
-  confirmWitness,
-  declineWitness,
-  updateSubmission,
-  getSubmissionById,
-} from "@/db/submissions";
+  backfillApproval,
+  backfillSubmission,
+  backfillWitness,
+} from "./lib/backfill";
 import { FormValues } from "@/forms/submission";
 import { logger } from "@/utils/logger";
 import { init } from "@/db/conn";
 import { checkAndGrantSpecialtyAwards } from "@/specialtyAwardManager";
 import { recordName } from "@/db/species";
-import { createActivity } from "@/db/activity";
+import { recordActivity } from "@/db/activity";
 
 // Plausible test data
 const fishNames = [
@@ -350,7 +348,7 @@ async function createWitnessTestSubmissions(
   // 1. Draft submission (not submitted)
   logger.info("Creating draft submission...");
   const draftFormData = generateFishSubmission(member1.name, member1.email);
-  const draftId = await createSubmission(member1.id, draftFormData, false); // false = draft
+  const draftId = await backfillSubmission(member1.id, draftFormData, false); // false = draft
   logger.info(`Created draft submission ${draftId} for ${member1.name}`);
 
   // 2. Submitted - Awaiting Witness (pending)
@@ -359,7 +357,7 @@ async function createWitnessTestSubmissions(
   pendingFormData.species_common_name = "Angelfish";
   pendingFormData.species_latin_name = "Pterophyllum scalare";
   pendingFormData.reproduction_date = dateFromDaysAgo(5).toISOString().split("T")[0]; // 5 days ago
-  const pendingId = await createSubmission(member2.id, pendingFormData, true); // true = submitted
+  const pendingId = await backfillSubmission(member2.id, pendingFormData, true); // true = submitted
   logger.info(`Created pending witness submission ${pendingId} for ${member2.name}`);
 
   // 3. Witnessed & Confirmed - Still in Waiting Period
@@ -368,8 +366,8 @@ async function createWitnessTestSubmissions(
   waitingFormData.species_common_name = "German Blue Ram";
   waitingFormData.species_latin_name = "Mikrogeophagus ramirezi";
   waitingFormData.reproduction_date = dateFromDaysAgo(15).toISOString().split("T")[0]; // 15 days ago (still waiting)
-  const waitingId = await createSubmission(member3.id, waitingFormData, true);
-  await confirmWitness(waitingId, johnId); // John witnesses it
+  const waitingId = await backfillSubmission(member3.id, waitingFormData, true);
+  await backfillWitness(waitingId, johnId); // John witnesses it
   logger.info(
     `Created witnessed submission ${waitingId} for ${member3.name} (15 days old - still waiting)`
   );
@@ -380,8 +378,8 @@ async function createWitnessTestSubmissions(
   readyFormData.species_common_name = "Zebra Danio";
   readyFormData.species_latin_name = "Danio rerio";
   readyFormData.reproduction_date = dateFromDaysAgo(35).toISOString().split("T")[0]; // 35 days ago (past waiting period)
-  const readyId = await createSubmission(member4.id, readyFormData, true);
-  await confirmWitness(readyId, johnId); // John witnesses it
+  const readyId = await backfillSubmission(member4.id, readyFormData, true);
+  await backfillWitness(readyId, johnId); // John witnesses it
   logger.info(
     `Created witnessed submission ${readyId} for ${member4.name} (35 days old - ready for approval)`
   );
@@ -392,9 +390,15 @@ async function createWitnessTestSubmissions(
   declinedFormData.species_common_name = "Neon Tetra";
   declinedFormData.species_latin_name = "Paracheirodon innesi";
   declinedFormData.reproduction_date = dateFromDaysAgo(10).toISOString().split("T")[0];
-  const declinedId = await createSubmission(member1.id, declinedFormData, true);
-  await declineWitness(declinedId, johnId); // John declines it
-  logger.info(`Created declined witness submission ${declinedId} for ${member1.name}`);
+  // The committee asks for more, rather than declining: a request for changes
+  // states the problems and has a way back, which declining never did.
+  const changesRequestedId = await backfillSubmission(member1.id, declinedFormData, true);
+  await updateSubmission(changesRequestedId, {
+    changes_requested_on: new Date().toISOString(),
+    changes_requested_by: johnId,
+    changes_requested_reason: "Please add photos that clearly show the fry.",
+  });
+  logger.info(`Created changes-requested submission ${changesRequestedId} for ${member1.name}`);
 
   // 6. Plant submission with 60-day waiting period - Still Waiting
   logger.info("Creating plant submission in 60-day waiting period...");
@@ -402,8 +406,8 @@ async function createWitnessTestSubmissions(
   plantWaitingFormData.species_common_name = "Java Fern";
   plantWaitingFormData.species_latin_name = "Microsorum pteropus";
   plantWaitingFormData.reproduction_date = dateFromDaysAgo(45).toISOString().split("T")[0]; // 45 days ago (still needs 15 more)
-  const plantWaitingId = await createSubmission(member2.id, plantWaitingFormData, true);
-  await confirmWitness(plantWaitingId, johnId); // John witnesses it
+  const plantWaitingId = await backfillSubmission(member2.id, plantWaitingFormData, true);
+  await backfillWitness(plantWaitingId, johnId); // John witnesses it
   logger.info(
     `Created plant submission ${plantWaitingId} for ${member2.name} (45 days old - still needs 15 more days)`
   );
@@ -414,8 +418,8 @@ async function createWitnessTestSubmissions(
   plantReadyFormData.species_common_name = "Amazon Sword";
   plantReadyFormData.species_latin_name = "Echinodorus amazonicus";
   plantReadyFormData.reproduction_date = dateFromDaysAgo(70).toISOString().split("T")[0]; // 70 days ago (past 60-day waiting period)
-  const plantReadyId = await createSubmission(member3.id, plantReadyFormData, true);
-  await confirmWitness(plantReadyId, johnId); // John witnesses it
+  const plantReadyId = await backfillSubmission(member3.id, plantReadyFormData, true);
+  await backfillWitness(plantReadyId, johnId); // John witnesses it
   logger.info(
     `Created plant submission ${plantReadyId} for ${member3.name} (70 days old - ready for approval)`
   );
@@ -426,8 +430,8 @@ async function createWitnessTestSubmissions(
   coralFormData.species_common_name = "Hammer Coral";
   coralFormData.species_latin_name = "Euphyllia ancora";
   coralFormData.reproduction_date = dateFromDaysAgo(20).toISOString().split("T")[0]; // 20 days ago (needs 10 more)
-  const coralId = await createSubmission(member4.id, coralFormData, true);
-  await confirmWitness(coralId, johnId); // John witnesses it
+  const coralId = await backfillSubmission(member4.id, coralFormData, true);
+  await backfillWitness(coralId, johnId); // John witnesses it
   logger.info(
     `Created coral submission ${coralId} for ${member4.name} (20 days old - needs 10 more days)`
   );
@@ -513,7 +517,7 @@ async function generateTestData() {
         // Create 5+ catfish submissions (including at least 1 non-Corydoras)
         for (const catfish of catfishNames) {
           const formData = generateCatfishSubmission(user.name, user.email, catfish);
-          const submissionId = await createSubmission(user.id, formData, true);
+          const submissionId = await backfillSubmission(user.id, formData, true);
 
           // Extract genus and species for canonical name
           const { genus, species } = extractGenusAndSpecies(catfish.latin);
@@ -553,7 +557,7 @@ async function generateTestData() {
               formData = generateFishSubmission(user.name, user.email);
           }
 
-          const submissionId = await createSubmission(user.id, formData, true);
+          const submissionId = await backfillSubmission(user.id, formData, true);
           const { genus, species } = extractGenusAndSpecies(
             formData.species_latin_name || "Unknown species"
           );
@@ -577,7 +581,7 @@ async function generateTestData() {
 
         for (const anabantoid of anabantoidNames) {
           const formData = generateSpecialtyFishSubmission(user.name, user.email, anabantoid);
-          const submissionId = await createSubmission(user.id, formData, true);
+          const submissionId = await backfillSubmission(user.id, formData, true);
 
           const { genus, species } = extractGenusAndSpecies(anabantoid.latin);
           submissionsToApprove.push({
@@ -604,7 +608,7 @@ async function generateTestData() {
 
         for (const livebearer of livebearerNames) {
           const formData = generateSpecialtyFishSubmission(user.name, user.email, livebearer);
-          const submissionId = await createSubmission(user.id, formData, true);
+          const submissionId = await backfillSubmission(user.id, formData, true);
 
           const { genus, species } = extractGenusAndSpecies(livebearer.latin);
           submissionsToApprove.push({
@@ -651,7 +655,7 @@ async function generateTestData() {
           // 70% chance of submission
           const shouldSubmit = Math.random() > 0.3;
 
-          const submissionId = await createSubmission(user.id, formData, shouldSubmit);
+          const submissionId = await backfillSubmission(user.id, formData, shouldSubmit);
 
           if (shouldSubmit) {
             const { genus, species } = extractGenusAndSpecies(
@@ -686,7 +690,7 @@ async function generateTestData() {
     for (const submission of submissionsToApprove) {
       try {
         // First witness the submission (required step)
-        await confirmWitness(submission.id, johnId);
+        await backfillWitness(submission.id, johnId);
         logger.info(`Witnessed submission ${submission.id}`);
 
         // 85% chance of approval after witnessing
@@ -705,7 +709,7 @@ async function generateTestData() {
           );
 
           // Now approve the submission with the correct species_name_id
-          await approveSubmission(
+          await backfillApproval(
             johnId, // John Allen approves everything
             submission.id,
             speciesNameId,
@@ -724,7 +728,7 @@ async function generateTestData() {
           // Create activity feed entry for submission approval (matching admin route behavior)
           const updatedSubmission = await getSubmissionById(submission.id);
           if (updatedSubmission) {
-            await createActivity(
+            await recordActivity(
               "submission_approved",
               submission.userId,
               updatedSubmission.id.toString(),

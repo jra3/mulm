@@ -5,7 +5,7 @@
  * scripts/steve-import.json (one record per submission to import).
  *
  * Each record runs the same path the app uses for a witnessed + approved entry:
- *   createSubmission -> confirmWitness -> recordName -> approveSubmission
+ *   backfillSubmission -> backfillWitness -> recordName -> backfillApproval
  *
  * Rows already in production (the 2025 "DAVID"-witnessed batch) were excluded
  * during enrichment, so this only imports the un-entered historical backlog.
@@ -18,7 +18,12 @@ moduleAlias.addAlias("@", path.join(__dirname, "..", "src"));
 
 import fs from "fs";
 import { init, query, writeConn } from "@/db/conn";
-import { createSubmission, approveSubmission, confirmWitness } from "@/db/submissions";
+import {
+  backfillApproval,
+  backfillQueued,
+  backfillSubmission,
+  backfillWitness,
+} from "./lib/backfill";
 import { recordName } from "@/db/species";
 import { checkAndUpdateMemberLevel, Program } from "@/levelManager";
 import { FormValues } from "@/forms/submission";
@@ -96,10 +101,11 @@ async function main() {
   for (const r of records) {
     try {
       // 1. Create + submit (status -> pending witness)
-      const submissionId = await createSubmission(member_id, r.form, true);
+      const submissionId = await backfillSubmission(member_id, r.form, true);
 
       // 2. Witness (status -> confirmed)
-      await confirmWitness(submissionId, r.witness_id);
+      await backfillWitness(submissionId, r.witness_id);
+      await backfillQueued(submissionId);
 
       // 3. Record/lookup species names -> ids (ON CONFLICT reuses existing group)
       const speciesIds = await recordName({
@@ -129,7 +135,7 @@ async function main() {
       }
 
       // 5. Approve (sets points, bonuses, approved_by/on)
-      await approveSubmission(APPROVER_ID, submissionId, speciesIds, {
+      await backfillApproval(APPROVER_ID, submissionId, speciesIds, {
         id: submissionId,
         group_id: speciesIds.group_id,
         points: r.approval.points,
@@ -152,7 +158,7 @@ async function main() {
     }
   }
 
-  // Recalculate stored member levels (approveSubmission at the DB layer doesn't,
+  // Recalculate stored member levels (a backfill writes rows and nothing else,
   // unlike the admin route). Emails disabled — this is a silent backfill.
   for (const program of ["fish", "plant", "coral"] as Program[]) {
     const res = await checkAndUpdateMemberLevel(member_id, program, { disableEmails: true });

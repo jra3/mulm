@@ -1,7 +1,7 @@
 import nodemailer from "nodemailer";
 import config from "@/config.json";
 import { type Submission } from "./db/submissions";
-import { getAdminEmails, MemberRecord } from "./db/members";
+import { MemberRecord } from "./db/members";
 import * as pug from "pug";
 import { logger } from "@/utils/logger";
 import { sendEmailWithRetry } from "./services/emailService";
@@ -25,21 +25,17 @@ const transporter = nodemailer.createTransport({
 
 const renderOnSubmission = pug.compileFile("src/views/email/onSubmission.pug");
 const renderOnScreeningApproved = pug.compileFile("src/views/email/onScreeningApproved.pug");
-const renderOnScreeningRejected = pug.compileFile("src/views/email/onScreeningRejected.pug");
 export async function onSubmissionSend(sub: Submission, member: MemberRecord) {
   if (EMAILS_DISABLED) {
     logger.info("Email disabled - would have sent submission confirmation", { submissionId: sub.id });
     return;
   }
 
-  const admins = await getAdminEmails();
-
   await sendEmailWithRetry(
     () =>
       transporter.sendMail({
         from: fromEmail,
         to: member.contact_email,
-        cc: admins,
         bcc: DEBUG_EMAIL,
         subject: `Submission Confirmation - ${sub.species_common_name}`,
         html: renderOnSubmission({
@@ -58,14 +54,11 @@ export async function sendChangesRequest(sub: Submission, contact_email: string,
     return;
   }
 
-  const admins = await getAdminEmails();
-
   await sendEmailWithRetry(
     () =>
       transporter.sendMail({
         from: fromEmail,
         to: contact_email,
-        cc: admins,
         bcc: DEBUG_EMAIL,
         subject: `Changes Requested - ${sub.species_common_name}`,
         text: content,
@@ -85,14 +78,11 @@ export async function onChangesRequested(
     return;
   }
 
-  const admins = await getAdminEmails();
-
   await sendEmailWithRetry(
     () =>
       transporter.sendMail({
         from: fromEmail,
         to: member.contact_email,
-        cc: admins,
         bcc: DEBUG_EMAIL,
         subject: `Changes Requested - ${submission.species_common_name}`,
         html: renderOnChangesRequested({
@@ -294,13 +284,17 @@ export async function onScreeningApproved(
   );
 }
 
-export async function onScreeningRejected(
-  submission: Submission,
-  member: MemberRecord,
-  reason: string
-) {
+const renderSpecialtyAward = pug.compileFile("src/views/email/onSpecialtyAward.pug");
+/**
+ * A Specialty Award is an achievement, not a row that quietly appears in a
+ * list. It is announced the same way a Level rise is.
+ */
+export async function onSpecialtyAward(member: MemberRecord, awardName: string) {
   if (EMAILS_DISABLED) {
-    logger.info("Email disabled - would have sent screening rejected", { submissionId: submission.id });
+    logger.info("Email disabled - would have sent specialty award", {
+      memberId: member.id,
+      awardName,
+    });
     return;
   }
 
@@ -310,15 +304,93 @@ export async function onScreeningRejected(
         from: fromEmail,
         to: member.contact_email,
         bcc: DEBUG_EMAIL,
-        subject: `Additional Information Needed - ${submission.species_common_name}`,
-        html: renderOnScreeningRejected({
+        subject: `Congratulations! You've earned the ${awardName}`,
+        html: renderSpecialtyAward({
           domain: config.server.domain,
-          submission,
           member,
-          reason,
+          awardName,
+        }),
+      }),
+    { type: "specialty_award", context: { memberId: member.id, awardName, recipient: member.contact_email } }
+  );
+}
+
+const renderSubmissionDeleted = pug.compileFile("src/views/email/onSubmissionDeleted.pug");
+/**
+ * Sent only when a committee member deleted work that was not their own, so a
+ * member's Submission does not simply vanish with no explanation.
+ */
+export async function onSubmissionDeleted(sub: Submission, member: MemberRecord) {
+  if (EMAILS_DISABLED) {
+    logger.info("Email disabled - would have sent submission deleted", { submissionId: sub.id });
+    return;
+  }
+
+  await sendEmailWithRetry(
+    () =>
+      transporter.sendMail({
+        from: fromEmail,
+        to: member.contact_email,
+        bcc: DEBUG_EMAIL,
+        subject: `Submission Removed - ${sub.species_common_name}`,
+        html: renderSubmissionDeleted({
+          domain: config.server.domain,
+          submission: sub,
+          member,
           programContactEmail: config.email.adminsEmail,
         }),
       }),
-    { type: "screening_rejected", context: { submissionId: submission.id, recipient: member.contact_email } }
+    { type: "submission_deleted", context: { submissionId: sub.id, recipient: member.contact_email } }
+  );
+}
+
+/** One Submission, as the digest lists it. */
+export type DigestItem = {
+  id: number;
+  memberName: string;
+  speciesCommonName: string;
+  speciesLatinName: string;
+  waitingSince: string | null;
+};
+
+/** One queue of one Program, as the digest lists it. */
+export type DigestSection = {
+  program: string;
+  programName: string;
+  queue: string;
+  title: string;
+  submissions: DigestItem[];
+};
+
+/** What is still waiting on the committee today. */
+export type CommitteeDigest = {
+  sections: DigestSection[];
+  total: number;
+};
+
+const renderCommitteeDigest = pug.compileFile("src/views/email/committeeDigest.pug");
+/**
+ * The committee's daily digest, replacing the cc on members' letters: a list of
+ * what is waiting on them, per Program, sent only while something is waiting.
+ */
+export async function onCommitteeDigest(recipients: string[], digest: CommitteeDigest) {
+  if (EMAILS_DISABLED) {
+    logger.info("Email disabled - would have sent committee digest", { items: digest.total });
+    return;
+  }
+
+  await sendEmailWithRetry(
+    () =>
+      transporter.sendMail({
+        from: fromEmail,
+        to: recipients,
+        bcc: DEBUG_EMAIL,
+        subject: `BAS Awards: ${digest.total} submission${digest.total === 1 ? "" : "s"} waiting on the committee`,
+        html: renderCommitteeDigest({
+          domain: config.server.domain,
+          digest,
+        }),
+      }),
+    { type: "committee_digest", context: { recipients: recipients.length, items: digest.total } }
   );
 }

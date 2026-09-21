@@ -29,7 +29,7 @@ mixin approvalQueueTable(submissions)
 					tr(class=rowClass)
 						td(class=stringCell)
 							if sub.statusInfo
-								- const icon = sub.statusInfo.status === 'draft' ? '📝' : sub.statusInfo.status === 'pending-witness' ? '👁️' : sub.statusInfo.status === 'waiting-period' ? '⏳' : sub.statusInfo.status === 'pending-approval' ? '🔵' : sub.statusInfo.status === 'approved' ? '✅' : sub.statusInfo.status === 'denied' ? '❌' : ''
+								- const icon = sub.statusInfo.icon
 								span(
 									class=`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${sub.statusInfo.bgColor} ${sub.statusInfo.color}`
 									title=sub.statusInfo.description

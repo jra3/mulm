@@ -4,12 +4,16 @@ moduleAlias.addAlias("@", path.join(__dirname, "..", "src"));
 
 import { init, query, writeConn, withTransaction } from "@/db/conn";
 import {
-  createSubmission,
-  approveSubmission,
-  confirmWitness,
+  getSubmissionById,
 } from "@/db/submissions";
 import { FormValues } from "@/forms/submission";
 import { recordName } from "@/db/species";
+import {
+  backfillApproval,
+  backfillQueued,
+  backfillSubmission,
+  backfillWitness,
+} from "./lib/backfill";
 import { logger } from "@/utils/logger";
 
 const MEMBER_ID = 14; // James Longo
@@ -400,7 +404,7 @@ async function importSubmissions() {
     const speciesName = parts.slice(1).join(" ");
 
     // 1. Create and submit
-    const submissionId = await createSubmission(MEMBER_ID, sub.form, true);
+    const submissionId = await backfillSubmission(MEMBER_ID, sub.form, true);
     logger.info(`Created submission ${submissionId}: ${sub.common_name}`);
 
     // 2. Clear reproduction_date if null (Blue Shrimp)
@@ -412,7 +416,8 @@ async function importSubmissions() {
     }
 
     // 3. Witness
-    await confirmWitness(submissionId, ADMIN_ID);
+    await backfillWitness(submissionId, ADMIN_ID);
+    await backfillQueued(submissionId);
     logger.info(`Witnessed submission ${submissionId}`);
 
     // 4. Record species name to get IDs
@@ -426,7 +431,7 @@ async function importSubmissions() {
     logger.info(`Recorded species: ${sub.latin_name} -> ${JSON.stringify(speciesIds)}`);
 
     // 5. Approve
-    await approveSubmission(ADMIN_ID, submissionId, speciesIds, {
+    await backfillApproval(ADMIN_ID, submissionId, speciesIds, {
       id: submissionId,
       points: sub.base_points,
       group_id: sub.group_id,

@@ -9,33 +9,19 @@ import {
   getGoogleAccountByMemberId,
 } from "@/db/members";
 import {
-  getOutstandingSubmissions,
-  getOutstandingSubmissionsCounts,
+  getQueue,
+  getQueueCounts,
   getSubmissionById,
-  updateSubmission,
   getSubmissionsByMember,
-  getWitnessQueue,
-  getWitnessQueueCounts,
-  getWaitingPeriodSubmissions,
-  confirmWitness,
-  declineWitness,
-  requestChanges,
-  type Submission,
+  getSubmissionSupplements,
 } from "@/db/submissions";
 import { approvalSchema } from "@/forms/approval";
 import { approvedEditSchema } from "@/forms/approvedEdit";
 import { inviteSchema } from "@/forms/member";
-import {
-  onSubmissionApprove,
-  onChangesRequested,
-  sendInviteEmail,
-  onScreeningApproved,
-  onScreeningRejected,
-} from "@/notifications";
-import { programs } from "@/programs";
+import { sendInviteEmail } from "@/notifications";
+import { getNextLevel, programMetadata, programs } from "@/programs";
 import { MulmRequest } from "@/sessions";
 import { Response, NextFunction } from "express";
-import { approveSubmission as approve } from "@/db/submissions";
 import { createAuthCode } from "@/db/auth";
 import { AuthCode, generateRandomCode } from "@/auth";
 import { validateFormResult } from "@/forms/utils";
@@ -43,10 +29,7 @@ import { validateSubmission } from "./submission";
 import {
   isLivestock,
   foodTypes,
-  getClassOptions,
   spawnLocations,
-  speciesTypes,
-  waterTypes,
   hasLighting,
   hasSupplements,
   hasFoods,
@@ -59,12 +42,12 @@ import {
   getGroupIdFromNameId,
 } from "@/db/species";
 import { getBodyParam, getBodyString, getQueryString } from "@/utils/request";
-import { checkAndUpdateMemberLevel, checkAllMemberLevels, Program } from "@/levelManager";
-import { checkAndGrantSpecialtyAwards, checkAllSpecialtyAwards } from "@/specialtyAwardManager";
-import { createActivity } from "@/db/activity";
+import { checkAllMemberLevels } from "@/levelManager";
+import { checkAllSpecialtyAwards } from "@/specialtyAwardManager";
 import { logger } from "@/utils/logger";
-import { getSubmissionStatus } from "@/utils/submissionStatus";
-import { ValidationError, AuthorizationError, StateError } from "@/utils/errors";
+import { getStatusPresentation } from "@/utils/statusBadge";
+import * as lifecycle from "@/lifecycle";
+import { sendLifecycleError } from "./lifecycleErrors";
 import {
   addNote,
   getNotesForSubmission,
@@ -93,7 +76,6 @@ export const viewMembers = async (req: MulmRequest, res: Response) => {
   const members = await getRosterWithPoints();
 
   // Import level utilities for member points HoverCards
-  const { getNextLevel, programMetadata } = await import("@/programs");
 
   res.render("admin/members", {
     title: "Member Roster",
@@ -101,35 +83,6 @@ export const viewMembers = async (req: MulmRequest, res: Response) => {
     getNextLevel,
     programMetadata,
   });
-};
-
-export const viewEditSubmission = async (req: MulmRequest, res: Response) => {
-  const submission = await validateSubmission(req, res);
-  if (!submission) {
-    return;
-  }
-  const submissionMember = await getMember(submission.member_id);
-
-  res.render("submit", {
-    title: `Edit Submission`,
-    subtitle: "Editing as admin",
-    submissionId: submission.id,
-    form: {
-      ...submission,
-      member_name: submissionMember?.display_name,
-      member_email: submissionMember?.contact_email,
-    },
-    errors: new Map(),
-    classOptions: getClassOptions(submission.species_type),
-    waterTypes,
-    speciesTypes,
-    foodTypes,
-    spawnLocations,
-    isLivestock: isLivestock(submission.species_type),
-    isAdmin: true,
-    editing: true,
-  });
-  return;
 };
 
 export const viewMemberUpdate = async (req: MulmRequest, res: Response) => {
@@ -142,7 +95,6 @@ export const viewMemberUpdate = async (req: MulmRequest, res: Response) => {
   const memberWithPoints = await getMemberWithPoints(id);
 
   // Import level utilities for member points HoverCards
-  const { getNextLevel, programMetadata } = await import("@/programs");
 
   // Render one table row for editing
   res.render("admin/editMember", {
@@ -162,7 +114,6 @@ export const viewMemberRow = async (req: MulmRequest, res: Response) => {
   const memberWithPoints = await getMemberWithPoints(id);
 
   // Import level utilities for member points HoverCards
-  const { getNextLevel, programMetadata } = await import("@/programs");
 
   res.render("admin/singleMemberRow", {
     member: memberWithPoints,
@@ -195,7 +146,6 @@ export const updateMemberFields = async (req: MulmRequest, res: Response) => {
   const memberWithPoints = await getMemberWithPoints(id);
 
   // Import level utilities for member points HoverCards
-  const { getNextLevel, programMetadata } = await import("@/programs");
 
   res.render("admin/singleMemberRow", {
     member: memberWithPoints,
@@ -212,15 +162,15 @@ export const showQueue = async (req: MulmRequest, res: Response) => {
   }
 
   const [submissions, programCounts, witnessCounts] = await Promise.all([
-    getOutstandingSubmissions(program),
-    getOutstandingSubmissionsCounts(),
-    getWitnessQueueCounts(),
+    getQueue("approval", program),
+    getQueueCounts("approval"),
+    getQueueCounts("witness"),
   ]);
 
   // Add status info to each submission
   const submissionsWithStatus = submissions.map((sub) => ({
     ...sub,
-    statusInfo: getSubmissionStatus(sub),
+    statusInfo: getStatusPresentation(sub),
   }));
 
   const subtitle = (() => {
@@ -253,14 +203,14 @@ export const showWitnessQueue = async (req: MulmRequest, res: Response) => {
   }
 
   const [submissions, programCounts] = await Promise.all([
-    getWitnessQueue(program),
-    getWitnessQueueCounts(),
+    getQueue("witness", program),
+    getQueueCounts("witness"),
   ]);
 
   // Add status info to each submission
   const submissionsWithStatus = submissions.map((sub) => ({
     ...sub,
-    statusInfo: getSubmissionStatus(sub),
+    statusInfo: getStatusPresentation(sub),
   }));
 
   const subtitle = (() => {
@@ -291,17 +241,20 @@ export const showWaitingPeriod = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const [submissions, programCounts, witnessCounts] = await Promise.all([
-    getWaitingPeriodSubmissions(program),
-    getOutstandingSubmissionsCounts(),
-    getWitnessQueueCounts(),
+  // Everything that has been screened but is not yet in the approval queue:
+  // the two states between the Witness and the queue. The approval queue
+  // itself is a different page, and no Submission can appear on both.
+  const [waiting, awaitingMeeting, programCounts, witnessCounts] = await Promise.all([
+    getQueue("waitingPeriod", program),
+    getQueue("awaitingFinalSubmission", program),
+    getQueueCounts("approval"),
+    getQueueCounts("witness"),
   ]);
 
-  // Import the waiting period utility to calculate status for each submission
-  const { getWaitingPeriodStatusBulk } = await import("@/utils/waitingPeriod");
-
-  // Add waiting period status to all submissions at once
-  const submissionsWithStatus = getWaitingPeriodStatusBulk(submissions);
+  const submissionsWithStatus = [...waiting, ...awaitingMeeting].map((sub) => ({
+    ...sub,
+    waitingStatus: lifecycle.waitingPeriod(sub),
+  }));
 
   const subtitle = (() => {
     switch (program) {
@@ -326,44 +279,28 @@ export const showWaitingPeriod = async (req: MulmRequest, res: Response) => {
 };
 
 export const sendRequestChanges = async (req: MulmRequest, res: Response) => {
-  try {
-    const submission = await validateSubmission(req, res);
-    if (!submission) {
-      res.status(400).send("Submission not found");
-      return;
-    }
-
-    const member = await getMember(submission.member_id);
-    if (!member) {
-      res.status(400).send("Member not found");
-      return;
-    }
-
-    const content = getBodyString(req, "content");
-    if (!content || content.trim().length === 0) {
-      res.status(400).send("Please describe what changes are needed");
-      return;
-    }
-
-    // Call database function (handles validation and state updates)
-    await Promise.all([
-      requestChanges(submission.id, req.viewer!.id, content),
-      onChangesRequested(submission, member, content),
-    ]);
-
-    // Redirect to approval queue for the submission's program
-    res.set("HX-Redirect", `/admin/queue/${submission.program}`).send();
-  } catch (error) {
-    // Handle validation errors from db.requestChanges
-    if (error instanceof Error) {
-      if (error.message.includes("Cannot request changes")) {
-        res.status(400).send(error.message);
-        return;
-      }
-    }
-    logger.error("Error sending request changes:", error);
-    res.status(500).send("Failed to request changes. Please try again.");
+  const submission = await validateSubmission(req, res);
+  if (!submission) {
+    return;
   }
+
+  try {
+    await lifecycle.requestChanges(
+      { id: req.viewer!.id, isAdmin: true },
+      submission.id,
+      getBodyString(req, "content")
+    );
+  } catch (err) {
+    if (sendLifecycleError(res, err, { submissionId: submission.id, adminId: req.viewer?.id })) {
+      return;
+    }
+    logger.error("Error sending request changes:", err);
+    res.status(500).send("Failed to request changes. Please try again.");
+    return;
+  }
+
+  // Redirect to approval queue for the submission's program
+  res.set("HX-Redirect", `/admin/queue/${submission.program}`).send();
 };
 
 export const requestChangesForm = async (req: MulmRequest, res: Response) => {
@@ -408,231 +345,24 @@ Substrate:
 };
 
 export const confirmWitnessAction = async (req: MulmRequest, res: Response) => {
-  try {
-    const submission = await validateSubmission(req, res);
-    if (!submission) {
-      logger.warn("Confirm witness action - submission not found", {
-        submissionId: req.params.id,
-        adminId: req.viewer?.id,
-      });
-      res.send("Submission not found");
-      return;
-    }
-
-    const [member, witness] = await Promise.all([
-      getMember(submission.member_id),
-      getMember(req.viewer!.id),
-    ]);
-
-    if (!member || !witness) {
-      logger.warn("Confirm witness action - member or witness not found", {
-        submissionId: submission.id,
-        adminId: req.viewer?.id,
-        memberFound: !!member,
-        witnessFound: !!witness,
-      });
-      res.send("Member or witness not found");
-      return;
-    }
-
-    logger.info("Processing witness confirmation from route", {
-      submissionId: submission.id,
-      adminId: req.viewer!.id,
-      speciesName: submission.species_common_name,
-    });
-
-    await Promise.all([
-      confirmWitness(submission.id, req.viewer!.id),
-      onScreeningApproved(submission, member, witness),
-    ]);
-
-    logger.info("Witness confirmation route completed successfully", {
-      submissionId: submission.id,
-      adminId: req.viewer!.id,
-      redirectTo: `/admin/witness-queue/${submission.program}`,
-    });
-
-    // Redirect to witness queue for the submission's program
-    res.set("HX-Redirect", `/admin/witness-queue/${submission.program}`).send();
-  } catch (err) {
-    const submissionId = req.params.id;
-    const adminId = req.viewer?.id;
-
-    // Log custom error types with detailed context
-    if (err instanceof ValidationError) {
-      logger.warn("Witness confirmation rejected - validation error", {
-        submissionId,
-        adminId,
-        errorCode: err.code,
-        errorMessage: err.message,
-        context: err.context,
-      });
-      res.send(err.message);
-    } else if (err instanceof AuthorizationError) {
-      logger.warn("Witness confirmation rejected - authorization error", {
-        submissionId,
-        adminId,
-        errorCode: err.code,
-        errorMessage: err.message,
-        context: err.context,
-      });
-      res.send(err.message);
-    } else if (err instanceof StateError) {
-      logger.warn("Witness confirmation rejected - state error", {
-        submissionId,
-        adminId,
-        errorCode: err.code,
-        errorMessage: err.message,
-        context: err.context,
-      });
-      res.send(err.message);
-    } else {
-      // Unexpected system errors
-      logger.error("Witness confirmation failed - unexpected error", {
-        submissionId,
-        adminId,
-        error: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-      res.send("An unexpected error occurred. Please try again.");
-    }
-  }
-};
-
-export const declineWitnessForm = async (req: MulmRequest, res: Response) => {
   const submission = await validateSubmission(req, res);
   if (!submission) {
-    res.send("Error: submission not found");
     return;
   }
 
-  const reproductionTerm =
-    submission.species_type === "Plant" || submission.species_type === "Coral"
-      ? "propagation"
-      : "spawn";
-  const offspringTerm = (() => {
-    switch (submission.species_type) {
-      case "Fish":
-        return "fry (and eggs if applicable)";
-      case "Plant":
-        return "plantlets";
-      case "Coral":
-        return "frags";
-      default:
-      case "Invert":
-        return "offspring";
-    }
-  })();
-
-  const contents = `
-Additional documentation is needed to verify this ${reproductionTerm}.
-
-• Please provide images or video links clearly showing the ${offspringTerm}.
-• Photos of the parents will also be helpful.
-`;
-
-  res.render("admin/declineWitness", {
-    submission,
-    contents,
-  });
-};
-
-export const declineWitnessAction = async (req: MulmRequest, res: Response) => {
   try {
-    const submission = await validateSubmission(req, res);
-    if (!submission) {
-      logger.warn("Decline witness action - submission not found", {
-        submissionId: req.params.id,
-        adminId: req.viewer?.id,
-      });
-      res.send("Submission not found");
-      return;
-    }
-
-    const member = await getMember(submission.member_id);
-    if (!member) {
-      logger.warn("Decline witness action - member not found", {
-        submissionId: submission.id,
-        adminId: req.viewer?.id,
-        memberId: submission.member_id,
-      });
-      res.send("Member not found");
-      return;
-    }
-
-    const reason = getBodyString(req, "reason");
-    if (!reason || reason.trim().length === 0) {
-      logger.warn("Decline witness action - missing reason", {
-        submissionId: submission.id,
-        adminId: req.viewer?.id,
-      });
-      res.send("Please provide a reason for requesting more documentation");
-      return;
-    }
-
-    logger.info("Processing witness decline from route", {
-      submissionId: submission.id,
-      adminId: req.viewer!.id,
-      speciesName: submission.species_common_name,
-      reasonLength: reason.length,
-    });
-
-    await Promise.all([
-      declineWitness(submission.id, req.viewer!.id),
-      onScreeningRejected(submission, member, reason),
-    ]);
-
-    logger.info("Witness decline route completed successfully", {
-      submissionId: submission.id,
-      adminId: req.viewer!.id,
-      redirectTo: `/admin/witness-queue/${submission.program}`,
-    });
-
-    // Redirect to witness queue for the submission's program
-    res.set("HX-Redirect", `/admin/witness-queue/${submission.program}`).send();
+    await lifecycle.confirmWitness({ id: req.viewer!.id, isAdmin: true }, submission.id);
   } catch (err) {
-    const submissionId = req.params.id;
-    const adminId = req.viewer?.id;
-
-    // Log custom error types with detailed context
-    if (err instanceof ValidationError) {
-      logger.warn("Witness decline rejected - validation error", {
-        submissionId,
-        adminId,
-        errorCode: err.code,
-        errorMessage: err.message,
-        context: err.context,
-      });
-      res.send(err.message);
-    } else if (err instanceof AuthorizationError) {
-      logger.warn("Witness decline rejected - authorization error", {
-        submissionId,
-        adminId,
-        errorCode: err.code,
-        errorMessage: err.message,
-        context: err.context,
-      });
-      res.send(err.message);
-    } else if (err instanceof StateError) {
-      logger.warn("Witness decline rejected - state error", {
-        submissionId,
-        adminId,
-        errorCode: err.code,
-        errorMessage: err.message,
-        context: err.context,
-      });
-      res.send(err.message);
-    } else {
-      // Unexpected system errors
-      logger.error("Witness decline failed - unexpected error", {
-        submissionId,
-        adminId,
-        error: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-      res.send("Failed to send request. Please try again.");
+    if (sendLifecycleError(res, err, { submissionId: submission.id, adminId: req.viewer?.id })) {
+      return;
     }
+    logger.error("Witness confirmation failed - unexpected error", err);
+    res.status(500).send("An unexpected error occurred. Please try again.");
+    return;
   }
+
+  // Redirect to witness queue for the submission's program
+  res.set("HX-Redirect", `/admin/witness-queue/${submission.program}`).send();
 };
 
 export const inviteMember = async (req: MulmRequest, res: Response) => {
@@ -816,41 +546,16 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
     submission.species_latin_name
   );
 
-  await approve(viewer!.id, id, speciesIds, updates);
-  const member = await getMember(submission.member_id);
-  if (member) {
-    // member should always exist...
-    // Get the updated submission with points included
-    const updatedSubmission = await getSubmissionById(id);
-    if (updatedSubmission) {
-      await onSubmissionApprove(updatedSubmission, member);
-
-      // Create activity feed entry for submission approval
-      try {
-        await createActivity("submission_approved", member.id, updatedSubmission.id.toString(), {
-          species_common_name: updatedSubmission.species_common_name,
-          species_type: updatedSubmission.species_type,
-          points: updatedSubmission.points || 0,
-          first_time_species: Boolean(updatedSubmission.first_time_species),
-          article_points: updatedSubmission.article_points || undefined,
-        });
-      } catch (error) {
-        logger.error("Error creating activity feed entry", error);
-      }
-
-      // Check for level upgrades after approval
-      if (updatedSubmission.program) {
-        try {
-          await checkAndUpdateMemberLevel(member.id, updatedSubmission.program as Program);
-
-          // Check for specialty awards after approval
-          await checkAndGrantSpecialtyAwards(member.id);
-        } catch (error) {
-          // Log error but don't fail the approval process
-          logger.error("Error checking level upgrade and specialty awards", error);
-        }
-      }
+  // Approving is the only way Points are ever awarded. Everything that follows
+  // from it - the member's email, the feed entry, the Level and Specialty
+  // Award recompute - hangs off the transition, not off this handler.
+  try {
+    await lifecycle.approve({ id: viewer!.id, isAdmin: true }, id, speciesIds, updates);
+  } catch (err) {
+    if (sendLifecycleError(res, err, { submissionId: id, adminId: viewer?.id })) {
+      return;
     }
+    throw err;
   }
 
   // Redirect to approval queue for the submission's program
@@ -1129,7 +834,6 @@ export const editApprovedSubmissionForm = async (req: MulmRequest, res: Response
   }
 
   // Fetch supplements from normalized table
-  const { getSubmissionSupplements } = await import("@/db/submissions");
   const supplements = await getSubmissionSupplements(submission.id);
   const supplement_type = supplements.map((s) => s.supplement_type).join(", ");
   const supplement_regimen = supplements.map((s) => s.supplement_regimen).join(", ");
@@ -1235,71 +939,6 @@ export const saveApprovedSubmissionEdits = async (req: MulmRequest, res: Respons
     updatesForDb.spawn_locations = JSON.stringify(updates.spawn_locations || []);
   }
 
-  // Calculate what changed
-  interface Change {
-    field: string;
-    old: unknown;
-    new: unknown;
-  }
-
-  const changes: Change[] = [];
-  for (const [field, newValue] of Object.entries(updates)) {
-    if (newValue === undefined) continue;
-
-    const oldValue = submission[field as keyof Submission];
-
-    // Normalize values for comparison (treat empty string, null, undefined, empty arrays as equivalent)
-    const normalizeValue = (val: unknown): string | number | boolean | null => {
-      if (val === "" || val === null || val === undefined) return null;
-      if (val === "[]") return null; // Empty JSON array
-      if (typeof val === "number") return val;
-      if (typeof val === "boolean") return val;
-      if (typeof val === "string") return val;
-      return JSON.stringify(val);
-    };
-
-    const normalizedOld = normalizeValue(oldValue);
-    const normalizedNew = normalizeValue(newValue);
-
-    // Special handling for booleans (checkbox fields)
-    const booleanFields = [
-      "first_time_species",
-      "cares_species",
-      "flowered",
-      "sexual_reproduction",
-    ];
-    if (booleanFields.includes(field)) {
-      // newValue is already a boolean from Zod transform
-      const oldBool = Boolean(oldValue);
-      const newBool = typeof newValue === "boolean" ? newValue : Boolean(Number(newValue));
-      if (oldBool !== newBool) {
-        changes.push({ field, old: oldBool, new: newBool });
-      }
-    } else if (normalizedOld !== normalizedNew) {
-      // Only record if there's a meaningful change
-      changes.push({ field, old: oldValue, new: newValue });
-    }
-  }
-
-  if (changes.length === 0) {
-    logger.warn("No changes detected", { updates, submission });
-    res.status(400).send("No changes detected");
-    return;
-  }
-
-  logger.info("Changes detected", { changes });
-
-  // Check for point-related changes
-  const pointFields = [
-    "points",
-    "article_points",
-    "first_time_species",
-    "cares_species",
-    "flowered",
-    "sexual_reproduction",
-  ];
-  const pointsChanged = changes.some((c) => pointFields.includes(c.field));
-
   // If species group changed, update name IDs
   if (groupId && groupId !== submission.common_name_id) {
     const speciesIds = await ensureNameIdsForGroupId(
@@ -1312,75 +951,29 @@ export const saveApprovedSubmissionEdits = async (req: MulmRequest, res: Respons
   }
 
   try {
-    // Save changes to database
-    await updateSubmission(submission.id, updatesForDb);
-
-    // Create changelog entry in submission_notes
-    const changelog = {
-      type: "admin_edit",
+    // Correcting an Approved Submission is the only movement out of Approved.
+    // The changelog, the feed entry updated in place rather than appended, and
+    // the symmetric Level and Specialty Award recompute all hang off the move.
+    const changes = await lifecycle.correctPoints(
+      { id: viewer!.id, isAdmin: true },
+      submission.id,
+      updatesForDb,
+      reason
+    );
+    logger.info(`Approved submission ${submission.id} corrected by admin ${viewer!.id}`, {
       changes,
-      reason,
-      timestamp: new Date().toISOString(),
-      admin_id: viewer!.id,
-      admin_name: viewer!.display_name,
-    };
-
-    await addNote(submission.id, viewer!.id, JSON.stringify(changelog));
-
-    logger.info(`Approved submission ${submission.id} edited by admin ${viewer!.id}`, { changes });
-
-    // Post-save side effects
-    const member = await getMember(submission.member_id);
-    if (!member) {
-      res.status(500).send("Member not found");
+    });
+  } catch (err) {
+    if (sendLifecycleError(res, err, { submissionId: submission.id, adminId: viewer?.id })) {
       return;
     }
-
-    // If points changed, recalculate member levels
-    if (pointsChanged && submission.program) {
-      try {
-        await checkAndUpdateMemberLevel(member.id, submission.program as Program);
-        await checkAndGrantSpecialtyAwards(member.id);
-        logger.info(`Recalculated levels for member ${member.id} after point edit`);
-      } catch (error) {
-        logger.error("Error recalculating member levels after edit", error);
-      }
-    }
-
-    // Create activity feed entry for significant changes
-    const significantFields = [
-      "points",
-      "article_points",
-      "species_common_name",
-      "species_latin_name",
-    ];
-    if (changes.some((c) => significantFields.includes(c.field))) {
-      try {
-        await createActivity("submission_approved", member.id, submission.id.toString(), {
-          species_common_name: submission.species_common_name,
-          species_type: submission.species_type,
-          points: updates.points !== undefined ? updates.points : submission.points || 0,
-          first_time_species: Boolean(
-            updates.first_time_species !== undefined
-              ? updates.first_time_species
-              : submission.first_time_species
-          ),
-          article_points:
-            updates.article_points !== undefined
-              ? updates.article_points
-              : submission.article_points || undefined,
-        });
-      } catch (error) {
-        logger.error("Error creating activity feed entry after edit", error);
-      }
-    }
-
-    // Redirect back to submission page
-    res.set("HX-Redirect", `/submissions/${submission.id}`).send();
-  } catch (error) {
-    logger.error("Error saving approved submission edits", error);
+    logger.error("Error saving approved submission edits", err);
     res.status(500).send("Failed to save changes. Please try again.");
+    return;
   }
+
+  // Redirect back to submission page
+  res.set("HX-Redirect", `/submissions/${submission.id}`).send();
 };
 
 /**

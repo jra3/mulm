@@ -1,9 +1,7 @@
-import { ApprovalFormValues } from "@/forms/approval";
 import { FormValues } from "@/forms/submission";
 import { writeConn, query, withTransaction } from "./conn";
 import { logger } from "@/utils/logger";
-import { ValidationError, AuthorizationError, StateError } from "@/utils/errors";
-import { filterEligibleSubmissions, isEligibleForApproval } from "@/utils/waitingPeriod";
+import { filterQueue, queueSql, type QueueName } from "@/lifecycle/queues";
 import { totalPointsSql } from "@/points";
 import type { Database } from "sqlite";
 
@@ -87,8 +85,23 @@ export type Submission = {
 
   witnessed_by: number | null;
   witnessed_on: string | null;
+  /**
+   * `declined` is DEAD. Declining a Witness emailed the member and left the
+   * Submission where nothing could move it out; it is deleted, and a committee
+   * member who wants more requests changes instead. The value stays in the
+   * union because production rows may still carry it - `deriveState` reads
+   * those as awaiting a Witness, which makes them actionable again. Nothing
+   * writes it.
+   */
   witness_verification_status: "pending" | "confirmed" | "declined";
 
+  /**
+   * DEAD COLUMNS. The Denied state is deleted: zero denials were ever recorded,
+   * the 2009 manual contains no denial language, and requesting changes is the
+   * refusal path. Nothing reads or writes these three; they are kept rather
+   * than dropped so this change needs no migration, and are candidates for a
+   * later one.
+   */
   denied_on: string | null;
   denied_by: number | null;
   denied_reason: string | null;
@@ -103,7 +116,21 @@ export type Submission = {
   is_cares_species?: number | null;
 };
 
-export function formToDB(memberId: number, form: FormValues, submit: boolean) {
+/** A Submission as a queue listing shows it, with the joins those pages read. */
+export type QueueSubmission = Submission & {
+  witnessed_by_name?: string | null;
+};
+
+/**
+ * The form-to-database mapper: a Submission's *contents*, as columns.
+ *
+ * It maps the form and nothing else. `submitted_on` and
+ * `witness_verification_status` are lifecycle columns and are set by the
+ * transition that earns them - stamping the Witness `pending` here on every
+ * non-draft save is what silently discarded a committee member's confirmed
+ * inspection.
+ */
+export function formToRow(memberId: number, form: FormValues): SubmissionRow {
   const program = (() => {
     switch (form.species_type) {
       case "Fish":
@@ -131,67 +158,46 @@ export function formToDB(memberId: number, form: FormValues, submit: boolean) {
   return {
     member_id: memberId,
     program,
-    submitted_on: submit ? new Date().toISOString() : undefined,
-    witness_verification_status: submit ? ("pending" as const) : undefined,
     ...form,
     member_name: undefined,
     member_email: undefined,
     foods: arrayToJSON(form.foods),
     spawn_locations: arrayToJSON(form.spawn_locations),
-    // Note: images and supplements are handled separately via normalized tables
+    // Images and supplements live in their own normalized tables.
     images: undefined,
     supplement_type: undefined,
     supplement_regimen: undefined,
   };
 }
 
-export async function createSubmission(memberId: number, form: FormValues, submit: boolean) {
+/** The columns a write may set. Mapped values, already validated. */
+export type SubmissionRow = Record<string, unknown>;
+
+/**
+ * Insert a Submission row and its supplements. Takes mapped values; deciding
+ * what a new Submission's lifecycle columns should be is the module's job.
+ */
+export async function createSubmissionRow(
+  row: SubmissionRow,
+  supplements: Array<{ type: string; regimen: string }> = []
+): Promise<number> {
   try {
     return await withTransaction(async (db) => {
-      // Prepare submission data (supplements handled separately)
-      const entries = formToDB(memberId, form, submit);
-
-      // Extract supplements for normalized table
-      const supplementTypes = form.supplement_type;
-      const supplementRegimens = form.supplement_regimen;
-
-      const fields = [];
-      const values = [];
-      const marks = [];
-      for (const [field, value] of Object.entries(entries)) {
-        if (value === undefined) {
-          continue;
-        }
-        fields.push(field);
-        values.push(value);
-        marks.push("?");
-      }
+      const entries = Object.entries(row).filter(([, value]) => value !== undefined);
 
       const stmt = await db.prepare(`
         INSERT INTO submissions
-        (${fields.join(", ")})
+        (${entries.map(([field]) => field).join(", ")})
         VALUES
-        (${marks.join(", ")})`);
+        (${entries.map(() => "?").join(", ")})`);
 
-      const result = await stmt.run(values);
+      const result = await stmt.run(entries.map(([, value]) => value));
       await stmt.finalize();
 
       const submissionId = result.lastID as number;
 
-      // Save supplements to normalized table
-      if (Array.isArray(supplementTypes) && Array.isArray(supplementRegimens)) {
-        const supplements = [];
-        const maxLength = Math.max(supplementTypes.length, supplementRegimens.length);
-        for (let i = 0; i < maxLength; i++) {
-          const type = supplementTypes[i] || "";
-          const regimen = supplementRegimens[i] || "";
-          if (type || regimen) {
-            supplements.push({ type, regimen });
-          }
-        }
-        if (supplements.length > 0) {
-          await setSubmissionSupplements(submissionId, supplements, db);
-        }
+      if (supplements.length > 0) {
+        await setSubmissionSupplements(submissionId, supplements, db);
       }
 
       return submissionId;
@@ -248,76 +254,29 @@ export async function getSubmissionById(id: number) {
   return result.pop();
 }
 
-export async function deleteSubmission(id: number) {
-  try {
-    const conn = writeConn;
-    const deleteRow = await conn.prepare("DELETE FROM submissions WHERE id = ?");
-    try {
-      return deleteRow.run(id);
-    } finally {
-      await deleteRow.finalize();
-    }
-  } catch (err) {
-    logger.error("Failed to delete submission", err);
-    throw new Error("Failed to delete submission");
-  }
-}
-
 /**
- * Delete a submission with permission validation
- * @param submissionId - ID of submission to delete
- * @param userId - ID of user attempting deletion
- * @param isAdmin - Whether user is an admin
- * @throws Error if not authorized or submission not found
+ * Delete a Submission and its child rows.
+ *
+ * Every foreign key in this schema is unenforced in production - the pragma is
+ * set only in tests - so `ON DELETE CASCADE` is decorative and the children go
+ * explicitly. Authorization is not this function's business: the lifecycle
+ * module decides who may delete what.
  */
-export async function deleteSubmissionWithAuth(
-  submissionId: number,
-  userId: number,
-  isAdmin: boolean
-): Promise<void> {
+export async function deleteSubmissionRow(db: Database, id: number) {
+  for (const table of ["submission_images", "submission_supplements", "submission_notes"]) {
+    const child = await db.prepare(`DELETE FROM ${table} WHERE submission_id = ?`);
+    try {
+      await child.run(id);
+    } finally {
+      await child.finalize();
+    }
+  }
+
+  const deleteRow = await db.prepare("DELETE FROM submissions WHERE id = ?");
   try {
-    return await withTransaction(async (db) => {
-      // Get current submission
-      const stmt = await db.prepare(`
-        SELECT id, member_id, approved_on
-        FROM submissions WHERE id = ?`);
-      const current: Submission[] = await stmt.all(submissionId);
-      await stmt.finalize();
-
-      if (!current[0]) {
-        throw new Error("Submission not found");
-      }
-
-      const submission = current[0];
-
-      // Admin can delete anything
-      if (isAdmin) {
-        const deleteStmt = await db.prepare("DELETE FROM submissions WHERE id = ?");
-        await deleteStmt.run(submissionId);
-        await deleteStmt.finalize();
-        logger.info(`Admin ${userId} deleted submission ${submissionId}`);
-        return;
-      }
-
-      // Non-admin: must be owner
-      if (submission.member_id !== userId) {
-        throw new Error("Cannot delete another member's submission");
-      }
-
-      // Owner can only delete unapproved submissions
-      if (submission.approved_on) {
-        throw new Error("Cannot delete approved submissions");
-      }
-
-      // Delete allowed
-      const deleteStmt = await db.prepare("DELETE FROM submissions WHERE id = ?");
-      await deleteStmt.run(submissionId);
-      await deleteStmt.finalize();
-      logger.info(`Member ${userId} deleted their submission ${submissionId}`);
-    });
-  } catch (err) {
-    logger.error("Failed to delete submission with auth", err);
-    throw err;
+    return await deleteRow.run(id);
+  } finally {
+    await deleteRow.finalize();
   }
 }
 
@@ -338,55 +297,20 @@ export function getApprovedSubmissionsInDateRange(startDate: Date, endDate: Date
   );
 }
 
-export async function getOutstandingSubmissions(program: string) {
-  const allWitnessed = await query<Submission>(
+/**
+ * The rows of one queue, for one Program.
+ *
+ * The membership rule is not written here: `queueSql` states the half a query
+ * can express and `filterQueue` applies the per-species waiting period the SQL
+ * cannot. This used to be six near-identical predicates, and one of them was
+ * missing a condition.
+ */
+export async function getQueue(queue: QueueName, program: string) {
+  const rows = await query<QueueSubmission>(
     `
 		SELECT
 			submissions.*,
 			${totalPointsSql("submissions")} as total_points,
-			members.display_name as member_name,
-			sng.is_cares_species
-		FROM submissions
-		JOIN members ON submissions.member_id == members.id
-		LEFT JOIN species_common_name cn ON submissions.common_name_id = cn.common_name_id
-		LEFT JOIN species_scientific_name scin ON submissions.scientific_name_id = scin.scientific_name_id
-		LEFT JOIN species_name_group sng ON (cn.group_id = sng.group_id OR scin.group_id = sng.group_id)
-		WHERE submitted_on IS NOT NULL
-		AND approved_on IS NULL
-		AND witness_verification_status = 'confirmed'
-		AND final_submission_on IS NOT NULL
-		AND program = ?`,
-    [program]
-  );
-
-  return filterEligibleSubmissions(allWitnessed);
-}
-
-export function getWitnessQueue(program: string) {
-  return query<Submission>(
-    `
-		SELECT
-			submissions.*,
-			members.display_name as member_name,
-			sng.is_cares_species
-		FROM submissions
-		JOIN members ON submissions.member_id == members.id
-		LEFT JOIN species_common_name cn ON submissions.common_name_id = cn.common_name_id
-		LEFT JOIN species_scientific_name scin ON submissions.scientific_name_id = scin.scientific_name_id
-		LEFT JOIN species_name_group sng ON (cn.group_id = sng.group_id OR scin.group_id = sng.group_id)
-		WHERE submitted_on IS NOT NULL
-		AND witness_verification_status = 'pending'
-		AND program = ?
-		ORDER BY submitted_on ASC`,
-    [program]
-  );
-}
-
-export function getWaitingPeriodSubmissions(program: string) {
-  return query<Submission>(
-    `
-		SELECT
-			submissions.*,
 			members.display_name as member_name,
 			witnessed_members.display_name as witnessed_by_name,
 			sng.is_cares_species
@@ -396,196 +320,33 @@ export function getWaitingPeriodSubmissions(program: string) {
 		LEFT JOIN species_common_name cn ON submissions.common_name_id = cn.common_name_id
 		LEFT JOIN species_scientific_name scin ON submissions.scientific_name_id = scin.scientific_name_id
 		LEFT JOIN species_name_group sng ON (cn.group_id = sng.group_id OR scin.group_id = sng.group_id)
-		WHERE submitted_on IS NOT NULL
-		AND witness_verification_status = 'confirmed'
-		AND approved_on IS NULL
+		WHERE ${queueSql(queue)}
 		AND program = ?
-		ORDER BY witnessed_on ASC`,
+		ORDER BY submissions.submitted_on ASC`,
     [program]
   );
+
+  return filterQueue(queue, rows);
 }
 
-export async function getOutstandingSubmissionsCounts() {
-  const rows = await query<{ count: number; program: string }>(`
-		SELECT COUNT(1) as count, program
+/** How many Submissions each Program has in `queue`. */
+export async function getQueueCounts(queue: QueueName): Promise<Record<string, number>> {
+  const rows = await query<QueueSubmission>(
+    `
+		SELECT submissions.*, members.display_name as member_name
 		FROM submissions JOIN members
 		ON submissions.member_id == members.id
-		WHERE submitted_on IS NOT NULL
-		AND approved_on IS NULL
-		AND witness_verification_status = 'confirmed'
-		AND final_submission_on IS NOT NULL
-		GROUP BY program`);
-  return Object.fromEntries(rows.map((row) => [row.program, row.count]));
-}
-
-export async function getWitnessQueueCounts() {
-  const rows = await query<{ count: number; program: string }>(`
-		SELECT COUNT(1) as count, program
-		FROM submissions JOIN members
-		ON submissions.member_id == members.id
-		WHERE submitted_on IS NOT NULL
-		AND witness_verification_status = 'pending'
-		GROUP BY program`);
-  return Object.fromEntries(rows.map((row) => [row.program, row.count]));
-}
-
-/**
- * Mark a submission as brought to a meeting and ready for the approval queue.
- *
- * Allowed when the caller is the submission owner or an admin, the submission
- * has been screened (witness confirmed), the waiting period has elapsed, and
- * the submission is not already approved or denied.
- */
-export async function setFinalSubmission(
-  submissionId: number,
-  userId: number,
-  isAdmin: boolean
-): Promise<void> {
-  return await withTransaction(async (db) => {
-    const stmt = await db.prepare(`
-        SELECT id, member_id, submitted_on, witness_verification_status,
-               approved_on, denied_on, final_submission_on, reproduction_date,
-               species_type, species_class
-        FROM submissions WHERE id = ?`);
-    const current: Submission[] = await stmt.all(submissionId);
-    await stmt.finalize();
-
-    if (!current[0]) {
-      throw new ValidationError("Submission not found", "submissionId", submissionId);
-    }
-
-    const submission = current[0];
-
-    if (!isAdmin && submission.member_id !== userId) {
-      throw new AuthorizationError(
-        "Cannot modify another member's submission",
-        userId,
-        "set_final_submission"
-      );
-    }
-
-    if (!submission.submitted_on) {
-      throw new StateError("Submission is still a draft", "submitted", "draft");
-    }
-    if (submission.approved_on) {
-      throw new StateError("Submission already approved", "unapproved", "approved");
-    }
-    if (submission.denied_on) {
-      throw new StateError("Submission was denied", "unapproved", "denied");
-    }
-    if (submission.witness_verification_status !== "confirmed") {
-      throw new StateError(
-        "Submission has not been screened",
-        "confirmed",
-        submission.witness_verification_status
-      );
-    }
-    if (!isEligibleForApproval(submission)) {
-      throw new StateError(
-        "Waiting period has not elapsed",
-        "past_waiting_period",
-        "in_waiting_period"
-      );
-    }
-
-    if (submission.final_submission_on) {
-      return;
-    }
-
-    const updateStmt = await db.prepare(`
-        UPDATE submissions SET final_submission_on = ?
-        WHERE id = ? AND final_submission_on IS NULL AND approved_on IS NULL`);
-    const result = await updateStmt.run(new Date().toISOString(), submissionId);
-    await updateStmt.finalize();
-
-    if (result.changes === 0) {
-      throw new StateError("Submission state changed during operation", "queueable", "unknown");
-    }
-
-    logger.info("Submission queued for approval", { submissionId, userId, isAdmin });
-  });
-}
-
-/**
- * Undo a final submission so the submission leaves the approval queue.
- * Allowed for owner or admin while the submission is unapproved.
- */
-export async function clearFinalSubmission(
-  submissionId: number,
-  userId: number,
-  isAdmin: boolean
-): Promise<void> {
-  return await withTransaction(async (db) => {
-    const stmt = await db.prepare(`
-        SELECT id, member_id, approved_on, denied_on, final_submission_on
-        FROM submissions WHERE id = ?`);
-    const current: Submission[] = await stmt.all(submissionId);
-    await stmt.finalize();
-
-    if (!current[0]) {
-      throw new ValidationError("Submission not found", "submissionId", submissionId);
-    }
-
-    const submission = current[0];
-
-    if (!isAdmin && submission.member_id !== userId) {
-      throw new AuthorizationError(
-        "Cannot modify another member's submission",
-        userId,
-        "clear_final_submission"
-      );
-    }
-
-    if (submission.approved_on) {
-      throw new StateError("Submission already approved", "unapproved", "approved");
-    }
-
-    if (!submission.final_submission_on) {
-      return;
-    }
-
-    const updateStmt = await db.prepare(`
-        UPDATE submissions SET final_submission_on = NULL
-        WHERE id = ? AND approved_on IS NULL`);
-    const result = await updateStmt.run(submissionId);
-    await updateStmt.finalize();
-
-    if (result.changes === 0) {
-      throw new StateError("Submission state changed during operation", "queued", "unknown");
-    }
-
-    logger.info("Submission removed from approval queue", { submissionId, userId, isAdmin });
-  });
-}
-
-export interface FinalReminderCandidate extends Submission {
-  contact_email: string;
-  member_name: string;
-}
-
-/**
- * Submissions ready for the "waiting period complete" reminder: witnessed and
- * confirmed, past their waiting period, not yet final-submitted, not approved
- * or denied, and not already reminded. Joined with the member's contact info.
- *
- * The waiting-period length depends on species, so the SQL filters the simple
- * boolean conditions and the per-species elapsed check is applied in JS via the
- * shared `isEligibleForApproval` helper.
- */
-export async function getSubmissionsAwaitingFinalReminder(): Promise<FinalReminderCandidate[]> {
-  const candidates = await query<FinalReminderCandidate>(
-    `SELECT submissions.*, members.contact_email, members.display_name AS member_name
-       FROM submissions
-       LEFT JOIN members ON submissions.member_id = members.id
-      WHERE submissions.submitted_on IS NOT NULL
-        AND submissions.approved_on IS NULL
-        AND submissions.denied_on IS NULL
-        AND submissions.witness_verification_status = 'confirmed'
-        AND submissions.final_submission_on IS NULL
-        AND submissions.final_submission_reminder_sent_on IS NULL`
+		WHERE ${queueSql(queue)}`
   );
-  return candidates.filter((submission) => isEligibleForApproval(submission));
+
+  const counts: Record<string, number> = {};
+  for (const row of filterQueue(queue, rows)) {
+    counts[row.program] = (counts[row.program] ?? 0) + 1;
+  }
+  return counts;
 }
+
+
 
 /**
  * Idempotently record that the final-submission reminder has been emailed.
@@ -603,262 +364,7 @@ export async function markFinalSubmissionReminderSent(submissionId: number): Pro
   }
 }
 
-export async function confirmWitness(submissionId: number, witnessAdminId: number) {
-  const startTime = Date.now();
 
-  try {
-    logger.info("Starting witness confirmation", {
-      submissionId,
-      witnessAdminId,
-      timestamp: new Date().toISOString(),
-    });
-
-    return await withTransaction(async (db) => {
-      // Check current state and prevent self-witnessing - use transaction db
-      const stmt = await db.prepare(`
-				SELECT id, member_id, witness_verification_status, species_common_name
-				FROM submissions WHERE id = ?`);
-      const current: Submission[] = await stmt.all(submissionId);
-      await stmt.finalize();
-
-      // Validate submission exists
-      if (!current[0]) {
-        throw new ValidationError("Submission not found", "submissionId", submissionId);
-      }
-
-      const submission = current[0];
-
-      // Validate authorization - prevent self-witnessing
-      if (submission.member_id === witnessAdminId) {
-        throw new AuthorizationError(
-          "Cannot witness your own submission",
-          witnessAdminId,
-          "confirm_witness"
-        );
-      }
-
-      // Validate state - must be pending
-      if (submission.witness_verification_status !== "pending") {
-        throw new StateError(
-          "Submission not in pending witness state",
-          "pending",
-          submission.witness_verification_status
-        );
-      }
-
-      // Perform update
-      const updateStmt = await db.prepare(`
-				UPDATE submissions SET
-					witnessed_by = ?,
-					witnessed_on = ?,
-					witness_verification_status = 'confirmed'
-				WHERE id = ? AND witness_verification_status = 'pending'`);
-
-      const result = await updateStmt.run(witnessAdminId, new Date().toISOString(), submissionId);
-      await updateStmt.finalize();
-
-      // Verify update succeeded (race condition check)
-      if (result.changes === 0) {
-        throw new StateError("Submission state changed during operation", "pending", "unknown");
-      }
-
-      const duration = Date.now() - startTime;
-      logger.info("Witness confirmation successful", {
-        submissionId,
-        witnessAdminId,
-        speciesName: submission.species_common_name,
-        duration: `${duration}ms`,
-      });
-    });
-  } catch (err) {
-    const duration = Date.now() - startTime;
-
-    // Handle custom errors with appropriate logging
-    if (
-      err instanceof ValidationError ||
-      err instanceof AuthorizationError ||
-      err instanceof StateError
-    ) {
-      logger.warn("Witness confirmation failed - business rule violation", {
-        submissionId,
-        witnessAdminId,
-        errorType: err.name,
-        errorCode: err.code,
-        errorMessage: err.message,
-        context: err.context,
-        duration: `${duration}ms`,
-      });
-    } else {
-      // System/unexpected errors
-      logger.error("Witness confirmation failed - system error", {
-        submissionId,
-        witnessAdminId,
-        error: err instanceof Error ? err.message : String(err),
-        duration: `${duration}ms`,
-      });
-    }
-
-    throw err;
-  }
-}
-
-export async function declineWitness(submissionId: number, witnessAdminId: number) {
-  const startTime = Date.now();
-
-  try {
-    logger.info("Starting witness decline", {
-      submissionId,
-      witnessAdminId,
-      timestamp: new Date().toISOString(),
-    });
-
-    return await withTransaction(async (db) => {
-      // Check current state and prevent self-witnessing - use transaction db
-      const stmt = await db.prepare(`
-				SELECT id, member_id, witness_verification_status, species_common_name
-				FROM submissions WHERE id = ?`);
-      const current: Submission[] = await stmt.all(submissionId);
-      await stmt.finalize();
-
-      // Validate submission exists
-      if (!current[0]) {
-        throw new ValidationError("Submission not found", "submissionId", submissionId);
-      }
-
-      const submission = current[0];
-
-      // Validate authorization - prevent self-witnessing
-      if (submission.member_id === witnessAdminId) {
-        throw new AuthorizationError(
-          "Cannot witness your own submission",
-          witnessAdminId,
-          "decline_witness"
-        );
-      }
-
-      // Validate state - must be pending
-      if (submission.witness_verification_status !== "pending") {
-        throw new StateError(
-          "Submission not in pending witness state",
-          "pending",
-          submission.witness_verification_status
-        );
-      }
-
-      // Perform update
-      const updateStmt = await db.prepare(`
-				UPDATE submissions SET
-					witnessed_by = ?,
-					witnessed_on = ?,
-					witness_verification_status = 'declined'
-				WHERE id = ? AND witness_verification_status = 'pending'`);
-
-      const result = await updateStmt.run(witnessAdminId, new Date().toISOString(), submissionId);
-      await updateStmt.finalize();
-
-      // Verify update succeeded (race condition check)
-      if (result.changes === 0) {
-        throw new StateError("Submission state changed during operation", "pending", "unknown");
-      }
-
-      const duration = Date.now() - startTime;
-      logger.info("Witness decline successful", {
-        submissionId,
-        witnessAdminId,
-        speciesName: submission.species_common_name,
-        duration: `${duration}ms`,
-      });
-    });
-  } catch (err) {
-    const duration = Date.now() - startTime;
-
-    // Handle custom errors with appropriate logging
-    if (
-      err instanceof ValidationError ||
-      err instanceof AuthorizationError ||
-      err instanceof StateError
-    ) {
-      logger.warn("Witness decline failed - business rule violation", {
-        submissionId,
-        witnessAdminId,
-        errorType: err.name,
-        errorCode: err.code,
-        errorMessage: err.message,
-        context: err.context,
-        duration: `${duration}ms`,
-      });
-    } else {
-      // System/unexpected errors
-      logger.error("Witness decline failed - system error", {
-        submissionId,
-        witnessAdminId,
-        error: err instanceof Error ? err.message : String(err),
-        duration: `${duration}ms`,
-      });
-    }
-
-    throw err;
-  }
-}
-
-/**
- * Request changes on a submission (admin action)
- * Validates submission state and sets changes_requested fields
- * Throws errors for invalid states (draft, approved, denied)
- */
-export async function requestChanges(
-  submissionId: number,
-  adminId: number,
-  reason: string
-): Promise<void> {
-  try {
-    return await withTransaction(async (db) => {
-      // Get current submission state
-      const stmt = await db.prepare(`
-        SELECT id, submitted_on, approved_on, denied_on
-        FROM submissions WHERE id = ?`);
-      const current: Submission[] = await stmt.all(submissionId);
-      await stmt.finalize();
-
-      if (!current[0]) {
-        throw new Error("Submission not found");
-      }
-
-      // Validate submission state
-      if (!current[0].submitted_on) {
-        throw new Error("Cannot request changes on draft submissions");
-      }
-
-      if (current[0].approved_on) {
-        throw new Error("Cannot request changes on approved submissions");
-      }
-
-      if (current[0].denied_on) {
-        throw new Error("Cannot request changes on denied submissions");
-      }
-
-      // Set changes_requested fields
-      const updateStmt = await db.prepare(`
-        UPDATE submissions SET
-          changes_requested_on = ?,
-          changes_requested_by = ?,
-          changes_requested_reason = ?
-        WHERE id = ?`);
-
-      const result = await updateStmt.run(new Date().toISOString(), adminId, reason, submissionId);
-      await updateStmt.finalize();
-
-      if (result.changes === 0) {
-        throw new Error("Failed to update submission");
-      }
-
-      logger.info(`Changes requested for submission ${submissionId} by admin ${adminId}`);
-    });
-  } catch (err) {
-    logger.error("Failed to request changes", err);
-    throw err;
-  }
-}
 
 export function getApprovedSubmissions(program: string) {
   return query<
@@ -907,87 +413,6 @@ export async function updateSubmission(id: number, updates: UpdateFor<Submission
   }
 }
 
-export async function approveSubmission(
-  approvedBy: number,
-  id: number,
-  speciesIds: { common_name_id: number; scientific_name_id: number },
-  updates: ApprovalFormValues
-) {
-  try {
-    return await withTransaction(async (db) => {
-      // Get current submission state
-      const stmt = await db.prepare(`
-        SELECT id, submitted_on, approved_on, denied_on, witness_verification_status
-        FROM submissions WHERE id = ?`);
-      const current: Submission[] = await stmt.all(id);
-      await stmt.finalize();
-
-      if (!current[0]) {
-        throw new Error("Submission not found");
-      }
-
-      // Validate submission state
-      if (!current[0].submitted_on) {
-        throw new Error("Cannot approve draft submissions");
-      }
-
-      if (current[0].approved_on) {
-        throw new Error("Cannot approve already approved submissions");
-      }
-
-      if (current[0].denied_on) {
-        throw new Error("Cannot approve denied submissions");
-      }
-
-      // Update submission with approval data
-      const {
-        points,
-        article_points,
-        first_time_species,
-        flowered,
-        sexual_reproduction,
-        cares_species,
-      } = updates;
-      const updateStmt = await db.prepare(`
-        UPDATE submissions SET
-          common_name_id = ?,
-          scientific_name_id = ?,
-          points = ?,
-          article_points = ?,
-          first_time_species = ?,
-          cares_species = ?,
-          flowered = ?,
-          sexual_reproduction = ?,
-          approved_by = ?,
-          approved_on = ?
-        WHERE id = ?`);
-
-      const result = await updateStmt.run(
-        speciesIds.common_name_id,
-        speciesIds.scientific_name_id,
-        points,
-        article_points,
-        first_time_species ? 1 : 0,
-        cares_species ? 1 : 0,
-        flowered ? 1 : 0,
-        sexual_reproduction ? 1 : 0,
-        approvedBy,
-        new Date().toISOString(),
-        id
-      );
-      await updateStmt.finalize();
-
-      if (result.changes === 0) {
-        throw new Error("Failed to update submission");
-      }
-
-      logger.info(`Submission ${id} approved by admin ${approvedBy} with ${points} base points`);
-    });
-  } catch (err) {
-    logger.error("Failed to approve submission", err);
-    throw err;
-  }
-}
 
 /**
  * Get all submissions approved today (in local time)

@@ -10,6 +10,8 @@ export type LevelCheckResult = {
   levelChanged: boolean;
   newLevel?: string;
   oldLevel?: string;
+  /** The member's program total, including bonuses, that this level reflects. */
+  totalPoints?: number;
 };
 
 /**
@@ -76,10 +78,11 @@ export async function checkAndUpdateMemberLevel(
         levelChanged: true,
         newLevel: calculatedLevel,
         oldLevel: currentLevel,
+        totalPoints,
       };
     }
 
-    return { levelChanged: false };
+    return { levelChanged: false, totalPoints };
   } catch (error) {
     logger.error(`Error checking level for member ${memberId} (${program}):`, error);
     throw error;

@@ -502,7 +502,7 @@ const id = await createTestSubmission({
 
 **Why**: The waiting period ensures fry/plants are biologically mature (30/60 days old), not just that admin witnessed them quickly.
 
-**Where defined**: `src/utils/waitingPeriod.ts:39` - `getDaysElapsed(submission.reproduction_date)`
+**Where defined**: `src/lifecycle/state.ts` - `waitingPeriod()`, which the module also uses to separate the two states either side of the clock
 
 ### Lesson 7: Test Data Defaults Matter
 

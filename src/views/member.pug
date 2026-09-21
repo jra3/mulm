@@ -32,7 +32,7 @@ mixin submissionTable(submissions, totalPoints)
 					tr(class=rowClass)
 						td(class=stringCell)
 							if sub.statusInfo
-								- const icon = sub.statusInfo.status === 'draft' ? '📝' : sub.statusInfo.status === 'pending-witness' ? '👁️' : sub.statusInfo.status === 'waiting-period' ? '⏳' : sub.statusInfo.status === 'pending-approval' ? '🔵' : sub.statusInfo.status === 'approved' ? '✅' : sub.statusInfo.status === 'denied' ? '❌' : ''
+								- const icon = sub.statusInfo.icon
 								if sub.statusInfo.status === 'draft'
 									a.link(href=`/submissions/${sub.id}`)
 										span(

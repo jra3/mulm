@@ -21,7 +21,7 @@ import * as species from "@/routes/species";
 import * as typeahead from "@/routes/typeahead";
 import uploadRouter from "@/routes/api/upload";
 
-import { getOutstandingSubmissionsCounts, getWitnessQueueCounts } from "./db/submissions";
+import { getQueueCounts } from "./db/submissions";
 import { getRecentActivity } from "./db/activity";
 import { getMemberByEmail, getMemberPassword } from "./db/members";
 import { checkPassword } from "./auth";
@@ -56,6 +56,7 @@ import * as hoverCardDemo from "./routes/hoverCardDemo";
 import testRouter from "./routes/test";
 import { startScheduledCleanup } from "./scheduled/cleanup";
 import { startFinalSubmissionReminders } from "./scheduled/finalSubmissionReminder";
+import { startCommitteeDigest } from "./scheduled/committeeDigest";
 import { startMcpHttpServer } from "./mcp/http-server";
 import { logger } from "./utils/logger";
 
@@ -197,8 +198,8 @@ router.get("/", async (req: MulmRequest, res) => {
   let witnessCount = 0;
   if (isAdmin) {
     const [counts, witnessCounts] = await Promise.all([
-      getOutstandingSubmissionsCounts(),
-      getWitnessQueueCounts(),
+      getQueueCounts("approval"),
+      getQueueCounts("witness"),
     ]);
     ["coral", "plant", "fish"].forEach((program) => {
       const count = counts[program];
@@ -235,9 +236,11 @@ router.get("/submissions/new/addSupplement", (req, res) => {
   res.render("bapForm/supplementSingleLine");
 });
 router.get("/submissions/:id", submission.view);
+router.get("/submissions/:id/edit", submission.renderEdit);
 router.post("/submissions", submission.create);
 router.patch("/submissions/:id", submission.update);
 router.delete("/submissions/:id", submission.remove);
+router.post("/submissions/:id/return-to-draft", submission.returnToDraft);
 router.post("/submissions/:id/final-submit", submission.finalSubmit);
 router.delete("/submissions/:id/final-submit", submission.unfinalSubmit);
 router.get("/submissions/:id/edit-media", submission.renderEditMedia);
@@ -497,6 +500,7 @@ async function main() {
     if (process.env.NODE_ENV === "production") {
       startScheduledCleanup();
       startFinalSubmissionReminders();
+      startCommitteeDigest();
       logger.info("Scheduled tasks enabled (production mode)");
     } else {
       logger.info("Scheduled tasks disabled (non-production environment)");

@@ -1,7 +1,8 @@
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
 import { runFinalSubmissionReminders } from "@/scheduled/finalSubmissionReminder";
-import { getSubmissionById, setFinalSubmission } from "../db/submissions";
+import { getSubmissionById } from "../db/submissions";
+import { enterApprovalQueue } from "@/lifecycle";
 import {
   setupTestDatabase,
   teardownTestDatabase,
@@ -86,7 +87,7 @@ void describe("Final-submission reminder job", () => {
       witnessedBy: ctx.admin.id,
       reproductionDate: SIXTY_FIVE_DAYS_AGO,
     });
-    await setFinalSubmission(id, ctx.member.id, false);
+    await enterApprovalQueue({ id: ctx.member.id, isAdmin: false }, id);
 
     const result = await runFinalSubmissionReminders();
 

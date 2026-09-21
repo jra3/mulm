@@ -5,7 +5,7 @@ import sqlite3 from "sqlite3";
 import { overrideConnection } from "../db/conn";
 
 // activity.ts
-import { createActivity, getRecentActivity } from "../db/activity";
+import { recordActivity, getRecentActivity } from "../db/activity";
 import type { SubmissionApprovedData, AwardGrantedData } from "../db/activity";
 
 // auth.ts
@@ -75,7 +75,7 @@ void describe("activity.ts", () => {
   beforeEach(setup);
   afterEach(teardown);
 
-  void describe("createActivity", () => {
+  void describe("recordActivity", () => {
     void test("should insert a submission_approved activity", async () => {
       const data: SubmissionApprovedData = {
         species_common_name: "Neon Tetra",
@@ -84,7 +84,7 @@ void describe("activity.ts", () => {
         first_time_species: true,
       };
 
-      await createActivity("submission_approved", memberId1, "sub-1", data);
+      await recordActivity("submission_approved", memberId1, "sub-1", data);
 
       const row = await db.get("SELECT * FROM activity_feed WHERE member_id = ?", memberId1);
       assert.ok(row);
@@ -101,7 +101,7 @@ void describe("activity.ts", () => {
         award_type: "specialty",
       };
 
-      await createActivity("award_granted", memberId1, "award-1", data);
+      await recordActivity("award_granted", memberId1, "award-1", data);
 
       const row = await db.get(
         "SELECT * FROM activity_feed WHERE activity_type = 'award_granted'"
@@ -113,7 +113,7 @@ void describe("activity.ts", () => {
     });
 
     void test("should set created_at automatically", async () => {
-      await createActivity("submission_approved", memberId1, "sub-1", {
+      await recordActivity("submission_approved", memberId1, "sub-1", {
         species_common_name: "Guppy",
         species_type: "Fish",
         points: 5,
@@ -127,13 +127,13 @@ void describe("activity.ts", () => {
 
   void describe("getRecentActivity", () => {
     void test("should return activities ordered by most recent first", async () => {
-      await createActivity("submission_approved", memberId1, "sub-1", {
+      await recordActivity("submission_approved", memberId1, "sub-1", {
         species_common_name: "First",
         species_type: "Fish",
         points: 5,
         first_time_species: false,
       });
-      await createActivity("submission_approved", memberId2, "sub-2", {
+      await recordActivity("submission_approved", memberId2, "sub-2", {
         species_common_name: "Second",
         species_type: "Fish",
         points: 10,
@@ -149,7 +149,7 @@ void describe("activity.ts", () => {
 
     void test("should respect limit parameter", async () => {
       for (let i = 0; i < 5; i++) {
-        await createActivity("submission_approved", memberId1, `sub-${i}`, {
+        await recordActivity("submission_approved", memberId1, `sub-${i}`, {
           species_common_name: `Species ${i}`,
           species_type: "Fish",
           points: 5,
@@ -162,7 +162,7 @@ void describe("activity.ts", () => {
     });
 
     void test("should include member_name from join", async () => {
-      await createActivity("submission_approved", memberId1, "sub-1", {
+      await recordActivity("submission_approved", memberId1, "sub-1", {
         species_common_name: "Tetra",
         species_type: "Fish",
         points: 5,
@@ -180,7 +180,7 @@ void describe("activity.ts", () => {
         [memberId1, "Fish Expert"]
       );
 
-      await createActivity("submission_approved", memberId1, "sub-1", {
+      await recordActivity("submission_approved", memberId1, "sub-1", {
         species_common_name: "Tetra",
         species_type: "Fish",
         points: 5,
@@ -200,7 +200,7 @@ void describe("activity.ts", () => {
 
     void test("should default to 10 results", async () => {
       for (let i = 0; i < 15; i++) {
-        await createActivity("submission_approved", memberId1, `sub-${i}`, {
+        await recordActivity("submission_approved", memberId1, `sub-${i}`, {
           species_common_name: `Species ${i}`,
           species_type: "Fish",
           points: 5,

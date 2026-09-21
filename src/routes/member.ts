@@ -4,7 +4,7 @@ import { getCollectionForMember, getCollectionStats } from "@/db/collection";
 import { getCaresProfile } from "@/db/cares";
 import { MulmRequest } from "@/sessions";
 import { Response } from "express";
-import { getSubmissionStatus } from "@/utils/submissionStatus";
+import { getStatusPresentation } from "@/utils/statusBadge";
 import { getTrophyDataWithAwards } from "@/utils/awards";
 import { isInProgram } from "@/points";
 
@@ -31,7 +31,7 @@ export const view = async (req: MulmRequest, res: Response) => {
   // Add status info to each submission
   const submissionsWithStatus = submissions.map((sub) => ({
     ...sub,
-    statusInfo: getSubmissionStatus(sub),
+    statusInfo: getStatusPresentation(sub),
   }));
 
   const fishSubs = submissionsWithStatus.filter((sub) => isInProgram("fish", sub.species_type));

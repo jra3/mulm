@@ -174,17 +174,21 @@ CREATE INDEX idx_species_name_scientific ON species_name (scientific_name);
 CREATE INDEX idx_species_name_group_id ON species_name (group_id);
 CREATE TABLE activity_feed (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    activity_type TEXT NOT NULL CHECK (activity_type IN ('submission_approved', 'award_granted')),
+    activity_type TEXT NOT NULL
+        CHECK (activity_type IN ('submission_approved', 'award_granted', 'level_up')),
     member_id INTEGER NOT NULL
         REFERENCES members(id)
         ON DELETE CASCADE,
-    related_id TEXT NOT NULL, -- submission_id for approvals, award_name for grants
+    related_id TEXT NOT NULL, -- submission_id for approvals, award_name for grants, program for levels
     activity_data TEXT, -- JSON data specific to activity type
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX idx_activity_created_at ON activity_feed (created_at DESC);
 CREATE INDEX idx_activity_type ON activity_feed (activity_type);
 CREATE INDEX idx_activity_member ON activity_feed (member_id);
+-- One entry per thing announced: a correction updates the approval's entry
+-- rather than appending a second one.
+CREATE UNIQUE INDEX idx_activity_subject ON activity_feed (activity_type, member_id, related_id);
 CREATE INDEX idx_submissions_witness_status ON submissions (witness_verification_status);
 CREATE INDEX idx_submissions_witnessed_by ON submissions (witnessed_by);
 CREATE INDEX idx_submissions_witness_program ON submissions (

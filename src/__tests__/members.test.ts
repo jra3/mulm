@@ -9,7 +9,8 @@ import {
   getMemberWithPoints,
   getRosterWithPoints,
 } from "../db/members";
-import { createSubmission, approveSubmission, getSubmissionsByMember } from "../db/submissions";
+import { getSubmissionsByMember } from "../db/submissions";
+import { approveSubmissionFixture, createSubmissionFixture } from "./helpers/testHelpers";
 import { totalPoints } from "../points";
 import { getErrorMessage } from "../utils/error";
 import {
@@ -131,7 +132,7 @@ void describe("getRosterWithPoints", () => {
     const memberId = await createMember("member@test.com", "Member");
 
     // Create and approve a fish submission
-    const submissionId = await createSubmission(
+    const submissionId = await createSubmissionFixture(
       memberId,
       {
         species_type: "Fish",
@@ -161,7 +162,7 @@ void describe("getRosterWithPoints", () => {
       "reticulata",
       "Freshwater"
     );
-    await approveSubmission(
+    await approveSubmissionFixture(
       adminId,
       submissionId,
       { common_name_id: speciesNameId.common_name_id, scientific_name_id: speciesNameId.scientific_name_id },
@@ -192,7 +193,7 @@ void describe("getRosterWithPoints", () => {
     const memberId = await createMember("member@test.com", "Member");
 
     // Create and approve a plant submission with flowered and sexual reproduction bonuses
-    const submissionId = await createSubmission(
+    const submissionId = await createSubmissionFixture(
       memberId,
       {
         species_type: "Plant",
@@ -225,7 +226,7 @@ void describe("getRosterWithPoints", () => {
       "pteropus",
       "Stem"
     );
-    await approveSubmission(
+    await approveSubmissionFixture(
       adminId,
       submissionId,
       {
@@ -260,7 +261,7 @@ void describe("getRosterWithPoints", () => {
     const memberId = await createMember("member@test.com", "Member");
 
     // Create and approve a coral submission
-    const submissionId = await createSubmission(
+    const submissionId = await createSubmissionFixture(
       memberId,
       {
         species_type: "Coral",
@@ -291,7 +292,7 @@ void describe("getRosterWithPoints", () => {
       "millepora",
       "SPS"
     );
-    await approveSubmission(
+    await approveSubmissionFixture(
       adminId,
       submissionId,
       {
@@ -325,7 +326,7 @@ void describe("getRosterWithPoints", () => {
     const memberId = await createMember("member@test.com", "Multi-Program Member");
 
     // Fish submission
-    const fishSubmissionId = await createSubmission(
+    const fishSubmissionId = await createSubmissionFixture(
       memberId,
       {
         species_type: "Fish",
@@ -351,7 +352,7 @@ void describe("getRosterWithPoints", () => {
       "innesi",
       "Freshwater"
     );
-    await approveSubmission(
+    await approveSubmissionFixture(
       adminId,
       fishSubmissionId,
       {
@@ -372,7 +373,7 @@ void describe("getRosterWithPoints", () => {
     );
 
     // Plant submission
-    const plantSubmissionId = await createSubmission(
+    const plantSubmissionId = await createSubmissionFixture(
       memberId,
       {
         species_type: "Plant",
@@ -398,7 +399,7 @@ void describe("getRosterWithPoints", () => {
       "grisebachii",
       "Rosette"
     );
-    await approveSubmission(
+    await approveSubmissionFixture(
       adminId,
       plantSubmissionId,
       {
@@ -432,7 +433,7 @@ void describe("getRosterWithPoints", () => {
     const memberId = await createMember("member@test.com", "Member");
 
     // Create submitted but not approved
-    await createSubmission(
+    await createSubmissionFixture(
       memberId,
       {
         species_type: "Fish",
@@ -449,7 +450,7 @@ void describe("getRosterWithPoints", () => {
     );
 
     // Create approved submission
-    const approvedSubmissionId = await createSubmission(
+    const approvedSubmissionId = await createSubmissionFixture(
       memberId,
       {
         species_type: "Fish",
@@ -473,7 +474,7 @@ void describe("getRosterWithPoints", () => {
       "sphenops",
       "Freshwater"
     );
-    await approveSubmission(
+    await approveSubmissionFixture(
       adminId,
       approvedSubmissionId,
       {
@@ -504,7 +505,7 @@ void describe("getRosterWithPoints", () => {
     const adminId = await createMember("admin@test.com", "Admin", {}, true);
     const memberId = await createMember("member@test.com", "Member");
 
-    const submissionId = await createSubmission(
+    const submissionId = await createSubmissionFixture(
       memberId,
       {
         species_type: "Invert",
@@ -528,7 +529,7 @@ void describe("getRosterWithPoints", () => {
       "davidi",
       "Freshwater"
     );
-    await approveSubmission(
+    await approveSubmissionFixture(
       adminId,
       submissionId,
       {
@@ -573,7 +574,7 @@ void describe("Points agreement across surfaces", () => {
     const adminId = await createMember("admin@test.com", "Admin", {}, true);
     const memberId = await createMember("member@test.com", "CARES Breeder");
 
-    const submissionId = await createSubmission(
+    const submissionId = await createSubmissionFixture(
       memberId,
       {
         species_type: "Fish",
@@ -599,7 +600,7 @@ void describe("Points agreement across surfaces", () => {
       "zebra",
       "Cichlid"
     );
-    await approveSubmission(
+    await approveSubmissionFixture(
       adminId,
       submissionId,
       {
