@@ -260,7 +260,7 @@ export function assertMoveIsLegal(move: MoveDefinition, context: MoveContext): v
 
   if (move.neverSubmitter && isOwner) {
     throw new AuthorizationError(
-      `You cannot ${describe(move.id)} your own submission`,
+      `You cannot ${describe(move.id, "your own submission")}`,
       actorId,
       move.id
     );
@@ -268,7 +268,7 @@ export function assertMoveIsLegal(move: MoveDefinition, context: MoveContext): v
 
   if (!move.actors.includes(actor)) {
     throw new AuthorizationError(
-      `Only the ${move.actors.join(" or ")} may ${describe(move.id)}`,
+      `Only the ${move.actors.join(" or ")} may ${describe(move.id, "this submission")}`,
       actorId,
       move.id
     );
@@ -285,7 +285,7 @@ export function assertMoveIsLegal(move: MoveDefinition, context: MoveContext): v
   const from = legalFrom(move, actor);
   if (!from.includes(state)) {
     throw new StateError(
-      `Cannot ${describe(move.id)} a submission that is ${label(state)}`,
+      `Cannot ${describe(move.id, `a submission that is ${label(state)}`)}`,
       from.join(" or "),
       state
     );
@@ -293,7 +293,7 @@ export function assertMoveIsLegal(move: MoveDefinition, context: MoveContext): v
 
   if (move.requiresNoChangesPending && changesPending) {
     throw new StateError(
-      `Cannot ${describe(move.id)} while requested changes are outstanding`,
+      `Cannot ${describe(move.id, "this submission")} while requested changes are outstanding`,
       "no changes outstanding",
       "changes requested"
     );
@@ -301,7 +301,7 @@ export function assertMoveIsLegal(move: MoveDefinition, context: MoveContext): v
 
   if (move.requiresChangesPending && !changesPending) {
     throw new StateError(
-      `Cannot ${describe(move.id)} when no changes have been requested`,
+      `Cannot ${describe(move.id, "this submission")} when no changes have been requested`,
       "changes requested",
       "no changes outstanding"
     );
@@ -312,42 +312,47 @@ export function assertMoveIsLegal(move: MoveDefinition, context: MoveContext): v
   }
 }
 
-/** How a move is named in a refusal. */
-function describe(id: MoveId): string {
+/**
+ * How a move is named in a refusal: the whole predicate, with `object` - the
+ * Submission as the sentence refers to it - where the move puts it, so every
+ * refusal reads as a sentence ("return this submission to draft", "confirm
+ * the witness on a submission that is approved").
+ */
+function describe(id: MoveId, object: string): string {
   switch (id) {
     case "saveDraft":
-      return "save a draft of";
+      return `save a draft of ${object}`;
     case "submit":
-      return "submit";
+      return `submit ${object}`;
     case "saveChanges":
-      return "save changes to";
+      return `save changes to ${object}`;
     case "returnToDraft":
-      return "return to draft";
+      return `return ${object} to draft`;
     case "confirmWitness":
-      return "confirm the witness";
+      return `confirm the witness on ${object}`;
     case "bindSpecies":
-      return "choose the Species of";
+      return `choose the Species of ${object}`;
     case "enterApprovalQueue":
-      return "queue for approval";
+      return `queue ${object} for approval`;
     case "removeFromQueue":
-      return "remove from the approval queue";
+      return `remove ${object} from the approval queue`;
     case "requestChanges":
-      return "request changes on";
+      return `request changes on ${object}`;
     case "resubmit":
-      return "resubmit";
+      return `resubmit ${object}`;
     case "approve":
-      return "approve";
+      return `approve ${object}`;
     case "correctPoints":
-      return "correct the points on";
+      return `correct the points on ${object}`;
     case "deleteSubmission":
-      return "delete";
+      return `delete ${object}`;
   }
 }
 
 /**
  * How a move that needs a bound Submission is named after "before you", in
- * the refusal `requiresBound` raises. Its own phrasing, not `describe`'s,
- * which reads as "... the submission" and not "... it".
+ * the refusal `requiresBound` raises: "confirm its Witness" reads better
+ * than `describe`'s "confirm the witness on it".
  */
 function describeOnBound(id: MoveId): string {
   switch (id) {
@@ -356,7 +361,7 @@ function describeOnBound(id: MoveId): string {
     case "approve":
       return "approve it";
     default:
-      return `${describe(id)} it`;
+      return describe(id, "it");
   }
 }
 
