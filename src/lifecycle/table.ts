@@ -308,10 +308,7 @@ export function assertMoveIsLegal(move: MoveDefinition, context: MoveContext): v
   }
 
   if (move.requiresBound && !bound) {
-    throw new UnboundError(
-      `Choose the Species this Submission is before you ${describe(move.id)} it`,
-      move.id
-    );
+    throw new UnboundError(`Bind this Submission to a Species before you ${describeOnBound(move.id)}`, move.id);
   }
 }
 
@@ -344,6 +341,22 @@ function describe(id: MoveId): string {
       return "correct the points on";
     case "deleteSubmission":
       return "delete";
+  }
+}
+
+/**
+ * How a move that needs a bound Submission is named after "before you", in
+ * the refusal `requiresBound` raises. Its own phrasing, not `describe`'s,
+ * which reads as "... the submission" and not "... it".
+ */
+function describeOnBound(id: MoveId): string {
+  switch (id) {
+    case "confirmWitness":
+      return "confirm its Witness";
+    case "approve":
+      return "approve it";
+    default:
+      return `${describe(id)} it`;
   }
 }
 

@@ -541,7 +541,9 @@ void describe("Submission lifecycle - transitions", () => {
       await assert.rejects(
         () => confirmWitness(committee, id),
         (err: unknown) =>
-          err instanceof UnboundError && /Species/.test(err.message) && !(err instanceof StateError)
+          err instanceof UnboundError &&
+          err.message === "Bind this Submission to a Species before you confirm its Witness" &&
+          !(err instanceof StateError)
       );
       assert.strictEqual(await stateOf(id), "pendingWitness");
     });
