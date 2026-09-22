@@ -25,7 +25,7 @@ export {
   type NameKind,
   type SpeciesNames,
 } from "./types";
-export { isPointClass, pointClasses, type PointClass } from "./pointClass";
+export { isPointClass, admitPointClass, pointClasses, type PointClass } from "./pointClass";
 export { CatalogueRefusal, type RefusalCode } from "./errors";
 
 // Finding a Species: by id, by any Name, by Canonical name, or from a pair of spellings.
@@ -39,7 +39,7 @@ export {
 } from "./lookup";
 
 // Names, by kind.
-export { listNames, addName, removeName, ensureName } from "./names";
+export { listNames, findNames, addName, removeName, updateName, ensureName } from "./names";
 
 // Curating Species identity.
 export {
@@ -48,9 +48,11 @@ export {
   setPointClass,
   renameCanonical,
   mergeSpecies,
+  previewMerge,
   deleteSpecies,
   type NewSpecies,
   type SpeciesUpdate,
+  type MergePreview,
 } from "./curation";
 
 // Does a Submission's form agree with a Species?
@@ -79,6 +81,8 @@ export {
   getBreedersForSpecies,
   getExplorerFilterOptions,
   listSpeciesDueIucnSync,
+  getSpeciesStatistics,
+  type SpeciesStatistics,
   type SpeciesFilters,
   type SpeciesExplorerItem,
   type SpeciesNameRecord,

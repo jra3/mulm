@@ -1,4 +1,4 @@
-import { query, writeConn } from "@/db/conn";
+import { query, writeConn, withTransaction } from "@/db/conn";
 import { logger } from "@/utils/logger";
 import { CatalogueRefusal, isUniqueViolation, speciesNotFound } from "./errors";
 import { nameKinds, type Name, type NameKind, type SpeciesNames } from "./types";
@@ -15,6 +15,21 @@ export const nameTable = {
     text: "scientific_name",
   },
 } as const satisfies Record<NameKind, { table: string; id: string; text: string }>;
+
+const nameLabel = (kind: NameKind) => (kind === "common" ? "Common name" : "Scientific name");
+
+/** A Name's text, trimmed; refused when empty. */
+function requireNameText(kind: NameKind, text: string): string {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    throw new CatalogueRefusal(`${nameLabel(kind)} cannot be empty`, "invalid");
+  }
+  return trimmed;
+}
+
+function duplicateName(kind: NameKind, text: string): CatalogueRefusal {
+  return new CatalogueRefusal(`${nameLabel(kind)} "${text}" already exists for this species`, "duplicate");
+}
 
 export async function speciesExists(speciesId: number): Promise<boolean> {
   const rows = await query<{ group_id: number }>(
@@ -46,11 +61,7 @@ export async function listNames(speciesId: number): Promise<SpeciesNames> {
  *   Species already has this Name of this kind
  */
 export async function addName(speciesId: number, kind: NameKind, text: string): Promise<number> {
-  const trimmed = text.trim();
-  const label = kind === "common" ? "Common name" : "Scientific name";
-  if (!trimmed) {
-    throw new CatalogueRefusal(`${label} cannot be empty`, "invalid");
-  }
+  const trimmed = requireNameText(kind, text);
   if (!(await speciesExists(speciesId))) {
     throw speciesNotFound(speciesId);
   }
@@ -68,34 +79,59 @@ export async function addName(speciesId: number, kind: NameKind, text: string): 
       await stmt.finalize();
     }
   } catch (err) {
-    if (isUniqueViolation(err)) {
-      throw new CatalogueRefusal(
-        `${label} "${trimmed}" already exists for this species`,
-        "duplicate"
-      );
-    }
+    if (isUniqueViolation(err)) throw duplicateName(kind, trimmed);
     logger.error(`Failed to add ${kind} Name`, err);
     throw new Error(`Failed to add ${kind} name`);
   }
 }
 
 /**
- * Remove one Name.
- * @returns 1 if removed, 0 if there was no such Name
+ * Remove Names of one kind: one id, or several at once in one transaction.
+ * @returns how many were removed (ids that do not exist are skipped)
  */
-export async function removeName(kind: NameKind, nameId: number): Promise<number> {
+export async function removeName(kind: NameKind, nameIds: number | number[]): Promise<number> {
+  const ids = Array.isArray(nameIds) ? nameIds : [nameIds];
+  if (ids.length === 0) return 0;
   const t = nameTable[kind];
   try {
-    const stmt = await writeConn.prepare(`DELETE FROM ${t.table} WHERE ${t.id} = ?`);
+    return await withTransaction(async (db) => {
+      const stmt = await db.prepare(`DELETE FROM ${t.table} WHERE ${t.id} = ?`);
+      try {
+        let removed = 0;
+        for (const id of ids) {
+          removed += (await stmt.run(id)).changes || 0;
+        }
+        return removed;
+      } finally {
+        await stmt.finalize();
+      }
+    });
+  } catch (err) {
+    logger.error(`Failed to remove ${kind} Name`, err);
+    throw new Error(`Failed to delete ${kind} name`);
+  }
+}
+
+/**
+ * Correct the text of one Name in place, keeping its id, so Submissions that
+ * reference it keep referencing it.
+ * @returns 1 if updated, 0 if there was no such Name
+ * @throws CatalogueRefusal if the text is empty or the Species already has it
+ */
+export async function updateName(kind: NameKind, nameId: number, text: string): Promise<number> {
+  const trimmed = requireNameText(kind, text);
+  const t = nameTable[kind];
+  try {
+    const stmt = await writeConn.prepare(`UPDATE ${t.table} SET ${t.text} = ? WHERE ${t.id} = ?`);
     try {
-      const result = await stmt.run(nameId);
-      return result.changes || 0;
+      return (await stmt.run(trimmed, nameId)).changes || 0;
     } finally {
       await stmt.finalize();
     }
   } catch (err) {
-    logger.error(`Failed to remove ${kind} Name`, err);
-    throw new Error(`Failed to delete ${kind} name`);
+    if (isUniqueViolation(err)) throw duplicateName(kind, trimmed);
+    logger.error(`Failed to update ${kind} Name`, err);
+    throw new Error(`Failed to update ${kind} name`);
   }
 }
 
@@ -112,4 +148,25 @@ export async function ensureName(speciesId: number, kind: NameKind, text: string
     [speciesId, text.trim()]
   );
   return rows[0]?.name_id ?? addName(speciesId, kind, text);
+}
+
+/**
+ * Every Name with this text, whole and ignoring case, across all Species.
+ * Pass a kind to search only common or only scientific Names.
+ */
+export async function findNames(text: string, kind?: NameKind): Promise<Name[]> {
+  const trimmed = text.trim();
+  if (!trimmed) return [];
+  const kinds = kind ? [kind] : nameKinds;
+  const found = await Promise.all(
+    kinds.map((k) => {
+      const t = nameTable[k];
+      return query<{ name_id: number; species_id: number; name: string }>(
+        `SELECT ${t.id} AS name_id, group_id AS species_id, ${t.text} AS name
+         FROM ${t.table} WHERE LOWER(${t.text}) = LOWER(?) ORDER BY group_id, ${t.id}`,
+        [trimmed]
+      ).then((rows) => rows.map((row): Name => ({ ...row, kind: k })));
+    })
+  );
+  return found.flat();
 }

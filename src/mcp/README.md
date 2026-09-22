@@ -10,26 +10,35 @@ MCP servers are available via two transport methods:
 
 ### 1. Species Database Server
 
-Provides tools and resources for managing species data.
+Provides tools and resources for managing species data. Every tool is an
+adapter over the Species catalogue (`src/species/`, `@/species`), so it obeys
+the same rules as the admin UI: a Point class is 5, 10, 15 or 20; a rename
+keeps the old Canonical name as a scientific Name; a merge keeps the loser's
+Canonical name; a Species that Submissions reference cannot be deleted.
 
 **Tools:**
-- `create_species_group` - Create new species
-- `update_species_group` - Update species metadata
-- `delete_species_group` - Delete species (with safety checks)
-- `add_species_synonym` - Add name variants
-- `update_species_synonym` - Update name variants
-- `delete_species_synonym` - Remove name variants
-- `merge_species_groups` - Merge duplicate species
+- `create_species_group` - Create a Species
+- `update_species_group` - Update Program class, Point class, CARES flag, references and images
+- `delete_species_group` - Delete a Species (refused while any Submission references it)
+- `add_species_name` - Add a Name (`kind`: `common` | `scientific`)
+- `update_species_name` - Correct a Name's text in place
+- `remove_species_name` - Remove a Name
+- `find_names_by_text` - Find every Name with a given text, across Species
+- `bulk_remove_names` - Remove Names of one kind by text or ids (with preview)
+- `merge_species_groups` - Merge duplicate Species (with preview)
 - `search_species` - Search with filters
-- `get_species_detail` - Get full species details
-- `set_base_points` - Update point values
+- `get_species_detail` - Get full Species details
+- `set_base_points` - Set the Point class (5, 10, 15 or 20)
 - `toggle_cares_status` - Mark CARES species
-- `update_canonical_name` - Update taxonomic names
+- `update_canonical_name` - Rename the Canonical name
 
 **Resources:**
 - `species://groups/list` - All species
+- `species://groups/{group_id}` - One Species with its Names by kind
 - `species://groups/by-type/{Fish|Plant|Invert|Coral}` - Species by type
+- `species://groups/by-class/{program class}` - Species by Program class
 - `species://groups/cares` - CARES species
+- `species://names/by-group/{group_id}` - A Species' Names by kind
 - `species://statistics` - Database statistics
 
 ### 2. Member Management Server

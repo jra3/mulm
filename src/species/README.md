@@ -23,11 +23,11 @@ module's own business.
 | `pointClass.ts` | The Point class: typed from the Points tally keys (5, 10, 15, 20), refused otherwise. |
 | `errors.ts` | `CatalogueRefusal`, the one error the catalogue's rules throw. |
 | `lookup.ts` | Find a Species by id, by any Name, by Canonical name, or from a pair of spellings (`resolveSpecies`, the lookup imports bind by). |
-| `names.ts` | A Species' Names by kind; add and remove one Name of a given kind. `nameTable` maps a kind to its table, for the module's own SQL. |
+| `names.ts` | A Species' Names by kind; find Names by text; add a Name, correct one in place, remove one or several of a given kind. `nameTable` maps a kind to its table, for the module's own SQL. |
 | `curation.ts` | Create, classify, set Point class, rename the Canonical name, merge, delete. |
 | `agreement.ts` | Does a Submission's form agree with a Species: spellings, Species type, Program class. |
 | `submissions.ts` | The Species-Submission relation, defined once as SQL, and the Submissions of a Species. |
-| `listings.ts` | Read models: typeahead, public explorer, admin list, detail page, breeders. |
+| `listings.ts` | Read models: typeahead, public explorer, admin list, detail page, breeders, statistics. |
 
 ## Rules it holds
 
@@ -61,9 +61,9 @@ module's own business.
 The catalogue is being expanded in front of the old species data module
 (`src/db/species.ts`), which re-exports or delegates to it so callers can move
 over one at a time. New code imports `@/species`. What the old module still
-implements itself - paired-Name functions, editing a Name in place
-(`updateCommonName`, `updateScientificName`, no production caller) - is not
-part of the catalogue, and its tests still import the old
+implements itself - paired-Name functions and its old per-kind Name editors
+(`updateCommonName`, `updateScientificName`; the catalogue's is `updateName`) -
+is not part of the catalogue, and its tests still import the old
 module until it goes. The Canonical name is still
 the two columns on the Species row; it becomes a flagged scientific Name
 (ADR-0002) in a later step, and Submissions still reach their Species through

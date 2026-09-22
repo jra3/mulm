@@ -643,3 +643,39 @@ export async function getSpeciesForAdmin(
     total_count,
   };
 }
+
+export type SpeciesStatistics = {
+  total_species: number;
+  by_type: Partial<Record<SpeciesType, number>>;
+  top_program_classes: Array<{ program_class: string; count: number }>;
+  cares_species: number;
+  with_base_points: number;
+  without_base_points: number;
+};
+
+/** Counts across the catalogue: by Species type, the ten largest Program classes, CARES, Point class set or unset. */
+export async function getSpeciesStatistics(): Promise<SpeciesStatistics> {
+  const [totals, byType, byClass] = await Promise.all([
+    query<{ total: number; cares: number; with_points: number }>(
+      `SELECT COUNT(*) AS total,
+              COALESCE(SUM(is_cares_species = 1), 0) AS cares,
+              COALESCE(SUM(base_points IS NOT NULL), 0) AS with_points
+       FROM species_name_group`
+    ),
+    query<{ species_type: string; count: number }>(
+      "SELECT species_type, COUNT(*) AS count FROM species_name_group GROUP BY species_type ORDER BY species_type"
+    ),
+    query<{ program_class: string; count: number }>(
+      "SELECT program_class, COUNT(*) AS count FROM species_name_group GROUP BY program_class ORDER BY count DESC LIMIT 10"
+    ),
+  ]);
+  const { total, cares, with_points } = totals[0];
+  return {
+    total_species: total,
+    by_type: Object.fromEntries(byType.map((t) => [t.species_type, t.count])),
+    top_program_classes: byClass,
+    cares_species: cares,
+    with_base_points: with_points,
+    without_base_points: total - with_points,
+  };
+}

@@ -8,10 +8,10 @@ import { writeConn, withTransaction } from "@/db/conn";
 import { logger } from "@/utils/logger";
 import { CatalogueRefusal, isUniqueViolation, speciesNotFound } from "./errors";
 import { findSpeciesById } from "./lookup";
-import { nameTable } from "./names";
+import { listNames, nameTable } from "./names";
 import { admitPointClass } from "./pointClass";
 import { countSubmissionsOfSpecies } from "./submissions";
-import { canonicalName, isSpeciesType, speciesTypes, type NameKind } from "./types";
+import { canonicalName, isSpeciesType, nameKinds, speciesTypes, type NameKind } from "./types";
 
 function admitSpeciesType(value: string): string {
   if (!isSpeciesType(value)) {
@@ -255,6 +255,61 @@ async function moveNames(db: Database, kind: NameKind, winnerId: number, loserId
       ]);
     }
   }
+}
+
+export type MergePreview = {
+  winnerCanonicalName: string;
+  loserCanonicalName: string;
+  /** The loser's Names the winner lacks, by kind: these move. */
+  moving: Record<NameKind, string[]>;
+  /** The loser's Names the winner already has (any case), by kind: these fold into the winner's. */
+  folding: Record<NameKind, string[]>;
+  /** Whether the loser's Canonical name will be added to the winner as a scientific Name. */
+  keepsLoserCanonicalName: boolean;
+  /** Submissions of the loser, which follow their Names to the winner. */
+  submissions: { total: number; approved: number };
+};
+
+/**
+ * What `mergeSpecies(winnerId, loserId)` would do, without doing it.
+ * @throws CatalogueRefusal as `mergeSpecies` would
+ */
+export async function previewMerge(winnerId: number, loserId: number): Promise<MergePreview> {
+  if (winnerId === loserId) {
+    throw new CatalogueRefusal("Cannot merge a species into itself", "invalid");
+  }
+  const [winner, loser] = await Promise.all([findSpeciesById(winnerId), findSpeciesById(loserId)]);
+  if (!winner) throw speciesNotFound(winnerId);
+  if (!loser) throw speciesNotFound(loserId);
+
+  const [winnerNames, loserNames, submissions] = await Promise.all([
+    listNames(winnerId),
+    listNames(loserId),
+    countSubmissionsOfSpecies(loserId),
+  ]);
+  const moving: Record<NameKind, string[]> = { common: [], scientific: [] };
+  const folding: Record<NameKind, string[]> = { common: [], scientific: [] };
+  for (const kind of nameKinds) {
+    const held = new Set(winnerNames[kind].map((n) => n.name.toLowerCase()));
+    for (const name of loserNames[kind]) {
+      (held.has(name.name.toLowerCase()) ? folding : moving)[kind].push(name.name);
+    }
+  }
+
+  const loserCanonical = canonicalName(loser);
+  const scientificAfter = new Set(
+    [...winnerNames.scientific, ...loserNames.scientific].map((n) => n.name.toLowerCase())
+  );
+  return {
+    winnerCanonicalName: canonicalName(winner),
+    loserCanonicalName: loserCanonical,
+    moving,
+    folding,
+    keepsLoserCanonicalName:
+      loserCanonical.toLowerCase() !== canonicalName(winner).toLowerCase() &&
+      !scientificAfter.has(loserCanonical.toLowerCase()),
+    submissions,
+  };
 }
 
 /**

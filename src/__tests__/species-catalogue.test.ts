@@ -33,6 +33,10 @@ import {
   findSpeciesByIds,
   findSpeciesIdOfSubmission,
   listSpeciesDueIucnSync,
+  updateName,
+  getSpeciesStatistics,
+  previewMerge,
+  findNames,
 } from "@/species";
 
 let db: Database;
@@ -178,6 +182,60 @@ void describe("Species catalogue", () => {
       assert.strictEqual(names.scientific[0].name_id, scientific);
     });
 
+    void test("updateName corrects the text in place; the id and its Submissions stay", async () => {
+      const id = await speciesWith({ genus: "Typous", epithet: "typous", common: ["Typo Fsh"] });
+      const [typo] = (await listNames(id)).common;
+      const submission = await submissionOn(id);
+
+      assert.strictEqual(await updateName("common", typo.name_id, " Typo Fish "), 1);
+
+      assert.deepStrictEqual(
+        (await listNames(id)).common.map((n) => [n.name_id, n.name]),
+        [[typo.name_id, "Typo Fish"]]
+      );
+      assert.deepStrictEqual(
+        (await listSubmissionsOfSpecies(id)).map((s) => s.id),
+        [submission]
+      );
+      assert.strictEqual(await updateName("common", 987654, "Nothing"), 0);
+    });
+
+    void test("updateName refuses empty text and a Name the Species already has", async () => {
+      const id = await speciesWith({ genus: "Typous", epithet: "twice", common: ["One", "Two"] });
+      const [one] = (await listNames(id)).common;
+      await assert.rejects(() => updateName("common", one.name_id, "  "), CatalogueRefusal);
+      await assert.rejects(() => updateName("common", one.name_id, "Two"), /already exists/);
+    });
+
+    void test("removeName takes several ids of one kind at once", async () => {
+      const id = await speciesWith({ genus: "Bulkus", epithet: "bulkus", common: ["A", "B", "C"] });
+      const [a, b] = (await listNames(id)).common;
+      assert.strictEqual(await removeName("common", [a.name_id, b.name_id, 987654]), 2);
+      assert.deepStrictEqual(
+        (await listNames(id)).common.map((n) => n.name),
+        ["C"]
+      );
+      assert.strictEqual(await removeName("common", []), 0);
+    });
+
+    void test("findNames finds every Name with a text across Species, by kind", async () => {
+      const a = await speciesWith({ genus: "Findus", epithet: "one", common: ["Lookalike"] });
+      const b = await speciesWith({ genus: "Findus", epithet: "two", scientific: ["lookalike"] });
+
+      assert.deepStrictEqual(
+        (await findNames(" LOOKALIKE ")).map((n) => [n.kind, n.species_id]),
+        [
+          ["common", a],
+          ["scientific", b],
+        ]
+      );
+      assert.deepStrictEqual(
+        (await findNames("lookalike", "scientific")).map((n) => n.species_id),
+        [b]
+      );
+      assert.deepStrictEqual(await findNames("  "), []);
+    });
+
     void test("a duplicate Name of the same kind is refused", async () => {
       const id = await speciesWith({ genus: "Zorbia", epithet: "duplex", common: ["Zorb"] });
       await assert.rejects(() => addName(id, "common", "Zorb"), /already exists/);
@@ -277,6 +335,39 @@ void describe("Species catalogue", () => {
       assert.strictEqual(byId.get(viaScientific)?.points, 20);
       assert.ok(byId.get(viaDuplicateName)?.approved_on);
       assert.strictEqual(byId.get(pending)?.approved_on, null);
+    });
+
+    void test("previewMerge says what mergeSpecies will do, and changes nothing", async () => {
+      const winner = await speciesWith({
+        genus: "Winnerus",
+        epithet: "previewus",
+        common: ["Shared"],
+        scientific: ["Winnerus previewus"],
+      });
+      const loser = await speciesWith({
+        genus: "Loserus",
+        epithet: "previewus",
+        common: ["shared", "Only Loser"],
+      });
+      await submissionOn(loser, { approved: true });
+
+      const plan = await previewMerge(winner, loser);
+      assert.deepStrictEqual(plan.moving, { common: ["Only Loser"], scientific: [] });
+      assert.deepStrictEqual(plan.folding, { common: ["shared"], scientific: [] });
+      assert.strictEqual(plan.keepsLoserCanonicalName, true);
+      assert.deepStrictEqual(plan.submissions, { total: 1, approved: 1 });
+      assert.ok(await findSpeciesById(loser), "a preview merges nothing");
+
+      await mergeSpecies(winner, loser);
+      const names = await listNames(winner);
+      assert.deepStrictEqual(
+        names.common.map((n) => n.name),
+        ["Only Loser", "Shared"]
+      );
+      assert.deepStrictEqual(
+        names.scientific.map((n) => n.name),
+        ["Loserus previewus", "Winnerus previewus"]
+      );
     });
 
     void test("refuses to merge a Species into itself or into a missing one", async () => {
@@ -392,6 +483,19 @@ void describe("Species catalogue", () => {
         [a, b]
       );
       assert.deepStrictEqual(await findSpeciesByIds([]), []);
+    });
+
+    void test("getSpeciesStatistics counts Species, CARES and Point class set or unset", async () => {
+      const before = await getSpeciesStatistics();
+      await speciesWith({ genus: "Statsus", epithet: "set", pointClass: 10 });
+      await speciesWith({ genus: "Statsus", epithet: "unset" });
+
+      const after = await getSpeciesStatistics();
+      assert.strictEqual(after.total_species, before.total_species + 2);
+      assert.strictEqual(after.with_base_points, before.with_base_points + 1);
+      assert.strictEqual(after.without_base_points, before.without_base_points + 1);
+      assert.strictEqual(after.by_type.Fish, (before.by_type.Fish ?? 0) + 2);
+      assert.strictEqual(after.cares_species, before.cares_species);
     });
 
     void test("listSpeciesDueIucnSync lists never-synced and stale Species of the type", async () => {
