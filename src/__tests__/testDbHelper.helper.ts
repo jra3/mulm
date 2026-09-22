@@ -161,11 +161,11 @@ export async function createTestSubmission(
     `
     INSERT INTO submissions (
       member_id, species_class, species_type, species_common_name,
-      species_latin_name, common_name_id, scientific_name_id,
+      species_latin_name, species_id,
       reproduction_date, temperature, ph, gh,
       specific_gravity, water_type, witness_verification_status,
       program, submitted_on
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `,
     [
       memberId,
@@ -173,8 +173,7 @@ export async function createTestSubmission(
       speciesType,
       "Test Fish",
       "Testus fishus",
-      speciesIds.common_name_id,
-      speciesIds.scientific_name_id,
+      speciesIds.group_id,
       new Date().toISOString(),
       "75",
       "7.0",

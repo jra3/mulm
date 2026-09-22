@@ -4,8 +4,8 @@
  * `src/`. It is a one-off historical import (already run). It records Species
  * through `recordName`, fills new Species' columns with raw SQL, and
  * `recordName` went with `src/db/species.ts` (#411), so it does not run until
- * that step is ported to `@/species` (for example `createSpecies` and
- * `ensureName`).
+ * that step is ported to `@/species` (for example `createSpecies`, with
+ * the Submission bound by `species_id`).
  */
 /**
  * Bulk-import Steve Matassa's historical BAP submissions.
@@ -143,7 +143,7 @@ async function main() {
       }
 
       // 5. Approve (sets points, bonuses, approved_by/on)
-      await backfillApproval(APPROVER_ID, submissionId, speciesIds, {
+      await backfillApproval(APPROVER_ID, submissionId, speciesIds.group_id, {
         id: submissionId,
         group_id: speciesIds.group_id,
         points: r.approval.points,

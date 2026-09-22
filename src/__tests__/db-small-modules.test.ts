@@ -429,37 +429,24 @@ void describe("submission_notes.ts", () => {
   beforeEach(async () => {
     await setup();
 
-    // Create a minimal submission to attach notes to
-    // Need species name group and names for FK constraints
+    // Create a minimal submission to attach notes to, bound to a Species
     const groupResult = await db.run(
       `INSERT INTO species_name_group (program_class, canonical_genus, canonical_species_name, species_type)
        VALUES ('Freshwater', 'Testus', 'noteus', 'Fish')`
     );
     const groupId = groupResult.lastID as number;
 
-    const cnResult = await db.run(
-      "INSERT INTO species_common_name (group_id, common_name) VALUES (?, ?)",
-      [groupId, "Test Note Fish"]
-    );
-    const commonNameId = cnResult.lastID as number;
-
-    const snResult = await db.run(
-      "INSERT INTO species_scientific_name (group_id, scientific_name) VALUES (?, ?)",
-      [groupId, "Testus noteus"]
-    );
-    const scientificNameId = snResult.lastID as number;
-
     const sub = await db.run(
       `INSERT INTO submissions (
         member_id, species_class, species_type, species_common_name,
-        species_latin_name, common_name_id, scientific_name_id,
+        species_latin_name, species_id,
         reproduction_date, temperature, ph, gh,
         specific_gravity, water_type, witness_verification_status,
         program, submitted_on
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         memberId1, "New World", "Fish", "Test Note Fish",
-        "Testus noteus", commonNameId, scientificNameId,
+        "Testus noteus", groupId,
         new Date().toISOString(), "76", "7.0", "8",
         "1.000", "Fresh", "pending",
         "fish", new Date().toISOString(),

@@ -165,7 +165,7 @@ void describe("getRosterWithPoints", () => {
     await approveSubmissionFixture(
       adminId,
       submissionId,
-      { common_name_id: speciesNameId.common_name_id, scientific_name_id: speciesNameId.scientific_name_id },
+      speciesNameId.group_id,
       {
         id: submissionId,
         points: 10,
@@ -229,10 +229,7 @@ void describe("getRosterWithPoints", () => {
     await approveSubmissionFixture(
       adminId,
       submissionId,
-      {
-        common_name_id: plantSpeciesNameId.common_name_id,
-        scientific_name_id: plantSpeciesNameId.scientific_name_id,
-      },
+      plantSpeciesNameId.group_id,
       {
         id: submissionId,
         points: 8,
@@ -295,10 +292,7 @@ void describe("getRosterWithPoints", () => {
     await approveSubmissionFixture(
       adminId,
       submissionId,
-      {
-        common_name_id: coralSpeciesNameId.common_name_id,
-        scientific_name_id: coralSpeciesNameId.scientific_name_id,
-      },
+      coralSpeciesNameId.group_id,
       {
         id: submissionId,
         points: 15,
@@ -355,10 +349,7 @@ void describe("getRosterWithPoints", () => {
     await approveSubmissionFixture(
       adminId,
       fishSubmissionId,
-      {
-        common_name_id: fishSpeciesNameId.common_name_id,
-        scientific_name_id: fishSpeciesNameId.scientific_name_id,
-      },
+      fishSpeciesNameId.group_id,
       {
         id: fishSubmissionId,
         points: 5,
@@ -402,10 +393,7 @@ void describe("getRosterWithPoints", () => {
     await approveSubmissionFixture(
       adminId,
       plantSubmissionId,
-      {
-        common_name_id: plantSpeciesNameId2.common_name_id,
-        scientific_name_id: plantSpeciesNameId2.scientific_name_id,
-      },
+      plantSpeciesNameId2.group_id,
       {
         id: plantSubmissionId,
         points: 6,
@@ -477,10 +465,7 @@ void describe("getRosterWithPoints", () => {
     await approveSubmissionFixture(
       adminId,
       approvedSubmissionId,
-      {
-        common_name_id: mollySpeciesNameId.common_name_id,
-        scientific_name_id: mollySpeciesNameId.scientific_name_id,
-      },
+      mollySpeciesNameId.group_id,
       {
         id: approvedSubmissionId,
         points: 7,
@@ -532,10 +517,7 @@ void describe("getRosterWithPoints", () => {
     await approveSubmissionFixture(
       adminId,
       submissionId,
-      {
-        common_name_id: shrimpSpeciesNameId.common_name_id,
-        scientific_name_id: shrimpSpeciesNameId.scientific_name_id,
-      },
+      shrimpSpeciesNameId.group_id,
       {
         id: submissionId,
         points: 4,
@@ -603,10 +585,7 @@ void describe("Points agreement across surfaces", () => {
     await approveSubmissionFixture(
       adminId,
       submissionId,
-      {
-        common_name_id: speciesNameId.common_name_id,
-        scientific_name_id: speciesNameId.scientific_name_id,
-      },
+      speciesNameId.group_id,
       {
         id: submissionId,
         points: 10,

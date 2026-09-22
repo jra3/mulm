@@ -498,24 +498,19 @@ void describe("Species catalogue: create, classify, rename, delete, Point class"
       `);
       const memberId = memberResult.lastID as number;
 
-      // Get the common and scientific name IDs we created in beforeEach
-      const names = await listNames(testGroupId);
-      const commonNameId = names.common[0]?.name_id;
-      const scientificNameId = names.scientific[0]?.name_id;
-
-      // Create approved submission using split schema FKs
+      // An approved Submission bound to the Species
       await db.run(
         `
         INSERT INTO submissions (
-          member_id, common_name_id, scientific_name_id, species_type, species_class,
+          member_id, species_id, species_type, species_class,
           species_common_name, species_latin_name, program,
           water_type, tank_size, filter_type, temperature, ph, gh,
           reproduction_date, submitted_on, approved_on, points
-        ) VALUES (?, ?, ?, 'Fish', 'Livebearers', 'Test', 'Testicus test', 'fish',
+        ) VALUES (?, ?, 'Fish', 'Livebearers', 'Test', 'Testicus test', 'fish',
                   'Fresh', '10g', 'Sponge', '75', '7.0', '200ppm',
                   '2024-01-01', '2024-01-01', '2024-01-15', 10)
       `,
-        [memberId, commonNameId, scientificNameId]
+        [memberId, testGroupId]
       );
 
       await assert.rejects(async () => await deleteSpecies(testGroupId), {
@@ -536,13 +531,10 @@ void describe("Species catalogue: create, classify, rename, delete, Point class"
       `);
       const memberId = memberResult.lastID as number;
 
-      const names = await listNames(testGroupId);
-      const commonNameId = names.common[0]?.name_id;
-
       await db.run(
         `
         INSERT INTO submissions (
-          member_id, common_name_id, species_type, species_class,
+          member_id, species_id, species_type, species_class,
           species_common_name, species_latin_name, program,
           water_type, tank_size, filter_type, temperature, ph, gh,
           reproduction_date, submitted_on
@@ -550,7 +542,7 @@ void describe("Species catalogue: create, classify, rename, delete, Point class"
                   'Fresh', '10g', 'Sponge', '75', '7.0', '200ppm',
                   '2024-01-01', '2024-01-01')
       `,
-        [memberId, commonNameId]
+        [memberId, testGroupId]
       );
 
       await assert.rejects(async () => await deleteSpecies(testGroupId), {

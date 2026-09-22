@@ -26,11 +26,11 @@ the module's own business.
 | `pointClass.ts` | `PointClass`, typed from the Points tally keys in `src/programs.ts` (5, 10, 15, 20); `isPointClass` for forms, `admitPointClass` to refuse anything else. |
 | `errors.ts` | `CatalogueRefusal`, the one error the catalogue's rules throw, with a `code` callers match on (`not_found`, `invalid`, `duplicate`, `referenced`, `point_class`, `canonical`). Routes map it to a 4xx by code. |
 | `lookup.ts` | `findSpeciesById`, `findSpeciesByIds`, and `resolveSpecies`: a pair of spellings to one Species (Latin as a scientific Name, the Canonical name among them, then common as a common Name). Imports bind by it. |
-| `names.ts` | Names by kind: `listNames`, `findNames` (by text across Species), `addName`, `updateName` (in place, id kept), `removeName` (one id or several), `ensureName` (find or add; used by approval until Submissions bind by id). `updateName` and `removeName` refuse the Canonical name. `nameTable` maps a kind to its table for the module's own SQL. |
+| `names.ts` | Names by kind: `listNames`, `findNames` (by text across Species), `addName`, `updateName` (in place, id kept), `removeName` (one id or several). `updateName` and `removeName` refuse the Canonical name. `nameTable` maps a kind to its table for the module's own SQL. |
 | `curation.ts` | `createSpecies`, `updateSpecies` (Program class, Species type, Point class, CARES), `setPointClass` (bulk), `renameCanonical`, `previewMerge`, `mergeSpecies`, `deleteSpecies`. Create, rename and merge keep the Canonical flag and its cache. |
 | `agreement.ts` | `checkFormAgreement`: does a Submission's form (spellings, Species type, Program class) agree with a Species. Built for the binding tickets; see "Not yet called" below. |
-| `submissions.ts` | The Species-Submission relation, defined once as SQL (`speciesIdOfSubmissionSql`); `findSpeciesIdOfSubmission`; `countSubmissionsOfSpecies`. |
-| `sql.ts` | SQL fragments for other modules' queries: `speciesOfSubmissionJoinSql`, `speciesJoinSql`, `speciesFromSql`, `anyNameSql`. |
+| `submissions.ts` | The Species-Submission relation, defined once as SQL (`speciesIdOfSubmissionSql`: the Submission's `species_id`); `countSubmissionsOfSpecies`. |
+| `sql.ts` | SQL fragments for other modules' queries: `speciesOfSubmissionJoinSql`, `programClassOfSubmissionSql`, `speciesJoinSql`, `speciesFromSql`, `anyNameSql`. |
 | `status.ts` | Writers for columns other modules own the meaning of: `updateIucnStatus`, `updateLastExternalSync`. |
 | `listings.ts` | Read models: `searchSpeciesTypeahead`, `getSpeciesForExplorer` + `getExplorerFilterOptions`, `getSpeciesForAdmin`, `getSpeciesDetail` (with Names by kind, references, images), `getBreedersForSpecies`, `listSpeciesDueIucnSync`, `getSpeciesStatistics`. |
 
@@ -41,12 +41,16 @@ Nothing outside `src/species/` names the species tables in SQL;
 A query elsewhere that needs a Species' columns composes the fragments in
 `sql.ts`, the way queries compose `totalPointsSql` from `src/points.ts`:
 
-- `speciesOfSubmissionJoinSql("s", "sng")`: the Species a Submission
-  references, LEFT JOINed as `sng`. Submissions, members, specialty awards.
+- `speciesOfSubmissionJoinSql("s", "sng")`: the Species a Submission is
+  bound to, LEFT JOINed as `sng`. Submissions, members, specialty awards
+  (which read the Program class from it).
 - `speciesJoinSql("c.group_id", "sng", { required })`: a Species by id.
   Collection, CARES.
 - `speciesFromSql("sng")`: the table in a FROM clause. CARES coverage, IUCN
   and external-sync reads.
+- `programClassOfSubmissionSql("s", "sng")`: the bound Species' Program
+  class, or the member's entry for an unbound Submission. Specialty awards
+  and their progress page.
 - `anyNameSql("common", "c.group_id")`: one Name of a kind, or NULL.
 
 When the tables change, these change and every query follows. Writes never go
@@ -75,9 +79,9 @@ through fragments: they go through a catalogue function.
   the same transaction.
 - **Merge** moves every Name of the loser to the winner, deduplicated without
   regard to case. The winner keeps its flag; the loser's Canonical name comes
-  along as an unflagged scientific Name. The loser's Submissions follow their
-  Names, so approved Submissions and their Points are untouched. `previewMerge` reports the same
-  plan without writing.
+  along as an unflagged scientific Name. The loser's Submissions are rebound
+  to the winner, so approved Submissions and their Points are untouched.
+  `previewMerge` reports the same plan without writing.
 - **Delete** is refused while any Submission, in any state, references the
   Species. There is no force: merge is the way out.
 - **Names** are never invented. The typeahead gives a common Name the
@@ -92,11 +96,11 @@ through fragments: they go through a catalogue function.
   search and form agreement find it as a scientific Name, with no separate
   canonical step. Import-only scripts that insert a Species directly must
   insert its flagged Name too (`scripts/setup-e2e-db.ts` does).
-- **Submissions reach their Species** through their two Name foreign keys
-  (`common_name_id`, `scientific_name_id`). `speciesIdOfSubmissionSql` is the
-  only place that knows it; #413 replaces it with `species_id` and every
-  query composing it follows. `ensureName` (approval) and the backfill
-  bridge in `src/mcp/backfill-server-core.ts` go then.
+- **Submissions are bound to their Species** by `submissions.species_id`
+  (migration 058, backfilled from the old Name foreign keys, which 059
+  dropped). Approval binds by id and adds no Names; the member's spellings
+  stay on the Submission as submitted. A Submission approved before binding
+  existed may be unbound (`species_id` NULL).
 - **`group_id`** is the Species' id under its column name. Read models,
   routes, views, forms and MCP arguments all say `group_id`; it is renamed
   when the column is, not before.

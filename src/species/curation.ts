@@ -169,14 +169,10 @@ async function insertCanonicalName(db: Database, speciesId: number, text: string
   );
 }
 
-/**
- * Fold one Name into another of the same kind: Submissions referencing it are
- * repointed to the other, and it goes.
- */
-async function foldName(db: Database, kind: NameKind, fromId: number, intoId: number) {
+/** Remove a Name that duplicates another. Submissions bind to Species, not Names, so none follow it. */
+async function deleteDuplicateName(db: Database, kind: NameKind, nameId: number) {
   const t = nameTable[kind];
-  await db.run(`UPDATE submissions SET ${t.id} = ? WHERE ${t.id} = ?`, [intoId, fromId]);
-  await db.run(`DELETE FROM ${t.table} WHERE ${t.id} = ?`, [fromId]);
+  await db.run(`DELETE FROM ${t.table} WHERE ${t.id} = ?`, [nameId]);
 }
 
 type NameText = { name_id: number; name: string };
@@ -208,7 +204,7 @@ async function moveCanonicalFlag(db: Database, speciesId: number, next: string) 
       flagged.name_id,
     ]);
     if (target && flagged.name.toLowerCase() === next.toLowerCase()) {
-      await foldName(db, "scientific", flagged.name_id, target.name_id);
+      await deleteDuplicateName(db, "scientific", flagged.name_id);
     }
   }
   if (!target) {
@@ -290,7 +286,7 @@ async function moveNames(db: Database, kind: NameKind, winnerId: number, loserId
       [winnerId, name.name, name.name]
     );
     if (winnerCopy) {
-      await foldName(db, kind, name.name_id, winnerCopy.name_id);
+      await deleteDuplicateName(db, kind, name.name_id);
     } else {
       await db.run(`UPDATE ${t.table} SET group_id = ? WHERE ${t.id} = ?`, [
         winnerId,
@@ -312,7 +308,7 @@ export type MergePreview = {
    * (unflagged) scientific Name; false when the winner already has it.
    */
   keepsLoserCanonicalName: boolean;
-  /** Submissions of the loser, which follow their Names to the winner. */
+  /** Submissions of the loser, which are rebound to the winner. */
   submissions: { total: number; approved: number };
 };
 
@@ -358,9 +354,9 @@ export async function previewMerge(winnerId: number, loserId: number): Promise<M
 /**
  * Merge the loser into the winner: every Name of the loser moves to the
  * winner, deduplicated without regard to case; the winner keeps its Canonical
- * name, and the loser's comes along as an unflagged scientific Name; the loser's Submissions follow their Names to the winner, so
- * approved Submissions and their Points are untouched; then the loser is
- * deleted.
+ * name, and the loser's comes along as an unflagged scientific Name; the
+ * loser's Submissions are rebound to the winner, so approved Submissions and
+ * their Points are untouched; then the loser is deleted.
  * @throws CatalogueRefusal if either Species is missing or they are the same
  */
 export async function mergeSpecies(winnerId: number, loserId: number): Promise<void> {
@@ -380,6 +376,7 @@ export async function mergeSpecies(winnerId: number, loserId: number): Promise<v
       );
       await moveNames(db, "common", winnerId, loserId);
       await moveNames(db, "scientific", winnerId, loserId);
+      await db.run("UPDATE submissions SET species_id = ? WHERE species_id = ?", [winnerId, loserId]);
 
       await db.run("DELETE FROM species_name_group WHERE group_id = ?", [loserId]);
     });

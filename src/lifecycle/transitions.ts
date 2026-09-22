@@ -15,6 +15,7 @@ import type { FormValues } from "@/forms/submission";
 import type { ApprovalFormValues } from "@/forms/approval";
 import type { Program } from "@/levelManager";
 import { isProgramType } from "@/programs";
+import { findSpeciesById } from "@/species";
 import { logger } from "@/utils/logger";
 import { AuthorizationError, ValidationError, StateError } from "./errors";
 import { deriveState, hasChangesRequested } from "./state";
@@ -493,18 +494,24 @@ export async function requestChanges(
 }
 
 /**
- * Approve a Submission and award its Points.
+ * Approve a Submission, binding it to the Species the committee chose, and
+ * award its Points.
  *
  * The only way Points are ever awarded, so there is one place to look when a
  * total is questioned - and the only transition that touches a member's
- * standing upward.
+ * standing upward. It binds by id and adds nothing to the Species: the
+ * member's spellings stay on the Submission as submitted.
  */
 export async function approve(
   caller: Caller,
   submissionId: number,
-  speciesIds: { common_name_id: number; scientific_name_id: number },
+  speciesId: number,
   approval: ApprovalFormValues
 ): Promise<void> {
+  if (!(await findSpeciesById(speciesId))) {
+    throw new ValidationError("Choose a Species that exists", "species_id", speciesId);
+  }
+
   const memberId = await withTransaction(async (db) => {
     const { submission } = await guard(db, moves.approve, caller, submissionId);
 
@@ -520,8 +527,7 @@ export async function approve(
     await runUpdate(
       db,
       `UPDATE submissions SET
-         common_name_id = ?,
-         scientific_name_id = ?,
+         species_id = ?,
          points = ?,
          article_points = ?,
          first_time_species = ?,
@@ -532,8 +538,7 @@ export async function approve(
          approved_on = ?
        WHERE id = ? AND approved_on IS NULL`,
       [
-        speciesIds.common_name_id,
-        speciesIds.scientific_name_id,
+        speciesId,
         points,
         article_points,
         first_time_species ? 1 : 0,

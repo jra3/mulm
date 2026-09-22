@@ -10,30 +10,13 @@ import assert from "node:assert";
 import { Database, open } from "sqlite";
 import sqlite3 from "sqlite3";
 import fs from "fs";
-import os from "os";
-import path from "path";
+import { allMigrations, migrationsUpTo } from "./helpers/migrations";
 
 const FLAG_MIGRATION = 57;
-const allMigrations = "./db/migrations";
-
-/**
- * A directory holding the migrations before 057, linked to the real files, so
- * the migrator (and its own parsing) runs them exactly as it runs the rest.
- * Migrating a 057 database with it rolls 057 back.
- */
-function migrationsBeforeFlag(): string {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "mulm-migrations-"));
-  for (const file of fs.readdirSync(allMigrations)) {
-    const id = Number(/^(\d+)/.exec(file)?.[1]);
-    if (file.endsWith(".sql") && id < FLAG_MIGRATION) {
-      fs.symlinkSync(path.resolve(allMigrations, file), path.join(dir, file));
-    }
-  }
-  return dir;
-}
 
 let db: Database;
 let before057: string;
+let upTo057: string;
 
 async function species(genus: string, epithet: string, scientific: string[] = []): Promise<number> {
   const { lastID } = await db.run(
@@ -60,7 +43,8 @@ async function scientificNames(groupId: number) {
 
 void describe("Migration 057: Canonical name as a flagged scientific Name", () => {
   beforeEach(async () => {
-    before057 = migrationsBeforeFlag();
+    before057 = migrationsUpTo(FLAG_MIGRATION - 1);
+    upTo057 = migrationsUpTo(FLAG_MIGRATION);
     db = await open({ filename: ":memory:", driver: sqlite3.Database });
     await db.exec("PRAGMA foreign_keys = ON;");
     await db.migrate({ migrationsPath: before057 });
@@ -68,7 +52,7 @@ void describe("Migration 057: Canonical name as a flagged scientific Name", () =
 
   afterEach(async () => {
     await db.close();
-    fs.rmSync(before057, { recursive: true, force: true });
+    for (const dir of [before057, upTo057]) fs.rmSync(dir, { recursive: true, force: true });
   });
 
   void test("gives every Species exactly one flagged scientific Name equal to its cached columns", async () => {
@@ -94,7 +78,8 @@ void describe("Migration 057: Canonical name as a flagged scientific Name", () =
     );
     const before = await db.get<{ n: number }>("SELECT COUNT(*) AS n FROM species_scientific_name");
 
-    await db.migrate({ migrationsPath: allMigrations });
+    // Up to 057 only: 059 drops the Submission's Name keys this test reads.
+    await db.migrate({ migrationsPath: upTo057 });
 
     const flaggedPerSpecies = await db.all<Array<{ group_id: number; flagged: number; matches: number }>>(
       `SELECT g.group_id,

@@ -9,7 +9,7 @@ import { Database, open } from "sqlite";
 import sqlite3 from "sqlite3";
 import { overrideConnection } from "../db/conn";
 import { getSpecialtyAwardProgress } from "../db/members";
-import { createSpecies, addName, ensureName } from "@/species";
+import { createSpecies, addName } from "@/species";
 
 void describe("Specialty Awards Progress Calculation", () => {
   let db: Database;
@@ -63,13 +63,10 @@ void describe("Specialty Awards Progress Calculation", () => {
 
     // Add names to species groups
     await addName(anabantoidSpeciesId, "common", "Betta splendens");
-    await ensureName(anabantoidSpeciesId, "scientific", "Betta splendens");
 
     await addName(catfishCorydorasId, "common", "Corydoras paleatus");
-    await ensureName(catfishCorydorasId, "scientific", "Corydoras paleatus");
 
     await addName(catfishNonCorydorasId, "common", "Ancistrus sp.");
-    await ensureName(catfishNonCorydorasId, "scientific", "Ancistrus sp.");
   });
 
   afterEach(async () => {
@@ -94,25 +91,17 @@ void describe("Specialty Awards Progress Calculation", () => {
 
   void test("calculates basic progress for Anabantoids", async () => {
     // Create approved submission for Anabantoid
-    const commonNameResult = await db.get(
-      "SELECT common_name_id FROM species_common_name WHERE group_id = ?",
-      [anabantoidSpeciesId]
-    );
-    const scientificNameResult = await db.get(
-      "SELECT scientific_name_id FROM species_scientific_name WHERE group_id = ?",
-      [anabantoidSpeciesId]
-    );
 
     await db.run(
       `
       INSERT INTO submissions (
         member_id, program, species_type, species_class, species_common_name, species_latin_name,
-        common_name_id, scientific_name_id, water_type, count, reproduction_date,
+        species_id, water_type, count, reproduction_date,
         foods, spawn_locations, submitted_on, approved_on, points
       ) VALUES (?, 'fish', 'Fish', 'Anabantoids', 'Siamese Fighting Fish', 'Betta splendens',
-        ?, ?, 'Fresh', '20', '2024-01-01', 'Frozen', 'Plants', datetime('now'), datetime('now'), 5)
+        ?, 'Fresh', '20', '2024-01-01', 'Frozen', 'Plants', datetime('now'), datetime('now'), 5)
     `,
-      [memberId, commonNameResult.common_name_id, scientificNameResult.scientific_name_id]
+      [memberId, anabantoidSpeciesId]
     );
 
     const progress = await getSpecialtyAwardProgress(memberId);
@@ -132,26 +121,18 @@ void describe("Specialty Awards Progress Calculation", () => {
 
   void test("handles Catfish special requirement (non-Corydoras)", async () => {
     // Add only Corydoras submissions (4 of them)
-    const corydorasCommonName = await db.get(
-      "SELECT common_name_id FROM species_common_name WHERE group_id = ?",
-      [catfishCorydorasId]
-    );
-    const corydorasScientificName = await db.get(
-      "SELECT scientific_name_id FROM species_scientific_name WHERE group_id = ?",
-      [catfishCorydorasId]
-    );
 
     for (let i = 0; i < 4; i++) {
       await db.run(
         `
         INSERT INTO submissions (
           member_id, program, species_type, species_class, species_common_name, species_latin_name,
-          common_name_id, scientific_name_id, water_type, count, reproduction_date,
+          species_id, water_type, count, reproduction_date,
           foods, spawn_locations, submitted_on, approved_on, points
         ) VALUES (?, 'fish', 'Fish', 'Catfish & Loaches', 'Peppered Cory', 'Corydoras paleatus',
-          ?, ?, 'Fresh', '20', '2024-01-01', 'Frozen', 'Plants', datetime('now'), datetime('now'), 5)
+          ?, 'Fresh', '20', '2024-01-01', 'Frozen', 'Plants', datetime('now'), datetime('now'), 5)
       `,
-        [memberId, corydorasCommonName.common_name_id, corydorasScientificName.scientific_name_id]
+        [memberId, catfishCorydorasId]
       );
     }
 
@@ -169,25 +150,17 @@ void describe("Specialty Awards Progress Calculation", () => {
     );
 
     // Now add a non-Corydoras catfish and reach 5 species total
-    const ancistrusCommonName = await db.get(
-      "SELECT common_name_id FROM species_common_name WHERE group_id = ?",
-      [catfishNonCorydorasId]
-    );
-    const ancistrusScientificName = await db.get(
-      "SELECT scientific_name_id FROM species_scientific_name WHERE group_id = ?",
-      [catfishNonCorydorasId]
-    );
 
     await db.run(
       `
       INSERT INTO submissions (
         member_id, program, species_type, species_class, species_common_name, species_latin_name,
-        common_name_id, scientific_name_id, water_type, count, reproduction_date,
+        species_id, water_type, count, reproduction_date,
         foods, spawn_locations, submitted_on, approved_on, points
       ) VALUES (?, 'fish', 'Fish', 'Catfish & Loaches', 'Bristlenose Pleco', 'Ancistrus sp.',
-        ?, ?, 'Fresh', '20', '2024-01-01', 'Frozen', 'Plants', datetime('now'), datetime('now'), 10)
+        ?, 'Fresh', '20', '2024-01-01', 'Frozen', 'Plants', datetime('now'), datetime('now'), 10)
     `,
-      [memberId, ancistrusCommonName.common_name_id, ancistrusScientificName.scientific_name_id]
+      [memberId, catfishNonCorydorasId]
     );
 
     // Add 3 more unique Corydoras species to reach 5 total
@@ -201,32 +174,21 @@ void describe("Specialty Awards Progress Calculation", () => {
       });
 
       await addName(newCorydorasId, "common", `Corydoras species${i}`);
-      await ensureName(newCorydorasId, "scientific", `Corydoras species${i}`);
-
-      const newCommonName = await db.get(
-        "SELECT common_name_id FROM species_common_name WHERE group_id = ?",
-        [newCorydorasId]
-      );
-      const newScientificName = await db.get(
-        "SELECT scientific_name_id FROM species_scientific_name WHERE group_id = ?",
-        [newCorydorasId]
-      );
 
       await db.run(
         `
         INSERT INTO submissions (
           member_id, program, species_type, species_class, species_common_name, species_latin_name,
-          common_name_id, scientific_name_id, water_type, count, reproduction_date,
+          species_id, water_type, count, reproduction_date,
           foods, spawn_locations, submitted_on, approved_on, points
         ) VALUES (?, 'fish', 'Fish', 'Catfish & Loaches', ?, ?,
-          ?, ?, 'Fresh', '20', '2024-01-01', 'Frozen', 'Plants', datetime('now'), datetime('now'), 5)
+          ?, 'Fresh', '20', '2024-01-01', 'Frozen', 'Plants', datetime('now'), datetime('now'), 5)
       `,
         [
           memberId,
           `Cory ${i}`,
           `Corydoras species${i}`,
-          newCommonName.common_name_id,
-          newScientificName.scientific_name_id,
+          newCorydorasId,
         ]
       );
     }
@@ -338,26 +300,18 @@ void describe("Specialty Awards Progress Calculation", () => {
 
   void test("counts unique species correctly (case-insensitive)", async () => {
     // Add the same species twice with different cases
-    const commonNameResult = await db.get(
-      "SELECT common_name_id FROM species_common_name WHERE group_id = ?",
-      [anabantoidSpeciesId]
-    );
-    const scientificNameResult = await db.get(
-      "SELECT scientific_name_id FROM species_scientific_name WHERE group_id = ?",
-      [anabantoidSpeciesId]
-    );
 
     // First submission
     await db.run(
       `
       INSERT INTO submissions (
         member_id, program, species_type, species_class, species_common_name, species_latin_name,
-        common_name_id, scientific_name_id, water_type, count, reproduction_date,
+        species_id, water_type, count, reproduction_date,
         foods, spawn_locations, submitted_on, approved_on, points
       ) VALUES (?, 'fish', 'Fish', 'Anabantoids', 'Siamese Fighting Fish', 'Betta splendens',
-        ?, ?, 'Fresh', '20', '2024-01-01', 'Frozen', 'Plants', datetime('now'), datetime('now'), 5)
+        ?, 'Fresh', '20', '2024-01-01', 'Frozen', 'Plants', datetime('now'), datetime('now'), 5)
     `,
-      [memberId, commonNameResult.common_name_id, scientificNameResult.scientific_name_id]
+      [memberId, anabantoidSpeciesId]
     );
 
     // Second submission (same species, should not count twice)
@@ -365,12 +319,12 @@ void describe("Specialty Awards Progress Calculation", () => {
       `
       INSERT INTO submissions (
         member_id, program, species_type, species_class, species_common_name, species_latin_name,
-        common_name_id, scientific_name_id, water_type, count, reproduction_date,
+        species_id, water_type, count, reproduction_date,
         foods, spawn_locations, submitted_on, approved_on, points
       ) VALUES (?, 'fish', 'Fish', 'Anabantoids', 'Siamese Fighting Fish', 'BETTA SPLENDENS',
-        ?, ?, 'Fresh', '30', '2024-02-01', 'Live', 'Cave', datetime('now'), datetime('now'), 5)
+        ?, 'Fresh', '30', '2024-02-01', 'Live', 'Cave', datetime('now'), datetime('now'), 5)
     `,
-      [memberId, commonNameResult.common_name_id, scientificNameResult.scientific_name_id]
+      [memberId, anabantoidSpeciesId]
     );
 
     const progress = await getSpecialtyAwardProgress(memberId);

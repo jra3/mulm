@@ -19,7 +19,7 @@ import { readFile, readdir, stat } from "fs/promises";
 import { join, extname } from "path";
 import { foodTypes, spawnLocations } from "../forms/submission";
 import * as catalogue from "../species";
-import type { NameKind, Species } from "../species";
+import type { Species } from "../species";
 
 // Type definitions
 
@@ -64,8 +64,6 @@ type ListCsvFilesArgs = {
 
 type SpeciesMatch = {
   group_id: number;
-  common_name_id: number | null;
-  scientific_name_id: number | null;
   base_points: number | null;
   species_class: string | null;
 };
@@ -88,8 +86,8 @@ type RowValidation = {
     foods: string | null;
     spawn_locations: string | null;
     points: number | null;
-    common_name_id: number | null;
-    scientific_name_id: number | null;
+    /** The Species the Submission will be bound to. */
+    species_id: number | null;
   };
   original: CsvRow;
 };
@@ -275,27 +273,10 @@ function deriveProgram(speciesType: string): string {
   }
 }
 
-/**
- * The Name ids a backfilled Submission references its Species through, until
- * Submissions carry a Species id: of each kind, the Name that matches the
- * row's spelling, else the Species' first Name of that kind. Nothing is added
- * to the catalogue.
- */
-async function nameIdsFor(
-  species: Species,
-  commonName: string | undefined,
-  latinName: string | undefined
-): Promise<SpeciesMatch> {
-  const names = await catalogue.listNames(species.group_id);
-  const pick = (kind: NameKind, spelling: string | undefined) => {
-    const wanted = spelling?.trim().toLowerCase();
-    const match = wanted ? names[kind].find((n) => n.name.toLowerCase() === wanted) : undefined;
-    return (match ?? names[kind][0])?.name_id ?? null;
-  };
+/** What an import takes from the Species a row binds to. */
+function speciesMatchOf(species: Species): SpeciesMatch {
   return {
     group_id: species.group_id,
-    common_name_id: pick("common", commonName),
-    scientific_name_id: pick("scientific", latinName),
     base_points: species.base_points,
     species_class: species.program_class,
   };
@@ -307,7 +288,7 @@ async function matchSpecies(
   latinName: string | undefined
 ): Promise<SpeciesMatch | null> {
   const resolution = await catalogue.resolveSpecies({ commonName, latinName });
-  return resolution ? nameIdsFor(resolution.species, commonName, latinName) : null;
+  return resolution ? speciesMatchOf(resolution.species) : null;
 }
 
 function parseFertilizers(input: string | undefined): Array<{ type: string; regimen: string }> {
@@ -421,14 +402,12 @@ async function handleValidateImport(args: ValidateImportArgs) {
 
     // Species matching
     const speciesMatch = await matchSpecies(row.species_common_name, row.species_latin_name);
-    let commonNameId: number | null = null;
-    let scientificNameId: number | null = null;
+    let speciesId: number | null = null;
     let points: number | null = default_points ?? null;
     let speciesClass = row.species_class || "";
 
     if (speciesMatch) {
-      commonNameId = speciesMatch.common_name_id;
-      scientificNameId = speciesMatch.scientific_name_id;
+      speciesId = speciesMatch.group_id;
       if (speciesMatch.base_points != null) {
         points = speciesMatch.base_points;
       }
@@ -485,8 +464,7 @@ async function handleValidateImport(args: ValidateImportArgs) {
         foods: normalizeFoods(row.foods),
         spawn_locations: normalizeSpawnLocations(row.spawn_locations),
         points,
-        common_name_id: commonNameId,
-        scientific_name_id: scientificNameId,
+        species_id: speciesId,
       },
       original: row,
     });
@@ -571,8 +549,7 @@ async function handleImportSubmissions(args: ImportSubmissionsArgs) {
       try {
         // Species matching with overrides
         const overrideKey = String(i);
-        let commonNameId: number | null = null;
-        let scientificNameId: number | null = null;
+        let speciesId: number | null = null;
         let points: number | null = default_points ?? null;
         let speciesClass = row.species_class || "";
 
@@ -583,11 +560,10 @@ async function handleImportSubmissions(args: ImportSubmissionsArgs) {
           continue;
         }
         const speciesMatch = overrideSpecies
-          ? await nameIdsFor(overrideSpecies, row.species_common_name, row.species_latin_name)
+          ? speciesMatchOf(overrideSpecies)
           : await matchSpecies(row.species_common_name, row.species_latin_name);
         if (speciesMatch) {
-          commonNameId = speciesMatch.common_name_id;
-          scientificNameId = speciesMatch.scientific_name_id;
+          speciesId = speciesMatch.group_id;
           if (speciesMatch.base_points != null) {
             points = speciesMatch.base_points;
           }
@@ -647,8 +623,7 @@ async function handleImportSubmissions(args: ImportSubmissionsArgs) {
           "approved_on",
           "approved_by",
           "points",
-          "common_name_id",
-          "scientific_name_id",
+          "species_id",
           "witness_verification_status",
           "witnessed_by",
           "witnessed_on",
@@ -685,8 +660,7 @@ async function handleImportSubmissions(args: ImportSubmissionsArgs) {
           now,                     // approved_on
           admin_id,                // approved_by
           points,
-          commonNameId,
-          scientificNameId,
+          speciesId,
           "confirmed",             // witness_verification_status
           admin_id,                // witnessed_by
           now,                     // witnessed_on

@@ -64,3 +64,7 @@ Zod form mapping, species-name resolution, image upload, the Points formula,
 Program rules and the Level ladder all stay outside. The module takes values
 already validated and resolved, and calls the Level and Specialty Award modules
 as consequences rather than absorbing them.
+
+`approve` takes the Species the committee chose as an id, refuses one the
+Species catalogue does not know, and binds the Submission to it. It never
+adds Names to the Species: the member's spellings stay on the Submission.

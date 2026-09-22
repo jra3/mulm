@@ -9,7 +9,7 @@ import {
   teardownTestDatabase,
   createTestSubmission,
   mockApprovalData,
-  mockSpeciesIds,
+  mockSpeciesId,
   approveSubmissionFixture,
   type TestContext,
 } from "./helpers/testHelpers";
@@ -44,7 +44,7 @@ void describe("Edit Approved Submission", () => {
     });
 
     // Approve the submission
-    await approveSubmissionFixture(ctx.admin.id, submissionId, mockSpeciesIds, {
+    await approveSubmissionFixture(ctx.admin.id, submissionId, mockSpeciesId, {
       ...mockApprovalData,
       points: options.points || 10,
       article_points: options.articlePoints || 0,

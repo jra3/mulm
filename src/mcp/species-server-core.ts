@@ -678,7 +678,7 @@ export function initializeSpeciesServer(server: Server): void {
         {
           name: "merge_species_groups",
           description:
-            "Merges the defunct Species into the canonical one: every Name moves (deduplicated), the defunct Species' Canonical name is kept as a scientific Name, and its Submissions follow their Names. Approved Submissions and their Points are untouched.",
+            "Merges the defunct Species into the canonical one: every Name moves (deduplicated), the defunct Species' Canonical name is kept as a scientific Name, and its Submissions are rebound to the canonical Species. Approved Submissions and their Points are untouched.",
           inputSchema: {
             type: "object",
             properties: {

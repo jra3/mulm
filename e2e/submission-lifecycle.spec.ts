@@ -166,6 +166,8 @@ test.describe("Submission Complete Lifecycle", () => {
 			expect(submission.approved_on).toBeTruthy();
 			expect(submission.approved_by).toBe(adminId);
 			expect(submission.points).toBe(10);
+			// Bound to the Species the committee picked
+			expect(submission.species_id).toBeTruthy();
 			// Witness data should still be preserved
 			expect(submission.witnessed_by).toBe(adminId);
 			expect(submission.witnessed_on).toBeTruthy();

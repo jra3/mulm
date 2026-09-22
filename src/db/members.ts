@@ -5,7 +5,7 @@ import { recordActivity, removeActivity } from "./activity";
 import { specialtyAwards, getCountableSpecialtyAwards } from "@/specialtyAwards";
 import { programSpeciesTypeSql, totalPointsSql } from "@/points";
 import { ProgramType } from "@/programs";
-import { speciesOfSubmissionJoinSql } from "@/species";
+import { programClassOfSubmissionSql, speciesOfSubmissionJoinSql } from "@/species";
 
 // type as represented in the database
 export type MemberRecord = {
@@ -408,7 +408,8 @@ export interface SpecialtyAwardProgressData {
 export async function getSpecialtyAwardProgress(
   memberId: number
 ): Promise<SpecialtyAwardProgressData> {
-  // Get member's approved submissions with genus information (for catfish limitation)
+  // Get member's approved submissions with genus information (for catfish limitation).
+  // Program class is the bound Species', as in recomputeSpecialtyAwards.
   const submissions = await query<{
     species_class: string;
     species_latin_name: string;
@@ -419,7 +420,7 @@ export async function getSpecialtyAwardProgress(
   }>(
     `
 		SELECT
-			s.species_class,
+			${programClassOfSubmissionSql("s", "sng")} AS species_class,
 			s.species_latin_name,
 			s.species_type,
 			s.water_type,

@@ -24,11 +24,9 @@ import {
   updateSpecies,
   setPointClass,
   checkFormAgreement,
-  findSpeciesIdOfSubmission,
   countSubmissionsOfSpecies,
   isPointClass,
   CatalogueRefusal,
-  ensureName,
   findSpeciesByIds,
   listSpeciesDueIucnSync,
   updateName,
@@ -60,32 +58,36 @@ async function speciesWith(opts: {
   return id;
 }
 
-/** A Submission referencing one of the Species' Names, as approval leaves it today. */
+/** A Submission bound to the Species, as approval leaves it. */
 async function submissionOn(
   speciesId: number,
-  opts: { approved?: boolean; points?: number; via?: "common" | "scientific" } = {}
+  opts: { approved?: boolean; points?: number } = {}
 ): Promise<number> {
-  const names = await listNames(speciesId);
-  const via = opts.via ?? "common";
-  const name = via === "common" ? names.common[0] : names.scientific[0];
   const now = new Date().toISOString();
   const result = await db.run(
     `INSERT INTO submissions (
       member_id, program, species_type, species_class, species_common_name, species_latin_name,
-      reproduction_date, submitted_on, approved_on, points,
-      common_name_id, scientific_name_id
-    ) VALUES (?, 'fish', 'Fish', 'Livebearers', 'as typed', 'as typed', ?, ?, ?, ?, ?, ?)`,
+      reproduction_date, submitted_on, approved_on, points, species_id
+    ) VALUES (?, 'fish', 'Fish', 'Livebearers', 'as typed', 'as typed', ?, ?, ?, ?, ?)`,
     [
       memberId,
       now,
       now,
       opts.approved ? now : null,
       opts.approved ? (opts.points ?? 10) : null,
-      via === "common" ? name.name_id : null,
-      via === "scientific" ? name.name_id : null,
+      speciesId,
     ]
   );
   return result.lastID as number;
+}
+
+/** The Species a Submission is bound to, or null. */
+async function speciesOfSubmission(submissionId: number): Promise<number | null> {
+  const row = await db.get<{ species_id: number | null }>(
+    "SELECT species_id FROM submissions WHERE id = ?",
+    [submissionId]
+  );
+  return row?.species_id ?? null;
 }
 
 /**
@@ -215,7 +217,7 @@ void describe("Species catalogue", () => {
       assert.strictEqual(names.scientific[0].name_id, scientific);
     });
 
-    void test("updateName corrects the text in place; the id and its Submissions stay", async () => {
+    void test("updateName corrects the text in place, keeping the id", async () => {
       const id = await speciesWith({ genus: "Typous", epithet: "typous", common: ["Typo Fsh"] });
       const [typo] = (await listNames(id)).common;
       const submission = await submissionOn(id);
@@ -226,7 +228,7 @@ void describe("Species catalogue", () => {
         (await listNames(id)).common.map((n) => [n.name_id, n.name]),
         [[typo.name_id, "Typo Fish"]]
       );
-      assert.strictEqual(await findSpeciesIdOfSubmission(submission), id);
+      assert.strictEqual(await speciesOfSubmission(submission), id);
       assert.strictEqual(await updateName("common", 987654, "Nothing"), 0);
     });
 
@@ -299,7 +301,7 @@ void describe("Species catalogue", () => {
     void test("keeps the old Canonical name's row and id, so its Submissions keep it", async () => {
       const id = await speciesWith({ genus: "Oldus", epithet: "twiceus" });
       const [old] = (await listNames(id)).scientific;
-      const submission = await submissionOn(id, { via: "scientific" });
+      const submission = await submissionOn(id);
 
       await renameCanonical(id, "Newus", "twiceus");
 
@@ -311,7 +313,7 @@ void describe("Species catalogue", () => {
           [true, "Oldus twiceus", false],
         ]
       );
-      assert.strictEqual(await findSpeciesIdOfSubmission(submission), id);
+      assert.strictEqual(await speciesOfSubmission(submission), id);
     });
 
     void test("refuses a Canonical name another Species already has", async () => {
@@ -388,9 +390,7 @@ void describe("Species catalogue", () => {
 
     void test("a change of case to a spelling the Species already has folds the old one into it", async () => {
       const id = await speciesWith({ genus: "Foldus", epithet: "Casus", scientific: ["Foldus casus"] });
-      const submission = await submissionOn(id, { via: "scientific" });
-      const [flagged] = (await listNames(id)).scientific.filter((n) => n.canonical);
-      await db.run("UPDATE submissions SET scientific_name_id = ? WHERE id = ?", [flagged.name_id, submission]);
+      const submission = await submissionOn(id);
 
       await renameCanonical(id, "Foldus", "casus");
 
@@ -400,11 +400,7 @@ void describe("Species catalogue", () => {
         names.map((n) => n.name),
         ["Foldus casus"]
       );
-      const row = await db.get<{ scientific_name_id: number }>(
-        "SELECT scientific_name_id FROM submissions WHERE id = ?",
-        [submission]
-      );
-      assert.strictEqual(row?.scientific_name_id, names[0].name_id);
+      assert.strictEqual(await speciesOfSubmission(submission), id);
     });
 
     void test("merge: the winner keeps its flag and the loser's comes along unflagged", async () => {
@@ -427,7 +423,7 @@ void describe("Species catalogue", () => {
     void test("merge folds a loser's Canonical name the winner already has, in any case", async () => {
       const winner = await speciesWith({ genus: "Winnerus", epithet: "foldus", scientific: ["loserus foldus"] });
       const loser = await speciesWith({ genus: "Loserus", epithet: "foldus" });
-      const submission = await submissionOn(loser, { via: "scientific", approved: true, points: 15 });
+      const submission = await submissionOn(loser, { approved: true, points: 15 });
 
       assert.strictEqual((await previewMerge(winner, loser)).keepsLoserCanonicalName, false);
       await mergeSpecies(winner, loser);
@@ -440,7 +436,7 @@ void describe("Species catalogue", () => {
           ["loserus foldus", false],
         ]
       );
-      assert.strictEqual(await findSpeciesIdOfSubmission(submission), winner);
+      assert.strictEqual(await speciesOfSubmission(submission), winner);
     });
 
     void test("removeName refuses it, alone or in a batch, and removes nothing", async () => {
@@ -523,14 +519,14 @@ void describe("Species catalogue", () => {
         epithet: "pointus",
         common: ["Pointy", "Other Pointy"],
       });
-      const viaDuplicateName = await submissionOn(loser, { approved: true, points: 15 });
-      const viaScientific = await submissionOn(loser, { approved: true, points: 20, via: "scientific" });
+      const approved15 = await submissionOn(loser, { approved: true, points: 15 });
+      const approved20 = await submissionOn(loser, { approved: true, points: 20 });
       const pending = await submissionOn(loser);
 
       await mergeSpecies(winner, loser);
 
-      for (const id of [viaDuplicateName, viaScientific, pending]) {
-        assert.strictEqual(await findSpeciesIdOfSubmission(id), winner);
+      for (const id of [approved15, approved20, pending]) {
+        assert.strictEqual(await speciesOfSubmission(id), winner);
       }
       assert.deepStrictEqual(await countSubmissionsOfSpecies(winner), { total: 3, approved: 2 });
       const row = (id: number) =>
@@ -538,9 +534,9 @@ void describe("Species catalogue", () => {
           "SELECT points, approved_on FROM submissions WHERE id = ?",
           [id]
         );
-      assert.strictEqual((await row(viaDuplicateName))?.points, 15);
-      assert.strictEqual((await row(viaScientific))?.points, 20);
-      assert.ok((await row(viaDuplicateName))?.approved_on);
+      assert.strictEqual((await row(approved15))?.points, 15);
+      assert.strictEqual((await row(approved20))?.points, 20);
+      assert.ok((await row(approved15))?.approved_on);
       assert.strictEqual((await row(pending))?.approved_on, null);
     });
 
@@ -600,7 +596,7 @@ void describe("Species catalogue", () => {
 
     void test("is refused when an unapproved Submission references the Species", async () => {
       const id = await speciesWith({ genus: "Keptus", epithet: "pendus" });
-      await submissionOn(id, { via: "scientific" });
+      await submissionOn(id);
       await assert.rejects(() => deleteSpecies(id), /merge/i);
       assert.ok(await findSpeciesById(id));
     });
@@ -646,40 +642,6 @@ void describe("Species catalogue", () => {
   });
 
   void describe("reads the routes use", () => {
-    void test("ensureName returns an existing Name's id, or adds the Name", async () => {
-      const id = await speciesWith({ genus: "Ensureus", epithet: "ensureus", common: ["Ensure Fish"] });
-      const existing = (await listNames(id)).common[0].name_id;
-
-      assert.strictEqual(await ensureName(id, "common", "Ensure Fish"), existing);
-      const added = await ensureName(id, "scientific", " Ensureus ensureus ");
-      assert.deepStrictEqual(
-        (await listNames(id)).scientific.map((n) => [n.name_id, n.name]),
-        [[added, "Ensureus ensureus"]]
-      );
-    });
-
-    void test("findSpeciesIdOfSubmission follows either Name reference", async () => {
-      const id = await speciesWith({
-        genus: "Boundus",
-        epithet: "boundus",
-        common: ["Bound Fish"],
-      });
-      const viaCommon = await submissionOn(id);
-      const viaScientific = await submissionOn(id, { via: "scientific" });
-      const unbound = (
-        await db.run(
-          `INSERT INTO submissions (member_id, program, species_type, species_class,
-             species_common_name, species_latin_name, reproduction_date)
-           VALUES (?, 'fish', 'Fish', 'Livebearers', 'x', 'y', ?)`,
-          [memberId, new Date().toISOString()]
-        )
-      ).lastID as number;
-
-      assert.strictEqual(await findSpeciesIdOfSubmission(viaCommon), id);
-      assert.strictEqual(await findSpeciesIdOfSubmission(viaScientific), id);
-      assert.strictEqual(await findSpeciesIdOfSubmission(unbound), null);
-    });
-
     void test("findSpeciesByIds returns the ones that exist", async () => {
       const a = await speciesWith({ genus: "Aaaus", epithet: "one" });
       const b = await speciesWith({ genus: "Bbbus", epithet: "two" });

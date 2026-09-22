@@ -4,7 +4,7 @@
  * `src/`. It is a historical test-data generator. It recorded Species through
  * `recordName`, which went with `src/db/species.ts` (#411), so it
  * does not run until that step is ported to `@/species` (for example
- * `createSpecies` and `ensureName`).
+ * `createSpecies`, with the Submission bound by `species_id`).
  */
 import moduleAlias from "module-alias";
 import path from "path";
@@ -719,7 +719,7 @@ async function generateTestData() {
           await backfillApproval(
             johnId, // John Allen approves everything
             submission.id,
-            speciesNameId,
+            speciesNameId.group_id,
             {
               id: submission.id,
               points: submission.points,

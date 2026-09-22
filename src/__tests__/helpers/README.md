@@ -238,22 +238,19 @@ const mockApprovalData = {
 
 **Usage:**
 ```typescript
-await approveSubmission(adminId, submissionId, mockSpeciesIds, {
+await approveSubmission(adminId, submissionId, mockSpeciesId, {
   ...mockApprovalData,
   points: 20,
   first_time_species: true,
 });
 ```
 
-#### `mockSpeciesIds`
+#### `mockSpeciesId`
 
-Pre-configured species name IDs for testing.
+The id of a Species the migrations seed, to bind approved test Submissions to.
 
 ```typescript
-const mockSpeciesIds = {
-  common_name_id: 1,
-  scientific_name_id: 1,
-};
+const mockSpeciesId = 1;
 ```
 
 ### Utility Functions
@@ -356,7 +353,7 @@ assertSubmissionState(submission, {
 ```typescript
 // ❌ Bad - repeated boilerplate
 await approveSubmission(adminId, submissionId,
-  { common_name_id: 1, scientific_name_id: 1 },
+  1,
   {
     id: 0,
     group_id: 1,
@@ -370,7 +367,7 @@ await approveSubmission(adminId, submissionId,
 );
 
 // ✅ Good - reuse mock data
-await approveSubmission(adminId, submissionId, mockSpeciesIds, {
+await approveSubmission(adminId, submissionId, mockSpeciesId, {
   ...mockApprovalData,
   points: 20,
 });

@@ -187,21 +187,6 @@ export async function updateName(kind: NameKind, nameId: number, text: string): 
 }
 
 /**
- * The id of the Species' Name of this kind with exactly this text, adding the
- * Name first if the Species lacks it. This is how approval turns a
- * Submission's spellings into Name references today; it goes when
- * Submissions bind to their Species by id.
- */
-export async function ensureName(speciesId: number, kind: NameKind, text: string): Promise<number> {
-  const t = nameTable[kind];
-  const rows = await query<{ name_id: number }>(
-    `SELECT ${t.id} AS name_id FROM ${t.table} WHERE group_id = ? AND ${t.text} = ?`,
-    [speciesId, text.trim()]
-  );
-  return rows[0]?.name_id ?? addName(speciesId, kind, text);
-}
-
-/**
  * Every Name with this text, whole and ignoring case, across all Species.
  * Pass a kind to search only common or only scientific Names.
  */

@@ -51,11 +51,8 @@ void describe("Species merge with duplicate synonyms", () => {
 
       CREATE TABLE submissions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        common_name_id INTEGER,
-        scientific_name_id INTEGER,
-        approved_on TEXT,
-        FOREIGN KEY (common_name_id) REFERENCES species_common_name(common_name_id),
-        FOREIGN KEY (scientific_name_id) REFERENCES species_scientific_name(scientific_name_id)
+        species_id INTEGER REFERENCES species_name_group(group_id) ON DELETE RESTRICT,
+        approved_on TEXT
       );
     `);
 
@@ -91,13 +88,8 @@ void describe("Species merge with duplicate synonyms", () => {
       "INSERT INTO species_scientific_name (group_id, scientific_name, is_canonical) VALUES (101, 'Danio Kerri', 1)"
     ); // the loser's Canonical name, the winner's in another case
 
-    // Create submission referencing group 101
-    const name101 = await db.get<{ common_name_id: number }>(
-      "SELECT common_name_id FROM species_common_name WHERE group_id = 101 AND common_name = 'Turquoise danio'"
-    );
-    await db.run("INSERT INTO submissions (common_name_id, approved_on) VALUES (?, '2025-01-01')", [
-      name101?.common_name_id,
-    ]);
+    // An approved Submission bound to group 101
+    await db.run("INSERT INTO submissions (species_id, approved_on) VALUES (101, '2025-01-01')");
 
     // Execute merge: 101 (defunct) -> 100 (canonical)
     await mergeSpecies(100, 101);
@@ -124,14 +116,8 @@ void describe("Species merge with duplicate synonyms", () => {
     const submissions = await db.all("SELECT * FROM submissions");
     assert.strictEqual(submissions.length, 1, "Submission should still exist");
 
-    const submissionName = await db.get(
-      "SELECT scn.common_name FROM submissions s JOIN species_common_name scn ON s.common_name_id = scn.common_name_id WHERE s.id = 1"
-    );
-    assert.strictEqual(
-      (submissionName as { common_name: string })?.common_name,
-      "Turquoise danio",
-      "Submission should reference canonical group's name"
-    );
+    const bound = await db.get<{ species_id: number }>("SELECT species_id FROM submissions WHERE id = 1");
+    assert.strictEqual(bound?.species_id, 100, "Submission should be bound to the winner");
   });
 
   void it("should merge species with all unique synonyms", async () => {

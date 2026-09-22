@@ -429,12 +429,9 @@ export const mockApprovalData = {
 };
 
 /**
- * Mock species IDs for testing
+ * A Species the migrations seed, to approve test Submissions against.
  */
-export const mockSpeciesIds = {
-  common_name_id: 1,
-  scientific_name_id: 1,
-};
+export const mockSpeciesId = 1;
 
 /**
  * Generates a unique timestamp-based email for testing
@@ -658,13 +655,12 @@ export async function createSubmissionFixture(
 export async function approveSubmissionFixture(
   approvedBy: number,
   submissionId: number,
-  speciesIds: { common_name_id: number; scientific_name_id: number },
+  speciesId: number,
   approval: ApprovalFormValues
 ): Promise<void> {
   const now = new Date().toISOString();
   await updateSubmission(submissionId, {
-    common_name_id: speciesIds.common_name_id,
-    scientific_name_id: speciesIds.scientific_name_id,
+    species_id: speciesId,
     points: approval.points,
     article_points: approval.article_points,
     first_time_species: approval.first_time_species ? 1 : 0,

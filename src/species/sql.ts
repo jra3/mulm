@@ -28,9 +28,19 @@ export function speciesJoinSql(
   return `${required ? "JOIN" : "LEFT JOIN"} species_name_group ${alias} ON ${alias}.group_id = ${speciesIdExpr}`;
 }
 
-/** Join the Species a Submission references, under `alias`; NULL columns when it references none. */
+/** Join the Species a Submission is bound to, under `alias`; NULL columns when it is bound to none. */
 export function speciesOfSubmissionJoinSql(submission: SubmissionAlias, alias: string): string {
   return speciesJoinSql(speciesIdOfSubmissionSql(submission), alias);
+}
+
+/**
+ * The Program class of a Submission's Species, joined as `speciesAlias` by
+ * `speciesOfSubmissionJoinSql`. A Submission bound to no Species (approved
+ * before binding was required) falls back to the class the member entered, so
+ * it keeps counting toward Specialty awards.
+ */
+export function programClassOfSubmissionSql(submission: SubmissionAlias, speciesAlias: string): string {
+  return `COALESCE(${speciesAlias}.program_class, ${submission}.species_class)`;
 }
 
 /** One Name of the kind for the Species `speciesIdExpr`, or NULL: a scalar subquery. */

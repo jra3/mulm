@@ -25,7 +25,7 @@ import {
   getSubmissionImages,
   getSubmissionSupplements,
 } from "@/db/submissions";
-import { findSpeciesById, findSpeciesIdOfSubmission } from "@/species";
+import { findSpeciesById } from "@/species";
 import * as lifecycle from "@/lifecycle";
 import { attempt, callerFor } from "./lifecycleErrors";
 import { getNotesForSubmission } from "@/db/submission_notes";
@@ -126,9 +126,8 @@ export const view = async (req: MulmRequest, res: Response) => {
   }
 
   const speciesShown = await (async () => {
-    // The Species the Submission references, if any
-    const speciesId = await findSpeciesIdOfSubmission(submission.id);
-    const species = speciesId ? await findSpeciesById(speciesId) : undefined;
+    // The Species the Submission is bound to, if any
+    const species = submission.species_id ? await findSpeciesById(submission.species_id) : undefined;
     if (species) return species;
 
     // Fall back to parsing the member's Latin spelling

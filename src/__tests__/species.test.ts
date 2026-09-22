@@ -48,8 +48,7 @@ void describe("Species Explorer Search Functionality", () => {
     const submissions = [
       {
         member_id: ctx.member.id,
-        common_name_id: species1.common_name_id,
-        scientific_name_id: species1.scientific_name_id,
+        species_id: species1.group_id,
         program: "fish",
         species_type: "Fish",
         species_class: "Cichlids - New World",
@@ -60,8 +59,7 @@ void describe("Species Explorer Search Functionality", () => {
       },
       {
         member_id: ctx.member.id,
-        common_name_id: species2.common_name_id,
-        scientific_name_id: species2.scientific_name_id,
+        species_id: species2.group_id,
         program: "fish",
         species_type: "Fish",
         species_class: "Characins",
@@ -72,8 +70,7 @@ void describe("Species Explorer Search Functionality", () => {
       },
       {
         member_id: ctx.admin.id,
-        common_name_id: species1.common_name_id,
-        scientific_name_id: species1.scientific_name_id,
+        species_id: species1.group_id,
         program: "fish",
         species_type: "Fish",
         species_class: "Cichlids - New World",
@@ -84,8 +81,7 @@ void describe("Species Explorer Search Functionality", () => {
       },
       {
         member_id: ctx.admin.id,
-        common_name_id: species3.common_name_id,
-        scientific_name_id: species3.scientific_name_id,
+        species_id: species3.group_id,
         program: "fish",
         species_type: "Fish",
         species_class: "Livebearers",
@@ -99,13 +95,12 @@ void describe("Species Explorer Search Functionality", () => {
     for (const submission of submissions) {
       await ctx.db.run(
         `INSERT INTO submissions (
-          member_id, common_name_id, scientific_name_id, program, species_type, species_class,
+          member_id, species_id, program, species_type, species_class,
           species_common_name, species_latin_name, approved_on, points
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           submission.member_id,
-          submission.common_name_id,
-          submission.scientific_name_id,
+          submission.species_id,
           submission.program,
           submission.species_type,
           submission.species_class,
@@ -314,10 +309,10 @@ void describe("CARES Species Filter", () => {
     for (const sp of [species1, species2]) {
       await ctx.db.run(
         `INSERT INTO submissions (
-          member_id, common_name_id, scientific_name_id, program, species_type, species_class,
+          member_id, species_id, program, species_type, species_class,
           species_common_name, species_latin_name, approved_on, points
-        ) VALUES (?, ?, ?, 'fish', 'Fish', 'Test', 'test', 'test', '2024-01-01', 10)`,
-        [ctx.member.id, sp.common_name_id, sp.scientific_name_id]
+        ) VALUES (?, ?, 'fish', 'Fish', 'Test', 'test', 'test', '2024-01-01', 10)`,
+        [ctx.member.id, sp.group_id]
       );
     }
   });

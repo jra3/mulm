@@ -9,13 +9,15 @@ import {
 } from "./specialtyAwards";
 import { query } from "./db/conn";
 import { logger } from "./utils/logger";
-import { speciesOfSubmissionJoinSql } from "@/species";
+import { programClassOfSubmissionSql, speciesOfSubmissionJoinSql } from "@/species";
 
 /**
  * Get approved submissions for a member with genus information for specialty award checking
  *
- * The genus is the Canonical genus of the Species each Submission references,
- * joined through the catalogue's one definition of that relation.
+ * The Program class and genus are the bound Species', joined through the
+ * catalogue's one definition of that relation, so a Species moved to another
+ * Program class moves its Submissions' awards with it (see
+ * `programClassOfSubmissionSql` for the unbound case).
  */
 async function getSubmissionsWithGenus(memberId: number): Promise<SubmissionForAward[]> {
   const submissions = await query<{
@@ -28,7 +30,7 @@ async function getSubmissionsWithGenus(memberId: number): Promise<SubmissionForA
   }>(
     `
 		SELECT
-			s.species_class,
+			${programClassOfSubmissionSql("s", "sng")} AS species_class,
 			s.species_latin_name,
 			s.species_type,
 			s.water_type,

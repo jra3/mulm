@@ -1,8 +1,5 @@
 /**
- * Test suite for specialtyAwardManager - Split schema migration
- *
- * Tests getSubmissionsWithGenus() which was updated to check all three FK columns
- * in submissions table (species_name_id, common_name_id, scientific_name_id).
+ * specialtyAwardManager over Submissions bound to their Species by species_id.
  */
 
 import { describe, test, beforeEach, afterEach } from "node:test";
@@ -10,10 +7,10 @@ import assert from "node:assert";
 import { Database, open } from "sqlite";
 import sqlite3 from "sqlite3";
 import { overrideConnection } from "../db/conn";
-import { createSpecies, addName, ensureName } from "@/species";
+import { createSpecies } from "@/species";
 import { checkAndGrantSpecialtyAwards } from "../specialtyAwardManager";
 
-void describe("SpecialtyAwardManager - Split Schema", () => {
+void describe("SpecialtyAwardManager", () => {
   let db: Database;
   let testGroupId: number;
   let memberId: number;
@@ -51,19 +48,18 @@ void describe("SpecialtyAwardManager - Split Schema", () => {
     }
   });
 
-  void describe("getSubmissionsWithGenus - Common name FK", () => {
-    void test("should get canonical_genus via common_name_id", async () => {
-      const commonNameId = await addName(testGroupId, "common", "Common Test Fish");
+  void describe("getSubmissionsWithGenus", () => {
+    void test("should read a bound Submission", async () => {
 
       await db.run(
         `
         INSERT INTO submissions (
-          member_id, common_name_id, species_class, species_common_name, species_latin_name,
+          member_id, species_id, species_class, species_common_name, species_latin_name,
           species_type, water_type, spawn_locations, submitted_on, approved_on, program
         ) VALUES (?, ?, 'Anabantoids', 'Common Test Fish', 'Testgenus testspecies',
                   'Fish', 'Freshwater', 'substrate', datetime('now'), datetime('now'), 'fish')
       `,
-        [memberId, commonNameId]
+        [memberId, testGroupId]
       );
 
       const result = await checkAndGrantSpecialtyAwards(memberId);
@@ -73,19 +69,18 @@ void describe("SpecialtyAwardManager - Split Schema", () => {
     });
   });
 
-  void describe("getSubmissionsWithGenus - Scientific name FK", () => {
-    void test("should get canonical_genus via scientific_name_id", async () => {
-      const scientificNameId = await ensureName(testGroupId, "scientific", "Testgenus testspecies");
+  void describe("getSubmissionsWithGenus, another spelling", () => {
+    void test("should read a bound Submission whatever the member typed", async () => {
 
       await db.run(
         `
         INSERT INTO submissions (
-          member_id, scientific_name_id, species_class, species_common_name, species_latin_name,
+          member_id, species_id, species_class, species_common_name, species_latin_name,
           species_type, water_type, spawn_locations, submitted_on, approved_on, program
         ) VALUES (?, ?, 'Anabantoids', 'Test Fish', 'Testgenus testspecies',
                   'Fish', 'Freshwater', 'substrate', datetime('now'), datetime('now'), 'fish')
       `,
-        [memberId, scientificNameId]
+        [memberId, testGroupId]
       );
 
       const result = await checkAndGrantSpecialtyAwards(memberId);
@@ -95,32 +90,29 @@ void describe("SpecialtyAwardManager - Split Schema", () => {
     });
   });
 
-  void describe("Mixed FK scenarios", () => {
-    void test("should handle submissions with different FK types", async () => {
-      const commonNameId = await addName(testGroupId, "common", "Common Fish");
-      const scientificNameId = await ensureName(testGroupId, "scientific", "Testgenus testspecies var. blue");
+  void describe("Several Submissions", () => {
+    void test("should handle several Submissions of one Species", async () => {
 
-      // Two submissions with different FK types
       await db.run(
         `
         INSERT INTO submissions (
-          member_id, common_name_id, species_class, species_common_name, species_latin_name,
+          member_id, species_id, species_class, species_common_name, species_latin_name,
           species_type, water_type, spawn_locations, submitted_on, approved_on, program
         ) VALUES (?, ?, 'Anabantoids', 'Common Fish', 'Testgenus testspecies',
                   'Fish', 'Freshwater', 'substrate', datetime('now'), datetime('now'), 'fish')
       `,
-        [memberId, commonNameId]
+        [memberId, testGroupId]
       );
 
       await db.run(
         `
         INSERT INTO submissions (
-          member_id, scientific_name_id, species_class, species_common_name, species_latin_name,
+          member_id, species_id, species_class, species_common_name, species_latin_name,
           species_type, water_type, spawn_locations, submitted_on, approved_on, program
         ) VALUES (?, ?, 'Anabantoids', 'Test Fish', 'Testgenus testspecies var. blue',
                   'Fish', 'Freshwater', 'substrate', datetime('now'), datetime('now'), 'fish')
       `,
-        [memberId, scientificNameId]
+        [memberId, testGroupId]
       );
 
       const result = await checkAndGrantSpecialtyAwards(memberId);
@@ -132,18 +124,17 @@ void describe("SpecialtyAwardManager - Split Schema", () => {
 
   void describe("Filtering", () => {
     void test("should only include approved submissions", async () => {
-      const commonNameId = await addName(testGroupId, "common", "Test Fish");
 
       // Draft submission (not approved)
       await db.run(
         `
         INSERT INTO submissions (
-          member_id, common_name_id, species_class, species_common_name, species_latin_name,
+          member_id, species_id, species_class, species_common_name, species_latin_name,
           species_type, water_type, spawn_locations, submitted_on, program
         ) VALUES (?, ?, 'Anabantoids', 'Test Fish', 'Testgenus testspecies',
                   'Fish', 'Freshwater', 'substrate', NULL, 'fish')
       `,
-        [memberId, commonNameId]
+        [memberId, testGroupId]
       );
 
       const result = await checkAndGrantSpecialtyAwards(memberId);
@@ -153,18 +144,17 @@ void describe("SpecialtyAwardManager - Split Schema", () => {
     });
 
     void test("should only include submissions that are submitted", async () => {
-      const commonNameId = await addName(testGroupId, "common", "Test Fish");
 
       // Unsubmitted submission
       await db.run(
         `
         INSERT INTO submissions (
-          member_id, common_name_id, species_class, species_common_name, species_latin_name,
+          member_id, species_id, species_class, species_common_name, species_latin_name,
           species_type, water_type, spawn_locations, program
         ) VALUES (?, ?, 'Anabantoids', 'Test Fish', 'Testgenus testspecies',
                   'Fish', 'Freshwater', 'substrate', 'fish')
       `,
-        [memberId, commonNameId]
+        [memberId, testGroupId]
       );
 
       const result = await checkAndGrantSpecialtyAwards(memberId);

@@ -4,7 +4,7 @@ import {
   setupTestDatabase,
   teardownTestDatabase,
   createTestSubmission,
-  mockSpeciesIds,
+  mockSpeciesId,
   mockApprovalData,
   type TestContext,
 } from "./helpers/testHelpers";
@@ -329,7 +329,7 @@ void describe("Level Manager", () => {
           witnessedBy: ctx.admin.id,
         });
 
-        await approveSubmissionFixture(ctx.admin.id, sub, mockSpeciesIds, {
+        await approveSubmissionFixture(ctx.admin.id, sub, mockSpeciesId, {
           ...mockApprovalData,
           points: 5, // Valid point value
         });
@@ -358,7 +358,7 @@ void describe("Level Manager", () => {
         witnessedBy: ctx.admin.id,
       });
 
-      await approveSubmissionFixture(ctx.admin.id, firstSub, mockSpeciesIds, {
+      await approveSubmissionFixture(ctx.admin.id, firstSub, mockSpeciesId, {
         ...mockApprovalData,
         points: 5,
       });
@@ -376,7 +376,7 @@ void describe("Level Manager", () => {
         witnessedBy: ctx.admin.id,
       });
 
-      await approveSubmissionFixture(ctx.admin.id, secondSub, mockSpeciesIds, {
+      await approveSubmissionFixture(ctx.admin.id, secondSub, mockSpeciesId, {
         ...mockApprovalData,
         points: 10,
       });
@@ -402,7 +402,7 @@ void describe("Level Manager", () => {
           witnessedBy: ctx.admin.id,
         });
 
-        await approveSubmissionFixture(ctx.admin.id, sub, mockSpeciesIds, {
+        await approveSubmissionFixture(ctx.admin.id, sub, mockSpeciesId, {
           ...mockApprovalData,
           points,
         });
@@ -428,7 +428,7 @@ void describe("Level Manager", () => {
           program: "plant",
         });
 
-        await approveSubmissionFixture(ctx.admin.id, sub, mockSpeciesIds, {
+        await approveSubmissionFixture(ctx.admin.id, sub, mockSpeciesId, {
           ...mockApprovalData,
           points: 5,
         });
@@ -457,7 +457,7 @@ void describe("Level Manager", () => {
           program: "coral",
         });
 
-        await approveSubmissionFixture(ctx.admin.id, sub, mockSpeciesIds, {
+        await approveSubmissionFixture(ctx.admin.id, sub, mockSpeciesId, {
           ...mockApprovalData,
           points: 5,
         });
@@ -517,7 +517,7 @@ void describe("Level Manager", () => {
           program: "fish",
         });
 
-        await approveSubmissionFixture(ctx.admin.id, fishSub, mockSpeciesIds, {
+        await approveSubmissionFixture(ctx.admin.id, fishSub, mockSpeciesId, {
           ...mockApprovalData,
           points: 5,
         });
@@ -534,7 +534,7 @@ void describe("Level Manager", () => {
           program: "plant",
         });
 
-        await approveSubmissionFixture(ctx.admin.id, plantSub, mockSpeciesIds, {
+        await approveSubmissionFixture(ctx.admin.id, plantSub, mockSpeciesId, {
           ...mockApprovalData,
           points: 5,
         });
@@ -600,7 +600,7 @@ void describe("Level Manager", () => {
           witnessedBy: ctx.admin.id,
         });
 
-        await approveSubmissionFixture(ctx.admin.id, sub, mockSpeciesIds, {
+        await approveSubmissionFixture(ctx.admin.id, sub, mockSpeciesId, {
           ...mockApprovalData,
           points: 5,
         });
@@ -625,7 +625,7 @@ void describe("Level Manager", () => {
           witnessedBy: ctx.admin.id,
         });
 
-        await approveSubmissionFixture(ctx.admin.id, sub, mockSpeciesIds, {
+        await approveSubmissionFixture(ctx.admin.id, sub, mockSpeciesId, {
           ...mockApprovalData,
           points: 5,
         });
@@ -654,7 +654,7 @@ void describe("Level Manager", () => {
           witnessedBy: ctx.admin.id,
         });
 
-        await approveSubmissionFixture(ctx.admin.id, sub, mockSpeciesIds, {
+        await approveSubmissionFixture(ctx.admin.id, sub, mockSpeciesId, {
           ...mockApprovalData,
           points: 5,
         });
@@ -675,7 +675,7 @@ void describe("Level Manager", () => {
           witnessedBy: ctx.admin.id,
         });
 
-        await approveSubmissionFixture(ctx.admin.id, sub, mockSpeciesIds, {
+        await approveSubmissionFixture(ctx.admin.id, sub, mockSpeciesId, {
           ...mockApprovalData,
           points: 10, // 30 points from 10+ category meets Breeder requirement
         });

@@ -40,8 +40,8 @@ export type Submission = {
   species_class: string;
   species_common_name: string;
   species_latin_name: string;
-  common_name_id: number | null;
-  scientific_name_id: number | null;
+  /** The Species the Submission is bound to, or null. */
+  species_id: number | null;
   water_type: string;
   count: string;
   reproduction_date: string;

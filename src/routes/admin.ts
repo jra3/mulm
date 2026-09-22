@@ -35,12 +35,7 @@ import {
   hasFoods,
   hasSpawnLocations,
 } from "@/forms/submission";
-import {
-  countSubmissionsOfSpecies,
-  ensureName,
-  findSpeciesById,
-  findSpeciesIdOfSubmission,
-} from "@/species";
+import { countSubmissionsOfSpecies, findSpeciesById } from "@/species";
 import { getBodyParam, getBodyString, getQueryString } from "@/utils/request";
 import { checkAllMemberLevels } from "@/levelManager";
 import { checkAllSpecialtyAwards } from "@/specialtyAwardManager";
@@ -514,21 +509,6 @@ export const getApprovalBonuses = async (req: MulmRequest, res: Response) => {
   }
 };
 
-/**
- * The Name ids a Submission references a Species through: its own common and
- * Latin spellings, each added as a Name of that Species if missing. Goes when
- * Submissions reference their Species by id.
- */
-async function ensureNameIdsForSpellings(
-  speciesId: number,
-  submission: { species_common_name: string; species_latin_name: string }
-) {
-  return {
-    common_name_id: await ensureName(speciesId, "common", submission.species_common_name),
-    scientific_name_id: await ensureName(speciesId, "scientific", submission.species_latin_name),
-  };
-}
-
 export const approveSubmission = async (req: MulmRequest, res: Response) => {
   const { viewer } = req;
 
@@ -555,15 +535,13 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
 
   const updates = parsed.data;
 
-  // Reference the chosen Species through the Submission's own spellings,
-  // adding them as Names where the Species lacks them.
-  const speciesIds = await ensureNameIdsForSpellings(updates.group_id, submission);
-
   // Approving is the only way Points are ever awarded. Everything that follows
   // from it - the member's email, the feed entry, the Level and Specialty
   // Award recompute - hangs off the transition, not off this handler.
   try {
-    await lifecycle.approve({ id: viewer!.id, isAdmin: true }, id, speciesIds, updates);
+    // Binds the Submission to the Species the committee picked; the member's
+    // spellings are not added to it as Names.
+    await lifecycle.approve({ id: viewer!.id, isAdmin: true }, id, updates.group_id, updates);
   } catch (err) {
     if (sendLifecycleError(res, err, { submissionId: id, adminId: viewer?.id })) {
       return;
@@ -838,8 +816,8 @@ export const editApprovedSubmissionForm = async (req: MulmRequest, res: Response
     return [];
   };
 
-  // The Species the Submission references, for the species typeahead
-  const currentGroupId = await findSpeciesIdOfSubmission(submission.id);
+  // The Species the Submission is bound to, for the species typeahead
+  const currentGroupId = submission.species_id;
 
   // Fetch supplements from normalized table
   const supplements = await getSubmissionSupplements(submission.id);
@@ -915,7 +893,7 @@ export const saveApprovedSubmissionEdits = async (req: MulmRequest, res: Respons
   const updates = parsed.data;
   const reason = updates.reason;
 
-  // Remove reason and group_id from updates (reason goes in audit log, group_id is converted to name IDs)
+  // Remove reason and group_id from updates (reason goes in audit log, group_id becomes species_id)
   delete (updates as Partial<typeof updates>).reason;
   const groupId = updates.group_id;
   delete (updates as Partial<typeof updates>).group_id;
@@ -947,11 +925,14 @@ export const saveApprovedSubmissionEdits = async (req: MulmRequest, res: Respons
     updatesForDb.spawn_locations = JSON.stringify(updates.spawn_locations || []);
   }
 
-  // If species group changed, update name IDs
-  if (groupId && groupId !== submission.common_name_id) {
-    const speciesIds = await ensureNameIdsForSpellings(groupId, submission);
-    updatesForDb.common_name_id = speciesIds.common_name_id;
-    updatesForDb.scientific_name_id = speciesIds.scientific_name_id;
+  // Rebind to another Species if the committee picked one
+  if (groupId && groupId !== submission.species_id) {
+    if (!(await findSpeciesById(groupId))) {
+      res.set("HX-Retarget", "#edit-approved-errors").set("HX-Reswap", "innerHTML");
+      res.render("admin/editApprovedErrors", { messages: ["Choose a Species that exists"] });
+      return;
+    }
+    updatesForDb.species_id = groupId;
   }
 
   try {

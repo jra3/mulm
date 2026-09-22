@@ -126,7 +126,7 @@ function buildSpeciesSearchQuery(
 		FROM species_name_group sng
 		LEFT JOIN species_common_name cn ON sng.group_id = cn.group_id
 		LEFT JOIN species_scientific_name scin ON sng.group_id = scin.group_id
-		LEFT JOIN submissions s ON (s.common_name_id = cn.common_name_id OR s.scientific_name_id = scin.scientific_name_id) AND s.approved_on IS NOT NULL
+		LEFT JOIN submissions s ON ${speciesIdOfSubmissionSql("s")} = sng.group_id AND s.approved_on IS NOT NULL
 		WHERE ${conditions.join(" ")}
 		GROUP BY sng.group_id, sng.program_class, sng.canonical_genus, sng.canonical_species_name, sng.is_cares_species, sng.iucn_redlist_category, sng.iucn_population_trend, sng.iucn_redlist_url
 		HAVING total_breeds > 0
