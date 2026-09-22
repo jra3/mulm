@@ -399,7 +399,8 @@ Database operations are organized by domain:
 - `src/db/conn.ts` - Connection management, query helpers
 - `src/db/members.ts` - Member CRUD operations
 - `src/db/submissions.ts` - Submission CRUD operations
-- `src/db/species.ts` - Species and synonym management
+- `src/db/species.ts` - The old species data module; re-exports the Species catalogue (`src/species/`, import `@/species`) while callers move to it
+- `src/db/speciesEnrichment.ts` - A Species' external references and images
 - `src/db/iucn.ts` - IUCN Red List conservation status operations
 - `src/db/tanks.ts` - Tank preset operations
 - `src/db/activity.ts` - Activity feed operations

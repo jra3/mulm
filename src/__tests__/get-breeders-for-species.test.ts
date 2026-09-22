@@ -12,10 +12,9 @@ import sqlite3 from "sqlite3";
 import { overrideConnection } from "../db/conn";
 import {
   getBreedersForSpecies,
-  createSpeciesGroup,
-  addCommonName,
-  addScientificName,
-} from "../db/species";
+  createSpecies,
+  addName,
+} from "@/species";
 
 void describe("getBreedersForSpecies - Split Schema", () => {
   let db: Database;
@@ -34,12 +33,12 @@ void describe("getBreedersForSpecies - Split Schema", () => {
     overrideConnection(db);
 
     // Create test species group
-    testGroupId = await createSpeciesGroup({
+    testGroupId = await createSpecies({
       programClass: "Test Class",
       speciesType: "Fish",
       canonicalGenus: "Breederus",
       canonicalSpeciesName: "testicus",
-      basePoints: 10,
+      pointClass: 10,
     });
 
     // Create test members
@@ -64,7 +63,7 @@ void describe("getBreedersForSpecies - Split Schema", () => {
 
   void describe("Common name FK", () => {
     void test("should find breeders via common_name_id", async () => {
-      const commonNameId = await addCommonName(testGroupId, "Test Common Fish");
+      const commonNameId = await addName(testGroupId, "common", "Test Common Fish");
 
       // Create submission using common_name FK
       await db.run(
@@ -88,7 +87,7 @@ void describe("getBreedersForSpecies - Split Schema", () => {
 
   void describe("Scientific name FK", () => {
     void test("should find breeders via scientific_name_id", async () => {
-      const scientificNameId = await addScientificName(testGroupId, "Breederus testicus");
+      const scientificNameId = await addName(testGroupId, "scientific", "Breederus testicus");
 
       // Create submission using scientific_name FK
       await db.run(
@@ -112,8 +111,8 @@ void describe("getBreedersForSpecies - Split Schema", () => {
 
   void describe("Mixed FK scenarios", () => {
     void test("should find breeders with submissions via different FK types", async () => {
-      const commonNameId = await addCommonName(testGroupId, "Common Name");
-      const scientificNameId = await addScientificName(testGroupId, "Scientific Name");
+      const commonNameId = await addName(testGroupId, "common", "Common Name");
+      const scientificNameId = await addName(testGroupId, "scientific", "Scientific Name");
 
       // Member 1: common_name submission
       await db.run(
@@ -154,7 +153,7 @@ void describe("getBreedersForSpecies - Split Schema", () => {
 
   void describe("Filtering and aggregation", () => {
     void test("should only count approved submissions", async () => {
-      const commonNameId = await addCommonName(testGroupId, "Test Fish");
+      const commonNameId = await addName(testGroupId, "common", "Test Fish");
 
       // Approved submission
       await db.run(
@@ -193,7 +192,7 @@ void describe("getBreedersForSpecies - Split Schema", () => {
     });
 
     void test("should sort by breed_count DESC", async () => {
-      const commonNameId = await addCommonName(testGroupId, "Test Fish");
+      const commonNameId = await addName(testGroupId, "common", "Test Fish");
 
       // Member 1: 1 breed
       await db.run(
@@ -236,7 +235,7 @@ void describe("getBreedersForSpecies - Split Schema", () => {
 
   void describe("Return value structure", () => {
     void test("should include all required fields", async () => {
-      const commonNameId = await addCommonName(testGroupId, "Test Fish");
+      const commonNameId = await addName(testGroupId, "common", "Test Fish");
 
       await db.run(
         `
@@ -268,7 +267,7 @@ void describe("getBreedersForSpecies - Split Schema", () => {
     });
 
     void test("should parse submissions array correctly", async () => {
-      const commonNameId = await addCommonName(testGroupId, "Test Fish");
+      const commonNameId = await addName(testGroupId, "common", "Test Fish");
 
       const submissionResult = await db.run(
         `
@@ -297,7 +296,7 @@ void describe("getBreedersForSpecies - Split Schema", () => {
 
   void describe("Date tracking", () => {
     void test("should track first and latest breed dates correctly", async () => {
-      const commonNameId = await addCommonName(testGroupId, "Test Fish");
+      const commonNameId = await addName(testGroupId, "common", "Test Fish");
 
       await db.run(
         `

@@ -10,7 +10,7 @@ import assert from "node:assert";
 import { Database, open } from "sqlite";
 import sqlite3 from "sqlite3";
 import { overrideConnection } from "../db/conn";
-import { getSpeciesForAdmin, addCommonName, addScientificName } from "../db/species";
+import { getSpeciesForAdmin, addName } from "@/species";
 
 void describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
   let db: Database;
@@ -36,9 +36,9 @@ void describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
       VALUES ('Livebearers', 'Fish', 'Testicus', 'guppyus', 10, 1)
     `);
     fishGroupId1 = fish1.lastID as number;
-    await addCommonName(fishGroupId1, "Test Guppy");
-    await addCommonName(fishGroupId1, "Fancy Test Guppy");
-    await addScientificName(fishGroupId1, "Testicus guppyus");
+    await addName(fishGroupId1, "common", "Test Guppy");
+    await addName(fishGroupId1, "common", "Fancy Test Guppy");
+    await addName(fishGroupId1, "scientific", "Testicus guppyus");
 
     // Fish 2: Cichlids, no points, not CARES
     const fish2 = await db.run(`
@@ -46,8 +46,8 @@ void describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
       VALUES ('Cichlids - New World', 'Fish', 'Testicus', 'cichlidus', NULL, 0)
     `);
     fishGroupId2 = fish2.lastID as number;
-    await addCommonName(fishGroupId2, "Test Cichlid");
-    await addScientificName(fishGroupId2, "Testicus cichlidus");
+    await addName(fishGroupId2, "common", "Test Cichlid");
+    await addName(fishGroupId2, "scientific", "Testicus cichlidus");
 
     // Plant: Cryptocoryne, 15 points, CARES
     const plant = await db.run(`
@@ -55,10 +55,10 @@ void describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
       VALUES ('Cryptocoryne', 'Plant', 'Testicus', 'plantus', 15, 1)
     `);
     plantGroupId = plant.lastID as number;
-    await addCommonName(plantGroupId, "Test Crypt");
-    await addCommonName(plantGroupId, "Test Plant");
-    await addCommonName(plantGroupId, "Another Test Plant");
-    await addScientificName(plantGroupId, "Testicus plantus");
+    await addName(plantGroupId, "common", "Test Crypt");
+    await addName(plantGroupId, "common", "Test Plant");
+    await addName(plantGroupId, "common", "Another Test Plant");
+    await addName(plantGroupId, "scientific", "Testicus plantus");
   });
 
   afterEach(async () => {
@@ -405,8 +405,8 @@ void describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
         VALUES ('Characins', 'Fish', 'Spec-ial', 'char&acters', 20, 0)
       `);
       const specialGroupId = specialResult.lastID as number;
-      await addCommonName(specialGroupId, "Fish's Name");
-      await addScientificName(specialGroupId, "Spec-ial char&acters");
+      await addName(specialGroupId, "common", "Fish's Name");
+      await addName(specialGroupId, "scientific", "Spec-ial char&acters");
 
       const result = await getSpeciesForAdmin({ search: "Spec-ial" });
 

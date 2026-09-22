@@ -1,11 +1,8 @@
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
-import {
-  getSpeciesForExplorer,
-  getSpeciesDetail,
-  getCaresCoverageStats,
-  type SpeciesFilters,
-} from "../db/species";
+import { getSpeciesForExplorer, getSpeciesDetail, type SpeciesFilters } from "@/species";
+// CARES coverage is not the catalogue's; it moves to the CARES data module.
+import { getCaresCoverageStats } from "../db/species";
 import {
   setupTestDatabase,
   teardownTestDatabase,

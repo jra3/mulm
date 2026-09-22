@@ -12,10 +12,9 @@ import sqlite3 from "sqlite3";
 import { overrideConnection } from "../db/conn";
 import {
   searchSpeciesTypeahead,
-  createSpeciesGroup,
-  addCommonName,
-  addScientificName,
-} from "../db/species";
+  createSpecies,
+  addName,
+} from "@/species";
 
 void describe("searchSpeciesTypeahead - Split Schema", () => {
   let db: Database;
@@ -58,14 +57,14 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
     });
 
     void test("should find species by common name", async () => {
-      const groupId = await createSpeciesGroup({
+      const groupId = await createSpecies({
         programClass: "Anabantoids",
         speciesType: "Fish",
         canonicalGenus: "Typeaheadicus",
         canonicalSpeciesName: "testicus",
       });
 
-      await addCommonName(groupId, "ZZTEST Siamese Fighter");
+      await addName(groupId, "common", "ZZTEST Siamese Fighter");
 
       const results = await searchSpeciesTypeahead("zztest siamese");
       assert.strictEqual(results.length, 1);
@@ -75,14 +74,14 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
     });
 
     void test("should find species by scientific name", async () => {
-      const groupId = await createSpeciesGroup({
+      const groupId = await createSpecies({
         programClass: "Anabantoids",
         speciesType: "Fish",
         canonicalGenus: "Typeaheadicus",
         canonicalSpeciesName: "scientificus",
       });
 
-      await addScientificName(groupId, "ZZTEST scientificus");
+      await addName(groupId, "scientific", "ZZTEST scientificus");
 
       const results = await searchSpeciesTypeahead("scientificus");
       assert.strictEqual(results.length, 1);
@@ -92,14 +91,14 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
     });
 
     void test("should be case-insensitive", async () => {
-      const groupId = await createSpeciesGroup({
+      const groupId = await createSpecies({
         programClass: "Livebearers",
         speciesType: "Fish",
         canonicalGenus: "Typeaheadicus",
         canonicalSpeciesName: "caseus",
       });
 
-      await addCommonName(groupId, "ZZTEST Guppy");
+      await addName(groupId, "common", "ZZTEST Guppy");
 
       const resultsLower = await searchSpeciesTypeahead("zztest guppy");
       const resultsUpper = await searchSpeciesTypeahead("ZZTEST GUPPY");
@@ -111,14 +110,14 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
     });
 
     void test("should support partial matching", async () => {
-      const groupId = await createSpeciesGroup({
+      const groupId = await createSpecies({
         programClass: "Cichlids - New World",
         speciesType: "Fish",
         canonicalGenus: "Typeaheadicus",
         canonicalSpeciesName: "angelus",
       });
 
-      await addCommonName(groupId, "ZZTEST Angelfish");
+      await addName(groupId, "common", "ZZTEST Angelfish");
 
       const results = await searchSpeciesTypeahead("zztest angel");
       assert.strictEqual(results.length, 1);
@@ -128,15 +127,15 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
 
   void describe("UNION behavior - common and scientific names", () => {
     void test("should return both common and scientific name matches", async () => {
-      const groupId = await createSpeciesGroup({
+      const groupId = await createSpecies({
         programClass: "Anabantoids",
         speciesType: "Fish",
         canonicalGenus: "Typeaheadicus",
         canonicalSpeciesName: "testsplendens",
       });
 
-      await addCommonName(groupId, "ZZTEST Betta Fighter");
-      await addScientificName(groupId, "ZZTEST Betta splendens");
+      await addName(groupId, "common", "ZZTEST Betta Fighter");
+      await addName(groupId, "scientific", "ZZTEST Betta splendens");
 
       const results = await searchSpeciesTypeahead("zztest betta");
       assert.strictEqual(results.length, 2);
@@ -152,22 +151,22 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
     });
 
     void test("should return matches from different species groups", async () => {
-      const groupId1 = await createSpeciesGroup({
+      const groupId1 = await createSpecies({
         programClass: "Anabantoids",
         speciesType: "Fish",
         canonicalGenus: "Typeaheadicus",
         canonicalSpeciesName: "testsplendens",
       });
 
-      const groupId2 = await createSpeciesGroup({
+      const groupId2 = await createSpecies({
         programClass: "Anabantoids",
         speciesType: "Fish",
         canonicalGenus: "Typeaheadicus",
         canonicalSpeciesName: "testimbellis",
       });
 
-      await addCommonName(groupId1, "ZZTEST Siamese");
-      await addCommonName(groupId2, "ZZTEST Peaceful");
+      await addName(groupId1, "common", "ZZTEST Siamese");
+      await addName(groupId2, "common", "ZZTEST Peaceful");
 
       const results = await searchSpeciesTypeahead("zztest");
       assert.strictEqual(results.length, 2);
@@ -177,15 +176,15 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
     });
 
     void test("should prioritize common names over scientific names in results", async () => {
-      const groupId = await createSpeciesGroup({
+      const groupId = await createSpecies({
         programClass: "Livebearers",
         speciesType: "Fish",
         canonicalGenus: "Typeaheadicus",
         canonicalSpeciesName: "testreticulata",
       });
 
-      await addCommonName(groupId, "ZZTEST Fancy");
-      await addScientificName(groupId, "ZZTEST reticulata");
+      await addName(groupId, "common", "ZZTEST Fancy");
+      await addName(groupId, "scientific", "ZZTEST reticulata");
 
       const results = await searchSpeciesTypeahead("zztest fancy", {}, 10);
 
@@ -196,16 +195,16 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
 
   void describe("Multiple names per species", () => {
     void test("should return all matching common names for a species", async () => {
-      const groupId = await createSpeciesGroup({
+      const groupId = await createSpecies({
         programClass: "Cichlids - New World",
         speciesType: "Fish",
         canonicalGenus: "Typeaheadicus",
         canonicalSpeciesName: "testscalare",
       });
 
-      await addCommonName(groupId, "ZZTEST Angelfish");
-      await addCommonName(groupId, "ZZTEST Freshwater Angelfish");
-      await addCommonName(groupId, "ZZTEST Silver Angelfish");
+      await addName(groupId, "common", "ZZTEST Angelfish");
+      await addName(groupId, "common", "ZZTEST Freshwater Angelfish");
+      await addName(groupId, "common", "ZZTEST Silver Angelfish");
 
       const results = await searchSpeciesTypeahead("zztest");
       assert.strictEqual(results.length, 3);
@@ -213,15 +212,15 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
     });
 
     void test("should return all matching scientific names for a species", async () => {
-      const groupId = await createSpeciesGroup({
+      const groupId = await createSpecies({
         programClass: "Anabantoids",
         speciesType: "Fish",
         canonicalGenus: "Typeaheadicus",
         canonicalSpeciesName: "testtrichopterus",
       });
 
-      await addScientificName(groupId, "ZZTEST trichopterus");
-      await addScientificName(groupId, "ZZTEST trichopodus");
+      await addName(groupId, "scientific", "ZZTEST trichopterus");
+      await addName(groupId, "scientific", "ZZTEST trichopodus");
 
       const results = await searchSpeciesTypeahead("zztest trichop");
       assert.strictEqual(results.length, 2);
@@ -231,22 +230,22 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
 
   void describe("Filters", () => {
     void test("should filter by species_type", async () => {
-      const fishGroupId = await createSpeciesGroup({
+      const fishGroupId = await createSpecies({
         programClass: "Livebearers",
         speciesType: "Fish",
         canonicalGenus: "Typeaheadicus",
         canonicalSpeciesName: "testreticulata",
       });
 
-      const plantGroupId = await createSpeciesGroup({
+      const plantGroupId = await createSpecies({
         programClass: "Aquatic Plants",
         speciesType: "Plant",
         canonicalGenus: "Typeaheadicus",
         canonicalSpeciesName: "barteri",
       });
 
-      await addCommonName(fishGroupId, "ZZTEST Guppy");
-      await addCommonName(plantGroupId, "ZZTEST Anubias");
+      await addName(fishGroupId, "common", "ZZTEST Guppy");
+      await addName(plantGroupId, "common", "ZZTEST Anubias");
 
       const fishResults = await searchSpeciesTypeahead("zztest guppy", { species_type: "Fish" });
       assert.strictEqual(fishResults.length, 1);
@@ -257,22 +256,22 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
     });
 
     void test("should filter by species_class (program_class)", async () => {
-      const fishGroupId = await createSpeciesGroup({
+      const fishGroupId = await createSpecies({
         programClass: "Livebearers",
         speciesType: "Fish",
         canonicalGenus: "Typeaheadicus",
         canonicalSpeciesName: "testreticulata",
       });
 
-      const plantGroupId = await createSpeciesGroup({
+      const plantGroupId = await createSpecies({
         programClass: "Aquatic Plants",
         speciesType: "Plant",
         canonicalGenus: "Typeaheadicus",
         canonicalSpeciesName: "barteri",
       });
 
-      await addCommonName(fishGroupId, "ZZTEST Guppy");
-      await addCommonName(plantGroupId, "ZZTEST Anubias");
+      await addName(fishGroupId, "common", "ZZTEST Guppy");
+      await addName(plantGroupId, "common", "ZZTEST Anubias");
 
       const livebearerResults = await searchSpeciesTypeahead("zztest guppy", {
         species_class: "Livebearers",
@@ -288,14 +287,14 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
     });
 
     void test("should support multiple filters", async () => {
-      const fishGroupId = await createSpeciesGroup({
+      const fishGroupId = await createSpecies({
         programClass: "Livebearers",
         speciesType: "Fish",
         canonicalGenus: "Typeaheadicus",
         canonicalSpeciesName: "testreticulata",
       });
 
-      await addCommonName(fishGroupId, "ZZTEST Guppy");
+      await addName(fishGroupId, "common", "ZZTEST Guppy");
 
       const results = await searchSpeciesTypeahead("zztest guppy", {
         species_type: "Fish",
@@ -309,7 +308,7 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
 
   void describe("Limit parameter", () => {
     void test("should default to 10 results", async () => {
-      const groupId = await createSpeciesGroup({
+      const groupId = await createSpecies({
         programClass: "Cichlids - New World",
         speciesType: "Fish",
         canonicalGenus: "Typeaheadicus",
@@ -318,7 +317,7 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
 
       // Create many common names starting with 'Z'
       for (let i = 1; i <= 15; i++) {
-        await addCommonName(groupId, `ZZTEST Variant ${i}`);
+        await addName(groupId, "common", `ZZTEST Variant ${i}`);
       }
 
       const results = await searchSpeciesTypeahead("zztest variant");
@@ -326,7 +325,7 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
     });
 
     void test("should respect custom limit", async () => {
-      const groupId = await createSpeciesGroup({
+      const groupId = await createSpecies({
         programClass: "Cichlids - New World",
         speciesType: "Fish",
         canonicalGenus: "Typeaheadicus",
@@ -334,7 +333,7 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
       });
 
       for (let i = 1; i <= 10; i++) {
-        await addCommonName(groupId, `ZZTEST Variant ${i}`);
+        await addName(groupId, "common", `ZZTEST Variant ${i}`);
       }
 
       const results = await searchSpeciesTypeahead("zztest variant", {}, 5);
@@ -342,15 +341,15 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
     });
 
     void test("should return all results if limit exceeds matches", async () => {
-      const groupId = await createSpeciesGroup({
+      const groupId = await createSpecies({
         programClass: "Livebearers",
         speciesType: "Fish",
         canonicalGenus: "Typeaheadicus",
         canonicalSpeciesName: "testhellerii",
       });
 
-      await addCommonName(groupId, "ZZTEST Swordtail");
-      await addCommonName(groupId, "ZZTEST Green Swordtail");
+      await addName(groupId, "common", "ZZTEST Swordtail");
+      await addName(groupId, "common", "ZZTEST Green Swordtail");
 
       const results = await searchSpeciesTypeahead("zztest", {}, 100);
       assert.strictEqual(results.length, 2);
@@ -359,14 +358,14 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
 
   void describe("Return type and metadata", () => {
     void test("should include all required fields in SpeciesNameRecord", async () => {
-      const groupId = await createSpeciesGroup({
+      const groupId = await createSpecies({
         programClass: "Anabantoids",
         speciesType: "Fish",
         canonicalGenus: "Typeaheadicus",
         canonicalSpeciesName: "testsplendens",
       });
 
-      const commonNameId = await addCommonName(groupId, "ZZTEST Siamese");
+      const commonNameId = await addName(groupId, "common", "ZZTEST Siamese");
 
       const results = await searchSpeciesTypeahead("zztest siamese");
       assert.strictEqual(results.length, 1);
@@ -388,28 +387,28 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
     });
 
     void test("should have correct name_id for common names", async () => {
-      const groupId = await createSpeciesGroup({
+      const groupId = await createSpecies({
         programClass: "Livebearers",
         speciesType: "Fish",
         canonicalGenus: "Typeaheadicus",
         canonicalSpeciesName: "testreticulata",
       });
 
-      const commonNameId = await addCommonName(groupId, "ZZTEST Guppy");
+      const commonNameId = await addName(groupId, "common", "ZZTEST Guppy");
 
       const results = await searchSpeciesTypeahead("zztest guppy");
       assert.strictEqual(results[0].name_id, commonNameId);
     });
 
     void test("should have correct name_id for scientific names", async () => {
-      const groupId = await createSpeciesGroup({
+      const groupId = await createSpecies({
         programClass: "Livebearers",
         speciesType: "Fish",
         canonicalGenus: "Typeaheadicus",
         canonicalSpeciesName: "testreticulata",
       });
 
-      const scientificNameId = await addScientificName(groupId, "ZZTEST reticulata");
+      const scientificNameId = await addName(groupId, "scientific", "ZZTEST reticulata");
 
       const results = await searchSpeciesTypeahead("zztest reticulata");
       assert.strictEqual(results[0].name_id, scientificNameId);
@@ -418,7 +417,7 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
 
   void describe("Edge cases", () => {
     void test("should handle species with no names", async () => {
-      await createSpeciesGroup({
+      await createSpecies({
         programClass: "Cichlids - New World",
         speciesType: "Fish",
         canonicalGenus: "Orphan",
@@ -430,28 +429,28 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
     });
 
     void test("should handle Unicode characters in search", async () => {
-      const groupId = await createSpeciesGroup({
+      const groupId = await createSpecies({
         programClass: "Cichlids - New World",
         speciesType: "Fish",
         canonicalGenus: "Typeaheadicus",
         canonicalSpeciesName: "testamphiacanthoides",
       });
 
-      await addCommonName(groupId, "ZZTEST Triangle");
+      await addName(groupId, "common", "ZZTEST Triangle");
 
       const results = await searchSpeciesTypeahead("zztest triangle");
       assert.strictEqual(results.length, 1);
     });
 
     void test("should trim whitespace from search query", async () => {
-      const groupId = await createSpeciesGroup({
+      const groupId = await createSpecies({
         programClass: "Livebearers",
         speciesType: "Fish",
         canonicalGenus: "Typeaheadicus",
         canonicalSpeciesName: "testreticulata",
       });
 
-      await addCommonName(groupId, "ZZTEST Guppy");
+      await addName(groupId, "common", "ZZTEST Guppy");
 
       const results = await searchSpeciesTypeahead("  zztest guppy  ");
       assert.strictEqual(results.length, 1);
@@ -460,16 +459,16 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
 
   void describe("Sorting", () => {
     void test("should sort common names alphabetically when all common", async () => {
-      const groupId = await createSpeciesGroup({
+      const groupId = await createSpecies({
         programClass: "Cichlids - New World",
         speciesType: "Fish",
         canonicalGenus: "Typeaheadicus",
         canonicalSpeciesName: "testscalare",
       });
 
-      await addCommonName(groupId, "ZZTEST Zebra");
-      await addCommonName(groupId, "ZZTEST Angelfish");
-      await addCommonName(groupId, "ZZTEST Marble");
+      await addName(groupId, "common", "ZZTEST Zebra");
+      await addName(groupId, "common", "ZZTEST Angelfish");
+      await addName(groupId, "common", "ZZTEST Marble");
 
       const results = await searchSpeciesTypeahead("zztest");
       const names = results.map((r) => r.common_name);
@@ -477,16 +476,16 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
     });
 
     void test("should sort scientific names alphabetically when all scientific", async () => {
-      const groupId = await createSpeciesGroup({
+      const groupId = await createSpecies({
         programClass: "Anabantoids",
         speciesType: "Fish",
         canonicalGenus: "Typeaheadicus",
         canonicalSpeciesName: "testsplendens",
       });
 
-      await addScientificName(groupId, "ZZTEST var. blue");
-      await addScientificName(groupId, "ZZTEST splendens");
-      await addScientificName(groupId, "ZZTEST var. red");
+      await addName(groupId, "scientific", "ZZTEST var. blue");
+      await addName(groupId, "scientific", "ZZTEST splendens");
+      await addName(groupId, "scientific", "ZZTEST var. red");
 
       const results = await searchSpeciesTypeahead("zztest");
       const names = results.map((r) => r.scientific_name);

@@ -4,14 +4,14 @@ import { Database, open } from "sqlite";
 import sqlite3 from "sqlite3";
 import { overrideConnection } from "../db/conn";
 import {
-  createSpeciesGroup,
-  updateSpeciesGroup,
-  deleteSpeciesGroup,
-  bulkSetPoints,
-  addCommonName,
-  addScientificName,
-  getNamesForGroup,
-} from "../db/species";
+  createSpecies,
+  updateSpecies,
+  renameCanonical,
+  deleteSpecies,
+  setPointClass,
+  addName,
+  listNames,
+} from "@/species";
 
 interface SpeciesGroupRow {
   group_id: number;
@@ -25,7 +25,7 @@ interface SpeciesGroupRow {
   image_links: string | null;
 }
 
-void describe("Species Group CRUD Operations", () => {
+void describe("Species catalogue: create, classify, rename, delete, Point class", () => {
   let db: Database;
   let testGroupId: number;
 
@@ -49,8 +49,8 @@ void describe("Species Group CRUD Operations", () => {
     testGroupId = result.lastID as number;
 
     // Add a common and scientific name
-    await addCommonName(testGroupId, "Test Fish");
-    await addScientificName(testGroupId, "Testicus groupus");
+    await addName(testGroupId, "common", "Test Fish");
+    await addName(testGroupId, "scientific", "Testicus groupus");
   });
 
   afterEach(async () => {
@@ -59,14 +59,14 @@ void describe("Species Group CRUD Operations", () => {
     }
   });
 
-  void describe("createSpeciesGroup", () => {
+  void describe("createSpecies", () => {
     void test("should create a new species group and return group_id", async () => {
-      const groupId = await createSpeciesGroup({
+      const groupId = await createSpecies({
         programClass: "Characins",
         speciesType: "Fish",
         canonicalGenus: "Newgenus",
         canonicalSpeciesName: "newspecies",
-        basePoints: 15,
+        pointClass: 15,
         isCaresSpecies: true,
       });
 
@@ -86,7 +86,7 @@ void describe("Species Group CRUD Operations", () => {
     });
 
     void test("should create with minimal required fields", async () => {
-      const groupId = await createSpeciesGroup({
+      const groupId = await createSpecies({
         programClass: "Killifish",
         speciesType: "Fish",
         canonicalGenus: "Minimal",
@@ -103,7 +103,7 @@ void describe("Species Group CRUD Operations", () => {
     });
 
     void test("should trim whitespace from inputs", async () => {
-      const groupId = await createSpeciesGroup({
+      const groupId = await createSpecies({
         programClass: "  Trimmed  ",
         speciesType: "Plant",
         canonicalGenus: "  Genus  ",
@@ -122,7 +122,7 @@ void describe("Species Group CRUD Operations", () => {
     void test("should throw error for empty canonical genus", async () => {
       await assert.rejects(
         async () =>
-          await createSpeciesGroup({
+          await createSpecies({
             programClass: "Test",
             speciesType: "Fish",
             canonicalGenus: "",
@@ -135,7 +135,7 @@ void describe("Species Group CRUD Operations", () => {
     void test("should throw error for empty canonical species name", async () => {
       await assert.rejects(
         async () =>
-          await createSpeciesGroup({
+          await createSpecies({
             programClass: "Test",
             speciesType: "Fish",
             canonicalGenus: "Genus",
@@ -148,7 +148,7 @@ void describe("Species Group CRUD Operations", () => {
     void test("should throw error for empty program class", async () => {
       await assert.rejects(
         async () =>
-          await createSpeciesGroup({
+          await createSpecies({
             programClass: "",
             speciesType: "Fish",
             canonicalGenus: "Genus",
@@ -161,33 +161,35 @@ void describe("Species Group CRUD Operations", () => {
     void test("should throw error for invalid species type", async () => {
       await assert.rejects(
         async () =>
-          await createSpeciesGroup({
+          await createSpecies({
             programClass: "Test",
              
             speciesType: "Invalid",
             canonicalGenus: "Genus",
             canonicalSpeciesName: "species",
           }),
-        { message: /must be Fish, Plant, Invert, or Coral/ }
+        { message: /Species type must be one of Fish, Plant, Invert, Coral/ }
       );
     });
 
-    void test("should throw error for points out of range", async () => {
-      await assert.rejects(
-        async () =>
-          await createSpeciesGroup({
-            programClass: "Test",
-            speciesType: "Fish",
-            canonicalGenus: "Genus",
-            canonicalSpeciesName: "species",
-            basePoints: 101,
-          }),
-        { message: /between 0 and 100/ }
-      );
+    void test("should throw error for a Point class outside the tally keys", async () => {
+      for (const bad of [0, 7, 101]) {
+        await assert.rejects(
+          async () =>
+            await createSpecies({
+              programClass: "Test",
+              speciesType: "Fish",
+              canonicalGenus: "Genus",
+              canonicalSpeciesName: "species",
+              pointClass: bad,
+            }),
+          { message: /Point class must be one of 5, 10, 15, 20/ }
+        );
+      }
     });
 
     void test("should throw error for duplicate canonical name", async () => {
-      await createSpeciesGroup({
+      await createSpecies({
         programClass: "Cichlids - New World",
         speciesType: "Fish",
         canonicalGenus: "Duplicate",
@@ -196,7 +198,7 @@ void describe("Species Group CRUD Operations", () => {
 
       await assert.rejects(
         async () =>
-          await createSpeciesGroup({
+          await createSpecies({
             programClass: "Livebearers",
             speciesType: "Fish",
             canonicalGenus: "Duplicate",
@@ -207,14 +209,14 @@ void describe("Species Group CRUD Operations", () => {
     });
 
     void test("should allow same genus with different species", async () => {
-      const id1 = await createSpeciesGroup({
+      const id1 = await createSpecies({
         programClass: "Cichlids - New World",
         speciesType: "Fish",
         canonicalGenus: "Samegenus",
         canonicalSpeciesName: "species1",
       });
 
-      const id2 = await createSpeciesGroup({
+      const id2 = await createSpecies({
         programClass: "Cichlids - New World",
         speciesType: "Fish",
         canonicalGenus: "Samegenus",
@@ -225,14 +227,14 @@ void describe("Species Group CRUD Operations", () => {
     });
 
     void test("should allow same species name with different genus", async () => {
-      const id1 = await createSpeciesGroup({
+      const id1 = await createSpecies({
         programClass: "Cichlids - New World",
         speciesType: "Fish",
         canonicalGenus: "Genus1",
         canonicalSpeciesName: "samespecies",
       });
 
-      const id2 = await createSpeciesGroup({
+      const id2 = await createSpecies({
         programClass: "Cichlids - New World",
         speciesType: "Fish",
         canonicalGenus: "Genus2",
@@ -243,28 +245,28 @@ void describe("Species Group CRUD Operations", () => {
     });
 
     void test("should accept all valid species types", async () => {
-      const fish = await createSpeciesGroup({
+      const fish = await createSpecies({
         programClass: "Cichlids - New World",
         speciesType: "Fish",
         canonicalGenus: "TypeTest",
         canonicalSpeciesName: "fish",
       });
 
-      const plant = await createSpeciesGroup({
+      const plant = await createSpecies({
         programClass: "Stem Plants",
         speciesType: "Plant",
         canonicalGenus: "TypeTest",
         canonicalSpeciesName: "plant",
       });
 
-      const invert = await createSpeciesGroup({
+      const invert = await createSpecies({
         programClass: "Shrimp",
         speciesType: "Invert",
         canonicalGenus: "TypeTest",
         canonicalSpeciesName: "invert",
       });
 
-      const coral = await createSpeciesGroup({
+      const coral = await createSpecies({
         programClass: "Hard",
         speciesType: "Coral",
         canonicalGenus: "TypeTest",
@@ -275,39 +277,72 @@ void describe("Species Group CRUD Operations", () => {
     });
   });
 
-  void describe("updateSpeciesGroup", () => {
-    void test("should update canonical genus", async () => {
-      const changes = await updateSpeciesGroup(testGroupId, {
-        canonicalGenus: "Newgenus",
-      });
-
-      assert.strictEqual(changes, 1);
+  void describe("renameCanonical", () => {
+    void test("should rename the genus, keeping the epithet", async () => {
+      await renameCanonical(testGroupId, "Newgenus", "groupus");
 
       const updated = await db.get<SpeciesGroupRow>("SELECT * FROM species_name_group WHERE group_id = ?", [
         testGroupId,
       ]);
       assert.strictEqual(updated?.canonical_genus, "Newgenus");
-      assert.strictEqual(updated?.canonical_species_name, "groupus"); // Unchanged
+      assert.strictEqual(updated?.canonical_species_name, "groupus");
     });
 
-    void test("should update canonical species name", async () => {
-      const changes = await updateSpeciesGroup(testGroupId, {
-        canonicalSpeciesName: "newspecies",
-      });
-
-      assert.strictEqual(changes, 1);
+    void test("should rename the epithet, keeping the genus", async () => {
+      await renameCanonical(testGroupId, "Testicus", "newspecies");
 
       const updated = await db.get<SpeciesGroupRow>("SELECT * FROM species_name_group WHERE group_id = ?", [
         testGroupId,
       ]);
       assert.strictEqual(updated?.canonical_species_name, "newspecies");
-      assert.strictEqual(updated?.canonical_genus, "Testicus"); // Unchanged
+      assert.strictEqual(updated?.canonical_genus, "Testicus");
     });
 
-    void test("should update species type", async () => {
-      const changes = await updateSpeciesGroup(testGroupId, {
-        speciesType: "Plant",
+    void test("should trim whitespace", async () => {
+      await renameCanonical(testGroupId, "  Whitespace  ", " groupus ");
+
+      const updated = await db.get<SpeciesGroupRow>("SELECT * FROM species_name_group WHERE group_id = ?", [
+        testGroupId,
+      ]);
+      assert.strictEqual(updated?.canonical_genus, "Whitespace");
+    });
+
+    void test("should throw error for empty canonical genus", async () => {
+      await assert.rejects(async () => await renameCanonical(testGroupId, "", "groupus"), {
+        message: /cannot be empty/,
       });
+      await assert.rejects(async () => await renameCanonical(testGroupId, "   ", "groupus"), {
+        message: /cannot be empty/,
+      });
+    });
+
+    void test("should throw error for empty canonical species name", async () => {
+      await assert.rejects(async () => await renameCanonical(testGroupId, "Testicus", ""), {
+        message: /cannot be empty/,
+      });
+    });
+
+    void test("should throw error for a missing species", async () => {
+      await assert.rejects(async () => await renameCanonical(99999, "Any", "name"), {
+        message: /not found/,
+      });
+    });
+
+    void test("should throw error for duplicate canonical name", async () => {
+      await db.run(`
+        INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name)
+        VALUES ('Cichlids - New World', 'Fish', 'Existing', 'species')
+      `);
+
+      await assert.rejects(async () => await renameCanonical(testGroupId, "Existing", "species"), {
+        message: /already exists/,
+      });
+    });
+  });
+
+  void describe("updateSpecies", () => {
+    void test("should update species type", async () => {
+      const changes = await updateSpecies(testGroupId, { speciesType: "Plant" });
 
       assert.strictEqual(changes, 1);
 
@@ -318,9 +353,7 @@ void describe("Species Group CRUD Operations", () => {
     });
 
     void test("should update program class", async () => {
-      const changes = await updateSpeciesGroup(testGroupId, {
-        programClass: "Cichlids - New World",
-      });
+      const changes = await updateSpecies(testGroupId, { programClass: "Cichlids - New World" });
 
       assert.strictEqual(changes, 1);
 
@@ -330,23 +363,19 @@ void describe("Species Group CRUD Operations", () => {
       assert.strictEqual(updated?.program_class, "Cichlids - New World");
     });
 
-    void test("should update base points", async () => {
-      const changes = await updateSpeciesGroup(testGroupId, {
-        basePoints: 25,
-      });
+    void test("should update the Point class", async () => {
+      const changes = await updateSpecies(testGroupId, { pointClass: 20 });
 
       assert.strictEqual(changes, 1);
 
       const updated = await db.get<SpeciesGroupRow>("SELECT * FROM species_name_group WHERE group_id = ?", [
         testGroupId,
       ]);
-      assert.strictEqual(updated?.base_points, 25);
+      assert.strictEqual(updated?.base_points, 20);
     });
 
-    void test("should set base points to null", async () => {
-      const changes = await updateSpeciesGroup(testGroupId, {
-        basePoints: null,
-      });
+    void test("should unset the Point class", async () => {
+      const changes = await updateSpecies(testGroupId, { pointClass: null });
 
       assert.strictEqual(changes, 1);
 
@@ -357,9 +386,7 @@ void describe("Species Group CRUD Operations", () => {
     });
 
     void test("should update CARES status", async () => {
-      const changes = await updateSpeciesGroup(testGroupId, {
-        isCaresSpecies: false,
-      });
+      const changes = await updateSpecies(testGroupId, { isCaresSpecies: false });
 
       assert.strictEqual(changes, 1);
 
@@ -369,41 +396,9 @@ void describe("Species Group CRUD Operations", () => {
       assert.strictEqual(updated?.is_cares_species, 0);
     });
 
-    void test("should update external references", async () => {
-      const refs = ["https://fishbase.org/test", "https://wikipedia.org/test"];
-      const changes = await updateSpeciesGroup(testGroupId, {
-        externalReferences: refs,
-      });
-
-      assert.strictEqual(changes, 1);
-
-      // Query from normalized table
-      const { getSpeciesExternalReferences } = await import("../db/species");
-      const updatedRefs = await getSpeciesExternalReferences(testGroupId);
-      assert.strictEqual(updatedRefs.length, 2);
-      assert.deepStrictEqual(
-        updatedRefs.map((r) => r.reference_url),
-        refs
-      );
-    });
-
-    void test("should clear external references with empty array", async () => {
-      const changes = await updateSpeciesGroup(testGroupId, {
-        externalReferences: [],
-      });
-
-      assert.strictEqual(changes, 1);
-
-      // Query from normalized table
-      const { getSpeciesExternalReferences } = await import("../db/species");
-      const updatedRefs = await getSpeciesExternalReferences(testGroupId);
-      assert.strictEqual(updatedRefs.length, 0);
-    });
-
     void test("should update multiple fields at once", async () => {
-      const changes = await updateSpeciesGroup(testGroupId, {
-        canonicalGenus: "Multiupdate",
-        basePoints: 50,
+      const changes = await updateSpecies(testGroupId, {
+        pointClass: 15,
         isCaresSpecies: false,
         programClass: "Characins",
       });
@@ -413,99 +408,57 @@ void describe("Species Group CRUD Operations", () => {
       const updated = await db.get<SpeciesGroupRow>("SELECT * FROM species_name_group WHERE group_id = ?", [
         testGroupId,
       ]);
-      assert.strictEqual(updated?.canonical_genus, "Multiupdate");
-      assert.strictEqual(updated?.base_points, 50);
+      assert.strictEqual(updated?.base_points, 15);
       assert.strictEqual(updated?.is_cares_species, 0);
       assert.strictEqual(updated?.program_class, "Characins");
     });
 
-    void test("should trim whitespace from string fields", async () => {
-      const changes = await updateSpeciesGroup(testGroupId, {
-        canonicalGenus: "  Whitespace  ",
-        programClass: "  Trimmed  ",
-      });
-
-      assert.strictEqual(changes, 1);
+    void test("should trim whitespace from the program class", async () => {
+      await updateSpecies(testGroupId, { programClass: "  Trimmed  " });
 
       const updated = await db.get<SpeciesGroupRow>("SELECT * FROM species_name_group WHERE group_id = ?", [
         testGroupId,
       ]);
-      assert.strictEqual(updated?.canonical_genus, "Whitespace");
       assert.strictEqual(updated?.program_class, "Trimmed");
     });
 
     void test("should return 0 for non-existent group_id", async () => {
-      const changes = await updateSpeciesGroup(99999, {
-        basePoints: 10,
-      });
+      const changes = await updateSpecies(99999, { pointClass: 10 });
 
       assert.strictEqual(changes, 0);
     });
 
-    void test("should throw error for empty canonical genus", async () => {
-      await assert.rejects(
-        async () => await updateSpeciesGroup(testGroupId, { canonicalGenus: "" }),
-        { message: /cannot be empty/ }
-      );
-
-      await assert.rejects(
-        async () => await updateSpeciesGroup(testGroupId, { canonicalGenus: "   " }),
-        { message: /cannot be empty/ }
-      );
-    });
-
-    void test("should throw error for empty canonical species name", async () => {
-      await assert.rejects(
-        async () => await updateSpeciesGroup(testGroupId, { canonicalSpeciesName: "" }),
-        { message: /cannot be empty/ }
-      );
+    void test("should throw error for empty program class", async () => {
+      await assert.rejects(async () => await updateSpecies(testGroupId, { programClass: "  " }), {
+        message: /cannot be empty/,
+      });
     });
 
     void test("should throw error for invalid species type", async () => {
       await assert.rejects(
-         
-        async () => await updateSpeciesGroup(testGroupId, { speciesType: "InvalidType" }),
-        { message: /must be Fish, Plant, Invert, or Coral/ }
+        async () => await updateSpecies(testGroupId, { speciesType: "InvalidType" }),
+        { message: /Species type must be one of Fish, Plant, Invert, Coral/ }
       );
     });
 
-    void test("should throw error for points out of range", async () => {
-      await assert.rejects(async () => await updateSpeciesGroup(testGroupId, { basePoints: -1 }), {
-        message: /between 0 and 100/,
-      });
-
-      await assert.rejects(async () => await updateSpeciesGroup(testGroupId, { basePoints: 101 }), {
-        message: /between 0 and 100/,
-      });
+    void test("should throw error for a Point class outside the tally keys", async () => {
+      for (const bad of [-1, 0, 7, 25, 101]) {
+        await assert.rejects(async () => await updateSpecies(testGroupId, { pointClass: bad }), {
+          message: /Point class must be one of 5, 10, 15, 20/,
+        });
+      }
     });
 
     void test("should throw error for empty updates object", async () => {
-      await assert.rejects(async () => await updateSpeciesGroup(testGroupId, {}), {
+      await assert.rejects(async () => await updateSpecies(testGroupId, {}), {
         message: /at least one field/i,
       });
     });
-
-    void test("should throw error for duplicate canonical name", async () => {
-      // Create another species
-      await db.run(`
-        INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name)
-        VALUES ('Cichlids - New World', 'Fish', 'Existing', 'species')
-      `);
-
-      await assert.rejects(
-        async () =>
-          await updateSpeciesGroup(testGroupId, {
-            canonicalGenus: "Existing",
-            canonicalSpeciesName: "species",
-          }),
-        { message: /already exists/ }
-      );
-    });
   });
 
-  void describe("deleteSpeciesGroup", () => {
+  void describe("deleteSpecies", () => {
     void test("should delete species group and return 1", async () => {
-      const changes = await deleteSpeciesGroup(testGroupId);
+      const changes = await deleteSpecies(testGroupId);
 
       assert.strictEqual(changes, 1);
 
@@ -516,17 +469,17 @@ void describe("Species Group CRUD Operations", () => {
     });
 
     void test("should cascade delete all synonyms (FK constraint)", async () => {
-      await addCommonName(testGroupId, "Second Name");
-      await addScientificName(testGroupId, "Testicus groupus variant");
+      await addName(testGroupId, "common", "Second Name");
+      await addName(testGroupId, "scientific", "Testicus groupus variant");
 
-      const beforeNames = await getNamesForGroup(testGroupId);
-      assert.strictEqual(beforeNames.common_names.length + beforeNames.scientific_names.length, 4);
+      const beforeNames = await listNames(testGroupId);
+      assert.strictEqual(beforeNames.common.length + beforeNames.scientific.length, 4);
 
-      await deleteSpeciesGroup(testGroupId);
+      await deleteSpecies(testGroupId);
 
-      const afterNames = await getNamesForGroup(testGroupId);
+      const afterNames = await listNames(testGroupId);
       assert.strictEqual(
-        afterNames.common_names.length + afterNames.scientific_names.length,
+        afterNames.common.length + afterNames.scientific.length,
         0,
         "All names should be deleted"
       );
@@ -534,7 +487,7 @@ void describe("Species Group CRUD Operations", () => {
 
     void test("should throw error for non-existent group_id", async () => {
       // The function checks if group exists before attempting delete
-      await assert.rejects(async () => await deleteSpeciesGroup(99999), { message: /not found/ });
+      await assert.rejects(async () => await deleteSpecies(99999), { message: /not found/ });
     });
 
     void test("should prevent deleting species with approved submissions", async () => {
@@ -546,9 +499,9 @@ void describe("Species Group CRUD Operations", () => {
       const memberId = memberResult.lastID as number;
 
       // Get the common and scientific name IDs we created in beforeEach
-      const names = await getNamesForGroup(testGroupId);
-      const commonNameId = names.common_names[0]?.common_name_id;
-      const scientificNameId = names.scientific_names[0]?.scientific_name_id;
+      const names = await listNames(testGroupId);
+      const commonNameId = names.common[0]?.name_id;
+      const scientificNameId = names.scientific[0]?.name_id;
 
       // Create approved submission using split schema FKs
       await db.run(
@@ -565,7 +518,7 @@ void describe("Species Group CRUD Operations", () => {
         [memberId, commonNameId, scientificNameId]
       );
 
-      await assert.rejects(async () => await deleteSpeciesGroup(testGroupId, false), {
+      await assert.rejects(async () => await deleteSpecies(testGroupId), {
         message: /approved submissions/,
       });
 
@@ -576,45 +529,42 @@ void describe("Species Group CRUD Operations", () => {
       assert.ok(stillExists, "Species should not be deleted");
     });
 
-    void test("should allow force delete of species with submissions", async () => {
-      // Create member and submission
+    void test("should prevent deleting species with an unapproved submission, with no force", async () => {
       const memberResult = await db.run(`
         INSERT INTO members (display_name, contact_email)
         VALUES ('Test Member', 'test@example.com')
       `);
       const memberId = memberResult.lastID as number;
 
-      // Get the name IDs for split schema FKs
-      const names = await getNamesForGroup(testGroupId);
-      const commonNameId = names.common_names[0]?.common_name_id;
-      const scientificNameId = names.scientific_names[0]?.scientific_name_id;
+      const names = await listNames(testGroupId);
+      const commonNameId = names.common[0]?.name_id;
 
       await db.run(
         `
         INSERT INTO submissions (
-          member_id, common_name_id, scientific_name_id, species_type, species_class,
+          member_id, common_name_id, species_type, species_class,
           species_common_name, species_latin_name, program,
           water_type, tank_size, filter_type, temperature, ph, gh,
-          reproduction_date, submitted_on, approved_on, points
-        ) VALUES (?, ?, ?, 'Fish', 'Livebearers', 'Test', 'Testicus test', 'fish',
+          reproduction_date, submitted_on
+        ) VALUES (?, ?, 'Fish', 'Livebearers', 'Test', 'Testicus test', 'fish',
                   'Fresh', '10g', 'Sponge', '75', '7.0', '200ppm',
-                  '2024-01-01', '2024-01-01', '2024-01-15', 10)
+                  '2024-01-01', '2024-01-01')
       `,
-        [memberId, commonNameId, scientificNameId]
+        [memberId, commonNameId]
       );
 
-      // Should succeed with force=true
-      const changes = await deleteSpeciesGroup(testGroupId, true);
-      assert.strictEqual(changes, 1);
+      await assert.rejects(async () => await deleteSpecies(testGroupId), {
+        message: /Merge it into another species/,
+      });
 
-      const result = await db.get<SpeciesGroupRow>("SELECT * FROM species_name_group WHERE group_id = ?", [
+      const stillExists = await db.get<SpeciesGroupRow>("SELECT * FROM species_name_group WHERE group_id = ?", [
         testGroupId,
       ]);
-      assert.strictEqual(result, undefined);
+      assert.ok(stillExists, "Species should not be deleted");
     });
   });
 
-  void describe("bulkSetPoints", () => {
+  void describe("setPointClass", () => {
     let groupId1: number;
     let groupId2: number;
     let groupId3: number;
@@ -641,7 +591,7 @@ void describe("Species Group CRUD Operations", () => {
     });
 
     void test("should update points for multiple species", async () => {
-      const changes = await bulkSetPoints([groupId1, groupId2, groupId3], 15);
+      const changes = await setPointClass([groupId1, groupId2, groupId3], 15);
 
       assert.strictEqual(changes, 3, "Should update all 3 species");
 
@@ -654,7 +604,7 @@ void describe("Species Group CRUD Operations", () => {
     });
 
     void test("should update single species", async () => {
-      const changes = await bulkSetPoints([groupId1], 20);
+      const changes = await setPointClass([groupId1], 20);
 
       assert.strictEqual(changes, 1);
 
@@ -666,7 +616,7 @@ void describe("Species Group CRUD Operations", () => {
     });
 
     void test("should set points to null (clear points)", async () => {
-      const changes = await bulkSetPoints([groupId2, groupId3], null);
+      const changes = await setPointClass([groupId2, groupId3], null);
 
       assert.strictEqual(changes, 2);
 
@@ -678,7 +628,7 @@ void describe("Species Group CRUD Operations", () => {
     });
 
     void test("should handle mix of existing and non-existent IDs", async () => {
-      const changes = await bulkSetPoints([groupId1, 99999, groupId2], 30);
+      const changes = await setPointClass([groupId1, 99999, groupId2], 5);
 
       assert.strictEqual(changes, 2, "Should update only existing species");
 
@@ -689,49 +639,31 @@ void describe("Species Group CRUD Operations", () => {
         groupId2,
       ]);
 
-      assert.strictEqual(g1?.base_points, 30);
-      assert.strictEqual(g2?.base_points, 30);
+      assert.strictEqual(g1?.base_points, 5);
+      assert.strictEqual(g2?.base_points, 5);
     });
 
     void test("should return 0 if all IDs are non-existent", async () => {
-      const changes = await bulkSetPoints([99998, 99999], 10);
+      const changes = await setPointClass([99998, 99999], 10);
       assert.strictEqual(changes, 0);
     });
 
     void test("should throw error for empty group IDs array", async () => {
-      await assert.rejects(async () => await bulkSetPoints([], 10), {
-        message: /at least one group ID/i,
+      await assert.rejects(async () => await setPointClass([], 10), {
+        message: /at least one species/i,
       });
     });
 
-    void test("should throw error for points below 0", async () => {
-      await assert.rejects(async () => await bulkSetPoints([groupId1], -1), {
-        message: /between 0 and 100/,
-      });
-    });
-
-    void test("should throw error for points above 100", async () => {
-      await assert.rejects(async () => await bulkSetPoints([groupId1], 101), {
-        message: /between 0 and 100/,
-      });
-    });
-
-    void test("should allow boundary values (0 and 100)", async () => {
-      const changes1 = await bulkSetPoints([groupId1], 0);
-      const changes2 = await bulkSetPoints([groupId2], 100);
-
-      assert.strictEqual(changes1, 1);
-      assert.strictEqual(changes2, 1);
-
+    void test("should refuse anything but a Point class or unset", async () => {
+      for (const bad of [-1, 0, 7, 100, 101]) {
+        await assert.rejects(async () => await setPointClass([groupId1], bad), {
+          message: /Point class must be one of 5, 10, 15, 20/,
+        });
+      }
       const g1 = await db.get<{ base_points: number | null }>("SELECT base_points FROM species_name_group WHERE group_id = ?", [
         groupId1,
       ]);
-      const g2 = await db.get<{ base_points: number | null }>("SELECT base_points FROM species_name_group WHERE group_id = ?", [
-        groupId2,
-      ]);
-
-      assert.strictEqual(g1?.base_points, 0);
-      assert.strictEqual(g2?.base_points, 100);
+      assert.strictEqual(g1?.base_points, null, "a refused bulk set changes nothing");
     });
 
     void test("should handle large batch updates efficiently", async () => {
@@ -746,7 +678,7 @@ void describe("Species Group CRUD Operations", () => {
       }
 
       const allIds = [groupId1, groupId2, groupId3, ...additionalIds];
-      const changes = await bulkSetPoints(allIds, 42);
+      const changes = await setPointClass(allIds, 10);
 
       assert.strictEqual(changes, 23, "Should update all 23 species in one operation");
 
@@ -754,14 +686,14 @@ void describe("Species Group CRUD Operations", () => {
       const sample = await db.get<{ base_points: number | null }>("SELECT base_points FROM species_name_group WHERE group_id = ?", [
         additionalIds[10],
       ]);
-      assert.strictEqual(sample?.base_points, 42);
+      assert.strictEqual(sample?.base_points, 10);
     });
   });
 
   void describe("Integration Scenarios", () => {
     void test("update then delete", async () => {
-      await updateSpeciesGroup(testGroupId, { basePoints: 99 });
-      const changes = await deleteSpeciesGroup(testGroupId);
+      await updateSpecies(testGroupId, { pointClass: 20 });
+      const changes = await deleteSpecies(testGroupId);
 
       assert.strictEqual(changes, 1);
     });
@@ -773,7 +705,7 @@ void describe("Species Group CRUD Operations", () => {
       `);
       const otherId = other.lastID as number;
 
-      await bulkSetPoints([testGroupId, otherId], 20);
+      await setPointClass([testGroupId, otherId], 20);
 
       const updated1 = await db.get<{ base_points: number | null }>(
         "SELECT base_points FROM species_name_group WHERE group_id = ?",
@@ -787,7 +719,7 @@ void describe("Species Group CRUD Operations", () => {
       assert.strictEqual(updated2?.base_points, 20);
 
       // Now individually update one
-      await updateSpeciesGroup(testGroupId, { basePoints: 50 });
+      await updateSpecies(testGroupId, { pointClass: 15 });
 
       const final1 = await db.get<{ base_points: number | null }>("SELECT base_points FROM species_name_group WHERE group_id = ?", [
         testGroupId,
@@ -795,30 +727,35 @@ void describe("Species Group CRUD Operations", () => {
       const final2 = await db.get<{ base_points: number | null }>("SELECT base_points FROM species_name_group WHERE group_id = ?", [
         otherId,
       ]);
-      assert.strictEqual(final1?.base_points, 50);
+      assert.strictEqual(final1?.base_points, 15);
       assert.strictEqual(final2?.base_points, 20); // Unchanged
     });
 
     void test("canonical name change preserves synonyms", async () => {
-      await addCommonName(testGroupId, "Old Name");
-      await addScientificName(testGroupId, "Testicus oldname");
+      await addName(testGroupId, "common", "Old Name");
+      await addName(testGroupId, "scientific", "Testicus oldname");
 
-      const beforeNames = await getNamesForGroup(testGroupId);
-      const beforeCount = beforeNames.common_names.length + beforeNames.scientific_names.length;
+      const beforeNames = await listNames(testGroupId);
+      const beforeCount = beforeNames.common.length + beforeNames.scientific.length;
       assert.strictEqual(beforeCount, 4); // 2 common + 2 scientific
 
-      await updateSpeciesGroup(testGroupId, {
-        canonicalGenus: "Renamed",
-        canonicalSpeciesName: "newname",
-      });
+      await renameCanonical(testGroupId, "Renamed", "newname");
 
-      const afterNames = await getNamesForGroup(testGroupId);
-      const afterCount = afterNames.common_names.length + afterNames.scientific_names.length;
-      assert.strictEqual(afterCount, 4, "Names should be preserved");
+      const afterNames = await listNames(testGroupId);
+      assert.deepStrictEqual(
+        afterNames.common.map((n) => n.name),
+        ["Old Name", "Test Fish"],
+        "common Names are preserved and gain nothing"
+      );
+      assert.deepStrictEqual(
+        afterNames.scientific.map((n) => n.name),
+        ["Testicus groupus", "Testicus oldname"],
+        "scientific Names are preserved; the old Canonical name was already one"
+      );
 
       // Verify names are still linked to the same group
-      assert.ok(afterNames.common_names.every((n) => n.group_id === testGroupId));
-      assert.ok(afterNames.scientific_names.every((n) => n.group_id === testGroupId));
+      assert.ok(afterNames.common.every((n) => n.species_id === testGroupId));
+      assert.ok(afterNames.scientific.every((n) => n.species_id === testGroupId));
     });
   });
 });

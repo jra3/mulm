@@ -7,7 +7,7 @@ import assert from "node:assert";
 import { open, Database } from "sqlite";
 import sqlite3 from "sqlite3";
 import { overrideConnection } from "../db/conn";
-import { mergeSpecies } from "../db/species";
+import { mergeSpecies } from "@/species";
 
 void describe("Species merge with duplicate synonyms", () => {
   let db: Database;
@@ -160,9 +160,13 @@ void describe("Species merge with duplicate synonyms", () => {
       "Should have both unique common names"
     );
 
-    const scientificNames = await db.all(
-      "SELECT scientific_name FROM species_scientific_name WHERE group_id = 200"
+    const scientificNames = await db.all<Array<{ scientific_name: string }>>(
+      "SELECT scientific_name FROM species_scientific_name WHERE group_id = 200 ORDER BY scientific_name"
     );
-    assert.strictEqual(scientificNames.length, 1, "Should have 1 scientific name (duplicate merged)");
+    assert.deepStrictEqual(
+      scientificNames.map((n) => n.scientific_name),
+      ["Poecilia reticulata", "Poecillia Reticulata"],
+      "Duplicate merged; the loser's Canonical name kept as a scientific Name"
+    );
   });
 });
