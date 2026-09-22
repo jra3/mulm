@@ -10,6 +10,8 @@ import { speciesIdOfSubmissionSql } from "./submissions";
 
 export type SpeciesFilters = {
   species_type?: string;
+  // `species_class`: the explorer filters on the Submission's copy of the Program class;
+  // the name is kept for current callers and goes in #411.
   species_class?: string;
   search?: string;
   sort?: "name" | "reports" | "breeders";
@@ -17,6 +19,7 @@ export type SpeciesFilters = {
 };
 
 export type SpeciesExplorerItem = {
+  // `group_id`: the Species' id under its schema name, kept for current views; goes in #411.
   group_id: number;
   program_class: string;
   canonical_genus: string;
@@ -33,11 +36,12 @@ export type SpeciesExplorerItem = {
 };
 
 /**
- * Individual species name record for typeahead/autocomplete
- * Represents a single name variant (synonym) for a species
+ * One typeahead result: the Name that matched, paired with one Name of the
+ * other kind for the current views.
  */
 export type SpeciesNameRecord = {
   name_id: number;
+  // `group_id`: the Species' id under its schema name, kept for current views; goes in #411.
   group_id: number;
   common_name: string;
   scientific_name: string;
@@ -53,7 +57,7 @@ export type SpeciesNameRecord = {
 function buildSpeciesSearchQuery(
   search?: string,
   species_type?: string,
-  species_class?: string,
+  programClassAsSubmitted?: string,
   sort: "name" | "reports" | "breeders" = "reports",
   limit?: number,
   cares_only?: boolean
@@ -75,9 +79,9 @@ function buildSpeciesSearchQuery(
     params.push(species_type);
   }
 
-  if (species_class) {
+  if (programClassAsSubmitted) {
     conditions.push("AND s.species_class = ?");
-    params.push(species_class);
+    params.push(programClassAsSubmitted);
   }
 
   if (cares_only) {
@@ -127,16 +131,13 @@ function buildSpeciesSearchQuery(
 }
 
 /**
- * Search species names for typeahead/autocomplete using split schema
- * Returns individual name records (not grouped) matching either common or scientific names
- *
- * **Migration Note**: Updated to query species_common_name and species_scientific_name tables
- * separately via UNION. Each result includes matched name and group metadata.
+ * Search Names for typeahead: one result per matching common or scientific
+ * Name, each carrying its Species' classification and Canonical name.
  *
  * @param searchQuery - Search term (minimum 2 characters)
- * @param filters - Optional filters for species_type and species_class
+ * @param filters - Optional Species type and Program class filters
  * @param limit - Maximum number of results (default: 10)
- * @returns Array of species name records with group metadata
+ * @returns One record per matching Name
  */
 export async function searchSpeciesTypeahead(
   searchQuery: string,
@@ -238,6 +239,7 @@ export async function getSpeciesForExplorer(
 }
 
 export type SpeciesDetail = {
+  // `group_id`: the Species' id under its schema name, kept for current views; goes in #411.
   group_id: number;
   program_class: string;
   species_type: string;
@@ -253,6 +255,7 @@ export type SpeciesDetail = {
   external_references: string[]; // Array of reference URLs
   image_links: string[]; // Array of image URLs (backward compatibility)
   images: SpeciesImage[]; // Full image objects with metadata
+  // `synonyms`: common Names paired with scientific ones, kept for current views; goes in #411.
   synonyms: Array<{
     name_id: number;
     common_name: string;
@@ -260,8 +263,8 @@ export type SpeciesDetail = {
   }>;
 };
 
-export async function getSpeciesDetail(groupId: number) {
-  const groupRows = await query<{
+export async function getSpeciesDetail(speciesId: number) {
+  const speciesRows = await query<{
     group_id: number;
     program_class: string;
     species_type: string;
@@ -280,10 +283,10 @@ export async function getSpeciesDetail(groupId: number) {
 		FROM species_name_group
 		WHERE group_id = ?
 	`,
-    [groupId]
+    [speciesId]
   );
 
-  if (groupRows.length === 0) {
+  if (speciesRows.length === 0) {
     return null;
   }
 
@@ -291,17 +294,17 @@ export async function getSpeciesDetail(groupId: number) {
   const [commonNames, scientificNames] = await Promise.all([
     query<{ common_name_id: number; common_name: string }>(
       "SELECT common_name_id, common_name FROM species_common_name WHERE group_id = ? ORDER BY common_name",
-      [groupId]
+      [speciesId]
     ),
     query<{ scientific_name_id: number; scientific_name: string }>(
       "SELECT scientific_name_id, scientific_name FROM species_scientific_name WHERE group_id = ? ORDER BY scientific_name",
-      [groupId]
+      [speciesId]
     ),
   ]);
 
-  // Create paired synonyms for backward compatibility with existing views
+  // Pair each common Name with a scientific one, for the current views only
   // Each common name is paired with the first scientific name
-  const synonymRows = commonNames.map((cn, idx) => ({
+  const pairedNames = commonNames.map((cn, idx) => ({
     name_id: cn.common_name_id,
     common_name: cn.common_name,
     scientific_name:
@@ -310,16 +313,16 @@ export async function getSpeciesDetail(groupId: number) {
 
   // Fetch normalized data
   const [externalRefs, images] = await Promise.all([
-    getSpeciesExternalReferences(groupId),
-    getSpeciesImages(groupId),
+    getSpeciesExternalReferences(speciesId),
+    getSpeciesImages(speciesId),
   ]);
 
   const detail: SpeciesDetail = {
-    ...groupRows[0],
+    ...speciesRows[0],
     external_references: externalRefs.map((ref) => ref.reference_url),
     image_links: images.map((img) => img.image_url), // Backward compatibility
     images, // Full objects with metadata
-    synonyms: synonymRows,
+    synonyms: pairedNames,
   };
 
   return detail;
@@ -344,10 +347,10 @@ export type SpeciesBreeder = {
 /**
  * Get breeders who have bred a specific species
  *
- * @param groupId - Species group ID
+ * @param speciesId - the Species' id
  * @returns Array of breeders with their breeding statistics for this species
  */
-export async function getBreedersForSpecies(groupId: number) {
+export async function getBreedersForSpecies(speciesId: number) {
   return query<SpeciesBreeder>(
     `
 		SELECT
@@ -370,7 +373,7 @@ export async function getBreedersForSpecies(groupId: number) {
 		GROUP BY m.id, m.display_name
 		ORDER BY breed_count DESC, latest_breed_date DESC
 	`,
-    [groupId]
+    [speciesId]
   ).then((rows) => {
     return rows.map((row) => ({
       ...row,
@@ -391,7 +394,7 @@ export async function getBreedersForSpecies(groupId: number) {
 }
 
 /**
- * Species group management for admin interface
+ * The admin list of Species
  */
 
 export type SpeciesAdminFilters = {
@@ -404,6 +407,7 @@ export type SpeciesAdminFilters = {
 };
 
 export type SpeciesAdminListItem = {
+  // `group_id`: the Species' id under its schema name, kept for current views; goes in #411.
   group_id: number;
   canonical_genus: string;
   canonical_species_name: string;
@@ -411,6 +415,7 @@ export type SpeciesAdminListItem = {
   program_class: string;
   base_points: number | null;
   is_cares_species: number;
+  // `synonym_count`: how many Names, of both kinds, kept for current views; goes in #411.
   synonym_count: number;
   iucn_redlist_category: string | null;
   iucn_population_trend: string | null;
@@ -424,11 +429,8 @@ export type SpeciesAdminListResult = {
 };
 
 /**
- * Get species list for admin interface with filters and pagination - Split schema
- * Unlike the public explorer, this returns ALL species (not just those with breeding reports)
- *
- * **Migration Note**: Updated to query species_common_name and species_scientific_name tables
- * for search and name counting. Synonym count now includes both common and scientific names.
+ * The admin list of Species, filtered and paginated. Unlike the public
+ * explorer it returns every Species, bred or not, with its Names of both kinds.
  *
  * @param filters - Filter criteria for species
  * @param sort - Sort order: 'name', 'points', or 'class' (default: 'name')
@@ -516,7 +518,7 @@ export async function getSpeciesForAdmin(
   const countResult = await query<{ count: number }>(countSql, params);
   const total_count = countResult[0]?.count || 0;
 
-  // Get paginated results with synonym count from both tables and IUCN data
+  // One page of Species, with a count of their Names of both kinds and IUCN data
   const dataSql = `
     SELECT
       sng.group_id,
@@ -544,10 +546,10 @@ export async function getSpeciesForAdmin(
   const dataParams = [...params, limit, offset];
   const species = await query<SpeciesAdminListItem>(dataSql, dataParams);
 
-  // Fetch all synonyms for these species in batch
+  // Fetch the Names of every Species on this page in one query per kind
   if (species.length > 0) {
-    const groupIds = species.map((s) => s.group_id);
-    const placeholders = groupIds.map(() => "?").join(",");
+    const speciesIds = species.map((s) => s.group_id);
+    const placeholders = speciesIds.map(() => "?").join(",");
 
     const [commonNames, scientificNames] = await Promise.all([
       query<{ group_id: number; common_name: string }>(
@@ -555,33 +557,33 @@ export async function getSpeciesForAdmin(
          FROM species_common_name
          WHERE group_id IN (${placeholders})
          ORDER BY group_id, common_name`,
-        groupIds
+        speciesIds
       ),
       query<{ group_id: number; scientific_name: string }>(
         `SELECT group_id, scientific_name
          FROM species_scientific_name
          WHERE group_id IN (${placeholders})
          ORDER BY group_id, scientific_name`,
-        groupIds
+        speciesIds
       ),
     ]);
 
-    // Group synonyms by group_id
-    const commonByGroup = new Map<number, string[]>();
-    const scientificByGroup = new Map<number, string[]>();
+    // Names by Species
+    const commonBySpecies = new Map<number, string[]>();
+    const scientificBySpecies = new Map<number, string[]>();
 
     commonNames.forEach((cn) => {
-      if (!commonByGroup.has(cn.group_id)) {
-        commonByGroup.set(cn.group_id, []);
+      if (!commonBySpecies.has(cn.group_id)) {
+        commonBySpecies.set(cn.group_id, []);
       }
-      commonByGroup.get(cn.group_id)!.push(cn.common_name);
+      commonBySpecies.get(cn.group_id)!.push(cn.common_name);
     });
 
     scientificNames.forEach((sn) => {
-      if (!scientificByGroup.has(sn.group_id)) {
-        scientificByGroup.set(sn.group_id, []);
+      if (!scientificBySpecies.has(sn.group_id)) {
+        scientificBySpecies.set(sn.group_id, []);
       }
-      scientificByGroup.get(sn.group_id)!.push(sn.scientific_name);
+      scientificBySpecies.get(sn.group_id)!.push(sn.scientific_name);
     });
 
     // Attach to each species (safe to extend the object)
@@ -590,8 +592,8 @@ export async function getSpeciesForAdmin(
         common_names: string[];
         scientific_names: string[];
       };
-      extended.common_names = commonByGroup.get(s.group_id) || [];
-      extended.scientific_names = scientificByGroup.get(s.group_id) || [];
+      extended.common_names = commonBySpecies.get(s.group_id) || [];
+      extended.scientific_names = scientificBySpecies.get(s.group_id) || [];
     });
   }
 
