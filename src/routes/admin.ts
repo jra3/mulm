@@ -18,6 +18,7 @@ import {
 import { approvalSchema } from "@/forms/approval";
 import { approvedEditSchema } from "@/forms/approvedEdit";
 import { bindSpeciesForm } from "@/forms/bindSpecies";
+import { confirmWitnessForm } from "@/forms/confirmWitness";
 import { inviteSchema } from "@/forms/member";
 import { sendInviteEmail } from "@/notifications";
 import { getNextLevel, programMetadata, programs } from "@/programs";
@@ -374,8 +375,18 @@ export const confirmWitnessAction = async (req: MulmRequest, res: Response) => {
     return;
   }
 
+  const parsed = confirmWitnessForm.safeParse(req.body ?? {});
+  if (!parsed.success) {
+    sendWitnessPanelRefusal(res, parsed.error.issues.map((issue) => issue.message));
+    return;
+  }
+
+  // The spellings the witness ticked become Names of the bound Species
   const ran = await witnessPanelMove(req, res, submission.id, () =>
-    lifecycle.confirmWitness(callerFor(req.viewer!), submission.id)
+    lifecycle.confirmWitness(callerFor(req.viewer!), submission.id, {
+      common: parsed.data.add_common_name,
+      scientific: parsed.data.add_scientific_name,
+    })
   );
   if (!ran) return;
 

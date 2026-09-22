@@ -16,7 +16,7 @@ import type { FormValues } from "@/forms/submission";
 import type { ApprovalFormValues } from "@/forms/approval";
 import type { Program } from "@/levelManager";
 import { isProgramType } from "@/programs";
-import { canonicalName, checkFormAgreement, findSpeciesById } from "@/species";
+import { addName, canonicalName, checkFormAgreement, findSpeciesById, type NameKind } from "@/species";
 import { logger } from "@/utils/logger";
 import { AuthorizationError, ValidationError, StateError } from "./errors";
 import { deriveState, hasChangesRequested } from "./state";
@@ -442,15 +442,21 @@ export async function resubmit(
 
 /**
  * Confirm the Witness: a committee member has inspected the fry, and the
- * waiting period starts.
+ * waiting period starts. The spellings the witness chose (`namesToAdd`) are
+ * added to the bound Species as Names in the same transaction, so a refused
+ * confirmation adds none.
  *
  * Never the submitter, so the independence of the first gate is enforced
  * rather than trusted. Refused on a Submission bound to no Species, so nothing
  * enters the waiting period without one: the witness binds it first
  * (`bindSpecies`).
  */
-export async function confirmWitness(caller: Caller, submissionId: number): Promise<void> {
-  const memberId = await withTransaction(async (db) => {
+export async function confirmWitness(
+  caller: Caller,
+  submissionId: number,
+  namesToAdd: NamesToAdd = {}
+): Promise<void> {
+  const { memberId, added } = await withTransaction(async (db) => {
     const { submission } = await guard(db, moves.confirmWitness, caller, submissionId);
     await runUpdate(
       db,
@@ -462,7 +468,8 @@ export async function confirmWitness(caller: Caller, submissionId: number): Prom
       [caller.id, new Date().toISOString(), submissionId],
       moves.confirmWitness
     );
-    return submission.member_id;
+    const added = await addSpellingsAsNames(db, submissionId, submission.species_id!, namesToAdd);
+    return { memberId: submission.member_id, added };
   });
 
   const [submission, member, witness] = await Promise.all([
@@ -474,7 +481,53 @@ export async function confirmWitness(caller: Caller, submissionId: number): Prom
     await notifier().witnessConfirmed(submission, member, witness);
   }
 
-  logger.info("Witness confirmed", { submissionId, witnessedBy: caller.id });
+  logger.info("Witness confirmed", { submissionId, witnessedBy: caller.id, namesAdded: added });
+}
+
+/**
+ * Which of the Submission's own spellings the witness chose to add to its
+ * Species as Names: the witness panel offers the common spelling checked and
+ * the Latin spelling unchecked.
+ */
+export type NamesToAdd = { common?: boolean; scientific?: boolean };
+
+/**
+ * Add the chosen spellings as Names of the Species, inside the Witness's
+ * transaction - the one place a Submission's spellings become Names. A
+ * spelling that is blank or already a Name of that kind (as
+ * `checkFormAgreement` decides: whole, any case) is never added.
+ * @returns the texts added, by kind
+ */
+async function addSpellingsAsNames(
+  db: Database,
+  submissionId: number,
+  speciesId: number,
+  namesToAdd: NamesToAdd
+): Promise<Partial<Record<NameKind, string>>> {
+  if (!namesToAdd.common && !namesToAdd.scientific) return {};
+
+  const stmt = await db.prepare(
+    "SELECT species_common_name, species_latin_name FROM submissions WHERE id = ?"
+  );
+  const spellings = await stmt.get<{ species_common_name: string; species_latin_name: string }>(submissionId);
+  await stmt.finalize();
+  if (!spellings) return {};
+
+  const agreement = await checkFormAgreement(speciesId, spellings);
+  const offered = {
+    common: { spelling: spellings.species_common_name, agreement: agreement?.commonName },
+    scientific: { spelling: spellings.species_latin_name, agreement: agreement?.latinName },
+  } satisfies Record<NameKind, unknown>;
+
+  const added: Partial<Record<NameKind, string>> = {};
+  for (const kind of ["common", "scientific"] as const) {
+    const { spelling, agreement: spellingAgreement } = offered[kind];
+    if (namesToAdd[kind] && spellingAgreement === "not-a-name") {
+      await addName(speciesId, kind, spelling);
+      added[kind] = spelling;
+    }
+  }
+  return added;
 }
 
 /**

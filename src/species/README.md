@@ -87,6 +87,11 @@ through fragments: they go through a catalogue function.
 - **Names** are never invented. The typeahead gives a common Name the
   Canonical name as its scientific spelling, and a scientific Name the
   Species' first common Name or nothing.
+- **A Submission's spellings become Names only at the Witness**, when the
+  witness ticks them on the witness panel (`confirmWitness` in
+  `src/lifecycle`, which calls `addName`). Every other `addName` caller adds
+  text a curator typed: the admin Species edit page and MCP
+  `add_species_name`.
 
 ## The schema today, and what changes next
 

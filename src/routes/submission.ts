@@ -201,10 +201,12 @@ export const view = async (req: MulmRequest, res: Response) => {
     boundSpecies: boundSpecies ?? null,
     boundSpeciesName: boundSpecies ? canonicalNameOf(boundSpecies) : null,
     classificationMismatch: agreement ? !agreement.classificationAgrees : false,
-    // Which of the two disagree, for the witness panel's highlight
+    // Which of the two disagree, for the witness panel's highlight, and which
+    // spellings are already Names of the Species, for its Names to add
     classificationAgreement: agreement
       ? { speciesType: agreement.speciesType, programClass: agreement.programClass }
       : null,
+    spellingAgreement: agreement ? { commonName: agreement.commonName, latinName: agreement.latinName } : null,
     waitingPeriodStatus,
     adminNotes,
     videoMetadata,

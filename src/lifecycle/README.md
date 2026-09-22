@@ -87,3 +87,11 @@ the Submission's Species type or Program class disagrees with its Species'
 `adoptSpeciesClassification` - the Submission takes the Species' type, class
 and Program, on the changelog, Witness untouched - or by rebinding, or by
 requesting changes.
+
+`confirmWitness` also takes the witness's choice of the Submission's own
+spellings to add to the bound Species as Names (`NamesToAdd`; the panel
+offers the common spelling ticked and the Latin one unticked). They are added
+through the catalogue's `addName` in the confirm's transaction, after the
+guards, so a refused confirmation adds nothing; a spelling that is blank or
+already a Name (as `checkFormAgreement` decides) is never added. This is the
+only path by which a Submission's spellings become Names.

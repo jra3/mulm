@@ -79,6 +79,7 @@ export {
   changesBetween,
   type Caller,
   type Change,
+  type NamesToAdd,
 } from "./transitions";
 
 // The clock's consequence, and the committee's standing view of its own work.

@@ -30,7 +30,7 @@ import {
   type SubmissionState,
 } from "@/lifecycle";
 import { query } from "@/db/conn";
-import { createSpecies, listNames } from "@/species";
+import { addName, checkFormAgreement, createSpecies, listNames } from "@/species";
 import {
   mockApprovalData,
   mockSpeciesId,
@@ -869,6 +869,89 @@ void describe("Submission lifecycle - transitions", () => {
         speciesId: null,
       });
       assert.strictEqual(await inRefusal(() => adoptSpeciesClassification(committee, unbound)), "unbound");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Names minted at the Witness
+  // -------------------------------------------------------------------------
+
+  void describe("Names the witness adds when confirming", () => {
+    /** A pending Submission bound to a fresh Species with only its Canonical name. */
+    const pendingOn = async (spellings: { commonName: string; latinName: string }) => {
+      const speciesId = await createSpecies({
+        canonicalGenus: "Mintus",
+        canonicalSpeciesName: `species${Math.random().toString(36).slice(2, 8)}`,
+        programClass: "Livebearers",
+        speciesType: "Fish",
+      });
+      const id = await submissionInState(ctx.db, "pendingWitness", {
+        memberId: ctx.member.id,
+        speciesId,
+        ...spellings,
+      });
+      return { id, speciesId };
+    };
+    const namesOf = async (speciesId: number) => {
+      const names = await listNames(speciesId);
+      return {
+        common: names.common.map((n) => n.name),
+        scientific: names.scientific.filter((n) => !n.canonical).map((n) => [n.name, n.canonical]),
+      };
+    };
+
+    void test("the common spelling checked adds a common Name; unchecked adds nothing", async () => {
+      const checked = await pendingOn({ commonName: " Sunset Mint ", latinName: "Mintus oldus" });
+      await confirmWitness(committee, checked.id, { common: true });
+      assert.deepStrictEqual(await namesOf(checked.speciesId), { common: ["Sunset Mint"], scientific: [] });
+
+      const unchecked = await pendingOn({ commonName: "Dawn Mint", latinName: "Mintus olderus" });
+      await confirmWitness(committee, unchecked.id, {});
+      assert.deepStrictEqual(await namesOf(unchecked.speciesId), { common: [], scientific: [] });
+
+      // No choice given: nothing added
+      const unasked = await pendingOn({ commonName: "Noon Mint", latinName: "Mintus meridianus" });
+      await confirmWitness(committee, unasked.id);
+      assert.deepStrictEqual(await namesOf(unasked.speciesId), { common: [], scientific: [] });
+    });
+
+    void test("the Latin spelling checked adds an unflagged scientific Name", async () => {
+      const { id, speciesId } = await pendingOn({ commonName: "Latin Mint", latinName: "Mintus antiquus" });
+      await confirmWitness(committee, id, { common: false, scientific: true });
+
+      assert.deepStrictEqual(await namesOf(speciesId), {
+        common: [],
+        scientific: [["Mintus antiquus", false]],
+      });
+    });
+
+    void test("a spelling already a Name, in any case, is never added again", async () => {
+      const { id, speciesId } = await pendingOn({ commonName: "twice mint", latinName: "Mintus iterum" });
+      await addName(speciesId, "common", "Twice Mint");
+      const canonical = (await listNames(speciesId)).scientific[0].name;
+      await ctx.db.run("UPDATE submissions SET species_latin_name = ? WHERE id = ?", [canonical.toUpperCase(), id]);
+
+      await confirmWitness(committee, id, { common: true, scientific: true });
+
+      const names = await listNames(speciesId);
+      assert.deepStrictEqual(names.common.map((n) => n.name), ["Twice Mint"]);
+      assert.deepStrictEqual(names.scientific.map((n) => n.name), [canonical]);
+    });
+
+    void test("a refused confirmation adds no Name", async () => {
+      const { id, speciesId } = await pendingOn({ commonName: "Refused Mint", latinName: "Mintus negatus" });
+      await ctx.db.run("UPDATE submissions SET species_class = 'Killifish' WHERE id = ?", [id]);
+
+      await assert.rejects(() => confirmWitness(committee, id, { common: true, scientific: true }), MismatchError);
+      assert.deepStrictEqual(await namesOf(speciesId), { common: [], scientific: [] });
+    });
+
+    void test("a Latin spelling added as a Name then agrees with the Species", async () => {
+      const { id, speciesId } = await pendingOn({ commonName: "Agree Mint", latinName: "Mintus concordans" });
+      assert.strictEqual((await checkFormAgreement(speciesId, (await readSubmission(id))!))?.latinName, "not-a-name");
+
+      await confirmWitness(committee, id, { scientific: true });
+      assert.strictEqual((await checkFormAgreement(speciesId, (await readSubmission(id))!))?.latinName, "name");
     });
   });
 

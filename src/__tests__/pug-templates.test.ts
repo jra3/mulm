@@ -650,6 +650,7 @@ void describe("Pug Template Rendering", () => {
             break;
 
           case "admin/witnessPanel.pug":
+            templateData.spellingAgreement = null;
             templateData.boundSpecies = null;
             templateData.allowed = { confirmWitness: false, bindSpecies: true, requestChanges: true };
             break;
@@ -952,6 +953,44 @@ void describe("Pug Template Rendering", () => {
       assert.doesNotMatch(html, /witness-mismatch/);
       assert.doesNotMatch(html, /adopt-species-classification/);
       assert.match(html, /Approve for Screening/);
+    });
+
+    void test("Names to add: common offered ticked, Latin unticked, a Name already shown without a box, a blank not at all", () => {
+      const renderNames = (
+        spellingAgreement: Record<string, string>,
+        submission: Record<string, string> = {}
+      ) =>
+        render({
+          submission: {
+            id: 42,
+            species_type: "Fish",
+            species_common_name: "Fancy Guppy",
+            species_latin_name: "Poecilia reticulatta",
+            ...submission,
+          },
+          boundSpecies: bound,
+          boundSpeciesName: "Poecilia reticulata",
+          spellingAgreement,
+        });
+
+      // Neither is a Name yet: both offered, the common one ticked
+      let html = renderNames({ commonName: "not-a-name", latinName: "not-a-name" });
+      assert.match(html, /<input type="checkbox" name="add_common_name" value="on" checked="checked"\/>/);
+      assert.match(html, /<input type="checkbox" name="add_scientific_name" value="on"\/>/);
+      assert.match(html, /Fancy Guppy/);
+      assert.match(html, /Poecilia reticulatta/);
+
+      // Already Names: shown as such, with no box
+      html = renderNames({ commonName: "name", latinName: "name" });
+      assert.doesNotMatch(html, /add_common_name|add_scientific_name/);
+      assert.match(html, /id="witness-common-is-name"/);
+      assert.match(html, /id="witness-latin-is-name"/);
+      assert.match(html, /is already a Name/);
+
+      // Blank: nothing offered and nothing shown for it
+      html = renderNames({ commonName: "empty", latinName: "not-a-name" }, { species_common_name: "" });
+      assert.doesNotMatch(html, /add_common_name|witness-common-is-name|Add common name/);
+      assert.match(html, /add_scientific_name/);
     });
 
     void test("without the bind move, no bind controls are offered", () => {
