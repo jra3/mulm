@@ -54,9 +54,9 @@ export async function assertSubmissionInvariantsHold(submission: Submission | nu
     violation("is in the approval queue without a confirmed Witness");
   }
 
-  // The gates happen in order. Note that `submitted_on` may *follow*
-  // `witnessed_on`: a confirmed Witness survives a trip back to Draft, which
-  // is the whole point of Draft having two exits.
+  // The gates happen in order. `submitted_on` may still *follow*
+  // `witnessed_on` on rows witnessed before ADR-0001, when a confirmed Witness
+  // survived a trip back to Draft; today resubmitting voids the Witness.
   if (submission.witnessed_on && submission.approved_on) {
     if (new Date(submission.witnessed_on) > new Date(submission.approved_on)) {
       violation("was witnessed after it was approved");

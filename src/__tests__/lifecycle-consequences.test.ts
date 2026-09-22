@@ -121,6 +121,8 @@ void describe("Submission lifecycle - consequences", () => {
 
     await saveChanges(member, id, { ...form, reproduction_date: new Date().toISOString() });
 
+    // The edit voids the Witness (ADR-0001), and that too is told to nobody:
+    // the form warned the member, and the witness queue is the committee's notice.
     assert.deepStrictEqual(
       sent.kinds,
       [],

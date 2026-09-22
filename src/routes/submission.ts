@@ -242,7 +242,6 @@ async function renderEditForm(
       reason: submission.changes_requested_reason,
       requestedBy: adminWhoRequested?.display_name || "Admin",
       requestedOn: formatShortDate(submission.changes_requested_on),
-      hasWitness: submission.witnessed_by != null,
     };
   }
 
@@ -271,6 +270,7 @@ async function renderEditForm(
     },
     errors: new Map(),
     changesRequested,
+    witnessConfirmed: submission.witness_verification_status === "confirmed",
     ...templateData,
   });
 }
@@ -467,6 +467,7 @@ export const update = async (req: MulmRequest, res: Response) => {
       title: `Edit ${getBapFormTitle(selectedType)}`,
       form,
       errors,
+      witnessConfirmed: submission.witness_verification_status === "confirmed",
       ...templateData,
     });
     return;
@@ -509,8 +510,8 @@ export const update = async (req: MulmRequest, res: Response) => {
 /**
  * POST /submissions/:id/return-to-draft
  *
- * Withdrawing, as its own named action. The confirmed Witness survives, so
- * submitting again skips screening and re-enters the waiting period.
+ * Withdrawing, as its own named action. Submitting again saves the form, which
+ * voids a confirmed Witness (ADR-0001), so the Submission is witnessed again.
  */
 export const returnToDraft = async (req: MulmRequest, res: Response) => {
   const submission = await validateSubmission(req, res);

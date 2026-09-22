@@ -45,6 +45,16 @@ from `src/points.ts`. One definition, many queries.
    the negative rows a test too — that an edit sends nothing is as much of a
    decision as that an approval sends something.
 
+## A member's save voids the Witness
+
+A Witness attests to the fry and to the form
+([ADR-0001](../../docs/adr/0001-witness-attests-to-the-form.md)). Every member
+save of a submitted Submission - Save Changes, Resubmit, and Submit after
+Return to Draft - voids a confirmed Witness, clears the approval queue entry,
+and leaves the Submission in Pending Witness, back in the witness queue. There
+is no field list and no diff: saving is the edit. Committee moves, including a
+Points correction to an Approved Submission, never touch the Witness.
+
 ## Things that are deliberately not here
 
 The machine keeps no prose state diagram: an ASCII diagram in a markdown file

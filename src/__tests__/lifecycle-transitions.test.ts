@@ -12,6 +12,7 @@ import {
   deriveState,
   enterApprovalQueue,
   hasChangesRequested,
+  queueFor,
   removeFromQueue,
   requestChanges,
   resetNotifier,
@@ -353,19 +354,34 @@ void describe("Submission lifecycle - transitions", () => {
       assert.strictEqual(await refusal(() => enterApprovalQueue(member, id)), "state");
     });
 
-    void test("resubmitting clears the flag and keeps the Submission exactly where it was", async () => {
+    void test("resubmitting clears the flag and keeps an unwitnessed Submission where it was", async () => {
+      const id = await submissionInState(ctx.db, "pendingWitness", { memberId: ctx.member.id });
+      const before = (await readSubmission(id))!;
+      await requestChangesFixture(id, ctx.admin.id);
+
+      await resubmit(member, id, await formFor(id));
+
+      const after = (await readSubmission(id))!;
+      assert.strictEqual(hasChangesRequested(after), false);
+      assert.strictEqual(deriveState(after), "pendingWitness");
+      assert.strictEqual(after.submitted_on, before.submitted_on, "keeps its place in the queue");
+      await assertSubmissionInvariantsHold(after);
+    });
+
+    void test("resubmitting a witnessed Submission sends it back through witnessing", async () => {
       const id = await at("inApprovalQueue");
       const before = (await readSubmission(id))!;
       await requestChangesFixture(id, ctx.admin.id);
 
-      await resubmit(member, id, form);
+      await resubmit(member, id, await formFor(id));
 
       const after = (await readSubmission(id))!;
       assert.strictEqual(hasChangesRequested(after), false);
-      assert.strictEqual(deriveState(after), "inApprovalQueue");
-      assert.strictEqual(after.submitted_on, before.submitted_on, "keeps its place in the queue");
-      assert.strictEqual(after.witness_verification_status, "confirmed", "keeps its Witness");
-      assert.strictEqual(after.final_submission_on, before.final_submission_on);
+      assert.strictEqual(deriveState(after), "pendingWitness");
+      assert.strictEqual(queueFor(after), "witness");
+      assert.strictEqual(after.witnessed_by, null);
+      assert.strictEqual(after.final_submission_on, null);
+      assert.strictEqual(after.submitted_on, before.submitted_on, "keeps its submission date");
       await assertSubmissionInvariantsHold(after);
     });
 
@@ -384,35 +400,72 @@ void describe("Submission lifecycle - transitions", () => {
   // Editing no longer moves a Submission
   // -------------------------------------------------------------------------
 
-  void describe("Save Changes leaves the Submission where it is", () => {
+  void describe("Save Changes voids a confirmed Witness", () => {
+    void test("editing a Submission awaiting a Witness keeps its state and date", async () => {
+      const id = await submissionInState(ctx.db, "pendingWitness", { memberId: ctx.member.id });
+      const before = (await readSubmission(id))!;
+
+      await saveChanges(member, id, { ...(await formFor(id)), count: "40" });
+
+      const after = (await readSubmission(id))!;
+      assert.strictEqual(deriveState(after), "pendingWitness");
+      assert.strictEqual(after.submitted_on, before.submitted_on);
+      assert.strictEqual(after.count, "40", "the edit itself landed");
+      await assertSubmissionInvariantsHold(after);
+    });
+
     for (const state of [
-      "pendingWitness",
       "waitingPeriod",
       "awaitingFinalSubmission",
       "inApprovalQueue",
     ] as SubmissionState[]) {
-      void test(`editing a ${state} Submission keeps its state, date and Witness`, async () => {
+      void test(`editing a witnessed ${state} Submission sends it back to the witness queue`, async () => {
         const id = await at(state);
         const before = (await readSubmission(id))!;
 
         await saveChanges(member, id, { ...(await formFor(id)), count: "40" });
 
         const after = (await readSubmission(id))!;
-        assert.strictEqual(deriveState(after), state);
-        assert.strictEqual(after.submitted_on, before.submitted_on);
-        assert.strictEqual(after.witness_verification_status, before.witness_verification_status);
-        assert.strictEqual(after.witnessed_by, before.witnessed_by);
-        assert.strictEqual(after.final_submission_on, before.final_submission_on);
+        assert.strictEqual(deriveState(after), "pendingWitness");
+        assert.strictEqual(queueFor(after), "witness");
+        assert.strictEqual(after.witness_verification_status, "pending");
+        assert.strictEqual(after.witnessed_by, null);
+        assert.strictEqual(after.witnessed_on, null);
+        assert.strictEqual(after.final_submission_on, null, "it must be witnessed before it queues");
+        assert.strictEqual(after.submitted_on, before.submitted_on, "keeps its submission date");
         assert.strictEqual(after.count, "40", "the edit itself landed");
+        await assertSubmissionInvariantsHold(after);
       });
     }
+
+    void test("a save that changes nothing still voids the Witness", async () => {
+      // ADR-0001: one rule, no field list. The Portal does not diff the form
+      // against what the Witness saw; saving is the member's edit.
+      const id = await at("waitingPeriod");
+
+      await saveChanges(member, id, await formFor(id));
+
+      assert.strictEqual(await stateOf(id), "pendingWitness");
+    });
+
+    void test("a voided Submission can be witnessed again", async () => {
+      const id = await at("waitingPeriod");
+      await saveChanges(member, id, { ...(await formFor(id)), count: "40" });
+
+      await confirmWitness(committee, id);
+
+      const after = (await readSubmission(id))!;
+      assert.strictEqual(after.witness_verification_status, "confirmed");
+      assert.strictEqual(after.witnessed_by, ctx.admin.id);
+      await assertSubmissionInvariantsHold(after);
+    });
   });
 
   // -------------------------------------------------------------------------
-  // Draft has two exits
+  // Leaving Draft
   // -------------------------------------------------------------------------
 
-  void describe("Draft has two exits", () => {
+  void describe("Leaving Draft", () => {
     void test("a first submission awaits a Witness", async () => {
       const id = await createSubmission(member, ctx.member.id, form, { submit: false });
       assert.strictEqual(await stateOf(id), "draft");
@@ -424,24 +477,26 @@ void describe("Submission lifecycle - transitions", () => {
       assert.strictEqual(after.witness_verification_status, "pending");
     });
 
-    void test("a confirmed Witness survives Return to Draft and skips screening", async () => {
+    void test("Return to Draft then resubmit voids a confirmed Witness", async () => {
       const id = await at("waitingPeriod");
       const witnessedBy = (await readSubmission(id))!.witnessed_by;
 
       await returnToDraft(member, id);
       const drafted = (await readSubmission(id))!;
       assert.strictEqual(deriveState(drafted), "draft");
-      assert.strictEqual(drafted.witness_verification_status, "confirmed", "the Witness survives");
-      assert.strictEqual(drafted.witnessed_by, witnessedBy);
+      assert.strictEqual(
+        drafted.witnessed_by,
+        witnessedBy,
+        "withdrawing is not an edit; the Witness goes when the member saves"
+      );
 
       await submit(member, id, await formFor(id));
       const resubmitted = (await readSubmission(id))!;
-      assert.strictEqual(
-        deriveState(resubmitted),
-        "waitingPeriod",
-        "it re-enters the waiting period rather than the screening queue"
-      );
-      assert.strictEqual(resubmitted.witness_verification_status, "confirmed");
+      assert.strictEqual(deriveState(resubmitted), "pendingWitness");
+      assert.strictEqual(queueFor(resubmitted), "witness");
+      assert.strictEqual(resubmitted.witness_verification_status, "pending");
+      assert.strictEqual(resubmitted.witnessed_by, null);
+      assert.strictEqual(resubmitted.witnessed_on, null);
       await assertSubmissionInvariantsHold(resubmitted);
     });
 
@@ -522,17 +577,24 @@ void describe("Submission lifecycle - transitions", () => {
       await assertSubmissionInvariantsHold(after);
     });
 
-    void test("the Witness is stamped pending on a first submission only", async () => {
+    void test("only a member's save voids a confirmed Witness", async () => {
       const id = await createSubmission(member, ctx.member.id, form, { submit: true });
       assert.strictEqual((await readSubmission(id))!.witness_verification_status, "pending");
 
       await confirmWitness(committee, id);
-      await saveChanges(member, id, { ...form, count: "99" });
-
+      await requestChanges(committee, id, "Add a photo of the fry");
       assert.strictEqual(
         (await readSubmission(id))!.witness_verification_status,
         "confirmed",
-        "an in-place edit must not discard a committee member's inspection"
+        "the committee asking for changes does not discard its own inspection"
+      );
+
+      await resubmit(member, id, { ...form, count: "99" });
+
+      assert.strictEqual(
+        (await readSubmission(id))!.witness_verification_status,
+        "pending",
+        "the Witness attested to the form, so the member's edit voids it"
       );
     });
   });
@@ -594,6 +656,21 @@ void describe("Submission lifecycle - transitions", () => {
       assert.strictEqual(notes.length, 1);
       assert.match(notes[0].note_text, /Misidentified species/);
       assert.strictEqual((await readSubmission(id))!.points, 20);
+    });
+
+    void test("a Points correction leaves the Witness untouched", async () => {
+      const id = await at("approved");
+      const before = (await readSubmission(id))!;
+
+      await correctPoints(committee, id, { points: 20 }, "Miscounted");
+
+      const after = (await readSubmission(id))!;
+      assert.strictEqual(deriveState(after), "approved");
+      assert.strictEqual(after.witness_verification_status, "confirmed");
+      assert.strictEqual(after.witnessed_by, before.witnessed_by);
+      assert.strictEqual(after.witnessed_on, before.witnessed_on);
+      assert.strictEqual(after.final_submission_on, before.final_submission_on);
+      await assertSubmissionInvariantsHold(after);
     });
   });
 

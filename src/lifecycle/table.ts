@@ -10,19 +10,24 @@ import { AuthorizationError, StateError } from "./errors";
  * | Move                    | From                                    | To                  | Actor              |
  * |-------------------------|-----------------------------------------|---------------------|--------------------|
  * | saveDraft               | draft                                   | draft               | member             |
- * | submit                  | draft                                   | pendingWitness, or  | member             |
- * |                         |                                         | waitingPeriod if a  |                    |
- * |                         |                                         | Witness survived    |                    |
- * | saveChanges             | the four middle states                  | same                | member             |
+ * | submit                  | draft                                   | pendingWitness      | member             |
+ * | saveChanges             | the four middle states                  | same, or            | member             |
+ * |                         |                                         | pendingWitness if   |                    |
+ * |                         |                                         | it was witnessed    |                    |
  * | returnToDraft           | pendingWitness .. awaitingFinalSubmission| draft              | member             |
  * | confirmWitness          | pendingWitness                          | waitingPeriod       | committee, not the submitter |
  * | enterApprovalQueue      | awaitingFinalSubmission                 | inApprovalQueue     | member or committee|
  * | removeFromQueue         | inApprovalQueue                         | awaitingFinalSubmission | member or committee |
  * | requestChanges          | the four middle states                  | same, flag set      | committee          |
- * | resubmit                | the four middle states                  | same, flag cleared  | member             |
+ * | resubmit                | the four middle states                  | as saveChanges,     | member             |
+ * |                         |                                         | flag cleared        |                    |
  * | approve                 | inApprovalQueue                         | approved            | committee          |
  * | correctPoints           | approved                                | approved            | committee          |
  * | deleteSubmission        | draft (member); draft .. inApprovalQueue (committee) | gone   | member or committee|
+ *
+ * Every member save (submit, saveChanges, resubmit) voids a confirmed Witness:
+ * the Witness attests to the form as well as the fry (ADR-0001). Committee
+ * moves never do.
  *
  * The thirteenth move is the clock: the waiting period elapsing carries a
  * Submission from waitingPeriod to awaitingFinalSubmission with nobody
@@ -95,9 +100,8 @@ export const moves = {
   },
 
   /**
-   * Editing in place. The Submission does not move, so a typo fix does not
-   * cost the member their place in the queue they are waiting in, and a
-   * confirmed Witness survives it.
+   * Editing in place. The submission date is kept, but a confirmed Witness is
+   * voided (ADR-0001), so a witnessed Submission goes back to Pending Witness.
    */
   saveChanges: {
     id: "saveChanges",

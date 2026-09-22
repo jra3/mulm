@@ -748,7 +748,6 @@ void describe("Pug Template Rendering", () => {
               reason: "Please add more photos and details",
               requestedBy: "Test Admin",
               requestedOn: "10/20/2025",
-              hasWitness: true,
             };
             break;
 
@@ -817,6 +816,55 @@ void describe("Pug Template Rendering", () => {
         });
       });
     }
+  });
+
+  /**
+   * ADR-0001: any member save voids a confirmed Witness, so the edit form
+   * warns before the member saves - and only when there is a Witness to lose.
+   */
+  void describe("Edit form Witness warning", () => {
+    const renderSubmit = pug.compileFile(path.join(viewsPath, "submit.pug"), {
+      basedir: viewsPath,
+      pretty: false,
+    });
+
+    const submitted = {
+      ...baseMockData.form,
+      id: 7,
+      member_id: 1,
+      submitted_on: new Date().toISOString(),
+    };
+
+    function render(data: Record<string, unknown>) {
+      return renderSubmit({ ...baseMockData, formAction: "/submit", ...data });
+    }
+
+    void test("a witnessed Submission's edit form warns that saving voids the Witness", () => {
+      const html = render({ form: submitted, witnessConfirmed: true });
+
+      assert.match(html, /witnessed again/);
+    });
+
+    void test("an unwitnessed Submission's edit form does not warn", () => {
+      const html = render({ form: submitted, witnessConfirmed: false });
+
+      assert.doesNotMatch(html, /witnessed again/);
+    });
+
+    void test("a request for changes no longer promises the Witness is kept", () => {
+      const html = render({
+        form: { ...submitted, changes_requested_on: new Date().toISOString() },
+        witnessConfirmed: true,
+        changesRequested: {
+          reason: "Please add a photo of the fry",
+          requestedBy: "Test Admin",
+          requestedOn: "10/20/2025",
+        },
+      });
+
+      assert.match(html, /witnessed again/);
+      assert.doesNotMatch(html, /preserved/);
+    });
   });
 
   void describe("Template Include Dependencies", () => {
