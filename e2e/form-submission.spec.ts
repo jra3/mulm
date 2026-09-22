@@ -180,6 +180,16 @@ test.describe("Form Submission Flow", () => {
 			// Verify data is correct (Tom Select may select different first result)
 			expect(submission.species_common_name).toBeTruthy();
 			expect(submission.temperature).toBe("76");
+
+			// The member picked a known Name ("Fancy Guppy" has one match in the
+			// e2e seed), so the Submission is bound to its Species, with the
+			// Species' Program class
+			const guppy = await db.get<{ group_id: number }>(
+				`SELECT group_id FROM species_name_group
+				 WHERE canonical_genus = 'Poecilia' AND canonical_species_name = 'reticulata'`
+			);
+			expect(submission.species_id).toBe(guppy!.group_id);
+			expect(submission.species_class).toBe("Livebearers");
 		} finally {
 			await db.close();
 		}

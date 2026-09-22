@@ -163,6 +163,8 @@ export function formToRow(memberId: number, form: FormValues): SubmissionRow {
     ...form,
     member_name: undefined,
     member_email: undefined,
+    // The binding is the lifecycle's to decide (`bindingAfterSave`), never the form's to write.
+    species_id: undefined,
     foods: arrayToJSON(form.foods),
     spawn_locations: arrayToJSON(form.spawn_locations),
     // Images and supplements live in their own normalized tables.

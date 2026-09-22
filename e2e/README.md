@@ -54,7 +54,7 @@ e2e/
 **form-field-linking.spec.ts** - Form field linking (11/11 tests) ⭐ **NEW**
 - ✅ Auto-populate scientific name when common name is selected
 - ✅ Auto-populate common name when scientific name is selected
-- ✅ Update hidden species_name_id field when species is selected
+- ✅ Picking a known Name sets the hidden species_id (the pick binds at submit)
 - ✅ Populate species_class field based on selected species
 - ✅ Maintain sync when switching between fields
 - ✅ Properly initialize Tom Select dropdowns

@@ -872,6 +872,117 @@ void describe("Submission lifecycle - transitions", () => {
   });
 
   // -------------------------------------------------------------------------
+  // The member's pick binds at submit (CONTEXT.md, Bound)
+  // -------------------------------------------------------------------------
+
+  void describe("The member's pick binds", () => {
+    const speciesIdOf = async (id: number) => (await readSubmission(id))!.species_id;
+    /** The form after picking Guppy in the typeahead: its id, type and class. */
+    const picked = async (): Promise<FormValues> => ({ ...form, species_id: await ensureGuppySpecies(ctx.db) });
+
+    void test("submitting with a picked Name produces a bound Submission with the Species' type and class", async () => {
+      const guppy = await ensureGuppySpecies(ctx.db);
+      const id = await createSubmission(member, ctx.member.id, await picked(), { submit: true });
+
+      const after = (await readSubmission(id))!;
+      assert.strictEqual(after.species_id, guppy);
+      assert.deepStrictEqual([after.species_type, after.species_class], ["Fish", "Livebearers"]);
+    });
+
+    void test("a picked Name binds a Draft too, and Submit keeps it", async () => {
+      const guppy = await ensureGuppySpecies(ctx.db);
+      const id = await createSubmission(member, ctx.member.id, await picked(), { submit: false });
+      assert.strictEqual(await speciesIdOf(id), guppy);
+
+      await submit(member, id, await picked());
+      assert.strictEqual(await speciesIdOf(id), guppy);
+    });
+
+    void test("submitting free text produces an unbound Submission", async () => {
+      await ensureGuppySpecies(ctx.db);
+      const id = await createSubmission(
+        member,
+        ctx.member.id,
+        { ...form, species_common_name: "Mystery tetra", species_latin_name: "Hyphessobrycon ignotus" },
+        { submit: true }
+      );
+      assert.strictEqual(await speciesIdOf(id), null);
+
+      // Even text that happens to be a Name: binding is by picking
+      const typed = await createSubmission(member, ctx.member.id, form, { submit: true });
+      assert.strictEqual(await speciesIdOf(typed), null);
+    });
+
+    void test("picking, then changing the class, then saving produces an unbound Submission", async () => {
+      const changedAtCreate = await createSubmission(
+        member,
+        ctx.member.id,
+        { ...(await picked()), species_class: "Killifish" },
+        { submit: true }
+      );
+      assert.strictEqual(await speciesIdOf(changedAtCreate), null);
+
+      const draft = await createSubmission(member, ctx.member.id, await picked(), { submit: false });
+      await saveDraft(member, draft, { ...(await picked()), species_class: "Killifish" });
+      assert.strictEqual(await speciesIdOf(draft), null);
+    });
+
+    void test("a forged id whose Species disagrees with the form is not kept", async () => {
+      const other = await createSpecies({
+        canonicalGenus: "Forgus",
+        canonicalSpeciesName: "falsus",
+        programClass: "Killifish",
+        speciesType: "Fish",
+      });
+      const created = await createSubmission(member, ctx.member.id, { ...form, species_id: other }, { submit: true });
+      assert.strictEqual(await speciesIdOf(created), null);
+
+      // Nor on an edit, where it replaces an agreeing binding with none
+      const bound = await at("pendingWitness");
+      await saveChanges(member, bound, { ...(await formFor(bound)), species_id: other });
+      assert.strictEqual(await speciesIdOf(bound), null);
+    });
+
+    void test("an id that names no Species saves unbound, not an error", async () => {
+      const created = await createSubmission(member, ctx.member.id, { ...form, species_id: 987654 }, { submit: true });
+      assert.strictEqual(await speciesIdOf(created), null);
+
+      const bound = await at("pendingWitness");
+      await saveChanges(member, bound, { ...(await formFor(bound)), species_id: 987654 });
+      assert.strictEqual(await speciesIdOf(bound), null);
+    });
+
+    void test("picking on the edit form binds an unbound Submission; the save still voids the Witness", async () => {
+      const guppy = await ensureGuppySpecies(ctx.db);
+      const id = await submissionInState(ctx.db, "waitingPeriod", {
+        memberId: ctx.member.id,
+        witnessedBy: ctx.admin.id,
+        speciesId: null,
+      });
+
+      await saveChanges(member, id, { ...(await formFor(id)), species_id: guppy });
+
+      const after = (await readSubmission(id))!;
+      assert.strictEqual(after.species_id, guppy);
+      assert.strictEqual(after.witness_verification_status, "pending", "ADR-0001: any member save voids it");
+    });
+
+    void test("the witness finds a member-bound Submission bound, its picked spellings already Names", async () => {
+      const guppy = await ensureGuppySpecies(ctx.db);
+      const id = await createSubmission(member, ctx.member.id, await picked(), { submit: true });
+
+      const agreement = (await checkFormAgreement(guppy, (await readSubmission(id))!))!;
+      assert.deepStrictEqual([agreement.commonName, agreement.latinName, agreement.agrees], ["name", "name", true]);
+
+      await confirmWitness(committee, id, { common: true, scientific: true });
+      assert.strictEqual((await readSubmission(id))!.witness_verification_status, "confirmed");
+      const names = await listNames(guppy);
+      assert.deepStrictEqual(names.common.map((n) => n.name), ["Guppy"], "a picked Name is never added again");
+      assert.deepStrictEqual(names.scientific.map((n) => n.name), ["Poecilia reticulata"]);
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // Names minted at the Witness
   // -------------------------------------------------------------------------
 

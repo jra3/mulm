@@ -108,7 +108,8 @@ through fragments: they go through a catalogue function.
   existed may be unbound (`species_id` NULL).
 - **`group_id`** is the Species' id under its column name. Read models,
   routes, views, forms and MCP arguments all say `group_id`; it is renamed
-  when the column is, not before.
+  when the column is, not before. The one exception is the Submission
+  form's hidden `species_id`, named for the Submission's column it claims.
 - **Collection and CARES** join a Species by `group_id` through the
   fragments; their own behaviour is out of this module's scope.
 

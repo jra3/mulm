@@ -137,25 +137,36 @@ async function runUpdate(
 }
 
 /**
- * A binding holds only while the Submission's spellings, Species type and
- * Program class agree with the Species (CONTEXT.md, Bound): saving a form that
- * no longer agrees clears it. A spelling agrees when it is blank or a Name of
- * the Species (`checkFormAgreement`). Only member saves ask this; committee
- * moves never unbind.
+ * The binding a member's save leaves (CONTEXT.md, Bound).
+ *
+ * The member binds by picking a Name in the form's typeahead, which posts that
+ * Species' id as `species_id`. The pick is a claim, not a binding: it is kept
+ * only if the Species exists and the form agrees with it (`checkFormAgreement`:
+ * each spelling blank or one of its Names, Species type and Program class
+ * equal). A pick that does not hold saves the Submission unbound - a forged or
+ * stale id is not an error, just no binding.
+ *
+ * With no pick, an existing binding holds only while the form still agrees
+ * with it: saving a form that no longer agrees clears it. Clearing the
+ * typeahead does not unbind by itself; what unbinds is a form that no longer
+ * agrees.
+ *
+ * Only member saves ask this; committee moves never unbind.
  */
 async function bindingAfterSave(
   submission: Pick<Submission, "species_id">,
   form: FormValues
-): Promise<{ species_id?: null }> {
-  if (submission.species_id == null) return {};
-  const agreement = await checkFormAgreement(submission.species_id, form);
-  return agreement?.agrees ? {} : { species_id: null };
+): Promise<{ species_id?: number | null }> {
+  const claimed = form.species_id ?? submission.species_id;
+  if (claimed == null) return {};
+  const agreement = await checkFormAgreement(claimed, form);
+  return { species_id: agreement?.agrees ? claimed : null };
 }
 
 /**
  * Write a member's form over the Submission's content columns, leaving every
- * lifecycle column alone - except the binding, which the form may clear
- * (`bindingAfterSave`).
+ * lifecycle column alone - except the binding, which the member's pick may
+ * set and a form that no longer agrees clears (`bindingAfterSave`).
  */
 async function writeContent(
   db: Database,
@@ -257,7 +268,8 @@ export function supplementsFromForm(form: FormValues): { type: string; regimen: 
  *
  * Not a move: there is no prior state to be legal from. The only guard is that
  * a member may create only for themselves, while a committee member may create
- * on another member's behalf.
+ * on another member's behalf. A Name picked in the form binds it, if the form
+ * agrees with that Species (`bindingAfterSave`).
  */
 export async function createSubmission(
   caller: Caller,
@@ -277,6 +289,7 @@ export async function createSubmission(
   const submissionId = await createSubmissionRow(
     {
       ...formToRow(memberId, form),
+      ...(await bindingAfterSave({ species_id: null }, form)),
       submitted_on: submittedOn,
       witness_verification_status: options.submit ? "pending" : undefined,
     },

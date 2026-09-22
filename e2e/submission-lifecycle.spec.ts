@@ -23,19 +23,22 @@ test.describe.configure({ mode: 'serial' });
  * member who is not the submitter. The reproduction date is past the waiting
  * period, so it goes straight to awaiting final submission.
  *
- * The Submission is unbound, so the witness binds it first through the
- * witness panel: a Witness cannot be confirmed without a Species.
+ * A Witness cannot be confirmed without a Species. A Submission the member
+ * bound by picking a Name opens in the panel already bound; an unbound one is
+ * bound here first, through the panel's typeahead.
  */
 async function rewitnessAndQueue(page: Page, submissionId: number): Promise<void> {
 	await page.goto(`/submissions/${submissionId}`);
-	await page.waitForSelector("body");
+	await page.waitForSelector("#witness-species");
 
-	await expect(page.locator("#witness-species")).toContainText("Not bound to a Species yet");
-	await expect(page.locator('button:has-text("Approve for Screening")')).toHaveCount(0);
-	await fillTomSelectTypeahead(page, "group_id", "Poecilia reticulata", false, false);
-	await page.locator('#witness-species button[type="submit"]:has-text("Bind")').click();
-	// Binding reloads the page with the Species named in the panel
-	await expect(page.locator("#witness-bound-species")).toBeVisible({ timeout: 10000 });
+	if ((await page.locator("#witness-bound-species").count()) === 0) {
+		await expect(page.locator("#witness-species")).toContainText("Not bound to a Species yet");
+		await expect(page.locator('button:has-text("Approve for Screening")')).toHaveCount(0);
+		await fillTomSelectTypeahead(page, "group_id", "Poecilia reticulata", false, false);
+		await page.locator('#witness-species button[type="submit"]:has-text("Bind")').click();
+		// Binding reloads the page with the Species named in the panel
+		await expect(page.locator("#witness-bound-species")).toBeVisible({ timeout: 10000 });
+	}
 
 	const witnessButton = page.locator('button:has-text("Approve for Screening")');
 	await witnessButton.scrollIntoViewIfNeeded();

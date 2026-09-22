@@ -82,8 +82,19 @@ A binding holds only while the form agrees with the Species (CONTEXT.md,
 Bound): every member save (Save Draft, Submit, Save Changes, Resubmit) asks
 the catalogue's `checkFormAgreement` and clears `species_id` when the saved
 spellings, Species type or Program class no longer agree. Committee moves
-never unbind. `confirmWitness` is also refused, with a `MismatchError`, while
-the Submission's Species type or Program class disagrees with its Species'
+never unbind.
+
+The member binds by picking a Name in the form's typeahead, which posts
+that Species' id as `species_id`. Every member save, `createSubmission`
+included, treats it as a claim: kept only if the Species exists and the form
+agrees with it, otherwise the Submission is saved unbound (a forged or stale
+id is not an error). With no pick, an existing binding is kept only while the
+form agrees. Clearing the typeahead is not itself an unbind; a form that no
+longer agrees is. `formToRow` never writes `species_id`: the binding is the
+lifecycle's to decide (`bindingAfterSave`).
+
+`confirmWitness` is also refused, with a `MismatchError`, while the
+Submission's Species type or Program class disagrees with its Species'
 (a spelling that is not a Name does not block it). The witness answers with
 `adoptSpeciesClassification` - the Submission takes the Species' type, class
 and Program, on the changelog, Witness untouched - or by rebinding, or by

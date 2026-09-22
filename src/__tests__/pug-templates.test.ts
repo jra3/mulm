@@ -871,6 +871,37 @@ void describe("Pug Template Rendering", () => {
   });
 
   /**
+   * The member's pick binds (CONTEXT.md, Bound). A bound form carries the
+   * Species id and warns that editing its species fields will unbind it; an
+   * unbound form carries no id and keeps the warning hidden until a pick.
+   */
+  void describe("Species binding notice", () => {
+    const renderSubmit = pug.compileFile(path.join(viewsPath, "submit.pug"), {
+      basedir: viewsPath,
+      pretty: false,
+    });
+    const render = (form: Record<string, unknown>) =>
+      renderSubmit({ ...baseMockData, formAction: "/submit", form: { ...baseMockData.form, ...form } });
+    const notice = (html: string) => /<div[^>]*id="species-binding-notice"[^>]*>/.exec(html)?.[0];
+
+    void test("a bound form carries its Species and warns that editing will unbind", () => {
+      const html = render({ id: 7, species_id: 12 });
+
+      assert.match(html, /<input type="hidden" name="species_id" id="species_id" value="12">/);
+      assert.ok(notice(html), "the notice is rendered");
+      assert.doesNotMatch(notice(html)!, /hidden/);
+      assert.match(html, /will unbind it/);
+    });
+
+    void test("an unbound form carries no Species and hides the warning", () => {
+      const html = render({ id: 7, species_id: null });
+
+      assert.match(html, /<input type="hidden" name="species_id" id="species_id" value="">/);
+      assert.match(notice(html)!, /hidden/);
+    });
+  });
+
+  /**
    * The species views read Names in the catalogue's shape - `name_id` and
    * `name`, by kind - and a refused delete has somewhere to say "merge".
    */

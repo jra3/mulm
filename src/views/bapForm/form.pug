@@ -71,7 +71,16 @@ mixin CRUDForm()
                 - const dateLabel = isLivestock ? "Date Spawned" : "Date Propagated";
                 +bapTextInput(dateLabel, "reproduction_date", "", "date")
 
-                input(type="hidden" name="species_name_id" id="species_name_id" value=form.species_name_id || "")
+                //- The Species the member picked in the name typeahead (submit.pug's
+                //- field linking sets and clears it). The lifecycle keeps it only
+                //- while the form agrees with that Species.
+                input(type="hidden" name="species_id" id="species_id" value=form.species_id || "")
+                .bg-blue-50.border-l-4.border-blue-400.p-3.text-sm.text-blue-900#species-binding-notice(
+                    class="md:col-span-2"
+                    role="note"
+                    hidden=!form.species_id
+                )
+                    p Picked from the species list. Changing the Species Type, Species Class or either name to something that is not a name of that species will unbind it, and the committee will choose the species when they witness.
 
                 +bapTypeaheadInput({
                     label: "Species Common Name",

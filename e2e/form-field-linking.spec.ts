@@ -7,8 +7,10 @@ import { fillTomSelectTypeahead, getTomSelectValue } from "./helpers/tomSelect";
  *
  * The BAP submission form has JavaScript-driven field linking that synchronizes:
  * - Common name ↔ Scientific name fields
- * - Auto-population of hidden `species_name_id` field
+ * - Picking a known Name sets the hidden `species_id` to its Species (the
+ *   member's pick binds the Submission, if the saved form agrees with it)
  * - Auto-population of `species_class` field based on species selection
+ * - Free text leaves `species_id` empty
  *
  * This functionality was temporarily disabled (commit c9e9606) and has been re-enabled.
  * These tests prevent regressions.
@@ -55,10 +57,10 @@ test.describe("BAP Form - Field Linking", () => {
 		expect(scientificName).toBeTruthy();
 		expect(scientificName).toContain("Poecilia");
 
-		// Verify hidden species_name_id field has a value
-		const nameId = await page.inputValue('input[name="species_name_id"]');
-		expect(nameId).toBeTruthy();
-		expect(parseInt(nameId)).toBeGreaterThan(0);
+		// Verify hidden species_id field has a value
+		const speciesId = await page.inputValue('input[name="species_id"]');
+		expect(speciesId).toBeTruthy();
+		expect(parseInt(speciesId)).toBeGreaterThan(0);
 	});
 
 	test("should auto-populate common name when scientific name is selected", async ({
@@ -73,27 +75,31 @@ test.describe("BAP Form - Field Linking", () => {
 		expect(commonName).toBeTruthy();
 		expect(commonName!.toLowerCase()).toContain("guppy");
 
-		// Verify hidden species_name_id field has a value
-		const nameId = await page.inputValue('input[name="species_name_id"]');
-		expect(nameId).toBeTruthy();
-		expect(parseInt(nameId)).toBeGreaterThan(0);
+		// Verify hidden species_id field has a value
+		const speciesId = await page.inputValue('input[name="species_id"]');
+		expect(speciesId).toBeTruthy();
+		expect(parseInt(speciesId)).toBeGreaterThan(0);
 	});
 
-	test("should update hidden species_name_id field when species is selected", async ({
+	test("should update hidden species_id field when species is selected", async ({
 		page,
 	}) => {
 		// Get initial value of hidden field (should be empty)
-		const initialValue = await page.inputValue('input[name="species_name_id"]');
+		const initialValue = await page.inputValue('input[name="species_id"]');
 		expect(initialValue).toBe("");
+		await expect(page.locator("#species-binding-notice")).toBeHidden();
 
 		// Select a species via common name
 		// Helper now waits for HTMX field linking to complete
 		await fillTomSelectTypeahead(page, "species_common_name", "Guppy");
 
 		// Verify hidden field now contains a numeric ID
-		const updatedValue = await page.inputValue('input[name="species_name_id"]');
+		const updatedValue = await page.inputValue('input[name="species_id"]');
 		expect(updatedValue).toBeTruthy();
 		expect(parseInt(updatedValue)).toBeGreaterThan(0);
+
+		// Bound: the form warns that changing the species fields will unbind
+		await expect(page.locator("#species-binding-notice")).toBeVisible();
 	});
 
 	test("should populate species_class field based on selected species", async ({
@@ -119,9 +125,9 @@ test.describe("BAP Form - Field Linking", () => {
 		let scientificName = await getTomSelectValue(page, "species_latin_name");
 		expect(scientificName).toContain("Poecilia");
 
-		// Get the name_id from first selection
-		const firstNameId = await page.inputValue('input[name="species_name_id"]');
-		expect(firstNameId).toBeTruthy();
+		// Get the Species id from first selection
+		const firstSpeciesId = await page.inputValue('input[name="species_id"]');
+		expect(firstSpeciesId).toBeTruthy();
 
 		// 2. Clear and select different species via scientific name
 		// Clear the Tom Select fields
@@ -154,9 +160,9 @@ test.describe("BAP Form - Field Linking", () => {
 		expect(commonName!.toLowerCase()).toMatch(/(platy|xiphophorus)/);
 
 		// Verify hidden ID updated to new species
-		const secondNameId = await page.inputValue('input[name="species_name_id"]');
-		expect(secondNameId).toBeTruthy();
-		expect(secondNameId).not.toBe(firstNameId); // Should be different species
+		const secondSpeciesId = await page.inputValue('input[name="species_id"]');
+		expect(secondSpeciesId).toBeTruthy();
+		expect(secondSpeciesId).not.toBe(firstSpeciesId); // Should be different species
 	});
 
 	test("should properly initialize Tom Select dropdowns", async ({ page }) => {
@@ -242,9 +248,9 @@ test.describe("BAP Form - Field Linking", () => {
 		const scientificName = await getTomSelectValue(page, "species_latin_name");
 		expect(scientificName).toBeTruthy();
 
-		// Get the name_id
-		const nameId = await page.inputValue('input[name="species_name_id"]');
-		expect(nameId).toBeTruthy();
+		// Get the Species id
+		const speciesId = await page.inputValue('input[name="species_id"]');
+		expect(speciesId).toBeTruthy();
 
 		// Now clear both fields
 		await page.evaluate(() => {
@@ -272,9 +278,9 @@ test.describe("BAP Form - Field Linking", () => {
 		const newCommonName = await getTomSelectValue(page, "species_common_name");
 		expect(newCommonName).toBeTruthy();
 
-		// Verify name_id matches
-		const newNameId = await page.inputValue('input[name="species_name_id"]');
-		expect(newNameId).toBe(nameId);
+		// Verify it is the same Species
+		const newSpeciesId = await page.inputValue('input[name="species_id"]');
+		expect(newSpeciesId).toBe(speciesId);
 	});
 
 	test("should preserve field values across HTMX swaps", async ({ page }) => {
@@ -284,7 +290,7 @@ test.describe("BAP Form - Field Linking", () => {
 
 		const initialCommonName = await getTomSelectValue(page, "species_common_name");
 		const initialScientificName = await getTomSelectValue(page, "species_latin_name");
-		const initialNameId = await page.inputValue('input[name="species_name_id"]');
+		const initialSpeciesId = await page.inputValue('input[name="species_id"]');
 
 		// Trigger an HTMX swap by changing species_type
 		await page.selectOption('select[name="species_type"]', "Plant");
@@ -325,10 +331,10 @@ test.describe("BAP Form - Field Linking", () => {
 		expect(scientificName).toBeTruthy();
 		expect(scientificName).toContain("Xiphophorus");
 
-		// Verify name_id is set
-		const nameId = await page.inputValue('input[name="species_name_id"]');
-		expect(nameId).toBeTruthy();
-		expect(parseInt(nameId)).toBeGreaterThan(0);
+		// Verify species_id is set
+		const speciesId = await page.inputValue('input[name="species_id"]');
+		expect(speciesId).toBeTruthy();
+		expect(parseInt(speciesId)).toBeGreaterThan(0);
 	});
 
 	test("should handle newly created custom species names", async ({ page }) => {
@@ -366,7 +372,8 @@ test.describe("BAP Form - Field Linking", () => {
 		expect(commonValue).toBe(customName);
 		expect(scientificValue).toBe(customScientific);
 
-		// Note: Hidden species_name_id will be empty for custom species
-		// That's expected behavior - it only gets populated when selecting from database
+		// Free text binds nothing: only picking a known Name sets species_id
+		expect(await page.inputValue('input[name="species_id"]')).toBe("");
+		await expect(page.locator("#species-binding-notice")).toBeHidden();
 	});
 });

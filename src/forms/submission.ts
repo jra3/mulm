@@ -77,7 +77,10 @@ export const bapFields = z.object({
     .string()
     .min(1, "Required")
     .max(200, "Common name too long (max 200 characters)"),
-  // species_id is set at approval, not by the member's form
+  // The Species the member picked in the typeahead. A claim, not a binding:
+  // the lifecycle keeps it only if the form agrees with that Species. An id
+  // that is blank or malformed reads as no pick.
+  species_id: z.coerce.number().int().positive().optional().catch(undefined),
 
   count: z.string().max(20, "Count too long (max 20 characters)").optional(),
   foods: multiSelect.optional(),
