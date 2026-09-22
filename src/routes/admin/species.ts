@@ -21,7 +21,10 @@ import { speciesEditForm } from "@/forms/speciesEdit";
 import { pointClassField } from "@/forms/pointClass";
 import { mergeSpeciesSchema } from "@/forms/speciesMerge";
 import { speciesCreateForm } from "@/forms/speciesCreate";
-import { getSubmissionById } from "@/db/submissions";
+import { getSubmissionById, type Submission } from "@/db/submissions";
+import * as lifecycle from "@/lifecycle";
+import { callerFor } from "../lifecycleErrors";
+import { allowedMoves, validateSubmission } from "../submission";
 import { logger } from "@/utils/logger";
 import * as z from "zod";
 
@@ -524,93 +527,106 @@ export const mergeSpeciesAction = async (req: MulmRequest, res: Response) => {
   }
 };
 
+type CreateSpeciesDialogValues = {
+  canonical_genus: string;
+  canonical_species_name: string;
+  program_class: string;
+};
+
+/** The create-Species dialog, for the witness panel's Submission. */
+function renderCreateSpeciesDialog(
+  res: Response,
+  submission: Submission,
+  prefilled: CreateSpeciesDialogValues,
+  errors: Map<string, string>
+) {
+  res.render("admin/createSpeciesDialog", {
+    submission,
+    prefilled,
+    classOptions: getClassOptions(submission.species_type || "Fish"),
+    errors,
+  });
+}
+
 /**
  * GET /admin/dialog/species/new?submission_id=123
- * Render create species dialog with pre-filled data from submission
+ * The witness panel's create-Species dialog, pre-filled from the Submission.
  */
 export const createSpeciesDialog = async (req: MulmRequest, res: Response) => {
-  const { viewer } = req;
-
-  if (!viewer?.is_admin) {
-    res.status(403).send("Admin access required");
-    return;
-  }
-
-  const submissionId = parseInt(req.query.submission_id as string);
+  const submissionId = parseInt(getQueryString(req, "submission_id", ""));
   if (!submissionId) {
     res.status(400).send("Invalid submission ID");
     return;
   }
 
   const submission = await getSubmissionById(submissionId);
-
   if (!submission) {
     res.status(404).send("Submission not found");
     return;
   }
 
-  // Parse scientific name into genus and species
-  // Expected format: "Genus species" (binomial nomenclature)
-  const latinName = submission.species_latin_name || "";
-  const parts = latinName.trim().split(/\s+/);
-  const canonical_genus = parts[0] || "";
-  const canonical_species_name = parts[1] || "";
+  // Genus, then the rest as the epithet, from the member's Latin spelling
+  const [canonical_genus = "", ...rest] = (submission.species_latin_name || "").trim().split(/\s+/);
 
-  // Get class options for this species type
-  const classOptions = getClassOptions(submission.species_type || "Fish");
-
-  res.render("admin/createSpeciesDialog", {
+  renderCreateSpeciesDialog(
+    res,
     submission,
-    prefilled: {
+    {
       canonical_genus,
-      canonical_species_name,
+      canonical_species_name: rest.join(" "),
       program_class: submission.species_class || "",
     },
-    classOptions,
-    errors: new Map(),
-  });
+    new Map()
+  );
 };
 
 /**
- * POST /admin/species
- * Create a new species group
+ * POST /admin/submissions/:id/species
+ * Create a Species from the witness panel and bind the Submission to it, in
+ * one flow: the dialog's success is the binding. A refusal re-renders the
+ * dialog with its errors; success reloads the page to show the Submission
+ * bound.
  */
-export const createSpeciesRoute = async (req: MulmRequest, res: Response) => {
-  const { viewer } = req;
-
-  if (!viewer?.is_admin) {
-    res.status(403).send("Admin access required");
+export const createSpeciesAndBind = async (req: MulmRequest, res: Response) => {
+  const submission = await validateSubmission(req, res);
+  if (!submission) {
     return;
   }
 
-  // Validate form data
+  const text = (key: string) => getBodyString(req, key);
+  const showErrors = (errors: Map<string, string>) => {
+    res.set("HX-Retarget", "#dialog").set("HX-Reswap", "outerHTML");
+    renderCreateSpeciesDialog(
+      res,
+      submission,
+      {
+        canonical_genus: text("canonical_genus"),
+        canonical_species_name: text("canonical_species_name"),
+        program_class: text("program_class"),
+      },
+      errors
+    );
+  };
+
   const parsed = speciesCreateForm.safeParse(req.body);
-
   if (!parsed.success) {
-    const errors = new Map<string, string>();
-    parsed.error.issues.forEach((issue) => {
-      errors.set(String(issue.path[0]), issue.message);
-    });
-
-    // Return errors as JSON for HTMX to handle
-    res.status(400).json({
-      success: false,
-      errors: Object.fromEntries(errors),
-    });
+    showErrors(new Map(parsed.error.issues.map((issue) => [String(issue.path[0]), issue.message])));
     return;
   }
 
-  const {
-    canonical_genus,
-    canonical_species_name,
-    program_class,
-    species_type,
-    base_points,
-    is_cares_species,
-  } = parsed.data;
+  // Ask the table before creating anything, so a refused bind leaves no
+  // Species behind. bindSpecies guards again below.
+  if (!allowedMoves(req.viewer, submission, lifecycle.deriveState(submission)).bindSpecies) {
+    showErrors(new Map([["_general", "This Submission cannot be bound to a Species by you now."]]));
+    return;
+  }
 
+  const { canonical_genus, canonical_species_name, program_class, species_type, base_points, is_cares_species } =
+    parsed.data;
+
+  let speciesId: number;
   try {
-    const groupId = await catalogue.createSpecies({
+    speciesId = await catalogue.createSpecies({
       canonicalGenus: canonical_genus,
       canonicalSpeciesName: canonical_species_name,
       programClass: program_class,
@@ -618,33 +634,30 @@ export const createSpeciesRoute = async (req: MulmRequest, res: Response) => {
       pointClass: base_points,
       isCaresSpecies: is_cares_species,
     });
-
-    const canonicalName = `${canonical_genus} ${canonical_species_name}`;
-
-    // Return JSON with the new group_id for HTMX event handling
-    res.status(200).json({
-      success: true,
-      group_id: groupId,
-      canonical_name: canonicalName,
-    });
   } catch (err) {
     if (err instanceof CatalogueRefusal) {
-      res.status(refusalStatus[err.code]).json({
-        success: false,
-        errors: {
-          [refusalField(err)]: err.message,
-        },
-      });
-    } else {
-      logger.error("Failed to create species", err);
-      res.status(500).json({
-        success: false,
-        errors: {
-          _general: "Failed to create species",
-        },
-      });
+      showErrors(new Map([[refusalField(err), err.message]]));
+      return;
     }
+    throw err;
   }
+
+  try {
+    await lifecycle.bindSpecies(callerFor(req.viewer!), submission.id, speciesId);
+  } catch (err) {
+    if (lifecycle.isLifecycleError(err)) {
+      logger.warn(`Created Species ${speciesId} but could not bind it: ${err.message}`, {
+        submissionId: submission.id,
+      });
+      showErrors(
+        new Map([["_general", `The Species was created, but the Submission was not bound to it: ${err.message}`]])
+      );
+      return;
+    }
+    throw err;
+  }
+
+  res.set("HX-Refresh", "true").send();
 };
 
 // Schema for bulk IUCN sync

@@ -40,9 +40,9 @@ adminRouter.post("/species/bulk-sync-iucn", speciesAdmin.bulkSyncIucn);
 adminRouter.get("/dialog/species/:groupId/merge", speciesAdmin.mergeSpeciesDialog);
 adminRouter.post("/species/:groupId/merge", speciesAdmin.mergeSpeciesAction);
 
-// Create species
+// Create a Species from the witness panel, binding the Submission to it
 adminRouter.get("/dialog/species/new", speciesAdmin.createSpeciesDialog);
-adminRouter.post("/species", speciesAdmin.createSpeciesRoute);
+adminRouter.post("/submissions/:id/species", speciesAdmin.createSpeciesAndBind);
 
 // Split name management (new schema)
 adminRouter.get("/species/:groupId/common-names/new", speciesAdmin.addCommonNameForm);
@@ -76,6 +76,7 @@ adminRouter.post("/members/:memberId/check-specialty-awards", admin.checkMemberS
 adminRouter.post("/members/:memberId/send-welcome", admin.sendWelcomeEmail);
 adminRouter.post("/members/invite", admin.inviteMember);
 
+adminRouter.post("/submissions/:id/bind-species", admin.bindSpeciesAction);
 adminRouter.post("/submissions/:id/confirm-witness", admin.confirmWitnessAction);
 adminRouter.post("/submissions/:id/request-changes", admin.sendRequestChanges);
 adminRouter.post("/submissions/:id/notes", admin.addSubmissionNote);

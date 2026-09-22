@@ -691,6 +691,12 @@ await db.close();
 ### Pattern: Witness Confirmation/Decline
 
 ```typescript
+// "Approve for Screening" is offered only once the Submission is bound to a
+// Species. Bind it in the witness panel first (see rewitnessAndQueue), or
+// create it bound with createTestSubmission({ ..., bound: true }).
+await fillTomSelectTypeahead(page, "group_id", "Poecilia reticulata", false, false);
+await page.locator('#witness-species button[type="submit"]:has-text("Bind")').click();
+
 // Witness confirmation (approve for screening)
 await page.click('button:has-text("Approve for Screening")');
 await page.waitForURL(/\/admin\/(witness-queue|queue)\//);

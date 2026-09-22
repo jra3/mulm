@@ -22,10 +22,20 @@ test.describe.configure({ mode: 'serial' });
  * re-enters the approval queue. The caller must be logged in as a committee
  * member who is not the submitter. The reproduction date is past the waiting
  * period, so it goes straight to awaiting final submission.
+ *
+ * The Submission is unbound, so the witness binds it first through the
+ * witness panel: a Witness cannot be confirmed without a Species.
  */
 async function rewitnessAndQueue(page: Page, submissionId: number): Promise<void> {
 	await page.goto(`/submissions/${submissionId}`);
 	await page.waitForSelector("body");
+
+	await expect(page.locator("#witness-species")).toContainText("Not bound to a Species yet");
+	await expect(page.locator('button:has-text("Approve for Screening")')).toHaveCount(0);
+	await fillTomSelectTypeahead(page, "group_id", "Poecilia reticulata", false, false);
+	await page.locator('#witness-species button[type="submit"]:has-text("Bind")').click();
+	// Binding reloads the page with the Species named in the panel
+	await expect(page.locator("#witness-bound-species")).toBeVisible({ timeout: 10000 });
 
 	const witnessButton = page.locator('button:has-text("Approve for Screening")');
 	await witnessButton.scrollIntoViewIfNeeded();
@@ -44,11 +54,12 @@ async function rewitnessAndQueue(page: Page, submissionId: number): Promise<void
 	const db = await getTestDatabase();
 	try {
 		const submission = await db.get(
-			"SELECT witness_verification_status, final_submission_on FROM submissions WHERE id = ?",
+			"SELECT witness_verification_status, final_submission_on, species_id FROM submissions WHERE id = ?",
 			submissionId
 		);
 		expect(submission.witness_verification_status).toBe("confirmed");
 		expect(submission.final_submission_on).toBeTruthy();
+		expect(submission.species_id).toBeTruthy();
 	} finally {
 		await db.close();
 	}

@@ -15,7 +15,7 @@ import type { FormValues } from "@/forms/submission";
 import type { ApprovalFormValues } from "@/forms/approval";
 import type { Program } from "@/levelManager";
 import { isProgramType } from "@/programs";
-import { findSpeciesById } from "@/species";
+import { canonicalName, findSpeciesById } from "@/species";
 import { logger } from "@/utils/logger";
 import { AuthorizationError, ValidationError, StateError } from "./errors";
 import { deriveState, hasChangesRequested } from "./state";
@@ -55,7 +55,7 @@ export type Caller = {
 /** The columns every guard reads. */
 const STATE_COLUMNS = `id, member_id, program, submitted_on, approved_on,
    witness_verification_status, final_submission_on, changes_requested_on,
-   reproduction_date, species_type, species_class`;
+   reproduction_date, species_type, species_class, species_id`;
 
 /**
  * Which hat the caller is wearing.
@@ -99,6 +99,7 @@ async function guard(
     actor,
     actorId: caller.id,
     isOwner: submission.member_id === caller.id,
+    bound: submission.species_id != null,
   });
 
   return { submission, actor };
@@ -388,7 +389,9 @@ export async function resubmit(
  * waiting period starts.
  *
  * Never the submitter, so the independence of the first gate is enforced
- * rather than trusted.
+ * rather than trusted. Refused on a Submission bound to no Species, so nothing
+ * enters the waiting period without one: the witness binds it first
+ * (`bindSpecies`).
  */
 export async function confirmWitness(caller: Caller, submissionId: number): Promise<void> {
   const memberId = await withTransaction(async (db) => {
@@ -416,6 +419,56 @@ export async function confirmWitness(caller: Caller, submissionId: number): Prom
   }
 
   logger.info("Witness confirmed", { submissionId, witnessedBy: caller.id });
+}
+
+/**
+ * Bind a Submission to a Species from the catalogue, or rebind it to another.
+ *
+ * A committee move - the witness's - so it does not void a confirmed Witness:
+ * the member's form is untouched. It goes on the Submission's changelog, the
+ * same record a Points correction writes. Binding to the Species it is
+ * already bound to changes nothing and records nothing.
+ */
+export async function bindSpecies(caller: Caller, submissionId: number, speciesId: number): Promise<void> {
+  const species = await findSpeciesById(speciesId);
+  if (!species) {
+    throw new ValidationError("Choose a Species that exists", "species_id", speciesId);
+  }
+
+  const { changed, previousId } = await withTransaction(async (db) => {
+    const { submission } = await guard(db, moves.bindSpecies, caller, submissionId);
+    if (submission.species_id === speciesId) {
+      return { changed: false, previousId: submission.species_id };
+    }
+    await runUpdate(
+      db,
+      `UPDATE submissions SET species_id = ? WHERE id = ? AND approved_on IS NULL`,
+      [speciesId, submissionId],
+      moves.bindSpecies
+    );
+    return { changed: true, previousId: submission.species_id };
+  });
+  if (!changed) return;
+
+  const previous = previousId == null ? undefined : await findSpeciesById(previousId);
+  const change: Change = {
+    field: "species",
+    old: previous ? canonicalName(previous) : null,
+    new: canonicalName(species),
+  };
+  await addNote(
+    submissionId,
+    caller.id,
+    JSON.stringify({
+      type: "admin_edit",
+      changes: [change],
+      reason: previousId == null ? "Bound to a Species" : "Rebound to another Species",
+      timestamp: new Date().toISOString(),
+      admin_id: caller.id,
+    })
+  );
+
+  logger.info("Submission bound to a Species", { submissionId, speciesId, previousId, by: caller.id });
 }
 
 /**

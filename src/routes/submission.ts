@@ -25,7 +25,7 @@ import {
   getSubmissionImages,
   getSubmissionSupplements,
 } from "@/db/submissions";
-import { findSpeciesById } from "@/species";
+import { canonicalName as canonicalNameOf, findSpeciesById } from "@/species";
 import * as lifecycle from "@/lifecycle";
 import { attempt, callerFor } from "./lifecycleErrors";
 import { getNotesForSubmission } from "@/db/submission_notes";
@@ -125,10 +125,11 @@ export const view = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const speciesShown = await (async () => {
-    // The Species the Submission is bound to, if any
-    const species = submission.species_id ? await findSpeciesById(submission.species_id) : undefined;
-    if (species) return species;
+  // The Species the Submission is bound to, if any
+  const boundSpecies = submission.species_id ? await findSpeciesById(submission.species_id) : undefined;
+
+  const speciesShown = (() => {
+    if (boundSpecies) return boundSpecies;
 
     // Fall back to parsing the member's Latin spelling
     const [genus, ...parts] = submission.species_latin_name.split(" ");
@@ -138,7 +139,7 @@ export const view = async (req: MulmRequest, res: Response) => {
     };
   })();
 
-  const canonicalName = `${speciesShown.canonical_genus} ${speciesShown.canonical_species_name}`;
+  const canonicalName = canonicalNameOf(speciesShown);
 
   // Calculate waiting period eligibility
   const waitingPeriodStatus = lifecycle.waitingPeriod(submission);
@@ -194,6 +195,8 @@ export const view = async (req: MulmRequest, res: Response) => {
     },
     canonicalName,
     name: speciesShown,
+    boundSpecies: boundSpecies ?? null,
+    boundSpeciesName: boundSpecies ? canonicalNameOf(boundSpecies) : null,
     waitingPeriodStatus,
     adminNotes,
     videoMetadata,
@@ -308,7 +311,7 @@ export const renderEdit = async (req: MulmRequest, res: Response) => {
  * id for the template. Asked of the transition table rather than restated, so
  * the buttons shown and the guards enforced cannot drift apart.
  */
-function allowedMoves(
+export function allowedMoves(
   viewer: MulmRequest["viewer"],
   submission: db.Submission,
   state: lifecycle.SubmissionState
@@ -325,6 +328,7 @@ function allowedMoves(
     actor,
     actorId: viewer.id,
     isOwner,
+    bound: submission.species_id != null,
   };
 
   return Object.fromEntries(

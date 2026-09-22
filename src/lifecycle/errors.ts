@@ -7,6 +7,7 @@
  *   ValidationError    - the request did not name a thing that exists
  *   AuthorizationError - the wrong person
  *   StateError         - the wrong moment
+ *   UnboundError       - a move that needs a Species, on a Submission bound to none
  *
  * Every transition throws one of these and nothing else, so a route matches on
  * the class rather than on a message string.
@@ -51,6 +52,18 @@ export class StateError extends LifecycleError {
   constructor(message: string, expectedState: string, actualState: string) {
     super(message, "STATE_ERROR", { expectedState, actualState });
     this.name = "StateError";
+  }
+}
+
+/**
+ * Thrown when a move needs the Submission bound to a Species and it is bound
+ * to none: the Witness is refused until the committee picks the Species, so
+ * nothing enters the waiting period without one.
+ */
+export class UnboundError extends LifecycleError {
+  constructor(message: string, action: string) {
+    super(message, "UNBOUND", { action });
+    this.name = "UnboundError";
   }
 }
 

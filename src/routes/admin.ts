@@ -17,6 +17,7 @@ import {
 } from "@/db/submissions";
 import { approvalSchema } from "@/forms/approval";
 import { approvedEditSchema } from "@/forms/approvedEdit";
+import { bindSpeciesForm } from "@/forms/bindSpecies";
 import { inviteSchema } from "@/forms/member";
 import { sendInviteEmail } from "@/notifications";
 import { getNextLevel, programMetadata, programs } from "@/programs";
@@ -42,7 +43,7 @@ import { checkAllSpecialtyAwards } from "@/specialtyAwardManager";
 import { logger } from "@/utils/logger";
 import { getStatusPresentation } from "@/utils/statusBadge";
 import * as lifecycle from "@/lifecycle";
-import { sendLifecycleError } from "./lifecycleErrors";
+import { callerFor, sendLifecycleError } from "./lifecycleErrors";
 import {
   addNote,
   getNotesForSubmission,
@@ -339,25 +340,72 @@ Substrate:
   });
 };
 
+/**
+ * Run a witness-panel move (binding a Species, confirming the Witness) and
+ * show a refusal in the panel's own alert. HTMX does not swap a 4xx body, so
+ * a refusal sent as one reached nobody; this retargets `#witness-error`.
+ * @returns whether the move ran; if not, the response has been sent
+ */
+async function witnessPanelMove(
+  req: MulmRequest,
+  res: Response,
+  submissionId: number,
+  move: () => Promise<void>
+): Promise<boolean> {
+  try {
+    await move();
+    return true;
+  } catch (err) {
+    if (!lifecycle.isLifecycleError(err)) throw err;
+    logger.warn(`Witness panel refusal: ${err.message}`, { submissionId, adminId: req.viewer?.id });
+    sendWitnessPanelRefusal(res, [err.message]);
+    return false;
+  }
+}
+
+function sendWitnessPanelRefusal(res: Response, messages: string[]): void {
+  res.set("HX-Retarget", "#witness-error").set("HX-Reswap", "innerHTML");
+  res.render("admin/witnessErrors", { messages });
+}
+
 export const confirmWitnessAction = async (req: MulmRequest, res: Response) => {
   const submission = await validateSubmission(req, res);
   if (!submission) {
     return;
   }
 
-  try {
-    await lifecycle.confirmWitness({ id: req.viewer!.id, isAdmin: true }, submission.id);
-  } catch (err) {
-    if (sendLifecycleError(res, err, { submissionId: submission.id, adminId: req.viewer?.id })) {
-      return;
-    }
-    logger.error("Witness confirmation failed - unexpected error", err);
-    res.status(500).send("An unexpected error occurred. Please try again.");
-    return;
-  }
+  const ran = await witnessPanelMove(req, res, submission.id, () =>
+    lifecycle.confirmWitness(callerFor(req.viewer!), submission.id)
+  );
+  if (!ran) return;
 
   // Redirect to witness queue for the submission's program
   res.set("HX-Redirect", `/admin/witness-queue/${submission.program}`).send();
+};
+
+/**
+ * POST /admin/submissions/:id/bind-species
+ * The witness panel binds (or rebinds) the Submission to the Species picked in
+ * the catalogue typeahead, then the page reloads to show it bound.
+ */
+export const bindSpeciesAction = async (req: MulmRequest, res: Response) => {
+  const submission = await validateSubmission(req, res);
+  if (!submission) {
+    return;
+  }
+
+  const parsed = bindSpeciesForm.safeParse(req.body);
+  if (!parsed.success) {
+    sendWitnessPanelRefusal(res, parsed.error.issues.map((issue) => issue.message));
+    return;
+  }
+
+  const ran = await witnessPanelMove(req, res, submission.id, () =>
+    lifecycle.bindSpecies(callerFor(req.viewer!), submission.id, parsed.data.group_id)
+  );
+  if (!ran) return;
+
+  res.set("HX-Refresh", "true").send();
 };
 
 export const inviteMember = async (req: MulmRequest, res: Response) => {

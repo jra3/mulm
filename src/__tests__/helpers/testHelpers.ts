@@ -272,6 +272,11 @@ export interface CreateSubmissionOptions {
    * Spawn locations array as JSON string (default: '["Plants","Spawning mop"]')
    */
   spawnLocations?: string;
+
+  /**
+   * The Species the Submission is bound to (default: none)
+   */
+  speciesId?: number | null;
 }
 
 /**
@@ -320,6 +325,7 @@ export async function createTestSubmission(
     reproductionDate = now,
     foods = '["Flakes","Live food"]',
     spawnLocations = '["Plants","Spawning mop"]',
+    speciesId = null,
   } = options;
 
   // Draft submissions should have null witness status, submitted ones default to "pending"
@@ -335,8 +341,8 @@ export async function createTestSubmission(
       first_time_species, cares_species,
       denied_on, denied_by, denied_reason,
       changes_requested_on, changes_requested_by, changes_requested_reason,
-      foods, spawn_locations
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      foods, spawn_locations, species_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       memberId,
       speciesClass,
@@ -367,6 +373,7 @@ export async function createTestSubmission(
       changesRequested ? "Test change request" : null,
       foods,
       spawnLocations,
+      speciesId,
     ]
   );
 

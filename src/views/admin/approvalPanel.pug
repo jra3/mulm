@@ -14,6 +14,8 @@ include ../mixins/errorMessage.pug
                 label.text-white.whitespace-nowrap Species:
                 // Species typeahead with HTMX integration
                 // Tom Select value is group_id, which gets submitted directly
+                //- Creating a Species is the witness panel's now; this picker
+                //- stays until approval reads the binding (#417).
                 .flex.flex-col
                     .flex.gap-2.items-center
                         select#species-search.tom-select-typeahead.flex-1(
@@ -33,12 +35,6 @@ include ../mixins/errorMessage.pug
                             hx-indicator="#approval-dynamic-section .htmx-indicator"
                             hx-include="this"
                             class=hasGroupIdError ? "error" : "")
-                        button.primary.text-sm(
-                            type="button"
-                            hx-get=`/admin/dialog/species/new?submission_id=${submission.id}`
-                            hx-target="body"
-                            hx-swap="beforeend"
-                        ) New
                     +errorMessage('group_id')
 
                 .flex.flex-col
@@ -129,23 +125,3 @@ include ../mixins/errorMessage.pug
                                         name="sexual_reproduction"
                                         checked=submission.sexual_reproduction == 1)
                                     label.text-white(for="sexual") Sexual Reproduction
-
-    // Event handler for species creation
-    script.
-        (function() {
-            const speciesSearch = document.getElementById('species-search');
-            if (speciesSearch) {
-                speciesSearch.addEventListener('species-created', function(e) {
-                    const tomSelect = this.tomselect;
-                    if (tomSelect && e.detail.group_id) {
-                        // Add the new species to the typeahead options
-                        tomSelect.addOption({
-                            group_id: e.detail.group_id,
-                            text: e.detail.canonical_name
-                        });
-                        // Select the newly created species
-                        tomSelect.setValue(e.detail.group_id);
-                    }
-                });
-            }
-        })();

@@ -3,7 +3,7 @@ import { pointClassField } from "./pointClass";
 
 /**
  * The create-Species form
- * Used when creating a new species from the approval panel
+ * Used when creating a new Species from the witness panel, which binds the Submission to it
  */
 export const speciesCreateForm = z.object({
   canonical_genus: z.string().trim().min(1, "Genus cannot be empty").max(100),

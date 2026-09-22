@@ -1,5 +1,5 @@
 import { MIDDLE_STATES, SubmissionState } from "./state";
-import { AuthorizationError, StateError } from "./errors";
+import { AuthorizationError, StateError, UnboundError } from "./errors";
 
 /**
  * The transition table: which moves are legal from which states, and for whom.
@@ -15,7 +15,8 @@ import { AuthorizationError, StateError } from "./errors";
  * |                         |                                         | pendingWitness if   |                    |
  * |                         |                                         | it was witnessed    |                    |
  * | returnToDraft           | pendingWitness .. awaitingFinalSubmission| draft              | member             |
- * | confirmWitness          | pendingWitness                          | waitingPeriod       | committee, not the submitter |
+ * | confirmWitness          | pendingWitness, bound to a Species      | waitingPeriod       | committee, not the submitter |
+ * | bindSpecies             | the four middle states                  | same, bound         | committee, not the submitter |
  * | enterApprovalQueue      | awaitingFinalSubmission                 | inApprovalQueue     | member or committee|
  * | removeFromQueue         | inApprovalQueue                         | awaitingFinalSubmission | member or committee |
  * | requestChanges          | the four middle states                  | same, flag set      | committee          |
@@ -27,9 +28,10 @@ import { AuthorizationError, StateError } from "./errors";
  *
  * Every member save of a submitted Submission (submit, saveChanges, resubmit)
  * voids a confirmed Witness (ADR-0001; `voidWitness` in transitions.ts).
- * saveDraft does not, and committee moves never do.
+ * saveDraft does not, and committee moves never do: binding a Species is the
+ * committee's, not an edit of the member's form.
  *
- * The thirteenth move is the clock: the waiting period elapsing carries a
+ * The fourteenth move is the clock: the waiting period elapsing carries a
  * Submission from waitingPeriod to awaitingFinalSubmission with nobody
  * performing anything. It is computed in `state.ts` rather than listed here.
  */
@@ -43,6 +45,7 @@ export type MoveId =
   | "saveChanges"
   | "returnToDraft"
   | "confirmWitness"
+  | "bindSpecies"
   | "enterApprovalQueue"
   | "removeFromQueue"
   | "requestChanges"
@@ -68,6 +71,8 @@ export type MoveDefinition = {
   readonly ownerOnly?: boolean;
   /** The submitter may never perform it, committee member or not. */
   readonly neverSubmitter?: boolean;
+  /** Legal only on a Submission bound to a Species. */
+  readonly requiresBound?: boolean;
 };
 
 const MEMBER_ONLY: readonly Actor[] = ["member"];
@@ -122,11 +127,26 @@ export const moves = {
     ownerOnly: true,
   },
 
+  /** Nothing enters the waiting period without a Species: the witness binds it first. */
   confirmWitness: {
     id: "confirmWitness",
     from: ["pendingWitness"],
     actors: COMMITTEE_ONLY,
     requiresNoChangesPending: true,
+    neverSubmitter: true,
+    requiresBound: true,
+  },
+
+  /**
+   * Bind (or rebind) the Submission to a Species from the catalogue - the
+   * witness's job, recorded in the changelog. Never the submitter, as with the
+   * Witness it prepares. Not on an Approved Submission: that is a Points
+   * correction, with a stated reason.
+   */
+  bindSpecies: {
+    id: "bindSpecies",
+    from: MIDDLE_STATES,
+    actors: COMMITTEE_ONLY,
     neverSubmitter: true,
   },
 
@@ -204,6 +224,8 @@ export type MoveContext = {
   readonly actorId: number;
   /** Whether the caller owns the Submission. */
   readonly isOwner: boolean;
+  /** Whether the Submission is bound to a Species. */
+  readonly bound: boolean;
 };
 
 /** The states `move` is legal from for this actor. */
@@ -234,7 +256,7 @@ export function canMove(move: MoveDefinition, context: MoveContext): boolean {
  * wrong and confusing, because they are on the committee.
  */
 export function assertMoveIsLegal(move: MoveDefinition, context: MoveContext): void {
-  const { state, changesPending, actor, actorId, isOwner } = context;
+  const { state, changesPending, actor, actorId, isOwner, bound } = context;
 
   if (move.neverSubmitter && isOwner) {
     throw new AuthorizationError(
@@ -284,6 +306,13 @@ export function assertMoveIsLegal(move: MoveDefinition, context: MoveContext): v
       "no changes outstanding"
     );
   }
+
+  if (move.requiresBound && !bound) {
+    throw new UnboundError(
+      `Choose the Species this Submission is before you ${describe(move.id)} it`,
+      move.id
+    );
+  }
 }
 
 /** How a move is named in a refusal. */
@@ -299,6 +328,8 @@ function describe(id: MoveId): string {
       return "return to draft";
     case "confirmWitness":
       return "confirm the witness";
+    case "bindSpecies":
+      return "choose the Species of";
     case "enterApprovalQueue":
       return "queue for approval";
     case "removeFromQueue":

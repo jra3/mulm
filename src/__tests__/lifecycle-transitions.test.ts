@@ -5,6 +5,9 @@ import {
   StateError,
   ValidationError,
   approve,
+  bindSpecies,
+  UnboundError,
+  type Change,
   confirmWitness,
   correctPoints,
   createSubmission,
@@ -529,6 +532,20 @@ void describe("Submission lifecycle - transitions", () => {
   // -------------------------------------------------------------------------
 
   void describe("the Witness gate", () => {
+    void test("confirming is refused on a Submission bound to no Species, with its own refusal", async () => {
+      const id = await submissionInState(ctx.db, "pendingWitness", {
+        memberId: ctx.member.id,
+        speciesId: null,
+      });
+
+      await assert.rejects(
+        () => confirmWitness(committee, id),
+        (err: unknown) =>
+          err instanceof UnboundError && /Species/.test(err.message) && !(err instanceof StateError)
+      );
+      assert.strictEqual(await stateOf(id), "pendingWitness");
+    });
+
     void test("confirming starts the waiting period", async () => {
       const id = await submissionInState(ctx.db, "pendingWitness", {
         memberId: ctx.member.id,
@@ -582,6 +599,7 @@ void describe("Submission lifecycle - transitions", () => {
       const id = await createSubmission(member, ctx.member.id, form, { submit: true });
       assert.strictEqual((await readSubmission(id))!.witness_verification_status, "pending");
 
+      await bindSpecies(committee, id, mockSpeciesId);
       await confirmWitness(committee, id);
       await requestChanges(committee, id, "Add a photo of the fry");
       assert.strictEqual(
@@ -597,6 +615,86 @@ void describe("Submission lifecycle - transitions", () => {
         "pending",
         "the Witness attested to the form, so the member's edit voids it"
       );
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Binding a Species
+  // -------------------------------------------------------------------------
+
+  void describe("Binding a Species", () => {
+    const newSpecies = (epithet: string) =>
+      createSpecies({
+        canonicalGenus: "Bindus",
+        canonicalSpeciesName: epithet,
+        programClass: "Livebearers",
+        speciesType: "Fish",
+      });
+    const changelog = async (id: number) =>
+      (
+        await query<{ note_text: string }>(
+          "SELECT note_text FROM submission_notes WHERE submission_id = ? ORDER BY id",
+          [id]
+        )
+      ).map((n) => JSON.parse(n.note_text) as { type: string; changes: Change[]; reason: string });
+
+    void test("the witness binds an unbound Submission, then rebinds it; both go on the changelog", async () => {
+      const first = await newSpecies("primus");
+      const second = await newSpecies("secundus");
+      const id = await submissionInState(ctx.db, "pendingWitness", {
+        memberId: ctx.member.id,
+        speciesId: null,
+      });
+
+      await bindSpecies(committee, id, first);
+      assert.strictEqual((await readSubmission(id))!.species_id, first);
+      await bindSpecies(committee, id, second);
+      assert.strictEqual((await readSubmission(id))!.species_id, second);
+      await bindSpecies(committee, id, second);
+
+      assert.deepStrictEqual(
+        (await changelog(id)).map((e) => [e.type, e.changes]),
+        [
+          ["admin_edit", [{ field: "species", old: null, new: "Bindus primus" }]],
+          ["admin_edit", [{ field: "species", old: "Bindus primus", new: "Bindus secundus" }]],
+        ],
+        "binding to the Species it already has records nothing"
+      );
+
+      await confirmWitness(committee, id);
+      assert.strictEqual((await readSubmission(id))!.witness_verification_status, "confirmed");
+    });
+
+    void test("rebinding a witnessed Submission is the committee's move and keeps the Witness", async () => {
+      const id = await at("waitingPeriod");
+      await bindSpecies(committee, id, await newSpecies("tertius"));
+
+      const after = (await readSubmission(id))!;
+      assert.strictEqual(after.witness_verification_status, "confirmed");
+      assert.strictEqual(deriveState(after), "waitingPeriod");
+    });
+
+    void test("only the committee binds, never on its own Submission, and not once Approved or a Draft", async () => {
+      const speciesId = await newSpecies("quartus");
+      const pending = await at("pendingWitness");
+      const approved = await at("approved");
+      const draft = await at("draft");
+      assert.strictEqual(await refusal(() => bindSpecies(member, pending, speciesId)), "authorization");
+
+      const own = await submissionInState(ctx.db, "pendingWitness", {
+        memberId: ctx.admin.id,
+        speciesId: null,
+      });
+      assert.strictEqual(await refusal(() => bindSpecies(committee, own, speciesId)), "authorization");
+
+      assert.strictEqual(await refusal(() => bindSpecies(committee, approved, speciesId)), "state");
+      assert.strictEqual(await refusal(() => bindSpecies(committee, draft, speciesId)), "state");
+    });
+
+    void test("binding to a Species that does not exist is refused", async () => {
+      const id = await at("pendingWitness");
+      assert.strictEqual(await refusal(() => bindSpecies(committee, id, 987654)), "validation");
+      assert.strictEqual((await readSubmission(id))!.species_id, mockSpeciesId);
     });
   });
 

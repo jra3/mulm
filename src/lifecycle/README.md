@@ -68,3 +68,10 @@ as consequences rather than absorbing them.
 `approve` takes the Species the committee chose as an id, refuses one the
 Species catalogue does not know, and binds the Submission to it. It never
 adds Names to the Species: the member's spellings stay on the Submission.
+
+`bindSpecies` is the witness's move: the committee binds or rebinds a
+Submission to a Species anywhere between submission and approval, never on
+its own Submission, and it goes on the changelog. It is not a member edit, so
+it leaves a confirmed Witness in place. `confirmWitness` refuses an unbound
+Submission with an `UnboundError`, so nothing enters the waiting period
+without a Species.

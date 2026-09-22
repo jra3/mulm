@@ -239,6 +239,7 @@ void describe("Submission lifecycle - standing", () => {
         speciesClass: "Anabantoids",
         latinName: "Betta unboundus",
         commonName: "Unbound Betta",
+        speciesId: null,
       });
       assert.strictEqual(
         (await query<{ species_id: number | null }>("SELECT species_id FROM submissions WHERE id = ?", [unbound]))[0]

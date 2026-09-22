@@ -1,0 +1,71 @@
+//- The witness panel: the committee screens a Submission awaiting a Witness.
+//-
+//- The witness binds the Submission to its Species here first - by searching
+//- the catalogue, or by creating the Species when none matches - and the
+//- Witness cannot be confirmed until it is bound.
+//-
+//- @param submission   - the Submission (id, species_type)
+//- @param boundSpecies - the Species it is bound to, or null
+//- @param boundSpeciesName - its Canonical name, when bound
+//- @param allowed      - the moves this viewer may make
+
+.status-panel.status-panel-admin#witnessPanel
+    .container.mx-auto.max-w-4xl
+        h3.text-white.text-lg.font-semibold.mb-4 Admin Screening Required
+        p.text-white.mb-4 Review the submission details above, including any photos/videos (when available), for completeness and credibility.
+
+        //- Which Species this is
+        .bg-white.rounded.p-4.mb-4#witness-species
+            if boundSpecies
+                p.text-gray-900
+                    span.font-semibold Species:
+                    |
+                    span.italic#witness-bound-species= boundSpeciesName
+                    span.text-sm.text-gray-600= ` (${boundSpecies.species_type}, ${boundSpecies.program_class})`
+            else
+                p.text-gray-900.font-semibold Not bound to a Species yet
+                p.text-sm.text-gray-600.mb-2 Find it in the catalogue, or create it if it is not there. The witness cannot be confirmed until the Submission is bound.
+
+            if allowed.bindSpecies
+                details(open=boundSpecies ? false : true)
+                    summary.link.text-sm.mt-2= boundSpecies ? "Change Species" : "Choose Species"
+                    form.flex.gap-2.items-center.mt-2(
+                        hx-post=`/admin/submissions/${submission.id}/bind-species`
+                        hx-disabled-elt="find button[type=submit]"
+                    )
+                        select#witness-species-search.tom-select-typeahead.flex-1(
+                            name="group_id"
+                            data-api-url="/api/species/search"
+                            data-param-species_type=submission.species_type
+                            data-value-field="group_id"
+                            data-label-field="text"
+                            data-search-fields="text,common_name,scientific_name"
+                            data-min-query-length="2"
+                            data-max-items="1"
+                            data-placeholder="Search species..."
+                            required
+                        )
+                        button.primary.text-sm(type="submit")= boundSpecies ? "Rebind" : "Bind"
+                        button.outline.text-sm(
+                            type="button"
+                            hx-get=`/admin/dialog/species/new?submission_id=${submission.id}`
+                            hx-target="body"
+                            hx-swap="beforeend"
+                        ) New Species
+
+            .text-sm.text-red-700.mt-2#witness-error(role="alert")
+
+        div.flex.justify-center.max-w-4xl.mx-auto.text-center.gap-4
+            //- The table refuses the Witness while unbound, so the button is not offered
+            if allowed.confirmWitness
+                form(hx-post=`/admin/submissions/${submission.id}/confirm-witness`)
+                    button.primary(type="submit") Approve for Screening
+            else if !boundSpecies
+                p.text-white.text-sm.self-center Bind a Species to approve for screening
+
+            if allowed.requestChanges
+                button.destructive(
+                    type="button"
+                    hx-get=`/admin/dialog/submissions/${submission.id}/request-changes`
+                    hx-target="closest body"
+                    hx-swap="beforeend") Request Changes

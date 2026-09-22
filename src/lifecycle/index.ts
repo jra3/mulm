@@ -72,6 +72,7 @@ export {
   requestChanges,
   approve,
   correctPoints,
+  bindSpecies,
   deleteSubmission,
   supplementsFromForm,
   changesBetween,
@@ -96,6 +97,7 @@ export {
   ValidationError,
   AuthorizationError,
   StateError,
+  UnboundError,
   isLifecycleError,
 } from "./errors";
 

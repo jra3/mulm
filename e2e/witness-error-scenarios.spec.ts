@@ -166,6 +166,7 @@ test.describe("Witness Error Scenarios", () => {
         memberId: user.id,
         submitted: true,
         witnessed: false,
+        bound: true,
       });
 
       // A row as the deleted decline path would have left it.

@@ -1,5 +1,10 @@
 include ../header.pug
 include ../mixins/errorMessage.pug
+include ../mixins/errorAlert.pug
+
+//- Create a Species from the witness panel. Creating it binds the Submission
+//- to it: the server reloads the page on success, or re-renders this dialog
+//- with its errors.
 
 +dialog()
 	h2.text-2xl.font-bold.mb-4 Create New Species
@@ -24,9 +29,11 @@ include ../mixins/errorMessage.pug
 					strong Class:
 					| #{submission.species_class}
 
+	+errorAlert('_general')
+
 	form(
-		hx-post="/admin/species"
-		hx-on--after-request="if(event.detail.successful) { const data = JSON.parse(event.detail.xhr.response); htmx.trigger('#species-search', 'species-created', {group_id: data.group_id, canonical_name: data.canonical_name}); document.getElementById('dialog').remove(); }"
+		hx-post=`/admin/submissions/${submission.id}/species`
+		hx-disabled-elt="find button[type=submit]"
 	)
 		input(type="hidden" name="species_type" value=submission.species_type)
 
@@ -97,4 +104,4 @@ include ../mixins/errorMessage.pug
 					type="button"
 					hx-on:click="document.getElementById('dialog').remove()"
 				) Cancel
-				button.primary(type="submit") Create Species
+				button.primary(type="submit") Create Species and Bind

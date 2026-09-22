@@ -645,6 +645,15 @@ void describe("Pug Template Rendering", () => {
             };
             break;
 
+          case "admin/witnessErrors.pug":
+            templateData.messages = ["Choose a Species from the catalogue"];
+            break;
+
+          case "admin/witnessPanel.pug":
+            templateData.boundSpecies = null;
+            templateData.allowed = { confirmWitness: false, bindSpecies: true, requestChanges: true };
+            break;
+
           case "admin/editApprovedErrors.pug":
             templateData.messages = [
               "The flowered bonus does not apply to Breeders Awards Program submissions",
@@ -860,6 +869,100 @@ void describe("Pug Template Rendering", () => {
    * The species views read Names in the catalogue's shape - `name_id` and
    * `name`, by kind - and a refused delete has somewhere to say "merge".
    */
+  /**
+   * The witness panel binds: bound, it names the Species and offers a rebind;
+   * unbound, it offers the catalogue typeahead and the create-Species dialog,
+   * and no confirmation until it is bound.
+   */
+  void describe("Witness panel", () => {
+    const render = (data: Record<string, unknown>) =>
+      pug.compileFile(path.join(viewsPath, "admin/witnessPanel.pug"), { basedir: viewsPath, pretty: false })({
+        ...baseMockData,
+        isAdmin: true,
+        submission: { id: 42, species_type: "Fish" },
+        allowed: { confirmWitness: true, bindSpecies: true, requestChanges: true },
+        ...data,
+      });
+    const bound = {
+      group_id: 7,
+      canonical_genus: "Poecilia",
+      canonical_species_name: "reticulata",
+      species_type: "Fish",
+      program_class: "Livebearers",
+    };
+
+    void test("bound: shows the Canonical name, a rebind, and the confirmation", () => {
+      const html = render({ boundSpecies: bound, boundSpeciesName: "Poecilia reticulata" });
+
+      assert.match(html, /id="witness-bound-species"[^>]*>Poecilia reticulata</);
+      assert.match(html, /Livebearers/);
+      assert.match(html, /Change Species/);
+      assert.match(html, /hx-post="\/admin\/submissions\/42\/bind-species"/);
+      assert.match(html, />Rebind</);
+      assert.match(html, /hx-post="\/admin\/submissions\/42\/confirm-witness"/);
+      assert.match(html, /Approve for Screening/);
+      assert.doesNotMatch(html, /Not bound to a Species/);
+    });
+
+    void test("unbound: offers the catalogue typeahead and create-Species dialog, and no confirmation", () => {
+      // The table refuses the Witness while unbound, so the move is not allowed
+      const html = render({
+        boundSpecies: null,
+        allowed: { confirmWitness: false, bindSpecies: true, requestChanges: true },
+      });
+
+      assert.match(html, /Not bound to a Species yet/);
+      assert.match(html, /<select[^>]*name="group_id"[^>]*data-api-url="\/api\/species\/search"/);
+      assert.match(html, /hx-post="\/admin\/submissions\/42\/bind-species"/);
+      assert.match(html, />Bind</);
+      assert.match(html, /hx-get="\/admin\/dialog\/species\/new\?submission_id=42"/);
+      assert.doesNotMatch(html, /Approve for Screening/);
+      assert.doesNotMatch(html, /confirm-witness/);
+      assert.match(html, /Bind a Species to approve for screening/);
+    });
+
+    void test("without the bind move, no bind controls are offered", () => {
+      const html = render({
+        boundSpecies: bound,
+        boundSpeciesName: "Poecilia reticulata",
+        allowed: { confirmWitness: true },
+      });
+      assert.doesNotMatch(html, /bind-species/);
+      assert.doesNotMatch(html, /dialog\/species\/new/);
+    });
+
+    void test("the create-Species dialog creates and binds in one request", () => {
+      const html = pug.compileFile(path.join(viewsPath, "admin/createSpeciesDialog.pug"), {
+        basedir: viewsPath,
+        pretty: false,
+      })({
+        ...baseMockData,
+        submission: { id: 42, species_type: "Fish", species_latin_name: "Newgenus novus" },
+        prefilled: { canonical_genus: "Newgenus", canonical_species_name: "novus", program_class: "" },
+        classOptions: [{ value: "Livebearers", text: "Livebearers" }],
+        errors: new Map([["_general", "The Species was created, but not bound"]]),
+      });
+      assert.match(html, /hx-post="\/admin\/submissions\/42\/species"/);
+      assert.match(html, /Create Species and Bind/);
+      assert.match(html, /value="Newgenus"/);
+      assert.match(html, /The Species was created, but not bound/);
+    });
+
+    void test("the approval panel no longer creates Species", () => {
+      const html = pug.compileFile(path.join(viewsPath, "admin/approvalPanel.pug"), {
+        basedir: viewsPath,
+        pretty: false,
+      })({
+        ...baseMockData,
+        submission: { id: 42, species_type: "Fish", program: "fish" },
+        errors: new Map(),
+        bonusFields: [],
+      });
+      assert.doesNotMatch(html, /dialog\/species\/new/);
+      assert.match(html, /name="group_id"/);
+    });
+  });
+
   void describe("Species views read the catalogue's Names", () => {
     const render = (template: string, data: Record<string, unknown>) =>
       pug.compileFile(path.join(viewsPath, template), { basedir: viewsPath, pretty: false })({
