@@ -2,9 +2,10 @@
  * The Species catalogue.
  *
  * One module owns Species identity, Names, the Canonical name, Program class,
- * Species type, Point class and the CARES flag. Admin routes, the lifecycle
- * module, MCP tools, backfill and scripts cross this interface for anything
- * about a Species.
+ * Species type, Point class and the CARES flag. Admin routes, the approval
+ * handler, MCP tools, backfill and the IUCN, external-data, CARES, collection
+ * and Submission data modules cross this interface for anything about a
+ * Species.
  *
  * What it does not own: IUCN status, external references and images
  * (enrichment, with their own modules), the CARES registry, the Points
@@ -17,9 +18,6 @@
 // What a Species, a Name and a Point class are.
 export {
   canonicalName,
-  nameKinds,
-  speciesTypes,
-  isSpeciesType,
   type Species,
   type Name,
   type NameKind,
@@ -28,12 +26,10 @@ export {
 export { isPointClass, admitPointClass, pointClasses, type PointClass } from "./pointClass";
 export { CatalogueRefusal, type RefusalCode } from "./errors";
 
-// Finding a Species: by id, by any Name, by Canonical name, or from a pair of spellings.
+// Finding a Species: by id, or from a pair of spellings (any Name or the Canonical name).
 export {
   findSpeciesById,
   findSpeciesByIds,
-  findSpeciesByName,
-  findSpeciesByCanonicalName,
   resolveSpecies,
   type Resolution,
 } from "./lookup";
@@ -65,11 +61,8 @@ export {
 
 // The Species-Submission relation, one definition.
 export {
-  speciesIdOfSubmissionSql,
-  listSubmissionsOfSpecies,
   countSubmissionsOfSpecies,
   findSpeciesIdOfSubmission,
-  type SubmissionOfSpecies,
 } from "./submissions";
 
 // Columns other modules own the meaning of; the catalogue writes them.
@@ -78,7 +71,7 @@ export { updateIucnStatus, updateLastExternalSync, type IucnStatus } from "./sta
 // SQL fragments for modules that read a Species alongside their own tables.
 export { speciesFromSql, speciesJoinSql, speciesOfSubmissionJoinSql, anyNameSql } from "./sql";
 
-// Read models: typeahead, explorer, admin list, detail, breeders.
+// Read models: typeahead, explorer, admin list, detail, breeders, IUCN due list, statistics.
 export {
   searchSpeciesTypeahead,
   getSpeciesForExplorer,

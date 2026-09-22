@@ -8,12 +8,16 @@ import { query } from "@/db/conn";
 import { getSpeciesExternalReferences, getSpeciesImages, type SpeciesImage } from "@/db/speciesEnrichment";
 import type { SpeciesType } from "@/points";
 import { speciesIdOfSubmissionSql } from "./submissions";
-import type { Species } from "./types";
+import { listNames } from "./names";
+import type { NameKind, Species, SpeciesNames } from "./types";
 
 export type SpeciesFilters = {
   species_type?: string;
-  // `species_class`: the explorer filters on the Submission's copy of the Program class;
-  // the name is kept for current callers and goes in #411.
+  /**
+   * The explorer filters on the Submission's copy of the Program class, whose
+   * column is `species_class`; the typeahead filters on the Species' Program
+   * class. The field keeps the query parameter's name.
+   */
   species_class?: string;
   search?: string;
   sort?: "name" | "reports" | "breeders";
@@ -21,7 +25,7 @@ export type SpeciesFilters = {
 };
 
 export type SpeciesExplorerItem = {
-  // `group_id`: the Species' id under its schema name, kept for current views; goes in #411.
+  /** The Species' id (its schema column is `group_id`). */
   group_id: number;
   program_class: string;
   canonical_genus: string;
@@ -38,16 +42,21 @@ export type SpeciesExplorerItem = {
 };
 
 /**
- * One typeahead result: the Name that matched, paired with one Name of the
- * other kind for the current views.
+ * One typeahead result: the Name that matched, and what a form should fill
+ * in beside it. A common Name comes with the Species' Canonical name as its
+ * scientific spelling; a scientific Name comes with the Species' first common
+ * Name, or an empty string when it has none. Nothing is paired that the
+ * catalogue does not hold.
  */
 export type SpeciesNameRecord = {
   name_id: number;
-  // `group_id`: the Species' id under its schema name, kept for current views; goes in #411.
+  kind: NameKind;
+  /** The Species' id (its schema column is `group_id`). */
   group_id: number;
   common_name: string;
   scientific_name: string;
   program_class: string;
+  species_type: string;
   canonical_genus: string;
   canonical_species_name: string;
 };
@@ -167,26 +176,18 @@ export async function searchSpeciesTypeahead(
   // Build WHERE clause for both queries
   const whereClause = conditions.join(" ");
 
-  // UNION query: search both common names and scientific names
-  // Each subquery joins with species_name_group for metadata
-  // Uses canonical names from species_name_group as fallback for pairing
   const sql = `
     SELECT
-      cn.common_name_id as name_id,
+      cn.common_name_id AS name_id,
+      'common' AS kind,
       cn.group_id,
       cn.common_name,
-      COALESCE(
-        (SELECT sn.scientific_name FROM species_scientific_name sn
-         WHERE sn.group_id = cn.group_id
-         ORDER BY sn.scientific_name
-         LIMIT 1),
-        sng.canonical_genus || ' ' || sng.canonical_species_name
-      ) as scientific_name,
+      sng.canonical_genus || ' ' || sng.canonical_species_name AS scientific_name,
       sng.program_class,
       sng.species_type,
       sng.canonical_genus,
       sng.canonical_species_name,
-      1 as is_common_name
+      1 AS is_common_name
     FROM species_common_name cn
     JOIN species_name_group sng ON cn.group_id = sng.group_id
     WHERE ${whereClause} AND LOWER(cn.common_name) LIKE ?
@@ -194,21 +195,22 @@ export async function searchSpeciesTypeahead(
     UNION ALL
 
     SELECT
-      sn.scientific_name_id as name_id,
+      sn.scientific_name_id AS name_id,
+      'scientific' AS kind,
       sn.group_id,
       COALESCE(
         (SELECT cn.common_name FROM species_common_name cn
          WHERE cn.group_id = sn.group_id
          ORDER BY cn.common_name
          LIMIT 1),
-        sng.canonical_genus || ' ' || sng.canonical_species_name
-      ) as common_name,
+        ''
+      ) AS common_name,
       sn.scientific_name,
       sng.program_class,
       sng.species_type,
       sng.canonical_genus,
       sng.canonical_species_name,
-      0 as is_common_name
+      0 AS is_common_name
     FROM species_scientific_name sn
     JOIN species_name_group sng ON sn.group_id = sng.group_id
     WHERE ${whereClause} AND LOWER(sn.scientific_name) LIKE ?
@@ -241,7 +243,7 @@ export async function getSpeciesForExplorer(
 }
 
 export type SpeciesDetail = {
-  // `group_id`: the Species' id under its schema name, kept for current views; goes in #411.
+  /** The Species' id (its schema column is `group_id`). */
   group_id: number;
   program_class: string;
   species_type: string;
@@ -257,15 +259,12 @@ export type SpeciesDetail = {
   external_references: string[]; // Array of reference URLs
   image_links: string[]; // Array of image URLs (backward compatibility)
   images: SpeciesImage[]; // Full image objects with metadata
-  // `synonyms`: common Names paired with scientific ones, kept for current views; goes in #411.
-  synonyms: Array<{
-    name_id: number;
-    common_name: string;
-    scientific_name: string;
-  }>;
+  /** The Species' Names by kind. */
+  names: SpeciesNames;
 };
 
-export async function getSpeciesDetail(speciesId: number) {
+/** One Species with its Names by kind, IUCN status, external references and images; null if missing. */
+export async function getSpeciesDetail(speciesId: number): Promise<SpeciesDetail | null> {
   const speciesRows = await query<{
     group_id: number;
     program_class: string;
@@ -292,29 +291,9 @@ export async function getSpeciesDetail(speciesId: number) {
     return null;
   }
 
-  // Get all names from split schema tables
-  const [commonNames, scientificNames] = await Promise.all([
-    query<{ common_name_id: number; common_name: string }>(
-      "SELECT common_name_id, common_name FROM species_common_name WHERE group_id = ? ORDER BY common_name",
-      [speciesId]
-    ),
-    query<{ scientific_name_id: number; scientific_name: string }>(
-      "SELECT scientific_name_id, scientific_name FROM species_scientific_name WHERE group_id = ? ORDER BY scientific_name",
-      [speciesId]
-    ),
-  ]);
-
-  // Pair each common Name with a scientific one, for the current views only
-  // Each common name is paired with the first scientific name
-  const pairedNames = commonNames.map((cn, idx) => ({
-    name_id: cn.common_name_id,
-    common_name: cn.common_name,
-    scientific_name:
-      scientificNames[idx]?.scientific_name || scientificNames[0]?.scientific_name || "",
-  }));
-
   // Fetch normalized data
-  const [externalRefs, images] = await Promise.all([
+  const [names, externalRefs, images] = await Promise.all([
+    listNames(speciesId),
     getSpeciesExternalReferences(speciesId),
     getSpeciesImages(speciesId),
   ]);
@@ -324,7 +303,7 @@ export async function getSpeciesDetail(speciesId: number) {
     external_references: externalRefs.map((ref) => ref.reference_url),
     image_links: images.map((img) => img.image_url), // Backward compatibility
     images, // Full objects with metadata
-    synonyms: pairedNames,
+    names,
   };
 
   return detail;
@@ -448,7 +427,7 @@ export type SpeciesAdminFilters = {
 };
 
 export type SpeciesAdminListItem = {
-  // `group_id`: the Species' id under its schema name, kept for current views; goes in #411.
+  /** The Species' id (its schema column is `group_id`). */
   group_id: number;
   canonical_genus: string;
   canonical_species_name: string;
@@ -456,8 +435,8 @@ export type SpeciesAdminListItem = {
   program_class: string;
   base_points: number | null;
   is_cares_species: number;
-  // `synonym_count`: how many Names, of both kinds, kept for current views; goes in #411.
-  synonym_count: number;
+  /** How many Names the Species has, of both kinds. */
+  name_count: number;
   iucn_redlist_category: string | null;
   iucn_population_trend: string | null;
   iucn_last_updated: string | null;
@@ -577,7 +556,7 @@ export async function getSpeciesForAdmin(
         SELECT COUNT(*) FROM species_common_name cn WHERE cn.group_id = sng.group_id
       ) + (
         SELECT COUNT(*) FROM species_scientific_name sn WHERE sn.group_id = sng.group_id
-      ) as synonym_count
+      ) as name_count
     FROM species_name_group sng
     WHERE ${conditions.join(" ")}
     ORDER BY ${orderBy}

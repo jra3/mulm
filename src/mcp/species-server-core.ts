@@ -1216,7 +1216,7 @@ async function handleSearchSpecies(args: SearchSpeciesArgs) {
               species_type: s.species_type,
               base_points: s.base_points,
               is_cares_species: Boolean(s.is_cares_species),
-              name_count: s.synonym_count,
+              name_count: s.name_count,
             })),
           },
           null,

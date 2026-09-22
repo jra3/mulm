@@ -271,7 +271,7 @@ void describe("Species Detail Functionality", () => {
     assert.ok(detail);
     assert.strictEqual(detail.canonical_genus, "Apistogramma");
     assert.strictEqual(detail.canonical_species_name, "cacatuoides");
-    assert.ok(detail.synonyms.length > 0);
+    assert.ok(detail.names.common.length + detail.names.scientific.length > 0);
   });
 
   void test("Returns null for non-existent species", async () => {

@@ -293,7 +293,7 @@ html
                 button.destructive.w-full(
                   type="button"
                   hx-delete=`/admin/species/${species.group_id}`
-                  hx-confirm="Delete this species and all its synonyms? This cannot be undone."
+                  hx-confirm="Delete this species and all its Names? This cannot be undone."
                   hx-target="#species-delete-refusal"
                   hx-swap="innerHTML"
                   hx-on--before-swap="if (event.detail.xhr.status >= 400 ? event.detail.xhr.status < 500 : false) { event.detail.shouldSwap = true; }"

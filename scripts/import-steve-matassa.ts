@@ -2,9 +2,10 @@
  * Import-only tooling: this script writes the species tables directly, not
  * through the Species catalogue (`@/species`). Do not copy this pattern into
  * `src/`. It is a one-off historical import (already run). It records Species
- * through the old species module's `recordName`, fills new Species' columns
- * with raw SQL, and calls submission `backfill*` helpers that no longer exist
- * in `src/`, so it does not run as it stands.
+ * through `recordName`, fills new Species' columns with raw SQL, and
+ * `recordName` went with `src/db/species.ts` (#411), so it does not run until
+ * that step is ported to `@/species` (for example `createSpecies` and
+ * `ensureName`).
  */
 /**
  * Bulk-import Steve Matassa's historical BAP submissions.
@@ -32,7 +33,6 @@ import {
   backfillSubmission,
   backfillWitness,
 } from "./lib/backfill";
-import { recordName } from "@/db/species";
 import { checkAndUpdateMemberLevel, Program } from "@/levelManager";
 import { FormValues } from "@/forms/submission";
 import { logger } from "@/utils/logger";

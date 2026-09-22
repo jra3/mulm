@@ -2,9 +2,9 @@
  * Import-only tooling: this script writes the species tables directly, not
  * through the Species catalogue (`@/species`). Do not copy this pattern into
  * `src/`. It is a one-off historical import (already run). It records Species
- * through the old species module's `recordName` and calls submission
- * `backfill*` helpers that no longer exist in `src/`, so it does not run as it
- * stands.
+ * through `recordName`, which went with `src/db/species.ts` (#411),
+ * so it does not run until that step is ported to `@/species` (for example
+ * `createSpecies` and `ensureName`).
  */
 import moduleAlias from "module-alias";
 import path from "path";
@@ -15,7 +15,6 @@ import {
   getSubmissionById,
 } from "@/db/submissions";
 import { FormValues } from "@/forms/submission";
-import { recordName } from "@/db/species";
 import {
   backfillApproval,
   backfillQueued,

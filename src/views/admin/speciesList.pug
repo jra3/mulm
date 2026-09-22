@@ -30,12 +30,12 @@ mixin speciesTable(speciesList)
             td(class=stringCell + ' text-center')
               input(type="checkbox" name="groupIds" value=item.group_id class="species-checkbox cursor-pointer" hx-on:change="this.closest('form').dispatchEvent(new Event('change', {bubbles: true}));")
             td(class=stringCell)
-              if item.synonym_count > 0
+              if item.name_count > 0
                 +hoverCard({id: `species-${item.group_id}`, side: 'right', width: 'md', openDelay: 300})
                   +hoverCardTrigger()
                     a.link.font-semibold(href=`/admin/species/${item.group_id}/edit`)
                       = `${item.canonical_genus} ${item.canonical_species_name}`
-                      span.ml-1.text-xs.text-gray-500.font-normal (#{item.synonym_count})
+                      span.ml-1.text-xs.text-gray-500.font-normal (#{item.name_count})
                   +hoverCardContent({cardClasses: 'hovercard-blue-border'})
                     if item.common_names && item.common_names.length > 0
                       div
@@ -52,7 +52,7 @@ mixin speciesTable(speciesList)
                             li= name
 
                     if (!item.common_names || item.common_names.length === 0) && (!item.scientific_names || item.scientific_names.length === 0)
-                      p.text-sm.text-gray-500.italic No synonyms recorded
+                      p.text-sm.text-gray-500.italic No Names recorded
               else
                 a.link.font-semibold(href=`/admin/species/${item.group_id}/edit`)
                   = `${item.canonical_genus} ${item.canonical_species_name}`
@@ -201,7 +201,7 @@ html
                   type="text"
                   id="search"
                   name="search"
-                  placeholder="Name or synonym..."
+                  placeholder="Any Name..."
                   value=(filters.search || "")
                 )
 

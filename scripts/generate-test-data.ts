@@ -1,10 +1,10 @@
 /**
  * Import-only tooling: this script writes the species tables directly, not
  * through the Species catalogue (`@/species`). Do not copy this pattern into
- * `src/`. It is a historical test-data generator. It records Species through
- * the old species module's `recordName` and calls submission `backfill*`
- * helpers that no longer exist in `src/`, so it does not run as it stands;
- * port it to `@/species` before reviving it.
+ * `src/`. It is a historical test-data generator. It recorded Species through
+ * `recordName`, which went with `src/db/species.ts` (#411), so it
+ * does not run until that step is ported to `@/species` (for example
+ * `createSpecies` and `ensureName`).
  */
 import moduleAlias from "module-alias";
 import path from "path";
@@ -21,7 +21,6 @@ import { FormValues } from "@/forms/submission";
 import { logger } from "@/utils/logger";
 import { init } from "@/db/conn";
 import { checkAndGrantSpecialtyAwards } from "@/specialtyAwardManager";
-import { recordName } from "@/db/species";
 import { recordActivity } from "@/db/activity";
 
 // Plausible test data

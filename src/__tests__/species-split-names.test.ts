@@ -3,10 +3,7 @@ import assert from "node:assert";
 import { Database, open } from "sqlite";
 import sqlite3 from "sqlite3";
 import { overrideConnection } from "../db/conn";
-import { listNames, addName, removeName } from "@/species";
-// Editing a Name in place is not part of the catalogue interface; these stay
-// on the old module until it goes.
-import { updateCommonName, updateScientificName } from "../db/species";
+import { listNames, addName, removeName, updateName } from "@/species";
 
 void describe("Species Split Name Schema CRUD", () => {
   let db: Database;
@@ -240,7 +237,7 @@ void describe("Species Split Name Schema CRUD", () => {
     });
   });
 
-  void describe("updateCommonName", () => {
+  void describe("updateName: common", () => {
     let testCommonNameId: number;
 
     beforeEach(async () => {
@@ -249,7 +246,7 @@ void describe("Species Split Name Schema CRUD", () => {
     });
 
     void test("should update common name", async () => {
-      const changes = await updateCommonName(testCommonNameId, "Updated Name");
+      const changes = await updateName("common", testCommonNameId, "Updated Name");
 
       assert.strictEqual(changes, 1);
 
@@ -259,7 +256,7 @@ void describe("Species Split Name Schema CRUD", () => {
     });
 
     void test("should trim whitespace", async () => {
-      await updateCommonName(testCommonNameId, "  Trimmed  ");
+      await updateName("common", testCommonNameId, "  Trimmed  ");
 
       const names = (await listNames(testGroupId)).common;
       const updated = names.find((n) => n.name_id === testCommonNameId);
@@ -267,13 +264,13 @@ void describe("Species Split Name Schema CRUD", () => {
     });
 
     void test("should throw error for empty name", async () => {
-      await assert.rejects(async () => await updateCommonName(testCommonNameId, ""), {
+      await assert.rejects(async () => await updateName("common", testCommonNameId, ""), {
         message: /cannot be empty/,
       });
     });
 
     void test("should return 0 for non-existent ID", async () => {
-      const changes = await updateCommonName(99999, "Test");
+      const changes = await updateName("common", 99999, "Test");
       assert.strictEqual(changes, 0);
     });
 
@@ -282,13 +279,13 @@ void describe("Species Split Name Schema CRUD", () => {
       const otherName = names.find((n) => n.name_id !== testCommonNameId);
 
       await assert.rejects(
-        async () => await updateCommonName(testCommonNameId, otherName!.name),
+        async () => await updateName("common", testCommonNameId, otherName!.name),
         { message: /already exists/ }
       );
     });
   });
 
-  void describe("updateScientificName", () => {
+  void describe("updateName: scientific", () => {
     let testScientificNameId: number;
 
     beforeEach(async () => {
@@ -297,7 +294,7 @@ void describe("Species Split Name Schema CRUD", () => {
     });
 
     void test("should update scientific name", async () => {
-      const changes = await updateScientificName(testScientificNameId, "Testicus updated");
+      const changes = await updateName("scientific", testScientificNameId, "Testicus updated");
 
       assert.strictEqual(changes, 1);
 
@@ -307,7 +304,7 @@ void describe("Species Split Name Schema CRUD", () => {
     });
 
     void test("should trim whitespace", async () => {
-      await updateScientificName(testScientificNameId, "  Testicus trimmed  ");
+      await updateName("scientific", testScientificNameId, "  Testicus trimmed  ");
 
       const names = (await listNames(testGroupId)).scientific;
       const updated = names.find((n) => n.name_id === testScientificNameId);
@@ -315,13 +312,13 @@ void describe("Species Split Name Schema CRUD", () => {
     });
 
     void test("should throw error for empty name", async () => {
-      await assert.rejects(async () => await updateScientificName(testScientificNameId, ""), {
+      await assert.rejects(async () => await updateName("scientific", testScientificNameId, ""), {
         message: /cannot be empty/,
       });
     });
 
     void test("should return 0 for non-existent ID", async () => {
-      const changes = await updateScientificName(99999, "Test");
+      const changes = await updateName("scientific", 99999, "Test");
       assert.strictEqual(changes, 0);
     });
 
@@ -330,7 +327,7 @@ void describe("Species Split Name Schema CRUD", () => {
       const otherName = names.find((n) => n.name_id !== testScientificNameId);
 
       await assert.rejects(
-        async () => await updateScientificName(testScientificNameId, otherName!.name),
+        async () => await updateName("scientific", testScientificNameId, otherName!.name),
         { message: /already exists/ }
       );
     });

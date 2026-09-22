@@ -73,6 +73,21 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
       assert.strictEqual(results[0].group_id, groupId);
     });
 
+    void test("a common Name comes with the Canonical name, not another scientific Name", async () => {
+      const groupId = await createSpecies({
+        programClass: "Anabantoids",
+        speciesType: "Fish",
+        canonicalGenus: "Typeaheadicus",
+        canonicalSpeciesName: "canonicus",
+      });
+      await addName(groupId, "common", "ZZTEST Paired Fish");
+      await addName(groupId, "scientific", "Aaaoldgenus canonicus");
+
+      const [result] = await searchSpeciesTypeahead("zztest paired");
+      assert.strictEqual(result.kind, "common");
+      assert.strictEqual(result.scientific_name, "Typeaheadicus canonicus");
+    });
+
     void test("should find species by scientific name", async () => {
       const groupId = await createSpecies({
         programClass: "Anabantoids",
@@ -85,7 +100,9 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
 
       const results = await searchSpeciesTypeahead("scientificus");
       assert.strictEqual(results.length, 1);
-      assert.strictEqual(results[0].common_name, "Typeaheadicus scientificus");
+      // No common Name to fill in beside it: nothing is invented
+      assert.strictEqual(results[0].kind, "scientific");
+      assert.strictEqual(results[0].common_name, "");
       assert.strictEqual(results[0].scientific_name, "ZZTEST scientificus");
       assert.strictEqual(results[0].group_id, groupId);
     });
@@ -141,8 +158,8 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
       assert.strictEqual(results.length, 2);
 
       // Should have one common name match and one scientific name match
-      const commonMatch = results.find((r) => r.common_name !== "");
-      const scientificMatch = results.find((r) => r.scientific_name !== "");
+      const commonMatch = results.find((r) => r.kind === "common");
+      const scientificMatch = results.find((r) => r.kind === "scientific");
 
       assert.ok(commonMatch);
       assert.ok(scientificMatch);

@@ -18,28 +18,6 @@ export function speciesIdOfSubmissionSql(alias: SubmissionAlias): string {
   )`;
 }
 
-export type SubmissionOfSpecies = {
-  id: number;
-  member_id: number | null;
-  species_common_name: string;
-  species_latin_name: string;
-  submitted_on: string | null;
-  approved_on: string | null;
-  points: number | null;
-};
-
-/** Every Submission, in any state, that references the Species. */
-export async function listSubmissionsOfSpecies(speciesId: number): Promise<SubmissionOfSpecies[]> {
-  return query<SubmissionOfSpecies>(
-    `SELECT s.id, s.member_id, s.species_common_name, s.species_latin_name,
-            s.submitted_on, s.approved_on, s.points
-     FROM submissions s
-     WHERE ${speciesIdOfSubmissionSql("s")} = ?
-     ORDER BY s.id`,
-    [speciesId]
-  );
-}
-
 /** How many Submissions reference the Species, and how many of those are approved. */
 export async function countSubmissionsOfSpecies(
   speciesId: number

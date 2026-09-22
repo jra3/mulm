@@ -5,7 +5,6 @@ import {
   getSpeciesDetail,
   getBreedersForSpecies,
   getExplorerFilterOptions,
-  listNames,
   type SpeciesFilters,
 } from "@/species";
 import { getCaresCoverageStats, getCaresMaintenersForSpecies } from "@/db/cares";
@@ -80,10 +79,9 @@ export async function detail(req: MulmRequest, res: Response) {
   }
 
   try {
-    const [speciesDetail, breeders, names, keepers] = await Promise.all([
+    const [speciesDetail, breeders, keepers] = await Promise.all([
       getSpeciesDetail(groupId),
       getBreedersForSpecies(groupId),
-      listNames(groupId),
       getSpeciesKeepers(groupId),
     ]);
 
@@ -107,8 +105,8 @@ export async function detail(req: MulmRequest, res: Response) {
       isLoggedIn,
       species: speciesDetail,
       breeders,
-      commonNames: names.common,
-      scientificNames: names.scientific,
+      commonNames: speciesDetail.names.common,
+      scientificNames: speciesDetail.names.scientific,
       displayName,
       totalBreeds: breeders.reduce((sum, breeder) => sum + breeder.breed_count, 0),
       totalBreeders: breeders.length,

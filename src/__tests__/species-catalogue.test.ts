@@ -14,8 +14,6 @@ import { createMember } from "../db/members";
 import {
   createSpecies,
   findSpeciesById,
-  findSpeciesByName,
-  findSpeciesByCanonicalName,
   resolveSpecies,
   listNames,
   addName,
@@ -26,12 +24,12 @@ import {
   updateSpecies,
   setPointClass,
   checkFormAgreement,
-  listSubmissionsOfSpecies,
+  findSpeciesIdOfSubmission,
+  countSubmissionsOfSpecies,
   isPointClass,
   CatalogueRefusal,
   ensureName,
   findSpeciesByIds,
-  findSpeciesIdOfSubmission,
   listSpeciesDueIucnSync,
   updateName,
   getSpeciesStatistics,
@@ -110,9 +108,8 @@ void describe("Species catalogue", () => {
         scientific: ["Oldgenus novella"],
       });
 
-      const byName = await findSpeciesByName("oldgenus NOVELLA");
       assert.deepStrictEqual(
-        byName.map((s) => s.group_id),
+        (await findNames("oldgenus NOVELLA")).map((n) => n.species_id),
         [id]
       );
       assert.strictEqual((await resolveSpecies({ latinName: "Oldgenus novella" }))?.species.group_id, id);
@@ -122,10 +119,10 @@ void describe("Species catalogue", () => {
       const id = await speciesWith({ genus: "Zorbia", epithet: "communis", common: ["Zorbish Tetra"] });
 
       assert.deepStrictEqual(
-        (await findSpeciesByName("zorbish tetra", "common")).map((s) => s.group_id),
+        (await findNames("zorbish tetra", "common")).map((n) => n.species_id),
         [id]
       );
-      assert.deepStrictEqual(await findSpeciesByName("zorbish tetra", "scientific"), []);
+      assert.deepStrictEqual(await findNames("zorbish tetra", "scientific"), []);
       const resolved = await resolveSpecies({ commonName: "Zorbish Tetra" });
       assert.strictEqual(resolved?.species.group_id, id);
       assert.strictEqual(resolved?.matchedBy, "common");
@@ -134,8 +131,7 @@ void describe("Species catalogue", () => {
     void test("finds a Species by Canonical name, even when it is not among its Names", async () => {
       const id = await speciesWith({ genus: "Zorbia", epithet: "canonica" });
 
-      assert.strictEqual((await findSpeciesByCanonicalName("zorbia Canonica"))?.group_id, id);
-      const resolved = await resolveSpecies({ latinName: "Zorbia canonica" });
+      const resolved = await resolveSpecies({ latinName: "zorbia Canonica" });
       assert.strictEqual(resolved?.species.group_id, id);
       assert.strictEqual(resolved?.matchedBy, "canonical");
     });
@@ -193,10 +189,7 @@ void describe("Species catalogue", () => {
         (await listNames(id)).common.map((n) => [n.name_id, n.name]),
         [[typo.name_id, "Typo Fish"]]
       );
-      assert.deepStrictEqual(
-        (await listSubmissionsOfSpecies(id)).map((s) => s.id),
-        [submission]
-      );
+      assert.strictEqual(await findSpeciesIdOfSubmission(submission), id);
       assert.strictEqual(await updateName("common", 987654, "Nothing"), 0);
     });
 
@@ -260,7 +253,7 @@ void describe("Species catalogue", () => {
         ["Old Fish"]
       );
       assert.strictEqual((await resolveSpecies({ latinName: "Oldus fishus" }))?.species.group_id, id);
-      assert.deepStrictEqual(await findSpeciesByName("Oldus fishus", "common"), []);
+      assert.deepStrictEqual(await findNames("Oldus fishus", "common"), []);
     });
 
     void test("does not duplicate an old Canonical name that is already a scientific Name", async () => {
@@ -325,16 +318,19 @@ void describe("Species catalogue", () => {
 
       await mergeSpecies(winner, loser);
 
-      const ofWinner = await listSubmissionsOfSpecies(winner);
-      assert.deepStrictEqual(
-        ofWinner.map((s) => s.id).sort(),
-        [viaDuplicateName, viaScientific, pending].sort()
-      );
-      const byId = new Map(ofWinner.map((s) => [s.id, s]));
-      assert.strictEqual(byId.get(viaDuplicateName)?.points, 15);
-      assert.strictEqual(byId.get(viaScientific)?.points, 20);
-      assert.ok(byId.get(viaDuplicateName)?.approved_on);
-      assert.strictEqual(byId.get(pending)?.approved_on, null);
+      for (const id of [viaDuplicateName, viaScientific, pending]) {
+        assert.strictEqual(await findSpeciesIdOfSubmission(id), winner);
+      }
+      assert.deepStrictEqual(await countSubmissionsOfSpecies(winner), { total: 3, approved: 2 });
+      const row = (id: number) =>
+        db.get<{ points: number | null; approved_on: string | null }>(
+          "SELECT points, approved_on FROM submissions WHERE id = ?",
+          [id]
+        );
+      assert.strictEqual((await row(viaDuplicateName))?.points, 15);
+      assert.strictEqual((await row(viaScientific))?.points, 20);
+      assert.ok((await row(viaDuplicateName))?.approved_on);
+      assert.strictEqual((await row(pending))?.approved_on, null);
     });
 
     void test("previewMerge says what mergeSpecies will do, and changes nothing", async () => {
@@ -382,7 +378,7 @@ void describe("Species catalogue", () => {
       const id = await speciesWith({ genus: "Goneus", epithet: "goneus", common: ["Gone"] });
       assert.strictEqual(await deleteSpecies(id), 1);
       assert.strictEqual(await findSpeciesById(id), undefined);
-      assert.deepStrictEqual(await findSpeciesByName("Gone"), []);
+      assert.deepStrictEqual(await findNames("Gone"), []);
     });
 
     void test("is refused when an approved Submission references the Species", async () => {

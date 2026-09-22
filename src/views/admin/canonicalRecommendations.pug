@@ -40,7 +40,7 @@ mixin recommendationRow(rec)
         .flex.gap-2
           button.primary.text-sm.px-3.py-1(
             hx-post=`/admin/species/canonical-recommendations/${rec.id}/accept`
-            hx-confirm="Accept this name change? The current name will be added as a synonym."
+            hx-confirm="Accept this name change? The current name will be kept as a scientific Name."
           ) Accept
           button.outline.text-sm.px-3.py-1(
             hx-post=`/admin/species/canonical-recommendations/${rec.id}/reject`
@@ -87,7 +87,7 @@ html
               h3.text-base.font-semibold.text-blue-800 About Taxonomic Name Recommendations
               p.text-sm.text-blue-700.mt-1
                 | These recommendations are automatically generated when IUCN Red List data shows a different scientific name than what's in our database.
-                | Accepting a recommendation will update the canonical name and preserve the old name as a synonym.
+                | Accepting a recommendation will update the canonical name and keep the old name as a scientific Name.
 
         //- Sync All IUCN Data Button
         .bg-amber-50.border-l-4.border-amber-400.p-4.mb-6.rounded-lg

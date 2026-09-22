@@ -15,7 +15,6 @@ adminRouter.post("/external-data/sync", externalData.triggerExternalDataSync);
 
 // Species management
 adminRouter.get("/species", speciesAdmin.listSpecies);
-adminRouter.get("/species/:id/synonyms", speciesAdmin.getSpeciesSynonyms);
 adminRouter.get("/species/:groupId/edit", speciesAdmin.editSpeciesSidebar);
 adminRouter.patch("/species/:groupId", speciesAdmin.updateSpecies);
 adminRouter.delete("/species/:groupId", speciesAdmin.deleteSpecies);

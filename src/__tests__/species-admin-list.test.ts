@@ -90,10 +90,10 @@ void describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
       assert.ok(typeof species.program_class === "string");
       assert.ok(species.base_points === null || typeof species.base_points === "number");
       assert.ok(typeof species.is_cares_species === "number");
-      assert.ok(typeof species.synonym_count === "number");
+      assert.ok(typeof species.name_count === "number");
     });
 
-    void test("should count synonyms correctly (split schema)", async () => {
+    void test("should count Names of both kinds", async () => {
       // Search for test species to ensure they're in results
       const result = await getSpeciesForAdmin({ search: "Testicus" });
 
@@ -104,19 +104,19 @@ void describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
       assert.ok(guppy && cichlid && plant, "All test species should be found");
       // Fish 1: 2 common + 1 scientific = 3 total
       assert.strictEqual(
-        guppy.synonym_count,
+        guppy.name_count,
         3,
         "Guppy should have 3 names (2 common + 1 scientific)"
       );
       // Fish 2: 1 common + 1 scientific = 2 total
       assert.strictEqual(
-        cichlid.synonym_count,
+        cichlid.name_count,
         2,
         "Cichlid should have 2 names (1 common + 1 scientific)"
       );
       // Plant: 3 common + 1 scientific = 4 total
       assert.strictEqual(
-        plant.synonym_count,
+        plant.name_count,
         4,
         "Plant should have 4 names (3 common + 1 scientific)"
       );
@@ -183,20 +183,20 @@ void describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
       assert.ok(found, "Should find guppyus by species name");
     });
 
-    void test("should search by synonym common name", async () => {
+    void test("should search by a common Name", async () => {
       const result = await getSpeciesForAdmin({ search: "Fancy Test Guppy" });
 
       assert.ok(result.species.length >= 1);
       const found = result.species.find((s) => s.canonical_species_name === "guppyus");
-      assert.ok(found, "Should find species by synonym common name");
+      assert.ok(found, "Should find species by a common Name");
     });
 
-    void test("should search by synonym scientific name", async () => {
+    void test("should search by a scientific Name", async () => {
       const result = await getSpeciesForAdmin({ search: "Testicus plantus" });
 
       assert.ok(result.species.length >= 1);
       const found = result.species.find((s) => s.canonical_species_name === "plantus");
-      assert.ok(found, "Should find species by synonym scientific name");
+      assert.ok(found, "Should find species by a scientific Name");
     });
 
     void test("should be case-insensitive in search", async () => {
@@ -338,8 +338,8 @@ void describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
   });
 
   void describe("Edge Cases", () => {
-    void test("should handle species with no synonyms", async () => {
-      // Create species without adding synonyms
+    void test("should handle species with no Names", async () => {
+      // Create species without adding Names
       await db.run(`
         INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name, base_points, is_cares_species)
         VALUES ('Killifish', 'Fish', 'Orphanus', 'nonames', 5, 0)
@@ -348,8 +348,8 @@ void describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
       const result = await getSpeciesForAdmin({ search: "Orphanus" });
 
       const found = result.species.find((s) => s.canonical_genus === "Orphanus");
-      assert.ok(found, "Should find species without synonyms");
-      assert.strictEqual(found?.synonym_count, 0, "Synonym count should be 0");
+      assert.ok(found, "Should find species without Names");
+      assert.strictEqual(found?.name_count, 0, "Name count should be 0");
     });
 
     void test("should return empty result when no species match filters", async () => {
@@ -386,16 +386,16 @@ void describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
       assert.strictEqual(groupIds.length, uniqueGroupIds.size, "No duplicate group_ids");
     });
 
-    void test("should return species even when search matches multiple synonyms", async () => {
-      // Plant has 3 synonyms, all containing "Test"
+    void test("should return species once when search matches several Names", async () => {
+      // Plant has 3 Names, all containing "Test"
       const result = await getSpeciesForAdmin({ search: "Test" });
 
-      // Should only return species once, not once per matching synonym
+      // Should only return species once, not once per matching Name
       const plantMatches = result.species.filter((s) => s.canonical_species_name === "plantus");
       assert.strictEqual(
         plantMatches.length,
         1,
-        "Should return species only once even with multiple synonym matches"
+        "Should return species only once even with several matching Names"
       );
     });
 
@@ -423,8 +423,8 @@ void describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
       assert.ok(result.species.length > 0);
       assert.ok(result.total_count > 0);
 
-      // Verify synonym_count is populated (not requiring separate query per species)
-      assert.ok(result.species.every((s) => typeof s.synonym_count === "number"));
+      // Verify name_count is populated (not requiring separate query per species)
+      assert.ok(result.species.every((s) => typeof s.name_count === "number"));
     });
   });
 

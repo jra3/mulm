@@ -150,7 +150,7 @@ test.describe("BAP Form - Field Linking", () => {
 		// Verify common name updates to new species
 		const commonName = await getTomSelectValue(page, "species_common_name");
 		expect(commonName).toBeTruthy();
-		// The API might return the scientific name as the common name if no common name exists
+		// Picking a scientific Name fills in the Species' first common Name
 		expect(commonName!.toLowerCase()).toMatch(/(platy|xiphophorus)/);
 
 		// Verify hidden ID updated to new species

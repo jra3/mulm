@@ -176,8 +176,8 @@ void describe("Pug Template Rendering", () => {
       iucn_population_trend: "Stable",
       iucn_last_updated: new Date().toISOString(),
       iucn_redlist_id: 12345,
-      synonym_count: 2,
-      synonyms: [],
+      name_count: 2,
+      names: { common: [], scientific: [] },
       external_references: null,
       image_links: null,
     },
@@ -248,13 +248,6 @@ void describe("Pug Template Rendering", () => {
       { name_id: 1, species_id: 1, kind: "scientific", name: "Scientificus name1" },
       { name_id: 2, species_id: 1, kind: "scientific", name: "Scientificus name2" },
     ],
-
-    // Synonym for legacy synonym row
-    synonym: {
-      name_id: 1,
-      common_name: "Legacy Common",
-      scientific_name: "Legacy scientificus",
-    },
 
     // Note data for submission notes
     note: {
@@ -918,6 +911,7 @@ void describe("Pug Template Rendering", () => {
       assert.match(html, /hx-target="#species-delete-refusal"/);
       assert.match(html, /hx-target="#species-edit-refusal"/);
       assert.match(html, /id="species-edit-refusal"/);
+      assert.match(html, /all its Names/);
       assert.match(html, /id="species-delete-refusal"/);
       assert.doesNotMatch(html, /force/);
     });
@@ -930,16 +924,6 @@ void describe("Pug Template Rendering", () => {
       const scientificRow = render("admin/scientificNameRow.pug", { name: scientific[0], groupId: 3 });
       assert.match(scientificRow, /Pelvicachromis pulcher/);
       assert.match(scientificRow, /\/admin\/species\/3\/scientific-names\/22/);
-    });
-
-    void test("the admin hovercard lists Names by kind", () => {
-      const html = render("admin/speciesSynonymsHovercard.pug", {
-        commonNames: common,
-        scientificNames: scientific,
-      });
-      assert.match(html, /Common Names/);
-      assert.match(html, /<li>Kribensis<\/li>/);
-      assert.match(html, /<li>Pelvicachromis pulcher<\/li>/);
     });
 
     void test("the merge dialog counts the loser's Names by kind", () => {

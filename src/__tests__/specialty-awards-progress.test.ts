@@ -9,7 +9,7 @@ import { Database, open } from "sqlite";
 import sqlite3 from "sqlite3";
 import { overrideConnection } from "../db/conn";
 import { getSpecialtyAwardProgress } from "../db/members";
-import { createSpeciesGroup, addCommonName, addScientificName } from "../db/species";
+import { createSpecies, addName } from "@/species";
 
 void describe("Specialty Awards Progress Calculation", () => {
   let db: Database;
@@ -37,39 +37,39 @@ void describe("Specialty Awards Progress Calculation", () => {
     memberId = memberResult.lastID as number;
 
     // Create test species groups with unique names
-    anabantoidSpeciesId = await createSpeciesGroup({
+    anabantoidSpeciesId = await createSpecies({
       programClass: "Anabantoids",
       speciesType: "Fish",
       canonicalGenus: "Betta",
       canonicalSpeciesName: `splendens${timestamp}`,
-      basePoints: 5,
+      pointClass: 5,
     });
 
-    catfishCorydorasId = await createSpeciesGroup({
+    catfishCorydorasId = await createSpecies({
       programClass: "Catfish & Loaches",
       speciesType: "Fish",
       canonicalGenus: "Corydoras",
       canonicalSpeciesName: `paleatus${timestamp}`,
-      basePoints: 5,
+      pointClass: 5,
     });
 
-    catfishNonCorydorasId = await createSpeciesGroup({
+    catfishNonCorydorasId = await createSpecies({
       programClass: "Catfish & Loaches",
       speciesType: "Fish",
       canonicalGenus: "Ancistrus",
       canonicalSpeciesName: `sp${timestamp}`,
-      basePoints: 10,
+      pointClass: 10,
     });
 
     // Add names to species groups
-    await addCommonName(anabantoidSpeciesId, "Betta splendens", "Siamese Fighting Fish");
-    await addScientificName(anabantoidSpeciesId, "Betta splendens");
+    await addName(anabantoidSpeciesId, "common", "Betta splendens");
+    await addName(anabantoidSpeciesId, "scientific", "Betta splendens");
 
-    await addCommonName(catfishCorydorasId, "Corydoras paleatus", "Peppered Cory");
-    await addScientificName(catfishCorydorasId, "Corydoras paleatus");
+    await addName(catfishCorydorasId, "common", "Corydoras paleatus");
+    await addName(catfishCorydorasId, "scientific", "Corydoras paleatus");
 
-    await addCommonName(catfishNonCorydorasId, "Ancistrus sp.", "Bristlenose Pleco");
-    await addScientificName(catfishNonCorydorasId, "Ancistrus sp.");
+    await addName(catfishNonCorydorasId, "common", "Ancistrus sp.");
+    await addName(catfishNonCorydorasId, "scientific", "Ancistrus sp.");
   });
 
   afterEach(async () => {
@@ -192,16 +192,16 @@ void describe("Specialty Awards Progress Calculation", () => {
 
     // Add 3 more unique Corydoras species to reach 5 total
     for (let i = 2; i <= 4; i++) {
-      const newCorydorasId = await createSpeciesGroup({
+      const newCorydorasId = await createSpecies({
         programClass: "Catfish & Loaches",
         speciesType: "Fish",
         canonicalGenus: "Corydoras",
         canonicalSpeciesName: `species${i}`,
-        basePoints: 5,
+        pointClass: 5,
       });
 
-      await addCommonName(newCorydorasId, `Corydoras species${i}`, `Cory ${i}`);
-      await addScientificName(newCorydorasId, `Corydoras species${i}`);
+      await addName(newCorydorasId, "common", `Corydoras species${i}`);
+      await addName(newCorydorasId, "scientific", `Corydoras species${i}`);
 
       const newCommonName = await db.get(
         "SELECT common_name_id FROM species_common_name WHERE group_id = ?",

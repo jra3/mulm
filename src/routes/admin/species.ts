@@ -103,33 +103,6 @@ export const listSpecies = async (req: MulmRequest, res: Response) => {
 };
 
 /**
- * GET /admin/species/:id/synonyms
- * Returns HTML fragment with synonyms for hovercard
- */
-export const getSpeciesSynonyms = async (req: MulmRequest, res: Response) => {
-  const { viewer } = req;
-
-  if (!viewer?.is_admin) {
-    res.status(403).send("Admin access required");
-    return;
-  }
-
-  const groupId = parseInt(req.params.id, 10);
-  if (isNaN(groupId)) {
-    res.status(400).send("Invalid species ID");
-    return;
-  }
-
-  const names = await catalogue.listNames(groupId);
-
-  // Render the hovercard content
-  res.render("admin/speciesSynonymsHovercard", {
-    commonNames: names.common,
-    scientificNames: names.scientific,
-  });
-};
-
-/**
  * GET /admin/species/:groupId/edit
  * Render edit sidebar for species (HTMX partial)
  */
@@ -154,7 +127,7 @@ export const editSpeciesSidebar = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const names = await catalogue.listNames(groupId);
+  const names = speciesDetail.names;
 
   // Get class options for this species type
   const classOptions = speciesTypesAndClasses[speciesDetail.species_type || "Fish"] || [];
@@ -498,7 +471,7 @@ export const mergeSpeciesDialog = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const defunctNames = await catalogue.listNames(groupId);
+  const defunctNames = defunctSpecies.names;
 
   res.render("admin/mergeSpeciesDialog", {
     defunctSpecies,
@@ -714,7 +687,7 @@ export const bulkSyncIucn = async (req: MulmRequest, res: Response) => {
     let successCount = 0;
     let notFoundCount = 0;
     let errorCount = 0;
-    let synonymsFound = 0;
+    let nameDifferencesFound = 0;
 
     // Sync each species
     for (const species of speciesData) {
@@ -737,7 +710,7 @@ export const bulkSyncIucn = async (req: MulmRequest, res: Response) => {
           });
           successCount++;
 
-          // Check for synonym/name mismatch
+          // Check whether IUCN knows the Species under a different name
           const genusDiffers = result.genus.toLowerCase() !== species.canonical_genus.toLowerCase();
           const speciesDiffers =
             result.scientific_name.split(" ")[1]?.toLowerCase() !==
@@ -760,7 +733,7 @@ export const bulkSyncIucn = async (req: MulmRequest, res: Response) => {
                   ? "IUCN accepted name differs (genus changed)"
                   : "IUCN accepted name differs (species epithet changed)",
               });
-              synonymsFound++;
+              nameDifferencesFound++;
             } catch (err) {
               // Ignore duplicate recommendations
               if (!(err instanceof Error && err.message.includes("already exists"))) {
@@ -789,9 +762,9 @@ export const bulkSyncIucn = async (req: MulmRequest, res: Response) => {
     }
 
     // Return success message as HTML with auto-reload
-    const synonymMessage =
-      synonymsFound > 0
-        ? ` <span class="text-amber-700 font-medium">${synonymsFound} name difference(s) detected - recommendations created for review.</span>`
+    const nameDifferenceMessage =
+      nameDifferencesFound > 0
+        ? ` <span class="text-amber-700 font-medium">${nameDifferencesFound} name difference(s) detected - recommendations created for review.</span>`
         : "";
     const resultHtml = `
       <div class="bg-green-50 border-l-4 border-green-400 p-4 mb-4 rounded-lg">
@@ -802,7 +775,7 @@ export const bulkSyncIucn = async (req: MulmRequest, res: Response) => {
           <div>
             <h3 class="text-base font-semibold text-green-800">IUCN Sync Complete</h3>
             <p class="text-sm text-green-700 mt-1">
-              Processed ${groupIds.length} species: ${successCount} successful, ${notFoundCount} not found, ${errorCount} errors.${synonymMessage}
+              Processed ${groupIds.length} species: ${successCount} successful, ${notFoundCount} not found, ${errorCount} errors.${nameDifferenceMessage}
             </p>
           </div>
         </div>

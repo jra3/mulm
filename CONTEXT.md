@@ -140,7 +140,7 @@ _Avoid_: season, award year, fiscal year
 ### Species
 
 **Species**:
-The organism a Submission is about, as one identity that outlives its names: taxonomy moves fish between genera, so a Species is a stable id with a set of **Names** attached, one of which is its **Canonical name**. Color variations are not separate Species; a different Latin name is. Points may be earned only once per Species per Member. Source of truth: `src/db/species.ts`.
+The organism a Submission is about, as one identity that outlives its names: taxonomy moves fish between genera, so a Species is a stable id with a set of **Names** attached, one of which is its **Canonical name**. Color variations are not separate Species; a different Latin name is. Points may be earned only once per Species per Member. Source of truth: the Species catalogue, `src/species/` (`@/species`).
 _Avoid_: fish, variety, breed, strain, species group, name group, group (when you mean the Species)
 
 **Name**:

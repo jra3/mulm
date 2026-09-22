@@ -10,7 +10,7 @@ import assert from "node:assert";
 import { Database, open } from "sqlite";
 import sqlite3 from "sqlite3";
 import { overrideConnection } from "../db/conn";
-import { createSpeciesGroup, addCommonName, addScientificName } from "../db/species";
+import { createSpecies, addName } from "@/species";
 import { checkAndGrantSpecialtyAwards } from "../specialtyAwardManager";
 
 void describe("SpecialtyAwardManager - Split Schema", () => {
@@ -29,12 +29,12 @@ void describe("SpecialtyAwardManager - Split Schema", () => {
     overrideConnection(db);
 
     // Create test species group
-    testGroupId = await createSpeciesGroup({
+    testGroupId = await createSpecies({
       programClass: "Anabantoids",
       speciesType: "Fish",
       canonicalGenus: "Testgenus",
       canonicalSpeciesName: "testspecies",
-      basePoints: 10,
+      pointClass: 10,
     });
 
     // Create test member
@@ -53,7 +53,7 @@ void describe("SpecialtyAwardManager - Split Schema", () => {
 
   void describe("getSubmissionsWithGenus - Common name FK", () => {
     void test("should get canonical_genus via common_name_id", async () => {
-      const commonNameId = await addCommonName(testGroupId, "Common Test Fish");
+      const commonNameId = await addName(testGroupId, "common", "Common Test Fish");
 
       await db.run(
         `
@@ -75,7 +75,7 @@ void describe("SpecialtyAwardManager - Split Schema", () => {
 
   void describe("getSubmissionsWithGenus - Scientific name FK", () => {
     void test("should get canonical_genus via scientific_name_id", async () => {
-      const scientificNameId = await addScientificName(testGroupId, "Testgenus testspecies");
+      const scientificNameId = await addName(testGroupId, "scientific", "Testgenus testspecies");
 
       await db.run(
         `
@@ -97,11 +97,8 @@ void describe("SpecialtyAwardManager - Split Schema", () => {
 
   void describe("Mixed FK scenarios", () => {
     void test("should handle submissions with different FK types", async () => {
-      const commonNameId = await addCommonName(testGroupId, "Common Fish");
-      const scientificNameId = await addScientificName(
-        testGroupId,
-        "Testgenus testspecies var. blue"
-      );
+      const commonNameId = await addName(testGroupId, "common", "Common Fish");
+      const scientificNameId = await addName(testGroupId, "scientific", "Testgenus testspecies var. blue");
 
       // Two submissions with different FK types
       await db.run(
@@ -135,7 +132,7 @@ void describe("SpecialtyAwardManager - Split Schema", () => {
 
   void describe("Filtering", () => {
     void test("should only include approved submissions", async () => {
-      const commonNameId = await addCommonName(testGroupId, "Test Fish");
+      const commonNameId = await addName(testGroupId, "common", "Test Fish");
 
       // Draft submission (not approved)
       await db.run(
@@ -156,7 +153,7 @@ void describe("SpecialtyAwardManager - Split Schema", () => {
     });
 
     void test("should only include submissions that are submitted", async () => {
-      const commonNameId = await addCommonName(testGroupId, "Test Fish");
+      const commonNameId = await addName(testGroupId, "common", "Test Fish");
 
       // Unsubmitted submission
       await db.run(
