@@ -42,9 +42,12 @@ void describe("Species merge with duplicate synonyms", () => {
         scientific_name_id INTEGER PRIMARY KEY AUTOINCREMENT,
         group_id INTEGER NOT NULL,
         scientific_name TEXT NOT NULL,
+        is_canonical INTEGER NOT NULL DEFAULT 0,
         UNIQUE(group_id, scientific_name),
         FOREIGN KEY (group_id) REFERENCES species_name_group(group_id) ON DELETE CASCADE
       );
+      CREATE UNIQUE INDEX idx_species_scientific_name_canonical
+        ON species_scientific_name (group_id) WHERE is_canonical = 1;
 
       CREATE TABLE submissions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -77,12 +80,16 @@ void describe("Species merge with duplicate synonyms", () => {
     // Group 100 names
     await db.run("INSERT INTO species_common_name (group_id, common_name) VALUES (100, 'Blue Danio')");
     await db.run("INSERT INTO species_common_name (group_id, common_name) VALUES (100, 'Kerr''s danio')");
-    await db.run("INSERT INTO species_scientific_name (group_id, scientific_name) VALUES (100, 'Danio kerri')");
+    await db.run(
+      "INSERT INTO species_scientific_name (group_id, scientific_name, is_canonical) VALUES (100, 'Danio kerri', 1)"
+    );
 
     // Group 101 names (has duplicates with different case)
     await db.run("INSERT INTO species_common_name (group_id, common_name) VALUES (101, 'Blue danio')"); // duplicate (different case)
     await db.run("INSERT INTO species_common_name (group_id, common_name) VALUES (101, 'Turquoise danio')"); // unique
-    await db.run("INSERT INTO species_scientific_name (group_id, scientific_name) VALUES (101, 'Danio kerri')"); // duplicate
+    await db.run(
+      "INSERT INTO species_scientific_name (group_id, scientific_name, is_canonical) VALUES (101, 'Danio Kerri', 1)"
+    ); // the loser's Canonical name, the winner's in another case
 
     // Create submission referencing group 101
     const name101 = await db.get<{ common_name_id: number }>(
@@ -140,7 +147,12 @@ void describe("Species merge with duplicate synonyms", () => {
 
     await db.run("INSERT INTO species_common_name (group_id, common_name) VALUES (200, 'Guppy')");
     await db.run("INSERT INTO species_common_name (group_id, common_name) VALUES (201, 'Super Cross Guppy')");
-    await db.run("INSERT INTO species_scientific_name (group_id, scientific_name) VALUES (200, 'Poecilia reticulata')");
+    await db.run(
+      "INSERT INTO species_scientific_name (group_id, scientific_name, is_canonical) VALUES (200, 'Poecilia reticulata', 1)"
+    );
+    await db.run(
+      "INSERT INTO species_scientific_name (group_id, scientific_name, is_canonical) VALUES (201, 'Poecillia Reticulata', 1)"
+    );
     await db.run("INSERT INTO species_scientific_name (group_id, scientific_name) VALUES (201, 'Poecilia reticulata')"); // This will be a duplicate
 
     // Execute merge: 201 -> 200
@@ -160,12 +172,15 @@ void describe("Species merge with duplicate synonyms", () => {
       "Should have both unique common names"
     );
 
-    const scientificNames = await db.all<Array<{ scientific_name: string }>>(
-      "SELECT scientific_name FROM species_scientific_name WHERE group_id = 200 ORDER BY scientific_name"
+    const scientificNames = await db.all<Array<{ scientific_name: string; is_canonical: number }>>(
+      "SELECT scientific_name, is_canonical FROM species_scientific_name WHERE group_id = 200 ORDER BY scientific_name"
     );
     assert.deepStrictEqual(
-      scientificNames.map((n) => n.scientific_name),
-      ["Poecilia reticulata", "Poecillia Reticulata"],
+      scientificNames.map((n) => [n.scientific_name, n.is_canonical]),
+      [
+        ["Poecilia reticulata", 1],
+        ["Poecillia Reticulata", 0],
+      ],
       "Duplicate merged; the loser's Canonical name kept as a scientific Name"
     );
   });

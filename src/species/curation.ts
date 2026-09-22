@@ -39,7 +39,7 @@ export type NewSpecies = {
 };
 
 /**
- * Create a Species.
+ * Create a Species, with its Canonical name as its one flagged scientific Name.
  * @returns the new Species' id
  * @throws CatalogueRefusal on empty or invalid fields, a Point class outside
  *   the tally keys, or a Canonical name another Species already has
@@ -52,34 +52,21 @@ export async function createSpecies(data: NewSpecies): Promise<number> {
   const speciesType = admitSpeciesType(data.speciesType);
   const pointClass = admitPointClass(data.pointClass ?? null);
 
+  let speciesId: number;
   try {
-    const stmt = await writeConn.prepare(`
-      INSERT INTO species_name_group (
-        program_class, species_type, canonical_genus, canonical_species_name,
-        base_points, is_cares_species
-      ) VALUES (?, ?, ?, ?, ?, ?)
-      RETURNING group_id
-    `);
-    try {
-      const row = await stmt.get<{ group_id: number }>(
-        programClass,
-        speciesType,
-        genus,
-        epithet,
-        pointClass,
-        data.isCaresSpecies ? 1 : 0
+    speciesId = await withTransaction(async (db) => {
+      const row = await db.get<{ group_id: number }>(
+        `INSERT INTO species_name_group (
+          program_class, species_type, canonical_genus, canonical_species_name,
+          base_points, is_cares_species
+        ) VALUES (?, ?, ?, ?, ?, ?)
+        RETURNING group_id`,
+        [programClass, speciesType, genus, epithet, pointClass, data.isCaresSpecies ? 1 : 0]
       );
       if (!row) throw new Error("Failed to create species");
-      logger.info("Created species", {
-        speciesId: row.group_id,
-        canonicalName: name,
-        speciesType,
-        programClass,
-      });
+      await insertCanonicalName(db, row.group_id, name);
       return row.group_id;
-    } finally {
-      await stmt.finalize();
-    }
+    });
   } catch (err) {
     if (isUniqueViolation(err)) {
       throw new CatalogueRefusal(`Species "${name}" already exists`, "duplicate");
@@ -87,6 +74,8 @@ export async function createSpecies(data: NewSpecies): Promise<number> {
     logger.error("Failed to create species", err);
     throw new Error("Failed to create species");
   }
+  logger.info("Created species", { speciesId, canonicalName: name, speciesType, programClass });
+  return speciesId;
 }
 
 export type SpeciesUpdate = {
@@ -170,22 +159,74 @@ export async function setPointClass(speciesIds: number[], pointClass: number | n
   }
 }
 
-/** Add `text` as a scientific Name of the Species unless it already has it (any case). */
-async function ensureScientificName(db: Database, speciesId: number, text: string) {
-  const t = nameTable.scientific;
-  const existing = await db.get<{ name_id: number }>(
-    `SELECT ${t.id} AS name_id FROM ${t.table} WHERE group_id = ? AND LOWER(${t.text}) = LOWER(?)`,
+const scientific = nameTable.scientific;
+
+/** Add `text` as the Species' flagged scientific Name. */
+async function insertCanonicalName(db: Database, speciesId: number, text: string) {
+  await db.run(
+    `INSERT INTO ${scientific.table} (group_id, ${scientific.text}, ${scientific.canonical}) VALUES (?, ?, 1)`,
     [speciesId, text]
   );
-  if (!existing) {
-    await db.run(`INSERT INTO ${t.table} (group_id, ${t.text}) VALUES (?, ?)`, [speciesId, text]);
-  }
 }
 
 /**
- * Change a Species' Canonical name. The previous Canonical name stays findable
- * as a scientific Name of the Species - never a common Name (ADR-0002). A
- * change of case only is a spelling fix and keeps no old name.
+ * Fold one Name into another of the same kind: Submissions referencing it are
+ * repointed to the other, and it goes.
+ */
+async function foldName(db: Database, kind: NameKind, fromId: number, intoId: number) {
+  const t = nameTable[kind];
+  await db.run(`UPDATE submissions SET ${t.id} = ? WHERE ${t.id} = ?`, [intoId, fromId]);
+  await db.run(`DELETE FROM ${t.table} WHERE ${t.id} = ?`, [fromId]);
+}
+
+type NameText = { name_id: number; name: string };
+
+/**
+ * Move the Canonical flag to `next`, inside a rename's transaction. The
+ * Species' scientific Name with that text becomes the flagged one - exact
+ * spelling first, else one differing only in case, whose spelling is
+ * corrected - or `next` is added. The previously flagged Name stays as an
+ * unflagged scientific Name, unless it differs from `next` only in case: a
+ * spelling fix keeps nothing, so it folds into the new one.
+ */
+async function moveCanonicalFlag(db: Database, speciesId: number, next: string) {
+  const flagged = await db.get<NameText>(
+    `SELECT ${scientific.id} AS name_id, ${scientific.text} AS name FROM ${scientific.table}
+     WHERE group_id = ? AND ${scientific.canonical} = 1`,
+    [speciesId]
+  );
+  const target = await db.get<NameText>(
+    `SELECT ${scientific.id} AS name_id, ${scientific.text} AS name FROM ${scientific.table}
+     WHERE group_id = ? AND LOWER(${scientific.text}) = LOWER(?)
+     ORDER BY ${scientific.text} = ? DESC, ${scientific.canonical} DESC, ${scientific.id}
+     LIMIT 1`,
+    [speciesId, next, next]
+  );
+
+  if (flagged && flagged.name_id !== target?.name_id) {
+    await db.run(`UPDATE ${scientific.table} SET ${scientific.canonical} = 0 WHERE ${scientific.id} = ?`, [
+      flagged.name_id,
+    ]);
+    if (target && flagged.name.toLowerCase() === next.toLowerCase()) {
+      await foldName(db, "scientific", flagged.name_id, target.name_id);
+    }
+  }
+  if (!target) {
+    await insertCanonicalName(db, speciesId, next);
+    return;
+  }
+  await db.run(
+    `UPDATE ${scientific.table} SET ${scientific.text} = ?, ${scientific.canonical} = 1 WHERE ${scientific.id} = ?`,
+    [next, target.name_id]
+  );
+}
+
+/**
+ * Change a Species' Canonical name: the flag moves to the new name's
+ * scientific Name (added, or one the Species already has) and the cached
+ * genus and epithet follow. The previous Canonical name stays findable as an
+ * unflagged scientific Name of the Species - never a common Name (ADR-0002).
+ * A change of case only is a spelling fix and keeps no old name.
  *
  * `alongside` runs in the same transaction, for a caller whose own record of
  * the rename must commit or roll back with it (accepting an IUCN
@@ -216,9 +257,7 @@ export async function renameCanonical(
           `UPDATE species_name_group SET canonical_genus = ?, canonical_species_name = ? WHERE group_id = ?`,
           [newGenus, newEpithet, speciesId]
         );
-        if (previous.toLowerCase() !== next.toLowerCase()) {
-          await ensureScientificName(db, speciesId, previous);
-        }
+        await moveCanonicalFlag(db, speciesId, next);
       }
       if (alongside) await alongside(db);
     });
@@ -234,8 +273,8 @@ export async function renameCanonical(
 
 /**
  * Move one kind of the loser's Names to the winner. A Name the winner already
- * has (any case) is not duplicated: the loser's Submissions are repointed to
- * the winner's copy and the loser's row goes.
+ * has (any case) is not duplicated: it folds into the winner's copy. The
+ * caller clears the loser's Canonical flag first, or the index refuses the move.
  */
 async function moveNames(db: Database, kind: NameKind, winnerId: number, loserId: number) {
   const t = nameTable[kind];
@@ -251,11 +290,7 @@ async function moveNames(db: Database, kind: NameKind, winnerId: number, loserId
       [winnerId, name.name, name.name]
     );
     if (winnerCopy) {
-      await db.run(`UPDATE submissions SET ${t.id} = ? WHERE ${t.id} = ?`, [
-        winnerCopy.name_id,
-        name.name_id,
-      ]);
-      await db.run(`DELETE FROM ${t.table} WHERE ${t.id} = ?`, [name.name_id]);
+      await foldName(db, kind, name.name_id, winnerCopy.name_id);
     } else {
       await db.run(`UPDATE ${t.table} SET group_id = ? WHERE ${t.id} = ?`, [
         winnerId,
@@ -272,7 +307,10 @@ export type MergePreview = {
   moving: Record<NameKind, string[]>;
   /** The loser's Names the winner already has (any case), by kind: these fold into the winner's. */
   folding: Record<NameKind, string[]>;
-  /** Whether the loser's Canonical name will be added to the winner as a scientific Name. */
+  /**
+   * Whether the loser's Canonical name moves to the winner as a new
+   * (unflagged) scientific Name; false when the winner already has it.
+   */
   keepsLoserCanonicalName: boolean;
   /** Submissions of the loser, which follow their Names to the winner. */
   submissions: { total: number; approved: number };
@@ -305,25 +343,22 @@ export async function previewMerge(winnerId: number, loserId: number): Promise<M
   }
 
   const loserCanonical = canonicalName(loser);
-  const scientificAfter = new Set(
-    [...winnerNames.scientific, ...loserNames.scientific].map((n) => n.name.toLowerCase())
-  );
   return {
     winnerCanonicalName: canonicalName(winner),
     loserCanonicalName: loserCanonical,
     moving,
     folding,
-    keepsLoserCanonicalName:
-      loserCanonical.toLowerCase() !== canonicalName(winner).toLowerCase() &&
-      !scientificAfter.has(loserCanonical.toLowerCase()),
+    // The loser's flagged Name has exactly the cache's text, so it is among
+    // `moving` unless the winner already has it in some case.
+    keepsLoserCanonicalName: moving.scientific.includes(loserCanonical),
     submissions,
   };
 }
 
 /**
  * Merge the loser into the winner: every Name of the loser moves to the
- * winner, deduplicated; the loser's Canonical name becomes a scientific Name of
- * the winner; the loser's Submissions follow their Names to the winner, so
+ * winner, deduplicated without regard to case; the winner keeps its Canonical
+ * name, and the loser's comes along as an unflagged scientific Name; the loser's Submissions follow their Names to the winner, so
  * approved Submissions and their Points are untouched; then the loser is
  * deleted.
  * @throws CatalogueRefusal if either Species is missing or they are the same
@@ -338,13 +373,13 @@ export async function mergeSpecies(winnerId: number, loserId: number): Promise<v
 
   try {
     await withTransaction(async (db) => {
+      // The winner keeps its Canonical name; the loser's moves as a plain scientific Name.
+      await db.run(
+        `UPDATE ${scientific.table} SET ${scientific.canonical} = 0 WHERE group_id = ?`,
+        [loserId]
+      );
       await moveNames(db, "common", winnerId, loserId);
       await moveNames(db, "scientific", winnerId, loserId);
-
-      const loserCanonical = canonicalName(loser);
-      if (loserCanonical.toLowerCase() !== canonicalName(winner).toLowerCase()) {
-        await ensureScientificName(db, winnerId, loserCanonical);
-      }
 
       await db.run("DELETE FROM species_name_group WHERE group_id = ?", [loserId]);
     });

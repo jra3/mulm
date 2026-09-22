@@ -22,12 +22,12 @@ the module's own business.
 | File | What it holds |
 |---|---|
 | `index.ts` | The interface. Start here. |
-| `types.ts` | `Species` (the identity row), `Name` and `NameKind` (`common` \| `scientific`), `SpeciesNames` (Names by kind), `canonicalName()`, the Species types. |
+| `types.ts` | `Species` (the identity row), `Name` (with `canonical`, true for the one flagged scientific Name) and `NameKind` (`common` \| `scientific`), `SpeciesNames` (Names by kind), `canonicalName()`, the Species types. |
 | `pointClass.ts` | `PointClass`, typed from the Points tally keys in `src/programs.ts` (5, 10, 15, 20); `isPointClass` for forms, `admitPointClass` to refuse anything else. |
-| `errors.ts` | `CatalogueRefusal`, the one error the catalogue's rules throw, with a `code` callers match on (`not_found`, `invalid`, `duplicate`, `referenced`, `point_class`). Routes map it to a 4xx by code. |
-| `lookup.ts` | `findSpeciesById`, `findSpeciesByIds`, and `resolveSpecies`: a pair of spellings to one Species (Latin as a scientific Name, then common as a common Name, then Latin as the Canonical name). Imports bind by it. |
-| `names.ts` | Names by kind: `listNames`, `findNames` (by text across Species), `addName`, `updateName` (in place, id kept), `removeName` (one id or several), `ensureName` (find or add; used by approval until Submissions bind by id). `nameTable` maps a kind to its table for the module's own SQL. |
-| `curation.ts` | `createSpecies`, `updateSpecies` (Program class, Species type, Point class, CARES), `setPointClass` (bulk), `renameCanonical`, `previewMerge`, `mergeSpecies`, `deleteSpecies`. |
+| `errors.ts` | `CatalogueRefusal`, the one error the catalogue's rules throw, with a `code` callers match on (`not_found`, `invalid`, `duplicate`, `referenced`, `point_class`, `canonical`). Routes map it to a 4xx by code. |
+| `lookup.ts` | `findSpeciesById`, `findSpeciesByIds`, and `resolveSpecies`: a pair of spellings to one Species (Latin as a scientific Name, the Canonical name among them, then common as a common Name). Imports bind by it. |
+| `names.ts` | Names by kind: `listNames`, `findNames` (by text across Species), `addName`, `updateName` (in place, id kept), `removeName` (one id or several), `ensureName` (find or add; used by approval until Submissions bind by id). `updateName` and `removeName` refuse the Canonical name. `nameTable` maps a kind to its table for the module's own SQL. |
+| `curation.ts` | `createSpecies`, `updateSpecies` (Program class, Species type, Point class, CARES), `setPointClass` (bulk), `renameCanonical`, `previewMerge`, `mergeSpecies`, `deleteSpecies`. Create, rename and merge keep the Canonical flag and its cache. |
 | `agreement.ts` | `checkFormAgreement`: does a Submission's form (spellings, Species type, Program class) agree with a Species. Built for the binding tickets; see "Not yet called" below. |
 | `submissions.ts` | The Species-Submission relation, defined once as SQL (`speciesIdOfSubmissionSql`); `findSpeciesIdOfSubmission`; `countSubmissionsOfSpecies`. |
 | `sql.ts` | SQL fragments for other modules' queries: `speciesOfSubmissionJoinSql`, `speciesJoinSql`, `speciesFromSql`, `anyNameSql`. |
@@ -54,19 +54,29 @@ through fragments: they go through a catalogue function.
 
 ## Rules it holds
 
+- **The Canonical name** is one of the Species' scientific Names, flagged
+  `is_canonical` (ADR-0002). A partial unique index allows at most one flagged
+  Name per Species; the catalogue keeps at least one: create adds it, rename
+  moves it, merge keeps the winner's. `canonical_genus` /
+  `canonical_species_name` on the Species row cache its text and are written
+  only here, in the same transaction as the flag. `updateName` and
+  `removeName` refuse the flagged Name (code `canonical`): it changes only by
+  `renameCanonical`, which knows the genus/epithet split and keeps the old
+  name, where a Name edit would do neither.
 - **Point class** is 5, 10, 15, 20 or unset, on create, update and bulk set.
   Forms (`src/forms/pointClass.ts`) check first for a friendlier message; the
   catalogue refuses regardless.
-- **Rename** keeps the previous Canonical name as a scientific Name of the
-  Species if it is not one already, never as a common Name. A change of case
-  only is a spelling fix and keeps nothing. The admin edit form, MCP
-  `update_canonical_name` and IUCN recommendation accept all call
-  `renameCanonical`; accept passes `alongside` to mark the recommendation in
+- **Rename** moves the flag to the new name - a scientific Name the Species
+  already has (any case; its spelling is corrected), or a new one - and leaves
+  the previous Canonical name as an unflagged scientific Name, never a common
+  Name. A change of case only is a spelling fix and keeps nothing. The admin
+  edit form, MCP `update_canonical_name` and IUCN recommendation accept all
+  call `renameCanonical`; accept passes `alongside` to mark the recommendation in
   the same transaction.
 - **Merge** moves every Name of the loser to the winner, deduplicated without
-  regard to case, and keeps the loser's Canonical name as a scientific Name of
-  the winner. The loser's Submissions follow their Names, so approved
-  Submissions and their Points are untouched. `previewMerge` reports the same
+  regard to case. The winner keeps its flag; the loser's Canonical name comes
+  along as an unflagged scientific Name. The loser's Submissions follow their
+  Names, so approved Submissions and their Points are untouched. `previewMerge` reports the same
   plan without writing.
 - **Delete** is refused while any Submission, in any state, references the
   Species. There is no force: merge is the way out.
@@ -76,13 +86,12 @@ through fragments: they go through a catalogue function.
 
 ## The schema today, and what changes next
 
-- **Canonical name** is still the two columns `canonical_genus` /
-  `canonical_species_name` on `species_name_group`, and it need not be among
-  the scientific Names. #412 adds the `is_canonical` flag on the
-  scientific-name row (ADR-0002) and makes those columns a cache the catalogue
-  writes. When it lands, `renameCanonical`, `mergeSpecies` and `createSpecies`
-  move the flag, and `updateName` / `removeName` must refuse or reroute the
-  flagged row so the cache cannot drift.
+- **Canonical name** is the flagged scientific Name (migration 057,
+  ADR-0002), with `canonical_genus` / `canonical_species_name` as its cache on
+  `species_name_group`. Read models read the cache; lookup, typeahead, admin
+  search and form agreement find it as a scientific Name, with no separate
+  canonical step. Import-only scripts that insert a Species directly must
+  insert its flagged Name too (`scripts/setup-e2e-db.ts` does).
 - **Submissions reach their Species** through their two Name foreign keys
   (`common_name_id`, `scientific_name_id`). `speciesIdOfSubmissionSql` is the
   only place that knows it; #413 replaces it with `species_id` and every

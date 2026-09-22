@@ -506,9 +506,8 @@ export async function getSpeciesForAdmin(
 
   if (search && search.trim().length >= 2) {
     const searchPattern = `%${search.trim().toLowerCase()}%`;
+    // The Canonical name is a scientific Name, so the EXISTS below covers it.
     conditions.push(`AND (
-      LOWER(sng.canonical_genus) LIKE ? OR
-      LOWER(sng.canonical_species_name) LIKE ? OR
       EXISTS (
         SELECT 1 FROM species_common_name cn
         WHERE cn.group_id = sng.group_id AND LOWER(cn.common_name) LIKE ?
@@ -518,7 +517,7 @@ export async function getSpeciesForAdmin(
         WHERE sn.group_id = sng.group_id AND LOWER(sn.scientific_name) LIKE ?
       )
     )`);
-    params.push(searchPattern, searchPattern, searchPattern, searchPattern);
+    params.push(searchPattern, searchPattern);
   }
 
   // Build ORDER BY clause

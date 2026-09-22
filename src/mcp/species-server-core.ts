@@ -611,7 +611,7 @@ export function initializeSpeciesServer(server: Server): void {
         {
           name: "update_species_name",
           description:
-            "Corrects the text of one Name in place. The Name keeps its id, so Submissions referencing it still do.",
+            "Corrects the text of one Name in place. The Name keeps its id, so Submissions referencing it still do. Refused on a Species' Canonical name (a Name with canonical: true): use update_canonical_name.",
           inputSchema: {
             type: "object",
             properties: {
@@ -624,7 +624,8 @@ export function initializeSpeciesServer(server: Server): void {
         },
         {
           name: "remove_species_name",
-          description: "Removes one Name, common or scientific, from its Species",
+          description:
+            "Removes one Name, common or scientific, from its Species. Refused on the Species' Canonical name (a Name with canonical: true).",
           inputSchema: {
             type: "object",
             properties: {
@@ -651,7 +652,7 @@ export function initializeSpeciesServer(server: Server): void {
         {
           name: "bulk_remove_names",
           description:
-            "Removes Names of one kind, either every Name with a given text or a list of Name ids, in one transaction. Use preview to see what would be removed.",
+            "Removes Names of one kind, either every Name with a given text or a list of Name ids, in one transaction. Refused, removing nothing, if any of them is a Species' Canonical name. Use preview to see what would be removed.",
           inputSchema: {
             type: "object",
             properties: {

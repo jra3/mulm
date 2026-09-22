@@ -40,17 +40,17 @@ void describe("Species catalogue: create, classify, rename, delete, Point class"
     overrideConnection(db);
 
     // Create test species group
-    const result = await db.run(`
-      INSERT INTO species_name_group (
-        program_class, species_type, canonical_genus, canonical_species_name,
-        base_points, is_cares_species
-      ) VALUES ('Livebearers', 'Fish', 'Testicus', 'groupus', 10, 1)
-    `);
-    testGroupId = result.lastID as number;
+    testGroupId = await createSpecies({
+      programClass: "Livebearers",
+      speciesType: "Fish",
+      canonicalGenus: "Testicus",
+      canonicalSpeciesName: "groupus",
+      pointClass: 10,
+      isCaresSpecies: true,
+    });
 
-    // Add a common and scientific name
+    // A common Name; the scientific one is its Canonical name, "Testicus groupus"
     await addName(testGroupId, "common", "Test Fish");
-    await addName(testGroupId, "scientific", "Testicus groupus");
   });
 
   afterEach(async () => {
@@ -748,9 +748,13 @@ void describe("Species catalogue: create, classify, rename, delete, Point class"
         "common Names are preserved and gain nothing"
       );
       assert.deepStrictEqual(
-        afterNames.scientific.map((n) => n.name),
-        ["Testicus groupus", "Testicus oldname"],
-        "scientific Names are preserved; the old Canonical name was already one"
+        afterNames.scientific.map((n) => [n.name, n.canonical]),
+        [
+          ["Renamed newname", true],
+          ["Testicus groupus", false],
+          ["Testicus oldname", false],
+        ],
+        "scientific Names are preserved; the old Canonical name stays as one, unflagged"
       );
 
       // Verify names are still linked to the same group

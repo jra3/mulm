@@ -98,7 +98,7 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
 
       await addName(groupId, "scientific", "ZZTEST scientificus");
 
-      const results = await searchSpeciesTypeahead("scientificus");
+      const results = await searchSpeciesTypeahead("zztest scientificus");
       assert.strictEqual(results.length, 1);
       // No common Name to fill in beside it: nothing is invented
       assert.strictEqual(results[0].kind, "scientific");
@@ -433,8 +433,8 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
   });
 
   void describe("Edge cases", () => {
-    void test("should handle species with no names", async () => {
-      await createSpecies({
+    void test("finds a Species with no other Names by its Canonical name, inventing no common Name", async () => {
+      const groupId = await createSpecies({
         programClass: "Cichlids - New World",
         speciesType: "Fish",
         canonicalGenus: "Orphan",
@@ -442,7 +442,10 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
       });
 
       const results = await searchSpeciesTypeahead("orphan");
-      assert.strictEqual(results.length, 0);
+      assert.deepStrictEqual(
+        results.map((r) => [r.group_id, r.kind, r.scientific_name, r.common_name]),
+        [[groupId, "scientific", "Orphan species", ""]]
+      );
     });
 
     void test("should handle Unicode characters in search", async () => {

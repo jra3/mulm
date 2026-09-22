@@ -250,13 +250,17 @@ html
                     each name in scientificNames
                       .flex.items-center.gap-2.p-2.bg-gray-50.rounded.border.border-gray-200
                         .flex-1.font-medium.text-sm.italic= name.name
-                        button.destructive.text-xs.px-2.py-1(
-                          type="button"
-                          hx-delete=`/admin/species/${species.group_id}/scientific-names/${name.name_id}`
-                          hx-confirm="Delete this scientific name?"
-                          hx-target="closest .flex.items-center"
-                          hx-swap="outerHTML swap:0.5s"
-                        ) ×
+                        if name.canonical
+                          //- The Canonical name changes by renaming above, never by deleting it here
+                          span.text-xs.text-gray-500 Canonical
+                        else
+                          button.destructive.text-xs.px-2.py-1(
+                            type="button"
+                            hx-delete=`/admin/species/${species.group_id}/scientific-names/${name.name_id}`
+                            hx-confirm="Delete this scientific name?"
+                            hx-target="closest .flex.items-center"
+                            hx-swap="outerHTML swap:0.5s"
+                          ) ×
                   else
                     .flex.flex-col.items-center.gap-2.py-6.text-center
                       svg.w-8.h-8.text-gray-300(fill="none" stroke="currentColor" viewBox="0 0 24 24")

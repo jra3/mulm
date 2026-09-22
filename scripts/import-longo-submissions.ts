@@ -385,7 +385,9 @@ async function fixSpecies() {
     );
     logger.info("Fixed group 1627 (Microsorum pteropus): Primative Plants, 5pts");
 
-    // Fix Water sprite: Floating Plants -> Primitive Plants, add points, fix canonical
+    // Fix Water sprite: Floating Plants -> Primitive Plants, add points, fix canonical.
+    // Written before migration 057 (Canonical name as a flagged Name): rerun
+    // today, this must go through renameCanonical instead.
     await db.run(
       `UPDATE species_name_group
        SET program_class = 'Primative Plants', base_points = 10,

@@ -14,6 +14,7 @@ import {
   getBreedersForSpecies,
   createSpecies,
   addName,
+  ensureName,
 } from "@/species";
 
 void describe("getBreedersForSpecies - Split Schema", () => {
@@ -87,7 +88,7 @@ void describe("getBreedersForSpecies - Split Schema", () => {
 
   void describe("Scientific name FK", () => {
     void test("should find breeders via scientific_name_id", async () => {
-      const scientificNameId = await addName(testGroupId, "scientific", "Breederus testicus");
+      const scientificNameId = await ensureName(testGroupId, "scientific", "Breederus testicus");
 
       // Create submission using scientific_name FK
       await db.run(
@@ -112,7 +113,7 @@ void describe("getBreedersForSpecies - Split Schema", () => {
   void describe("Mixed FK scenarios", () => {
     void test("should find breeders with submissions via different FK types", async () => {
       const commonNameId = await addName(testGroupId, "common", "Common Name");
-      const scientificNameId = await addName(testGroupId, "scientific", "Scientific Name");
+      const scientificNameId = await ensureName(testGroupId, "scientific", "Scientific Name");
 
       // Member 1: common_name submission
       await db.run(

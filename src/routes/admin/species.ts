@@ -31,6 +31,7 @@ const refusalStatus: Record<RefusalCode, number> = {
   point_class: 400,
   duplicate: 409,
   referenced: 409,
+  canonical: 409,
 };
 
 /** The form field a refusal belongs to: a taken Canonical name is the genus field's. */
@@ -293,7 +294,9 @@ export const deleteScientificNameRoute = async (req: MulmRequest, res: Response)
 
     // Return empty response - HTMX will remove the element
     res.status(200).send("");
-  } catch {
+  } catch (err) {
+    if (sendRefusal(res, err)) return;
+    logger.error("Failed to delete scientific name", err);
     res.status(500).send("Failed to delete scientific name");
   }
 };

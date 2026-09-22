@@ -32,6 +32,11 @@ export type Name = {
   species_id: number;
   kind: NameKind;
   name: string;
+  /**
+   * Whether this is the Species' Canonical name: true for exactly one
+   * scientific Name of each Species (ADR-0002), never for a common Name.
+   */
+  canonical: boolean;
 };
 
 /** A Species' Names, by kind, each list alphabetical. */

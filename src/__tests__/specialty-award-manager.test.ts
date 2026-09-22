@@ -10,7 +10,7 @@ import assert from "node:assert";
 import { Database, open } from "sqlite";
 import sqlite3 from "sqlite3";
 import { overrideConnection } from "../db/conn";
-import { createSpecies, addName } from "@/species";
+import { createSpecies, addName, ensureName } from "@/species";
 import { checkAndGrantSpecialtyAwards } from "../specialtyAwardManager";
 
 void describe("SpecialtyAwardManager - Split Schema", () => {
@@ -75,7 +75,7 @@ void describe("SpecialtyAwardManager - Split Schema", () => {
 
   void describe("getSubmissionsWithGenus - Scientific name FK", () => {
     void test("should get canonical_genus via scientific_name_id", async () => {
-      const scientificNameId = await addName(testGroupId, "scientific", "Testgenus testspecies");
+      const scientificNameId = await ensureName(testGroupId, "scientific", "Testgenus testspecies");
 
       await db.run(
         `
@@ -98,7 +98,7 @@ void describe("SpecialtyAwardManager - Split Schema", () => {
   void describe("Mixed FK scenarios", () => {
     void test("should handle submissions with different FK types", async () => {
       const commonNameId = await addName(testGroupId, "common", "Common Fish");
-      const scientificNameId = await addName(testGroupId, "scientific", "Testgenus testspecies var. blue");
+      const scientificNameId = await ensureName(testGroupId, "scientific", "Testgenus testspecies var. blue");
 
       // Two submissions with different FK types
       await db.run(

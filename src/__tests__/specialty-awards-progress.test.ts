@@ -9,7 +9,7 @@ import { Database, open } from "sqlite";
 import sqlite3 from "sqlite3";
 import { overrideConnection } from "../db/conn";
 import { getSpecialtyAwardProgress } from "../db/members";
-import { createSpecies, addName } from "@/species";
+import { createSpecies, addName, ensureName } from "@/species";
 
 void describe("Specialty Awards Progress Calculation", () => {
   let db: Database;
@@ -63,13 +63,13 @@ void describe("Specialty Awards Progress Calculation", () => {
 
     // Add names to species groups
     await addName(anabantoidSpeciesId, "common", "Betta splendens");
-    await addName(anabantoidSpeciesId, "scientific", "Betta splendens");
+    await ensureName(anabantoidSpeciesId, "scientific", "Betta splendens");
 
     await addName(catfishCorydorasId, "common", "Corydoras paleatus");
-    await addName(catfishCorydorasId, "scientific", "Corydoras paleatus");
+    await ensureName(catfishCorydorasId, "scientific", "Corydoras paleatus");
 
     await addName(catfishNonCorydorasId, "common", "Ancistrus sp.");
-    await addName(catfishNonCorydorasId, "scientific", "Ancistrus sp.");
+    await ensureName(catfishNonCorydorasId, "scientific", "Ancistrus sp.");
   });
 
   afterEach(async () => {
@@ -201,7 +201,7 @@ void describe("Specialty Awards Progress Calculation", () => {
       });
 
       await addName(newCorydorasId, "common", `Corydoras species${i}`);
-      await addName(newCorydorasId, "scientific", `Corydoras species${i}`);
+      await ensureName(newCorydorasId, "scientific", `Corydoras species${i}`);
 
       const newCommonName = await db.get(
         "SELECT common_name_id FROM species_common_name WHERE group_id = ?",

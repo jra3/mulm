@@ -582,6 +582,18 @@ export async function createTestSpeciesName(
     throw new Error("Failed to create or find species name group");
   }
 
+  // Its Canonical name is its one flagged scientific Name (ADR-0002)
+  await db.run(
+    `
+    INSERT OR IGNORE INTO species_scientific_name (group_id, scientific_name, is_canonical)
+    SELECT ?, ?, 1
+    WHERE NOT EXISTS (
+      SELECT 1 FROM species_scientific_name WHERE group_id = ? AND is_canonical = 1
+    )
+  `,
+    [group.group_id, `${genus} ${species}`, group.group_id]
+  );
+
   // Create or get the common name
   await db.run(
     `

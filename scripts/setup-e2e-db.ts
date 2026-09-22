@@ -118,6 +118,14 @@ async function seedTestSpecies(db: any) {
 				species.group.species_type
 			);
 			groupId = result.lastID as number;
+
+			// Its Canonical name is its one flagged scientific Name (ADR-0002);
+			// Species that already existed got theirs from migration 057.
+			await db.run(
+				`INSERT INTO species_scientific_name (group_id, scientific_name, is_canonical) VALUES (?, ?, 1)`,
+				groupId,
+				`${species.group.canonical_genus} ${species.group.canonical_species_name}`
+			);
 		}
 
 		// Add common name variants (new schema has separate tables)

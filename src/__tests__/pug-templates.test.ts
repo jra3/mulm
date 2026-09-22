@@ -898,6 +898,24 @@ void describe("Pug Template Rendering", () => {
       assert.match(html, /\/admin\/species\/3\/scientific-names\/22/);
     });
 
+    void test("the edit page offers no delete for the Canonical name", () => {
+      const html = render("admin/speciesEdit.pug", {
+        species,
+        commonNames: common,
+        scientificNames: [
+          { ...scientific[0], canonical: true },
+          { name_id: 23, species_id: 3, kind: "scientific", name: "Pelmatochromis pulcher", canonical: false },
+        ],
+        classOptions: [],
+        speciesTypes: ["Fish"],
+        errors: new Map(),
+      });
+
+      assert.doesNotMatch(html, /\/admin\/species\/3\/scientific-names\/22/);
+      assert.match(html, /\/admin\/species\/3\/scientific-names\/23/);
+      assert.match(html, />Canonical</);
+    });
+
     void test("the edit page's save and delete each have a place for a refusal, and no force option", () => {
       const html = render("admin/speciesEdit.pug", {
         species,

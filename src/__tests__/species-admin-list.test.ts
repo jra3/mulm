@@ -10,7 +10,7 @@ import assert from "node:assert";
 import { Database, open } from "sqlite";
 import sqlite3 from "sqlite3";
 import { overrideConnection } from "../db/conn";
-import { getSpeciesForAdmin, addName } from "@/species";
+import { getSpeciesForAdmin, addName, createSpecies } from "@/species";
 
 void describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
   let db: Database;
@@ -31,34 +31,40 @@ void describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
 
     // Create test species with varying attributes
     // Fish 1: Livebearers, 10 points, CARES
-    const fish1 = await db.run(`
-      INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name, base_points, is_cares_species)
-      VALUES ('Livebearers', 'Fish', 'Testicus', 'guppyus', 10, 1)
-    `);
-    fishGroupId1 = fish1.lastID as number;
+    fishGroupId1 = await createSpecies({
+      programClass: "Livebearers",
+      speciesType: "Fish",
+      canonicalGenus: "Testicus",
+      canonicalSpeciesName: "guppyus",
+      pointClass: 10,
+      isCaresSpecies: true,
+    });
     await addName(fishGroupId1, "common", "Test Guppy");
     await addName(fishGroupId1, "common", "Fancy Test Guppy");
-    await addName(fishGroupId1, "scientific", "Testicus guppyus");
 
     // Fish 2: Cichlids, no points, not CARES
-    const fish2 = await db.run(`
-      INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name, base_points, is_cares_species)
-      VALUES ('Cichlids - New World', 'Fish', 'Testicus', 'cichlidus', NULL, 0)
-    `);
-    fishGroupId2 = fish2.lastID as number;
+    fishGroupId2 = await createSpecies({
+      programClass: "Cichlids - New World",
+      speciesType: "Fish",
+      canonicalGenus: "Testicus",
+      canonicalSpeciesName: "cichlidus",
+      pointClass: null,
+      isCaresSpecies: false,
+    });
     await addName(fishGroupId2, "common", "Test Cichlid");
-    await addName(fishGroupId2, "scientific", "Testicus cichlidus");
 
     // Plant: Cryptocoryne, 15 points, CARES
-    const plant = await db.run(`
-      INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name, base_points, is_cares_species)
-      VALUES ('Cryptocoryne', 'Plant', 'Testicus', 'plantus', 15, 1)
-    `);
-    plantGroupId = plant.lastID as number;
+    plantGroupId = await createSpecies({
+      programClass: "Cryptocoryne",
+      speciesType: "Plant",
+      canonicalGenus: "Testicus",
+      canonicalSpeciesName: "plantus",
+      pointClass: 15,
+      isCaresSpecies: true,
+    });
     await addName(plantGroupId, "common", "Test Crypt");
     await addName(plantGroupId, "common", "Test Plant");
     await addName(plantGroupId, "common", "Another Test Plant");
-    await addName(plantGroupId, "scientific", "Testicus plantus");
   });
 
   afterEach(async () => {
@@ -338,18 +344,21 @@ void describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
   });
 
   void describe("Edge Cases", () => {
-    void test("should handle species with no Names", async () => {
-      // Create species without adding Names
-      await db.run(`
-        INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name, base_points, is_cares_species)
-        VALUES ('Killifish', 'Fish', 'Orphanus', 'nonames', 5, 0)
-      `);
+    void test("finds a Species with only its Canonical name, by genus or epithet", async () => {
+      await createSpecies({
+        programClass: "Killifish",
+        speciesType: "Fish",
+        canonicalGenus: "Orphanus",
+        canonicalSpeciesName: "nonames",
+        pointClass: 5,
+      });
 
-      const result = await getSpeciesForAdmin({ search: "Orphanus" });
-
-      const found = result.species.find((s) => s.canonical_genus === "Orphanus");
-      assert.ok(found, "Should find species without Names");
-      assert.strictEqual(found?.name_count, 0, "Name count should be 0");
+      for (const search of ["Orphanus", "nonames", "hanus non"]) {
+        const result = await getSpeciesForAdmin({ search });
+        const found = result.species.find((s) => s.canonical_genus === "Orphanus");
+        assert.ok(found, `"${search}" finds it`);
+        assert.strictEqual(found?.name_count, 1, "its one Name is the Canonical name");
+      }
     });
 
     void test("should return empty result when no species match filters", async () => {
@@ -400,13 +409,14 @@ void describe("getSpeciesForAdmin - Admin Species List (Split Schema)", () => {
     });
 
     void test("should handle species with special characters in names", async () => {
-      const specialResult = await db.run(`
-        INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name, base_points, is_cares_species)
-        VALUES ('Characins', 'Fish', 'Spec-ial', 'char&acters', 20, 0)
-      `);
-      const specialGroupId = specialResult.lastID as number;
+      const specialGroupId = await createSpecies({
+        programClass: "Characins",
+        speciesType: "Fish",
+        canonicalGenus: "Spec-ial",
+        canonicalSpeciesName: "char&acters",
+        pointClass: 20,
+      });
       await addName(specialGroupId, "common", "Fish's Name");
-      await addName(specialGroupId, "scientific", "Spec-ial char&acters");
 
       const result = await getSpeciesForAdmin({ search: "Spec-ial" });
 

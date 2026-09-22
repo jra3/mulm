@@ -748,14 +748,18 @@ void describe("IUCN Database Operations", () => {
         const names = await listNames(id);
         return {
           common: names.common.map((n) => n.name),
-          scientific: names.scientific.map((n) => n.name.replace(epithet, "<epithet>")),
+          scientific: names.scientific.map((n) => [n.name.replace(epithet, "<epithet>"), n.canonical]),
         };
       };
       const iucnNames = await shape(viaIucn, "alpha");
       assert.deepStrictEqual(iucnNames, await shape(viaEditForm, "beta"));
       assert.deepStrictEqual(iucnNames, {
         common: ["Twin Fish"],
-        scientific: ["Twingenus <epithet>", "Twingenus <epithet> variant"],
+        scientific: [
+          ["Movedgenus <epithet>", true],
+          ["Twingenus <epithet>", false],
+          ["Twingenus <epithet> variant", false],
+        ],
       });
     });
 

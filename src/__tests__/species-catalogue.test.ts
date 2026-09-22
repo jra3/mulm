@@ -35,6 +35,7 @@ import {
   getSpeciesStatistics,
   previewMerge,
   findNames,
+  canonicalName,
 } from "@/species";
 
 let db: Database;
@@ -87,6 +88,22 @@ async function submissionOn(
   return result.lastID as number;
 }
 
+/**
+ * ADR-0002's invariant: exactly one scientific Name of the Species is flagged
+ * as its Canonical name, and its text is the cached genus and epithet.
+ */
+async function assertOneCanonicalName(speciesId: number) {
+  const species = await findSpeciesById(speciesId);
+  assert.ok(species, `Species ${speciesId} exists`);
+  const names = await listNames(speciesId);
+  assert.deepStrictEqual(
+    names.scientific.filter((n) => n.canonical).map((n) => n.name),
+    [canonicalName(species)],
+    `Species ${speciesId} has exactly one flagged Name, equal to its cache`
+  );
+  assert.ok(!names.common.some((n) => n.canonical), "no common Name is canonical");
+}
+
 void describe("Species catalogue", () => {
   beforeEach(async () => {
     db = await open({ filename: ":memory:", driver: sqlite3.Database });
@@ -128,20 +145,40 @@ void describe("Species catalogue", () => {
       assert.strictEqual(resolved?.matchedBy, "common");
     });
 
-    void test("finds a Species by Canonical name, even when it is not among its Names", async () => {
+    void test("finds a Species by its Canonical name, which is one of its scientific Names", async () => {
       const id = await speciesWith({ genus: "Zorbia", epithet: "canonica" });
 
       const resolved = await resolveSpecies({ latinName: "zorbia Canonica" });
       assert.strictEqual(resolved?.species.group_id, id);
-      assert.strictEqual(resolved?.matchedBy, "canonical");
+      assert.strictEqual(resolved?.matchedBy, "scientific");
+    });
+
+    void test("prefers the Species whose Canonical name it is over one that keeps it as an old Name", async () => {
+      const keeper = await speciesWith({ genus: "Aaaolder", epithet: "splitus", scientific: ["Zorbia splitus"] });
+      const holder = await speciesWith({ genus: "Zorbia", epithet: "splitus" });
+
+      assert.strictEqual((await resolveSpecies({ latinName: "Zorbia splitus" }))?.species.group_id, holder);
+      assert.notStrictEqual(keeper, holder);
+    });
+
+    void test("finds a Canonical name typed with doubled spaces", async () => {
+      const id = await speciesWith({ genus: "Spacius", epithet: "aeneus venezuelan" });
+      assert.strictEqual(
+        (await resolveSpecies({ latinName: " Spacius  aeneus   venezuelan " }))?.species.group_id,
+        id
+      );
+    });
+
+    void test("a Latin spelling that is a Canonical name wins over a common spelling of another Species", async () => {
+      const byCanonical = await speciesWith({ genus: "Zorbia", epithet: "latina" });
+      await speciesWith({ genus: "Zorbia", epithet: "vulgaris", common: ["Common Zorb"] });
+
+      const resolved = await resolveSpecies({ commonName: "Common Zorb", latinName: "Zorbia latina" });
+      assert.strictEqual(resolved?.species.group_id, byCanonical);
     });
 
     void test("prefers the Latin spelling over the common one", async () => {
-      const byLatin = await speciesWith({
-        genus: "Zorbia",
-        epithet: "prima",
-        scientific: ["Zorbia prima"],
-      });
+      const byLatin = await speciesWith({ genus: "Zorbia", epithet: "prima" });
       await speciesWith({ genus: "Zorbia", epithet: "secunda", common: ["Shared Zorb"] });
 
       const resolved = await resolveSpecies({ commonName: "Shared Zorb", latinName: "Zorbia prima" });
@@ -169,7 +206,7 @@ void describe("Species catalogue", () => {
       );
       assert.deepStrictEqual(
         names.scientific.map((n) => n.name),
-        ["Zorb zorb"]
+        ["Zorb zorb", "Zorbia nominata"]
       );
 
       assert.strictEqual(await removeName("common", common), 1);
@@ -245,8 +282,11 @@ void describe("Species catalogue", () => {
       assert.strictEqual(species?.canonical_genus, "Newus");
       const names = await listNames(id);
       assert.deepStrictEqual(
-        names.scientific.map((n) => n.name),
-        ["Oldus fishus"]
+        names.scientific.map((n) => [n.name, n.canonical]),
+        [
+          ["Newus fishus", true],
+          ["Oldus fishus", false],
+        ]
       );
       assert.deepStrictEqual(
         names.common.map((n) => n.name),
@@ -256,16 +296,22 @@ void describe("Species catalogue", () => {
       assert.deepStrictEqual(await findNames("Oldus fishus", "common"), []);
     });
 
-    void test("does not duplicate an old Canonical name that is already a scientific Name", async () => {
-      const id = await speciesWith({ genus: "Oldus", epithet: "twiceus", scientific: ["Oldus twiceus"] });
+    void test("keeps the old Canonical name's row and id, so its Submissions keep it", async () => {
+      const id = await speciesWith({ genus: "Oldus", epithet: "twiceus" });
+      const [old] = (await listNames(id)).scientific;
+      const submission = await submissionOn(id, { via: "scientific" });
 
       await renameCanonical(id, "Newus", "twiceus");
 
       const names = await listNames(id);
       assert.deepStrictEqual(
-        names.scientific.map((n) => n.name),
-        ["Oldus twiceus"]
+        names.scientific.map((n) => [n.name_id === old.name_id, n.name, n.canonical]),
+        [
+          [false, "Newus twiceus", true],
+          [true, "Oldus twiceus", false],
+        ]
       );
+      assert.strictEqual(await findSpeciesIdOfSubmission(submission), id);
     });
 
     void test("refuses a Canonical name another Species already has", async () => {
@@ -274,13 +320,176 @@ void describe("Species catalogue", () => {
 
       await assert.rejects(() => renameCanonical(id, "Takenus", "already"), /already exists/);
       assert.strictEqual((await findSpeciesById(id))?.canonical_genus, "Freeus");
-      assert.deepStrictEqual((await listNames(id)).scientific, []);
+      assert.deepStrictEqual(
+        (await listNames(id)).scientific.map((n) => [n.name, n.canonical]),
+        [["Freeus already", true]]
+      );
     });
 
     void test("renaming to the same Canonical name changes nothing", async () => {
       const id = await speciesWith({ genus: "Sameus", epithet: "sameus" });
+      const before = await listNames(id);
       await renameCanonical(id, "Sameus", "sameus");
-      assert.deepStrictEqual((await listNames(id)).scientific, []);
+      assert.deepStrictEqual(await listNames(id), before);
+    });
+  });
+
+  void describe("the Canonical name is a flagged scientific Name", () => {
+    void test("create adds it", async () => {
+      const id = await speciesWith({ genus: "Createus", epithet: "aeneus venezuelan" });
+      await assertOneCanonicalName(id);
+      assert.deepStrictEqual(
+        (await findNames("createus AENEUS venezuelan")).map((n) => [n.species_id, n.kind, n.canonical]),
+        [[id, "scientific", true]]
+      );
+    });
+
+    void test("rename moves it; each step leaves one flagged Name matching the cache", async () => {
+      const id = await speciesWith({
+        genus: "Firstus",
+        epithet: "movus",
+        scientific: ["Thirdus movus", "fourthus movus"],
+      });
+      const idOf = async (text: string) =>
+        (await listNames(id)).scientific.find((n) => n.name === text)?.name_id;
+      const third = await idOf("Thirdus movus");
+      const fourth = await idOf("fourthus movus");
+
+      // To a new name: added and flagged; the old stays, unflagged.
+      await renameCanonical(id, "Secondus", "movus");
+      await assertOneCanonicalName(id);
+
+      // To a Name the Species already has: that row is flagged, not duplicated.
+      await renameCanonical(id, "Thirdus", "movus");
+      await assertOneCanonicalName(id);
+      assert.strictEqual(await idOf("Thirdus movus"), third);
+
+      // To a Name it has in another case: that row is flagged and its spelling corrected.
+      await renameCanonical(id, "Fourthus", "movus");
+      await assertOneCanonicalName(id);
+      assert.strictEqual(await idOf("Fourthus movus"), fourth);
+
+      // A change of case only: corrected in place, keeping its id, and no old spelling is kept.
+      await renameCanonical(id, "Fourthus", "Movus");
+      await assertOneCanonicalName(id);
+      assert.strictEqual(await idOf("Fourthus Movus"), fourth);
+
+      assert.deepStrictEqual(
+        (await listNames(id)).scientific.map((n) => [n.name, n.canonical]),
+        [
+          ["Firstus movus", false],
+          ["Fourthus Movus", true],
+          ["Secondus movus", false],
+          ["Thirdus movus", false],
+        ]
+      );
+      assert.deepStrictEqual((await listNames(id)).common, []);
+    });
+
+    void test("a change of case to a spelling the Species already has folds the old one into it", async () => {
+      const id = await speciesWith({ genus: "Foldus", epithet: "Casus", scientific: ["Foldus casus"] });
+      const submission = await submissionOn(id, { via: "scientific" });
+      const [flagged] = (await listNames(id)).scientific.filter((n) => n.canonical);
+      await db.run("UPDATE submissions SET scientific_name_id = ? WHERE id = ?", [flagged.name_id, submission]);
+
+      await renameCanonical(id, "Foldus", "casus");
+
+      await assertOneCanonicalName(id);
+      const names = (await listNames(id)).scientific;
+      assert.deepStrictEqual(
+        names.map((n) => n.name),
+        ["Foldus casus"]
+      );
+      const row = await db.get<{ scientific_name_id: number }>(
+        "SELECT scientific_name_id FROM submissions WHERE id = ?",
+        [submission]
+      );
+      assert.strictEqual(row?.scientific_name_id, names[0].name_id);
+    });
+
+    void test("merge: the winner keeps its flag and the loser's comes along unflagged", async () => {
+      const winner = await speciesWith({ genus: "Winnerus", epithet: "flagus" });
+      const loser = await speciesWith({ genus: "Loserus", epithet: "flagus", scientific: ["Olderus flagus"] });
+
+      await mergeSpecies(winner, loser);
+
+      await assertOneCanonicalName(winner);
+      assert.deepStrictEqual(
+        (await listNames(winner)).scientific.map((n) => [n.name, n.canonical]),
+        [
+          ["Loserus flagus", false],
+          ["Olderus flagus", false],
+          ["Winnerus flagus", true],
+        ]
+      );
+    });
+
+    void test("merge folds a loser's Canonical name the winner already has, in any case", async () => {
+      const winner = await speciesWith({ genus: "Winnerus", epithet: "foldus", scientific: ["loserus foldus"] });
+      const loser = await speciesWith({ genus: "Loserus", epithet: "foldus" });
+      const submission = await submissionOn(loser, { via: "scientific", approved: true, points: 15 });
+
+      assert.strictEqual((await previewMerge(winner, loser)).keepsLoserCanonicalName, false);
+      await mergeSpecies(winner, loser);
+
+      await assertOneCanonicalName(winner);
+      assert.deepStrictEqual(
+        (await listNames(winner)).scientific.map((n) => [n.name, n.canonical]),
+        [
+          ["Winnerus foldus", true],
+          ["loserus foldus", false],
+        ]
+      );
+      assert.strictEqual(await findSpeciesIdOfSubmission(submission), winner);
+    });
+
+    void test("removeName refuses it, alone or in a batch, and removes nothing", async () => {
+      const id = await speciesWith({ genus: "Guardus", epithet: "removus", scientific: ["Olderus removus"] });
+      const names = (await listNames(id)).scientific;
+      const canonical = names.find((n) => n.canonical)!;
+      const other = names.find((n) => !n.canonical)!;
+
+      await assert.rejects(
+        () => removeName("scientific", canonical.name_id),
+        (err: unknown) => err instanceof CatalogueRefusal && err.code === "canonical"
+      );
+      await assert.rejects(() => removeName("scientific", [other.name_id, canonical.name_id]), CatalogueRefusal);
+      assert.strictEqual((await listNames(id)).scientific.length, 2);
+      await assertOneCanonicalName(id);
+
+      assert.strictEqual(await removeName("scientific", other.name_id), 1);
+    });
+
+    void test("updateName refuses it; renameCanonical is the way to change it", async () => {
+      const id = await speciesWith({ genus: "Guardus", epithet: "updatus", scientific: ["Olderus updatus"] });
+      const names = (await listNames(id)).scientific;
+      const canonical = names.find((n) => n.canonical)!;
+      const other = names.find((n) => !n.canonical)!;
+
+      await assert.rejects(
+        () => updateName("scientific", canonical.name_id, "Guardus Updatus"),
+        (err: unknown) => err instanceof CatalogueRefusal && err.code === "canonical"
+      );
+      await assertOneCanonicalName(id);
+      assert.strictEqual(await updateName("scientific", other.name_id, "Oldestus updatus"), 1);
+    });
+
+    void test("adding it again as a Name is refused as a duplicate", async () => {
+      const id = await speciesWith({ genus: "Twiceus", epithet: "addus" });
+      await assert.rejects(() => addName(id, "scientific", "Twiceus addus"), /already exists/);
+    });
+
+    void test("the database refuses a second flagged Name for a Species", async () => {
+      const id = await speciesWith({ genus: "Indexus", epithet: "secondus" });
+      await assert.rejects(
+        () =>
+          db.run(
+            "INSERT INTO species_scientific_name (group_id, scientific_name, is_canonical) VALUES (?, 'Otherus secondus', 1)",
+            [id]
+          ),
+        /UNIQUE constraint/
+      );
+      await assertOneCanonicalName(id);
     });
   });
 
@@ -294,8 +503,11 @@ void describe("Species catalogue", () => {
       assert.strictEqual(await findSpeciesById(loser), undefined);
       const names = await listNames(winner);
       assert.deepStrictEqual(
-        names.scientific.map((n) => n.name),
-        ["Loserus maximus"]
+        names.scientific.map((n) => [n.name, n.canonical]),
+        [
+          ["Loserus maximus", false],
+          ["Winnerus maximus", true],
+        ]
       );
       assert.deepStrictEqual(
         names.common.map((n) => n.name),
@@ -310,7 +522,6 @@ void describe("Species catalogue", () => {
         genus: "Loserus",
         epithet: "pointus",
         common: ["Pointy", "Other Pointy"],
-        scientific: ["Loserus pointus"],
       });
       const viaDuplicateName = await submissionOn(loser, { approved: true, points: 15 });
       const viaScientific = await submissionOn(loser, { approved: true, points: 20, via: "scientific" });
@@ -338,7 +549,6 @@ void describe("Species catalogue", () => {
         genus: "Winnerus",
         epithet: "previewus",
         common: ["Shared"],
-        scientific: ["Winnerus previewus"],
       });
       const loser = await speciesWith({
         genus: "Loserus",
@@ -348,7 +558,7 @@ void describe("Species catalogue", () => {
       await submissionOn(loser, { approved: true });
 
       const plan = await previewMerge(winner, loser);
-      assert.deepStrictEqual(plan.moving, { common: ["Only Loser"], scientific: [] });
+      assert.deepStrictEqual(plan.moving, { common: ["Only Loser"], scientific: ["Loserus previewus"] });
       assert.deepStrictEqual(plan.folding, { common: ["shared"], scientific: [] });
       assert.strictEqual(plan.keepsLoserCanonicalName, true);
       assert.deepStrictEqual(plan.submissions, { total: 1, approved: 1 });
@@ -389,7 +599,7 @@ void describe("Species catalogue", () => {
     });
 
     void test("is refused when an unapproved Submission references the Species", async () => {
-      const id = await speciesWith({ genus: "Keptus", epithet: "pendus", scientific: ["Keptus pendus"] });
+      const id = await speciesWith({ genus: "Keptus", epithet: "pendus" });
       await submissionOn(id, { via: "scientific" });
       await assert.rejects(() => deleteSpecies(id), /merge/i);
       assert.ok(await findSpeciesById(id));
@@ -453,7 +663,6 @@ void describe("Species catalogue", () => {
         genus: "Boundus",
         epithet: "boundus",
         common: ["Bound Fish"],
-        scientific: ["Boundus boundus"],
       });
       const viaCommon = await submissionOn(id);
       const viaScientific = await submissionOn(id, { via: "scientific" });
