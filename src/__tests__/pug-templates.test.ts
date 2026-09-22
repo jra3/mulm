@@ -921,6 +921,39 @@ void describe("Pug Template Rendering", () => {
       assert.match(html, /Bind a Species to approve for screening/);
     });
 
+    void test("mismatch: highlights the disagreeing type or class, offers to adopt the Species' values, and no confirmation", () => {
+      const html = render({
+        submission: { id: 42, species_type: "Fish", species_class: "Cichlids - New World" },
+        boundSpecies: bound,
+        boundSpeciesName: "Poecilia reticulata",
+        classificationMismatch: true,
+        classificationAgreement: { speciesType: true, programClass: false },
+        allowed: { confirmWitness: false, bindSpecies: true, adoptSpeciesClassification: true, requestChanges: true },
+      });
+
+      assert.match(html, /id="witness-mismatch"/);
+      assert.match(html, /<tr class="font-semibold"><td class="pr-4">Program class<\/td><td class="pr-4">Cichlids - New World<\/td><td>Livebearers<\/td>/);
+      assert.match(html, /<tr><td class="pr-4">Species type<\/td>/, "the agreeing row is not highlighted");
+      assert.match(html, /hx-post="\/admin\/submissions\/42\/adopt-species-classification"/);
+      assert.match(html, /Use the Species&#39; type and class|Use the Species' type and class/);
+      assert.doesNotMatch(html, /Approve for Screening/);
+      assert.match(html, /Resolve the mismatch to approve for screening/);
+      assert.match(html, /Request Changes/);
+    });
+
+    void test("no mismatch: nothing is highlighted and nothing offered to adopt", () => {
+      const html = render({
+        submission: { id: 42, species_type: "Fish", species_class: "Livebearers" },
+        boundSpecies: bound,
+        boundSpeciesName: "Poecilia reticulata",
+        classificationMismatch: false,
+        allowed: { confirmWitness: true, bindSpecies: true, adoptSpeciesClassification: true, requestChanges: true },
+      });
+      assert.doesNotMatch(html, /witness-mismatch/);
+      assert.doesNotMatch(html, /adopt-species-classification/);
+      assert.match(html, /Approve for Screening/);
+    });
+
     void test("without the bind move, no bind controls are offered", () => {
       const html = render({
         boundSpecies: bound,

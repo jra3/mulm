@@ -73,6 +73,7 @@ export {
   approve,
   correctPoints,
   bindSpecies,
+  adoptSpeciesClassification,
   deleteSubmission,
   supplementsFromForm,
   changesBetween,
@@ -98,6 +99,7 @@ export {
   AuthorizationError,
   StateError,
   UnboundError,
+  MismatchError,
   isLifecycleError,
 } from "./errors";
 

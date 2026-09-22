@@ -8,6 +8,8 @@
  *   AuthorizationError - the wrong person
  *   StateError         - the wrong moment
  *   UnboundError       - a move that needs a Species, on a Submission bound to none
+ *   MismatchError      - the Submission's Species type or Program class disagrees
+ *                        with its bound Species
  *
  * Every transition throws one of these and nothing else, so a route matches on
  * the class rather than on a message string.
@@ -64,6 +66,19 @@ export class UnboundError extends LifecycleError {
   constructor(message: string, action: string) {
     super(message, "UNBOUND", { action });
     this.name = "UnboundError";
+  }
+}
+
+/**
+ * Thrown when a move needs the Submission's Species type and Program class to
+ * agree with its bound Species', and they do not: a Corydoras cannot be
+ * witnessed as a Cichlid. The witness adopts the Species' values, rebinds, or
+ * requests changes.
+ */
+export class MismatchError extends LifecycleError {
+  constructor(message: string, action: string) {
+    super(message, "MISMATCH", { action });
+    this.name = "MismatchError";
   }
 }
 

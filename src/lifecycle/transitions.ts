@@ -5,6 +5,7 @@ import {
   deleteSubmissionRow,
   formToRow,
   getSubmissionById,
+  programOfSpeciesType,
   setSubmissionSupplements,
   Submission,
 } from "@/db/submissions";
@@ -15,7 +16,7 @@ import type { FormValues } from "@/forms/submission";
 import type { ApprovalFormValues } from "@/forms/approval";
 import type { Program } from "@/levelManager";
 import { isProgramType } from "@/programs";
-import { canonicalName, findSpeciesById } from "@/species";
+import { canonicalName, checkFormAgreement, findSpeciesById } from "@/species";
 import { logger } from "@/utils/logger";
 import { AuthorizationError, ValidationError, StateError } from "./errors";
 import { deriveState, hasChangesRequested } from "./state";
@@ -93,6 +94,13 @@ async function guard(
   const submission = await readForGuard(db, submissionId);
   const actor = actorFor(caller, submission);
 
+  // Asked of the catalogue only for a move that needs it. A bound Species
+  // the catalogue no longer has agrees with nothing.
+  const classificationAgrees =
+    move.requiresAgreeingClassification && submission.species_id != null
+      ? ((await checkFormAgreement(submission.species_id, submission))?.classificationAgrees ?? false)
+      : undefined;
+
   assertMoveIsLegal(move, {
     state: deriveState(submission),
     changesPending: hasChangesRequested(submission),
@@ -100,6 +108,7 @@ async function guard(
     actorId: caller.id,
     isOwner: submission.member_id === caller.id,
     bound: submission.species_id != null,
+    classificationAgrees,
   });
 
   return { submission, actor };
@@ -127,15 +136,39 @@ async function runUpdate(
   }
 }
 
-/** Write the form's content columns, leaving every lifecycle column alone. */
+/**
+ * A binding holds only while the Submission's spellings, Species type and
+ * Program class agree with the Species (CONTEXT.md, Bound): saving a form that
+ * no longer agrees clears it. A spelling agrees when it is blank or a Name of
+ * the Species (`checkFormAgreement`). Only member saves ask this; committee
+ * moves never unbind.
+ */
+async function bindingAfterSave(
+  submission: Pick<Submission, "species_id">,
+  form: FormValues
+): Promise<{ species_id?: null }> {
+  if (submission.species_id == null) return {};
+  const agreement = await checkFormAgreement(submission.species_id, form);
+  return agreement?.agrees ? {} : { species_id: null };
+}
+
+/**
+ * Write a member's form over the Submission's content columns, leaving every
+ * lifecycle column alone - except the binding, which the form may clear
+ * (`bindingAfterSave`).
+ */
 async function writeContent(
   db: Database,
-  submissionId: number,
-  memberId: number,
+  submission: Pick<Submission, "id" | "member_id" | "species_id">,
   form: FormValues,
   extra: Record<string, unknown> = {}
 ): Promise<void> {
-  const row = { ...formToRow(memberId, form), ...extra };
+  const submissionId = submission.id;
+  const row = {
+    ...formToRow(submission.member_id, form),
+    ...(await bindingAfterSave(submission, form)),
+    ...extra,
+  };
   const entries = Object.entries(row).filter(([, value]) => value !== undefined);
   const setClause = entries.map(([field]) => `${field} = ?`).join(", ");
 
@@ -170,6 +203,29 @@ async function voidWitness(db: Database, submissionId: number, move: MoveDefinit
      WHERE id = ? AND submitted_on IS NOT NULL AND approved_on IS NULL`,
     [submissionId],
     move
+  );
+}
+
+/**
+ * Put a committee change on the Submission's changelog: the structured
+ * `admin_edit` note the review page renders as field, old and new.
+ */
+async function recordAdminEdit(
+  submissionId: number,
+  caller: Caller,
+  changes: Change[],
+  reason: string
+): Promise<void> {
+  await addNote(
+    submissionId,
+    caller.id,
+    JSON.stringify({
+      type: "admin_edit",
+      changes,
+      reason,
+      timestamp: new Date().toISOString(),
+      admin_id: caller.id,
+    })
   );
 }
 
@@ -254,7 +310,7 @@ export async function saveDraft(
 ): Promise<void> {
   const memberId = await withTransaction(async (db) => {
     const { submission } = await guard(db, moves.saveDraft, caller, submissionId);
-    await writeContent(db, submissionId, submission.member_id, form);
+    await writeContent(db, submission, form);
     return submission.member_id;
   });
 
@@ -276,7 +332,7 @@ export async function submit(
   const memberId = await withTransaction(async (db) => {
     const { submission } = await guard(db, moves.submit, caller, submissionId);
 
-    await writeContent(db, submissionId, submission.member_id, form, {
+    await writeContent(db, submission, form, {
       // Submitting is the member's answer to a request for changes, so the
       // flag clears here: work arriving in a committee queue must never also
       // be marked as waiting on the member.
@@ -317,7 +373,7 @@ export async function saveChanges(
 ): Promise<void> {
   await withTransaction(async (db) => {
     const { submission } = await guard(db, moves.saveChanges, caller, submissionId);
-    await writeContent(db, submissionId, submission.member_id, form);
+    await writeContent(db, submission, form);
     await voidWitness(db, submissionId, moves.saveChanges);
   });
 
@@ -362,7 +418,7 @@ export async function resubmit(
 ): Promise<void> {
   await withTransaction(async (db) => {
     const { submission } = await guard(db, moves.resubmit, caller, submissionId);
-    await writeContent(db, submissionId, submission.member_id, form);
+    await writeContent(db, submission, form);
     await voidWitness(db, submissionId, moves.resubmit);
     await runUpdate(
       db,
@@ -456,19 +512,50 @@ export async function bindSpecies(caller: Caller, submissionId: number, speciesI
     old: previous ? canonicalName(previous) : null,
     new: canonicalName(species),
   };
-  await addNote(
-    submissionId,
-    caller.id,
-    JSON.stringify({
-      type: "admin_edit",
-      changes: [change],
-      reason: previousId == null ? "Bound to a Species" : "Rebound to another Species",
-      timestamp: new Date().toISOString(),
-      admin_id: caller.id,
-    })
-  );
+  await recordAdminEdit(submissionId, caller, [change], previousId == null ? "Bound to a Species" : "Rebound to another Species");
 
   logger.info("Submission bound to a Species", { submissionId, speciesId, previousId, by: caller.id });
+}
+
+/**
+ * Give the Submission its bound Species' Species type and Program class - the
+ * witness's one-click answer to a mismatch - and the Program that type
+ * belongs to.
+ *
+ * A committee move like `bindSpecies`: on the changelog, and it leaves a
+ * confirmed Witness in place. When the Submission already agrees it changes
+ * nothing and records nothing.
+ */
+export async function adoptSpeciesClassification(caller: Caller, submissionId: number): Promise<void> {
+  const changes = await withTransaction(async (db) => {
+    const { submission } = await guard(db, moves.adoptSpeciesClassification, caller, submissionId);
+    const species = await findSpeciesById(submission.species_id!);
+    if (!species) {
+      throw new ValidationError("The bound Species no longer exists", "species_id", submission.species_id);
+    }
+
+    const adopted = {
+      species_type: species.species_type,
+      species_class: species.program_class,
+      program: programOfSpeciesType(species.species_type),
+    };
+    const diff = changesBetween(submission, adopted);
+    if (diff.length === 0) return diff;
+
+    await runUpdate(
+      db,
+      `UPDATE submissions SET species_type = ?, species_class = ?, program = ?
+         WHERE id = ? AND approved_on IS NULL`,
+      [adopted.species_type, adopted.species_class, adopted.program, submissionId],
+      moves.adoptSpeciesClassification
+    );
+    return diff;
+  });
+  if (changes.length === 0) return;
+
+  await recordAdminEdit(submissionId, caller, changes, "Adopted the Species' type and class");
+
+  logger.info("Submission adopted its Species' classification", { submissionId, changes, by: caller.id });
 }
 
 /**
@@ -672,17 +759,7 @@ export async function correctPoints(
     return { memberId: before.member_id, changes: diff };
   });
 
-  await addNote(
-    submissionId,
-    caller.id,
-    JSON.stringify({
-      type: "admin_edit",
-      changes,
-      reason: trimmed,
-      timestamp: new Date().toISOString(),
-      admin_id: caller.id,
-    })
-  );
+  await recordAdminEdit(submissionId, caller, changes, trimmed);
 
   const [submission, member] = await Promise.all([getSubmissionById(submissionId), getMember(memberId)]);
   if (submission && member) {

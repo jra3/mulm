@@ -408,6 +408,25 @@ export const bindSpeciesAction = async (req: MulmRequest, res: Response) => {
   res.set("HX-Refresh", "true").send();
 };
 
+/**
+ * POST /admin/submissions/:id/adopt-species-classification
+ * The witness panel's one click on a mismatch: the Submission takes its bound
+ * Species' Species type and Program class, then the page reloads.
+ */
+export const adoptSpeciesClassificationAction = async (req: MulmRequest, res: Response) => {
+  const submission = await validateSubmission(req, res);
+  if (!submission) {
+    return;
+  }
+
+  const ran = await witnessPanelMove(req, res, submission.id, () =>
+    lifecycle.adoptSpeciesClassification(callerFor(req.viewer!), submission.id)
+  );
+  if (!ran) return;
+
+  res.set("HX-Refresh", "true").send();
+};
+
 export const inviteMember = async (req: MulmRequest, res: Response) => {
   const errors = new Map<string, string>();
   const renderDialog = () => {

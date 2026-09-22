@@ -6,7 +6,9 @@ import {
   ValidationError,
   approve,
   bindSpecies,
+  adoptSpeciesClassification,
   UnboundError,
+  MismatchError,
   type Change,
   confirmWitness,
   correctPoints,
@@ -32,6 +34,7 @@ import { createSpecies, listNames } from "@/species";
 import {
   mockApprovalData,
   mockSpeciesId,
+  ensureGuppySpecies,
   setupTestDatabase,
   teardownTestDatabase,
   type TestContext,
@@ -601,7 +604,7 @@ void describe("Submission lifecycle - transitions", () => {
       const id = await createSubmission(member, ctx.member.id, form, { submit: true });
       assert.strictEqual((await readSubmission(id))!.witness_verification_status, "pending");
 
-      await bindSpecies(committee, id, mockSpeciesId);
+      await bindSpecies(committee, id, await ensureGuppySpecies(ctx.db));
       await confirmWitness(committee, id);
       await requestChanges(committee, id, "Add a photo of the fry");
       assert.strictEqual(
@@ -693,10 +696,179 @@ void describe("Submission lifecycle - transitions", () => {
       assert.strictEqual(await refusal(() => bindSpecies(committee, draft, speciesId)), "state");
     });
 
+    void test("while changes are requested, neither binding nor adopting is the committee's to do", async () => {
+      const id = await at("pendingWitness");
+      await requestChanges(committee, id, "Check the Species");
+      const speciesId = await newSpecies("quintus");
+
+      assert.strictEqual(await refusal(() => bindSpecies(committee, id, speciesId)), "state");
+      assert.strictEqual(await refusal(() => adoptSpeciesClassification(committee, id)), "state");
+    });
+
     void test("binding to a Species that does not exist is refused", async () => {
       const id = await at("pendingWitness");
       assert.strictEqual(await refusal(() => bindSpecies(committee, id, 987654)), "validation");
-      assert.strictEqual((await readSubmission(id))!.species_id, mockSpeciesId);
+      assert.strictEqual((await readSubmission(id))!.species_id, await ensureGuppySpecies(ctx.db));
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Agreement with the Species (CONTEXT.md, Bound)
+  // -------------------------------------------------------------------------
+
+  void describe("Agreement with the Species", () => {
+    const speciesIdOf = async (id: number) => (await readSubmission(id))!.species_id;
+    const inRefusal = async (call: () => Promise<unknown>) => {
+      try {
+        await call();
+        return "allowed";
+      } catch (err) {
+        if (err instanceof MismatchError) return "mismatch";
+        if (err instanceof UnboundError) return "unbound";
+        throw err;
+      }
+    };
+
+    void test("saving a bound Submission with a changed Species type clears the binding", async () => {
+      const id = await at("pendingWitness");
+      assert.ok(await speciesIdOf(id));
+
+      await saveChanges(member, id, { ...(await formFor(id)), species_type: "Invert" });
+
+      assert.strictEqual(await speciesIdOf(id), null);
+    });
+
+    void test("a changed Program class, or a Latin spelling that is not a Name, clears it too", async () => {
+      const classChanged = await at("pendingWitness");
+      await saveChanges(member, classChanged, { ...(await formFor(classChanged)), species_class: "Killifish" });
+      assert.strictEqual(await speciesIdOf(classChanged), null);
+
+      const misspelled = await at("pendingWitness");
+      await saveChanges(member, misspelled, {
+        ...(await formFor(misspelled)),
+        species_latin_name: "Poecilia reticulatta",
+      });
+      assert.strictEqual(await speciesIdOf(misspelled), null, "a spelling-only disagreement is a disagreement");
+    });
+
+    void test("a save that still agrees keeps the binding", async () => {
+      const id = await at("pendingWitness");
+      const bound = await speciesIdOf(id);
+
+      // Names match whatever the case, and a blank spelling agrees
+      await saveChanges(member, id, {
+        ...(await formFor(id)),
+        species_common_name: "GUPPY",
+        species_latin_name: "poecilia reticulata",
+        count: "35",
+      });
+      assert.strictEqual(await speciesIdOf(id), bound);
+    });
+
+    void test("every member save applies it: Save Draft, Submit and Resubmit as well", async () => {
+      const disagreeing = (f: FormValues): FormValues => ({ ...f, species_type: "Invert" });
+
+      const draft = await at("draft");
+      await ctx.db.run("UPDATE submissions SET species_id = ? WHERE id = ?", [await ensureGuppySpecies(ctx.db), draft]);
+      await saveDraft(member, draft, disagreeing(await formFor(draft)));
+      assert.strictEqual(await speciesIdOf(draft), null, "Save Draft");
+
+      const toSubmit = await at("draft");
+      await ctx.db.run("UPDATE submissions SET species_id = ? WHERE id = ?", [
+        await ensureGuppySpecies(ctx.db),
+        toSubmit,
+      ]);
+      await submit(member, toSubmit, disagreeing(await formFor(toSubmit)));
+      assert.strictEqual(await speciesIdOf(toSubmit), null, "Submit");
+
+      const asked = await at("pendingWitness");
+      await requestChanges(committee, asked, "Check the type");
+      assert.ok(await speciesIdOf(asked), "a committee move never unbinds");
+      await resubmit(member, asked, disagreeing(await formFor(asked)));
+      assert.strictEqual(await speciesIdOf(asked), null, "Resubmit");
+    });
+
+    void test("confirming is refused on a Program class mismatch, with its own refusal", async () => {
+      const id = await submissionInState(ctx.db, "pendingWitness", {
+        memberId: ctx.member.id,
+        speciesClass: "Cichlids - New World",
+      });
+
+      assert.strictEqual(await inRefusal(() => confirmWitness(committee, id)), "mismatch");
+      await assert.rejects(
+        () => confirmWitness(committee, id),
+        (err: unknown) => err instanceof MismatchError && !(err instanceof StateError)
+      );
+      assert.strictEqual(await stateOf(id), "pendingWitness");
+    });
+
+    void test("a spelling that is not a Name does not block confirming", async () => {
+      const id = await submissionInState(ctx.db, "pendingWitness", {
+        memberId: ctx.member.id,
+        latinName: "Poecilia reticulatta",
+        commonName: "Millions fish",
+      });
+
+      await confirmWitness(committee, id);
+      assert.strictEqual((await readSubmission(id))!.witness_verification_status, "confirmed");
+    });
+
+    void test("adopting the Species' values sets the type, class and Program, clears the mismatch, and is on the changelog", async () => {
+      const id = await submissionInState(ctx.db, "pendingWitness", {
+        memberId: ctx.member.id,
+        speciesType: "Invert",
+        speciesClass: "Shrimp",
+      });
+      assert.strictEqual(await inRefusal(() => confirmWitness(committee, id)), "mismatch");
+
+      await adoptSpeciesClassification(committee, id);
+
+      const after = (await readSubmission(id))!;
+      assert.deepStrictEqual([after.species_type, after.species_class, after.program], [
+        "Fish",
+        "Livebearers",
+        "fish",
+      ]);
+      const notes = await query<{ note_text: string }>(
+        "SELECT note_text FROM submission_notes WHERE submission_id = ?",
+        [id]
+      );
+      assert.deepStrictEqual(
+        (JSON.parse(notes[0].note_text) as { changes: Change[] }).changes.map((c) => [c.field, c.old, c.new]),
+        [
+          ["species_type", "Invert", "Fish"],
+          ["species_class", "Shrimp", "Livebearers"],
+        ]
+      );
+
+      await adoptSpeciesClassification(committee, id);
+      assert.strictEqual(
+        (await query("SELECT id FROM submission_notes WHERE submission_id = ?", [id])).length,
+        1,
+        "adopting values it already has records nothing"
+      );
+
+      await confirmWitness(committee, id);
+      assert.strictEqual((await readSubmission(id))!.witness_verification_status, "confirmed");
+    });
+
+    void test("adopting keeps a confirmed Witness, and is the committee's move on someone else's bound Submission", async () => {
+      const witnessed = await submissionInState(ctx.db, "waitingPeriod", {
+        memberId: ctx.member.id,
+        witnessedBy: ctx.admin.id,
+        speciesClass: "Killifish",
+      });
+      await adoptSpeciesClassification(committee, witnessed);
+      assert.strictEqual((await readSubmission(witnessed))!.witness_verification_status, "confirmed");
+
+      assert.strictEqual(await refusal(() => adoptSpeciesClassification(member, witnessed)), "authorization");
+      const own = await submissionInState(ctx.db, "pendingWitness", { memberId: ctx.admin.id });
+      assert.strictEqual(await refusal(() => adoptSpeciesClassification(committee, own)), "authorization");
+      const unbound = await submissionInState(ctx.db, "pendingWitness", {
+        memberId: ctx.member.id,
+        speciesId: null,
+      });
+      assert.strictEqual(await inRefusal(() => adoptSpeciesClassification(committee, unbound)), "unbound");
     });
   });
 

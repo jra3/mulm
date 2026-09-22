@@ -7,6 +7,12 @@
 //- @param submission   - the Submission (id, species_type)
 //- @param boundSpecies - the Species it is bound to, or null
 //- @param boundSpeciesName - its Canonical name, when bound
+//- @param classificationMismatch - whether the Submission's Species type or
+//-   Program class disagrees with the bound Species'. The Witness cannot be
+//-   confirmed until the witness adopts the Species' values, rebinds, or the
+//-   member corrects it.
+//- @param classificationAgreement - { speciesType, programClass }: which of
+//-   the two agree, when bound
 //- @param allowed      - the moves this viewer may make
 
 .status-panel.status-panel-admin#witnessPanel
@@ -22,6 +28,30 @@
                     |
                     span.italic#witness-bound-species= boundSpeciesName
                     span.text-sm.text-gray-600= ` (${boundSpecies.species_type}, ${boundSpecies.program_class})`
+
+                if classificationMismatch
+                    .bg-red-50.border.border-red-300.rounded.p-3.mt-2#witness-mismatch(role="alert")
+                        p.text-red-800.font-semibold The Submission's Species type or Program class disagrees with this Species
+                        table.text-sm.text-red-800.mt-1
+                            tr
+                                th.text-left.pr-4
+                                th.text-left.pr-4 Submission
+                                th.text-left Species
+                            tr(class=classificationAgreement.speciesType ? "" : "font-semibold")
+                                td.pr-4 Species type
+                                td.pr-4= submission.species_type
+                                td= boundSpecies.species_type
+                            tr(class=classificationAgreement.programClass ? "" : "font-semibold")
+                                td.pr-4 Program class
+                                td.pr-4= submission.species_class
+                                td= boundSpecies.program_class
+                        if allowed.adoptSpeciesClassification
+                            form.mt-2(
+                                hx-post=`/admin/submissions/${submission.id}/adopt-species-classification`
+                                hx-disabled-elt="find button"
+                            )
+                                button.primary.text-sm(type="submit") Use the Species' type and class
+                        p.text-sm.text-red-700.mt-1 Or rebind to the right Species, or request changes if the Submission itself is wrong.
             else
                 p.text-gray-900.font-semibold Not bound to a Species yet
                 p.text-sm.text-gray-600.mb-2 Find it in the catalogue, or create it if it is not there. The witness cannot be confirmed until the Submission is bound.
@@ -62,6 +92,8 @@
                     button.primary(type="submit") Approve for Screening
             else if !boundSpecies
                 p.text-white.text-sm.self-center Bind a Species to approve for screening
+            else if classificationMismatch
+                p.text-white.text-sm.self-center Resolve the mismatch to approve for screening
 
             if allowed.requestChanges
                 button.destructive(

@@ -77,6 +77,10 @@ adminRouter.post("/members/:memberId/send-welcome", admin.sendWelcomeEmail);
 adminRouter.post("/members/invite", admin.inviteMember);
 
 adminRouter.post("/submissions/:id/bind-species", admin.bindSpeciesAction);
+adminRouter.post(
+  "/submissions/:id/adopt-species-classification",
+  admin.adoptSpeciesClassificationAction
+);
 adminRouter.post("/submissions/:id/confirm-witness", admin.confirmWitnessAction);
 adminRouter.post("/submissions/:id/request-changes", admin.sendRequestChanges);
 adminRouter.post("/submissions/:id/notes", admin.addSubmissionNote);

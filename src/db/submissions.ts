@@ -122,6 +122,22 @@ export type QueueSubmission = Submission & {
   witnessed_by_name?: string | null;
 };
 
+/** The Program a Species type belongs to: Fish and Invert are the fish Program. */
+export function programOfSpeciesType(speciesType: string): "fish" | "plant" | "coral" {
+  switch (speciesType) {
+    case "Fish":
+    case "Invert":
+      return "fish";
+    case "Plant":
+      return "plant";
+    case "Coral":
+      return "coral";
+    default:
+      logger.warn("Unknown species type", speciesType);
+      throw new Error("Unknown species type");
+  }
+}
+
 /**
  * The form-to-database mapper: a Submission's *contents*, as columns.
  *
@@ -132,22 +148,7 @@ export type QueueSubmission = Submission & {
  * inspection.
  */
 export function formToRow(memberId: number, form: FormValues): SubmissionRow {
-  const program = (() => {
-    switch (form.species_type) {
-      case "Fish":
-      case "Invert":
-        return "fish";
-      case "Plant":
-        return "plant";
-      case "Coral":
-        return "coral";
-      case undefined:
-        return undefined;
-      default:
-        logger.warn("Unknown species type", form.species_type);
-        throw new Error("Unknown species type");
-    }
-  })();
+  const program = form.species_type === undefined ? undefined : programOfSpeciesType(form.species_type);
 
   const arrayToJSON = (formField: unknown) => {
     if (Array.isArray(formField)) {

@@ -25,7 +25,7 @@ import {
   getSubmissionImages,
   getSubmissionSupplements,
 } from "@/db/submissions";
-import { canonicalName as canonicalNameOf, findSpeciesById } from "@/species";
+import { canonicalName as canonicalNameOf, checkFormAgreement, findSpeciesById } from "@/species";
 import * as lifecycle from "@/lifecycle";
 import { attempt, callerFor } from "./lifecycleErrors";
 import { getNotesForSubmission } from "@/db/submission_notes";
@@ -103,6 +103,12 @@ export const view = async (req: MulmRequest, res: Response) => {
   }
 
   const state = lifecycle.deriveState(submission);
+
+  // The Species the Submission is bound to, if any, and whether its Species
+  // type and Program class agree with the Submission's
+  const boundSpecies = submission.species_id ? await findSpeciesById(submission.species_id) : undefined;
+  const agreement = boundSpecies ? await checkFormAgreement(boundSpecies.group_id, submission) : undefined;
+
   const aspect = {
     isSubmitted: submission.submitted_on != null,
     isApproved: submission.approved_on != null,
@@ -114,7 +120,7 @@ export const view = async (req: MulmRequest, res: Response) => {
     // Which moves this viewer may actually make, asked of the same table the
     // transitions guard against - so nobody is shown a button that will refuse
     // them.
-    allowed: allowedMoves(viewer, submission, state),
+    allowed: allowedMoves(viewer, submission, state, agreement?.classificationAgrees),
   };
 
   // A Draft has nothing to review, so its owner goes straight to the form.
@@ -124,9 +130,6 @@ export const view = async (req: MulmRequest, res: Response) => {
     await renderEditForm(res, submission, viewer);
     return;
   }
-
-  // The Species the Submission is bound to, if any
-  const boundSpecies = submission.species_id ? await findSpeciesById(submission.species_id) : undefined;
 
   const speciesShown = (() => {
     if (boundSpecies) return boundSpecies;
@@ -197,6 +200,11 @@ export const view = async (req: MulmRequest, res: Response) => {
     name: speciesShown,
     boundSpecies: boundSpecies ?? null,
     boundSpeciesName: boundSpecies ? canonicalNameOf(boundSpecies) : null,
+    classificationMismatch: agreement ? !agreement.classificationAgrees : false,
+    // Which of the two disagree, for the witness panel's highlight
+    classificationAgreement: agreement
+      ? { speciesType: agreement.speciesType, programClass: agreement.programClass }
+      : null,
     waitingPeriodStatus,
     adminNotes,
     videoMetadata,
@@ -314,7 +322,8 @@ export const renderEdit = async (req: MulmRequest, res: Response) => {
 export function allowedMoves(
   viewer: MulmRequest["viewer"],
   submission: db.Submission,
-  state: lifecycle.SubmissionState
+  state: lifecycle.SubmissionState,
+  classificationAgrees?: boolean
 ): Partial<Record<lifecycle.MoveId, boolean>> {
   if (!viewer) {
     return {};
@@ -329,6 +338,7 @@ export function allowedMoves(
     actorId: viewer.id,
     isOwner,
     bound: submission.species_id != null,
+    classificationAgrees,
   };
 
   return Object.fromEntries(

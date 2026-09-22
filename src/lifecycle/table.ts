@@ -1,5 +1,5 @@
 import { MIDDLE_STATES, SubmissionState } from "./state";
-import { AuthorizationError, StateError, UnboundError } from "./errors";
+import { AuthorizationError, MismatchError, StateError, UnboundError } from "./errors";
 
 /**
  * The transition table: which moves are legal from which states, and for whom.
@@ -15,8 +15,12 @@ import { AuthorizationError, StateError, UnboundError } from "./errors";
  * |                         |                                         | pendingWitness if   |                    |
  * |                         |                                         | it was witnessed    |                    |
  * | returnToDraft           | pendingWitness .. awaitingFinalSubmission| draft              | member             |
- * | confirmWitness          | pendingWitness, bound to a Species      | waitingPeriod       | committee, not the submitter |
- * | bindSpecies             | the four middle states                  | same, bound         | committee, not the submitter |
+ * | confirmWitness          | pendingWitness, bound, type and class   | waitingPeriod       | committee, not the submitter |
+ * |                         | agreeing with the Species               |                     |                    |
+ * | bindSpecies             | the four middle states, no changes      | same, bound         | committee, not the submitter |
+ * |                         | requested                               |                     |                    |
+ * | adoptSpeciesClassification | the four middle states, bound, no    | same, agreeing      | committee, not the submitter |
+ * |                         | changes requested                       |                     |                    |
  * | enterApprovalQueue      | awaitingFinalSubmission                 | inApprovalQueue     | member or committee|
  * | removeFromQueue         | inApprovalQueue                         | awaitingFinalSubmission | member or committee |
  * | requestChanges          | the four middle states                  | same, flag set      | committee          |
@@ -31,7 +35,10 @@ import { AuthorizationError, StateError, UnboundError } from "./errors";
  * saveDraft does not, and committee moves never do: binding a Species is the
  * committee's, not an edit of the member's form.
  *
- * The fourteenth move is the clock: the waiting period elapsing carries a
+ * A member save also clears a binding the saved form no longer agrees with
+ * (CONTEXT.md, Bound; `bindingAfterSave` in transitions.ts).
+ *
+ * The fifteenth move is the clock: the waiting period elapsing carries a
  * Submission from waitingPeriod to awaitingFinalSubmission with nobody
  * performing anything. It is computed in `state.ts` rather than listed here.
  */
@@ -46,6 +53,7 @@ export type MoveId =
   | "returnToDraft"
   | "confirmWitness"
   | "bindSpecies"
+  | "adoptSpeciesClassification"
   | "enterApprovalQueue"
   | "removeFromQueue"
   | "requestChanges"
@@ -73,6 +81,11 @@ export type MoveDefinition = {
   readonly neverSubmitter?: boolean;
   /** Legal only on a Submission bound to a Species. */
   readonly requiresBound?: boolean;
+  /**
+   * Legal only while the Submission's Species type and Program class agree
+   * with the bound Species'.
+   */
+  readonly requiresAgreeingClassification?: boolean;
 };
 
 const MEMBER_ONLY: readonly Actor[] = ["member"];
@@ -135,6 +148,7 @@ export const moves = {
     requiresNoChangesPending: true,
     neverSubmitter: true,
     requiresBound: true,
+    requiresAgreeingClassification: true,
   },
 
   /**
@@ -147,7 +161,22 @@ export const moves = {
     id: "bindSpecies",
     from: MIDDLE_STATES,
     actors: COMMITTEE_ONLY,
+    requiresNoChangesPending: true,
     neverSubmitter: true,
+  },
+
+  /**
+   * The witness's one-click answer to a mismatch: the Submission takes the
+   * bound Species' Species type and Program class. A committee move on the
+   * changelog, like binding, so it leaves a confirmed Witness in place.
+   */
+  adoptSpeciesClassification: {
+    id: "adoptSpeciesClassification",
+    from: MIDDLE_STATES,
+    actors: COMMITTEE_ONLY,
+    requiresNoChangesPending: true,
+    neverSubmitter: true,
+    requiresBound: true,
   },
 
   enterApprovalQueue: {
@@ -226,6 +255,12 @@ export type MoveContext = {
   readonly isOwner: boolean;
   /** Whether the Submission is bound to a Species. */
   readonly bound: boolean;
+  /**
+   * Whether the Submission's Species type and Program class agree with the
+   * bound Species'. Undefined when unbound or not looked up; only a move that
+   * `requiresAgreeingClassification` needs it.
+   */
+  readonly classificationAgrees?: boolean;
 };
 
 /** The states `move` is legal from for this actor. */
@@ -256,7 +291,7 @@ export function canMove(move: MoveDefinition, context: MoveContext): boolean {
  * wrong and confusing, because they are on the committee.
  */
 export function assertMoveIsLegal(move: MoveDefinition, context: MoveContext): void {
-  const { state, changesPending, actor, actorId, isOwner, bound } = context;
+  const { state, changesPending, actor, actorId, isOwner, bound, classificationAgrees } = context;
 
   if (move.neverSubmitter && isOwner) {
     throw new AuthorizationError(
@@ -310,6 +345,14 @@ export function assertMoveIsLegal(move: MoveDefinition, context: MoveContext): v
   if (move.requiresBound && !bound) {
     throw new UnboundError(`Bind this Submission to a Species before you ${describeOnBound(move.id)}`, move.id);
   }
+
+  if (move.requiresAgreeingClassification && classificationAgrees === false) {
+    throw new MismatchError(
+      "This Submission's Species type or Program class disagrees with its Species. " +
+        `Adopt the Species' values, rebind it, or request changes before you ${describeOnBound(move.id)}`,
+      move.id
+    );
+  }
 }
 
 /**
@@ -332,6 +375,8 @@ function describe(id: MoveId, object: string): string {
       return `confirm the witness on ${object}`;
     case "bindSpecies":
       return `choose the Species of ${object}`;
+    case "adoptSpeciesClassification":
+      return `give ${object} its Species' type and class`;
     case "enterApprovalQueue":
       return `queue ${object} for approval`;
     case "removeFromQueue":

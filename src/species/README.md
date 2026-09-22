@@ -28,7 +28,7 @@ the module's own business.
 | `lookup.ts` | `findSpeciesById`, `findSpeciesByIds`, and `resolveSpecies`: a pair of spellings to one Species (Latin as a scientific Name, the Canonical name among them, then common as a common Name). Imports bind by it. |
 | `names.ts` | Names by kind: `listNames`, `findNames` (by text across Species), `addName`, `updateName` (in place, id kept), `removeName` (one id or several). `updateName` and `removeName` refuse the Canonical name. `nameTable` maps a kind to its table for the module's own SQL. |
 | `curation.ts` | `createSpecies`, `updateSpecies` (Program class, Species type, Point class, CARES), `setPointClass` (bulk), `renameCanonical`, `previewMerge`, `mergeSpecies`, `deleteSpecies`. Create, rename and merge keep the Canonical flag and its cache. |
-| `agreement.ts` | `checkFormAgreement`: does a Submission's form (spellings, Species type, Program class) agree with a Species. Built for the binding tickets; see "Not yet called" below. |
+| `agreement.ts` | `checkFormAgreement`: does a Submission's form (spellings, Species type, Program class) agree with a Species. The lifecycle's member saves read `agrees` to keep or clear a binding; the confirmWitness guard and the witness panel read `classificationAgrees`. |
 | `submissions.ts` | The Species-Submission relation, defined once as SQL (`speciesIdOfSubmissionSql`: the Submission's `species_id`); `countSubmissionsOfSpecies`. |
 | `sql.ts` | SQL fragments for other modules' queries: `speciesOfSubmissionJoinSql`, `programClassOfSubmissionSql`, `speciesJoinSql`, `speciesFromSql`, `anyNameSql`. |
 | `status.ts` | Writers for columns other modules own the meaning of: `updateIucnStatus`, `updateLastExternalSync`. |
@@ -106,12 +106,6 @@ through fragments: they go through a catalogue function.
   when the column is, not before.
 - **Collection and CARES** join a Species by `group_id` through the
   fragments; their own behaviour is out of this module's scope.
-
-## Not yet called
-
-`checkFormAgreement` has no production caller yet. It was specified for the
-binding work (#413, #414): the save transitions read `agrees`, the witness
-panel reads the parts. Everything else exported has a caller in `src/`.
 
 ## Things that are deliberately not here
 

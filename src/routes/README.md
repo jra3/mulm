@@ -143,6 +143,7 @@ POST   /admin/submissions/:id/approve          - Approve submission
 GET    /admin/submissions/:id/edit             - Edit submission (admin view)
 POST   /admin/submissions/:id/bind-species     - Bind (or rebind) to a Species (witness panel)
 POST   /admin/submissions/:id/species          - Create a Species and bind to it (witness panel)
+POST   /admin/submissions/:id/adopt-species-classification - Take the bound Species' type and class (witness panel)
 POST   /admin/submissions/:id/confirm-witness  - Confirm witness (refused while unbound)
 POST   /admin/submissions/:id/decline-witness  - Decline witness
 POST   /admin/submissions/:id/request-changes  - Request changes from submitter

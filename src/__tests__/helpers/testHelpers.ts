@@ -30,6 +30,7 @@ import { createMember, getMember } from "../../db/members";
 import { createSubmissionRow, formToRow, updateSubmission } from "../../db/submissions";
 import type { FormValues } from "../../forms/submission";
 import type { ApprovalFormValues } from "../../forms/approval";
+import { addName, createSpecies } from "../../species";
 
 /**
  * Test context containing database and common test fixtures
@@ -439,6 +440,27 @@ export const mockApprovalData = {
  * A Species the migrations seed, to approve test Submissions against.
  */
 export const mockSpeciesId = 1;
+
+/**
+ * The Species the default test Submission is (Guppy, Poecilia reticulata,
+ * Fish, Livebearers), created if the database lacks it: a Submission bound
+ * to it agrees with its Species, so its Witness can be confirmed.
+ */
+export async function ensureGuppySpecies(db: Database): Promise<number> {
+  const row = await db.get<{ group_id: number }>(
+    `SELECT group_id FROM species_name_group
+     WHERE canonical_genus = 'Poecilia' AND canonical_species_name = 'reticulata'`
+  );
+  if (row) return row.group_id;
+  const id = await createSpecies({
+    canonicalGenus: "Poecilia",
+    canonicalSpeciesName: "reticulata",
+    programClass: "Livebearers",
+    speciesType: "Fish",
+  });
+  await addName(id, "common", "Guppy");
+  return id;
+}
 
 /**
  * Generates a unique timestamp-based email for testing

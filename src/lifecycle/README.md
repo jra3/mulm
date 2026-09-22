@@ -71,7 +71,19 @@ adds Names to the Species: the member's spellings stay on the Submission.
 
 `bindSpecies` is the witness's move: the committee binds or rebinds a
 Submission to a Species anywhere between submission and approval, never on
-its own Submission, and it goes on the changelog. It is not a member edit, so
+its own Submission and not while changes are requested (the ball is with the
+member), and it goes on the changelog. It is not a member edit, so
 it leaves a confirmed Witness in place. `confirmWitness` refuses an unbound
 Submission with an `UnboundError`, so nothing enters the waiting period
 without a Species.
+
+A binding holds only while the form agrees with the Species (CONTEXT.md,
+Bound): every member save (Save Draft, Submit, Save Changes, Resubmit) asks
+the catalogue's `checkFormAgreement` and clears `species_id` when the saved
+spellings, Species type or Program class no longer agree. Committee moves
+never unbind. `confirmWitness` is also refused, with a `MismatchError`, while
+the Submission's Species type or Program class disagrees with its Species'
+(a spelling that is not a Name does not block it). The witness answers with
+`adoptSpeciesClassification` - the Submission takes the Species' type, class
+and Program, on the changelog, Witness untouched - or by rebinding, or by
+requesting changes.
