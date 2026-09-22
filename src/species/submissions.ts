@@ -52,3 +52,12 @@ export async function countSubmissionsOfSpecies(
   );
   return { total: rows[0]?.total ?? 0, approved: rows[0]?.approved ?? 0 };
 }
+
+/** The id of the Species a Submission references, or null when it references none. */
+export async function findSpeciesIdOfSubmission(submissionId: number): Promise<number | null> {
+  const rows = await query<{ species_id: number | null }>(
+    `SELECT ${speciesIdOfSubmissionSql("s")} AS species_id FROM submissions s WHERE s.id = ?`,
+    [submissionId]
+  );
+  return rows[0]?.species_id ?? null;
+}

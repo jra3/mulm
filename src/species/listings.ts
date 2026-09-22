@@ -6,7 +6,9 @@
  */
 import { query } from "@/db/conn";
 import { getSpeciesExternalReferences, getSpeciesImages, type SpeciesImage } from "@/db/speciesEnrichment";
+import type { SpeciesType } from "@/points";
 import { speciesIdOfSubmissionSql } from "./submissions";
+import type { Species } from "./types";
 
 export type SpeciesFilters = {
   species_type?: string;
@@ -391,6 +393,45 @@ export async function getBreedersForSpecies(speciesId: number) {
         : [],
     }));
   });
+}
+
+/** The Species types that have approved Submissions, for the explorer's filter. */
+export async function getExplorerFilterOptions() {
+  const speciesTypes = await query<{ species_type: string }>(`
+		SELECT DISTINCT species_type
+		FROM submissions
+		WHERE approved_on IS NOT NULL
+		ORDER BY species_type
+	`);
+
+  return {
+    species_types: speciesTypes.map((s) => s.species_type),
+  };
+}
+
+/**
+ * Species of a type whose IUCN status was last synced before a date, or
+ * never, oldest first. The IUCN sync decides what to do with them; the
+ * catalogue only lists them.
+ */
+export async function listSpeciesDueIucnSync(
+  speciesType: SpeciesType,
+  syncedBefore: Date,
+  limit: number
+): Promise<
+  Array<
+    Pick<Species, "group_id" | "canonical_genus" | "canonical_species_name" | "iucn_last_updated">
+  >
+> {
+  return query(
+    `SELECT group_id, canonical_genus, canonical_species_name, iucn_last_updated
+     FROM species_name_group
+     WHERE species_type = ?
+       AND (iucn_last_updated IS NULL OR iucn_last_updated < ?)
+     ORDER BY iucn_last_updated ASC NULLS FIRST
+     LIMIT ?`,
+    [speciesType, syncedBefore.toISOString(), limit]
+  );
 }
 
 /**

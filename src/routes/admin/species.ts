@@ -1,21 +1,9 @@
 import { Response } from "express";
 import { MulmRequest } from "@/sessions";
 import type { Database } from "sqlite";
-import {
-  getSpeciesForAdmin,
-  SpeciesAdminFilters,
-  getSpeciesDetail,
-  getSynonymsForGroup,
-  getNamesForGroup,
-  updateSpeciesGroup,
-  deleteSpeciesGroup,
-  addCommonName,
-  addScientificName,
-  deleteCommonName,
-  deleteScientificName,
-  bulkSetPoints,
-  mergeSpecies,
-} from "@/db/species";
+import * as catalogue from "@/species";
+import { CatalogueRefusal, type RefusalCode, type SpeciesAdminFilters } from "@/species";
+import { setSpeciesExternalReferences, setSpeciesImages } from "@/db/speciesEnrichment";
 import {
   updateIucnData,
   recordIucnSync,
@@ -28,13 +16,38 @@ import {
 import { IUCNClient } from "@/integrations/iucn";
 import { db } from "@/db/conn";
 import { getQueryString, getQueryNumber, getQueryBoolean, getBodyString } from "@/utils/request";
-import { getClassOptions } from "@/forms/submission";
+import { getClassOptions, speciesTypesAndClasses } from "@/forms/submission";
+import { speciesEditForm } from "@/forms/speciesEdit";
+import { pointClassField } from "@/forms/pointClass";
 import { mergeSpeciesSchema } from "@/forms/speciesMerge";
 import { speciesCreateForm } from "@/forms/speciesCreate";
 import { getSubmissionById } from "@/db/submissions";
-import { createSpeciesGroup } from "@/db/species";
 import { logger } from "@/utils/logger";
 import * as z from "zod";
+
+const refusalStatus: Record<RefusalCode, number> = {
+  not_found: 404,
+  invalid: 400,
+  point_class: 400,
+  duplicate: 409,
+  referenced: 409,
+};
+
+/** The form field a refusal belongs to: a taken Canonical name is the genus field's. */
+function refusalField(err: CatalogueRefusal): string {
+  return err.code === "duplicate" ? "canonical_genus" : "_general";
+}
+
+/**
+ * Send a catalogue refusal as a 4xx carrying its message. Matches on the
+ * class and its code, never on message text.
+ * @returns true if `err` was a refusal and a response was sent
+ */
+function sendRefusal(res: Response, err: unknown): boolean {
+  if (!(err instanceof CatalogueRefusal)) return false;
+  res.status(refusalStatus[err.code]).send(err.message);
+  return true;
+}
 
 /**
  * GET /admin/species
@@ -63,19 +76,8 @@ export const listSpecies = async (req: MulmRequest, res: Response) => {
   const limit = 50;
   const offset = (page - 1) * limit;
 
-  // Get species data with synonyms
-  const result = await getSpeciesForAdmin(filters, sort, limit, offset);
-
-  // For each species, fetch their synonyms for the hovercard
-  const speciesWithSynonyms = await Promise.all(
-    result.species.map(async (species) => {
-      const synonyms = await getSynonymsForGroup(species.group_id);
-      return {
-        ...species,
-        synonyms,
-      };
-    })
-  );
+  // Each row carries its Names of both kinds for the hovercard
+  const result = await catalogue.getSpeciesForAdmin(filters, sort, limit, offset);
 
   // Calculate pagination
   const totalPages = Math.ceil(result.total_count / limit);
@@ -86,7 +88,7 @@ export const listSpecies = async (req: MulmRequest, res: Response) => {
 
   res.render("admin/speciesList", {
     title: "Species Management",
-    species: speciesWithSynonyms,
+    species: result.species,
     filters,
     sort,
     classOptions,
@@ -118,12 +120,12 @@ export const getSpeciesSynonyms = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const names = await getNamesForGroup(groupId);
+  const names = await catalogue.listNames(groupId);
 
   // Render the hovercard content
   res.render("admin/speciesSynonymsHovercard", {
-    commonNames: names.common_names,
-    scientificNames: names.scientific_names,
+    commonNames: names.common,
+    scientificNames: names.scientific,
   });
 };
 
@@ -145,25 +147,23 @@ export const editSpeciesSidebar = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const speciesDetail = await getSpeciesDetail(groupId);
+  const speciesDetail = await catalogue.getSpeciesDetail(groupId);
 
   if (!speciesDetail) {
     res.status(404).send("Species not found");
     return;
   }
 
-  // Get split names (common and scientific separately)
-  const names = await getNamesForGroup(groupId);
+  const names = await catalogue.listNames(groupId);
 
   // Get class options for this species type
-  const { speciesTypesAndClasses } = await import("@/forms/submission");
   const classOptions = speciesTypesAndClasses[speciesDetail.species_type || "Fish"] || [];
 
   res.render("admin/speciesEdit", {
     title: "Edit Species",
     species: speciesDetail,
-    commonNames: names.common_names,
-    scientificNames: names.scientific_names,
+    commonNames: names.common,
+    scientificNames: names.scientific,
     classOptions,
     speciesTypes: ["Fish", "Plant", "Invert", "Coral"],
     errors: new Map(),
@@ -188,15 +188,12 @@ export const updateSpecies = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  // Import form validation
-  const { speciesEditForm } = await import("@/forms/speciesEdit");
-
   // Validate form data
   const parsed = speciesEditForm.safeParse(req.body);
 
   if (!parsed.success) {
     // Re-render form with errors
-    const speciesDetail = await getSpeciesDetail(groupId);
+    const speciesDetail = await catalogue.getSpeciesDetail(groupId);
     if (!speciesDetail) {
       res.status(404).send("Species not found");
       return;
@@ -226,32 +223,37 @@ export const updateSpecies = async (req: MulmRequest, res: Response) => {
   } = parsed.data;
 
   try {
-    const changes = await updateSpeciesGroup(groupId, {
-      canonicalGenus: canonical_genus,
-      canonicalSpeciesName: canonical_species_name,
+    // The rename goes first: its refusals (a missing Species, a Canonical
+    // name another Species holds) come before it writes anything, and the
+    // form has already validated what `updateSpecies` would refuse.
+    await catalogue.renameCanonical(groupId, canonical_genus, canonical_species_name);
+    await catalogue.updateSpecies(groupId, {
       programClass: program_class,
-      basePoints: base_points,
+      pointClass: base_points,
       isCaresSpecies: is_cares_species,
-      externalReferences: external_references,
-      imageLinks: image_links,
     });
-
-    if (changes === 0) {
-      res.status(404).send("Species not found");
-      return;
-    }
+    await setSpeciesExternalReferences(groupId, external_references);
+    await setSpeciesImages(groupId, image_links);
 
     // Success - redirect back to list
     res.set("HX-Redirect", "/admin/species").status(200).send();
   } catch (err) {
-    // Handle errors (e.g., duplicate canonical name)
-    const speciesDetail = await getSpeciesDetail(groupId);
-    const errors = new Map<string, string>();
+    if (!(err instanceof CatalogueRefusal)) {
+      logger.error("Failed to update species", err);
+    }
+    if (err instanceof CatalogueRefusal && err.code === "not_found") {
+      res.status(404).send(err.message);
+      return;
+    }
 
-    if (err instanceof Error && err.message.includes("already exists")) {
-      errors.set("canonical_genus", err.message);
+    const speciesDetail = await catalogue.getSpeciesDetail(groupId);
+    const errors = new Map<string, string>();
+    if (err instanceof CatalogueRefusal) {
+      errors.set(refusalField(err), err.message);
+      res.status(refusalStatus[err.code]);
     } else {
       errors.set("_general", "Failed to update species");
+      res.status(500);
     }
 
     res.render("admin/speciesEdit", {
@@ -264,7 +266,8 @@ export const updateSpecies = async (req: MulmRequest, res: Response) => {
 
 /**
  * DELETE /admin/species/:groupId
- * Delete species group and all synonyms
+ * Delete a Species and its Names. Refused while any Submission references it;
+ * the refusal tells the admin to merge instead.
  */
 export const deleteSpecies = async (req: MulmRequest, res: Response) => {
   const { viewer } = req;
@@ -281,22 +284,12 @@ export const deleteSpecies = async (req: MulmRequest, res: Response) => {
   }
 
   try {
-    // Check query param for force flag
-    const force = req.query.force === "true";
-    const changes = await deleteSpeciesGroup(groupId, force);
-
-    if (changes === 0) {
-      res.status(404).send("Species not found");
-      return;
-    }
-
+    await catalogue.deleteSpecies(groupId);
     res.status(200).send("Species deleted");
   } catch (err) {
-    if (err instanceof Error && err.message.includes("approved submissions")) {
-      res.status(400).send(err.message);
-    } else {
-      res.status(500).send("Failed to delete species");
-    }
+    if (sendRefusal(res, err)) return;
+    logger.error("Failed to delete species", err);
+    res.status(500).send("Failed to delete species");
   }
 };
 
@@ -319,7 +312,7 @@ export const deleteCommonNameRoute = async (req: MulmRequest, res: Response) => 
   }
 
   try {
-    const changes = await deleteCommonName(commonNameId);
+    const changes = await catalogue.removeName("common", commonNameId);
 
     if (changes === 0) {
       res.status(404).send("Common name not found");
@@ -352,7 +345,7 @@ export const deleteScientificNameRoute = async (req: MulmRequest, res: Response)
   }
 
   try {
-    const changes = await deleteScientificName(scientificNameId);
+    const changes = await catalogue.removeName("scientific", scientificNameId);
 
     if (changes === 0) {
       res.status(404).send("Scientific name not found");
@@ -388,22 +381,17 @@ export const addCommonNameRoute = async (req: MulmRequest, res: Response) => {
   const common_name = getBodyString(req, "common_name");
 
   try {
-    const commonNameId = await addCommonName(groupId, common_name);
+    const nameId = await catalogue.addName(groupId, "common", common_name);
 
     // Return HTML for new common name row
     res.render("admin/commonNameRow", {
-      name: {
-        common_name_id: commonNameId,
-        common_name: common_name.trim(),
-      },
+      name: { name_id: nameId, name: common_name.trim() },
       groupId,
     });
   } catch (err) {
-    if (err instanceof Error) {
-      res.status(400).send(err.message);
-    } else {
-      res.status(500).send("Failed to add common name");
-    }
+    if (sendRefusal(res, err)) return;
+    logger.error("Failed to add common name", err);
+    res.status(500).send("Failed to add common name");
   }
 };
 
@@ -428,22 +416,17 @@ export const addScientificNameRoute = async (req: MulmRequest, res: Response) =>
   const scientific_name = getBodyString(req, "scientific_name");
 
   try {
-    const scientificNameId = await addScientificName(groupId, scientific_name);
+    const nameId = await catalogue.addName(groupId, "scientific", scientific_name);
 
     // Return HTML for new scientific name row
     res.render("admin/scientificNameRow", {
-      name: {
-        scientific_name_id: scientificNameId,
-        scientific_name: scientific_name.trim(),
-      },
+      name: { name_id: nameId, name: scientific_name.trim() },
       groupId,
     });
   } catch (err) {
-    if (err instanceof Error) {
-      res.status(400).send(err.message);
-    } else {
-      res.status(500).send("Failed to add scientific name");
-    }
+    if (sendRefusal(res, err)) return;
+    logger.error("Failed to add scientific name", err);
+    res.status(500).send("Failed to add scientific name");
   }
 };
 
@@ -496,12 +479,7 @@ const bulkSetPointsSchema = z.object({
     z.string().transform((val) => val.split(",").map((id) => parseInt(id.trim()))),
     z.array(z.string()).transform((arr) => arr.map((id) => parseInt(id))),
   ]),
-  base_points: z
-    .string()
-    .transform((val) => (val === "" ? null : parseInt(val)))
-    .refine((val) => val === null || (val >= 0 && val <= 100), {
-      message: "Points must be between 0 and 100",
-    }),
+  base_points: pointClassField,
 });
 
 /**
@@ -524,11 +502,13 @@ export const bulkSetPointsAction = async (req: MulmRequest, res: Response) => {
   }
 
   try {
-    await bulkSetPoints(groupIds, base_points);
+    await catalogue.setPointClass(groupIds, base_points);
 
     // Success - close dialog and reload page
     res.set("HX-Redirect", "/admin/species").status(200).send();
-  } catch {
+  } catch (err) {
+    if (sendRefusal(res, err)) return;
+    logger.error("Failed to set Point class", err);
     res.status(500).send("Failed to update species points");
   }
 };
@@ -545,14 +525,14 @@ export const mergeSpeciesDialog = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const defunctSpecies = await getSpeciesDetail(groupId);
+  const defunctSpecies = await catalogue.getSpeciesDetail(groupId);
 
   if (!defunctSpecies) {
     res.status(404).send("Species not found");
     return;
   }
 
-  const defunctNames = await getNamesForGroup(groupId);
+  const defunctNames = await catalogue.listNames(groupId);
 
   res.render("admin/mergeSpeciesDialog", {
     defunctSpecies,
@@ -576,8 +556,8 @@ export const mergeSpeciesAction = async (req: MulmRequest, res: Response) => {
 
   // Verify both species exist
   const [defunctSpecies, canonicalSpecies] = await Promise.all([
-    getSpeciesDetail(defunct_group_id),
-    getSpeciesDetail(canonical_group_id),
+    catalogue.getSpeciesDetail(defunct_group_id),
+    catalogue.getSpeciesDetail(canonical_group_id),
   ]);
 
   if (!defunctSpecies) {
@@ -591,11 +571,13 @@ export const mergeSpeciesAction = async (req: MulmRequest, res: Response) => {
   }
 
   try {
-    await mergeSpecies(canonical_group_id, defunct_group_id);
+    await catalogue.mergeSpecies(canonical_group_id, defunct_group_id);
 
     // Success - redirect to canonical species edit page
     res.set("HX-Redirect", `/admin/species/${canonical_group_id}/edit`).status(200).send();
-  } catch {
+  } catch (err) {
+    if (sendRefusal(res, err)) return;
+    logger.error("Failed to merge species", err);
     res.status(500).send("Failed to merge species");
   }
 };
@@ -686,12 +668,12 @@ export const createSpeciesRoute = async (req: MulmRequest, res: Response) => {
   } = parsed.data;
 
   try {
-    const groupId = await createSpeciesGroup({
+    const groupId = await catalogue.createSpecies({
       canonicalGenus: canonical_genus,
       canonicalSpeciesName: canonical_species_name,
       programClass: program_class,
       speciesType: species_type,
-      basePoints: base_points,
+      pointClass: base_points,
       isCaresSpecies: is_cares_species,
     });
 
@@ -704,15 +686,15 @@ export const createSpeciesRoute = async (req: MulmRequest, res: Response) => {
       canonical_name: canonicalName,
     });
   } catch (err) {
-    // Handle errors (e.g., duplicate canonical name)
-    if (err instanceof Error && err.message.includes("already exists")) {
-      res.status(400).json({
+    if (err instanceof CatalogueRefusal) {
+      res.status(refusalStatus[err.code]).json({
         success: false,
         errors: {
-          canonical_genus: err.message,
+          [refusalField(err)]: err.message,
         },
       });
     } else {
+      logger.error("Failed to create species", err);
       res.status(500).json({
         success: false,
         errors: {
@@ -761,14 +743,7 @@ export const bulkSyncIucn = async (req: MulmRequest, res: Response) => {
       return;
     }
 
-    // Get species data for selected IDs
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const speciesData: any[] = await database.all(
-      `SELECT group_id, canonical_genus, canonical_species_name
-       FROM species_name_group
-       WHERE group_id IN (${groupIds.map(() => "?").join(",")})`,
-      ...groupIds
-    );
+    const speciesData = await catalogue.findSpeciesByIds(groupIds);
 
     let successCount = 0;
     let notFoundCount = 0;
@@ -776,11 +751,7 @@ export const bulkSyncIucn = async (req: MulmRequest, res: Response) => {
     let synonymsFound = 0;
 
     // Sync each species
-    for (const species of speciesData as Array<{
-      group_id: number;
-      canonical_genus: string;
-      canonical_species_name: string;
-    }>) {
+    for (const species of speciesData) {
       try {
         const scientificName = `${species.canonical_genus} ${species.canonical_species_name}`;
         const result = await iucnClient.getSpeciesByName(scientificName);
@@ -914,7 +885,7 @@ export const listCanonicalRecommendations = async (req: MulmRequest, res: Respon
     // For each recommendation, get the current species details
     const recommendationsWithSpecies = await Promise.all(
       recommendations.map(async (rec) => {
-        const species = await getSpeciesDetail(rec.group_id);
+        const species = await catalogue.getSpeciesDetail(rec.group_id);
         return {
           ...rec,
           species,
@@ -1028,24 +999,8 @@ export const syncAllIucnData = async (req: MulmRequest, res: Response) => {
     // Get species that need syncing (haven't been synced in 30 days or never synced)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
 
-    interface SpeciesForSync {
-      group_id: number;
-      canonical_genus: string;
-      canonical_species_name: string;
-      iucn_last_updated: string | null;
-    }
-
-    const speciesToSync = await database.all<SpeciesForSync[]>(
-      `SELECT group_id, canonical_genus, canonical_species_name, iucn_last_updated
-       FROM species_name_group
-       WHERE species_type = 'Fish'
-         AND (iucn_last_updated IS NULL OR iucn_last_updated < ?)
-       ORDER BY iucn_last_updated ASC NULLS FIRST
-       LIMIT 100`,
-      [thirtyDaysAgoISO]
-    );
+    const speciesToSync = await catalogue.listSpeciesDueIucnSync("Fish", thirtyDaysAgo, 100);
 
     if (speciesToSync.length === 0) {
       res.send(`

@@ -1,23 +1,14 @@
 import { z } from "zod";
+import { pointClassField } from "./pointClass";
 
 /**
- * Species group edit form validation
+ * The admin Species edit form
  */
 export const speciesEditForm = z.object({
   canonical_genus: z.string().trim().min(1, "Genus cannot be empty").max(100),
   canonical_species_name: z.string().trim().min(1, "Species name cannot be empty").max(100),
   program_class: z.string().trim().min(1, "Program class cannot be empty").max(100),
-  base_points: z
-    .string()
-    .optional()
-    .transform((val) => {
-      if (!val || val === "") return null;
-      const num = parseInt(val, 10);
-      if (![5, 10, 15, 20].includes(num)) {
-        throw new Error("Base points must be 5, 10, 15, or 20");
-      }
-      return num;
-    }),
+  base_points: pointClassField,
   is_cares_species: z
     .string()
     .optional()

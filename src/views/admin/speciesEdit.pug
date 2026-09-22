@@ -212,10 +212,10 @@ html
                   if commonNames && commonNames.length > 0
                     each name in commonNames
                       .flex.items-center.gap-2.p-2.bg-gray-50.rounded.border.border-gray-200
-                        .flex-1.font-medium.text-sm= name.common_name
+                        .flex-1.font-medium.text-sm= name.name
                         button.destructive.text-xs.px-2.py-1(
                           type="button"
-                          hx-delete=`/admin/species/${species.group_id}/common-names/${name.common_name_id}`
+                          hx-delete=`/admin/species/${species.group_id}/common-names/${name.name_id}`
                           hx-confirm="Delete this common name?"
                           hx-target="closest .flex.items-center"
                           hx-swap="outerHTML swap:0.5s"
@@ -247,10 +247,10 @@ html
                   if scientificNames && scientificNames.length > 0
                     each name in scientificNames
                       .flex.items-center.gap-2.p-2.bg-gray-50.rounded.border.border-gray-200
-                        .flex-1.font-medium.text-sm.italic= name.scientific_name
+                        .flex-1.font-medium.text-sm.italic= name.name
                         button.destructive.text-xs.px-2.py-1(
                           type="button"
-                          hx-delete=`/admin/species/${species.group_id}/scientific-names/${name.scientific_name_id}`
+                          hx-delete=`/admin/species/${species.group_id}/scientific-names/${name.name_id}`
                           hx-confirm="Delete this scientific name?"
                           hx-target="closest .flex.items-center"
                           hx-swap="outerHTML swap:0.5s"
@@ -290,8 +290,12 @@ html
                   type="button"
                   hx-delete=`/admin/species/${species.group_id}`
                   hx-confirm="Delete this species and all its synonyms? This cannot be undone."
+                  hx-target="#species-delete-refusal"
+                  hx-on--before-swap="if (event.detail.xhr.status >= 400 ? event.detail.xhr.status < 500 : false) { event.detail.shouldSwap = true; }"
                   hx-on--after-request="if(event.detail.successful) { window.location.href='/admin/species'; }"
                 ) Delete Species
+                //- A refused delete (the Species is referenced) lands here, telling the admin to merge
+                p#species-delete-refusal.text-sm.text-red-700(role="alert")
 
     +footer()
 

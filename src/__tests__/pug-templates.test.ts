@@ -235,24 +235,18 @@ void describe("Pug Template Rendering", () => {
       3: { level: "bronze", icon: "🥉", awards: ["Breeder Award Level 1"] },
     },
 
-    // Split schema name data for admin templates
-    name: {
-      common_name_id: 1,
-      common_name: "Test Common Name",
-      scientific_name_id: 1,
-      scientific_name: "Testus scientificus",
-      name_id: 1, // For legacy synonym row
-    },
+    // One Name, as the catalogue returns it, for the admin Name rows
+    name: { name_id: 1, species_id: 1, kind: "common", name: "Test Common Name" },
     groupId: 1,
 
-    // Common and scientific names for species edit
+    // A Species' Names by kind, for species edit, detail and the hovercard
     commonNames: [
-      { common_name_id: 1, common_name: "Common Name 1" },
-      { common_name_id: 2, common_name: "Common Name 2" },
+      { name_id: 1, species_id: 1, kind: "common", name: "Common Name 1" },
+      { name_id: 2, species_id: 1, kind: "common", name: "Common Name 2" },
     ],
     scientificNames: [
-      { scientific_name_id: 1, scientific_name: "Scientificus name1" },
-      { scientific_name_id: 2, scientific_name: "Scientificus name2" },
+      { name_id: 1, species_id: 1, kind: "scientific", name: "Scientificus name1" },
+      { name_id: 2, species_id: 1, kind: "scientific", name: "Scientificus name2" },
     ],
 
     // Synonym for legacy synonym row
@@ -722,8 +716,10 @@ void describe("Pug Template Rendering", () => {
               species_type: "Fish",
             };
             templateData.defunctNames = {
-              common_names: [{ common_name: "Cockatoo Dwarf Cichlid" }],
-              scientific_names: [{ scientific_name: "Apistogramma cacatuoides" }],
+              common: [{ name_id: 1, species_id: 1, kind: "common", name: "Cockatoo Dwarf Cichlid" }],
+              scientific: [
+                { name_id: 2, species_id: 1, kind: "scientific", name: "Apistogramma cacatuoides" },
+              ],
             };
             break;
 
@@ -864,6 +860,92 @@ void describe("Pug Template Rendering", () => {
 
       assert.match(html, /witnessed again/);
       assert.doesNotMatch(html, /preserved/);
+    });
+  });
+
+  /**
+   * The species views read Names in the catalogue's shape - `name_id` and
+   * `name`, by kind - and a refused delete has somewhere to say "merge".
+   */
+  void describe("Species views read the catalogue's Names", () => {
+    const render = (template: string, data: Record<string, unknown>) =>
+      pug.compileFile(path.join(viewsPath, template), { basedir: viewsPath, pretty: false })({
+        ...baseMockData,
+        isAdmin: true,
+        ...data,
+      });
+
+    const common = [{ name_id: 11, species_id: 3, kind: "common", name: "Kribensis" }];
+    const scientific = [
+      { name_id: 22, species_id: 3, kind: "scientific", name: "Pelvicachromis pulcher" },
+    ];
+    const species = {
+      group_id: 3,
+      canonical_genus: "Pelvicachromis",
+      canonical_species_name: "pulcher",
+      species_type: "Fish",
+      program_class: "Cichlids - Old World",
+      base_points: 10,
+      is_cares_species: 0,
+    };
+
+    void test("the edit page lists each Name with a delete addressed by its id", () => {
+      const html = render("admin/speciesEdit.pug", {
+        species,
+        commonNames: common,
+        scientificNames: scientific,
+        classOptions: [],
+        speciesTypes: ["Fish"],
+        errors: new Map(),
+      });
+
+      assert.match(html, /Kribensis/);
+      assert.match(html, /Pelvicachromis pulcher/);
+      assert.match(html, /\/admin\/species\/3\/common-names\/11/);
+      assert.match(html, /\/admin\/species\/3\/scientific-names\/22/);
+    });
+
+    void test("the edit page's delete has a place for the refusal and no force option", () => {
+      const html = render("admin/speciesEdit.pug", {
+        species,
+        commonNames: common,
+        scientificNames: scientific,
+        classOptions: [],
+        speciesTypes: ["Fish"],
+        errors: new Map(),
+      });
+
+      assert.match(html, /hx-target="#species-delete-refusal"/);
+      assert.match(html, /id="species-delete-refusal"/);
+      assert.doesNotMatch(html, /force/);
+    });
+
+    void test("a new Name row renders the Name and its delete", () => {
+      const commonRow = render("admin/commonNameRow.pug", { name: common[0], groupId: 3 });
+      assert.match(commonRow, /Kribensis/);
+      assert.match(commonRow, /\/admin\/species\/3\/common-names\/11/);
+
+      const scientificRow = render("admin/scientificNameRow.pug", { name: scientific[0], groupId: 3 });
+      assert.match(scientificRow, /Pelvicachromis pulcher/);
+      assert.match(scientificRow, /\/admin\/species\/3\/scientific-names\/22/);
+    });
+
+    void test("the admin hovercard lists Names by kind", () => {
+      const html = render("admin/speciesSynonymsHovercard.pug", {
+        commonNames: common,
+        scientificNames: scientific,
+      });
+      assert.match(html, /Common Names/);
+      assert.match(html, /<li>Kribensis<\/li>/);
+      assert.match(html, /<li>Pelvicachromis pulcher<\/li>/);
+    });
+
+    void test("the merge dialog counts the loser's Names by kind", () => {
+      const html = render("admin/mergeSpeciesDialog.pug", {
+        defunctSpecies: species,
+        defunctNames: { common, scientific: [...scientific, { ...scientific[0], name_id: 23 }] },
+      });
+      assert.match(html, /1 common names, 2 scientific names/);
     });
   });
 

@@ -309,7 +309,7 @@ export async function deleteSpecies(speciesId: number): Promise<number> {
   const submissions = await countSubmissionsOfSpecies(speciesId);
   if (submissions.total > 0) {
     throw new CatalogueRefusal(
-      `Species is referenced by ${submissions.total} submission(s) (approved submissions: ${submissions.approved}). ` +
+      `Species is referenced by ${submissions.total} submission(s), ${submissions.approved} of them approved. ` +
         "Merge it into another species instead of deleting it.",
       "referenced"
     );

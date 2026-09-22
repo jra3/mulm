@@ -10,6 +10,16 @@ export async function findSpeciesById(speciesId: number): Promise<Species | unde
   return rows[0];
 }
 
+/** The Species with these ids that exist, in canonical-name order. */
+export async function findSpeciesByIds(speciesIds: number[]): Promise<Species[]> {
+  if (speciesIds.length === 0) return [];
+  return query<Species>(
+    `SELECT * FROM species_name_group WHERE group_id IN (${speciesIds.map(() => "?").join(",")})
+     ORDER BY canonical_genus, canonical_species_name`,
+    speciesIds
+  );
+}
+
 /**
  * Every Species that has this Name, matched whole and case-insensitively.
  * A common Name can belong to more than one Species, so this is a list.

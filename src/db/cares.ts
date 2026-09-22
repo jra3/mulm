@@ -504,3 +504,95 @@ export async function getMemberCaresCount(memberId: number): Promise<number> {
   );
   return rows[0]?.cnt ?? 0;
 }
+
+// Coverage of the CARES priority list across members' collections.
+
+export type CaresCoverageStats = {
+  total_cares_species: number;
+  maintained_species: number;
+  coverage_percent: number;
+  most_maintained: Array<{
+    group_id: number;
+    canonical_genus: string;
+    canonical_species_name: string;
+    keeper_count: number;
+  }>;
+  unmaintained: Array<{
+    group_id: number;
+    canonical_genus: string;
+    canonical_species_name: string;
+  }>;
+};
+
+export async function getCaresCoverageStats(): Promise<CaresCoverageStats> {
+  const totalRow = await query<{ count: number }>(
+    `SELECT COUNT(*) as count FROM species_name_group WHERE is_cares_species = 1`
+  );
+  const total_cares_species = totalRow[0]?.count || 0;
+
+  const maintainedRow = await query<{ count: number }>(
+    `SELECT COUNT(DISTINCT sng.group_id) as count
+     FROM species_name_group sng
+     JOIN species_collection c ON c.group_id = sng.group_id
+       AND c.removed_date IS NULL AND c.visibility = 'public'
+     WHERE sng.is_cares_species = 1`
+  );
+  const maintained_species = maintainedRow[0]?.count || 0;
+
+  const most_maintained = await query<{
+    group_id: number;
+    canonical_genus: string;
+    canonical_species_name: string;
+    keeper_count: number;
+  }>(
+    `SELECT sng.group_id, sng.canonical_genus, sng.canonical_species_name,
+            COUNT(DISTINCT c.member_id) as keeper_count
+     FROM species_name_group sng
+     JOIN species_collection c ON c.group_id = sng.group_id
+       AND c.removed_date IS NULL AND c.visibility = 'public'
+     WHERE sng.is_cares_species = 1
+     GROUP BY sng.group_id
+     ORDER BY keeper_count DESC
+     LIMIT 5`
+  );
+
+  const unmaintained = await query<{
+    group_id: number;
+    canonical_genus: string;
+    canonical_species_name: string;
+  }>(
+    `SELECT sng.group_id, sng.canonical_genus, sng.canonical_species_name
+     FROM species_name_group sng
+     WHERE sng.is_cares_species = 1
+       AND NOT EXISTS (
+         SELECT 1 FROM species_collection c
+         WHERE c.group_id = sng.group_id
+           AND c.removed_date IS NULL AND c.visibility = 'public'
+       )
+     ORDER BY sng.canonical_genus, sng.canonical_species_name
+     LIMIT 10`
+  );
+
+  return {
+    total_cares_species,
+    maintained_species,
+    coverage_percent: total_cares_species > 0
+      ? Math.round((maintained_species / total_cares_species) * 100)
+      : 0,
+    most_maintained,
+    unmaintained,
+  };
+}
+
+export async function getCaresMaintenersForSpecies(
+  groupId: number
+): Promise<Array<{ id: number; display_name: string; cares_registered_at: string | null }>> {
+  return query<{ id: number; display_name: string; cares_registered_at: string | null }>(
+    `SELECT m.id, m.display_name, c.cares_registered_at
+     FROM species_collection c
+     JOIN members m ON c.member_id = m.id
+     WHERE c.group_id = ? AND c.removed_date IS NULL AND c.visibility = 'public'
+     ORDER BY c.cares_registered_at DESC NULLS LAST, m.display_name`,
+    [groupId]
+  );
+}

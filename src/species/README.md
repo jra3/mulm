@@ -47,8 +47,9 @@ module's own business.
 ## Things that are deliberately not here
 
 - IUCN status, external references and images. They are enrichment with their
-  own modules (`src/db/iucn.ts`, `src/db/speciesEnrichment.ts`); the detail
-  view reads them, the catalogue never writes them.
+  own modules (`src/db/iucn.ts`, `src/db/speciesEnrichment.ts`); the catalogue
+  never writes them. It reads the IUCN columns only to show them and to list
+  which Species are due an IUCN sync.
 - The CARES registry. The catalogue knows the CARES flag on a Species, nothing
   more.
 - Moving Submissions. The catalogue says which Submissions reference a Species
@@ -61,8 +62,8 @@ The catalogue is being expanded in front of the old species data module
 (`src/db/species.ts`), which re-exports or delegates to it so callers can move
 over one at a time. New code imports `@/species`. What the old module still
 implements itself - paired-Name functions, editing a Name in place
-(`updateCommonName`, `updateScientificName`, no production caller), the CARES
-queries - is not part of the catalogue, and its tests still import the old
+(`updateCommonName`, `updateScientificName`, no production caller) - is not
+part of the catalogue, and its tests still import the old
 module until it goes. The Canonical name is still
 the two columns on the Species row; it becomes a flagged scientific Name
 (ADR-0002) in a later step, and Submissions still reach their Species through

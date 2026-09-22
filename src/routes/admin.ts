@@ -36,11 +36,11 @@ import {
   hasSpawnLocations,
 } from "@/forms/submission";
 import {
-  ensureNameIdsForGroupId,
-  isFirstTimeSpeciesForProgram,
-  getSpeciesGroup,
-  getGroupIdFromNameId,
-} from "@/db/species";
+  countSubmissionsOfSpecies,
+  ensureName,
+  findSpeciesById,
+  findSpeciesIdOfSubmission,
+} from "@/species";
 import { getBodyParam, getBodyString, getQueryString } from "@/utils/request";
 import { checkAllMemberLevels } from "@/levelManager";
 import { checkAllSpecialtyAwards } from "@/specialtyAwardManager";
@@ -487,9 +487,10 @@ export const getApprovalBonuses = async (req: MulmRequest, res: Response) => {
 
   try {
     // Check first-time status (program-wide) and get species data
-    const [breedingHistory, speciesGroup] = await Promise.all([
-      isFirstTimeSpeciesForProgram(groupId),
-      getSpeciesGroup(groupId),
+    // First-time is program-wide: no member has had this Species approved yet.
+    const [submissionsOfSpecies, species] = await Promise.all([
+      countSubmissionsOfSpecies(groupId),
+      findSpeciesById(groupId),
     ]);
 
     const templateData = {
@@ -497,10 +498,10 @@ export const getApprovalBonuses = async (req: MulmRequest, res: Response) => {
         id: submission.id,
       },
       program: submission.program,
-      isFirstTime: breedingHistory.isFirstTime,
-      priorBreedCount: breedingHistory.priorBreedCount,
-      isCaresSpecies: speciesGroup?.is_cares_species === 1,
-      basePoints: speciesGroup?.base_points,
+      isFirstTime: submissionsOfSpecies.approved === 0,
+      priorBreedCount: submissionsOfSpecies.approved,
+      isCaresSpecies: species?.is_cares_species === 1,
+      basePoints: species?.base_points,
     };
 
     logger.info("Rendering approval bonuses", templateData);
@@ -512,6 +513,21 @@ export const getApprovalBonuses = async (req: MulmRequest, res: Response) => {
     res.status(500).send("Error loading bonus data");
   }
 };
+
+/**
+ * The Name ids a Submission references a Species through: its own common and
+ * Latin spellings, each added as a Name of that Species if missing. Goes when
+ * Submissions reference their Species by id.
+ */
+async function ensureNameIdsForSpellings(
+  speciesId: number,
+  submission: { species_common_name: string; species_latin_name: string }
+) {
+  return {
+    common_name_id: await ensureName(speciesId, "common", submission.species_common_name),
+    scientific_name_id: await ensureName(speciesId, "scientific", submission.species_latin_name),
+  };
+}
 
 export const approveSubmission = async (req: MulmRequest, res: Response) => {
   const { viewer } = req;
@@ -539,12 +555,9 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
 
   const updates = parsed.data;
 
-  // Ensure species name IDs exist for the selected group_id
-  const speciesIds = await ensureNameIdsForGroupId(
-    updates.group_id,
-    submission.species_common_name,
-    submission.species_latin_name
-  );
+  // Reference the chosen Species through the Submission's own spellings,
+  // adding them as Names where the Species lacks them.
+  const speciesIds = await ensureNameIdsForSpellings(updates.group_id, submission);
 
   // Approving is the only way Points are ever awarded. Everything that follows
   // from it - the member's email, the feed entry, the Level and Specialty
@@ -825,13 +838,8 @@ export const editApprovedSubmissionForm = async (req: MulmRequest, res: Response
     return [];
   };
 
-  // Get current group_id for species typeahead
-  let currentGroupId = null;
-  if (submission.common_name_id) {
-    currentGroupId = await getGroupIdFromNameId(submission.common_name_id, true);
-  } else if (submission.scientific_name_id) {
-    currentGroupId = await getGroupIdFromNameId(submission.scientific_name_id, false);
-  }
+  // The Species the Submission references, for the species typeahead
+  const currentGroupId = await findSpeciesIdOfSubmission(submission.id);
 
   // Fetch supplements from normalized table
   const supplements = await getSubmissionSupplements(submission.id);
@@ -941,11 +949,7 @@ export const saveApprovedSubmissionEdits = async (req: MulmRequest, res: Respons
 
   // If species group changed, update name IDs
   if (groupId && groupId !== submission.common_name_id) {
-    const speciesIds = await ensureNameIdsForGroupId(
-      groupId,
-      submission.species_common_name,
-      submission.species_latin_name
-    );
+    const speciesIds = await ensureNameIdsForSpellings(groupId, submission);
     updatesForDb.common_name_id = speciesIds.common_name_id;
     updatesForDb.scientific_name_id = speciesIds.scientific_name_id;
   }

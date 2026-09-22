@@ -1,7 +1,8 @@
 import { z } from "zod";
+import { pointClassField } from "./pointClass";
 
 /**
- * Species group creation form validation
+ * The create-Species form
  * Used when creating a new species from the approval panel
  */
 export const speciesCreateForm = z.object({
@@ -11,17 +12,7 @@ export const speciesCreateForm = z.object({
   species_type: z.enum(["Fish", "Plant", "Invert", "Coral"], {
     error: "Species type must be Fish, Plant, Invert, or Coral",
   }),
-  base_points: z
-    .string()
-    .optional()
-    .transform((val) => {
-      if (!val || val === "") return null;
-      const num = parseInt(val, 10);
-      if (![5, 10, 15, 20].includes(num)) {
-        throw new Error("Base points must be 5, 10, 15, or 20");
-      }
-      return num;
-    }),
+  base_points: pointClassField,
   is_cares_species: z
     .string()
     .optional()

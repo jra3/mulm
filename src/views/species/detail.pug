@@ -183,7 +183,7 @@ html
 									.space-y-2
 										each name in commonNames
 											.p-3.bg-gray-50.rounded.border.border-gray-200
-												.font-medium.text-gray-900= name.common_name
+												.font-medium.text-gray-900= name.name
 								else
 									.text-center.py-4
 										.text-sm.text-gray-500 No common names recorded
@@ -195,7 +195,7 @@ html
 									.space-y-2
 										each name in scientificNames
 											.p-3.bg-gray-50.rounded.border.border-gray-200
-												.font-medium.text-gray-900.italic= name.scientific_name
+												.font-medium.text-gray-900.italic= name.name
 								else
 									.text-center.py-4
 										.text-sm.text-gray-500 No scientific names recorded

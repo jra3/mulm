@@ -31,6 +31,7 @@ export { CatalogueRefusal, type RefusalCode } from "./errors";
 // Finding a Species: by id, by any Name, by Canonical name, or from a pair of spellings.
 export {
   findSpeciesById,
+  findSpeciesByIds,
   findSpeciesByName,
   findSpeciesByCanonicalName,
   resolveSpecies,
@@ -38,7 +39,7 @@ export {
 } from "./lookup";
 
 // Names, by kind.
-export { listNames, addName, removeName } from "./names";
+export { listNames, addName, removeName, ensureName } from "./names";
 
 // Curating Species identity.
 export {
@@ -65,6 +66,7 @@ export {
   speciesIdOfSubmissionSql,
   listSubmissionsOfSpecies,
   countSubmissionsOfSpecies,
+  findSpeciesIdOfSubmission,
   type SubmissionOfSpecies,
 } from "./submissions";
 
@@ -75,6 +77,8 @@ export {
   getSpeciesForAdmin,
   getSpeciesDetail,
   getBreedersForSpecies,
+  getExplorerFilterOptions,
+  listSpeciesDueIucnSync,
   type SpeciesFilters,
   type SpeciesExplorerItem,
   type SpeciesNameRecord,

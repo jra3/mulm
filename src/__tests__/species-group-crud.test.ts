@@ -519,7 +519,7 @@ void describe("Species catalogue: create, classify, rename, delete, Point class"
       );
 
       await assert.rejects(async () => await deleteSpecies(testGroupId), {
-        message: /approved submissions/,
+        message: /1 of them approved\. Merge it into another species/,
       });
 
       // Species should still exist

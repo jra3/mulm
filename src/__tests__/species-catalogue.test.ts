@@ -29,6 +29,10 @@ import {
   listSubmissionsOfSpecies,
   isPointClass,
   CatalogueRefusal,
+  ensureName,
+  findSpeciesByIds,
+  findSpeciesIdOfSubmission,
+  listSpeciesDueIucnSync,
 } from "@/species";
 
 let db: Database;
@@ -341,6 +345,67 @@ void describe("Species catalogue", () => {
       assert.strictEqual((await findSpeciesById(id))?.base_points, 15);
       assert.strictEqual(await setPointClass([id], null), 1);
       assert.strictEqual((await findSpeciesById(id))?.base_points, null);
+    });
+  });
+
+  void describe("reads the routes use", () => {
+    void test("ensureName returns an existing Name's id, or adds the Name", async () => {
+      const id = await speciesWith({ genus: "Ensureus", epithet: "ensureus", common: ["Ensure Fish"] });
+      const existing = (await listNames(id)).common[0].name_id;
+
+      assert.strictEqual(await ensureName(id, "common", "Ensure Fish"), existing);
+      const added = await ensureName(id, "scientific", " Ensureus ensureus ");
+      assert.deepStrictEqual(
+        (await listNames(id)).scientific.map((n) => [n.name_id, n.name]),
+        [[added, "Ensureus ensureus"]]
+      );
+    });
+
+    void test("findSpeciesIdOfSubmission follows either Name reference", async () => {
+      const id = await speciesWith({
+        genus: "Boundus",
+        epithet: "boundus",
+        common: ["Bound Fish"],
+        scientific: ["Boundus boundus"],
+      });
+      const viaCommon = await submissionOn(id);
+      const viaScientific = await submissionOn(id, { via: "scientific" });
+      const unbound = (
+        await db.run(
+          `INSERT INTO submissions (member_id, program, species_type, species_class,
+             species_common_name, species_latin_name, reproduction_date)
+           VALUES (?, 'fish', 'Fish', 'Livebearers', 'x', 'y', ?)`,
+          [memberId, new Date().toISOString()]
+        )
+      ).lastID as number;
+
+      assert.strictEqual(await findSpeciesIdOfSubmission(viaCommon), id);
+      assert.strictEqual(await findSpeciesIdOfSubmission(viaScientific), id);
+      assert.strictEqual(await findSpeciesIdOfSubmission(unbound), null);
+    });
+
+    void test("findSpeciesByIds returns the ones that exist", async () => {
+      const a = await speciesWith({ genus: "Aaaus", epithet: "one" });
+      const b = await speciesWith({ genus: "Bbbus", epithet: "two" });
+      assert.deepStrictEqual(
+        (await findSpeciesByIds([b, 987654, a])).map((s) => s.group_id),
+        [a, b]
+      );
+      assert.deepStrictEqual(await findSpeciesByIds([]), []);
+    });
+
+    void test("listSpeciesDueIucnSync lists never-synced and stale Species of the type", async () => {
+      const never = await speciesWith({ genus: "Iucnus", epithet: "never" });
+      const stale = await speciesWith({ genus: "Iucnus", epithet: "stale" });
+      const fresh = await speciesWith({ genus: "Iucnus", epithet: "fresh" });
+      await db.run("UPDATE species_name_group SET iucn_last_updated = '2020-01-01' WHERE group_id = ?", [stale]);
+      await db.run("UPDATE species_name_group SET iucn_last_updated = '2099-01-01' WHERE group_id = ?", [fresh]);
+
+      const due = (await listSpeciesDueIucnSync("Fish", new Date("2030-01-01"), 5000)).map((s) => s.group_id);
+      assert.ok(due.includes(never));
+      assert.ok(due.includes(stale));
+      assert.ok(!due.includes(fresh));
+      assert.ok(due.indexOf(stale) > due.indexOf(never), "never-synced first");
     });
   });
 

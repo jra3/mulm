@@ -25,7 +25,7 @@ include ../header.pug
 					strong.text-red-800= `${defunctSpecies.canonical_genus} ${defunctSpecies.canonical_species_name}`
 					if defunctNames
 						.text-sm.text-red-700.mt-1
-							| #{defunctNames.common_names.length} common names, #{defunctNames.scientific_names.length} scientific names
+							| #{defunctNames.common.length} common names, #{defunctNames.scientific.length} scientific names
 
 			//- Canonical species typeahead
 			.space-y-2
