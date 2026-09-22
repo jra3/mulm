@@ -679,13 +679,14 @@ await page.waitForLoadState("networkidle");
 const db = await getTestDatabase();
 const submission = await db.get("SELECT * FROM submissions WHERE id = ?", id);
 expect(submission.changes_requested_on).toBeNull(); // Cleared
-expect(submission.witnessed_by).toBeTruthy(); // Preserved
+expect(submission.witness_verification_status).toBe("pending"); // Voided
 await db.close();
 ```
 
 **Critical verifications**:
 - `changes_requested_*` fields are cleared on resubmit
-- Witness data (`witnessed_by`, `witnessed_on`, `witness_verification_status`) is PRESERVED
+- Any member save of a witnessed Submission voids the Witness (ADR-0001): `witness_verification_status` is back to `pending`, `witnessed_by`/`witnessed_on`/`final_submission_on` are null. To approve it afterwards, re-witness ("Approve for Screening") and confirm it was brought to a meeting first (see `rewitnessAndQueue` in `submission-lifecycle.spec.ts`)
+- Requesting changes alone leaves the Witness in place
 
 ### Pattern: Witness Confirmation/Decline
 

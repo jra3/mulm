@@ -150,9 +150,11 @@ test.describe("Changes-Requested Status Display", () => {
 		const resubmitButton = page.locator('button:has-text("Resubmit")');
 		await expect(resubmitButton).toBeVisible();
 
-		// Verify witness preservation notice (if witnessed)
-		const witnessNotice = page.locator('text=Your witness confirmation is preserved');
-		await expect(witnessNotice).toBeVisible();
+		// The Submission is witnessed, so the form warns that saving voids the
+		// Witness (ADR-0001) and no longer promises it is preserved
+		await expect(page.locator('h3:has-text("This submission has been witnessed")')).toBeVisible();
+		await expect(page.locator("text=must be witnessed again")).toBeVisible();
+		await expect(page.locator("text=witness confirmation is preserved")).toHaveCount(0);
 	});
 
 	test("status badge has correct tooltip/title", async ({ page }) => {

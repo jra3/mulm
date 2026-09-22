@@ -8,7 +8,7 @@ import { createTestSubmission } from "./helpers/submissions";
  * Admin Workflow Tests
  *
  * Tests for admin-only actions on submissions:
- * - Request changes (preserves witness data)
+ * - Request changes (the Witness stands until the member saves; ADR-0001)
  * - Approve/deny submissions
  * - Witness confirmation/decline
  *
@@ -99,7 +99,8 @@ test.describe("Admin - Changes Requested Workflow", () => {
 			expect(submission.changes_requested_by).toBeTruthy();
 			expect(submission.changes_requested_reason).toBe("Please add more photos and details about water parameters");
 
-			// CRITICAL: Verify witness data is preserved
+			// Asking for changes is a committee move: the Witness stands until
+			// the member saves (ADR-0001)
 			expect(submission.witnessed_by).toBeTruthy();
 			expect(submission.witnessed_on).toBeTruthy();
 			expect(submission.witness_verification_status).toBe("confirmed");
@@ -214,10 +215,12 @@ test.describe("Admin - Changes Requested Workflow", () => {
 			expect(submission.changes_requested_by).toBeTruthy();
 			expect(submission.changes_requested_reason).toBe("Please add more details");
 
-			// Verify witness data still preserved
-			expect(submission.witnessed_by).toBeTruthy();
-			expect(submission.witnessed_on).toBeTruthy();
-			expect(submission.witness_verification_status).toBe("confirmed");
+			// The member's save voids the Witness (ADR-0001): it awaits a
+			// Witness again and has left the approval queue
+			expect(submission.witnessed_by).toBeNull();
+			expect(submission.witnessed_on).toBeNull();
+			expect(submission.witness_verification_status).toBe("pending");
+			expect(submission.final_submission_on).toBeNull();
 		} finally {
 			await dbTest2c.close();
 		}
@@ -304,10 +307,11 @@ test.describe("Admin - Changes Requested Workflow", () => {
 			// Verify submission is still submitted
 			expect(submission.submitted_on).toBeTruthy();
 
-			// Verify witness data still preserved
-			expect(submission.witnessed_by).toBeTruthy();
-			expect(submission.witnessed_on).toBeTruthy();
-			expect(submission.witness_verification_status).toBe("confirmed");
+			// Resubmitting is a member save, so it voids the Witness (ADR-0001)
+			expect(submission.witnessed_by).toBeNull();
+			expect(submission.witnessed_on).toBeNull();
+			expect(submission.witness_verification_status).toBe("pending");
+			expect(submission.final_submission_on).toBeNull();
 
 			// Verify edits persisted
 			expect(submission.ph).toBe("7.4");
