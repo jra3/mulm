@@ -26,6 +26,7 @@
 export {
   deriveState,
   hasChangesRequested,
+  hasConfirmedWitness,
   waitingPeriod,
   requiredWaitingDays,
   daysElapsedSince,

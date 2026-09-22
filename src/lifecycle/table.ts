@@ -25,9 +25,9 @@ import { AuthorizationError, StateError } from "./errors";
  * | correctPoints           | approved                                | approved            | committee          |
  * | deleteSubmission        | draft (member); draft .. inApprovalQueue (committee) | gone   | member or committee|
  *
- * Every member save (submit, saveChanges, resubmit) voids a confirmed Witness:
- * the Witness attests to the form as well as the fry (ADR-0001). Committee
- * moves never do.
+ * Every member save of a submitted Submission (submit, saveChanges, resubmit)
+ * voids a confirmed Witness (ADR-0001; `voidWitness` in transitions.ts).
+ * saveDraft does not, and committee moves never do.
  *
  * The thirteenth move is the clock: the waiting period elapsing carries a
  * Submission from waitingPeriod to awaitingFinalSubmission with nobody

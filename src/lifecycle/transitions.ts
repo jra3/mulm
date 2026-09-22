@@ -146,23 +146,30 @@ async function writeContent(
 }
 
 /**
- * The columns a member's save writes to void a confirmed Witness (ADR-0001).
+ * Void a confirmed Witness: ADR-0001's rule, stated once.
  *
- * A Witness attests to the fry and to the form, so any member save after
- * confirmation voids it and the Submission awaits a Witness again. One rule,
- * no field list and no diff: saving is the edit, even if nothing changed.
- * The approval queue goes too, because nothing is queued for approval
+ * A Witness attests to the fry and to the form, so every member save of a
+ * submitted Submission voids it and the Submission awaits a Witness again. One
+ * rule, no field list and no diff: saving is the edit, even if nothing changed.
+ * The approval queue entry goes too, because nothing is queued for approval
  * unwitnessed; the member queues it again once it has been re-witnessed.
  *
- * Only member saves carry this. A committee Points correction to an Approved
- * Submission never touches the Witness.
+ * Only member saves call this. Committee moves, including a Points correction
+ * to an Approved Submission, never touch the Witness.
  */
-const WITNESS_VOIDED = {
-  witness_verification_status: "pending",
-  witnessed_by: null,
-  witnessed_on: null,
-  final_submission_on: null,
-} as const;
+async function voidWitness(db: Database, submissionId: number, move: MoveDefinition): Promise<void> {
+  await runUpdate(
+    db,
+    `UPDATE submissions SET
+       witness_verification_status = 'pending',
+       witnessed_by = NULL,
+       witnessed_on = NULL,
+       final_submission_on = NULL
+     WHERE id = ? AND submitted_on IS NOT NULL AND approved_on IS NULL`,
+    [submissionId],
+    move
+  );
+}
 
 /** The supplements a form carries, as the normalized table wants them. */
 export function supplementsFromForm(form: FormValues): { type: string; regimen: string }[] {
@@ -256,9 +263,8 @@ export async function saveDraft(
 /**
  * Submit a Draft to the committee.
  *
- * Always lands in Pending Witness. A Submission coming back from Return to
- * Draft had its form saved on the way, and any member save voids a confirmed
- * Witness (ADR-0001), so it is witnessed again.
+ * Always lands in Pending Witness: submitting saves the form, which voids a
+ * Witness kept from before Return to Draft (see `voidWitness`).
  */
 export async function submit(
   caller: Caller,
@@ -275,7 +281,6 @@ export async function submit(
       changes_requested_on: null,
       changes_requested_by: null,
       changes_requested_reason: null,
-      ...WITNESS_VOIDED,
     });
 
     await runUpdate(
@@ -284,6 +289,7 @@ export async function submit(
       [new Date().toISOString(), submissionId],
       moves.submit
     );
+    await voidWitness(db, submissionId, moves.submit);
 
     return submission.member_id;
   });
@@ -295,8 +301,8 @@ export async function submit(
 /**
  * Edit a submitted Submission in place.
  *
- * It keeps its original submission date, but any member save voids a
- * confirmed Witness (ADR-0001): a witnessed Submission goes back to Pending
+ * It keeps its original submission date, but the save voids a confirmed
+ * Witness (see `voidWitness`): a witnessed Submission goes back to Pending
  * Witness and reappears in the witness queue. Nobody is emailed - the form
  * warned the member, and the committee's witness queue and daily digest are
  * the notice - so fixing a water-hardness figure does not put a second copy of
@@ -309,7 +315,8 @@ export async function saveChanges(
 ): Promise<void> {
   await withTransaction(async (db) => {
     const { submission } = await guard(db, moves.saveChanges, caller, submissionId);
-    await writeContent(db, submissionId, submission.member_id, form, WITNESS_VOIDED);
+    await writeContent(db, submissionId, submission.member_id, form);
+    await voidWitness(db, submissionId, moves.saveChanges);
   });
 
   await setSubmissionSupplements(submissionId, supplementsFromForm(form));
@@ -343,9 +350,8 @@ export async function returnToDraft(caller: Caller, submissionId: number): Promi
  * Answer a request for changes.
  *
  * The flag clears and the submission date is kept, so responding to the
- * committee does not restart the claim. The member's answer is a save, though,
- * so it voids a confirmed Witness (ADR-0001) and a witnessed Submission goes
- * back through witnessing.
+ * committee does not restart the claim. The answer is a save, though, so it
+ * voids a confirmed Witness (see `voidWitness`).
  */
 export async function resubmit(
   caller: Caller,
@@ -354,7 +360,8 @@ export async function resubmit(
 ): Promise<void> {
   await withTransaction(async (db) => {
     const { submission } = await guard(db, moves.resubmit, caller, submissionId);
-    await writeContent(db, submissionId, submission.member_id, form, WITNESS_VOIDED);
+    await writeContent(db, submissionId, submission.member_id, form);
+    await voidWitness(db, submissionId, moves.resubmit);
     await runUpdate(
       db,
       `UPDATE submissions SET
@@ -450,8 +457,7 @@ export async function removeFromQueue(caller: Caller, submissionId: number): Pro
  *
  * This is the committee's refusal path, and it has a way back: the Submission
  * keeps its state and its Witness, leaves the committee's queues until the
- * member responds, and no committee action but Delete is legal meanwhile. The
- * member's response is a save, so a witnessed Submission is witnessed again.
+ * member responds, and no committee action but Delete is legal meanwhile.
  */
 export async function requestChanges(
   caller: Caller,
@@ -565,8 +571,7 @@ export async function approve(
  * the approval: the feed entry is updated in place, so fixing a mistake does
  * not put it back on the front page a second time. Nothing is emailed, because
  * the member's standing page already shows the truth. The Witness is left
- * alone: voiding it is for member saves before approval, and Approved is
- * terminal.
+ * alone (see `voidWitness`).
  *
  * Returns the fields that actually changed, which is also what the changelog
  * records.

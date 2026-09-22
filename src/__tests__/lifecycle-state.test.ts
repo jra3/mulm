@@ -6,6 +6,7 @@ import {
   requiredWaitingDays,
   waitingPeriod,
   type StateRow,
+  hasConfirmedWitness,
 } from "@/lifecycle";
 
 /**
@@ -146,6 +147,27 @@ void describe("The waiting-period clock", () => {
       waitingPeriod({ species_type: "Fish", species_class: "Livebearers", reproduction_date })
         .elapsed,
       false
+    );
+  });
+});
+
+void describe("A Witness a member's save would void", () => {
+  void test("only a confirmed, unapproved Submission carries one", () => {
+    assert.strictEqual(
+      hasConfirmedWitness({ witness_verification_status: "confirmed", approved_on: undefined }),
+      true
+    );
+    assert.strictEqual(
+      hasConfirmedWitness({ witness_verification_status: "pending", approved_on: undefined }),
+      false
+    );
+    assert.strictEqual(
+      hasConfirmedWitness({
+        witness_verification_status: "confirmed",
+        approved_on: new Date().toISOString(),
+      }),
+      false,
+      "Approved is terminal; nothing the member does can void it"
     );
   });
 });

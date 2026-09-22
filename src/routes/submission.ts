@@ -270,7 +270,7 @@ async function renderEditForm(
     },
     errors: new Map(),
     changesRequested,
-    witnessConfirmed: submission.witness_verification_status === "confirmed",
+    witnessConfirmed: lifecycle.hasConfirmedWitness(submission),
     ...templateData,
   });
 }
@@ -467,7 +467,7 @@ export const update = async (req: MulmRequest, res: Response) => {
       title: `Edit ${getBapFormTitle(selectedType)}`,
       form,
       errors,
-      witnessConfirmed: submission.witness_verification_status === "confirmed",
+      witnessConfirmed: lifecycle.hasConfirmedWitness(submission),
       ...templateData,
     });
     return;

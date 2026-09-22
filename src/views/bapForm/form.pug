@@ -280,7 +280,7 @@ mixin CRUDForm()
                     li Points awarded at the meeting when offspring are presented!
 
     if witnessConfirmed
-        //- ADR-0001: the Witness attests to the form, so any member save voids it.
+        //- ADR-0001: a member's save voids the Witness (lifecycle `voidWitness`).
         section.bg-yellow-50.py-4.border-l-4.border-yellow-400(aria-labelledby="witness-void-warning")
             div.max-w-4xl.mx-auto.px-4
                 h3#witness-void-warning.text-lg.font-semibold.text-yellow-900.mb-2 ⚠️ This submission has been witnessed
