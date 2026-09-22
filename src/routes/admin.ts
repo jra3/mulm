@@ -27,7 +27,7 @@ import { Response, NextFunction } from "express";
 import { createAuthCode } from "@/db/auth";
 import { AuthCode, generateRandomCode } from "@/auth";
 import { validateFormResult } from "@/forms/utils";
-import { validateSubmission } from "./submission";
+import { approvalPanelData, validateSubmission } from "./submission";
 import {
   isLivestock,
   foodTypes,
@@ -37,8 +37,8 @@ import {
   hasFoods,
   hasSpawnLocations,
 } from "@/forms/submission";
-import { countSubmissionsOfSpecies, findSpeciesById } from "@/species";
-import { getBodyParam, getBodyString, getQueryString } from "@/utils/request";
+import { findSpeciesById } from "@/species";
+import { getBodyParam, getBodyString } from "@/utils/request";
 import { checkAllMemberLevels } from "@/levelManager";
 import { checkAllSpecialtyAwards } from "@/specialtyAwardManager";
 import { logger } from "@/utils/logger";
@@ -539,54 +539,6 @@ export const sendWelcomeEmail = async (req: MulmRequest, res: Response) => {
   }
 };
 
-/**
- * GET /admin/submissions/:id/approval-bonuses
- * HTMX endpoint: Returns bonus checkboxes fragment when species is selected
- */
-export const getApprovalBonuses = async (req: MulmRequest, res: Response) => {
-  const { id } = req.params;
-  const groupId = parseInt(getQueryString(req, "group_id", ""));
-
-  if (isNaN(groupId)) {
-    res.status(400).send("Invalid group ID");
-    return;
-  }
-
-  const submission = await getSubmissionById(parseInt(id));
-  if (!submission) {
-    res.status(404).send("Submission not found");
-    return;
-  }
-
-  try {
-    // Check first-time status (program-wide) and get species data
-    // First-time is program-wide: no member has had this Species approved yet.
-    const [submissionsOfSpecies, species] = await Promise.all([
-      countSubmissionsOfSpecies(groupId),
-      findSpeciesById(groupId),
-    ]);
-
-    const templateData = {
-      submission: {
-        id: submission.id,
-      },
-      program: submission.program,
-      isFirstTime: submissionsOfSpecies.approved === 0,
-      priorBreedCount: submissionsOfSpecies.approved,
-      isCaresSpecies: species?.is_cares_species === 1,
-      basePoints: species?.base_points,
-    };
-
-    logger.info("Rendering approval bonuses", templateData);
-
-    // Render the bonus checkboxes fragment (includes base points selector)
-    res.render("admin/approvalBonuses", templateData);
-  } catch (error) {
-    logger.error("Error fetching approval bonuses", error);
-    res.status(500).send("Error loading bonus data");
-  }
-};
-
 export const approveSubmission = async (req: MulmRequest, res: Response) => {
   const { viewer } = req;
 
@@ -594,7 +546,8 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
   const submission = (await getSubmissionById(id))!;
 
   const errors = new Map<string, string>();
-  const onError = () => {
+  const parsed = approvalSchema(submission.program).safeParse(req.body);
+  if (!validateFormResult(parsed, errors)) {
     res.render("admin/approvalPanel", {
       submission: {
         id: submission.id,
@@ -602,12 +555,9 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
         species_class: submission.species_class,
         program: submission.program,
       },
+      approval: await approvalPanelData(submission),
       errors,
     });
-  };
-
-  const parsed = approvalSchema(submission.program).safeParse(req.body);
-  if (!validateFormResult(parsed, errors, onError)) {
     return;
   }
 
@@ -617,9 +567,7 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
   // from it - the member's email, the feed entry, the Level and Specialty
   // Award recompute - hangs off the transition, not off this handler.
   try {
-    // Binds the Submission to the Species the committee picked; the member's
-    // spellings are not added to it as Names.
-    await lifecycle.approve({ id: viewer!.id, isAdmin: true }, id, updates.group_id, updates);
+    await lifecycle.approve(callerFor(viewer!), id, updates);
   } catch (err) {
     if (sendLifecycleError(res, err, { submissionId: id, adminId: viewer?.id })) {
       return;

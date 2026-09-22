@@ -10,11 +10,6 @@ const approvalFields = z.object({
     .string()
     .max(10, "Points value too long")
     .transform((val) => parseInt(val)),
-  group_id: z
-    .string()
-    .min(1, "Species selection required")
-    .max(20, "Group ID too long")
-    .transform((val) => parseInt(val)),
   article_points: z
     .string()
     .max(10, "Article points too long")

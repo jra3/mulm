@@ -25,7 +25,12 @@ import {
   getSubmissionImages,
   getSubmissionSupplements,
 } from "@/db/submissions";
-import { canonicalName as canonicalNameOf, checkFormAgreement, findSpeciesById } from "@/species";
+import {
+  canonicalName as canonicalNameOf,
+  checkFormAgreement,
+  countSubmissionsOfSpecies,
+  findSpeciesById,
+} from "@/species";
 import * as lifecycle from "@/lifecycle";
 import { attempt, callerFor } from "./lifecycleErrors";
 import { getNotesForSubmission } from "@/db/submission_notes";
@@ -207,6 +212,8 @@ export const view = async (req: MulmRequest, res: Response) => {
       ? { speciesType: agreement.speciesType, programClass: agreement.programClass }
       : null,
     spellingAgreement: agreement ? { commonName: agreement.commonName, latinName: agreement.latinName } : null,
+    // The approval panel reads the bound Species; only a committee member sees it
+    approval: aspect.isAdmin && state === "inApprovalQueue" ? await approvalPanelData(submission) : null,
     waitingPeriodStatus,
     adminNotes,
     videoMetadata,
@@ -315,6 +322,29 @@ export const renderEdit = async (req: MulmRequest, res: Response) => {
 
   await renderEditForm(res, submission, viewer);
 };
+
+/**
+ * What the approval panel shows about the Species a Submission is bound to:
+ * its Canonical name and classification, its Point class (which prefills the
+ * Points), and the bonuses it implies - first time in the Program for this
+ * Species, and CARES. Null when the Submission is unbound, which the panel
+ * says and offers no Approve for.
+ */
+export async function approvalPanelData(submission: Pick<db.Submission, "species_id">) {
+  const species = submission.species_id ? await findSpeciesById(submission.species_id) : undefined;
+  if (!species) return null;
+  // First-time is program-wide: no member has had this Species approved yet
+  const submissionsOfSpecies = await countSubmissionsOfSpecies(species.group_id);
+  return {
+    speciesName: canonicalNameOf(species),
+    speciesType: species.species_type,
+    programClass: species.program_class,
+    pointClass: species.base_points,
+    isFirstTime: submissionsOfSpecies.approved === 0,
+    priorBreedCount: submissionsOfSpecies.approved,
+    isCaresSpecies: species.is_cares_species === 1,
+  };
+}
 
 /**
  * The moves this viewer may make on this Submission right now, keyed by move

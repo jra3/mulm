@@ -33,7 +33,6 @@ import { query } from "@/db/conn";
 import { addName, checkFormAgreement, createSpecies, listNames } from "@/species";
 import {
   mockApprovalData,
-  mockSpeciesId,
   ensureGuppySpecies,
   setupTestDatabase,
   teardownTestDatabase,
@@ -178,7 +177,7 @@ void describe("Submission lifecycle - transitions", () => {
       {
         move: "approve",
         legal: ["inApprovalQueue"],
-        run: (id) => approve(committee, id, mockSpeciesId, mockApprovalData),
+        run: (id) => approve(committee, id, mockApprovalData),
       },
       {
         move: "correctPoints",
@@ -302,7 +301,7 @@ void describe("Submission lifecycle - transitions", () => {
         witnessedBy: ctx.otherAdmin!.id,
       });
       assert.strictEqual(
-        await refusal(() => approve(committee, id, mockSpeciesId, mockApprovalData)),
+        await refusal(() => approve(committee, id, mockApprovalData)),
         "authorization"
       );
     });
@@ -349,7 +348,7 @@ void describe("Submission lifecycle - transitions", () => {
       const queued = await at("inApprovalQueue");
       await requestChangesFixture(queued, ctx.admin.id);
       assert.strictEqual(
-        await refusal(() => approve(committee, queued, mockSpeciesId, mockApprovalData)),
+        await refusal(() => approve(committee, queued, mockApprovalData)),
         "state"
       );
       assert.strictEqual(await refusal(() => deleteSubmission(committee, queued)), "allowed");
@@ -963,7 +962,7 @@ void describe("Submission lifecycle - transitions", () => {
     void test("approving records the Points and is terminal", async () => {
       const id = await at("inApprovalQueue");
 
-      await approve(committee, id, mockSpeciesId, { ...mockApprovalData, points: 15 });
+      await approve(committee, id, { ...mockApprovalData, points: 15 });
 
       const after = (await readSubmission(id))!;
       assert.strictEqual(deriveState(after), "approved");
@@ -976,7 +975,7 @@ void describe("Submission lifecycle - transitions", () => {
       assert.strictEqual(await refusal(() => deleteSubmission(member, id)), "state");
     });
 
-    void test("approving binds the Submission to the chosen Species and adds it no Names", async () => {
+    void test("approving keeps the bound Species and adds it no Names", async () => {
       const speciesId = await createSpecies({
         canonicalGenus: "Bindus",
         canonicalSpeciesName: "approvus",
@@ -989,9 +988,10 @@ void describe("Submission lifecycle - transitions", () => {
         witnessedBy: ctx.admin.id,
         commonName: "Member's Own Spelling",
         latinName: "Bindus approvvus",
+        speciesId,
       });
 
-      await approve(committee, id, speciesId, mockApprovalData);
+      await approve(committee, id, mockApprovalData);
 
       const after = (await readSubmission(id))!;
       assert.strictEqual(after.species_id, speciesId);
@@ -1000,10 +1000,23 @@ void describe("Submission lifecycle - transitions", () => {
       assert.deepStrictEqual(await listNames(speciesId), before, "the member's spellings are not minted as Names");
     });
 
-    void test("approving refuses a Species that does not exist, and changes nothing", async () => {
-      const id = await at("inApprovalQueue");
-      assert.strictEqual(await refusal(() => approve(committee, id, 987654, mockApprovalData)), "validation");
-      assert.strictEqual(deriveState((await readSubmission(id))!), "inApprovalQueue");
+    void test("approving is refused on a Submission bound to no Species, with its own refusal", async () => {
+      const id = await submissionInState(ctx.db, "inApprovalQueue", {
+        memberId: ctx.member.id,
+        witnessedBy: ctx.admin.id,
+        speciesId: null,
+      });
+
+      await assert.rejects(
+        () => approve(committee, id, mockApprovalData),
+        (err: unknown) =>
+          err instanceof UnboundError &&
+          err.message === "Bind this Submission to a Species before you approve it" &&
+          !(err instanceof StateError)
+      );
+      const after = (await readSubmission(id))!;
+      assert.strictEqual(deriveState(after), "inApprovalQueue");
+      assert.strictEqual(after.points, null, "no Points awarded to no Species");
     });
 
     void test("a correction needs a stated reason and an actual change", async () => {

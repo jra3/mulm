@@ -24,7 +24,6 @@ import { updateMember } from "@/db/members";
 import { markFinalSubmissionReminderSent } from "@/db/submissions";
 import {
   mockApprovalData,
-  mockSpeciesId,
   setupTestDatabase,
   teardownTestDatabase,
   type TestContext,
@@ -244,7 +243,7 @@ void describe("Submission lifecycle - consequences", () => {
     const id = await at("inApprovalQueue");
     sent.clear();
 
-    await approve(committee, id, mockSpeciesId, { ...mockApprovalData, points: 10 });
+    await approve(committee, id, { ...mockApprovalData, points: 10 });
 
     assert.ok(sent.kinds.includes("approved"));
     assert.deepStrictEqual(sent.of("approved")[0].to, [ctx.member.contact_email]);
@@ -257,7 +256,7 @@ void describe("Submission lifecycle - consequences", () => {
 
   void test("correcting an approval updates its entry rather than announcing it again", async () => {
     const id = await at("inApprovalQueue");
-    await approve(committee, id, mockSpeciesId, { ...mockApprovalData, points: 10 });
+    await approve(committee, id, { ...mockApprovalData, points: 10 });
     sent.clear();
 
     await correctPoints(committee, id, { points: 20 }, "Wrong point class");
@@ -274,7 +273,7 @@ void describe("Submission lifecycle - consequences", () => {
 
   void test("correcting an approval emails the member nothing at all", async () => {
     const id = await at("inApprovalQueue");
-    await approve(committee, id, mockSpeciesId, { ...mockApprovalData, points: 10 });
+    await approve(committee, id, { ...mockApprovalData, points: 10 });
     sent.clear();
 
     await correctPoints(committee, id, { points: 5 }, "Wrong point class");
@@ -290,7 +289,7 @@ void describe("Submission lifecycle - consequences", () => {
     const id = await at("inApprovalQueue");
     assert.strictEqual((await readSubmission(id))!.points, null);
 
-    await approve(committee, id, mockSpeciesId, { ...mockApprovalData, points: 15 });
+    await approve(committee, id, { ...mockApprovalData, points: 15 });
 
     assert.strictEqual((await readSubmission(id))!.points, 15);
   });

@@ -65,9 +65,10 @@ Program rules and the Level ladder all stay outside. The module takes values
 already validated and resolved, and calls the Level and Specialty Award modules
 as consequences rather than absorbing them.
 
-`approve` takes the Species the committee chose as an id, refuses one the
-Species catalogue does not know, and binds the Submission to it. It never
-adds Names to the Species: the member's spellings stay on the Submission.
+`approve` is about Points: it takes no Species, uses the one the Submission
+is bound to, and is refused on an unbound Submission (`requiresBound`, an
+`UnboundError`). There is no binding at approval; an unbound Submission past
+its Witness is fixed by hand. It never adds Names to the Species.
 
 `bindSpecies` is the witness's move: the committee binds or rebinds a
 Submission to a Species anywhere between submission and approval, never on

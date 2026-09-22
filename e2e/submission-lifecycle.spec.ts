@@ -109,6 +109,7 @@ test.describe("Submission Complete Lifecycle", () => {
 				witnessed: true,
 				witnessedBy: admin.id,
 				witnessedDaysAgo: 70, // 70 days ago - well past the 60-day requirement
+				bound: true, // the witness bound it; approval requires a Species
 			});
 		} finally {
 			await db.close();
@@ -154,11 +155,8 @@ test.describe("Submission Complete Lifecycle", () => {
 		// Wait for the approval form to fully load
 		await page.waitForLoadState("networkidle");
 
-		// Select species using Tom Select typeahead (required field)
-		await fillTomSelectTypeahead(page, "group_id", "Poecilia reticulata");
-
-		// Wait for HTMX to update the points dropdown based on selected species
-		await page.waitForTimeout(500);
+		// The approval panel shows the bound Species; there is no species step
+		await expect(page.locator("#approval-species-name")).toHaveText("Poecilia reticulata");
 
 		// Select base points from dropdown
 		await page.selectOption('select[name="points"]', "10");
@@ -327,9 +325,8 @@ test.describe("Submission Complete Lifecycle", () => {
 		// Wait for the approval form to fully load
 		await page.waitForLoadState("networkidle");
 
-		// Select species using Tom Select typeahead (required field)
-		await fillTomSelectTypeahead(page, "group_id", "Poecilia reticulata");
-		await page.waitForTimeout(500);
+		// The approval panel shows the bound Species; there is no species step
+		await expect(page.locator("#approval-species-name")).toHaveText("Poecilia reticulata");
 
 		// Select base points from dropdown
 		await page.selectOption('select[name="points"]', "10");
@@ -573,9 +570,8 @@ test.describe("Submission Complete Lifecycle", () => {
 		// Wait for the approval form to fully load
 		await page.waitForLoadState("networkidle");
 
-		// Select species using Tom Select typeahead (required field)
-		await fillTomSelectTypeahead(page, "group_id", "Poecilia reticulata");
-		await page.waitForTimeout(500);
+		// The approval panel shows the bound Species; there is no species step
+		await expect(page.locator("#approval-species-name")).toHaveText("Poecilia reticulata");
 
 		// Select base points from dropdown
 		await page.selectOption('select[name="points"]', "10");

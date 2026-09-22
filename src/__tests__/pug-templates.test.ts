@@ -638,10 +638,14 @@ void describe("Pug Template Rendering", () => {
             break;
 
           case "admin/approvalPanel.pug":
-            templateData.formData = templateData.form;
-            templateData.name = {
-              canonical_genus: "Apistogramma",
-              canonical_species: "cacatuoides",
+            templateData.approval = {
+              speciesName: "Apistogramma cacatuoides",
+              speciesType: "Fish",
+              programClass: "Cichlids - New World",
+              pointClass: 10,
+              isFirstTime: true,
+              priorBreedCount: 0,
+              isCaresSpecies: false,
             };
             break;
 
@@ -1019,19 +1023,63 @@ void describe("Pug Template Rendering", () => {
       assert.match(html, /value="Newgenus"/);
       assert.match(html, /The Species was created, but not bound/);
     });
+  });
 
-    void test("the approval panel no longer creates Species", () => {
-      const html = pug.compileFile(path.join(viewsPath, "admin/approvalPanel.pug"), {
-        basedir: viewsPath,
-        pretty: false,
-      })({
+  /**
+   * Approval is about Points: the bound Species read-only with its Point
+   * class, Points prefilled from it, and no species step at all.
+   */
+  void describe("Approval panel", () => {
+    const render = (data: Record<string, unknown>) =>
+      pug.compileFile(path.join(viewsPath, "admin/approvalPanel.pug"), { basedir: viewsPath, pretty: false })({
         ...baseMockData,
-        submission: { id: 42, species_type: "Fish", program: "fish" },
+        isAdmin: true,
+        submission: { id: 42, species_type: "Fish", program: "fish", points: null },
         errors: new Map(),
-        bonusFields: [],
+        ...data,
       });
-      assert.doesNotMatch(html, /dialog\/species\/new/);
-      assert.match(html, /name="group_id"/);
+    const approval = {
+      speciesName: "Poecilia reticulata",
+      speciesType: "Fish",
+      programClass: "Livebearers",
+      pointClass: 10,
+      isFirstTime: false,
+      priorBreedCount: 3,
+      isCaresSpecies: true,
+    };
+
+    void test("bound, with a Point class: the Species read-only and the Points prefilled from it", () => {
+      const html = render({ approval });
+
+      assert.match(html, /id="approval-species-name"[^>]*>Poecilia reticulata</);
+      assert.match(html, /Livebearers/);
+      assert.match(html, /id="approval-point-class"><span class="font-semibold">Point class:<\/span> <span>10<\/span>/);
+      assert.match(html, /<option value="10" selected="selected">10<\/option>/);
+      assert.match(html, /Previously bred 3 times/);
+      assert.match(html, /<input type="checkbox" id="cares" name="cares_species" checked="checked"\/>/);
+      assert.match(html, /hx-post="\/admin\/submissions\/42\/approve"/);
+      // No species step
+      assert.doesNotMatch(html, /tom-select|species-search|name="group_id"|dialog\/species\/new|approval-bonuses/);
+    });
+
+    void test("bound, with no Point class: nothing prefilled, and it says so", () => {
+      const html = render({ approval: { ...approval, pointClass: null } });
+
+      assert.match(html, /not set for this Species/);
+      assert.match(html, /<option value="" disabled="disabled" selected="selected">Base Points<\/option>/);
+      assert.doesNotMatch(html, /<option value="\d+" selected/);
+      assert.match(html, /Approve/);
+    });
+
+    void test("unbound: says it must be bound first, and offers no Approve", () => {
+      const html = render({ approval: null });
+
+      assert.match(html, /id="approval-unbound"/);
+      assert.match(html, /Not bound to a Species/);
+      assert.doesNotMatch(html, /\/approve"|>Approve</);
+      assert.doesNotMatch(html, /tom-select|name="group_id"/);
+      assert.match(html, /Request Changes/);
+      assert.match(html, /hx-delete="\/submissions\/42"/);
     });
   });
 

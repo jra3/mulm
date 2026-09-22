@@ -343,7 +343,7 @@ html
                                     )
                                 button.primary(type="submit") Add Note
 
-        // Initialize typeahead for species selection in approval panel
+        // Initialize the witness panel's Species typeahead
         if isAdmin
             style.
                 /* Force typeahead to maintain fixed width and handle long text */
@@ -385,7 +385,7 @@ html
                         }
 
                         // Add wrapper class for species search to maintain fixed width
-                        if (element.id === 'species-search' || element.id === 'witness-species-search') {
+                        if (element.id === 'witness-species-search') {
                             tomSelect.wrapper.classList.add('species-search-wrapper');
                         }
                     });

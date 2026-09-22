@@ -74,15 +74,16 @@ void describe("Submission lifecycle - standing", () => {
     const ids: number[] = [];
     const species: number[] = [];
     for (let i = 0; i < count; i++) {
+      const speciesId = await speciesOf("Anabantoids");
       const id = await submissionInState(ctx.db, "inApprovalQueue", {
         memberId: ctx.member.id,
         witnessedBy: ctx.admin.id,
         speciesClass: "Anabantoids",
         latinName: `Betta species${i}`,
         commonName: `Betta ${i}`,
+        speciesId,
       });
-      const speciesId = await speciesOf("Anabantoids");
-      await approve(committee, id, speciesId, { ...mockApprovalData, points });
+      await approve(committee, id, { ...mockApprovalData, points });
       ids.push(id);
       species.push(speciesId);
     }

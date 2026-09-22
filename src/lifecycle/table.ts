@@ -26,7 +26,7 @@ import { AuthorizationError, MismatchError, StateError, UnboundError } from "./e
  * | requestChanges          | the four middle states                  | same, flag set      | committee          |
  * | resubmit                | the four middle states                  | as saveChanges,     | member             |
  * |                         |                                         | flag cleared        |                    |
- * | approve                 | inApprovalQueue                         | approved            | committee          |
+ * | approve                 | inApprovalQueue, bound to a Species     | approved            | committee          |
  * | correctPoints           | approved                                | approved            | committee          |
  * | deleteSubmission        | draft (member); draft .. inApprovalQueue (committee) | gone   | member or committee|
  *
@@ -212,7 +212,10 @@ export const moves = {
   /**
    * Never the submitter, as with the Witness: awarding yourself points is the
    * same conflict as inspecting your own fry. The Portal already hid the
-   * approval panel from a Submission's owner; this makes it a rule.
+   * approval panel from a Submission's owner; this makes it a rule. Never on a
+   * Submission bound to no Species, so Points are never awarded to no Species;
+   * there is no binding at approval, so one past its Witness unbound is fixed
+   * by hand.
    */
   approve: {
     id: "approve",
@@ -220,6 +223,7 @@ export const moves = {
     actors: COMMITTEE_ONLY,
     requiresNoChangesPending: true,
     neverSubmitter: true,
+    requiresBound: true,
   },
 
   /** The only movement out of Approved. Approved is otherwise terminal. */

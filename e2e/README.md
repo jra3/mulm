@@ -415,8 +415,8 @@ await page.click('button:has-text("Approve")');
 await page.waitForURL(/\/admin\/queue\//); // TIMEOUT!
 
 // Why? Check the form schema in src/forms/approval.ts:
-// - group_id is REQUIRED ("Species selection required")
 // - points must be provided
+// - approve is refused on a Submission bound to no Species
 ```
 
 **Debugging strategy**:
@@ -434,7 +434,7 @@ console.log("Errors:", errors);
 ```
 
 **Real examples from this codebase**:
-- Approval requires `group_id` (species selection) - silently fails without it
+- Approval requires a Submission bound to a Species - the panel offers no Approve without one
 - Witness decline dialog requires `reason` with `minlength="10"`
 - Approval uses dropdown `select[name="points"]` not text input
 
@@ -619,9 +619,9 @@ const approveButton = page.locator('button:has-text("Approve")').first();
 await approveButton.scrollIntoViewIfNeeded();
 await page.waitForLoadState("networkidle");
 
-// REQUIRED: Select species (validation fails without this)
-await fillTomSelectTypeahead(page, "group_id", "Poecilia reticulata");
-await page.waitForTimeout(500); // HTMX updates points dropdown
+// The panel shows the bound Species; there is no species step. The
+// Submission must be bound (createTestSubmission({ ..., bound: true }), or
+// bound in the witness panel) or the panel offers no Approve.
 
 // Select base points
 await page.selectOption('select[name="points"]', "10");
@@ -633,9 +633,8 @@ await page.waitForURL(/\/admin\/(witness-queue|queue)\//);
 
 **Key requirements**:
 1. Submission must be past waiting period (check reproduction_date)
-2. Must select species via `group_id` (required field)
-3. Must select points from dropdown (not text input)
-4. Wait for `networkidle` before selecting species
+2. Must be bound to a Species (`bound: true`, or bind in the witness panel)
+3. Must select points from dropdown (not text input); it is prefilled from the Species' Point class when it has one
 
 ### Pattern: Changes Requested Workflow
 
@@ -748,7 +747,6 @@ cat src/forms/approval.ts
 
 ```typescript
 export const approvalSchema = z.object({
-  group_id: z.string().min(1, "Species selection required"), // REQUIRED!
   points: z.string().transform(val => parseInt(val)),
   // ... optional fields ...
 });
@@ -880,6 +878,7 @@ test("test workflow", async ({ page }) => {
     submitted: true,
     witnessed: true,
     reproductionDaysAgo: 70,
+    bound: true,
   });
 
   // Login and go directly to the state we want to test
@@ -887,7 +886,6 @@ test("test workflow", async ({ page }) => {
   await page.goto(`/submissions/${id}`);
 
   // Test only the interaction we care about
-  await fillTomSelectTypeahead(page, "group_id", "Poecilia reticulata");
   await page.selectOption('select[name="points"]', "10");
   await page.click('button:has-text("Approve")');
 
@@ -958,8 +956,8 @@ const id = await createTestSubmission({ witnessed: true, witnessedDaysAgo: 70 })
 await page.selectOption('select[name="points"]', "10");
 await page.click('button:has-text("Approve")');
 ```
-**Error**: No redirect occurs (silent validation failure)
-**Fix**: Must select species first - `group_id` is required field
+**Error**: No Approve button (the Submission is unbound)
+**Fix**: Bind it first - `createTestSubmission({ ..., bound: true })` or the witness panel
 
 ### Iteration 6: Wrong Field Type
 ```typescript
@@ -984,8 +982,6 @@ const approveButton = page.locator('button:has-text("Approve")').first();
 await approveButton.scrollIntoViewIfNeeded();
 await page.waitForLoadState("networkidle");
 
-await fillTomSelectTypeahead(page, "group_id", "Poecilia reticulata");
-await page.waitForTimeout(500);
 
 await page.selectOption('select[name="points"]', "10");
 await approveButton.click();
