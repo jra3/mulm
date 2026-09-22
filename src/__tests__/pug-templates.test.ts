@@ -905,7 +905,7 @@ void describe("Pug Template Rendering", () => {
       assert.match(html, /\/admin\/species\/3\/scientific-names\/22/);
     });
 
-    void test("the edit page's delete has a place for the refusal and no force option", () => {
+    void test("the edit page's save and delete each have a place for a refusal, and no force option", () => {
       const html = render("admin/speciesEdit.pug", {
         species,
         commonNames: common,
@@ -916,6 +916,8 @@ void describe("Pug Template Rendering", () => {
       });
 
       assert.match(html, /hx-target="#species-delete-refusal"/);
+      assert.match(html, /hx-target="#species-edit-refusal"/);
+      assert.match(html, /id="species-edit-refusal"/);
       assert.match(html, /id="species-delete-refusal"/);
       assert.doesNotMatch(html, /force/);
     });

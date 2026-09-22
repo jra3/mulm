@@ -29,7 +29,9 @@ html
 
         form(
           hx-patch=`/admin/species/${species.group_id}`
-          hx-swap="none"
+          hx-target="#species-edit-refusal"
+          hx-swap="innerHTML"
+          hx-on--before-swap="if (event.detail.xhr.status >= 400 ? event.detail.xhr.status < 500 : false) { event.detail.shouldSwap = true; }"
           hx-on--after-request="if(event.detail.successful && event.detail.elt === this) { window.location.href='/admin/species'; }"
         )
 
@@ -271,6 +273,8 @@ html
           .flex.gap-3.justify-center
             button.primary(type="submit" hx-disabled-elt="this") Save Changes
             button.outline(type="button" onclick="window.location.href='/admin/species'") Cancel
+          //- A refused save (a Canonical name another Species holds, an invalid field) lands here
+          p#species-edit-refusal.text-sm.text-red-700.text-center(role="alert")
 
           //- Danger Zone
           .mt-6.pt-6.border-t.border-gray-300
@@ -291,6 +295,7 @@ html
                   hx-delete=`/admin/species/${species.group_id}`
                   hx-confirm="Delete this species and all its synonyms? This cannot be undone."
                   hx-target="#species-delete-refusal"
+                  hx-swap="innerHTML"
                   hx-on--before-swap="if (event.detail.xhr.status >= 400 ? event.detail.xhr.status < 500 : false) { event.detail.shouldSwap = true; }"
                   hx-on--after-request="if(event.detail.successful) { window.location.href='/admin/species'; }"
                 ) Delete Species

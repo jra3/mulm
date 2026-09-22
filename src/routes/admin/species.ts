@@ -191,24 +191,10 @@ export const updateSpecies = async (req: MulmRequest, res: Response) => {
   // Validate form data
   const parsed = speciesEditForm.safeParse(req.body);
 
+  // A refusal is a 4xx whose text the form shows under Save Changes; only a
+  // successful save leaves the page.
   if (!parsed.success) {
-    // Re-render form with errors
-    const speciesDetail = await catalogue.getSpeciesDetail(groupId);
-    if (!speciesDetail) {
-      res.status(404).send("Species not found");
-      return;
-    }
-
-    const errors = new Map<string, string>();
-    parsed.error.issues.forEach((issue) => {
-      errors.set(String(issue.path[0]), issue.message);
-    });
-
-    res.render("admin/speciesEdit", {
-      title: "Edit Species",
-      species: { ...speciesDetail, ...(req.body as Record<string, unknown>) },
-      errors,
-    });
+    res.status(400).send(parsed.error.issues.map((issue) => issue.message).join(". "));
     return;
   }
 
@@ -238,29 +224,9 @@ export const updateSpecies = async (req: MulmRequest, res: Response) => {
     // Success - redirect back to list
     res.set("HX-Redirect", "/admin/species").status(200).send();
   } catch (err) {
-    if (!(err instanceof CatalogueRefusal)) {
-      logger.error("Failed to update species", err);
-    }
-    if (err instanceof CatalogueRefusal && err.code === "not_found") {
-      res.status(404).send(err.message);
-      return;
-    }
-
-    const speciesDetail = await catalogue.getSpeciesDetail(groupId);
-    const errors = new Map<string, string>();
-    if (err instanceof CatalogueRefusal) {
-      errors.set(refusalField(err), err.message);
-      res.status(refusalStatus[err.code]);
-    } else {
-      errors.set("_general", "Failed to update species");
-      res.status(500);
-    }
-
-    res.render("admin/speciesEdit", {
-      title: "Edit Species",
-      species: { ...speciesDetail, ...(req.body as Record<string, unknown>) },
-      errors,
-    });
+    if (sendRefusal(res, err)) return;
+    logger.error("Failed to update species", err);
+    res.status(500).send("Failed to update species");
   }
 };
 
