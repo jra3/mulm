@@ -1,3 +1,11 @@
+/**
+ * Import-only tooling: this script writes the species tables directly, not
+ * through the Species catalogue (`@/species`). Do not copy this pattern into
+ * `src/`. It is a one-off historical import (already run). It records Species
+ * through the old species module's `recordName` and calls submission
+ * `backfill*` helpers that no longer exist in `src/`, so it does not run as it
+ * stands.
+ */
 import moduleAlias from "module-alias";
 import path from "path";
 moduleAlias.addAlias("@", path.join(__dirname, "..", "src"));

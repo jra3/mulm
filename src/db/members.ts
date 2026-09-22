@@ -5,6 +5,7 @@ import { recordActivity, removeActivity } from "./activity";
 import { specialtyAwards, getCountableSpecialtyAwards } from "@/specialtyAwards";
 import { programSpeciesTypeSql, totalPointsSql } from "@/points";
 import { ProgramType } from "@/programs";
+import { speciesOfSubmissionJoinSql } from "@/species";
 
 // type as represented in the database
 export type MemberRecord = {
@@ -423,15 +424,9 @@ export async function getSpecialtyAwardProgress(
 			s.species_type,
 			s.water_type,
 			s.spawn_locations,
-			COALESCE(
-				sng_common.canonical_genus,
-				sng_scientific.canonical_genus
-			) as canonical_genus
+			sng.canonical_genus
 		FROM submissions s
-		LEFT JOIN species_common_name cn ON s.common_name_id = cn.common_name_id
-		LEFT JOIN species_name_group sng_common ON cn.group_id = sng_common.group_id
-		LEFT JOIN species_scientific_name scin ON s.scientific_name_id = scin.scientific_name_id
-		LEFT JOIN species_name_group sng_scientific ON scin.group_id = sng_scientific.group_id
+		${speciesOfSubmissionJoinSql("s", "sng")}
 		WHERE s.member_id = ?
 			AND s.submitted_on IS NOT NULL
 			AND s.approved_on IS NOT NULL

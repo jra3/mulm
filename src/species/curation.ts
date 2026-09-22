@@ -186,13 +186,18 @@ async function ensureScientificName(db: Database, speciesId: number, text: strin
  * Change a Species' Canonical name. The previous Canonical name stays findable
  * as a scientific Name of the Species - never a common Name (ADR-0002). A
  * change of case only is a spelling fix and keeps no old name.
+ *
+ * `alongside` runs in the same transaction, for a caller whose own record of
+ * the rename must commit or roll back with it (accepting an IUCN
+ * recommendation marks the recommendation accepted).
  * @throws CatalogueRefusal if the Species is missing, a part is empty, or
  *   another Species already has this Canonical name
  */
 export async function renameCanonical(
   speciesId: number,
   genus: string,
-  epithet: string
+  epithet: string,
+  { alongside }: { alongside?: (db: Database) => Promise<void> } = {}
 ): Promise<void> {
   const newGenus = requireText(genus, "Canonical genus");
   const newEpithet = requireText(epithet, "Canonical species name");
@@ -202,17 +207,20 @@ export async function renameCanonical(
 
   const previous = canonicalName(species);
   const next = canonicalName({ canonical_genus: newGenus, canonical_species_name: newEpithet });
-  if (previous === next) return;
+  if (previous === next && !alongside) return;
 
   try {
     await withTransaction(async (db) => {
-      await db.run(
-        `UPDATE species_name_group SET canonical_genus = ?, canonical_species_name = ? WHERE group_id = ?`,
-        [newGenus, newEpithet, speciesId]
-      );
-      if (previous.toLowerCase() !== next.toLowerCase()) {
-        await ensureScientificName(db, speciesId, previous);
+      if (previous !== next) {
+        await db.run(
+          `UPDATE species_name_group SET canonical_genus = ?, canonical_species_name = ? WHERE group_id = ?`,
+          [newGenus, newEpithet, speciesId]
+        );
+        if (previous.toLowerCase() !== next.toLowerCase()) {
+          await ensureScientificName(db, speciesId, previous);
+        }
       }
+      if (alongside) await alongside(db);
     });
   } catch (err) {
     if (isUniqueViolation(err)) {

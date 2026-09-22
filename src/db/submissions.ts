@@ -4,6 +4,7 @@ import { logger } from "@/utils/logger";
 import { filterQueue, queueSql, type QueueName } from "@/lifecycle/queues";
 import { totalPointsSql } from "@/points";
 import type { Database } from "sqlite";
+import { speciesOfSubmissionJoinSql } from "@/species";
 
 // New normalized table types
 export type SubmissionImage = {
@@ -221,9 +222,7 @@ export function getSubmissionsByMember(
 			sng.is_cares_species
 		FROM submissions
 		LEFT JOIN members ON submissions.member_id == members.id
-		LEFT JOIN species_common_name cn ON submissions.common_name_id = cn.common_name_id
-		LEFT JOIN species_scientific_name scin ON submissions.scientific_name_id = scin.scientific_name_id
-		LEFT JOIN species_name_group sng ON (cn.group_id = sng.group_id OR scin.group_id = sng.group_id)
+		${speciesOfSubmissionJoinSql("submissions", "sng")}
 		WHERE submissions.member_id = ?`;
 
   if (!includeUnsubmitted) {
@@ -317,9 +316,7 @@ export async function getQueue(queue: QueueName, program: string) {
 		FROM submissions
 		JOIN members ON submissions.member_id == members.id
 		LEFT JOIN members as witnessed_members ON submissions.witnessed_by == witnessed_members.id
-		LEFT JOIN species_common_name cn ON submissions.common_name_id = cn.common_name_id
-		LEFT JOIN species_scientific_name scin ON submissions.scientific_name_id = scin.scientific_name_id
-		LEFT JOIN species_name_group sng ON (cn.group_id = sng.group_id OR scin.group_id = sng.group_id)
+		${speciesOfSubmissionJoinSql("submissions", "sng")}
 		WHERE ${queueSql(queue)}
 		AND program = ?
 		ORDER BY submissions.submitted_on ASC`,

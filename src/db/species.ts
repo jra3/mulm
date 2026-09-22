@@ -6,8 +6,8 @@
  * migrate to `@/species` ticket by ticket and this file then goes. What is
  * still implemented here is what the catalogue deliberately does not carry:
  * the deprecated functions that pair a common Name with a scientific one and
- * orphan exports. The CARES queries now live in the CARES data module and are
- * re-exported here.
+ * orphan exports. The CARES queries live in the CARES data module and a
+ * Species' references and images in `./speciesEnrichment`.
  */
 import { query, writeConn, withTransaction } from "./conn";
 import { logger } from "@/utils/logger";
@@ -30,12 +30,6 @@ import {
 import { setSpeciesExternalReferences, setSpeciesImages } from "./speciesEnrichment";
 
 export {
-  getCaresCoverageStats,
-  getCaresMaintenersForSpecies,
-  type CaresCoverageStats,
-} from "./cares";
-
-export {
   mergeSpecies,
   getExplorerFilterOptions as getFilterOptions,
   searchSpeciesTypeahead,
@@ -52,17 +46,6 @@ export {
   type SpeciesDetail,
   type SpeciesBreeder,
 } from "@/species";
-
-export {
-  getSpeciesExternalReferences,
-  setSpeciesExternalReferences,
-  getSpeciesImages,
-  setSpeciesImages,
-  setSpeciesImagesWithMetadata,
-  type SpeciesExternalReference,
-  type SpeciesImage,
-  type SpeciesImageInput,
-} from "./speciesEnrichment";
 
 type NameSynonym = {
   /** Not a phylogenetic class. The species class for the BAP program */

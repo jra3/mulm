@@ -72,6 +72,12 @@ export {
   type SubmissionOfSpecies,
 } from "./submissions";
 
+// Columns other modules own the meaning of; the catalogue writes them.
+export { updateIucnStatus, updateLastExternalSync, type IucnStatus } from "./status";
+
+// SQL fragments for modules that read a Species alongside their own tables.
+export { speciesFromSql, speciesJoinSql, speciesOfSubmissionJoinSql, anyNameSql } from "./sql";
+
 // Read models: typeahead, explorer, admin list, detail, breeders.
 export {
   searchSpeciesTypeahead,

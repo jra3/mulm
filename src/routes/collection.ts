@@ -11,7 +11,7 @@ import {
   getCollectionEntry,
   getCollectionStats,
 } from "@/db/collection";
-import { getSpeciesGroup } from "@/db/species";
+import { findSpeciesById } from "@/species";
 import {
   addToCollectionSchema,
   updateCollectionSchema,
@@ -408,7 +408,7 @@ router.post("/api/collection/:id/link", async (req: MulmRequest, res: Response) 
     }).parse(req.body);
 
     // Verify the species actually exists in the database
-    const species = await getSpeciesGroup(group_id);
+    const species = await findSpeciesById(group_id);
     if (!species) {
       res.status(400).render("partials/message", {
         message: "The selected species does not exist in the database.",

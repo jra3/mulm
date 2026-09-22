@@ -6,7 +6,7 @@ import {
   getSpeciesExternalReferences,
   getSpeciesImages,
   setSpeciesExternalReferences,
-} from "@/db/species";
+} from "@/db/speciesEnrichment";
 import { getAllSyncLog } from "@/db/external-data-sync";
 import { setupTestDatabase, teardownTestDatabase, type TestContext } from "./helpers/testHelpers";
 

@@ -1,4 +1,12 @@
 /**
+ * Import-only tooling: this script writes the species tables directly, not
+ * through the Species catalogue (`@/species`). Do not copy this pattern into
+ * `src/`. It is a CSV import of IUCN status; it opens its own connection for
+ * its dry-run mode and writes the IUCN columns with raw SQL. The in-app path
+ * (`src/db/iucn.ts` `updateIucnData`) writes through the catalogue's
+ * `updateIucnStatus`.
+ */
+/**
  * Import IUCN conservation status data from CARES species CSV file
  *
  * This script imports IUCN Red List conservation status data from a CSV file

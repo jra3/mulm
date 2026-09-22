@@ -25,7 +25,7 @@ import {
   getSubmissionImages,
   getSubmissionSupplements,
 } from "@/db/submissions";
-import { getSpeciesGroup, getGroupIdFromNameId } from "@/db/species";
+import { findSpeciesById, findSpeciesIdOfSubmission } from "@/species";
 import * as lifecycle from "@/lifecycle";
 import { attempt, callerFor } from "./lifecycleErrors";
 import { getNotesForSubmission } from "@/db/submission_notes";
@@ -125,25 +125,13 @@ export const view = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const nameGroup = await (async () => {
-    // Try new split schema FK columns first
-    if (submission.common_name_id) {
-      const groupId = await getGroupIdFromNameId(submission.common_name_id, true);
-      if (groupId) {
-        const group = await getSpeciesGroup(groupId);
-        if (group) return group;
-      }
-    }
+  const speciesShown = await (async () => {
+    // The Species the Submission references, if any
+    const speciesId = await findSpeciesIdOfSubmission(submission.id);
+    const species = speciesId ? await findSpeciesById(speciesId) : undefined;
+    if (species) return species;
 
-    if (submission.scientific_name_id) {
-      const groupId = await getGroupIdFromNameId(submission.scientific_name_id, false);
-      if (groupId) {
-        const group = await getSpeciesGroup(groupId);
-        if (group) return group;
-      }
-    }
-
-    // Fall back to parsing from submission data if no species group linked
+    // Fall back to parsing the member's Latin spelling
     const [genus, ...parts] = submission.species_latin_name.split(" ");
     return {
       canonical_genus: genus,
@@ -151,7 +139,7 @@ export const view = async (req: MulmRequest, res: Response) => {
     };
   })();
 
-  const canonicalName = `${nameGroup.canonical_genus} ${nameGroup.canonical_species_name}`;
+  const canonicalName = `${speciesShown.canonical_genus} ${speciesShown.canonical_species_name}`;
 
   // Calculate waiting period eligibility
   const waitingPeriodStatus = lifecycle.waitingPeriod(submission);
@@ -206,7 +194,7 @@ export const view = async (req: MulmRequest, res: Response) => {
       images, // Pass array of image objects instead of JSON string
     },
     canonicalName,
-    name: nameGroup,
+    name: speciesShown,
     waitingPeriodStatus,
     adminNotes,
     videoMetadata,

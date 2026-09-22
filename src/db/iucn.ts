@@ -8,6 +8,7 @@
 import type { Database } from "sqlite";
 import type { IUCNCategory, PopulationTrend } from "@/integrations/iucn";
 import { logger } from "@/utils/logger";
+import { CatalogueRefusal, renameCanonical, speciesFromSql, updateIucnStatus } from "@/species";
 
 /**
  * IUCN data to be stored/updated
@@ -83,57 +84,11 @@ export async function updateIucnData(
   groupId: number,
   data: IUCNData
 ): Promise<number> {
-  try {
-    const now = new Date().toISOString();
-
-    const updates: string[] = ["iucn_redlist_category = ?", "iucn_last_updated = ?"];
-    const values: (string | number | null)[] = [data.category, now];
-
-    if (data.taxonId !== undefined) {
-      updates.push("iucn_redlist_id = ?");
-      values.push(data.taxonId);
-    }
-
-    if (data.populationTrend !== undefined) {
-      updates.push("iucn_population_trend = ?");
-      values.push(data.populationTrend);
-    }
-
-    if (data.url !== undefined) {
-      updates.push("iucn_redlist_url = ?");
-      values.push(data.url);
-    }
-
-    values.push(groupId);
-
-    const stmt = await db.prepare(
-      `UPDATE species_name_group
-       SET ${updates.join(", ")}
-       WHERE group_id = ?`
-    );
-
-    try {
-      const result = await stmt.run(...values);
-
-      if (!result.changes || result.changes === 0) {
-        throw new Error(`Species group ${groupId} not found`);
-      }
-
-      return result.changes;
-    } finally {
-      await stmt.finalize();
-    }
-  } catch (err) {
-    if (err instanceof Error && err.message.includes("CHECK constraint")) {
-      logger.error("Invalid IUCN data", { groupId, data, error: err.message });
-      throw new Error(`Invalid IUCN category or population trend`);
-    }
-    if (err instanceof Error && err.message.includes("not found")) {
-      throw err; // Rethrow our own "not found" error
-    }
-    logger.error("Failed to update IUCN data", { groupId, error: err });
-    throw new Error("Failed to update IUCN data");
-  }
+  // The catalogue is the only writer of the Species row; `db` is kept for
+  // callers and is the same connection.
+  void db;
+  await updateIucnStatus(groupId, data);
+  return 1;
 }
 
 /**
@@ -227,7 +182,7 @@ export async function getSpeciesWithMissingIucn(
 ): Promise<SpeciesWithMissingIUCN[]> {
   return await db.all(`
     SELECT group_id, canonical_genus, canonical_species_name, program_class
-    FROM species_name_group
+    FROM ${speciesFromSql("sng")}
     WHERE iucn_redlist_category IS NULL
     ORDER BY canonical_genus, canonical_species_name
   `);
@@ -253,7 +208,7 @@ export async function getSpeciesNeedingResync(
       iucn_redlist_category,
       iucn_last_updated,
       CAST((julianday('now') - julianday(iucn_last_updated)) AS INTEGER) as days_since_update
-    FROM species_name_group
+    FROM ${speciesFromSql("sng")}
     WHERE iucn_redlist_category IS NOT NULL
       AND iucn_last_updated IS NOT NULL
       AND julianday('now') - julianday(iucn_last_updated) > ?
@@ -453,7 +408,9 @@ export async function getCanonicalRecommendations(
 /**
  * Accept a canonical name recommendation and apply the change
  *
- * This updates the species group's canonical name and adds the old name as a synonym.
+ * Renames the Species through the catalogue's `renameCanonical`, the same
+ * rename as the admin edit form, which keeps the old Canonical name as a
+ * scientific Name.
  *
  * @param db - Database connection
  * @param recommendationId - ID of the recommendation to accept
@@ -477,64 +434,30 @@ export async function acceptCanonicalRecommendation(
       throw new Error(`Pending recommendation ${recommendationId} not found`);
     }
 
-    // Perform the update in a transaction
-    await db.run("BEGIN TRANSACTION");
-
-    try {
-      const now = new Date().toISOString();
-
-      // 1. Update the canonical name in species_name_group
-      const updateResult = await db.run(
-        `UPDATE species_name_group
-         SET canonical_genus = ?,
-             canonical_species_name = ?
-         WHERE group_id = ?`,
-        [rec.suggested_canonical_genus, rec.suggested_canonical_species, rec.group_id]
-      );
-
-      if (!updateResult.changes || updateResult.changes === 0) {
-        throw new Error(`Species group ${rec.group_id} not found`);
-      }
-
-      // 2. Add old canonical name as a scientific name synonym (if not already present)
-      const oldScientificName = `${rec.current_canonical_genus} ${rec.current_canonical_species}`;
-      const existingSynonym = await db.get<{ scientific_name_id: number }>(
-        `SELECT scientific_name_id FROM species_scientific_name
-         WHERE group_id = ? AND scientific_name = ?`,
-        [rec.group_id, oldScientificName]
-      );
-
-      if (!existingSynonym) {
-        await db.run(
-          `INSERT INTO species_scientific_name (group_id, scientific_name)
-           VALUES (?, ?)`,
-          [rec.group_id, oldScientificName]
+    // The same rename as the admin edit form: the catalogue keeps the old
+    // Canonical name as a scientific Name. The recommendation is marked
+    // accepted in the same transaction.
+    await renameCanonical(rec.group_id, rec.suggested_canonical_genus, rec.suggested_canonical_species, {
+      alongside: async (tx) => {
+        await tx.run(
+          `UPDATE iucn_canonical_recommendations
+           SET status = 'accepted',
+               reviewed_at = ?,
+               reviewed_by = ?
+           WHERE id = ?`,
+          [new Date().toISOString(), reviewedBy, recommendationId]
         );
-      }
-
-      // 3. Mark recommendation as accepted
-      await db.run(
-        `UPDATE iucn_canonical_recommendations
-         SET status = 'accepted',
-             reviewed_at = ?,
-             reviewed_by = ?
-         WHERE id = ?`,
-        [now, reviewedBy, recommendationId]
-      );
-
-      await db.run("COMMIT");
-      return true;
-    } catch (err) {
-      await db.run("ROLLBACK");
-      throw err;
-    }
+      },
+    });
+    return true;
   } catch (err) {
     logger.error("Failed to accept canonical recommendation", {
       recommendationId,
       reviewedBy,
       error: err,
     });
-    // Re-throw our own errors with their original messages
+    // Re-throw our own errors and the catalogue's refusals with their messages
+    if (err instanceof CatalogueRefusal) throw err;
     if (err instanceof Error && err.message.includes("not found")) {
       throw err;
     }

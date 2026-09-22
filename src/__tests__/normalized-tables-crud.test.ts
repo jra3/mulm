@@ -15,7 +15,7 @@ import {
   setSpeciesExternalReferences,
   getSpeciesImages,
   setSpeciesImages,
-} from "../db/species";
+} from "../db/speciesEnrichment";
 
 void describe("Normalized Tables CRUD Operations", () => {
   let db: Database;

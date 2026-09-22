@@ -6,6 +6,7 @@
  */
 
 import type { Database } from "sqlite";
+import { speciesFromSql, updateLastExternalSync } from "@/species";
 import { logger } from "@/utils/logger";
 
 /**
@@ -30,17 +31,6 @@ export interface ExternalDataSyncLogEntry {
   links_added: number;
   images_added: number;
   error_message: string | null;
-}
-
-/**
- * Species with missing external data
- */
-export interface SpeciesWithMissingExternalData {
-  group_id: number;
-  canonical_genus: string;
-  canonical_species_name: string;
-  submission_count: number;
-  last_external_sync: string | null;
 }
 
 /**
@@ -94,7 +84,8 @@ export async function recordExternalDataSync(
   errorMessage?: string
 ): Promise<number> {
   try {
-    const now = new Date().toISOString();
+    const syncedAt = new Date();
+    const now = syncedAt.toISOString();
 
     const result = await db.run(
       `INSERT INTO external_data_sync_log
@@ -103,14 +94,9 @@ export async function recordExternalDataSync(
       [groupId, source, now, status, linksAdded, imagesAdded, errorMessage || null]
     );
 
-    // Update last_external_sync timestamp on species
+    // Stamp the Species' last external sync (the catalogue writes the row)
     if (status === "success") {
-      await db.run(
-        `UPDATE species_name_group
-         SET last_external_sync = ?
-         WHERE group_id = ?`,
-        [now, groupId]
-      );
+      await updateLastExternalSync(groupId, syncedAt);
     }
 
     logger.info(
@@ -210,50 +196,6 @@ export async function getAllSyncLog(
 }
 
 /**
- * Get species with submissions but missing external data
- *
- * @param db - Database connection
- * @param minSubmissions - Minimum number of submissions (default 1)
- * @returns Array of species that have submissions but no external data
- */
-export async function getSpeciesWithMissingExternalData(
-  db: Database,
-  minSubmissions = 1
-): Promise<SpeciesWithMissingExternalData[]> {
-  try {
-    const species = await db.all<SpeciesWithMissingExternalData[]>(
-      `SELECT
-         sng.group_id,
-         sng.canonical_genus,
-         sng.canonical_species_name,
-         COUNT(DISTINCT s.submission_id) as submission_count,
-         sng.last_external_sync
-       FROM species_name_group sng
-       INNER JOIN species_scientific_name ssn ON sng.group_id = ssn.group_id
-       INNER JOIN submissions s ON s.scientific_name_id = ssn.scientific_name_id
-       WHERE s.status = 'approved'
-       AND NOT EXISTS (
-         SELECT 1 FROM species_external_references ser
-         WHERE ser.group_id = sng.group_id
-       )
-       AND NOT EXISTS (
-         SELECT 1 FROM species_images si
-         WHERE si.group_id = sng.group_id
-       )
-       GROUP BY sng.group_id, sng.canonical_genus, sng.canonical_species_name, sng.last_external_sync
-       HAVING COUNT(DISTINCT s.submission_id) >= ?
-       ORDER BY submission_count DESC, sng.canonical_genus, sng.canonical_species_name`,
-      [minSubmissions]
-    );
-
-    return species;
-  } catch (error) {
-    logger.error("Failed to get species with missing external data", error);
-    throw error;
-  }
-}
-
-/**
  * Get species needing external data sync (never synced or old data)
  *
  * @param db - Database connection
@@ -279,7 +221,7 @@ export async function getSpeciesNeedingExternalSync(
            WHEN sng.last_external_sync IS NULL THEN NULL
            ELSE CAST((julianday('now') - julianday(sng.last_external_sync)) AS INTEGER)
          END as days_since_sync
-       FROM species_name_group sng
+       FROM ${speciesFromSql("sng")}
        WHERE sng.last_external_sync IS NULL
           OR sng.last_external_sync < ?
        ORDER BY
@@ -316,7 +258,7 @@ export async function getExternalDataSyncStats(
          COUNT(DISTINCT sng.group_id) as total_species,
          COUNT(DISTINCT CASE WHEN ser.group_id IS NOT NULL THEN sng.group_id END) as species_with_links,
          COUNT(DISTINCT CASE WHEN si.group_id IS NOT NULL THEN sng.group_id END) as species_with_images
-       FROM species_name_group sng
+       FROM ${speciesFromSql("sng")}
        LEFT JOIN species_external_references ser ON sng.group_id = ser.group_id
        LEFT JOIN species_images si ON sng.group_id = si.group_id`
     );

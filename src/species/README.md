@@ -27,7 +27,17 @@ module's own business.
 | `curation.ts` | Create, classify, set Point class, rename the Canonical name, merge, delete. |
 | `agreement.ts` | Does a Submission's form agree with a Species: spellings, Species type, Program class. |
 | `submissions.ts` | The Species-Submission relation, defined once as SQL, and the Submissions of a Species. |
+| `status.ts` | Writers for columns other modules own the meaning of: IUCN status, last external sync. |
+| `sql.ts` | SQL fragments for modules that read a Species alongside their own tables. |
 | `listings.ts` | Read models: typeahead, public explorer, admin list, detail page, breeders, statistics. |
+
+## Reading a Species from another module's query
+
+The catalogue is the only writer of the species tables, and nothing outside
+it names them. A query in another module that needs a Species' columns
+composes the fragments in `sql.ts` - `speciesOfSubmissionJoinSql` for the
+Species a Submission references, `speciesJoinSql` for a Species by id,
+`speciesFromSql`, `anyNameSql` - the way queries compose `totalPointsSql`.
 
 ## Rules it holds
 
@@ -48,8 +58,10 @@ module's own business.
 
 - IUCN status, external references and images. They are enrichment with their
   own modules (`src/db/iucn.ts`, `src/db/speciesEnrichment.ts`); the catalogue
-  never writes them. It reads the IUCN columns only to show them and to list
-  which Species are due an IUCN sync.
+  decides nothing about them. It reads the IUCN columns to show them and to
+  list which Species are due an IUCN sync, and it writes the IUCN status and
+  last-external-sync columns on those modules' behalf (`status.ts`) so it
+  stays the only writer of the Species row.
 - The CARES registry. The catalogue knows the CARES flag on a Species, nothing
   more.
 - Moving Submissions. The catalogue says which Submissions reference a Species

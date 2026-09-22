@@ -20,6 +20,7 @@ import {
   rejectCanonicalRecommendation,
   type IUCNData,
 } from "../db/iucn";
+import { addName, createSpecies, listNames, renameCanonical } from "@/species";
 
 void describe("IUCN Database Operations", () => {
   let ctx: TestContext;
@@ -711,6 +712,51 @@ void describe("IUCN Database Operations", () => {
       );
       assert.strictEqual(recommendation!.status, "accepted");
       assert.strictEqual(recommendation!.reviewed_by, 1);
+    });
+
+    void test("accepting a recommendation leaves the same Names as the admin edit form's rename", async () => {
+      // Two Species alike but for their epithet; one renamed each way.
+      const twin = async (epithet: string) => {
+        const id = await createSpecies({
+          canonicalGenus: "Twingenus",
+          canonicalSpeciesName: epithet,
+          programClass: "Livebearers",
+          speciesType: "Fish",
+        });
+        await addName(id, "common", "Twin Fish");
+        await addName(id, "scientific", `Twingenus ${epithet} variant`);
+        return id;
+      };
+      const viaIucn = await twin("alpha");
+      const viaEditForm = await twin("beta");
+
+      const recId = await createCanonicalRecommendation(ctx.db, {
+        groupId: viaIucn,
+        currentGenus: "Twingenus",
+        currentSpecies: "alpha",
+        suggestedGenus: "Movedgenus",
+        suggestedSpecies: "alpha",
+        iucnTaxonId: 44444,
+        reason: "Genus change",
+      });
+      await acceptCanonicalRecommendation(ctx.db, recId, 1);
+      // The edit form's rename (src/routes/admin/species.ts updateSpecies)
+      await renameCanonical(viaEditForm, "Movedgenus", "beta");
+
+      // Names, with the epithet written as a placeholder so the twins compare
+      const shape = async (id: number, epithet: string) => {
+        const names = await listNames(id);
+        return {
+          common: names.common.map((n) => n.name),
+          scientific: names.scientific.map((n) => n.name.replace(epithet, "<epithet>")),
+        };
+      };
+      const iucnNames = await shape(viaIucn, "alpha");
+      assert.deepStrictEqual(iucnNames, await shape(viaEditForm, "beta"));
+      assert.deepStrictEqual(iucnNames, {
+        common: ["Twin Fish"],
+        scientific: ["Twingenus <epithet>", "Twingenus <epithet> variant"],
+      });
     });
 
     void test("should reject a canonical name recommendation", async () => {

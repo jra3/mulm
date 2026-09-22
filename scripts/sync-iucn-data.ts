@@ -24,9 +24,8 @@
  *   npm run script scripts/sync-iucn-data.ts --stale-only 365
  */
 
-import sqlite3 from "sqlite3";
-import { open, Database } from "sqlite";
-import config from "../src/config.json";
+import type { Database } from "sqlite";
+import { ready, db as appDb } from "../src/db/conn";
 import { getIUCNClient, IUCNAPIError } from "../src/integrations/iucn";
 import {
   updateIucnData,
@@ -304,10 +303,10 @@ async function syncIUCNData() {
 
   // Connect to database
   console.log("Connecting to database...");
-  const db = await open({
-    filename: config.databaseFile,
-    driver: sqlite3.Database,
-  });
+  // The app's connection: IUCN status is written through the Species
+  // catalogue, which uses it.
+  await ready;
+  const db = appDb(true);
 
   // Get IUCN client
   console.log("Initializing IUCN API client...");

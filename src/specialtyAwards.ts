@@ -14,7 +14,7 @@ export interface SubmissionForAward {
   species_type: string;
   water_type: string;
   spawn_locations?: string;
-  canonical_genus?: string; // From species_name_group table
+  canonical_genus?: string; // The referenced Species' Canonical genus
 }
 
 export const specialtyAwards: SpecialtyAward[] = [
