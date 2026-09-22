@@ -84,7 +84,7 @@ The minimum age (from `reproduction_date`) a submission must reach before it may
 _Avoid_: holding period, cooldown
 
 **Witness (Gate 1 — physical verification)**:
-A committee member's inspection of the fry/parents (or cutting). Carried on the submission as `witnessed_by` / `witnessed_on` and `witness_verification_status: pending | confirmed`. A member cannot witness their own submission, and no Witness may be confirmed while requested changes are outstanding. A **confirmed Witness survives the member's edits and a trip back to Draft** — it attested to the fry, not to the form — so resubmitting skips screening and re-enters the waiting period.
+A committee member's attestation that the fry (or cutting) exist and that the Submission describes them and the breeding situation correctly, including which Species it is bound to. Carried on the submission as `witnessed_by` / `witnessed_on` and `witness_verification_status: pending | confirmed`. A member cannot witness their own submission, and no Witness may be confirmed while requested changes are outstanding, while the Submission is unbound, or while its Species type or Program class disagree with its Species. Because the Witness attests to the form, **any change the member makes after confirmation voids it** and the Submission awaits a Witness again; the form says so before saving.
 The `declined` value is **dead**: declining a Witness stranded the submission where nothing could move it out, and is deleted. A committee member who wants more **requests changes** instead. Rows still carrying `'declined'` derive as awaiting a Witness, which makes them actionable again.
 _Avoid_: verify, screen (informal), confirm (that's one outcome), decline
 
@@ -94,7 +94,7 @@ The committee's acceptance: `approved_on` / `approved_by` set and `points` calcu
 _Avoid_: accepted/rejected, validated, confirmed (confirmed belongs to witnessing), denied
 
 **Changes requested**:
-The committee asking the member to edit and resubmit, with the problems stated (`changes_requested_*`). It is an **overlay over the state a submission is already in, not a state of its own**: the submission keeps its place in the pipeline and its Witness, and resubmitting clears the flag without restarting anything. While the flag is set the ball is with the member — flagged work **leaves the committee's queues**, and no committee action but Delete is legal.
+The committee asking the member to edit and resubmit, with the problems stated (`changes_requested_*`). It is an **overlay over the state a submission is already in, not a state of its own**: the submission keeps its place in the pipeline, and resubmitting clears the flag without restarting anything (a witnessed Submission that the member edits awaits a Witness again, as after any edit). While the flag is set the ball is with the member — flagged work **leaves the committee's queues**, and no committee action but Delete is legal.
 _Avoid_: revision, rework, denied
 
 ### Awards & recognition
@@ -140,16 +140,28 @@ _Avoid_: season, award year, fiscal year
 ### Species
 
 **Species**:
-The unit a submission is about, identified by scientific (Latin) name — color variations are not separate species, but a different Latin name is. Points may be earned only once per species per member. Source of truth: `src/db/species.ts` and the species-name-group tables (canonical genus / synonyms).
-_Avoid_: fish, variety, breed, strain
+The organism a Submission is about, as one identity that outlives its names: taxonomy moves fish between genera, so a Species is a stable id with a set of **Names** attached, one of which is its **Canonical name**. Color variations are not separate Species; a different Latin name is. Points may be earned only once per Species per Member. Source of truth: `src/db/species.ts`.
+_Avoid_: fish, variety, breed, strain, species group, name group, group (when you mean the Species)
 
-**Species class**:
-The group a species belongs to for Specialty awards and classification (e.g. Anabantoids, Cichlids, Killifish) — distinct from **point class** and from **species type**. Represented as `species_class` (`src/specialtyAwards.ts`).
-_Avoid_: category, group, family (when you mean the `species_class` field)
+**Name**:
+A handle a Species is known by, of kind common ("Kribensis") or scientific ("Pelvicachromis pulcher"). A Species has many; they accumulate as taxonomy and hobby usage change, and any of them finds the Species. Names are curated by the Breeders Award Committee: a spelling on a Submission is not a Name until the committee adds it.
+_Avoid_: synonym, alias, variant, name pair
+
+**Canonical name**:
+The scientific Name the Portal treats as correct today (genus + epithet), shown wherever a Species is displayed. Exactly one per Species and always one of its scientific Names; it changes when taxonomy does, and the previous Canonical name remains a scientific Name.
+_Avoid_: current name, valid name, accepted name, display name
+
+**Bound**:
+A Submission is bound when it has a Species. The member binds it by picking a Name at submit; the Breeders Award Committee binds or rebinds it at the witness step. A binding holds only while the Submission's spellings, Species type and Program class agree with the Species: saving a form that no longer agrees clears it. Only a bound Submission can be witnessed or approved, and Points come from the bound Species' Point class. The member's spellings stay on the Submission as "as submitted".
+_Avoid_: linked, matched, resolved, assigned, proposed
+
+**Program class**:
+The group a Species belongs to within its Program, for Specialty awards and classification (e.g. Anabantoids, Cichlids, Killifish) — distinct from **Point class** and from **Species type**. Column `program_class` on the Species; the Submission's copy is still named `species_class` (`src/specialtyAwards.ts`).
+_Avoid_: species class, category, group, family, class (a taxonomic rank, not this)
 
 **Species type**:
-Which kind of organism a species is — Fish, Invert, Plant or Coral — and so which Program a submission counts toward (Fish and Invert to BAP, Plant to HAP, Coral to CAP). Represented as `species_type`; the type-to-Program mapping lives in `src/points.ts` (`SpeciesType`, `isInProgram`). Coarser than **species class**, which subdivides within a type.
-_Avoid_: species class, category, kind
+Which kind of organism a species is — Fish, Invert, Plant or Coral — and so which Program a submission counts toward (Fish and Invert to BAP, Plant to HAP, Coral to CAP). Represented as `species_type`; the type-to-Program mapping lives in `src/points.ts` (`SpeciesType`, `isInProgram`). Coarser than **Program class**, which subdivides within a type.
+_Avoid_: program class, species class, category, kind
 
 ## CARES
 
