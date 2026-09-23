@@ -122,8 +122,15 @@ html
                     ? selectedOption.scientific_name
                     : selectedOption.common_name;
                 const pairedField = document.getElementById(pairedId);
-                if (pairedValue && pairedField && pairedField.tomSelectInstance) {
+                if (pairedField && pairedField.tomSelectInstance) {
                     const instance = pairedField.tomSelectInstance;
+                    // A Species with no Name of the paired kind clears the
+                    // paired field: a stale spelling would not agree with it
+                    if (!pairedValue) {
+                        instance.clear(true);
+                        pairedField.value = '';
+                        return;
+                    }
                     // Options are keyed by the field's own value
                     if (!instance.options[pairedValue]) {
                         instance.addOption({

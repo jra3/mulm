@@ -2,7 +2,7 @@ import { FormValues } from "@/forms/submission";
 import { writeConn, query, withTransaction } from "./conn";
 import { logger } from "@/utils/logger";
 import { filterQueue, queueSql, type QueueName } from "@/lifecycle/queues";
-import { totalPointsSql } from "@/points";
+import { programOfSpeciesType, totalPointsSql } from "@/points";
 import type { Database } from "sqlite";
 import { speciesOfSubmissionJoinSql } from "@/species";
 
@@ -121,22 +121,6 @@ export type Submission = {
 export type QueueSubmission = Submission & {
   witnessed_by_name?: string | null;
 };
-
-/** The Program a Species type belongs to: Fish and Invert are the fish Program. */
-export function programOfSpeciesType(speciesType: string): "fish" | "plant" | "coral" {
-  switch (speciesType) {
-    case "Fish":
-    case "Invert":
-      return "fish";
-    case "Plant":
-      return "plant";
-    case "Coral":
-      return "coral";
-    default:
-      logger.warn("Unknown species type", speciesType);
-      throw new Error("Unknown species type");
-  }
-}
 
 /**
  * The form-to-database mapper: a Submission's *contents*, as columns.

@@ -5,9 +5,9 @@
  *
  * This scans the source for SQL that selects from, joins, inserts into,
  * updates or deletes from a species table anywhere else. It matches the
- * table in SQL position (after FROM, JOIN, INTO or UPDATE), so the
- * Submission's own columns (`species_common_name`, `species_latin_name`) do
- * not trip it. It does not see a comma join (`FROM a, species_name_group`)
+ * table in SQL position (after FROM, JOIN, INTO or UPDATE, with or without
+ * `OR IGNORE`, a `main.` prefix or quotes), so the Submission's own columns
+ * (`species_common_name`, `species_latin_name`) do not trip it. It does not see a comma join (`FROM a, species_name_group`)
  * or a table name built at runtime.
  */
 import { describe, test } from "node:test";
@@ -20,7 +20,7 @@ const allowed = [path.join(srcRoot, "species"), path.join(srcRoot, "__tests__")]
 
 const speciesTables = ["species_name_group", "species_common_name", "species_scientific_name"];
 const sqlPosition = new RegExp(
-  `\\b(FROM|JOIN|INTO|UPDATE)\\s+(${speciesTables.join("|")})\\b`,
+  `\\b(FROM|JOIN|INTO|UPDATE(?:\\s+OR\\s+\\w+)?)\\s+(?:main\\.)?["\`]?(${speciesTables.join("|")})\\b`,
   "gi"
 );
 

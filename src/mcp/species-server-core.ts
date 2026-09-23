@@ -1035,8 +1035,9 @@ async function handleUpdateSpeciesGroup(args: UpdateSpeciesGroupArgs) {
   // Refuse a bad Point class before anything is written
   if (base_points !== undefined) admitPointClass(base_points);
 
+  let changes = 0;
   if (program_class !== undefined || base_points !== undefined || is_cares_species !== undefined) {
-    await catalogue.updateSpecies(group_id, {
+    changes = await catalogue.updateSpecies(group_id, {
       programClass: program_class,
       pointClass: base_points,
       isCaresSpecies: is_cares_species,
@@ -1051,7 +1052,7 @@ async function handleUpdateSpeciesGroup(args: UpdateSpeciesGroupArgs) {
 
   return ok({
     group_id,
-    changes: 1,
+    changes,
     updated_fields: Object.keys(args).filter((k) => k !== "group_id"),
     message: "Species updated successfully",
   });
