@@ -68,10 +68,13 @@
                         hx-post=`/admin/submissions/${submission.id}/bind-species`
                         hx-disabled-elt="find button[type=submit]"
                     )
+                        label.sr-only(for="witness-species-search") Species
+                        //- Unfiltered by Species type: a Submission filed under the
+                        //- wrong type is corrected by binding it to the right Species
+                        //- and adopting that Species' classification.
                         select#witness-species-search.tom-select-typeahead.flex-1(
                             name="group_id"
                             data-api-url="/api/species/search"
-                            data-param-species_type=submission.species_type
                             data-value-field="group_id"
                             data-label-field="text"
                             data-search-fields="text,common_name,scientific_name"
