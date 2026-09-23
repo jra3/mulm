@@ -97,8 +97,9 @@ lifecycle's to decide (`bindingAfterSave`).
 Submission's Species type or Program class disagrees with its Species'
 (a spelling that is not a Name does not block it). The witness answers with
 `adoptSpeciesClassification` - the Submission takes the Species' type, class
-and Program, on the changelog, Witness untouched - or by rebinding, or by
-requesting changes.
+and Program, on the changelog, Witness untouched; a queued Submission whose
+adopted classification asks a longer waiting period leaves the approval queue
+and waits again - or by rebinding, or by requesting changes.
 
 `confirmWitness` also takes the witness's choice of the Submission's own
 spellings to add to the bound Species as Names (`NamesToAdd`; the panel

@@ -5,7 +5,6 @@ import {
   deleteSubmissionRow,
   formToRow,
   getSubmissionById,
-  programOfSpeciesType,
   setSubmissionSupplements,
   Submission,
 } from "@/db/submissions";
@@ -16,10 +15,11 @@ import type { FormValues } from "@/forms/submission";
 import type { ApprovalFormValues } from "@/forms/approval";
 import type { Program } from "@/levelManager";
 import { isProgramType } from "@/programs";
+import { programOfSpeciesType } from "@/points";
 import { addName, canonicalName, checkFormAgreement, findSpeciesById, type NameKind } from "@/species";
 import { logger } from "@/utils/logger";
 import { AuthorizationError, ValidationError, StateError } from "./errors";
-import { deriveState, hasChangesRequested } from "./state";
+import { deriveState, hasChangesRequested, waitingPeriod } from "./state";
 import { assertMoveIsLegal, Actor, MoveDefinition, moves } from "./table";
 import { notifier } from "./consequences";
 import { recomputeStanding } from "./standing";
@@ -591,6 +591,11 @@ export async function bindSpecies(caller: Caller, submissionId: number, speciesI
  * A committee move like `bindSpecies`: on the changelog, and it leaves a
  * confirmed Witness in place. When the Submission already agrees it changes
  * nothing and records nothing.
+ *
+ * The adopted classification can carry a longer waiting period than the one
+ * the Submission entered the approval queue under. Approval is asked only of
+ * a Submission whose clock has run out, so a queued one whose new clock has
+ * not leaves the queue and waits again; the member re-enters it when it has.
  */
 export async function adoptSpeciesClassification(caller: Caller, submissionId: number): Promise<void> {
   const changes = await withTransaction(async (db) => {
@@ -605,14 +610,18 @@ export async function adoptSpeciesClassification(caller: Caller, submissionId: n
       species_class: species.program_class,
       program: programOfSpeciesType(species.species_type),
     };
-    const diff = changesBetween(submission, adopted);
+    const leavesQueue =
+      submission.final_submission_on != null && !waitingPeriod({ ...submission, ...adopted }).elapsed;
+    const updates = leavesQueue ? { ...adopted, final_submission_on: null } : adopted;
+    const diff = changesBetween(submission, updates);
     if (diff.length === 0) return diff;
 
     await runUpdate(
       db,
-      `UPDATE submissions SET species_type = ?, species_class = ?, program = ?
+      `UPDATE submissions SET species_type = ?, species_class = ?, program = ?,
+         final_submission_on = CASE WHEN ? THEN NULL ELSE final_submission_on END
          WHERE id = ? AND approved_on IS NULL`,
-      [adopted.species_type, adopted.species_class, adopted.program, submissionId],
+      [adopted.species_type, adopted.species_class, adopted.program, leavesQueue ? 1 : 0, submissionId],
       moves.adoptSpeciesClassification
     );
     return diff;

@@ -869,6 +869,42 @@ void describe("Submission lifecycle - transitions", () => {
       });
       assert.strictEqual(await inRefusal(() => adoptSpeciesClassification(committee, unbound)), "unbound");
     });
+
+    void test("adopting a classification with a longer waiting period takes a queued Submission back out of the queue", async () => {
+      // Queued as Fish/Marine (30 days) at 40 days old; Guppy is Fish/Livebearers (60 days)
+      const fortyDaysAgo = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString();
+      const id = await submissionInState(ctx.db, "inApprovalQueue", {
+        memberId: ctx.member.id,
+        speciesType: "Fish",
+        speciesClass: "Marine",
+        reproductionDate: fortyDaysAgo,
+      });
+
+      await adoptSpeciesClassification(committee, id);
+
+      const after = (await readSubmission(id))!;
+      assert.strictEqual(after.species_class, "Livebearers");
+      assert.strictEqual(after.final_submission_on, null);
+      assert.strictEqual(deriveState(after), "waitingPeriod");
+      assert.strictEqual(await refusal(() => approve(committee, id, mockApprovalData)), "state");
+      const notes = await query<{ note_text: string }>(
+        "SELECT note_text FROM submission_notes WHERE submission_id = ?",
+        [id]
+      );
+      assert.ok(
+        (JSON.parse(notes[0].note_text) as { changes: Change[] }).changes.some((c) => c.field === "final_submission_on"),
+        "leaving the queue is on the changelog"
+      );
+
+      // A queued Submission whose new clock has already run stays queued
+      const served = await submissionInState(ctx.db, "inApprovalQueue", {
+        memberId: ctx.member.id,
+        speciesType: "Fish",
+        speciesClass: "Marine",
+      });
+      await adoptSpeciesClassification(committee, served);
+      assert.strictEqual(deriveState((await readSubmission(served))!), "inApprovalQueue");
+    });
   });
 
   // -------------------------------------------------------------------------

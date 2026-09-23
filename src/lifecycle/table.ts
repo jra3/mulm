@@ -19,8 +19,8 @@ import { AuthorizationError, MismatchError, StateError, UnboundError } from "./e
  * |                         | agreeing with the Species               |                     |                    |
  * | bindSpecies             | the four middle states, no changes      | same, bound         | committee, not the submitter |
  * |                         | requested                               |                     |                    |
- * | adoptSpeciesClassification | the four middle states, bound, no    | same, agreeing      | committee, not the submitter |
- * |                         | changes requested                       |                     |                    |
+ * | adoptSpeciesClassification | the four middle states, bound, no    | same, agreeing (or  | committee, not the submitter |
+ * |                         | changes requested                       | waitingPeriod, if the new clock has not run) | |
  * | enterApprovalQueue      | awaitingFinalSubmission                 | inApprovalQueue     | member or committee|
  * | removeFromQueue         | inApprovalQueue                         | awaitingFinalSubmission | member or committee |
  * | requestChanges          | the four middle states                  | same, flag set      | committee          |
