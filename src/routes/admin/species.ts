@@ -209,8 +209,9 @@ export const updateSpecies = async (req: MulmRequest, res: Response) => {
 
 /**
  * DELETE /admin/species/:groupId
- * Delete a Species and its Names. Refused while any Submission references it;
- * the refusal tells the admin to merge instead.
+ * Delete a Species and its Names. Refused while any Submission, collection
+ * entry or CARES record references it; the refusal tells the admin to merge
+ * instead.
  */
 export const deleteSpecies = async (req: MulmRequest, res: Response) => {
   const { viewer } = req;

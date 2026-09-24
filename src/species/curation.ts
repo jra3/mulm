@@ -10,6 +10,14 @@ import { CatalogueRefusal, isUniqueViolation, speciesNotFound } from "./errors";
 import { findSpeciesById } from "./lookup";
 import { listNames, nameTable } from "./names";
 import { admitPointClass } from "./pointClass";
+import {
+  countReferencesOfSpecies,
+  deleteOwnedRows,
+  findCollectionConflicts,
+  moveReferences,
+  type CollectionConflict,
+  type SpeciesReferences,
+} from "./references";
 import { countSubmissionsOfSpecies } from "./submissions";
 import { canonicalName, isSpeciesType, nameKinds, speciesTypes, type NameKind } from "./types";
 
@@ -310,6 +318,14 @@ export type MergePreview = {
   keepsLoserCanonicalName: boolean;
   /** Submissions of the loser, which are rebound to the winner. */
   submissions: { total: number; approved: number };
+  /**
+   * The loser's rows elsewhere that move to the winner: collection entries,
+   * CARES records, images and links. Images and links the winner already has
+   * are dropped instead.
+   */
+  references: SpeciesReferences;
+  /** Members who keep both Species now. While any do, merge is refused. */
+  collectionConflicts: CollectionConflict[];
 };
 
 /**
@@ -324,10 +340,12 @@ export async function previewMerge(winnerId: number, loserId: number): Promise<M
   if (!winner) throw speciesNotFound(winnerId);
   if (!loser) throw speciesNotFound(loserId);
 
-  const [winnerNames, loserNames, submissions] = await Promise.all([
+  const [winnerNames, loserNames, submissions, references, collectionConflicts] = await Promise.all([
     listNames(winnerId),
     listNames(loserId),
     countSubmissionsOfSpecies(loserId),
+    countReferencesOfSpecies(loserId),
+    findCollectionConflicts(winnerId, loserId),
   ]);
   const moving: Record<NameKind, string[]> = { common: [], scientific: [] };
   const folding: Record<NameKind, string[]> = { common: [], scientific: [] };
@@ -348,7 +366,18 @@ export async function previewMerge(winnerId: number, loserId: number): Promise<M
     // `moving` unless the winner already has it in some case.
     keepsLoserCanonicalName: moving.scientific.includes(loserCanonical),
     submissions,
+    references,
+    collectionConflicts,
   };
+}
+
+function collectionConflictRefusal(conflicts: CollectionConflict[]): CatalogueRefusal {
+  const names = conflicts.map((c) => c.displayName).join(", ");
+  return new CatalogueRefusal(
+    `${conflicts.length} member(s) keep both species in their collection: ${names}. ` +
+      "Remove one of the two entries for each member, then merge.",
+    "referenced"
+  );
 }
 
 /**
@@ -356,8 +385,11 @@ export async function previewMerge(winnerId: number, loserId: number): Promise<M
  * winner, deduplicated without regard to case; the winner keeps its Canonical
  * name, and the loser's comes along as an unflagged scientific Name; the
  * loser's Submissions are rebound to the winner, so approved Submissions and
- * their Points are untouched; then the loser is deleted.
- * @throws CatalogueRefusal if either Species is missing or they are the same
+ * their Points are untouched. Collection entries and CARES records move to the
+ * winner, images and links too (less those the winner already has), and the
+ * loser's sync records go (`references.ts`); then the loser is deleted.
+ * @throws CatalogueRefusal if either Species is missing, they are the same,
+ *   or a member keeps both in their collection (code `referenced`)
  */
 export async function mergeSpecies(winnerId: number, loserId: number): Promise<void> {
   if (winnerId === loserId) {
@@ -369,6 +401,9 @@ export async function mergeSpecies(winnerId: number, loserId: number): Promise<v
 
   try {
     await withTransaction(async (db) => {
+      const conflicts = await findCollectionConflicts(winnerId, loserId, db);
+      if (conflicts.length > 0) throw collectionConflictRefusal(conflicts);
+
       // The winner keeps its Canonical name; the loser's moves as a plain scientific Name.
       await db.run(
         `UPDATE ${scientific.table} SET ${scientific.canonical} = 0 WHERE group_id = ?`,
@@ -377,10 +412,12 @@ export async function mergeSpecies(winnerId: number, loserId: number): Promise<v
       await moveNames(db, "common", winnerId, loserId);
       await moveNames(db, "scientific", winnerId, loserId);
       await db.run("UPDATE submissions SET species_id = ? WHERE species_id = ?", [winnerId, loserId]);
+      await moveReferences(db, winnerId, loserId);
 
       await db.run("DELETE FROM species_name_group WHERE group_id = ?", [loserId]);
     });
   } catch (err) {
+    if (err instanceof CatalogueRefusal) throw err;
     logger.error("Failed to merge species", err);
     throw new Error("Failed to merge species");
   }
@@ -392,8 +429,9 @@ export async function mergeSpecies(winnerId: number, loserId: number): Promise<v
 }
 
 /**
- * Delete a Species and its Names. Refused while any Submission, in any state,
- * references it: merge it into the Species it duplicates instead.
+ * Delete a Species, its Names, images, links and sync records. Refused while
+ * any Submission (in any state), collection entry (current or removed) or
+ * CARES record references it: merge it into the Species it duplicates instead.
  * @returns 1 when deleted
  * @throws CatalogueRefusal if the Species is missing or referenced
  */
@@ -401,11 +439,22 @@ export async function deleteSpecies(speciesId: number): Promise<number> {
   const species = await findSpeciesById(speciesId);
   if (!species) throw speciesNotFound(speciesId);
 
-  const submissions = await countSubmissionsOfSpecies(speciesId);
-  if (submissions.total > 0) {
+  const [submissions, references] = await Promise.all([
+    countSubmissionsOfSpecies(speciesId),
+    countReferencesOfSpecies(speciesId),
+  ]);
+  const held = [
+    submissions.total > 0
+      ? `${submissions.total} submission(s), ${submissions.approved} of them approved`
+      : null,
+    references.collection > 0 ? `${references.collection} collection entr(ies)` : null,
+    references.caresArticles + references.caresFryShares > 0
+      ? `${references.caresArticles + references.caresFryShares} CARES record(s)`
+      : null,
+  ].filter((h) => h !== null);
+  if (held.length > 0) {
     throw new CatalogueRefusal(
-      `Species is referenced by ${submissions.total} submission(s), ${submissions.approved} of them approved. ` +
-        "Merge it into another species instead of deleting it.",
+      `Species is referenced by ${held.join(", ")}. Merge it into another species instead of deleting it.`,
       "referenced"
     );
   }
@@ -416,6 +465,7 @@ export async function deleteSpecies(speciesId: number): Promise<number> {
       for (const t of Object.values(nameTable)) {
         await db.run(`DELETE FROM ${t.table} WHERE group_id = ?`, [speciesId]);
       }
+      await deleteOwnedRows(db, speciesId);
       const result = await db.run("DELETE FROM species_name_group WHERE group_id = ?", [speciesId]);
       changes = result.changes || 0;
     });

@@ -9,7 +9,9 @@ include ../header.pug
 		ul.list-disc.ml-5.text-yellow-700.text-sm
 			li Move all common and scientific names from defunct species to canonical species
 			li Redirect all submissions to the canonical species
+			li Move members' collection entries, CARES records, images and links to the canonical species
 			li Delete the defunct species permanently
+		p.text-yellow-700.text-sm.mt-2 Refused while a member keeps both species in their collection; they remove one entry first.
 
 	form(
 		hx-post=`/admin/species/${defunctSpecies.group_id}/merge`

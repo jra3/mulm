@@ -29,6 +29,7 @@ the module's own business.
 | `names.ts` | Names by kind: `listNames`, `findNames` (by text across Species), `addName`, `updateName` (in place, id kept), `removeName` (one id or several). `updateName` and `removeName` refuse the Canonical name. `nameTable` maps a kind to its table for the module's own SQL. |
 | `curation.ts` | `createSpecies`, `updateSpecies` (Program class, Species type, Point class, CARES), `setPointClass` (bulk), `renameCanonical`, `previewMerge`, `mergeSpecies`, `deleteSpecies`. Create, rename and merge keep the Canonical flag and its cache. |
 | `agreement.ts` | `checkFormAgreement`: does a Submission's form (spellings, Species type, Program class) agree with a Species. The lifecycle's member saves read `agrees` to keep or clear a binding; the confirmWitness guard and the witness panel read `classificationAgrees`. |
+| `references.ts` | Rows in other tables that belong to a Species (collection, CARES, images, links, sync records) and what merge and delete do with each; `countReferencesOfSpecies`, `findCollectionConflicts`. |
 | `submissions.ts` | The Species-Submission relation, defined once as SQL (`speciesIdOfSubmissionSql`: the Submission's `species_id`); `countSubmissionsOfSpecies`. |
 | `sql.ts` | SQL fragments for other modules' queries: `speciesOfSubmissionJoinSql`, `programClassOfSubmissionSql`, `speciesJoinSql`, `speciesFromSql`, `anyNameSql`. |
 | `status.ts` | Writers for columns other modules own the meaning of: `updateIucnStatus`, `updateLastExternalSync`. |
@@ -88,9 +89,16 @@ through fragments: they go through a catalogue function.
   regard to case. The winner keeps its flag; the loser's Canonical name comes
   along as an unflagged scientific Name. The loser's Submissions are rebound
   to the winner, so approved Submissions and their Points are untouched.
+  Collection entries and CARES records move too; images and links move less
+  those the winner already has; the loser's sync logs and IUCN
+  recommendations are dropped. Refused while a member keeps both Species in
+  their collection: their two entries are theirs to reconcile.
   `previewMerge` reports the same plan without writing.
-- **Delete** is refused while any Submission, in any state, references the
-  Species. There is no force: merge is the way out.
+- **Delete** is refused while any Submission (in any state), collection entry
+  (current or removed) or CARES record references the Species. There is no
+  force: merge is the way out. Images, links and sync records go with it.
+- **Nothing cascades in production** (foreign keys are off), so every table
+  holding a Species id is listed in `references.ts`; a new one goes there.
 - **Names** are never invented. The typeahead gives a common Name the
   Canonical name as its scientific spelling, and a scientific Name the
   Species' first common Name or nothing.

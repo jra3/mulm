@@ -586,7 +586,7 @@ export function initializeSpeciesServer(server: Server): void {
         {
           name: "delete_species_group",
           description:
-            "Deletes a Species and its Names (DESTRUCTIVE). Refused while any Submission references the Species; merge it into another Species instead.",
+            "Deletes a Species, its Names, images, links and sync records (DESTRUCTIVE). Refused while any Submission, collection entry or CARES record references the Species; merge it into another Species instead.",
           inputSchema: {
             type: "object",
             properties: {
@@ -678,7 +678,7 @@ export function initializeSpeciesServer(server: Server): void {
         {
           name: "merge_species_groups",
           description:
-            "Merges the defunct Species into the canonical one: every Name moves (deduplicated), the defunct Species' Canonical name is kept as a scientific Name, and its Submissions are rebound to the canonical Species. Approved Submissions and their Points are untouched.",
+            "Merges the defunct Species into the canonical one: every Name moves (deduplicated), the defunct Species' Canonical name is kept as a scientific Name, and its Submissions are rebound to the canonical Species. Approved Submissions and their Points are untouched. Collection entries, CARES records, images and links move too; the defunct Species' sync logs and IUCN recommendations are dropped. Refused while a member keeps both Species in their collection.",
           inputSchema: {
             type: "object",
             properties: {
@@ -1142,6 +1142,8 @@ async function handleMergeSpeciesGroups(args: MergeSpeciesGroupsArgs) {
       defunct_canonical_name_kept_as_scientific_name: plan.keepsLoserCanonicalName,
       submissions_to_update: plan.submissions.total,
       approved_submissions_to_update: plan.submissions.approved,
+      references_to_move: plan.references,
+      members_keeping_both: plan.collectionConflicts,
     },
   };
 
