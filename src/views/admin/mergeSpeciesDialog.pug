@@ -12,7 +12,7 @@ include ../header.pug
 			li Move members' collection entries, CARES records, images and links to the canonical species
 			li Delete the defunct species permanently
 			li Mark the canonical species CARES if the defunct one was
-		p.text-yellow-700.text-sm.mt-2 Refused while a member keeps both species in their collection; they remove one entry first.
+		p.text-yellow-700.text-sm.mt-2 A member keeping both species keeps the canonical one's collection entry, with the earlier CARES registration; the other entry is marked removed.
 
 	form(
 		hx-post=`/admin/species/${defunctSpecies.group_id}/merge`
@@ -55,7 +55,7 @@ include ../header.pug
 				label.text-sm.text-gray-700(for="confirm")
 					strong I understand this will permanently merge these species and cannot be undone
 
-			//- A refused merge (a member keeps both, or the form is incomplete) lands here
+			//- A refused merge lands here
 			p#merge-refusal.text-sm.text-red-700(role="alert")
 
 			.flex.gap-2.justify-end

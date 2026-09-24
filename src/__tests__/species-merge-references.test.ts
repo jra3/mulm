@@ -187,20 +187,81 @@ void describe("merge", () => {
     assert.deepStrictEqual(await rowsFor(loser), none);
   });
 
-  void test("is refused while a member keeps both Species, and changes nothing", async () => {
+  void test("a member keeping both keeps the winner's entry; the loser's is marked removed", async () => {
     const winner = await createTestSpecies("Winnerus", "maximus");
     const loser = await createTestSpecies("Loserus", "minimus");
-    await addToCollection(alice, winner);
-    await addToCollection(alice, loser);
-    await addToCollection(bob, loser);
+    const kept = await addToCollection(alice, winner);
+    const retired = await addToCollection(alice, loser);
+    await db.run("UPDATE species_collection SET notes = 'my first pair' WHERE id = ?", [retired]);
 
-    await assert.rejects(
-      () => mergeSpecies(winner, loser),
-      (err: unknown) =>
-        err instanceof CatalogueRefusal && err.code === "referenced" && /Alice/.test(err.message)
+    await mergeSpecies(winner, loser);
+
+    const entries = await db.all<Array<{ id: number; removed_date: string | null; notes: string | null }>>(
+      "SELECT id, removed_date, notes FROM species_collection WHERE member_id = ? AND group_id = ? ORDER BY id",
+      [alice, winner]
     );
-    assert.strictEqual((await rowsFor(loser)).collection, 2);
-    assert.ok(await db.get("SELECT 1 FROM species_name_group WHERE group_id = ?", [loser]));
+    assert.deepStrictEqual(
+      entries.map((e) => [e.id, e.removed_date === null]),
+      [
+        [kept, true],
+        [retired, false],
+      ],
+      "one current entry, the winner's; the loser's is history"
+    );
+    assert.strictEqual(entries[1].notes, "my first pair", "the retired entry keeps its notes");
+    assert.deepStrictEqual(await rowsFor(loser), none);
+  });
+
+  void test("the kept entry takes the loser's CARES registration when it has none", async () => {
+    const winner = await createTestSpecies("Winnerus", "maximus");
+    const loser = await createTestSpecies("Loserus", "minimus");
+    const kept = await addToCollection(alice, winner);
+    const retired = await addToCollection(alice, loser, { caresRegistered: "2024-03-01" });
+    await db.run(
+      "UPDATE species_collection SET cares_last_confirmed = '2026-03-01', cares_photo_key = 'k', cares_photo_url = 'u' WHERE id = ?",
+      [retired]
+    );
+
+    await mergeSpecies(winner, loser);
+
+    const entry = await db.get(
+      "SELECT cares_registered_at, cares_last_confirmed, cares_photo_key, cares_photo_url FROM species_collection WHERE id = ?",
+      [kept]
+    );
+    assert.deepStrictEqual({ ...entry }, {
+      cares_registered_at: "2024-03-01",
+      cares_last_confirmed: "2026-03-01",
+      cares_photo_key: "k",
+      cares_photo_url: "u",
+    });
+  });
+
+  void test("when both are registered, the kept entry has the earlier registration and the later confirmation", async () => {
+    const winner = await createTestSpecies("Winnerus", "maximus");
+    const loser = await createTestSpecies("Loserus", "minimus");
+    const kept = await addToCollection(alice, winner, { caresRegistered: "2025-06-01" });
+    await db.run(
+      "UPDATE species_collection SET cares_last_confirmed = '2026-06-01', cares_photo_key = 'winner-k', cares_photo_url = 'winner-u' WHERE id = ?",
+      [kept]
+    );
+    const retired = await addToCollection(alice, loser, { caresRegistered: "2024-01-01" });
+    await db.run(
+      "UPDATE species_collection SET cares_last_confirmed = '2025-01-01', cares_photo_key = 'loser-k', cares_photo_url = 'loser-u' WHERE id = ?",
+      [retired]
+    );
+
+    await mergeSpecies(winner, loser);
+
+    const entry = await db.get(
+      "SELECT cares_registered_at, cares_last_confirmed, cares_photo_key, cares_photo_url FROM species_collection WHERE id = ?",
+      [kept]
+    );
+    assert.deepStrictEqual({ ...entry }, {
+      cares_registered_at: "2024-01-01",
+      cares_last_confirmed: "2026-06-01",
+      cares_photo_key: "loser-k",
+      cares_photo_url: "loser-u",
+    });
   });
 
   void test("a member who removed one of the two may still be merged", async () => {
@@ -261,7 +322,7 @@ void describe("merge", () => {
     assert.strictEqual(row!.is_cares_species, 1);
   });
 
-  void test("the preview counts what moves and names who blocks it", async () => {
+  void test("the preview counts what moves and names the members keeping both", async () => {
     const winner = await createTestSpecies("Winnerus", "maximus");
     const loser = await createTestSpecies("Loserus", "minimus");
     await addToCollection(alice, winner);
@@ -278,7 +339,7 @@ void describe("merge", () => {
       images: 1,
       externalReferences: 1,
     });
-    assert.deepStrictEqual(plan.collectionConflicts, [{ memberId: alice, displayName: "Alice" }]);
+    assert.deepStrictEqual(plan.membersKeepingBoth, [{ memberId: alice, displayName: "Alice" }]);
   });
 });
 

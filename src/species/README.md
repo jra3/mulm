@@ -29,7 +29,7 @@ the module's own business.
 | `names.ts` | Names by kind: `listNames`, `findNames` (by text across Species), `addName`, `updateName` (in place, id kept), `removeName` (one id or several). `updateName` and `removeName` refuse the Canonical name. `nameTable` maps a kind to its table for the module's own SQL. |
 | `curation.ts` | `createSpecies`, `updateSpecies` (Program class, Species type, Point class, CARES), `setPointClass` (bulk), `renameCanonical`, `previewMerge`, `mergeSpecies`, `deleteSpecies`. Create, rename and merge keep the Canonical flag and its cache. |
 | `agreement.ts` | `checkFormAgreement`: does a Submission's form (spellings, Species type, Program class) agree with a Species. The lifecycle's member saves read `agrees` to keep or clear a binding; the confirmWitness guard and the witness panel read `classificationAgrees`. |
-| `references.ts` | Rows in other tables that belong to a Species (collection, CARES, images, links, sync records) and what merge and delete do with each; `countReferencesOfSpecies`, `findCollectionConflicts`. |
+| `references.ts` | Rows in other tables that belong to a Species (collection, CARES, images, links, sync records) and what merge and delete do with each; `countReferencesOfSpecies`, `findMembersKeepingBoth`. |
 | `submissions.ts` | The Species-Submission relation, defined once as SQL (`speciesIdOfSubmissionSql`: the Submission's `species_id`); `countSubmissionsOfSpecies`. |
 | `sql.ts` | SQL fragments for other modules' queries: `speciesOfSubmissionJoinSql`, `programClassOfSubmissionSql`, `speciesJoinSql`, `speciesFromSql`, `anyNameSql`. |
 | `status.ts` | Writers for columns other modules own the meaning of: `updateIucnStatus`, `updateLastExternalSync`. |
@@ -92,8 +92,10 @@ through fragments: they go through a catalogue function.
   Collection entries and CARES records move too; images and links move less
   those the winner already has; the loser's sync logs and IUCN
   recommendations are dropped. A CARES loser makes the winner CARES, so the
-  moved CARES records still count. Refused while a member keeps both Species in
-  their collection: their two entries are theirs to reconcile.
+  moved CARES records still count. A member keeping both Species keeps the
+  winner's collection entry current, with the earlier CARES registration (and
+  its photo) and the later confirmation of the two; the loser's entry is
+  marked removed and keeps its notes and photos as history.
   `previewMerge` reports the same plan without writing.
 - **Delete** is refused while any Submission (in any state), collection entry
   (current or removed) or CARES record references the Species. There is no

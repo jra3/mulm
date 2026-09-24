@@ -678,7 +678,7 @@ export function initializeSpeciesServer(server: Server): void {
         {
           name: "merge_species_groups",
           description:
-            "Merges the defunct Species into the canonical one: every Name moves (deduplicated), the defunct Species' Canonical name is kept as a scientific Name, and its Submissions are rebound to the canonical Species. Approved Submissions and their Points are untouched. Collection entries, CARES records, images and links move too; the defunct Species' sync logs and IUCN recommendations are dropped. Refused while a member keeps both Species in their collection.",
+            "Merges the defunct Species into the canonical one: every Name moves (deduplicated), the defunct Species' Canonical name is kept as a scientific Name, and its Submissions are rebound to the canonical Species. Approved Submissions and their Points are untouched. Collection entries, CARES records, images and links move too; the defunct Species' sync logs and IUCN recommendations are dropped. A member keeping both Species keeps the canonical one's collection entry (with the earlier CARES registration); the other is marked removed.",
           inputSchema: {
             type: "object",
             properties: {
@@ -1150,7 +1150,8 @@ async function handleMergeSpeciesGroups(args: MergeSpeciesGroupsArgs) {
         external_references: plan.references.externalReferences,
       },
       canonical_becomes_cares: plan.winnerBecomesCares,
-      members_keeping_both: plan.collectionConflicts.map((c) => ({
+      // Each keeps the canonical Species' entry; the defunct one's is marked removed.
+      members_keeping_both: plan.membersKeepingBoth.map((c) => ({
         member_id: c.memberId,
         display_name: c.displayName,
       })),

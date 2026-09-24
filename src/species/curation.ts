@@ -13,9 +13,9 @@ import { admitPointClass } from "./pointClass";
 import {
   countReferencesOfSpecies,
   deleteEnrichmentAndSyncRecords,
-  findCollectionConflicts,
+  findMembersKeepingBoth,
   moveReferences,
-  type CollectionConflict,
+  type MemberKeepingBoth,
   type SpeciesReferences,
 } from "./references";
 import { countSubmissionsOfSpecies } from "./submissions";
@@ -324,8 +324,12 @@ export type MergePreview = {
    * are dropped instead.
    */
   references: SpeciesReferences;
-  /** Members who keep both Species now. While any do, merge is refused. */
-  collectionConflicts: CollectionConflict[];
+  /**
+   * Members with a current collection entry for both Species. Each keeps the
+   * winner's entry; the loser's is marked removed, and the kept one carries
+   * their CARES registration.
+   */
+  membersKeepingBoth: MemberKeepingBoth[];
   /** Whether the winner becomes a CARES Species, because the loser is one and it is not. */
   winnerBecomesCares: boolean;
 };
@@ -342,12 +346,12 @@ export async function previewMerge(winnerId: number, loserId: number): Promise<M
   if (!winner) throw speciesNotFound(winnerId);
   if (!loser) throw speciesNotFound(loserId);
 
-  const [winnerNames, loserNames, submissions, references, collectionConflicts] = await Promise.all([
+  const [winnerNames, loserNames, submissions, references, membersKeepingBoth] = await Promise.all([
     listNames(winnerId),
     listNames(loserId),
     countSubmissionsOfSpecies(loserId),
     countReferencesOfSpecies(loserId),
-    findCollectionConflicts(winnerId, loserId),
+    findMembersKeepingBoth(winnerId, loserId),
   ]);
   const moving: Record<NameKind, string[]> = { common: [], scientific: [] };
   const folding: Record<NameKind, string[]> = { common: [], scientific: [] };
@@ -369,18 +373,9 @@ export async function previewMerge(winnerId: number, loserId: number): Promise<M
     keepsLoserCanonicalName: moving.scientific.includes(loserCanonical),
     submissions,
     references,
-    collectionConflicts,
+    membersKeepingBoth,
     winnerBecomesCares: Boolean(loser.is_cares_species) && !winner.is_cares_species,
   };
-}
-
-function collectionConflictRefusal(conflicts: CollectionConflict[]): CatalogueRefusal {
-  const names = conflicts.map((c) => c.displayName).join(", ");
-  return new CatalogueRefusal(
-    `${conflicts.length} member(s) keep both species in their collection: ${names}. ` +
-      "Remove one of the two entries for each member, then merge.",
-    "referenced"
-  );
 }
 
 /**
@@ -389,11 +384,11 @@ function collectionConflictRefusal(conflicts: CollectionConflict[]): CatalogueRe
  * name, and the loser's comes along as an unflagged scientific Name; the
  * loser's Submissions are rebound to the winner, so approved Submissions and
  * their Points are untouched. Collection entries and CARES records move to the
- * winner, images and links too (less those the winner already has), and the
+ * winner (a member keeping both keeps the winner's entry current; the
+ * loser's is marked removed), images and links too (less those the winner already has), and the
  * loser's sync records go (`references.ts`); a CARES loser makes the winner
  * CARES; then the loser is deleted.
- * @throws CatalogueRefusal if either Species is missing, they are the same,
- *   or a member keeps both in their collection (code `referenced`)
+ * @throws CatalogueRefusal if either Species is missing or they are the same
  */
 export async function mergeSpecies(winnerId: number, loserId: number): Promise<void> {
   if (winnerId === loserId) {
@@ -405,9 +400,6 @@ export async function mergeSpecies(winnerId: number, loserId: number): Promise<v
 
   try {
     await withTransaction(async (db) => {
-      const conflicts = await findCollectionConflicts(winnerId, loserId, db);
-      if (conflicts.length > 0) throw collectionConflictRefusal(conflicts);
-
       // The winner keeps its Canonical name; the loser's moves as a plain scientific Name.
       await db.run(
         `UPDATE ${scientific.table} SET ${scientific.canonical} = 0 WHERE group_id = ?`,
