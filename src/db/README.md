@@ -204,6 +204,17 @@ in SQL: a query elsewhere that needs a Species' columns composes the
 catalogue's SQL fragments. `src/__tests__/species-tables-catalogue-only.test.ts`
 enforces this. See `src/species/README.md`.
 
+## Searching Text
+
+A "contains" search on something a person typed uses `containsSql` and `containsPattern` from `src/db/likePattern.ts`, never a raw `LIKE ?`. Unescaped, `%` and `_` are wildcards: `jane_doe` also finds `janexdoe`, and `%%` finds everything. `src/__tests__/like-pattern.test.ts` fails on a raw `LIKE ?`.
+
+```typescript
+conditions.push(`(${containsSql("display_name")} OR ${containsSql("contact_email")})`);
+params.push(containsPattern(search), containsPattern(search));
+```
+
+An exact match on an email address compares with `COLLATE NOCASE` (see `getMemberByEmail`); `members.contact_email` is unique without regard to case.
+
 ## Transaction Handling
 
 ### When to Use Transactions

@@ -192,8 +192,11 @@ export const loginRateLimiter = rateLimit({
     if (req.path && req.path.includes("/passkey/")) {
       return getIpKey(req);
     }
-    // Rate limit by IP + email to prevent targeted attacks
-    const email = (req.body as { email?: string })?.email || "unknown";
+    // Rate limit by IP + email to prevent targeted attacks. An address is one
+    // address whatever its case, so case variants share a bucket.
+    const email = String((req.body as { email?: string })?.email || "unknown")
+      .trim()
+      .toLowerCase();
     return `${getIpKey(req)}:${email}`;
   },
   handler: (_req, res) => {

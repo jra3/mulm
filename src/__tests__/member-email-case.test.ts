@@ -13,6 +13,8 @@ import { overrideConnection } from "../db/conn";
 import { createMember, getMemberByEmail } from "../db/members";
 import { migrationsUpTo } from "./helpers/migrations";
 
+const EMAIL_NOCASE_MIGRATION = 61;
+
 void describe("member email", () => {
   let db: Database;
 
@@ -39,6 +41,12 @@ void describe("member email", () => {
     assert.strictEqual((await getMemberByEmail("jane.doe@example.com"))?.contact_email, "Jane.Doe@Example.com");
   });
 
+  void test("stores the address without surrounding whitespace", async () => {
+    await createMember("  Jane@Example.com ", "Jane");
+    await assert.rejects(() => createMember("jane@example.com", "Jane again"));
+    assert.strictEqual((await getMemberByEmail("jane@example.com"))?.contact_email, "Jane@Example.com");
+  });
+
   void test("refuses a second member with a case variant of an address", async () => {
     await createMember("Jane.Doe@Example.com", "Jane");
     await assert.rejects(() => createMember("jane.doe@example.com", "Jane again"));
@@ -49,7 +57,7 @@ void describe("member email", () => {
 
 void describe("migration 061", () => {
   void test("refuses to run while two members share an address up to case", async () => {
-    const before061 = migrationsUpTo(60);
+    const before061 = migrationsUpTo(EMAIL_NOCASE_MIGRATION - 1);
     const raw = await open({ filename: ":memory:", driver: sqlite3.Database });
     try {
       await raw.migrate({ migrationsPath: before061 });
@@ -61,7 +69,7 @@ void describe("migration 061", () => {
         /UNIQUE constraint failed/
       );
       const applied = await raw.get<{ id: number }>("SELECT MAX(id) AS id FROM migrations");
-      assert.strictEqual(applied!.id, 60, "061 is not recorded as applied");
+      assert.strictEqual(applied!.id, EMAIL_NOCASE_MIGRATION - 1, "061 is not recorded as applied");
     } finally {
       await raw.close();
       fs.rmSync(before061, { recursive: true, force: true });

@@ -160,7 +160,7 @@ export async function createMember(
       // is this a bug... we should return the data, not the lastID
       let memberId;
       try {
-        memberId = (await userStmt.run(name, email, isAdmin ? 1 : 0)).lastID;
+        memberId = (await userStmt.run(name, email.trim(), isAdmin ? 1 : 0)).lastID;
       } finally {
         await userStmt.finalize();
       }

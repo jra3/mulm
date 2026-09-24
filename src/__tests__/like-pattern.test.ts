@@ -20,10 +20,14 @@ void describe("containsPattern", () => {
 });
 
 void describe("LIKE with a bound parameter", () => {
-  // A LIKE against a `?` is a search on input; it goes through containsSql so
-  // the input is escaped. LIKE against a literal pattern ('%r2.dev%') is fine.
+  // LIKE against anything but a string literal ('%r2.dev%') is a search on
+  // input: a `?`, a named parameter, LOWER(?), '%' || ? || '%' after a
+  // literal, or an interpolated value, quoted or not. It goes through containsSql so the
+  // input is escaped. SQL here writes LIKE in capitals; prose "like" is not
+  // matched.
   void test("is written only by containsSql", () => {
     const srcRoot = path.join(__dirname, "..");
+    const scriptsRoot = path.join(srcRoot, "..", "scripts");
     const sourceFiles = (dir: string): string[] =>
       fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
         const full = path.join(dir, entry.name);
@@ -31,9 +35,10 @@ void describe("LIKE with a bound parameter", () => {
         return entry.name.endsWith(".ts") ? [full] : [];
       });
     const helper = path.join(srcRoot, "db", "likePattern.ts");
-    const offenders = sourceFiles(srcRoot)
-      .filter((file) => file !== helper && /\bLIKE\s+(LOWER\()?\?/i.test(fs.readFileSync(file, "utf8")))
-      .map((file) => path.relative(srcRoot, file));
+    const offenders = [...sourceFiles(srcRoot), ...sourceFiles(scriptsRoot)]
+      .filter((file) => file !== helper)
+      .filter((file) => /\bLIKE\s+(?!'(?:[^'$]|\$(?!\{))*'(?!\s*\|\|))/.test(fs.readFileSync(file, "utf8")))
+      .map((file) => path.relative(path.join(srcRoot, ".."), file));
     assert.deepStrictEqual(offenders, [], "use containsSql/containsPattern from src/db/likePattern.ts");
   });
 });
