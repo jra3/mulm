@@ -67,6 +67,13 @@ through fragments: they go through a catalogue function.
   `removeName` refuse the flagged Name (code `canonical`): it changes only by
   `renameCanonical`, which knows the genus/epithet split and keeps the old
   name, where a Name edit would do neither.
+  Two Species cannot hold Canonical names that differ only in case: a NOCASE
+  unique index (migration 060) backs the `duplicate` refusal on create and
+  rename.
+- **Search** (typeahead, explorer, admin list) matches a Name containing the
+  search text, case-insensitively. `%` and `_` match themselves: build the
+  clause with `containsSql` and the parameter with `containsPattern`
+  (`src/db/likePattern.ts`).
 - **Point class** is 5, 10, 15, 20 or unset, on create, update and bulk set.
   Forms (`src/forms/pointClass.ts`) check first for a friendlier message; the
   catalogue refuses regardless.

@@ -1,6 +1,7 @@
 import { makePasswordEntry, ScryptPassword } from "../auth";
-import { db, query, deleteOne, insertOne, updateOne } from "./conn";
+import { db, query, deleteOne, insertOne, updateOne, withTransaction } from "./conn";
 import { logger } from "@/utils/logger";
+import { containsPattern, containsSql } from "./likePattern";
 import { recordActivity, removeActivity } from "./activity";
 import { specialtyAwards, getCountableSpecialtyAwards } from "@/specialtyAwards";
 import { programSpeciesTypeSql, totalPointsSql } from "@/points";
@@ -145,49 +146,54 @@ export async function createMember(
   } = {},
   isAdmin: boolean = false
 ) {
-  const conn = db(true);
-  await conn.exec("BEGIN TRANSACTION;");
-
   try {
-    const userStmt = await conn.prepare(
-      "INSERT INTO members (display_name, contact_email, is_admin) VALUES (?, ?, ?)"
-    );
-    // is this a bug... we should return the data, not the lastID
-    let memberId;
-    try {
-      memberId = (await userStmt.run(name, email, isAdmin ? 1 : 0)).lastID;
-    } finally {
-      await userStmt.finalize();
-    }
+    // Hash before taking the write connection: scrypt is slow, and every other
+    // transaction queues behind this one.
+    const passwordEntry = credentials.password
+      ? await makePasswordEntry(credentials.password)
+      : undefined;
 
-    if (credentials.google_sub) {
-      const googleStmt = await conn.prepare(
-        "INSERT INTO google_account (google_sub, member_id, google_email) VALUES (?, ?, ?)"
+    const address = email.trim();
+
+    return await withTransaction(async (conn) => {
+      const userStmt = await conn.prepare(
+        "INSERT INTO members (display_name, contact_email, is_admin) VALUES (?, ?, ?)"
       );
+      // is this a bug... we should return the data, not the lastID
+      let memberId;
       try {
-        await googleStmt.run(credentials.google_sub, memberId, email);
+        memberId = (await userStmt.run(name, address, isAdmin ? 1 : 0)).lastID;
       } finally {
-        await googleStmt.finalize();
+        await userStmt.finalize();
       }
-    }
 
-    if (credentials.password) {
-      const { N, r, p, salt, hash } = await makePasswordEntry(credentials.password);
-      const passwordStmt = await conn.prepare(
-        "INSERT INTO password_account (member_id, N, r, p, salt, hash) VALUES (?, ?, ?, ?, ?, ?)"
-      );
-      try {
-        await passwordStmt.run(memberId, N, r, p, salt, hash);
-      } finally {
-        await passwordStmt.finalize();
+      if (credentials.google_sub) {
+        const googleStmt = await conn.prepare(
+          "INSERT INTO google_account (google_sub, member_id, google_email) VALUES (?, ?, ?)"
+        );
+        try {
+          await googleStmt.run(credentials.google_sub, memberId, address);
+        } finally {
+          await googleStmt.finalize();
+        }
       }
-    }
 
-    await conn.exec("COMMIT;");
-    return memberId as number;
+      if (passwordEntry) {
+        const { N, r, p, salt, hash } = passwordEntry;
+        const passwordStmt = await conn.prepare(
+          "INSERT INTO password_account (member_id, N, r, p, salt, hash) VALUES (?, ?, ?, ?, ?, ?)"
+        );
+        try {
+          await passwordStmt.run(memberId, N, r, p, salt, hash);
+        } finally {
+          await passwordStmt.finalize();
+        }
+      }
+
+      return memberId as number;
+    });
   } catch (err) {
     logger.error("Failed to create member", err);
-    await conn.exec("ROLLBACK;");
     throw new Error("Failed to create member");
   }
 }
@@ -201,10 +207,12 @@ export async function updateMember(memberId: number, updates: Partial<MemberReco
   return updateOne("members", { id: memberId }, updates);
 }
 
+/** The member holding this address, compared without regard to case. */
 export async function getMemberByEmail(email: string) {
-  const members = await query<MemberRecord>("SELECT * FROM members WHERE contact_email = ?", [
-    email,
-  ]);
+  const members = await query<MemberRecord>(
+    "SELECT * FROM members WHERE contact_email = ? COLLATE NOCASE",
+    [email.trim()]
+  );
   return members.pop();
 }
 
@@ -314,13 +322,13 @@ export async function searchMembers(
     return [];
   }
 
-  const searchPattern = `%${searchQuery.trim().toLowerCase()}%`;
+  const searchPattern = containsPattern(searchQuery);
 
   return query<MemberRecord>(
     `
 		SELECT * FROM members
-		WHERE LOWER(display_name) LIKE ?
-		   OR LOWER(contact_email) LIKE ?
+		WHERE ${containsSql("display_name")}
+		   OR ${containsSql("contact_email")}
 		ORDER BY display_name
 		LIMIT ?
 	`,

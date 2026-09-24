@@ -204,6 +204,17 @@ in SQL: a query elsewhere that needs a Species' columns composes the
 catalogue's SQL fragments. `src/__tests__/species-tables-catalogue-only.test.ts`
 enforces this. See `src/species/README.md`.
 
+## Searching Text
+
+A "contains" search on something a person typed uses `containsSql` and `containsPattern` from `src/db/likePattern.ts`, never a raw `LIKE ?`. Unescaped, `%` and `_` are wildcards: `jane_doe` also finds `janexdoe`, and `%%` finds everything. `src/__tests__/like-pattern.test.ts` fails on a raw `LIKE ?`.
+
+```typescript
+conditions.push(`(${containsSql("display_name")} OR ${containsSql("contact_email")})`);
+params.push(containsPattern(search), containsPattern(search));
+```
+
+An exact match on an email address compares with `COLLATE NOCASE` (see `getMemberByEmail`); `members.contact_email` is unique without regard to case.
+
 ## Transaction Handling
 
 ### When to Use Transactions
@@ -237,32 +248,18 @@ await withTransaction(async (db) => {
 });
 ```
 
+### One Transaction at a Time
+
+All transactions share the one write connection, and SQLite refuses a second `BEGIN` while one is open. So `withTransaction()` queues: a call waits until every transaction started before it has committed or rolled back. Two requests racing for the same row therefore run one after the other, and the second reads what the first committed.
+
+- Don't call `withTransaction()` from inside another transaction's callback. It throws instead of waiting on itself; pass the callback's `db` down instead.
+- Keep slow work (password hashing, network calls) outside the callback; everything else waits for it.
+- A transaction that holds the connection longer than `TRANSACTION_SLOW_MS` (5s) is logged with `logger.warn`, and again when it lets go. There is no timeout: its `BEGIN` is still open, so failing the writes queued behind it would not free the connection.
+- Only `withTransaction()` queues. A plain write on `writeConn` (`insertOne`, `updateOne`, a direct `run`) issued while another request's transaction is open joins that transaction and is rolled back with it.
+
 ### Transaction Error Handling
 
-The try/catch around ROLLBACK in `withTransaction()` is intentional - the sqlite3 package doesn't expose transaction state, so ROLLBACK might fail if transaction already rolled back.
-
-```typescript
-// From src/db/conn.ts
-export async function withTransaction<T>(
-  callback: (db: Database.Database) => Promise<T>
-): Promise<T> {
-  const db = writeConn;
-  await db.exec('BEGIN TRANSACTION');
-  try {
-    const result = await callback(db);
-    await db.exec('COMMIT');
-    return result;
-  } catch (err) {
-    try {
-      await db.exec('ROLLBACK');
-    } catch (rollbackErr) {
-      // Transaction might already be rolled back
-      logger.warn('ROLLBACK failed (transaction may already be rolled back)', rollbackErr);
-    }
-    throw err;
-  }
-}
-```
+The try/catch around ROLLBACK in `withTransaction()` is intentional - the sqlite3 package doesn't expose transaction state, so ROLLBACK might fail if transaction already rolled back. The rollback error is swallowed and the original error rethrown.
 
 ## Migration System
 

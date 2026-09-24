@@ -14,6 +14,7 @@ import {
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { query, withTransaction } from "../db/conn";
+import { containsPattern, containsSql } from "../db/likePattern";
 import { parse } from "csv-parse/sync";
 import { readFile, readdir, stat } from "fs/promises";
 import { join, extname } from "path";
@@ -758,13 +759,13 @@ async function handleSearchMember(args: SearchMemberArgs) {
   const params: string[] = [];
 
   if (name) {
-    conditions.push("LOWER(display_name) LIKE LOWER(?)");
-    params.push(`%${name.trim()}%`);
+    conditions.push(containsSql("display_name"));
+    params.push(containsPattern(name));
   }
 
   if (email) {
-    conditions.push("LOWER(contact_email) LIKE LOWER(?)");
-    params.push(`%${email.trim()}%`);
+    conditions.push(containsSql("contact_email"));
+    params.push(containsPattern(email));
   }
 
   if (conditions.length === 0) {
