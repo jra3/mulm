@@ -13,6 +13,7 @@ import {
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { query, withTransaction } from "../db/conn";
+import { containsPattern, containsSql } from "../db/likePattern";
 import { anyProgramSpeciesTypeSql, totalPointsSql } from "../points";
 
 // Type definitions
@@ -363,8 +364,8 @@ async function handleListMembers(args: ListMembersArgs) {
   }
 
   if (searchQuery && typeof searchQuery === 'string' && searchQuery.trim().length >= 2) {
-    const searchPattern = `%${searchQuery.trim().toLowerCase()}%`;
-    conditions.push("(LOWER(m.display_name) LIKE ? OR LOWER(m.contact_email) LIKE ?)");
+    const searchPattern = containsPattern(searchQuery);
+    conditions.push(`(${containsSql("m.display_name")} OR ${containsSql("m.contact_email")})`);
     params.push(searchPattern, searchPattern);
   }
 

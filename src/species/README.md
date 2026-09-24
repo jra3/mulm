@@ -72,7 +72,8 @@ through fragments: they go through a catalogue function.
   rename.
 - **Search** (typeahead, explorer, admin list) matches a Name containing the
   search text, case-insensitively. `%` and `_` match themselves: build the
-  clause with `containsSql` and the parameter with `containsPattern`.
+  clause with `containsSql` and the parameter with `containsPattern`
+  (`src/db/likePattern.ts`).
 - **Point class** is 5, 10, 15, 20 or unset, on create, update and bulk set.
   Forms (`src/forms/pointClass.ts`) check first for a friendlier message; the
   catalogue refuses regardless.

@@ -5,6 +5,7 @@
  * return are for the old views and go when those views read Names by kind.
  */
 import { query } from "@/db/conn";
+import { containsPattern, containsSql } from "@/db/likePattern";
 import { getSpeciesExternalReferences, getSpeciesImages, type SpeciesImage } from "@/db/speciesEnrichment";
 import type { SpeciesType } from "@/points";
 import { speciesIdOfSubmissionSql } from "./submissions";
@@ -60,21 +61,6 @@ export type SpeciesNameRecord = {
   canonical_genus: string;
   canonical_species_name: string;
 };
-
-/**
- * A LIKE pattern matching names that contain `search`, case-insensitively.
- * `%` and `_` in the search are escaped, so they match themselves. Bind it to
- * a `containsSql` clause, which carries the matching ESCAPE.
- */
-function containsPattern(search: string): string {
-  const escaped = search.trim().toLowerCase().replace(/[\\%_]/g, (c) => `\\${c}`);
-  return `%${escaped}%`;
-}
-
-/** SQL: `column` contains the `containsPattern` bound to its one parameter. */
-function containsSql(column: string): string {
-  return `LOWER(${column}) LIKE ? ESCAPE '\\'`;
-}
 
 /**
  * Unified species search function with flexible options

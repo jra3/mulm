@@ -1,6 +1,7 @@
 import { makePasswordEntry, ScryptPassword } from "../auth";
 import { db, query, deleteOne, insertOne, updateOne, withTransaction } from "./conn";
 import { logger } from "@/utils/logger";
+import { containsPattern, containsSql } from "./likePattern";
 import { recordActivity, removeActivity } from "./activity";
 import { specialtyAwards, getCountableSpecialtyAwards } from "@/specialtyAwards";
 import { programSpeciesTypeSql, totalPointsSql } from "@/points";
@@ -317,13 +318,13 @@ export async function searchMembers(
     return [];
   }
 
-  const searchPattern = `%${searchQuery.trim().toLowerCase()}%`;
+  const searchPattern = containsPattern(searchQuery);
 
   return query<MemberRecord>(
     `
 		SELECT * FROM members
-		WHERE LOWER(display_name) LIKE ?
-		   OR LOWER(contact_email) LIKE ?
+		WHERE ${containsSql("display_name")}
+		   OR ${containsSql("contact_email")}
 		ORDER BY display_name
 		LIMIT ?
 	`,
