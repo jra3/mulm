@@ -205,10 +205,12 @@ export async function updateMember(memberId: number, updates: Partial<MemberReco
   return updateOne("members", { id: memberId }, updates);
 }
 
+/** The member holding this address, compared without regard to case. */
 export async function getMemberByEmail(email: string) {
-  const members = await query<MemberRecord>("SELECT * FROM members WHERE contact_email = ?", [
-    email,
-  ]);
+  const members = await query<MemberRecord>(
+    "SELECT * FROM members WHERE contact_email = ? COLLATE NOCASE",
+    [email.trim()]
+  );
   return members.pop();
 }
 
