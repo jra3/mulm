@@ -62,6 +62,16 @@ export type SpeciesNameRecord = {
 };
 
 /**
+ * A LIKE pattern matching names that contain `search`, case-insensitively.
+ * `%` and `_` in the search are escaped, so they match themselves: use it
+ * with `LIKE ? ESCAPE '\'` against a LOWER()ed column.
+ */
+function containsPattern(search: string): string {
+  const escaped = search.trim().toLowerCase().replace(/[\\%_]/g, (c) => `\\${c}`);
+  return `%${escaped}%`;
+}
+
+/**
  * Unified species search function with flexible options
  * Handles both typeahead and explorer use cases
  */
@@ -100,10 +110,10 @@ function buildSpeciesSearchQuery(
   }
 
   if (search && search.trim().length >= 2) {
-    const searchPattern = `%${search.trim().toLowerCase()}%`;
+    const searchPattern = containsPattern(search);
     conditions.push(`AND (
-			LOWER(cn.common_name) LIKE ? OR
-			LOWER(scin.scientific_name) LIKE ?
+			LOWER(cn.common_name) LIKE ? ESCAPE '\\' OR
+			LOWER(scin.scientific_name) LIKE ? ESCAPE '\\'
 		)`);
     params.push(searchPattern, searchPattern);
   }
@@ -159,7 +169,7 @@ export async function searchSpeciesTypeahead(
     return [];
   }
 
-  const searchPattern = `%${searchQuery.trim().toLowerCase()}%`;
+  const searchPattern = containsPattern(searchQuery);
   const conditions: string[] = ["1=1"];
   const params: unknown[] = [];
 
@@ -190,7 +200,7 @@ export async function searchSpeciesTypeahead(
       1 AS is_common_name
     FROM species_common_name cn
     JOIN species_name_group sng ON cn.group_id = sng.group_id
-    WHERE ${whereClause} AND LOWER(cn.common_name) LIKE ?
+    WHERE ${whereClause} AND LOWER(cn.common_name) LIKE ? ESCAPE '\\'
 
     UNION ALL
 
@@ -213,7 +223,7 @@ export async function searchSpeciesTypeahead(
       0 AS is_common_name
     FROM species_scientific_name sn
     JOIN species_name_group sng ON sn.group_id = sng.group_id
-    WHERE ${whereClause} AND LOWER(sn.scientific_name) LIKE ?
+    WHERE ${whereClause} AND LOWER(sn.scientific_name) LIKE ? ESCAPE '\\'
 
     ORDER BY is_common_name DESC, common_name, scientific_name
     LIMIT ?
@@ -505,16 +515,16 @@ export async function getSpeciesForAdmin(
   }
 
   if (search && search.trim().length >= 2) {
-    const searchPattern = `%${search.trim().toLowerCase()}%`;
+    const searchPattern = containsPattern(search);
     // The Canonical name is a scientific Name, so the EXISTS below covers it.
     conditions.push(`AND (
       EXISTS (
         SELECT 1 FROM species_common_name cn
-        WHERE cn.group_id = sng.group_id AND LOWER(cn.common_name) LIKE ?
+        WHERE cn.group_id = sng.group_id AND LOWER(cn.common_name) LIKE ? ESCAPE '\\'
       ) OR
       EXISTS (
         SELECT 1 FROM species_scientific_name sn
-        WHERE sn.group_id = sng.group_id AND LOWER(sn.scientific_name) LIKE ?
+        WHERE sn.group_id = sng.group_id AND LOWER(sn.scientific_name) LIKE ? ESCAPE '\\'
       )
     )`);
     params.push(searchPattern, searchPattern);
