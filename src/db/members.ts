@@ -145,13 +145,13 @@ export async function createMember(
   } = {},
   isAdmin: boolean = false
 ) {
-  // Hash before taking the write connection: scrypt is slow, and every other
-  // transaction queues behind this one.
-  const passwordEntry = credentials.password
-    ? await makePasswordEntry(credentials.password)
-    : undefined;
-
   try {
+    // Hash before taking the write connection: scrypt is slow, and every other
+    // transaction queues behind this one.
+    const passwordEntry = credentials.password
+      ? await makePasswordEntry(credentials.password)
+      : undefined;
+
     return await withTransaction(async (conn) => {
       const userStmt = await conn.prepare(
         "INSERT INTO members (display_name, contact_email, is_admin) VALUES (?, ?, ?)"

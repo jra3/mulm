@@ -170,16 +170,17 @@ export async function deleteOne(table: TableName, key: PartialRow) {
  * second BEGIN on a connection while one is open. Queueing them means two
  * requests racing for the same row run one after the other: the second reads
  * what the first committed and is refused by the rules, not by the driver.
+ * Plain writes on `writeConn` do not queue; see src/db/README.md.
  */
 let transactionQueue: Promise<unknown> = Promise.resolve();
 
 /**
  * Marks the async context of a transaction's callback, so a nested call fails
- * instead of waiting on itself. `open` goes false at commit or rollback: work
+ * instead of waiting on itself. `active` goes false at commit or rollback: work
  * the callback started without awaiting may still run later, and is free then
  * to open a transaction of its own.
  */
-const insideTransaction = new AsyncLocalStorage<{ open: boolean }>();
+const transactionContext = new AsyncLocalStorage<{ active: boolean }>();
 
 /**
  * Execute a function within a database transaction, after any transaction
@@ -189,15 +190,15 @@ const insideTransaction = new AsyncLocalStorage<{ open: boolean }>();
  * @throws Error if called from inside another transaction's callback
  */
 export async function withTransaction<T>(fn: (db: Database) => Promise<T>): Promise<T> {
-  if (insideTransaction.getStore()?.open) {
+  if (transactionContext.getStore()?.active) {
     throw new Error("withTransaction cannot be called inside another transaction");
   }
   const run = transactionQueue.then(async () => {
-    const context = { open: true };
+    const context = { active: true };
     try {
-      return await insideTransaction.run(context, () => runTransaction(fn));
+      return await transactionContext.run(context, () => runTransaction(fn));
     } finally {
-      context.open = false;
+      context.active = false;
     }
   });
   transactionQueue = run.catch(() => undefined);

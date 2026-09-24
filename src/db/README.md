@@ -237,32 +237,17 @@ await withTransaction(async (db) => {
 });
 ```
 
+### One Transaction at a Time
+
+All transactions share the one write connection, and SQLite refuses a second `BEGIN` while one is open. So `withTransaction()` queues: a call waits until every transaction started before it has committed or rolled back. Two requests racing for the same row therefore run one after the other, and the second reads what the first committed.
+
+- Don't call `withTransaction()` from inside another transaction's callback. It throws instead of waiting on itself; pass the callback's `db` down instead.
+- Keep slow work (password hashing, network calls) outside the callback; everything else waits for it.
+- Only `withTransaction()` queues. A plain write on `writeConn` (`insertOne`, `updateOne`, a direct `run`) issued while another request's transaction is open joins that transaction and is rolled back with it.
+
 ### Transaction Error Handling
 
-The try/catch around ROLLBACK in `withTransaction()` is intentional - the sqlite3 package doesn't expose transaction state, so ROLLBACK might fail if transaction already rolled back.
-
-```typescript
-// From src/db/conn.ts
-export async function withTransaction<T>(
-  callback: (db: Database.Database) => Promise<T>
-): Promise<T> {
-  const db = writeConn;
-  await db.exec('BEGIN TRANSACTION');
-  try {
-    const result = await callback(db);
-    await db.exec('COMMIT');
-    return result;
-  } catch (err) {
-    try {
-      await db.exec('ROLLBACK');
-    } catch (rollbackErr) {
-      // Transaction might already be rolled back
-      logger.warn('ROLLBACK failed (transaction may already be rolled back)', rollbackErr);
-    }
-    throw err;
-  }
-}
-```
+The try/catch around ROLLBACK in `withTransaction()` is intentional - the sqlite3 package doesn't expose transaction state, so ROLLBACK might fail if transaction already rolled back. The rollback error is swallowed and the original error rethrown.
 
 ## Migration System
 
