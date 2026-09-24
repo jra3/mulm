@@ -63,12 +63,17 @@ export type SpeciesNameRecord = {
 
 /**
  * A LIKE pattern matching names that contain `search`, case-insensitively.
- * `%` and `_` in the search are escaped, so they match themselves: use it
- * with `LIKE ? ESCAPE '\'` against a LOWER()ed column.
+ * `%` and `_` in the search are escaped, so they match themselves. Bind it to
+ * a `containsSql` clause, which carries the matching ESCAPE.
  */
 function containsPattern(search: string): string {
   const escaped = search.trim().toLowerCase().replace(/[\\%_]/g, (c) => `\\${c}`);
   return `%${escaped}%`;
+}
+
+/** SQL: `column` contains the `containsPattern` bound to its one parameter. */
+function containsSql(column: string): string {
+  return `LOWER(${column}) LIKE ? ESCAPE '\\'`;
 }
 
 /**
@@ -112,8 +117,8 @@ function buildSpeciesSearchQuery(
   if (search && search.trim().length >= 2) {
     const searchPattern = containsPattern(search);
     conditions.push(`AND (
-			LOWER(cn.common_name) LIKE ? ESCAPE '\\' OR
-			LOWER(scin.scientific_name) LIKE ? ESCAPE '\\'
+			${containsSql("cn.common_name")} OR
+			${containsSql("scin.scientific_name")}
 		)`);
     params.push(searchPattern, searchPattern);
   }
@@ -200,7 +205,7 @@ export async function searchSpeciesTypeahead(
       1 AS is_common_name
     FROM species_common_name cn
     JOIN species_name_group sng ON cn.group_id = sng.group_id
-    WHERE ${whereClause} AND LOWER(cn.common_name) LIKE ? ESCAPE '\\'
+    WHERE ${whereClause} AND ${containsSql("cn.common_name")}
 
     UNION ALL
 
@@ -223,7 +228,7 @@ export async function searchSpeciesTypeahead(
       0 AS is_common_name
     FROM species_scientific_name sn
     JOIN species_name_group sng ON sn.group_id = sng.group_id
-    WHERE ${whereClause} AND LOWER(sn.scientific_name) LIKE ? ESCAPE '\\'
+    WHERE ${whereClause} AND ${containsSql("sn.scientific_name")}
 
     ORDER BY is_common_name DESC, common_name, scientific_name
     LIMIT ?
@@ -520,11 +525,11 @@ export async function getSpeciesForAdmin(
     conditions.push(`AND (
       EXISTS (
         SELECT 1 FROM species_common_name cn
-        WHERE cn.group_id = sng.group_id AND LOWER(cn.common_name) LIKE ? ESCAPE '\\'
+        WHERE cn.group_id = sng.group_id AND ${containsSql("cn.common_name")}
       ) OR
       EXISTS (
         SELECT 1 FROM species_scientific_name sn
-        WHERE sn.group_id = sng.group_id AND LOWER(sn.scientific_name) LIKE ? ESCAPE '\\'
+        WHERE sn.group_id = sng.group_id AND ${containsSql("sn.scientific_name")}
       )
     )`);
     params.push(searchPattern, searchPattern);
