@@ -29,6 +29,7 @@ the module's own business.
 | `names.ts` | Names by kind: `listNames`, `findNames` (by text across Species), `addName`, `updateName` (in place, id kept), `removeName` (one id or several). `updateName` and `removeName` refuse the Canonical name. `nameTable` maps a kind to its table for the module's own SQL. |
 | `curation.ts` | `createSpecies`, `updateSpecies` (Program class, Species type, Point class, CARES), `setPointClass` (bulk), `renameCanonical`, `previewMerge`, `mergeSpecies`, `deleteSpecies`. Create, rename and merge keep the Canonical flag and its cache. |
 | `agreement.ts` | `checkFormAgreement`: does a Submission's form (spellings, Species type, Program class) agree with a Species. The lifecycle's member saves read `agrees` to keep or clear a binding; the confirmWitness guard and the witness panel read `classificationAgrees`. |
+| `references.ts` | Rows in other tables that belong to a Species (collection, CARES, images, links, sync records) and what merge and delete do with each; `countReferencesOfSpecies`, `findMembersKeepingBoth`. |
 | `submissions.ts` | The Species-Submission relation, defined once as SQL (`speciesIdOfSubmissionSql`: the Submission's `species_id`); `countSubmissionsOfSpecies`. |
 | `sql.ts` | SQL fragments for other modules' queries: `speciesOfSubmissionJoinSql`, `programClassOfSubmissionSql`, `speciesJoinSql`, `speciesFromSql`, `anyNameSql`. |
 | `status.ts` | Writers for columns other modules own the meaning of: `updateIucnStatus`, `updateLastExternalSync`. |
@@ -88,9 +89,19 @@ through fragments: they go through a catalogue function.
   regard to case. The winner keeps its flag; the loser's Canonical name comes
   along as an unflagged scientific Name. The loser's Submissions are rebound
   to the winner, so approved Submissions and their Points are untouched.
+  Collection entries and CARES records move too; images and links move less
+  those the winner already has; the loser's sync logs and IUCN
+  recommendations are dropped. A CARES loser makes the winner CARES, so the
+  moved CARES records still count. A member keeping both Species keeps the
+  winner's collection entry current, with the earlier CARES registration (and
+  its photo) and the later confirmation of the two; the loser's entry is
+  marked removed and keeps its notes and photos as history.
   `previewMerge` reports the same plan without writing.
-- **Delete** is refused while any Submission, in any state, references the
-  Species. There is no force: merge is the way out.
+- **Delete** is refused while any Submission (in any state), collection entry
+  (current or removed) or CARES record references the Species. There is no
+  force: merge is the way out. Images, links and sync records go with it.
+- **Nothing cascades in production** (foreign keys are off), so every table
+  holding a Species id is listed in `references.ts`; a new one goes there.
 - **Names** are never invented. The typeahead gives a common Name the
   Canonical name as its scientific spelling, and a scientific Name the
   Species' first common Name or nothing.
@@ -118,18 +129,23 @@ through fragments: they go through a catalogue function.
   when the column is, not before. The one exception is the Submission
   form's hidden `species_id`, named for the Submission's column it claims.
 - **Collection and CARES** join a Species by `group_id` through the
-  fragments; their own behaviour is out of this module's scope.
+  fragments; their own behaviour is out of this module's scope. The one
+  exception is merge and delete (`references.ts`): they move or remove other
+  modules' rows by Species id, in the catalogue's transaction, because a
+  Species that goes must take its references with it.
 
 ## Things that are deliberately not here
 
 - External references and images: `src/db/speciesEnrichment.ts`. #404 keeps
   enrichment in its own modules; the detail read model reads it, the admin
-  edit route and the external-data sync write it.
+  edit route and the external-data sync write it. Merge and delete move or
+  remove them by Species id and nothing more (`references.ts`).
 - IUCN status logic and sync: `src/db/iucn.ts`, `src/integrations/iucn.ts`.
   The catalogue writes the IUCN columns (`status.ts`) and lists who is due a
   sync; it decides nothing about them.
 - The CARES registry: `src/db/cares.ts`. The catalogue knows the CARES flag
-  on a Species, nothing more.
+  on a Species; merge moves CARES records to the winner and delete refuses
+  while any exist, nothing more.
 - Moving Submissions: `src/lifecycle/`. The catalogue says which Species a
   Submission references and whether a form agrees with one; the lifecycle
   decides what happens to the Submission.

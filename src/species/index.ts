@@ -11,6 +11,8 @@
  * (enrichment, with their own modules), the CARES registry, the Points
  * formula, and Submissions themselves - it answers which Submissions reference
  * a Species, and whether a form agrees with one, but it does not move them.
+ * Merge and delete are the exception for rows keyed by a Species id: they
+ * move or remove them so none is left pointing at a Species that is gone.
  *
  * This index is the interface. See README.md for what is where.
  */

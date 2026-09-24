@@ -54,6 +54,27 @@ void describe("Species merge with duplicate synonyms", () => {
         species_id INTEGER REFERENCES species_name_group(group_id) ON DELETE RESTRICT,
         approved_on TEXT
       );
+
+      -- The rest of what merge reads and moves (src/species/references.ts),
+      -- only the columns it touches. Real migrations would forbid the
+      -- case-variant Canonical names these tests seed (migration 060).
+      CREATE TABLE members (id INTEGER PRIMARY KEY, display_name TEXT);
+      CREATE TABLE species_collection (
+        id INTEGER PRIMARY KEY, member_id INTEGER, group_id INTEGER, removed_date TEXT,
+        updated_at TEXT, cares_registered_at TEXT, cares_last_confirmed TEXT,
+        cares_photo_key TEXT, cares_photo_url TEXT
+      );
+      CREATE TABLE cares_article (id INTEGER PRIMARY KEY, species_group_id INTEGER);
+      CREATE TABLE cares_fry_share (id INTEGER PRIMARY KEY, species_group_id INTEGER);
+      CREATE TABLE species_images (
+        id INTEGER PRIMARY KEY, group_id INTEGER, image_url TEXT, display_order INTEGER DEFAULT 0
+      );
+      CREATE TABLE species_external_references (
+        id INTEGER PRIMARY KEY, group_id INTEGER, reference_url TEXT, display_order INTEGER DEFAULT 0
+      );
+      CREATE TABLE external_data_sync_log (id INTEGER PRIMARY KEY, group_id INTEGER);
+      CREATE TABLE iucn_sync_log (id INTEGER PRIMARY KEY, group_id INTEGER);
+      CREATE TABLE iucn_canonical_recommendations (id INTEGER PRIMARY KEY, group_id INTEGER);
     `);
 
     overrideConnection(db);

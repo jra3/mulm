@@ -9,10 +9,16 @@ include ../header.pug
 		ul.list-disc.ml-5.text-yellow-700.text-sm
 			li Move all common and scientific names from defunct species to canonical species
 			li Redirect all submissions to the canonical species
+			li Move members' collection entries, CARES records, images and links to the canonical species
 			li Delete the defunct species permanently
+			li Mark the canonical species CARES if the defunct one was
+		p.text-yellow-700.text-sm.mt-2 A member keeping both species keeps the canonical one's collection entry, with the earlier CARES registration; the other entry is marked removed.
 
 	form(
 		hx-post=`/admin/species/${defunctSpecies.group_id}/merge`
+		hx-target="#merge-refusal"
+		hx-swap="innerHTML"
+		hx-on--before-swap="if (event.detail.xhr.status >= 400 ? event.detail.xhr.status < 500 : false) { event.detail.shouldSwap = true; }"
 	)
 		input(type="hidden" name="defunct_group_id" value=defunctSpecies.group_id)
 		input(type="hidden" id="canonical_group_id_hidden" name="canonical_group_id")
@@ -48,6 +54,9 @@ include ../header.pug
 				input(type="checkbox" id="confirm" name="confirm" required)
 				label.text-sm.text-gray-700(for="confirm")
 					strong I understand this will permanently merge these species and cannot be undone
+
+			//- A refused merge lands here
+			p#merge-refusal.text-sm.text-red-700(role="alert")
 
 			.flex.gap-2.justify-end
 				button.outline(
