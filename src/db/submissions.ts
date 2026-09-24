@@ -2,8 +2,9 @@ import { FormValues } from "@/forms/submission";
 import { writeConn, query, withTransaction } from "./conn";
 import { logger } from "@/utils/logger";
 import { filterQueue, queueSql, type QueueName } from "@/lifecycle/queues";
-import { totalPointsSql } from "@/points";
+import { programOfSpeciesType, totalPointsSql } from "@/points";
 import type { Database } from "sqlite";
+import { speciesOfSubmissionJoinSql } from "@/species";
 
 // New normalized table types
 export type SubmissionImage = {
@@ -39,8 +40,8 @@ export type Submission = {
   species_class: string;
   species_common_name: string;
   species_latin_name: string;
-  common_name_id: number | null;
-  scientific_name_id: number | null;
+  /** The Species the Submission is bound to, or null. */
+  species_id: number | null;
   water_type: string;
   count: string;
   reproduction_date: string;
@@ -131,22 +132,7 @@ export type QueueSubmission = Submission & {
  * inspection.
  */
 export function formToRow(memberId: number, form: FormValues): SubmissionRow {
-  const program = (() => {
-    switch (form.species_type) {
-      case "Fish":
-      case "Invert":
-        return "fish";
-      case "Plant":
-        return "plant";
-      case "Coral":
-        return "coral";
-      case undefined:
-        return undefined;
-      default:
-        logger.warn("Unknown species type", form.species_type);
-        throw new Error("Unknown species type");
-    }
-  })();
+  const program = form.species_type === undefined ? undefined : programOfSpeciesType(form.species_type);
 
   const arrayToJSON = (formField: unknown) => {
     if (Array.isArray(formField)) {
@@ -161,6 +147,8 @@ export function formToRow(memberId: number, form: FormValues): SubmissionRow {
     ...form,
     member_name: undefined,
     member_email: undefined,
+    // The binding is the lifecycle's to decide (`bindingAfterSave`), never the form's to write.
+    species_id: undefined,
     foods: arrayToJSON(form.foods),
     spawn_locations: arrayToJSON(form.spawn_locations),
     // Images and supplements live in their own normalized tables.
@@ -221,9 +209,7 @@ export function getSubmissionsByMember(
 			sng.is_cares_species
 		FROM submissions
 		LEFT JOIN members ON submissions.member_id == members.id
-		LEFT JOIN species_common_name cn ON submissions.common_name_id = cn.common_name_id
-		LEFT JOIN species_scientific_name scin ON submissions.scientific_name_id = scin.scientific_name_id
-		LEFT JOIN species_name_group sng ON (cn.group_id = sng.group_id OR scin.group_id = sng.group_id)
+		${speciesOfSubmissionJoinSql("submissions", "sng")}
 		WHERE submissions.member_id = ?`;
 
   if (!includeUnsubmitted) {
@@ -317,9 +303,7 @@ export async function getQueue(queue: QueueName, program: string) {
 		FROM submissions
 		JOIN members ON submissions.member_id == members.id
 		LEFT JOIN members as witnessed_members ON submissions.witnessed_by == witnessed_members.id
-		LEFT JOIN species_common_name cn ON submissions.common_name_id = cn.common_name_id
-		LEFT JOIN species_scientific_name scin ON submissions.scientific_name_id = scin.scientific_name_id
-		LEFT JOIN species_name_group sng ON (cn.group_id = sng.group_id OR scin.group_id = sng.group_id)
+		${speciesOfSubmissionJoinSql("submissions", "sng")}
 		WHERE ${queueSql(queue)}
 		AND program = ?
 		ORDER BY submissions.submitted_on ASC`,

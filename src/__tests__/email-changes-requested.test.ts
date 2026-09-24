@@ -110,7 +110,7 @@ void describe("Changes Requested Email Template", () => {
 		assert.ok(html.includes("Edit Submission"), "Should have edit button text");
 	});
 
-	void test("includes witness preservation notice", () => {
+	void test("warns that a witnessed submission is witnessed again after resubmitting", () => {
 		const html = renderOnChangesRequested({
 			domain: "https://test.com",
 			submission: createMockSubmission(),
@@ -119,8 +119,8 @@ void describe("Changes Requested Email Template", () => {
 			programContactEmail: "admin@test.com",
 		});
 
-		assert.ok(html.includes("Your Witness Confirmation is Preserved"), "Should mention witness preservation");
-		assert.ok(html.includes("do not need to go through screening again"), "Should explain no re-screening needed");
+		assert.ok(html.includes("will need to be witnessed again"), "Should say resubmitting voids the Witness");
+		assert.ok(!html.includes("Preserved"), "Must not promise the Witness is kept");
 	});
 
 	void test("includes program contact email", () => {

@@ -1,4 +1,5 @@
 import { query, writeConn } from './conn';
+import { anyNameSql, speciesFromSql, speciesJoinSql } from "@/species";
 
 export interface CaresRegistration {
   collection_id: number;
@@ -108,7 +109,7 @@ export async function registerForCares(
   }>(
     `SELECT c.id, c.group_id, sng.is_cares_species, c.cares_registered_at
      FROM species_collection c
-     LEFT JOIN species_name_group sng ON c.group_id = sng.group_id
+     ${speciesJoinSql("c.group_id", "sng")}
      WHERE c.id = ? AND c.member_id = ? AND c.removed_date IS NULL`,
     [collectionEntryId, memberId]
   );
@@ -212,7 +213,7 @@ export async function getCaresEligibility(
   }>(
     `SELECT sng.is_cares_species, c.cares_registered_at, c.cares_photo_url
      FROM species_collection c
-     LEFT JOIN species_name_group sng ON c.group_id = sng.group_id
+     ${speciesJoinSql("c.group_id", "sng")}
      WHERE c.id = ? AND c.member_id = ? AND c.removed_date IS NULL`,
     [collectionEntryId, memberId]
   );
@@ -238,7 +239,7 @@ export async function getCaresProfile(memberId: number): Promise<CaresProfile> {
       c.id AS collection_id,
       c.group_id,
       COALESCE(
-        (SELECT common_name FROM species_common_name WHERE group_id = c.group_id LIMIT 1),
+        ${anyNameSql("common", "c.group_id")},
         c.common_name
       ) AS common_name,
       COALESCE(
@@ -272,7 +273,7 @@ export async function getCaresProfile(memberId: number): Promise<CaresProfile> {
         ELSE 0
       END AS years_confirmed
     FROM species_collection c
-    LEFT JOIN species_name_group sng ON c.group_id = sng.group_id
+    ${speciesJoinSql("c.group_id", "sng")}
     WHERE c.member_id = ?
       AND c.cares_registered_at IS NOT NULL
       AND c.removed_date IS NULL
@@ -288,7 +289,7 @@ export async function getCaresProfile(memberId: number): Promise<CaresProfile> {
       ca.url,
       ca.published_date,
       COALESCE(
-        (SELECT common_name FROM species_common_name WHERE group_id = ca.species_group_id LIMIT 1),
+        ${anyNameSql("common", "ca.species_group_id")},
         NULL
       ) AS common_name,
       COALESCE(
@@ -297,7 +298,7 @@ export async function getCaresProfile(memberId: number): Promise<CaresProfile> {
       ) AS scientific_name,
       ca.species_group_id
     FROM cares_article ca
-    LEFT JOIN species_name_group sng ON ca.species_group_id = sng.group_id
+    ${speciesJoinSql("ca.species_group_id", "sng")}
     WHERE ca.member_id = ?
     ORDER BY ca.published_date DESC, ca.created_at DESC`,
     [memberId]
@@ -312,7 +313,7 @@ export async function getCaresProfile(memberId: number): Promise<CaresProfile> {
       fs.share_date,
       fs.notes,
       COALESCE(
-        (SELECT common_name FROM species_common_name WHERE group_id = fs.species_group_id LIMIT 1),
+        ${anyNameSql("common", "fs.species_group_id")},
         NULL
       ) AS common_name,
       COALESCE(
@@ -322,7 +323,7 @@ export async function getCaresProfile(memberId: number): Promise<CaresProfile> {
       fs.species_group_id,
       CASE WHEN fs.recipient_member_id IS NULL AND fs.recipient_club IS NOT NULL THEN 1 ELSE 0 END AS is_external
     FROM cares_fry_share fs
-    LEFT JOIN species_name_group sng ON fs.species_group_id = sng.group_id
+    ${speciesJoinSql("fs.species_group_id", "sng")}
     WHERE fs.member_id = ?
     ORDER BY fs.share_date DESC, fs.created_at DESC`,
     [memberId]
@@ -390,7 +391,7 @@ export async function getCaresRegistrations(memberId: number): Promise<Array<{
       c.id AS collection_id,
       c.group_id,
       COALESCE(
-        (SELECT common_name FROM species_common_name WHERE group_id = c.group_id LIMIT 1),
+        ${anyNameSql("common", "c.group_id")},
         c.common_name
       ) AS common_name,
       COALESCE(
@@ -398,7 +399,7 @@ export async function getCaresRegistrations(memberId: number): Promise<Array<{
         c.scientific_name
       ) AS scientific_name
     FROM species_collection c
-    LEFT JOIN species_name_group sng ON c.group_id = sng.group_id
+    ${speciesJoinSql("c.group_id", "sng")}
     WHERE c.member_id = ?
       AND c.cares_registered_at IS NOT NULL
       AND c.removed_date IS NULL
@@ -462,7 +463,7 @@ export async function getCaresStats(): Promise<CaresStats> {
       COUNT(DISTINCT sc.group_id) AS species_count,
       COUNT(DISTINCT sc.member_id) AS member_count
     FROM species_collection sc
-    JOIN species_name_group sng ON sc.group_id = sng.group_id
+    ${speciesJoinSql("sc.group_id", "sng", { required: true })}
     WHERE sng.is_cares_species = 1
       AND sc.removed_date IS NULL`
   );
@@ -480,7 +481,7 @@ export async function isMemberCaresParticipant(memberId: number): Promise<boolea
   const rows = await query<{ cnt: number }>(
     `SELECT COUNT(*) AS cnt
     FROM species_collection sc
-    JOIN species_name_group sng ON sc.group_id = sng.group_id
+    ${speciesJoinSql("sc.group_id", "sng", { required: true })}
     WHERE sc.member_id = ?
       AND sng.is_cares_species = 1
       AND sc.removed_date IS NULL`,
@@ -496,11 +497,103 @@ export async function getMemberCaresCount(memberId: number): Promise<number> {
   const rows = await query<{ cnt: number }>(
     `SELECT COUNT(*) AS cnt
     FROM species_collection sc
-    JOIN species_name_group sng ON sc.group_id = sng.group_id
+    ${speciesJoinSql("sc.group_id", "sng", { required: true })}
     WHERE sc.member_id = ?
       AND sng.is_cares_species = 1
       AND sc.removed_date IS NULL`,
     [memberId]
   );
   return rows[0]?.cnt ?? 0;
+}
+
+// Coverage of the CARES priority list across members' collections.
+
+export type CaresCoverageStats = {
+  total_cares_species: number;
+  maintained_species: number;
+  coverage_percent: number;
+  most_maintained: Array<{
+    group_id: number;
+    canonical_genus: string;
+    canonical_species_name: string;
+    keeper_count: number;
+  }>;
+  unmaintained: Array<{
+    group_id: number;
+    canonical_genus: string;
+    canonical_species_name: string;
+  }>;
+};
+
+export async function getCaresCoverageStats(): Promise<CaresCoverageStats> {
+  const totalRow = await query<{ count: number }>(
+    `SELECT COUNT(*) as count FROM ${speciesFromSql("sng")} WHERE sng.is_cares_species = 1`
+  );
+  const total_cares_species = totalRow[0]?.count || 0;
+
+  const maintainedRow = await query<{ count: number }>(
+    `SELECT COUNT(DISTINCT sng.group_id) as count
+     FROM ${speciesFromSql("sng")}
+     JOIN species_collection c ON c.group_id = sng.group_id
+       AND c.removed_date IS NULL AND c.visibility = 'public'
+     WHERE sng.is_cares_species = 1`
+  );
+  const maintained_species = maintainedRow[0]?.count || 0;
+
+  const most_maintained = await query<{
+    group_id: number;
+    canonical_genus: string;
+    canonical_species_name: string;
+    keeper_count: number;
+  }>(
+    `SELECT sng.group_id, sng.canonical_genus, sng.canonical_species_name,
+            COUNT(DISTINCT c.member_id) as keeper_count
+     FROM ${speciesFromSql("sng")}
+     JOIN species_collection c ON c.group_id = sng.group_id
+       AND c.removed_date IS NULL AND c.visibility = 'public'
+     WHERE sng.is_cares_species = 1
+     GROUP BY sng.group_id
+     ORDER BY keeper_count DESC
+     LIMIT 5`
+  );
+
+  const unmaintained = await query<{
+    group_id: number;
+    canonical_genus: string;
+    canonical_species_name: string;
+  }>(
+    `SELECT sng.group_id, sng.canonical_genus, sng.canonical_species_name
+     FROM ${speciesFromSql("sng")}
+     WHERE sng.is_cares_species = 1
+       AND NOT EXISTS (
+         SELECT 1 FROM species_collection c
+         WHERE c.group_id = sng.group_id
+           AND c.removed_date IS NULL AND c.visibility = 'public'
+       )
+     ORDER BY sng.canonical_genus, sng.canonical_species_name
+     LIMIT 10`
+  );
+
+  return {
+    total_cares_species,
+    maintained_species,
+    coverage_percent: total_cares_species > 0
+      ? Math.round((maintained_species / total_cares_species) * 100)
+      : 0,
+    most_maintained,
+    unmaintained,
+  };
+}
+
+export async function getCaresMaintenersForSpecies(
+  groupId: number
+): Promise<Array<{ id: number; display_name: string; cares_registered_at: string | null }>> {
+  return query<{ id: number; display_name: string; cares_registered_at: string | null }>(
+    `SELECT m.id, m.display_name, c.cares_registered_at
+     FROM species_collection c
+     JOIN members m ON c.member_id = m.id
+     WHERE c.group_id = ? AND c.removed_date IS NULL AND c.visibility = 'public'
+     ORDER BY c.cares_registered_at DESC NULLS LAST, m.display_name`,
+    [groupId]
+  );
 }

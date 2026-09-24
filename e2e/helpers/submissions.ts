@@ -30,6 +30,15 @@ export interface TestSubmissionOptions {
 	 */
 	finalSubmitted?: boolean;
 
+	/**
+	 * Bind the Submission to the Species whose Canonical name is its Latin
+	 * spelling (the e2e seed has Poecilia reticulata, Cryptocoryne wendtii and
+	 * Acropora millepora), as a witness would have. A Witness cannot be
+	 * confirmed on an unbound Submission, so a test that confirms one without
+	 * exercising the witness panel's binding passes true.
+	 */
+	bound?: boolean;
+
 	// Species identification (defaults to Fish: Guppy)
 	speciesType?: "Fish" | "Invert" | "Plant" | "Coral";
 	speciesClass?: string;
@@ -98,6 +107,16 @@ export async function createTestSubmission(options: TestSubmissionOptions): Prom
 	const speciesLatinName = options.speciesLatinName || (isPlant ? "Cryptocoryne wendtii" : isCoral ? "Acropora millepora" : "Poecilia reticulata");
 	const waterType = options.waterType || (isCoral ? "Salt" : "Fresh");
 
+	let speciesId: number | null = null;
+	if (options.bound) {
+		const species = await dbConn.get<{ group_id: number }>(
+			"SELECT group_id FROM species_name_group WHERE canonical_genus || ' ' || canonical_species_name = ?",
+			speciesLatinName
+		);
+		if (!species) throw new Error(`No seeded Species "${speciesLatinName}" to bind to`);
+		speciesId = species.group_id;
+	}
+
 	// Fish/Invert-specific fields
 	const count = options.count !== undefined ? options.count : (isLivestock ? "20" : null);
 	const foods = options.foods !== undefined ? JSON.stringify(options.foods) : (isLivestock || isCoral ? JSON.stringify(["Live"]) : "[]");
@@ -150,8 +169,9 @@ export async function createTestSubmission(options: TestSubmissionOptions): Prom
 			approved_on,
 			approved_by,
 			points,
-			final_submission_on
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			final_submission_on,
+			species_id
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		options.memberId,
 		program,
 		speciesType,
@@ -186,7 +206,8 @@ export async function createTestSubmission(options: TestSubmissionOptions): Prom
 		approvedOn,
 		options.approvedBy || null,
 		options.points || null,
-		finalSubmissionOn
+		finalSubmissionOn,
+		speciesId
 	);
 
 	return result.lastID!;

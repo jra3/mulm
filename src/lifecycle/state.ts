@@ -95,6 +95,17 @@ export function hasChangesRequested(row: Partial<Pick<Submission, "changes_reque
 }
 
 /**
+ * Whether a Submission carries a confirmed Witness - the one a member's save
+ * would void (ADR-0001). A Draft withdrawn after witnessing still carries it
+ * until it is submitted again.
+ */
+export function hasConfirmedWitness(
+  row: Pick<Submission, "witness_verification_status" | "approved_on">
+): boolean {
+  return row.witness_verification_status === "confirmed" && !row.approved_on;
+}
+
+/**
  * Where a Submission is, from its row.
  *
  * Read top to bottom: Approved wins over everything (it is terminal), then the

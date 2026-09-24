@@ -1,4 +1,10 @@
 #!/usr/bin/env tsx
+/**
+ * Import-only tooling: this script writes the species tables directly, not
+ * through the Species catalogue (`@/species`). Do not copy this pattern into
+ * `src/`. It generates the SQL of migration 021 from a CSV and writes no
+ * database; the migration it produced is history.
+ */
 
 /**
  * Import Aquatic Plants from CSV

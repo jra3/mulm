@@ -29,7 +29,7 @@ export interface SpeciesTypeaheadItem {
  */
 export interface SpeciesExplorerResponse {
   /** Array of species matching the search criteria */
-  species: import("@/db/species").SpeciesExplorerItem[];
+  species: import("@/species").SpeciesExplorerItem[];
   /** Total count of species in the result set */
   totalSpecies: number;
 }

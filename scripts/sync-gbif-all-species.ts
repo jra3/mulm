@@ -1,4 +1,12 @@
 /**
+ * Import-only tooling: this script writes the species tables directly, not
+ * through the Species catalogue (`@/species`). Do not copy this pattern into
+ * `src/`. It is a CLI backfill with its own connection, and stamps
+ * `last_external_sync` with raw SQL. The in-app sync
+ * (`src/services/externalDataSync.ts`) writes through the catalogue's
+ * `updateLastExternalSync`.
+ */
+/**
  * Sync GBIF External Data
  *
  * Uses the GBIF API to populate species_external_references and species_images

@@ -15,7 +15,6 @@ adminRouter.post("/external-data/sync", externalData.triggerExternalDataSync);
 
 // Species management
 adminRouter.get("/species", speciesAdmin.listSpecies);
-adminRouter.get("/species/:id/synonyms", speciesAdmin.getSpeciesSynonyms);
 adminRouter.get("/species/:groupId/edit", speciesAdmin.editSpeciesSidebar);
 adminRouter.patch("/species/:groupId", speciesAdmin.updateSpecies);
 adminRouter.delete("/species/:groupId", speciesAdmin.deleteSpecies);
@@ -41,9 +40,9 @@ adminRouter.post("/species/bulk-sync-iucn", speciesAdmin.bulkSyncIucn);
 adminRouter.get("/dialog/species/:groupId/merge", speciesAdmin.mergeSpeciesDialog);
 adminRouter.post("/species/:groupId/merge", speciesAdmin.mergeSpeciesAction);
 
-// Create species
+// Create a Species from the witness panel, binding the Submission to it
 adminRouter.get("/dialog/species/new", speciesAdmin.createSpeciesDialog);
-adminRouter.post("/species", speciesAdmin.createSpeciesRoute);
+adminRouter.post("/submissions/:id/species", speciesAdmin.createSpeciesAndBind);
 
 // Split name management (new schema)
 adminRouter.get("/species/:groupId/common-names/new", speciesAdmin.addCommonNameForm);
@@ -64,7 +63,6 @@ adminRouter.get("/witness-queue{/:program}", admin.showWitnessQueue);
 adminRouter.get("/waiting-period{/:program}", admin.showWaitingPeriod);
 
 adminRouter.post("/submissions/:id/approve", admin.approveSubmission);
-adminRouter.get("/submissions/:id/approval-bonuses", admin.getApprovalBonuses);
 adminRouter.get("/submissions/:id/edit-approved", admin.editApprovedSubmissionForm);
 adminRouter.post("/submissions/:id/edit-approved", admin.saveApprovedSubmissionEdits);
 
@@ -77,6 +75,11 @@ adminRouter.post("/members/:memberId/check-specialty-awards", admin.checkMemberS
 adminRouter.post("/members/:memberId/send-welcome", admin.sendWelcomeEmail);
 adminRouter.post("/members/invite", admin.inviteMember);
 
+adminRouter.post("/submissions/:id/bind-species", admin.bindSpeciesAction);
+adminRouter.post(
+  "/submissions/:id/adopt-species-classification",
+  admin.adoptSpeciesClassificationAction
+);
 adminRouter.post("/submissions/:id/confirm-witness", admin.confirmWitnessAction);
 adminRouter.post("/submissions/:id/request-changes", admin.sendRequestChanges);
 adminRouter.post("/submissions/:id/notes", admin.addSubmissionNote);

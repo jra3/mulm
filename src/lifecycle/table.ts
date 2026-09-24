@@ -1,5 +1,5 @@
 import { MIDDLE_STATES, SubmissionState } from "./state";
-import { AuthorizationError, StateError } from "./errors";
+import { AuthorizationError, MismatchError, StateError, UnboundError } from "./errors";
 
 /**
  * The transition table: which moves are legal from which states, and for whom.
@@ -10,21 +10,35 @@ import { AuthorizationError, StateError } from "./errors";
  * | Move                    | From                                    | To                  | Actor              |
  * |-------------------------|-----------------------------------------|---------------------|--------------------|
  * | saveDraft               | draft                                   | draft               | member             |
- * | submit                  | draft                                   | pendingWitness, or  | member             |
- * |                         |                                         | waitingPeriod if a  |                    |
- * |                         |                                         | Witness survived    |                    |
- * | saveChanges             | the four middle states                  | same                | member             |
+ * | submit                  | draft                                   | pendingWitness      | member             |
+ * | saveChanges             | the four middle states                  | same, or            | member             |
+ * |                         |                                         | pendingWitness if   |                    |
+ * |                         |                                         | it was witnessed    |                    |
  * | returnToDraft           | pendingWitness .. awaitingFinalSubmission| draft              | member             |
- * | confirmWitness          | pendingWitness                          | waitingPeriod       | committee, not the submitter |
+ * | confirmWitness          | pendingWitness, bound, type and class   | waitingPeriod       | committee, not the submitter |
+ * |                         | agreeing with the Species               |                     |                    |
+ * | bindSpecies             | the four middle states, no changes      | same, bound         | committee, not the submitter |
+ * |                         | requested                               |                     |                    |
+ * | adoptSpeciesClassification | the four middle states, bound, no    | same, agreeing (or  | committee, not the submitter |
+ * |                         | changes requested                       | waitingPeriod, if the new clock has not run) | |
  * | enterApprovalQueue      | awaitingFinalSubmission                 | inApprovalQueue     | member or committee|
  * | removeFromQueue         | inApprovalQueue                         | awaitingFinalSubmission | member or committee |
  * | requestChanges          | the four middle states                  | same, flag set      | committee          |
- * | resubmit                | the four middle states                  | same, flag cleared  | member             |
- * | approve                 | inApprovalQueue                         | approved            | committee          |
+ * | resubmit                | the four middle states                  | as saveChanges,     | member             |
+ * |                         |                                         | flag cleared        |                    |
+ * | approve                 | inApprovalQueue, bound to a Species     | approved            | committee          |
  * | correctPoints           | approved                                | approved            | committee          |
  * | deleteSubmission        | draft (member); draft .. inApprovalQueue (committee) | gone   | member or committee|
  *
- * The thirteenth move is the clock: the waiting period elapsing carries a
+ * Every member save of a submitted Submission (submit, saveChanges, resubmit)
+ * voids a confirmed Witness (ADR-0001; `voidWitness` in transitions.ts).
+ * saveDraft does not, and committee moves never do: binding a Species is the
+ * committee's, not an edit of the member's form.
+ *
+ * A member save also clears a binding the saved form no longer agrees with
+ * (CONTEXT.md, Bound; `bindingAfterSave` in transitions.ts).
+ *
+ * The fifteenth move is the clock: the waiting period elapsing carries a
  * Submission from waitingPeriod to awaitingFinalSubmission with nobody
  * performing anything. It is computed in `state.ts` rather than listed here.
  */
@@ -38,6 +52,8 @@ export type MoveId =
   | "saveChanges"
   | "returnToDraft"
   | "confirmWitness"
+  | "bindSpecies"
+  | "adoptSpeciesClassification"
   | "enterApprovalQueue"
   | "removeFromQueue"
   | "requestChanges"
@@ -63,6 +79,13 @@ export type MoveDefinition = {
   readonly ownerOnly?: boolean;
   /** The submitter may never perform it, committee member or not. */
   readonly neverSubmitter?: boolean;
+  /** Legal only on a Submission bound to a Species. */
+  readonly requiresBound?: boolean;
+  /**
+   * Legal only while the Submission's Species type and Program class agree
+   * with the bound Species'.
+   */
+  readonly requiresAgreeingClassification?: boolean;
 };
 
 const MEMBER_ONLY: readonly Actor[] = ["member"];
@@ -95,9 +118,8 @@ export const moves = {
   },
 
   /**
-   * Editing in place. The Submission does not move, so a typo fix does not
-   * cost the member their place in the queue they are waiting in, and a
-   * confirmed Witness survives it.
+   * Editing in place. The submission date is kept, but a confirmed Witness is
+   * voided (ADR-0001), so a witnessed Submission goes back to Pending Witness.
    */
   saveChanges: {
     id: "saveChanges",
@@ -118,12 +140,43 @@ export const moves = {
     ownerOnly: true,
   },
 
+  /** Nothing enters the waiting period without a Species: the witness binds it first. */
   confirmWitness: {
     id: "confirmWitness",
     from: ["pendingWitness"],
     actors: COMMITTEE_ONLY,
     requiresNoChangesPending: true,
     neverSubmitter: true,
+    requiresBound: true,
+    requiresAgreeingClassification: true,
+  },
+
+  /**
+   * Bind (or rebind) the Submission to a Species from the catalogue - the
+   * witness's job, recorded in the changelog. Never the submitter, as with the
+   * Witness it prepares. Not on an Approved Submission: that is a Points
+   * correction, with a stated reason.
+   */
+  bindSpecies: {
+    id: "bindSpecies",
+    from: MIDDLE_STATES,
+    actors: COMMITTEE_ONLY,
+    requiresNoChangesPending: true,
+    neverSubmitter: true,
+  },
+
+  /**
+   * The witness's one-click answer to a mismatch: the Submission takes the
+   * bound Species' Species type and Program class. A committee move on the
+   * changelog, like binding, so it leaves a confirmed Witness in place.
+   */
+  adoptSpeciesClassification: {
+    id: "adoptSpeciesClassification",
+    from: MIDDLE_STATES,
+    actors: COMMITTEE_ONLY,
+    requiresNoChangesPending: true,
+    neverSubmitter: true,
+    requiresBound: true,
   },
 
   enterApprovalQueue: {
@@ -159,7 +212,10 @@ export const moves = {
   /**
    * Never the submitter, as with the Witness: awarding yourself points is the
    * same conflict as inspecting your own fry. The Portal already hid the
-   * approval panel from a Submission's owner; this makes it a rule.
+   * approval panel from a Submission's owner; this makes it a rule. Never on a
+   * Submission bound to no Species, so Points are never awarded to no Species;
+   * there is no binding at approval, so one past its Witness unbound is fixed
+   * by hand.
    */
   approve: {
     id: "approve",
@@ -167,6 +223,7 @@ export const moves = {
     actors: COMMITTEE_ONLY,
     requiresNoChangesPending: true,
     neverSubmitter: true,
+    requiresBound: true,
   },
 
   /** The only movement out of Approved. Approved is otherwise terminal. */
@@ -200,6 +257,14 @@ export type MoveContext = {
   readonly actorId: number;
   /** Whether the caller owns the Submission. */
   readonly isOwner: boolean;
+  /** Whether the Submission is bound to a Species. */
+  readonly bound: boolean;
+  /**
+   * Whether the Submission's Species type and Program class agree with the
+   * bound Species'. Undefined when unbound or not looked up; only a move that
+   * `requiresAgreeingClassification` needs it.
+   */
+  readonly classificationAgrees?: boolean;
 };
 
 /** The states `move` is legal from for this actor. */
@@ -230,11 +295,11 @@ export function canMove(move: MoveDefinition, context: MoveContext): boolean {
  * wrong and confusing, because they are on the committee.
  */
 export function assertMoveIsLegal(move: MoveDefinition, context: MoveContext): void {
-  const { state, changesPending, actor, actorId, isOwner } = context;
+  const { state, changesPending, actor, actorId, isOwner, bound, classificationAgrees } = context;
 
   if (move.neverSubmitter && isOwner) {
     throw new AuthorizationError(
-      `You cannot ${describe(move.id)} your own submission`,
+      `You cannot ${describe(move.id, "your own submission")}`,
       actorId,
       move.id
     );
@@ -242,7 +307,7 @@ export function assertMoveIsLegal(move: MoveDefinition, context: MoveContext): v
 
   if (!move.actors.includes(actor)) {
     throw new AuthorizationError(
-      `Only the ${move.actors.join(" or ")} may ${describe(move.id)}`,
+      `Only the ${move.actors.join(" or ")} may ${describe(move.id, "this submission")}`,
       actorId,
       move.id
     );
@@ -259,7 +324,7 @@ export function assertMoveIsLegal(move: MoveDefinition, context: MoveContext): v
   const from = legalFrom(move, actor);
   if (!from.includes(state)) {
     throw new StateError(
-      `Cannot ${describe(move.id)} a submission that is ${label(state)}`,
+      `Cannot ${describe(move.id, `a submission that is ${label(state)}`)}`,
       from.join(" or "),
       state
     );
@@ -267,7 +332,7 @@ export function assertMoveIsLegal(move: MoveDefinition, context: MoveContext): v
 
   if (move.requiresNoChangesPending && changesPending) {
     throw new StateError(
-      `Cannot ${describe(move.id)} while requested changes are outstanding`,
+      `Cannot ${describe(move.id, "this submission")} while requested changes are outstanding`,
       "no changes outstanding",
       "changes requested"
     );
@@ -275,40 +340,77 @@ export function assertMoveIsLegal(move: MoveDefinition, context: MoveContext): v
 
   if (move.requiresChangesPending && !changesPending) {
     throw new StateError(
-      `Cannot ${describe(move.id)} when no changes have been requested`,
+      `Cannot ${describe(move.id, "this submission")} when no changes have been requested`,
       "changes requested",
       "no changes outstanding"
     );
   }
+
+  if (move.requiresBound && !bound) {
+    throw new UnboundError(`Bind this Submission to a Species before you ${describeOnBound(move.id)}`, move.id);
+  }
+
+  if (move.requiresAgreeingClassification && classificationAgrees === false) {
+    throw new MismatchError(
+      "This Submission's Species type or Program class disagrees with its Species. " +
+        `Adopt the Species' values, rebind it, or request changes before you ${describeOnBound(move.id)}`,
+      move.id
+    );
+  }
 }
 
-/** How a move is named in a refusal. */
-function describe(id: MoveId): string {
+/**
+ * How a move is named in a refusal: the whole predicate, with `object` - the
+ * Submission as the sentence refers to it - where the move puts it, so every
+ * refusal reads as a sentence ("return this submission to draft", "confirm
+ * the witness on a submission that is approved").
+ */
+function describe(id: MoveId, object: string): string {
   switch (id) {
     case "saveDraft":
-      return "save a draft of";
+      return `save a draft of ${object}`;
     case "submit":
-      return "submit";
+      return `submit ${object}`;
     case "saveChanges":
-      return "save changes to";
+      return `save changes to ${object}`;
     case "returnToDraft":
-      return "return to draft";
+      return `return ${object} to draft`;
     case "confirmWitness":
-      return "confirm the witness";
+      return `confirm the witness on ${object}`;
+    case "bindSpecies":
+      return `choose the Species of ${object}`;
+    case "adoptSpeciesClassification":
+      return `give ${object} its Species' type and class`;
     case "enterApprovalQueue":
-      return "queue for approval";
+      return `queue ${object} for approval`;
     case "removeFromQueue":
-      return "remove from the approval queue";
+      return `remove ${object} from the approval queue`;
     case "requestChanges":
-      return "request changes on";
+      return `request changes on ${object}`;
     case "resubmit":
-      return "resubmit";
+      return `resubmit ${object}`;
     case "approve":
-      return "approve";
+      return `approve ${object}`;
     case "correctPoints":
-      return "correct the points on";
+      return `correct the points on ${object}`;
     case "deleteSubmission":
-      return "delete";
+      return `delete ${object}`;
+  }
+}
+
+/**
+ * How a move that needs a bound Submission is named after "before you", in
+ * the refusal `requiresBound` raises: "confirm its Witness" reads better
+ * than `describe`'s "confirm the witness on it".
+ */
+function describeOnBound(id: MoveId): string {
+  switch (id) {
+    case "confirmWitness":
+      return "confirm its Witness";
+    case "approve":
+      return "approve it";
+    default:
+      return describe(id, "it");
   }
 }
 

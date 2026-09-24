@@ -26,6 +26,7 @@
 export {
   deriveState,
   hasChangesRequested,
+  hasConfirmedWitness,
   waitingPeriod,
   requiredWaitingDays,
   daysElapsedSince,
@@ -71,11 +72,14 @@ export {
   requestChanges,
   approve,
   correctPoints,
+  bindSpecies,
+  adoptSpeciesClassification,
   deleteSubmission,
   supplementsFromForm,
   changesBetween,
   type Caller,
   type Change,
+  type NamesToAdd,
 } from "./transitions";
 
 // The clock's consequence, and the committee's standing view of its own work.
@@ -95,6 +99,8 @@ export {
   ValidationError,
   AuthorizationError,
   StateError,
+  UnboundError,
+  MismatchError,
   isLifecycleError,
 } from "./errors";
 

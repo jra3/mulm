@@ -72,75 +72,77 @@ html
                 }
             });
 
-            // Handle species typeahead changes for form auto-population
+            // Field linking for the species typeaheads. Picking a known Name
+            // binds: it sets the hidden species_id to that Species, fills the
+            // Program class (the typeahead only offers Species of the form's
+            // Species type) and the other name, and shows the unbind notice.
+            // Free text empties species_id. A cleared field changes nothing:
+            // a blank spelling still agrees with the Species. Whether a pick
+            // binds is the server's call (lifecycle bindingAfterSave).
+            function setPickedSpecies(speciesId) {
+                const hiddenIdField = document.getElementById('species_id');
+                if (hiddenIdField) {
+                    hiddenIdField.value = speciesId || '';
+                }
+                const notice = document.getElementById('species-binding-notice');
+                if (notice) {
+                    notice.hidden = !speciesId;
+                }
+            }
+
             document.addEventListener("typeahead:change", function (e) {
                 const target = e.target;
                 const detail = e.detail;
 
-                // Handle species typeahead changes (common or latin name)
-                if (target.id === 'species_common_name' || target.id === 'species_latin_name') {
-                    const selectedOption = detail.selectedOption;
+                if (target.id !== 'species_common_name' && target.id !== 'species_latin_name') {
+                    return;
+                }
 
-                    if (selectedOption && selectedOption.name_id) {
-                        // Update the hidden species_name_id field
-                        const hiddenIdField = document.getElementById('species_name_id');
-                        if (hiddenIdField) {
-                            hiddenIdField.value = selectedOption.name_id;
-                        }
+                const selectedOption = detail.selectedOption;
+                if (!detail.value) {
+                    return;
+                }
+                if (!selectedOption || !selectedOption.group_id) {
+                    setPickedSpecies(null);
+                    return;
+                }
 
-                        // Update species_class if available in the selected option
-                        if (selectedOption.program_class) {
-                            const speciesClassField = document.getElementById('species_class');
-                            if (speciesClassField) {
-                                speciesClassField.value = selectedOption.program_class;
-                            }
-                        }
+                setPickedSpecies(selectedOption.group_id);
 
-                        // Sync the paired field (common <-> scientific)
-                        if (target.id === 'species_common_name' && selectedOption.scientific_name) {
-                            // User selected common name, update scientific name
-                            const scientificNameField = document.getElementById('species_latin_name');
-                            if (scientificNameField && scientificNameField.tomSelectInstance) {
-                                const instance = scientificNameField.tomSelectInstance;
-                                const scientificValue = selectedOption.scientific_name;
-
-                                // Add option if it doesn't exist (using scientific_name as the key)
-                                if (!instance.options[scientificValue]) {
-                                    instance.addOption({
-                                        scientific_name: scientificValue,
-                                        common_name: selectedOption.common_name,
-                                        name_id: selectedOption.name_id,
-                                        program_class: selectedOption.program_class
-                                    });
-                                }
-                                // Set value (this will replace any existing value)
-                                instance.setValue(scientificValue, false);
-                                // Manually update the underlying select element since we suppressed onChange
-                                scientificNameField.value = scientificValue;
-                            }
-                        } else if (target.id === 'species_latin_name' && selectedOption.common_name) {
-                            // User selected scientific name, update common name
-                            const commonNameField = document.getElementById('species_common_name');
-                            if (commonNameField && commonNameField.tomSelectInstance) {
-                                const instance = commonNameField.tomSelectInstance;
-                                const commonValue = selectedOption.common_name;
-
-                                // Add option if it doesn't exist (using common_name as the key)
-                                if (!instance.options[commonValue]) {
-                                    instance.addOption({
-                                        common_name: commonValue,
-                                        scientific_name: selectedOption.scientific_name,
-                                        name_id: selectedOption.name_id,
-                                        program_class: selectedOption.program_class
-                                    });
-                                }
-                                // Set value (this will replace any existing value)
-                                instance.setValue(commonValue, false);
-                                // Manually update the underlying select element since we suppressed onChange
-                                commonNameField.value = commonValue;
-                            }
-                        }
+                if (selectedOption.program_class) {
+                    const speciesClassField = document.getElementById('species_class');
+                    if (speciesClassField) {
+                        speciesClassField.value = selectedOption.program_class;
                     }
+                }
+
+                // Sync the paired field (common <-> scientific)
+                const pairedId = target.id === 'species_common_name' ? 'species_latin_name' : 'species_common_name';
+                const pairedValue = target.id === 'species_common_name'
+                    ? selectedOption.scientific_name
+                    : selectedOption.common_name;
+                const pairedField = document.getElementById(pairedId);
+                if (pairedField && pairedField.tomSelectInstance) {
+                    const instance = pairedField.tomSelectInstance;
+                    // A Species with no Name of the paired kind clears the
+                    // paired field: a stale spelling would not agree with it
+                    if (!pairedValue) {
+                        instance.clear(true);
+                        pairedField.value = '';
+                        return;
+                    }
+                    // Options are keyed by the field's own value
+                    if (!instance.options[pairedValue]) {
+                        instance.addOption({
+                            common_name: selectedOption.common_name,
+                            scientific_name: selectedOption.scientific_name,
+                            group_id: selectedOption.group_id,
+                            program_class: selectedOption.program_class
+                        });
+                    }
+                    // Silent, so the paired field does not re-run this handler
+                    instance.setValue(pairedValue, true);
+                    pairedField.value = pairedValue;
                 }
             });
 

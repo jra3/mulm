@@ -115,132 +115,132 @@ html
 							p.text-sm.text-green-700 This species is on the C.A.R.E.S. priority list but needs hobbyist maintainers. Consider adding it to your collection!
 
 			// External References & Images
-				if (species.external_references && species.external_references.length > 0) || (species.image_links && species.image_links.length > 0)
-					.bg-white.rounded-lg.shadow-md.p-6.mb-6
-						h2.text-xl.font-bold.text-gray-900.mb-4 External Resources
+			if (species.external_references && species.external_references.length > 0) || (species.image_links && species.image_links.length > 0)
+				.bg-white.rounded-lg.shadow-md.p-6.mb-6
+					h2.text-xl.font-bold.text-gray-900.mb-4 External Resources
 
-						// External Links
-						if species.external_references && species.external_references.length > 0
-							.mb-6
-								h3.text-base.font-semibold.text-gray-700.mb-3 Reference Links
-								.space-y-2
-									each url in species.external_references
-										a.flex.items-center.p-3.bg-gray-50.hover_bg-gray-100.rounded.border.border-gray-200.transition.group(
-											href=url
+					// External Links
+					if species.external_references && species.external_references.length > 0
+						.mb-6
+							h3.text-base.font-semibold.text-gray-700.mb-3 Reference Links
+							.space-y-2
+								each url in species.external_references
+									a.flex.items-center.p-3.bg-gray-50.hover_bg-gray-100.rounded.border.border-gray-200.transition.group(
+										href=url
+										target="_blank"
+										rel="noopener noreferrer"
+									)
+										i.fas.fa-external-link-alt.text-blue-600.mr-3
+										.flex-1
+											.font-medium.text-blue-700.group-hover_text-blue-900
+												if url.includes('fishbase.se')
+													| FishBase Species Page
+												else if url.includes('wikipedia.org')
+													| Wikipedia Article
+												else if url.includes('gbif.org')
+													| GBIF Species Page
+												else
+													| External Reference
+											.text-sm.text-gray-500.truncate= url
+										i.fas.fa-arrow-right.text-gray-400.group-hover_text-blue-600.ml-2
+
+					// Species Images
+					if species.images && species.images.length > 0
+						div
+							h3.text-base.font-semibold.text-gray-700.mb-3 Species Images
+							.grid.grid-cols-2.gap-4(class="md:grid-cols-3 lg:grid-cols-4")
+								each image in species.images
+									.group
+										a.block.relative.aspect-square.bg-gray-100.rounded-lg.overflow-hidden.border.border-gray-200.hover_border-blue-500.transition(
+											href=image.image_url
 											target="_blank"
 											rel="noopener noreferrer"
+											title=image.title || "View full size image"
 										)
-											i.fas.fa-external-link-alt.text-blue-600.mr-3
-											.flex-1
-												.font-medium.text-blue-700.group-hover_text-blue-900
-													if url.includes('fishbase.se')
-														| FishBase Species Page
-													else if url.includes('wikipedia.org')
-														| Wikipedia Article
-													else if url.includes('gbif.org')
-														| GBIF Species Page
-													else
-														| External Reference
-												.text-sm.text-gray-500.truncate= url
-											i.fas.fa-arrow-right.text-gray-400.group-hover_text-blue-600.ml-2
-
-						// Species Images
-						if species.images && species.images.length > 0
-							div
-								h3.text-base.font-semibold.text-gray-700.mb-3 Species Images
-								.grid.grid-cols-2.gap-4(class="md:grid-cols-3 lg:grid-cols-4")
-									each image in species.images
-										.group
-											a.block.relative.aspect-square.bg-gray-100.rounded-lg.overflow-hidden.border.border-gray-200.hover_border-blue-500.transition(
-												href=image.image_url
-												target="_blank"
-												rel="noopener noreferrer"
-												title=image.title || "View full size image"
+											img.w-full.h-full.object-cover.transition(
+												src=image.image_url
+												alt=image.title || `${displayName} - Species Photo`
+												loading="lazy"
+												onerror="this.parentElement.innerHTML='<div class=\"flex items-center justify-center h-full text-gray-400\"><i class=\"fas fa-image-slash text-3xl\"></i></div>'"
 											)
-												img.w-full.h-full.object-cover.transition(
-													src=image.image_url
-													alt=image.title || `${displayName} - Species Photo`
-													loading="lazy"
-													onerror="this.parentElement.innerHTML='<div class=\"flex items-center justify-center h-full text-gray-400\"><i class=\"fas fa-image-slash text-3xl\"></i></div>'"
-												)
-											if image.attribution || image.license
-												.mt-1.text-xs.text-gray-500.truncate
-													if image.attribution
-														span= image.attribution
-													if image.license
-														span.ml-1.text-gray-400= `(${image.license})`
+										if image.attribution || image.license
+											.mt-1.text-xs.text-gray-500.truncate
+												if image.attribution
+													span= image.attribution
+												if image.license
+													span.ml-1.text-gray-400= `(${image.license})`
 
-				// Name Variations - Split by Type
-				if (commonNames && commonNames.length > 0) || (scientificNames && scientificNames.length > 0)
-					.bg-white.rounded-lg.shadow-md.p-6.mb-6
-						h2.text-xl.font-bold.text-gray-900.mb-4 Known Names
-						.grid.grid-cols-1.gap-6(class="md:grid-cols-2")
+			// Name Variations - Split by Type
+			if (commonNames && commonNames.length > 0) || (scientificNames && scientificNames.length > 0)
+				.bg-white.rounded-lg.shadow-md.p-6.mb-6
+					h2.text-xl.font-bold.text-gray-900.mb-4 Known Names
+					.grid.grid-cols-1.gap-6(class="md:grid-cols-2")
 
-							// Common Names
-							div
-								h3.text-base.font-semibold.text-gray-700.mb-3 Common Names
-								if commonNames && commonNames.length > 0
-									.space-y-2
-										each name in commonNames
-											.p-3.bg-gray-50.rounded.border.border-gray-200
-												.font-medium.text-gray-900= name.common_name
-								else
-									.text-center.py-4
-										.text-sm.text-gray-500 No common names recorded
+						// Common Names
+						div
+							h3.text-base.font-semibold.text-gray-700.mb-3 Common Names
+							if commonNames && commonNames.length > 0
+								.space-y-2
+									each name in commonNames
+										.p-3.bg-gray-50.rounded.border.border-gray-200
+											.font-medium.text-gray-900= name.name
+							else
+								.text-center.py-4
+									.text-sm.text-gray-500 No common names recorded
 
-							// Scientific Names
-							div
-								h3.text-base.font-semibold.text-gray-700.mb-3 Scientific Names
-								if scientificNames && scientificNames.length > 0
-									.space-y-2
-										each name in scientificNames
-											.p-3.bg-gray-50.rounded.border.border-gray-200
-												.font-medium.text-gray-900.italic= name.scientific_name
-								else
-									.text-center.py-4
-										.text-sm.text-gray-500 No scientific names recorded
+						// Scientific Names
+						div
+							h3.text-base.font-semibold.text-gray-700.mb-3 Scientific Names
+							if scientificNames && scientificNames.length > 0
+								.space-y-2
+									each name in scientificNames
+										.p-3.bg-gray-50.rounded.border.border-gray-200
+											.font-medium.text-gray-900.italic= name.name
+							else
+								.text-center.py-4
+									.text-sm.text-gray-500 No scientific names recorded
 
-				// Expert Breeders
-				if breeders.length > 0
-					.bg-white.rounded-lg.shadow-md.p-6
-						h2.text-xl.font-bold.text-gray-900.mb-4 Expert Breeders
-						
-						.grid.grid-cols-1.gap-6(class="lg:grid-cols-2")
-							each breeder in breeders
-								+card({variant: 'content', margin: ''})
-									.flex.justify-between.items-start.mb-3
+			// Expert Breeders
+			if breeders.length > 0
+				.bg-white.rounded-lg.shadow-md.p-6
+					h2.text-xl.font-bold.text-gray-900.mb-4 Expert Breeders
+					
+					.grid.grid-cols-1.gap-6(class="lg:grid-cols-2")
+						each breeder in breeders
+							+card({variant: 'content', margin: ''})
+								.flex.justify-between.items-start.mb-3
+									div
+										a(class="text-lg font-semibold text-blue-600 hover:text-blue-800" href=`/member/${breeder.member_id}`)= breeder.member_name
+										.text-sm.text-gray-600
+											= breeder.breed_count
+											= breeder.breed_count === 1 ? ' breeding report' : ' breeding reports'
+									div.text-right.text-sm.text-gray-600
 										div
-											a(class="text-lg font-semibold text-blue-600 hover:text-blue-800" href=`/member/${breeder.member_id}`)= breeder.member_name
-											.text-sm.text-gray-600
-												= breeder.breed_count
-												= breeder.breed_count === 1 ? ' breeding report' : ' breeding reports'
-										div.text-right.text-sm.text-gray-600
+											strong First:
+											+shortDate(breeder.first_breed_date, "First breed date")
+										if breeder.first_breed_date !== breeder.latest_breed_date
 											div
-												strong First:
-												+shortDate(breeder.first_breed_date, "First breed date")
-											if breeder.first_breed_date !== breeder.latest_breed_date
+												strong Latest:
+												+shortDate(breeder.latest_breed_date, "Latest breed date")
+
+								// Breeding Reports
+								if breeder.submissions && breeder.submissions.length > 0
+									.space-y-2
+										h4.font-medium.text-gray-900 Breeding Reports:
+										each submission in breeder.submissions
+											.flex.justify-between.items-center.text-sm.bg-gray-50.rounded.p-2
 												div
-													strong Latest:
-													+shortDate(breeder.latest_breed_date, "Latest breed date")
+													a(class="text-blue-600 hover:text-blue-800" href=`/submissions/${submission.id}`)
+														if submission.species_common_name
+															= submission.species_common_name
+														else
+															= submission.species_latin_name
+												div.text-right
+													.text-green-600.font-medium= submission.points + ' pts'
+													.text-gray-500
+														+shortDate(submission.approved_on, "Approved on")
 
-									// Breeding Reports
-									if breeder.submissions && breeder.submissions.length > 0
-										.space-y-2
-											h4.font-medium.text-gray-900 Breeding Reports:
-											each submission in breeder.submissions
-												.flex.justify-between.items-center.text-sm.bg-gray-50.rounded.p-2
-													div
-														a(class="text-blue-600 hover:text-blue-800" href=`/submissions/${submission.id}`)
-															if submission.species_common_name
-																= submission.species_common_name
-															else
-																= submission.species_latin_name
-													div.text-right
-														.text-green-600.font-medium= submission.points + ' pts'
-														.text-gray-500
-															+shortDate(submission.approved_on, "Approved on")
-
-				else
-					+emptyState("No breeding reports found for this species.", { showCard: true, size: "lg", subtitle: "This species may be in our database but hasn't been successfully bred yet." })
+			else
+				+emptyState("No breeding reports found for this species.", { showCard: true, size: "lg", subtitle: "This species may be in our database but hasn't been successfully bred yet." })
 
 		+footer()

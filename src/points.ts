@@ -151,6 +151,15 @@ export function isInProgram(program: ProgramType, speciesType: string | null | u
   return programSpeciesTypes[program].some((type) => type === speciesType);
 }
 
+/** The Program a Species type belongs to: Fish and Invert are the fish Program. */
+export function programOfSpeciesType(speciesType: string): ProgramType {
+  const program = (Object.keys(programSpeciesTypes) as ProgramType[]).find((p) => isInProgram(p, speciesType));
+  if (!program) {
+    throw new Error(`Unknown species type: ${speciesType}`);
+  }
+  return program;
+}
+
 /** A bonus the committee can award, named for the column it is stored in. */
 export type BonusField =
   | "article_points"

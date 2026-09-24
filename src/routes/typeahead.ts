@@ -1,7 +1,7 @@
 import { Response } from "express";
 import { MulmRequest } from "@/sessions";
 import { searchMembers as searchMembersDb } from "@/db/members";
-import { searchSpeciesTypeahead } from "@/db/species";
+import { searchSpeciesTypeahead } from "@/species";
 import { getQueryString } from "@/utils/request";
 import { speciesExplorerQuerySchema } from "@/forms/species-explorer";
 import { validateQueryWithFallback } from "@/forms/utils";

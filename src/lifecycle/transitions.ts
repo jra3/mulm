@@ -15,9 +15,11 @@ import type { FormValues } from "@/forms/submission";
 import type { ApprovalFormValues } from "@/forms/approval";
 import type { Program } from "@/levelManager";
 import { isProgramType } from "@/programs";
+import { programOfSpeciesType } from "@/points";
+import { addName, canonicalName, checkFormAgreement, findSpeciesById, type NameKind } from "@/species";
 import { logger } from "@/utils/logger";
 import { AuthorizationError, ValidationError, StateError } from "./errors";
-import { deriveState, hasChangesRequested } from "./state";
+import { deriveState, hasChangesRequested, waitingPeriod } from "./state";
 import { assertMoveIsLegal, Actor, MoveDefinition, moves } from "./table";
 import { notifier } from "./consequences";
 import { recomputeStanding } from "./standing";
@@ -54,7 +56,7 @@ export type Caller = {
 /** The columns every guard reads. */
 const STATE_COLUMNS = `id, member_id, program, submitted_on, approved_on,
    witness_verification_status, final_submission_on, changes_requested_on,
-   reproduction_date, species_type, species_class`;
+   reproduction_date, species_type, species_class, species_id`;
 
 /**
  * Which hat the caller is wearing.
@@ -92,12 +94,21 @@ async function guard(
   const submission = await readForGuard(db, submissionId);
   const actor = actorFor(caller, submission);
 
+  // Asked of the catalogue only for a move that needs it. A bound Species
+  // the catalogue no longer has agrees with nothing.
+  const classificationAgrees =
+    move.requiresAgreeingClassification && submission.species_id != null
+      ? ((await checkFormAgreement(submission.species_id, submission))?.classificationAgrees ?? false)
+      : undefined;
+
   assertMoveIsLegal(move, {
     state: deriveState(submission),
     changesPending: hasChangesRequested(submission),
     actor,
     actorId: caller.id,
     isOwner: submission.member_id === caller.id,
+    bound: submission.species_id != null,
+    classificationAgrees,
   });
 
   return { submission, actor };
@@ -125,15 +136,50 @@ async function runUpdate(
   }
 }
 
-/** Write the form's content columns, leaving every lifecycle column alone. */
+/**
+ * The binding a member's save leaves (CONTEXT.md, Bound).
+ *
+ * The member binds by picking a Name in the form's typeahead, which posts that
+ * Species' id as `species_id`. The pick is a claim, not a binding: it is kept
+ * only if the Species exists and the form agrees with it (`checkFormAgreement`:
+ * each spelling blank or one of its Names, Species type and Program class
+ * equal). A pick that does not hold saves the Submission unbound - a forged or
+ * stale id is not an error, just no binding.
+ *
+ * With no pick, an existing binding holds only while the form still agrees
+ * with it: saving a form that no longer agrees clears it. Clearing the
+ * typeahead does not unbind by itself; what unbinds is a form that no longer
+ * agrees.
+ *
+ * Only member saves ask this; committee moves never unbind.
+ */
+async function bindingAfterSave(
+  submission: Pick<Submission, "species_id">,
+  form: FormValues
+): Promise<{ species_id?: number | null }> {
+  const claimed = form.species_id ?? submission.species_id;
+  if (claimed == null) return {};
+  const agreement = await checkFormAgreement(claimed, form);
+  return { species_id: agreement?.agrees ? claimed : null };
+}
+
+/**
+ * Write a member's form over the Submission's content columns, leaving every
+ * lifecycle column alone - except the binding, which the member's pick may
+ * set and a form that no longer agrees clears (`bindingAfterSave`).
+ */
 async function writeContent(
   db: Database,
-  submissionId: number,
-  memberId: number,
+  submission: Pick<Submission, "id" | "member_id" | "species_id">,
   form: FormValues,
   extra: Record<string, unknown> = {}
 ): Promise<void> {
-  const row = { ...formToRow(memberId, form), ...extra };
+  const submissionId = submission.id;
+  const row = {
+    ...formToRow(submission.member_id, form),
+    ...(await bindingAfterSave(submission, form)),
+    ...extra,
+  };
   const entries = Object.entries(row).filter(([, value]) => value !== undefined);
   const setClause = entries.map(([field]) => `${field} = ?`).join(", ");
 
@@ -143,6 +189,55 @@ async function writeContent(
   } finally {
     await stmt.finalize();
   }
+}
+
+/**
+ * Void a confirmed Witness: ADR-0001's rule, stated once.
+ *
+ * A Witness attests to the fry and to the form, so every member save of a
+ * submitted Submission voids it and the Submission awaits a Witness again. One
+ * rule, no field list and no diff: saving is the edit, even if nothing changed.
+ * The approval queue entry goes too, because nothing is queued for approval
+ * unwitnessed; the member queues it again once it has been re-witnessed.
+ *
+ * Only member saves call this. Committee moves, including a Points correction
+ * to an Approved Submission, never touch the Witness.
+ */
+async function voidWitness(db: Database, submissionId: number, move: MoveDefinition): Promise<void> {
+  await runUpdate(
+    db,
+    `UPDATE submissions SET
+       witness_verification_status = 'pending',
+       witnessed_by = NULL,
+       witnessed_on = NULL,
+       final_submission_on = NULL
+     WHERE id = ? AND submitted_on IS NOT NULL AND approved_on IS NULL`,
+    [submissionId],
+    move
+  );
+}
+
+/**
+ * Put a committee change on the Submission's changelog: the structured
+ * `admin_edit` note the review page renders as field, old and new.
+ */
+async function recordAdminEdit(
+  submissionId: number,
+  caller: Caller,
+  changes: Change[],
+  reason: string
+): Promise<void> {
+  await addNote(
+    submissionId,
+    caller.id,
+    JSON.stringify({
+      type: "admin_edit",
+      changes,
+      reason,
+      timestamp: new Date().toISOString(),
+      admin_id: caller.id,
+    })
+  );
 }
 
 /** The supplements a form carries, as the normalized table wants them. */
@@ -173,7 +268,8 @@ export function supplementsFromForm(form: FormValues): { type: string; regimen: 
  *
  * Not a move: there is no prior state to be legal from. The only guard is that
  * a member may create only for themselves, while a committee member may create
- * on another member's behalf.
+ * on another member's behalf. A Name picked in the form binds it, if the form
+ * agrees with that Species (`bindingAfterSave`).
  */
 export async function createSubmission(
   caller: Caller,
@@ -193,6 +289,7 @@ export async function createSubmission(
   const submissionId = await createSubmissionRow(
     {
       ...formToRow(memberId, form),
+      ...(await bindingAfterSave({ species_id: null }, form)),
       submitted_on: submittedOn,
       witness_verification_status: options.submit ? "pending" : undefined,
     },
@@ -226,7 +323,7 @@ export async function saveDraft(
 ): Promise<void> {
   const memberId = await withTransaction(async (db) => {
     const { submission } = await guard(db, moves.saveDraft, caller, submissionId);
-    await writeContent(db, submissionId, submission.member_id, form);
+    await writeContent(db, submission, form);
     return submission.member_id;
   });
 
@@ -237,13 +334,8 @@ export async function saveDraft(
 /**
  * Submit a Draft to the committee.
  *
- * Draft has two exits. A confirmed Witness survives Return to Draft, so a
- * Submission coming back through here skips Pending Witness and re-enters the
- * Waiting period: the Witness attested to the fry, not to the form.
- *
- * The Witness is stamped `pending` only on a first submission. Stamping it on
- * every non-draft save is what silently discarded a committee member's
- * physical inspection.
+ * Always lands in Pending Witness: submitting saves the form, which voids a
+ * Witness kept from before Return to Draft (see `voidWitness`).
  */
 export async function submit(
   caller: Caller,
@@ -253,7 +345,7 @@ export async function submit(
   const memberId = await withTransaction(async (db) => {
     const { submission } = await guard(db, moves.submit, caller, submissionId);
 
-    await writeContent(db, submissionId, submission.member_id, form, {
+    await writeContent(db, submission, form, {
       // Submitting is the member's answer to a request for changes, so the
       // flag clears here: work arriving in a committee queue must never also
       // be marked as waiting on the member.
@@ -262,14 +354,13 @@ export async function submit(
       changes_requested_reason: null,
     });
 
-    const keepsWitness = submission.witness_verification_status === "confirmed";
     await runUpdate(
       db,
-      `UPDATE submissions SET submitted_on = ?, witness_verification_status = ?
-         WHERE id = ? AND submitted_on IS NULL`,
-      [new Date().toISOString(), keepsWitness ? "confirmed" : "pending", submissionId],
+      `UPDATE submissions SET submitted_on = ? WHERE id = ? AND submitted_on IS NULL`,
+      [new Date().toISOString(), submissionId],
       moves.submit
     );
+    await voidWitness(db, submissionId, moves.submit);
 
     return submission.member_id;
   });
@@ -281,10 +372,12 @@ export async function submit(
 /**
  * Edit a submitted Submission in place.
  *
- * The Submission does not move: it keeps its place in the queue it is waiting
- * in, its original submission date, and its confirmed Witness. Nobody is
- * emailed, so fixing a water-hardness figure does not put a second copy of the
- * Submission in three committee members' inboxes.
+ * It keeps its original submission date, but the save voids a confirmed
+ * Witness (see `voidWitness`): a witnessed Submission goes back to Pending
+ * Witness and reappears in the witness queue. Nobody is emailed - the form
+ * warned the member, and the committee's witness queue and daily digest are
+ * the notice - so fixing a water-hardness figure does not put a second copy of
+ * the Submission in three committee members' inboxes.
  */
 export async function saveChanges(
   caller: Caller,
@@ -293,7 +386,8 @@ export async function saveChanges(
 ): Promise<void> {
   await withTransaction(async (db) => {
     const { submission } = await guard(db, moves.saveChanges, caller, submissionId);
-    await writeContent(db, submissionId, submission.member_id, form);
+    await writeContent(db, submission, form);
+    await voidWitness(db, submissionId, moves.saveChanges);
   });
 
   await setSubmissionSupplements(submissionId, supplementsFromForm(form));
@@ -304,8 +398,9 @@ export async function saveChanges(
  * Withdraw a Submission to Draft.
  *
  * Explicit, named, and the member's own choice - not a side effect of opening
- * the edit form. The confirmed Witness survives, so resubmitting does not mean
- * being witnessed again.
+ * the edit form. Withdrawing is not itself an edit, so the confirmed Witness
+ * stays on the row until the member submits again - and submitting saves the
+ * form, which voids it.
  */
 export async function returnToDraft(caller: Caller, submissionId: number): Promise<void> {
   await withTransaction(async (db) => {
@@ -325,9 +420,9 @@ export async function returnToDraft(caller: Caller, submissionId: number): Promi
 /**
  * Answer a request for changes.
  *
- * The Submission stays exactly where it was and the flag clears, so responding
- * to the committee does not restart the claim: the Witness and the place in the
- * pipeline are both kept.
+ * The flag clears and the submission date is kept, so responding to the
+ * committee does not restart the claim. The answer is a save, though, so it
+ * voids a confirmed Witness (see `voidWitness`).
  */
 export async function resubmit(
   caller: Caller,
@@ -336,7 +431,8 @@ export async function resubmit(
 ): Promise<void> {
   await withTransaction(async (db) => {
     const { submission } = await guard(db, moves.resubmit, caller, submissionId);
-    await writeContent(db, submissionId, submission.member_id, form);
+    await writeContent(db, submission, form);
+    await voidWitness(db, submissionId, moves.resubmit);
     await runUpdate(
       db,
       `UPDATE submissions SET
@@ -359,13 +455,21 @@ export async function resubmit(
 
 /**
  * Confirm the Witness: a committee member has inspected the fry, and the
- * waiting period starts.
+ * waiting period starts. The spellings the witness chose (`namesToAdd`) are
+ * added to the bound Species as Names in the same transaction, so a refused
+ * confirmation adds none.
  *
  * Never the submitter, so the independence of the first gate is enforced
- * rather than trusted.
+ * rather than trusted. Refused on a Submission bound to no Species, so nothing
+ * enters the waiting period without one: the witness binds it first
+ * (`bindSpecies`).
  */
-export async function confirmWitness(caller: Caller, submissionId: number): Promise<void> {
-  const memberId = await withTransaction(async (db) => {
+export async function confirmWitness(
+  caller: Caller,
+  submissionId: number,
+  namesToAdd: NamesToAdd = {}
+): Promise<void> {
+  const { memberId, added } = await withTransaction(async (db) => {
     const { submission } = await guard(db, moves.confirmWitness, caller, submissionId);
     await runUpdate(
       db,
@@ -377,7 +481,8 @@ export async function confirmWitness(caller: Caller, submissionId: number): Prom
       [caller.id, new Date().toISOString(), submissionId],
       moves.confirmWitness
     );
-    return submission.member_id;
+    const added = await addSpellingsAsNames(db, submissionId, submission.species_id!, namesToAdd);
+    return { memberId: submission.member_id, added };
   });
 
   const [submission, member, witness] = await Promise.all([
@@ -389,7 +494,143 @@ export async function confirmWitness(caller: Caller, submissionId: number): Prom
     await notifier().witnessConfirmed(submission, member, witness);
   }
 
-  logger.info("Witness confirmed", { submissionId, witnessedBy: caller.id });
+  logger.info("Witness confirmed", { submissionId, witnessedBy: caller.id, namesAdded: added });
+}
+
+/**
+ * Which of the Submission's own spellings the witness chose to add to its
+ * Species as Names: the witness panel offers the common spelling checked and
+ * the Latin spelling unchecked.
+ */
+export type NamesToAdd = { common?: boolean; scientific?: boolean };
+
+/**
+ * Add the chosen spellings as Names of the Species, inside the Witness's
+ * transaction - the one place a Submission's spellings become Names. A
+ * spelling that is blank or already a Name of that kind (as
+ * `checkFormAgreement` decides: whole, any case) is never added.
+ * @returns the texts added, by kind
+ */
+async function addSpellingsAsNames(
+  db: Database,
+  submissionId: number,
+  speciesId: number,
+  namesToAdd: NamesToAdd
+): Promise<Partial<Record<NameKind, string>>> {
+  if (!namesToAdd.common && !namesToAdd.scientific) return {};
+
+  const stmt = await db.prepare(
+    "SELECT species_common_name, species_latin_name FROM submissions WHERE id = ?"
+  );
+  const spellings = await stmt.get<{ species_common_name: string; species_latin_name: string }>(submissionId);
+  await stmt.finalize();
+  if (!spellings) return {};
+
+  const agreement = await checkFormAgreement(speciesId, spellings);
+  const offered = {
+    common: { spelling: spellings.species_common_name, agreement: agreement?.commonName },
+    scientific: { spelling: spellings.species_latin_name, agreement: agreement?.latinName },
+  } satisfies Record<NameKind, unknown>;
+
+  const added: Partial<Record<NameKind, string>> = {};
+  for (const kind of ["common", "scientific"] as const) {
+    const { spelling, agreement: spellingAgreement } = offered[kind];
+    if (namesToAdd[kind] && spellingAgreement === "not-a-name") {
+      await addName(speciesId, kind, spelling);
+      added[kind] = spelling;
+    }
+  }
+  return added;
+}
+
+/**
+ * Bind a Submission to a Species from the catalogue, or rebind it to another.
+ *
+ * A committee move - the witness's - so it does not void a confirmed Witness:
+ * the member's form is untouched. It goes on the Submission's changelog, the
+ * same record a Points correction writes. Binding to the Species it is
+ * already bound to changes nothing and records nothing.
+ */
+export async function bindSpecies(caller: Caller, submissionId: number, speciesId: number): Promise<void> {
+  const species = await findSpeciesById(speciesId);
+  if (!species) {
+    throw new ValidationError("Choose a Species that exists", "species_id", speciesId);
+  }
+
+  const { changed, previousId } = await withTransaction(async (db) => {
+    const { submission } = await guard(db, moves.bindSpecies, caller, submissionId);
+    if (submission.species_id === speciesId) {
+      return { changed: false, previousId: submission.species_id };
+    }
+    await runUpdate(
+      db,
+      `UPDATE submissions SET species_id = ? WHERE id = ? AND approved_on IS NULL`,
+      [speciesId, submissionId],
+      moves.bindSpecies
+    );
+    return { changed: true, previousId: submission.species_id };
+  });
+  if (!changed) return;
+
+  const previous = previousId == null ? undefined : await findSpeciesById(previousId);
+  const change: Change = {
+    field: "species",
+    old: previous ? canonicalName(previous) : null,
+    new: canonicalName(species),
+  };
+  await recordAdminEdit(submissionId, caller, [change], previousId == null ? "Bound to a Species" : "Rebound to another Species");
+
+  logger.info("Submission bound to a Species", { submissionId, speciesId, previousId, by: caller.id });
+}
+
+/**
+ * Give the Submission its bound Species' Species type and Program class - the
+ * witness's one-click answer to a mismatch - and the Program that type
+ * belongs to.
+ *
+ * A committee move like `bindSpecies`: on the changelog, and it leaves a
+ * confirmed Witness in place. When the Submission already agrees it changes
+ * nothing and records nothing.
+ *
+ * The adopted classification can carry a longer waiting period than the one
+ * the Submission entered the approval queue under. Approval is asked only of
+ * a Submission whose clock has run out, so a queued one whose new clock has
+ * not leaves the queue and waits again; the member re-enters it when it has.
+ */
+export async function adoptSpeciesClassification(caller: Caller, submissionId: number): Promise<void> {
+  const changes = await withTransaction(async (db) => {
+    const { submission } = await guard(db, moves.adoptSpeciesClassification, caller, submissionId);
+    const species = await findSpeciesById(submission.species_id!);
+    if (!species) {
+      throw new ValidationError("The bound Species no longer exists", "species_id", submission.species_id);
+    }
+
+    const adopted = {
+      species_type: species.species_type,
+      species_class: species.program_class,
+      program: programOfSpeciesType(species.species_type),
+    };
+    const leavesQueue =
+      submission.final_submission_on != null && !waitingPeriod({ ...submission, ...adopted }).elapsed;
+    const updates = leavesQueue ? { ...adopted, final_submission_on: null } : adopted;
+    const diff = changesBetween(submission, updates);
+    if (diff.length === 0) return diff;
+
+    await runUpdate(
+      db,
+      `UPDATE submissions SET species_type = ?, species_class = ?, program = ?,
+         final_submission_on = CASE WHEN ? THEN NULL ELSE final_submission_on END
+         WHERE id = ? AND approved_on IS NULL`,
+      [adopted.species_type, adopted.species_class, adopted.program, leavesQueue ? 1 : 0, submissionId],
+      moves.adoptSpeciesClassification
+    );
+    return diff;
+  });
+  if (changes.length === 0) return;
+
+  await recordAdminEdit(submissionId, caller, changes, "Adopted the Species' type and class");
+
+  logger.info("Submission adopted its Species' classification", { submissionId, changes, by: caller.id });
 }
 
 /**
@@ -468,16 +709,17 @@ export async function requestChanges(
 }
 
 /**
- * Approve a Submission and award its Points.
+ * Approve a bound Submission and award its Points.
  *
  * The only way Points are ever awarded, so there is one place to look when a
  * total is questioned - and the only transition that touches a member's
- * standing upward.
+ * standing upward. The Species is the one the Submission is already bound to
+ * (the witness bound it); approval is about Points and bonuses only, and is
+ * refused on an unbound Submission.
  */
 export async function approve(
   caller: Caller,
   submissionId: number,
-  speciesIds: { common_name_id: number; scientific_name_id: number },
   approval: ApprovalFormValues
 ): Promise<void> {
   const memberId = await withTransaction(async (db) => {
@@ -495,8 +737,6 @@ export async function approve(
     await runUpdate(
       db,
       `UPDATE submissions SET
-         common_name_id = ?,
-         scientific_name_id = ?,
          points = ?,
          article_points = ?,
          first_time_species = ?,
@@ -507,8 +747,6 @@ export async function approve(
          approved_on = ?
        WHERE id = ? AND approved_on IS NULL`,
       [
-        speciesIds.common_name_id,
-        speciesIds.scientific_name_id,
         points,
         article_points,
         first_time_species ? 1 : 0,
@@ -545,7 +783,8 @@ export async function approve(
  * than deleted, and the correction goes on the record. It does not re-announce
  * the approval: the feed entry is updated in place, so fixing a mistake does
  * not put it back on the front page a second time. Nothing is emailed, because
- * the member's standing page already shows the truth.
+ * the member's standing page already shows the truth. The Witness is left
+ * alone (see `voidWitness`).
  *
  * Returns the fields that actually changed, which is also what the changelog
  * records.
@@ -588,17 +827,7 @@ export async function correctPoints(
     return { memberId: before.member_id, changes: diff };
   });
 
-  await addNote(
-    submissionId,
-    caller.id,
-    JSON.stringify({
-      type: "admin_edit",
-      changes,
-      reason: trimmed,
-      timestamp: new Date().toISOString(),
-      admin_id: caller.id,
-    })
-  );
+  await recordAdminEdit(submissionId, caller, changes, trimmed);
 
   const [submission, member] = await Promise.all([getSubmissionById(submissionId), getMember(memberId)]);
   if (submission && member) {

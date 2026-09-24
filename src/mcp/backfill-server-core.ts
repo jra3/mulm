@@ -18,6 +18,8 @@ import { parse } from "csv-parse/sync";
 import { readFile, readdir, stat } from "fs/promises";
 import { join, extname } from "path";
 import { foodTypes, spawnLocations } from "../forms/submission";
+import * as catalogue from "../species";
+import type { Species } from "../species";
 
 // Type definitions
 
@@ -41,7 +43,7 @@ type ImportSubmissionsArgs = {
   admin_id: number;
   default_points?: number;
   skip_rows?: number[];
-  species_overrides?: Record<string, { common_name_id: number; scientific_name_id: number }>;
+  species_overrides?: Record<string, { group_id: number }>;
   date_overrides?: Record<string, string>;
   dry_run?: boolean;
 };
@@ -61,11 +63,7 @@ type ListCsvFilesArgs = {
 };
 
 type SpeciesMatch = {
-  common_name_id: number;
-  scientific_name_id: number;
   group_id: number;
-  common_name: string;
-  scientific_name: string;
   base_points: number | null;
   species_class: string | null;
 };
@@ -88,8 +86,8 @@ type RowValidation = {
     foods: string | null;
     spawn_locations: string | null;
     points: number | null;
-    common_name_id: number | null;
-    scientific_name_id: number | null;
+    /** The Species the Submission will be bound to. */
+    species_id: number | null;
   };
   original: CsvRow;
 };
@@ -275,136 +273,22 @@ function deriveProgram(speciesType: string): string {
   }
 }
 
+/** What an import takes from the Species a row binds to. */
+function speciesMatchOf(species: Species): SpeciesMatch {
+  return {
+    group_id: species.group_id,
+    base_points: species.base_points,
+    species_class: species.program_class,
+  };
+}
+
+/** Resolve a row's spellings to a Species through the catalogue's lookup. */
 async function matchSpecies(
   commonName: string | undefined,
   latinName: string | undefined
 ): Promise<SpeciesMatch | null> {
-  if (!commonName && !latinName) return null;
-
-  // Try exact latin name match first
-  if (latinName && latinName.trim()) {
-    const byLatin = await query<{
-      common_name_id: number;
-      scientific_name_id: number;
-      group_id: number;
-      common_name: string;
-      scientific_name: string;
-      base_points: number | null;
-      program_class: string | null;
-    }>(
-      `SELECT
-        cn.common_name_id,
-        scin.scientific_name_id,
-        sng.group_id,
-        cn.common_name,
-        scin.scientific_name,
-        sng.base_points,
-        sng.program_class
-      FROM species_scientific_name scin
-      JOIN species_name_group sng ON scin.group_id = sng.group_id
-      LEFT JOIN species_common_name cn ON cn.group_id = sng.group_id
-      WHERE LOWER(scin.scientific_name) = LOWER(?)
-      LIMIT 1`,
-      [latinName.trim()]
-    );
-    if (byLatin.length > 0) {
-      return {
-        common_name_id: byLatin[0].common_name_id,
-        scientific_name_id: byLatin[0].scientific_name_id,
-        group_id: byLatin[0].group_id,
-        common_name: byLatin[0].common_name,
-        scientific_name: byLatin[0].scientific_name,
-        base_points: byLatin[0].base_points,
-        species_class: byLatin[0].program_class,
-      };
-    }
-  }
-
-  // Try exact common name match
-  if (commonName && commonName.trim()) {
-    const byCommon = await query<{
-      common_name_id: number;
-      scientific_name_id: number;
-      group_id: number;
-      common_name: string;
-      scientific_name: string;
-      base_points: number | null;
-      program_class: string | null;
-    }>(
-      `SELECT
-        cn.common_name_id,
-        scin.scientific_name_id,
-        sng.group_id,
-        cn.common_name,
-        scin.scientific_name,
-        sng.base_points,
-        sng.program_class
-      FROM species_common_name cn
-      JOIN species_name_group sng ON cn.group_id = sng.group_id
-      LEFT JOIN species_scientific_name scin ON scin.group_id = sng.group_id
-      WHERE LOWER(cn.common_name) = LOWER(?)
-      LIMIT 1`,
-      [commonName.trim()]
-    );
-    if (byCommon.length > 0) {
-      return {
-        common_name_id: byCommon[0].common_name_id,
-        scientific_name_id: byCommon[0].scientific_name_id,
-        group_id: byCommon[0].group_id,
-        common_name: byCommon[0].common_name,
-        scientific_name: byCommon[0].scientific_name,
-        base_points: byCommon[0].base_points,
-        species_class: byCommon[0].program_class,
-      };
-    }
-  }
-
-  // Try canonical genus + species fallback from latin name
-  if (latinName && latinName.trim()) {
-    const parts = latinName.trim().split(/\s+/);
-    if (parts.length >= 2) {
-      const genus = parts[0];
-      const species = parts.slice(1).join(" ");
-      const byCanonical = await query<{
-        common_name_id: number;
-        scientific_name_id: number;
-        group_id: number;
-        common_name: string;
-        scientific_name: string;
-        base_points: number | null;
-        program_class: string | null;
-      }>(
-        `SELECT
-          cn.common_name_id,
-          scin.scientific_name_id,
-          sng.group_id,
-          cn.common_name,
-          scin.scientific_name,
-          sng.base_points,
-          sng.program_class
-        FROM species_name_group sng
-        LEFT JOIN species_common_name cn ON cn.group_id = sng.group_id
-        LEFT JOIN species_scientific_name scin ON scin.group_id = sng.group_id
-        WHERE LOWER(sng.canonical_genus) = LOWER(?)
-        AND LOWER(sng.canonical_species_name) = LOWER(?)
-        LIMIT 1`,
-        [genus, species]
-      );
-      if (byCanonical.length > 0) {
-        return {
-          common_name_id: byCanonical[0].common_name_id,
-          scientific_name_id: byCanonical[0].scientific_name_id,
-          group_id: byCanonical[0].group_id,
-          common_name: byCanonical[0].common_name,
-          scientific_name: byCanonical[0].scientific_name,
-          base_points: byCanonical[0].base_points,
-          species_class: byCanonical[0].program_class,
-        };
-      }
-    }
-  }
-
-  return null;
+  const resolution = await catalogue.resolveSpecies({ commonName, latinName });
+  return resolution ? speciesMatchOf(resolution.species) : null;
 }
 
 function parseFertilizers(input: string | undefined): Array<{ type: string; regimen: string }> {
@@ -518,14 +402,12 @@ async function handleValidateImport(args: ValidateImportArgs) {
 
     // Species matching
     const speciesMatch = await matchSpecies(row.species_common_name, row.species_latin_name);
-    let commonNameId: number | null = null;
-    let scientificNameId: number | null = null;
+    let speciesId: number | null = null;
     let points: number | null = default_points ?? null;
     let speciesClass = row.species_class || "";
 
     if (speciesMatch) {
-      commonNameId = speciesMatch.common_name_id;
-      scientificNameId = speciesMatch.scientific_name_id;
+      speciesId = speciesMatch.group_id;
       if (speciesMatch.base_points != null) {
         points = speciesMatch.base_points;
       }
@@ -582,8 +464,7 @@ async function handleValidateImport(args: ValidateImportArgs) {
         foods: normalizeFoods(row.foods),
         spawn_locations: normalizeSpawnLocations(row.spawn_locations),
         points,
-        common_name_id: commonNameId,
-        scientific_name_id: scientificNameId,
+        species_id: speciesId,
       },
       original: row,
     });
@@ -668,25 +549,26 @@ async function handleImportSubmissions(args: ImportSubmissionsArgs) {
       try {
         // Species matching with overrides
         const overrideKey = String(i);
-        let commonNameId: number | null = null;
-        let scientificNameId: number | null = null;
+        let speciesId: number | null = null;
         let points: number | null = default_points ?? null;
         let speciesClass = row.species_class || "";
 
-        if (species_overrides[overrideKey]) {
-          commonNameId = species_overrides[overrideKey].common_name_id;
-          scientificNameId = species_overrides[overrideKey].scientific_name_id;
-        } else {
-          const speciesMatch = await matchSpecies(row.species_common_name, row.species_latin_name);
-          if (speciesMatch) {
-            commonNameId = speciesMatch.common_name_id;
-            scientificNameId = speciesMatch.scientific_name_id;
-            if (speciesMatch.base_points != null) {
-              points = speciesMatch.base_points;
-            }
-            if (!speciesClass && speciesMatch.species_class) {
-              speciesClass = speciesMatch.species_class;
-            }
+        const override = species_overrides[overrideKey];
+        const overrideSpecies = override ? await catalogue.findSpeciesById(override.group_id) : undefined;
+        if (override && !overrideSpecies) {
+          errors.push({ row_index: i, error: `Override species ${override.group_id} not found` });
+          continue;
+        }
+        const speciesMatch = overrideSpecies
+          ? speciesMatchOf(overrideSpecies)
+          : await matchSpecies(row.species_common_name, row.species_latin_name);
+        if (speciesMatch) {
+          speciesId = speciesMatch.group_id;
+          if (speciesMatch.base_points != null) {
+            points = speciesMatch.base_points;
+          }
+          if (!speciesClass && speciesMatch.species_class) {
+            speciesClass = speciesMatch.species_class;
           }
         }
 
@@ -741,8 +623,7 @@ async function handleImportSubmissions(args: ImportSubmissionsArgs) {
           "approved_on",
           "approved_by",
           "points",
-          "common_name_id",
-          "scientific_name_id",
+          "species_id",
           "witness_verification_status",
           "witnessed_by",
           "witnessed_on",
@@ -779,8 +660,7 @@ async function handleImportSubmissions(args: ImportSubmissionsArgs) {
           now,                     // approved_on
           admin_id,                // approved_by
           points,
-          commonNameId,
-          scientificNameId,
+          speciesId,
           "confirmed",             // witness_verification_status
           admin_id,                // witnessed_by
           now,                     // witnessed_on
@@ -935,40 +815,14 @@ async function handleSearchSpecies(args: SearchSpeciesArgs) {
     throw new Error("Query must be at least 2 characters");
   }
 
-  const pattern = `%${searchQuery.trim()}%`;
-
-  const typeCondition = species_type
-    ? "AND sng.species_type = ?"
-    : "";
-  const typeParams = species_type ? [species_type] : [];
-
-  const results = await query<{
-    group_id: number;
-    common_name_id: number;
-    scientific_name_id: number;
-    common_name: string;
-    scientific_name: string;
-    program_class: string;
-    species_type: string;
-    base_points: number | null;
-  }>(
-    `SELECT DISTINCT
-      sng.group_id,
-      cn.common_name_id,
-      scin.scientific_name_id,
-      cn.common_name,
-      scin.scientific_name,
-      sng.program_class,
-      sng.species_type,
-      sng.base_points
-    FROM species_name_group sng
-    LEFT JOIN species_common_name cn ON cn.group_id = sng.group_id
-    LEFT JOIN species_scientific_name scin ON scin.group_id = sng.group_id
-    WHERE (LOWER(cn.common_name) LIKE LOWER(?) OR LOWER(scin.scientific_name) LIKE LOWER(?))
-    ${typeCondition}
-    ORDER BY cn.common_name
-    LIMIT 20`,
-    [pattern, pattern, ...typeParams]
+  const { species } = await catalogue.getSpeciesForAdmin(
+    { search: searchQuery, species_type },
+    "name",
+    20,
+    0
+  );
+  const withNames = await Promise.all(
+    species.map(async (s) => ({ species: s, names: await catalogue.listNames(s.group_id) }))
   );
 
   return {
@@ -978,13 +832,12 @@ async function handleSearchSpecies(args: SearchSpeciesArgs) {
         text: JSON.stringify(
           {
             success: true,
-            count: results.length,
-            species: results.map((s) => ({
+            count: withNames.length,
+            species: withNames.map(({ species: s, names }) => ({
               group_id: s.group_id,
-              common_name_id: s.common_name_id,
-              scientific_name_id: s.scientific_name_id,
-              common_name: s.common_name,
-              scientific_name: s.scientific_name,
+              canonical_name: catalogue.canonicalName(s),
+              common_names: names.common.map((n) => n.name),
+              scientific_names: names.scientific.map((n) => n.name),
               species_class: s.program_class,
               species_type: s.species_type,
               base_points: s.base_points,
@@ -1161,7 +1014,7 @@ export function initializeBackfillServer(server: Server): void {
               species_overrides: {
                 type: "object",
                 description:
-                  "Map of row index (string) to { common_name_id, scientific_name_id } for manual species matching",
+                  "Map of row index (string) to { group_id } for manual Species matching (group_id from search_species_for_import)",
               },
               date_overrides: {
                 type: "object",
@@ -1204,7 +1057,8 @@ export function initializeBackfillServer(server: Server): void {
         },
         {
           name: "search_species_for_import",
-          description: "Search species by common or latin name for manual matching",
+          description:
+            "Search Species by any Name or the Canonical name, for manual matching. Pass a result's group_id in import_submissions' species_overrides.",
           inputSchema: {
             type: "object",
             properties: {

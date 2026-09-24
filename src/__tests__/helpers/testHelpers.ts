@@ -30,6 +30,7 @@ import { createMember, getMember } from "../../db/members";
 import { createSubmissionRow, formToRow, updateSubmission } from "../../db/submissions";
 import type { FormValues } from "../../forms/submission";
 import type { ApprovalFormValues } from "../../forms/approval";
+import { addName, createSpecies } from "../../species";
 
 /**
  * Test context containing database and common test fixtures
@@ -272,6 +273,11 @@ export interface CreateSubmissionOptions {
    * Spawn locations array as JSON string (default: '["Plants","Spawning mop"]')
    */
   spawnLocations?: string;
+
+  /**
+   * The Species the Submission is bound to (default: none)
+   */
+  speciesId?: number | null;
 }
 
 /**
@@ -320,6 +326,7 @@ export async function createTestSubmission(
     reproductionDate = now,
     foods = '["Flakes","Live food"]',
     spawnLocations = '["Plants","Spawning mop"]',
+    speciesId = null,
   } = options;
 
   // Draft submissions should have null witness status, submitted ones default to "pending"
@@ -335,8 +342,8 @@ export async function createTestSubmission(
       first_time_species, cares_species,
       denied_on, denied_by, denied_reason,
       changes_requested_on, changes_requested_by, changes_requested_reason,
-      foods, spawn_locations
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      foods, spawn_locations, species_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       memberId,
       speciesClass,
@@ -367,6 +374,7 @@ export async function createTestSubmission(
       changesRequested ? "Test change request" : null,
       foods,
       spawnLocations,
+      speciesId,
     ]
   );
 
@@ -429,12 +437,30 @@ export const mockApprovalData = {
 };
 
 /**
- * Mock species IDs for testing
+ * A Species the migrations seed, to approve test Submissions against.
  */
-export const mockSpeciesIds = {
-  common_name_id: 1,
-  scientific_name_id: 1,
-};
+export const mockSpeciesId = 1;
+
+/**
+ * The Species the default test Submission is (Guppy, Poecilia reticulata,
+ * Fish, Livebearers), created if the database lacks it: a Submission bound
+ * to it agrees with its Species, so its Witness can be confirmed.
+ */
+export async function ensureGuppySpecies(db: Database): Promise<number> {
+  const row = await db.get<{ group_id: number }>(
+    `SELECT group_id FROM species_name_group
+     WHERE canonical_genus = 'Poecilia' AND canonical_species_name = 'reticulata'`
+  );
+  if (row) return row.group_id;
+  const id = await createSpecies({
+    canonicalGenus: "Poecilia",
+    canonicalSpeciesName: "reticulata",
+    programClass: "Livebearers",
+    speciesType: "Fish",
+  });
+  await addName(id, "common", "Guppy");
+  return id;
+}
 
 /**
  * Generates a unique timestamp-based email for testing
@@ -582,6 +608,18 @@ export async function createTestSpeciesName(
     throw new Error("Failed to create or find species name group");
   }
 
+  // Its Canonical name is its one flagged scientific Name (ADR-0002)
+  await db.run(
+    `
+    INSERT OR IGNORE INTO species_scientific_name (group_id, scientific_name, is_canonical)
+    SELECT ?, ?, 1
+    WHERE NOT EXISTS (
+      SELECT 1 FROM species_scientific_name WHERE group_id = ? AND is_canonical = 1
+    )
+  `,
+    [group.group_id, `${genus} ${species}`, group.group_id]
+  );
+
   // Create or get the common name
   await db.run(
     `
@@ -646,13 +684,12 @@ export async function createSubmissionFixture(
 export async function approveSubmissionFixture(
   approvedBy: number,
   submissionId: number,
-  speciesIds: { common_name_id: number; scientific_name_id: number },
+  speciesId: number,
   approval: ApprovalFormValues
 ): Promise<void> {
   const now = new Date().toISOString();
   await updateSubmission(submissionId, {
-    common_name_id: speciesIds.common_name_id,
-    scientific_name_id: speciesIds.scientific_name_id,
+    species_id: speciesId,
     points: approval.points,
     article_points: approval.article_points,
     first_time_species: approval.first_time_species ? 1 : 0,

@@ -49,20 +49,19 @@ export async function backfillQueued(
 }
 
 /**
- * Stamp a Submission approved with its Points. Sends nothing and recomputes
- * nothing - run `scripts/sweep-member-levels.ts` afterwards to bring the
- * members' standings into line.
+ * Stamp a Submission approved with its Points, bound to its Species. Sends
+ * nothing and recomputes nothing - run `scripts/sweep-member-levels.ts`
+ * afterwards to bring the members' standings into line.
  */
 export async function backfillApproval(
   approvedBy: number,
   submissionId: number,
-  speciesIds: { common_name_id: number; scientific_name_id: number },
+  speciesId: number,
   approval: PointsRow & Record<string, unknown>,
   approvedOn: Date = new Date()
 ): Promise<void> {
   await updateSubmission(submissionId, {
-    common_name_id: speciesIds.common_name_id,
-    scientific_name_id: speciesIds.scientific_name_id,
+    species_id: speciesId,
     points: approval.points ?? 0,
     article_points: approval.article_points ?? 0,
     first_time_species: approval.first_time_species ? 1 : 0,

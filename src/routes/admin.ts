@@ -17,6 +17,8 @@ import {
 } from "@/db/submissions";
 import { approvalSchema } from "@/forms/approval";
 import { approvedEditSchema } from "@/forms/approvedEdit";
+import { bindSpeciesForm } from "@/forms/bindSpecies";
+import { confirmWitnessForm } from "@/forms/confirmWitness";
 import { inviteSchema } from "@/forms/member";
 import { sendInviteEmail } from "@/notifications";
 import { getNextLevel, programMetadata, programs } from "@/programs";
@@ -25,7 +27,7 @@ import { Response, NextFunction } from "express";
 import { createAuthCode } from "@/db/auth";
 import { AuthCode, generateRandomCode } from "@/auth";
 import { validateFormResult } from "@/forms/utils";
-import { validateSubmission } from "./submission";
+import { approvalPanelData, validateSubmission } from "./submission";
 import {
   isLivestock,
   foodTypes,
@@ -35,19 +37,14 @@ import {
   hasFoods,
   hasSpawnLocations,
 } from "@/forms/submission";
-import {
-  ensureNameIdsForGroupId,
-  isFirstTimeSpeciesForProgram,
-  getSpeciesGroup,
-  getGroupIdFromNameId,
-} from "@/db/species";
-import { getBodyParam, getBodyString, getQueryString } from "@/utils/request";
+import { findSpeciesById } from "@/species";
+import { getBodyParam, getBodyString } from "@/utils/request";
 import { checkAllMemberLevels } from "@/levelManager";
 import { checkAllSpecialtyAwards } from "@/specialtyAwardManager";
 import { logger } from "@/utils/logger";
 import { getStatusPresentation } from "@/utils/statusBadge";
 import * as lifecycle from "@/lifecycle";
-import { sendLifecycleError } from "./lifecycleErrors";
+import { callerFor, sendLifecycleError } from "./lifecycleErrors";
 import {
   addNote,
   getNotesForSubmission,
@@ -344,25 +341,101 @@ Substrate:
   });
 };
 
+/**
+ * Run a witness-panel move (binding a Species, confirming the Witness) and
+ * show a refusal in the panel's own alert. HTMX does not swap a 4xx body, so
+ * a refusal sent as one reached nobody; this retargets `#witness-error`.
+ * @returns whether the move ran; if not, the response has been sent
+ */
+async function witnessPanelMove(
+  req: MulmRequest,
+  res: Response,
+  submissionId: number,
+  move: () => Promise<void>
+): Promise<boolean> {
+  try {
+    await move();
+    return true;
+  } catch (err) {
+    if (!lifecycle.isLifecycleError(err)) throw err;
+    logger.warn(`Witness panel refusal: ${err.message}`, { submissionId, adminId: req.viewer?.id });
+    sendWitnessPanelRefusal(res, [err.message]);
+    return false;
+  }
+}
+
+function sendWitnessPanelRefusal(res: Response, messages: string[]): void {
+  res.set("HX-Retarget", "#witness-error").set("HX-Reswap", "innerHTML");
+  res.render("admin/witnessErrors", { messages });
+}
+
 export const confirmWitnessAction = async (req: MulmRequest, res: Response) => {
   const submission = await validateSubmission(req, res);
   if (!submission) {
     return;
   }
 
-  try {
-    await lifecycle.confirmWitness({ id: req.viewer!.id, isAdmin: true }, submission.id);
-  } catch (err) {
-    if (sendLifecycleError(res, err, { submissionId: submission.id, adminId: req.viewer?.id })) {
-      return;
-    }
-    logger.error("Witness confirmation failed - unexpected error", err);
-    res.status(500).send("An unexpected error occurred. Please try again.");
+  const parsed = confirmWitnessForm.safeParse(req.body ?? {});
+  if (!parsed.success) {
+    sendWitnessPanelRefusal(res, parsed.error.issues.map((issue) => issue.message));
     return;
   }
 
+  // The spellings the witness ticked become Names of the bound Species
+  const ran = await witnessPanelMove(req, res, submission.id, () =>
+    lifecycle.confirmWitness(callerFor(req.viewer!), submission.id, {
+      common: parsed.data.add_common_name,
+      scientific: parsed.data.add_scientific_name,
+    })
+  );
+  if (!ran) return;
+
   // Redirect to witness queue for the submission's program
   res.set("HX-Redirect", `/admin/witness-queue/${submission.program}`).send();
+};
+
+/**
+ * POST /admin/submissions/:id/bind-species
+ * The witness panel binds (or rebinds) the Submission to the Species picked in
+ * the catalogue typeahead, then the page reloads to show it bound.
+ */
+export const bindSpeciesAction = async (req: MulmRequest, res: Response) => {
+  const submission = await validateSubmission(req, res);
+  if (!submission) {
+    return;
+  }
+
+  const parsed = bindSpeciesForm.safeParse(req.body);
+  if (!parsed.success) {
+    sendWitnessPanelRefusal(res, parsed.error.issues.map((issue) => issue.message));
+    return;
+  }
+
+  const ran = await witnessPanelMove(req, res, submission.id, () =>
+    lifecycle.bindSpecies(callerFor(req.viewer!), submission.id, parsed.data.group_id)
+  );
+  if (!ran) return;
+
+  res.set("HX-Refresh", "true").send();
+};
+
+/**
+ * POST /admin/submissions/:id/adopt-species-classification
+ * The witness panel's one click on a mismatch: the Submission takes its bound
+ * Species' Species type and Program class, then the page reloads.
+ */
+export const adoptSpeciesClassificationAction = async (req: MulmRequest, res: Response) => {
+  const submission = await validateSubmission(req, res);
+  if (!submission) {
+    return;
+  }
+
+  const ran = await witnessPanelMove(req, res, submission.id, () =>
+    lifecycle.adoptSpeciesClassification(callerFor(req.viewer!), submission.id)
+  );
+  if (!ran) return;
+
+  res.set("HX-Refresh", "true").send();
 };
 
 export const inviteMember = async (req: MulmRequest, res: Response) => {
@@ -466,53 +539,6 @@ export const sendWelcomeEmail = async (req: MulmRequest, res: Response) => {
   }
 };
 
-/**
- * GET /admin/submissions/:id/approval-bonuses
- * HTMX endpoint: Returns bonus checkboxes fragment when species is selected
- */
-export const getApprovalBonuses = async (req: MulmRequest, res: Response) => {
-  const { id } = req.params;
-  const groupId = parseInt(getQueryString(req, "group_id", ""));
-
-  if (isNaN(groupId)) {
-    res.status(400).send("Invalid group ID");
-    return;
-  }
-
-  const submission = await getSubmissionById(parseInt(id));
-  if (!submission) {
-    res.status(404).send("Submission not found");
-    return;
-  }
-
-  try {
-    // Check first-time status (program-wide) and get species data
-    const [breedingHistory, speciesGroup] = await Promise.all([
-      isFirstTimeSpeciesForProgram(groupId),
-      getSpeciesGroup(groupId),
-    ]);
-
-    const templateData = {
-      submission: {
-        id: submission.id,
-      },
-      program: submission.program,
-      isFirstTime: breedingHistory.isFirstTime,
-      priorBreedCount: breedingHistory.priorBreedCount,
-      isCaresSpecies: speciesGroup?.is_cares_species === 1,
-      basePoints: speciesGroup?.base_points,
-    };
-
-    logger.info("Rendering approval bonuses", templateData);
-
-    // Render the bonus checkboxes fragment (includes base points selector)
-    res.render("admin/approvalBonuses", templateData);
-  } catch (error) {
-    logger.error("Error fetching approval bonuses", error);
-    res.status(500).send("Error loading bonus data");
-  }
-};
-
 export const approveSubmission = async (req: MulmRequest, res: Response) => {
   const { viewer } = req;
 
@@ -520,7 +546,8 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
   const submission = (await getSubmissionById(id))!;
 
   const errors = new Map<string, string>();
-  const onError = () => {
+  const parsed = approvalSchema(submission.program).safeParse(req.body);
+  if (!validateFormResult(parsed, errors)) {
     res.render("admin/approvalPanel", {
       submission: {
         id: submission.id,
@@ -528,29 +555,19 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
         species_class: submission.species_class,
         program: submission.program,
       },
+      approval: await approvalPanelData(submission),
       errors,
     });
-  };
-
-  const parsed = approvalSchema(submission.program).safeParse(req.body);
-  if (!validateFormResult(parsed, errors, onError)) {
     return;
   }
 
   const updates = parsed.data;
 
-  // Ensure species name IDs exist for the selected group_id
-  const speciesIds = await ensureNameIdsForGroupId(
-    updates.group_id,
-    submission.species_common_name,
-    submission.species_latin_name
-  );
-
   // Approving is the only way Points are ever awarded. Everything that follows
   // from it - the member's email, the feed entry, the Level and Specialty
   // Award recompute - hangs off the transition, not off this handler.
   try {
-    await lifecycle.approve({ id: viewer!.id, isAdmin: true }, id, speciesIds, updates);
+    await lifecycle.approve(callerFor(viewer!), id, updates);
   } catch (err) {
     if (sendLifecycleError(res, err, { submissionId: id, adminId: viewer?.id })) {
       return;
@@ -825,13 +842,8 @@ export const editApprovedSubmissionForm = async (req: MulmRequest, res: Response
     return [];
   };
 
-  // Get current group_id for species typeahead
-  let currentGroupId = null;
-  if (submission.common_name_id) {
-    currentGroupId = await getGroupIdFromNameId(submission.common_name_id, true);
-  } else if (submission.scientific_name_id) {
-    currentGroupId = await getGroupIdFromNameId(submission.scientific_name_id, false);
-  }
+  // The Species the Submission is bound to, for the species typeahead
+  const currentGroupId = submission.species_id;
 
   // Fetch supplements from normalized table
   const supplements = await getSubmissionSupplements(submission.id);
@@ -907,7 +919,7 @@ export const saveApprovedSubmissionEdits = async (req: MulmRequest, res: Respons
   const updates = parsed.data;
   const reason = updates.reason;
 
-  // Remove reason and group_id from updates (reason goes in audit log, group_id is converted to name IDs)
+  // Remove reason and group_id from updates (reason goes in audit log, group_id becomes species_id)
   delete (updates as Partial<typeof updates>).reason;
   const groupId = updates.group_id;
   delete (updates as Partial<typeof updates>).group_id;
@@ -939,15 +951,14 @@ export const saveApprovedSubmissionEdits = async (req: MulmRequest, res: Respons
     updatesForDb.spawn_locations = JSON.stringify(updates.spawn_locations || []);
   }
 
-  // If species group changed, update name IDs
-  if (groupId && groupId !== submission.common_name_id) {
-    const speciesIds = await ensureNameIdsForGroupId(
-      groupId,
-      submission.species_common_name,
-      submission.species_latin_name
-    );
-    updatesForDb.common_name_id = speciesIds.common_name_id;
-    updatesForDb.scientific_name_id = speciesIds.scientific_name_id;
+  // Rebind to another Species if the committee picked one
+  if (groupId && groupId !== submission.species_id) {
+    if (!(await findSpeciesById(groupId))) {
+      res.set("HX-Retarget", "#edit-approved-errors").set("HX-Reswap", "innerHTML");
+      res.render("admin/editApprovedErrors", { messages: ["Choose a Species that exists"] });
+      return;
+    }
+    updatesForDb.species_id = groupId;
   }
 
   try {

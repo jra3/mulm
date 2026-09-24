@@ -2,7 +2,7 @@ import { query, writeConn } from "../../db/conn";
 import type { Submission } from "../../db/submissions";
 import type { Notifier, SubmissionState } from "../../lifecycle";
 import { setNotifier } from "../../lifecycle";
-import { createTestSubmission, type CreateSubmissionOptions } from "./testHelpers";
+import { createTestSubmission, ensureGuppySpecies, type CreateSubmissionOptions } from "./testHelpers";
 import type { Database } from "sqlite";
 
 /**
@@ -11,6 +11,11 @@ import type { Database } from "sqlite";
  * The clock is not a seam: Waiting period and Awaiting final submission are
  * separated only by a date comparison, so a fixture straddles that edge by
  * writing a reproduction date in the past, the way the rest of the suite does.
+ *
+ * A submitted Submission is bound unless the caller says otherwise, since a
+ * Witness cannot be confirmed without one: to Poecilia reticulata, which the
+ * default Submission (Guppy, Fish, Livebearers) agrees with. Pass
+ * `speciesId: null` for an unbound one.
  */
 export async function submissionInState(
   db: Database,
@@ -24,6 +29,8 @@ export async function submissionInState(
 
   const base: CreateSubmissionOptions = {
     ...options,
+    speciesId:
+      options.speciesId !== undefined ? options.speciesId : state === "draft" ? null : await ensureGuppySpecies(db),
     // Everything past the Witness gate needs a date old enough to have served
     // its waiting period, except the one state that is defined by not having.
     reproductionDate:

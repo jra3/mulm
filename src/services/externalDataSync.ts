@@ -9,7 +9,7 @@ import {
   setSpeciesExternalReferences,
   getSpeciesImages,
   setSpeciesImages,
-} from "@/db/species";
+} from "@/db/speciesEnrichment";
 import { getWikipediaClient } from "@/integrations/wikipedia";
 import { getGBIFClient } from "@/integrations/gbif";
 

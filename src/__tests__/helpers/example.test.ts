@@ -7,7 +7,7 @@ import {
   createTestMember,
   assertSubmissionState,
   mockApprovalData,
-  mockSpeciesIds,
+  mockSpeciesId,
   type TestContext,
 } from "./testHelpers";
 import { getSubmissionById } from "../../db/submissions";
@@ -154,7 +154,7 @@ void describe("Example Test Using Helpers", () => {
         witnessedBy: ctx.admin.id,
       });
 
-      await approveSubmissionFixture(ctx.admin.id, submissionId, mockSpeciesIds, {
+      await approveSubmissionFixture(ctx.admin.id, submissionId, mockSpeciesId, {
         ...mockApprovalData,
         points: 20,
       });

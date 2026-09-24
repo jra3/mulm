@@ -1,0 +1,8 @@
+//- A refusal from the witness panel (binding a Species, confirming the
+//- Witness), swapped into #witness-error so it is read where it was tried.
+//-
+//- @param {string[]} messages - What was refused, and why
+
+include ../mixins/errorAlert.pug
+
++errorAlertList('Not done:', messages)

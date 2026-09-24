@@ -160,6 +160,16 @@ void describe("Per-program bonuses - the exported set", () => {
 void describe("Per-program bonuses - the approval panel shows the issue", () => {
   const viewsPath = path.join(__dirname, "../views");
 
+  const approval = {
+    speciesName: "Apistogramma cacatuoides",
+    speciesType: "Fish",
+    programClass: "Cichlids - New World",
+    pointClass: 10,
+    isFirstTime: true,
+    priorBreedCount: 0,
+    isCaresSpecies: false,
+  };
+
   function render(template: string, locals: Record<string, unknown>): string {
     const compiled = pug.compileFile(path.join(viewsPath, template), { basedir: viewsPath });
     return compiled(locals);
@@ -171,6 +181,7 @@ void describe("Per-program bonuses - the approval panel shows the issue", () => 
     const message = "The flowered bonus does not apply to Breeders Awards Program submissions";
     const html = render("admin/approvalPanel.pug", {
       submission: { id: 1, points: 10, species_class: "Cichlids", program: "fish" },
+      approval,
       bonusFields,
       errors: new Map([["flowered", message]]),
     });
@@ -179,15 +190,12 @@ void describe("Per-program bonuses - the approval panel shows the issue", () => 
     assert.ok(html.includes(message), "the flowered message must still be on the page");
   });
 
-  void test("a CARES issue reaches the swapped bonus section of a plant submission", () => {
+  void test("a CARES issue reaches the bonus section of a plant submission", () => {
     const message =
       "The CARES species bonus does not apply to Horticultural Awards Program submissions";
-    const html = render("admin/approvalBonuses.pug", {
-      program: "plant",
-      basePoints: 10,
-      isFirstTime: true,
-      isCaresSpecies: false,
-      priorBreedCount: 0,
+    const html = render("admin/approvalPanel.pug", {
+      submission: { id: 1, points: 10, species_class: "Cryptocoryne", program: "plant" },
+      approval: { ...approval, speciesType: "Plant", programClass: "Cryptocoryne" },
       bonusFields,
       errors: new Map([["cares_species", message]]),
     });
@@ -199,19 +207,18 @@ void describe("Per-program bonuses - the approval panel shows the issue", () => 
 
 void describe("Per-program bonuses - refinement ordering", () => {
   void test("a body missing a required field reports only that field", () => {
-    const result = approvalSchema("fish").safeParse({ id: "1", points: "10", flowered: "1" });
+    const result = approvalSchema("fish").safeParse({ id: "1", flowered: "1" });
     const issues = result.success ? [] : result.error.issues;
 
     assert.deepStrictEqual(
       issues.map((issue) => String(issue.path[0])),
-      ["group_id"]
+      ["points"]
     );
   });
 
   void test("a program name that is not one of ours still rejects a program-specific bonus", () => {
     const result = approvalSchema("terrestrial").safeParse({
       id: "1",
-      group_id: "42",
       points: "10",
       cares_species: "1",
       first_time_species: "1",

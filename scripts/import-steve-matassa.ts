@@ -1,4 +1,13 @@
 /**
+ * Import-only tooling: this script writes the species tables directly, not
+ * through the Species catalogue (`@/species`). Do not copy this pattern into
+ * `src/`. It is a one-off historical import (already run). It records Species
+ * through `recordName`, fills new Species' columns with raw SQL, and
+ * `recordName` went with `src/db/species.ts` (#411), so it does not run until
+ * that step is ported to `@/species` (for example `createSpecies`, with
+ * the Submission bound by `species_id`).
+ */
+/**
  * Bulk-import Steve Matassa's historical BAP submissions.
  *
  * Source: "Steve's Points.xlsx", normalized + enriched offline into
@@ -24,7 +33,6 @@ import {
   backfillSubmission,
   backfillWitness,
 } from "./lib/backfill";
-import { recordName } from "@/db/species";
 import { checkAndUpdateMemberLevel, Program } from "@/levelManager";
 import { FormValues } from "@/forms/submission";
 import { logger } from "@/utils/logger";
@@ -135,7 +143,7 @@ async function main() {
       }
 
       // 5. Approve (sets points, bonuses, approved_by/on)
-      await backfillApproval(APPROVER_ID, submissionId, speciesIds, {
+      await backfillApproval(APPROVER_ID, submissionId, speciesIds.group_id, {
         id: submissionId,
         group_id: speciesIds.group_id,
         points: r.approval.points,

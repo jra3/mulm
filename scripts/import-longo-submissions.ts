@@ -1,3 +1,11 @@
+/**
+ * Import-only tooling: this script writes the species tables directly, not
+ * through the Species catalogue (`@/species`). Do not copy this pattern into
+ * `src/`. It is a one-off historical import (already run). It records Species
+ * through `recordName`, which went with `src/db/species.ts` (#411),
+ * so it does not run until that step is ported to `@/species` (for example
+ * `createSpecies`, with the Submission bound by `species_id`).
+ */
 import moduleAlias from "module-alias";
 import path from "path";
 moduleAlias.addAlias("@", path.join(__dirname, "..", "src"));
@@ -7,7 +15,6 @@ import {
   getSubmissionById,
 } from "@/db/submissions";
 import { FormValues } from "@/forms/submission";
-import { recordName } from "@/db/species";
 import {
   backfillApproval,
   backfillQueued,
@@ -378,7 +385,9 @@ async function fixSpecies() {
     );
     logger.info("Fixed group 1627 (Microsorum pteropus): Primative Plants, 5pts");
 
-    // Fix Water sprite: Floating Plants -> Primitive Plants, add points, fix canonical
+    // Fix Water sprite: Floating Plants -> Primitive Plants, add points, fix canonical.
+    // Written before migration 057 (Canonical name as a flagged Name): rerun
+    // today, this must go through renameCanonical instead.
     await db.run(
       `UPDATE species_name_group
        SET program_class = 'Primative Plants', base_points = 10,
@@ -431,7 +440,7 @@ async function importSubmissions() {
     logger.info(`Recorded species: ${sub.latin_name} -> ${JSON.stringify(speciesIds)}`);
 
     // 5. Approve
-    await backfillApproval(ADMIN_ID, submissionId, speciesIds, {
+    await backfillApproval(ADMIN_ID, submissionId, speciesIds.group_id, {
       id: submissionId,
       points: sub.base_points,
       group_id: sub.group_id,

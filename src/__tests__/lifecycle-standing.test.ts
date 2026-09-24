@@ -9,9 +9,9 @@ import {
 } from "@/lifecycle";
 import { query } from "@/db/conn";
 import { getMember } from "@/db/members";
+import { createSpecies, updateSpecies } from "@/species";
 import {
   mockApprovalData,
-  mockSpeciesIds,
   setupTestDatabase,
   teardownTestDatabase,
   type TestContext,
@@ -56,21 +56,38 @@ void describe("Submission lifecycle - standing", () => {
       ctx.member.id,
     ]);
 
-  /** Approve `count` Anabantoid Submissions, one per distinct species. */
-  async function approveAnabantoids(count: number, points = 10): Promise<number[]> {
+  let speciesCount = 0;
+  /** A new Species of the Program class. */
+  const speciesOf = (programClass: string) =>
+    createSpecies({
+      canonicalGenus: "Standingus",
+      canonicalSpeciesName: `species${++speciesCount}`,
+      programClass,
+      speciesType: "Fish",
+    });
+
+  /**
+   * Approve `count` Anabantoid Submissions, each bound to its own Anabantoid
+   * Species.
+   */
+  async function approveAnabantoids(count: number, points = 10): Promise<{ ids: number[]; species: number[] }> {
     const ids: number[] = [];
+    const species: number[] = [];
     for (let i = 0; i < count; i++) {
+      const speciesId = await speciesOf("Anabantoids");
       const id = await submissionInState(ctx.db, "inApprovalQueue", {
         memberId: ctx.member.id,
         witnessedBy: ctx.admin.id,
         speciesClass: "Anabantoids",
         latinName: `Betta species${i}`,
         commonName: `Betta ${i}`,
+        speciesId,
       });
-      await approve(committee, id, mockSpeciesIds, { ...mockApprovalData, points });
+      await approve(committee, id, { ...mockApprovalData, points });
       ids.push(id);
+      species.push(speciesId);
     }
-    return ids;
+    return { ids, species };
   }
 
   // -------------------------------------------------------------------------
@@ -79,7 +96,7 @@ void describe("Submission lifecycle - standing", () => {
 
   void describe("Levels", () => {
     void test("reaching the same Level again refreshes its entry rather than adding one", async () => {
-      const ids = await approveAnabantoids(3, 10);
+      const { ids } = await approveAnabantoids(3, 10);
       const before = (await feed()).filter((e) => e.activity_type === "level_up").length;
 
       await correctPoints(committee, ids[0], { points: 5 }, "Wrong point class");
@@ -115,7 +132,7 @@ void describe("Submission lifecycle - standing", () => {
     });
 
     void test("a drop tells nobody", async () => {
-      const ids = await approveAnabantoids(3, 10);
+      const { ids } = await approveAnabantoids(3, 10);
       assert.strictEqual((await getMember(ctx.member.id))!.fish_level, "Hobbyist");
       sent.clear();
 
@@ -156,7 +173,7 @@ void describe("Submission lifecycle - standing", () => {
     });
 
     void test("a correction to the species takes the Award back, and its feed entry with it", async () => {
-      const ids = await approveAnabantoids(6);
+      const { ids } = await approveAnabantoids(6);
       assert.strictEqual((await awards()).length, 1);
       sent.clear();
 
@@ -164,7 +181,7 @@ void describe("Submission lifecycle - standing", () => {
       await correctPoints(
         committee,
         ids[5],
-        { species_class: "Catfish & Loaches" },
+        { species_id: await speciesOf("Catfish & Loaches") },
         "Misidentified species"
       );
 
@@ -182,19 +199,58 @@ void describe("Submission lifecycle - standing", () => {
     });
 
     void test("the recompute runs on any change, not only when Points changed", async () => {
-      const ids = await approveAnabantoids(6);
+      const { ids } = await approveAnabantoids(6);
       sent.clear();
 
-      // Nothing about the Points moves here - only the species class does, and
-      // that is exactly what Specialty Awards key on.
+      // Nothing about the Points moves here - only the Species does, and its
+      // Program class is exactly what Specialty Awards key on.
       await correctPoints(
         committee,
         ids[0],
-        { species_class: "Characins" },
+        { species_id: await speciesOf("Characins") },
         "Misidentified species"
       );
 
       assert.deepStrictEqual((await awards()).map((a) => a.award_name), []);
+    });
+
+    void test("the Program class is the bound Species', not the member's entry", async () => {
+      // The member entered Anabantoids on each form; that is not what counts.
+      const { species } = await approveAnabantoids(6);
+      const sixth = species[5];
+      assert.deepStrictEqual((await awards()).map((a) => a.award_name), ["Anabantoids Specialist"]);
+
+      // The catalogue moves one Species to another Program class: the Award goes.
+      await updateSpecies(sixth, { programClass: "Characins" });
+      await recomputeStanding(ctx.member.id, "fish");
+      assert.deepStrictEqual((await awards()).map((a) => a.award_name), []);
+
+      // And back: the Award is granted again.
+      await updateSpecies(sixth, { programClass: "Anabantoids" });
+      await recomputeStanding(ctx.member.id, "fish");
+      assert.deepStrictEqual((await awards()).map((a) => a.award_name), ["Anabantoids Specialist"]);
+    });
+
+    void test("an approved Submission bound to no Species counts by the class the member entered", async () => {
+      await approveAnabantoids(5);
+      // Approved before Submissions were bound: no species_id, only the member's entry.
+      const unbound = await submissionInState(ctx.db, "approved", {
+        memberId: ctx.member.id,
+        witnessedBy: ctx.admin.id,
+        speciesClass: "Anabantoids",
+        latinName: "Betta unboundus",
+        commonName: "Unbound Betta",
+        speciesId: null,
+      });
+      assert.strictEqual(
+        (await query<{ species_id: number | null }>("SELECT species_id FROM submissions WHERE id = ?", [unbound]))[0]
+          .species_id,
+        null
+      );
+
+      await recomputeStanding(ctx.member.id, "fish");
+
+      assert.deepStrictEqual((await awards()).map((a) => a.award_name), ["Anabantoids Specialist"]);
     });
 
     void test("an Award a committee member granted by hand is not the recompute's to take back", async () => {
@@ -217,7 +273,9 @@ void describe("Submission lifecycle - standing", () => {
   // -------------------------------------------------------------------------
 
   void test("the feed never advertises the same approval twice", async () => {
-    const [id] = await approveAnabantoids(1);
+    const {
+      ids: [id],
+    } = await approveAnabantoids(1);
 
     await correctPoints(committee, id, { points: 20 }, "Wrong point class");
     await correctPoints(committee, id, { points: 15 }, "Wrong again");

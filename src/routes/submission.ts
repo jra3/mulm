@@ -25,7 +25,12 @@ import {
   getSubmissionImages,
   getSubmissionSupplements,
 } from "@/db/submissions";
-import { getSpeciesGroup, getGroupIdFromNameId } from "@/db/species";
+import {
+  canonicalName as canonicalNameOf,
+  checkFormAgreement,
+  countSubmissionsOfSpecies,
+  findSpeciesById,
+} from "@/species";
 import * as lifecycle from "@/lifecycle";
 import { attempt, callerFor } from "./lifecycleErrors";
 import { getNotesForSubmission } from "@/db/submission_notes";
@@ -103,6 +108,12 @@ export const view = async (req: MulmRequest, res: Response) => {
   }
 
   const state = lifecycle.deriveState(submission);
+
+  // The Species the Submission is bound to, if any, and whether its Species
+  // type and Program class agree with the Submission's
+  const boundSpecies = submission.species_id ? await findSpeciesById(submission.species_id) : undefined;
+  const agreement = boundSpecies ? await checkFormAgreement(boundSpecies.group_id, submission) : undefined;
+
   const aspect = {
     isSubmitted: submission.submitted_on != null,
     isApproved: submission.approved_on != null,
@@ -114,7 +125,7 @@ export const view = async (req: MulmRequest, res: Response) => {
     // Which moves this viewer may actually make, asked of the same table the
     // transitions guard against - so nobody is shown a button that will refuse
     // them.
-    allowed: allowedMoves(viewer, submission, state),
+    allowed: allowedMoves(viewer, submission, state, agreement?.classificationAgrees),
   };
 
   // A Draft has nothing to review, so its owner goes straight to the form.
@@ -125,25 +136,10 @@ export const view = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const nameGroup = await (async () => {
-    // Try new split schema FK columns first
-    if (submission.common_name_id) {
-      const groupId = await getGroupIdFromNameId(submission.common_name_id, true);
-      if (groupId) {
-        const group = await getSpeciesGroup(groupId);
-        if (group) return group;
-      }
-    }
+  const speciesShown = (() => {
+    if (boundSpecies) return boundSpecies;
 
-    if (submission.scientific_name_id) {
-      const groupId = await getGroupIdFromNameId(submission.scientific_name_id, false);
-      if (groupId) {
-        const group = await getSpeciesGroup(groupId);
-        if (group) return group;
-      }
-    }
-
-    // Fall back to parsing from submission data if no species group linked
+    // Fall back to parsing the member's Latin spelling
     const [genus, ...parts] = submission.species_latin_name.split(" ");
     return {
       canonical_genus: genus,
@@ -151,7 +147,7 @@ export const view = async (req: MulmRequest, res: Response) => {
     };
   })();
 
-  const canonicalName = `${nameGroup.canonical_genus} ${nameGroup.canonical_species_name}`;
+  const canonicalName = canonicalNameOf(speciesShown);
 
   // Calculate waiting period eligibility
   const waitingPeriodStatus = lifecycle.waitingPeriod(submission);
@@ -206,7 +202,18 @@ export const view = async (req: MulmRequest, res: Response) => {
       images, // Pass array of image objects instead of JSON string
     },
     canonicalName,
-    name: nameGroup,
+    name: speciesShown,
+    boundSpecies: boundSpecies ?? null,
+    boundSpeciesName: boundSpecies ? canonicalNameOf(boundSpecies) : null,
+    classificationMismatch: agreement ? !agreement.classificationAgrees : false,
+    // Which of the two disagree, for the witness panel's highlight, and which
+    // spellings are already Names of the Species, for its Names to add
+    classificationAgreement: agreement
+      ? { speciesType: agreement.speciesType, programClass: agreement.programClass }
+      : null,
+    spellingAgreement: agreement ? { commonName: agreement.commonName, latinName: agreement.latinName } : null,
+    // The approval panel reads the bound Species; only a committee member sees it
+    approval: aspect.isAdmin && state === "inApprovalQueue" ? await approvalPanelData(submission) : null,
     waitingPeriodStatus,
     adminNotes,
     videoMetadata,
@@ -242,7 +249,6 @@ async function renderEditForm(
       reason: submission.changes_requested_reason,
       requestedBy: adminWhoRequested?.display_name || "Admin",
       requestedOn: formatShortDate(submission.changes_requested_on),
-      hasWitness: submission.witnessed_by != null,
     };
   }
 
@@ -271,6 +277,7 @@ async function renderEditForm(
     },
     errors: new Map(),
     changesRequested,
+    witnessConfirmed: lifecycle.hasConfirmedWitness(submission),
     ...templateData,
   });
 }
@@ -317,14 +324,38 @@ export const renderEdit = async (req: MulmRequest, res: Response) => {
 };
 
 /**
+ * What the approval panel shows about the Species a Submission is bound to:
+ * its Canonical name and classification, its Point class (which prefills the
+ * Points), and the bonuses it implies - first time in the Program for this
+ * Species, and CARES. Null when the Submission is unbound, which the panel
+ * says and offers no Approve for.
+ */
+export async function approvalPanelData(submission: Pick<db.Submission, "species_id">) {
+  const species = submission.species_id ? await findSpeciesById(submission.species_id) : undefined;
+  if (!species) return null;
+  // First-time is program-wide: no member has had this Species approved yet
+  const submissionsOfSpecies = await countSubmissionsOfSpecies(species.group_id);
+  return {
+    speciesName: canonicalNameOf(species),
+    speciesType: species.species_type,
+    programClass: species.program_class,
+    pointClass: species.base_points,
+    isFirstTime: submissionsOfSpecies.approved === 0,
+    priorBreedCount: submissionsOfSpecies.approved,
+    isCaresSpecies: species.is_cares_species === 1,
+  };
+}
+
+/**
  * The moves this viewer may make on this Submission right now, keyed by move
  * id for the template. Asked of the transition table rather than restated, so
  * the buttons shown and the guards enforced cannot drift apart.
  */
-function allowedMoves(
+export function allowedMoves(
   viewer: MulmRequest["viewer"],
   submission: db.Submission,
-  state: lifecycle.SubmissionState
+  state: lifecycle.SubmissionState,
+  classificationAgrees?: boolean
 ): Partial<Record<lifecycle.MoveId, boolean>> {
   if (!viewer) {
     return {};
@@ -338,6 +369,8 @@ function allowedMoves(
     actor,
     actorId: viewer.id,
     isOwner,
+    bound: submission.species_id != null,
+    classificationAgrees,
   };
 
   return Object.fromEntries(
@@ -467,6 +500,7 @@ export const update = async (req: MulmRequest, res: Response) => {
       title: `Edit ${getBapFormTitle(selectedType)}`,
       form,
       errors,
+      witnessConfirmed: lifecycle.hasConfirmedWitness(submission),
       ...templateData,
     });
     return;
@@ -509,8 +543,8 @@ export const update = async (req: MulmRequest, res: Response) => {
 /**
  * POST /submissions/:id/return-to-draft
  *
- * Withdrawing, as its own named action. The confirmed Witness survives, so
- * submitting again skips screening and re-enters the waiting period.
+ * Withdrawing, as its own named action. Submitting again saves the form, which
+ * voids a confirmed Witness (ADR-0001), so the Submission is witnessed again.
  */
 export const returnToDraft = async (req: MulmRequest, res: Response) => {
   const submission = await validateSubmission(req, res);

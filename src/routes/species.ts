@@ -4,12 +4,10 @@ import {
   getSpeciesForExplorer,
   getSpeciesDetail,
   getBreedersForSpecies,
-  getFilterOptions,
-  getNamesForGroup,
-  getCaresCoverageStats,
-  getCaresMaintenersForSpecies,
-  SpeciesFilters,
-} from "@/db/species";
+  getExplorerFilterOptions,
+  type SpeciesFilters,
+} from "@/species";
+import { getCaresCoverageStats, getCaresMaintenersForSpecies } from "@/db/cares";
 import { getSpeciesKeepers } from "@/db/collection";
 import { getClassOptions } from "@/forms/submission";
 import { speciesExplorerQuerySchema } from "@/forms/species-explorer";
@@ -39,7 +37,7 @@ export async function explorer(req: MulmRequest, res: Response) {
   try {
     const [species, filterOptions, caresStats] = await Promise.all([
       getSpeciesForExplorer(filters),
-      getFilterOptions(),
+      getExplorerFilterOptions(),
       caresOnly ? getCaresCoverageStats() : Promise.resolve(null),
     ]);
 
@@ -81,10 +79,9 @@ export async function detail(req: MulmRequest, res: Response) {
   }
 
   try {
-    const [speciesDetail, breeders, names, keepers] = await Promise.all([
+    const [speciesDetail, breeders, keepers] = await Promise.all([
       getSpeciesDetail(groupId),
       getBreedersForSpecies(groupId),
-      getNamesForGroup(groupId),
       getSpeciesKeepers(groupId),
     ]);
 
@@ -108,8 +105,8 @@ export async function detail(req: MulmRequest, res: Response) {
       isLoggedIn,
       species: speciesDetail,
       breeders,
-      commonNames: names.common_names,
-      scientificNames: names.scientific_names,
+      commonNames: speciesDetail.names.common,
+      scientificNames: speciesDetail.names.scientific,
       displayName,
       totalBreeds: breeders.reduce((sum, breeder) => sum + breeder.breed_count, 0),
       totalBreeders: breeders.length,

@@ -1,3 +1,11 @@
+/**
+ * Import-only tooling: this script writes the species tables directly, not
+ * through the Species catalogue (`@/species`). Do not copy this pattern into
+ * `src/`. It is a historical test-data generator. It recorded Species through
+ * `recordName`, which went with `src/db/species.ts` (#411), so it
+ * does not run until that step is ported to `@/species` (for example
+ * `createSpecies`, with the Submission bound by `species_id`).
+ */
 import moduleAlias from "module-alias";
 import path from "path";
 moduleAlias.addAlias("@", path.join(__dirname, "..", "src"));
@@ -13,7 +21,6 @@ import { FormValues } from "@/forms/submission";
 import { logger } from "@/utils/logger";
 import { init } from "@/db/conn";
 import { checkAndGrantSpecialtyAwards } from "@/specialtyAwardManager";
-import { recordName } from "@/db/species";
 import { recordActivity } from "@/db/activity";
 
 // Plausible test data
@@ -712,7 +719,7 @@ async function generateTestData() {
           await backfillApproval(
             johnId, // John Allen approves everything
             submission.id,
-            speciesNameId,
+            speciesNameId.group_id,
             {
               id: submission.id,
               points: submission.points,

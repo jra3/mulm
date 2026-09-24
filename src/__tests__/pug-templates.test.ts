@@ -176,8 +176,8 @@ void describe("Pug Template Rendering", () => {
       iucn_population_trend: "Stable",
       iucn_last_updated: new Date().toISOString(),
       iucn_redlist_id: 12345,
-      synonym_count: 2,
-      synonyms: [],
+      name_count: 2,
+      names: { common: [], scientific: [] },
       external_references: null,
       image_links: null,
     },
@@ -235,32 +235,19 @@ void describe("Pug Template Rendering", () => {
       3: { level: "bronze", icon: "🥉", awards: ["Breeder Award Level 1"] },
     },
 
-    // Split schema name data for admin templates
-    name: {
-      common_name_id: 1,
-      common_name: "Test Common Name",
-      scientific_name_id: 1,
-      scientific_name: "Testus scientificus",
-      name_id: 1, // For legacy synonym row
-    },
+    // One Name, as the catalogue returns it, for the admin Name rows
+    name: { name_id: 1, species_id: 1, kind: "common", name: "Test Common Name" },
     groupId: 1,
 
-    // Common and scientific names for species edit
+    // A Species' Names by kind, for species edit, detail and the hovercard
     commonNames: [
-      { common_name_id: 1, common_name: "Common Name 1" },
-      { common_name_id: 2, common_name: "Common Name 2" },
+      { name_id: 1, species_id: 1, kind: "common", name: "Common Name 1" },
+      { name_id: 2, species_id: 1, kind: "common", name: "Common Name 2" },
     ],
     scientificNames: [
-      { scientific_name_id: 1, scientific_name: "Scientificus name1" },
-      { scientific_name_id: 2, scientific_name: "Scientificus name2" },
+      { name_id: 1, species_id: 1, kind: "scientific", name: "Scientificus name1" },
+      { name_id: 2, species_id: 1, kind: "scientific", name: "Scientificus name2" },
     ],
-
-    // Synonym for legacy synonym row
-    synonym: {
-      name_id: 1,
-      common_name: "Legacy Common",
-      scientific_name: "Legacy scientificus",
-    },
 
     // Note data for submission notes
     note: {
@@ -651,11 +638,25 @@ void describe("Pug Template Rendering", () => {
             break;
 
           case "admin/approvalPanel.pug":
-            templateData.formData = templateData.form;
-            templateData.name = {
-              canonical_genus: "Apistogramma",
-              canonical_species: "cacatuoides",
+            templateData.approval = {
+              speciesName: "Apistogramma cacatuoides",
+              speciesType: "Fish",
+              programClass: "Cichlids - New World",
+              pointClass: 10,
+              isFirstTime: true,
+              priorBreedCount: 0,
+              isCaresSpecies: false,
             };
+            break;
+
+          case "admin/witnessErrors.pug":
+            templateData.messages = ["Choose a Species from the catalogue"];
+            break;
+
+          case "admin/witnessPanel.pug":
+            templateData.spellingAgreement = null;
+            templateData.boundSpecies = null;
+            templateData.allowed = { confirmWitness: false, bindSpecies: true, requestChanges: true };
             break;
 
           case "admin/editApprovedErrors.pug":
@@ -722,8 +723,10 @@ void describe("Pug Template Rendering", () => {
               species_type: "Fish",
             };
             templateData.defunctNames = {
-              common_names: [{ common_name: "Cockatoo Dwarf Cichlid" }],
-              scientific_names: [{ scientific_name: "Apistogramma cacatuoides" }],
+              common: [{ name_id: 1, species_id: 1, kind: "common", name: "Cockatoo Dwarf Cichlid" }],
+              scientific: [
+                { name_id: 2, species_id: 1, kind: "scientific", name: "Apistogramma cacatuoides" },
+              ],
             };
             break;
 
@@ -748,7 +751,6 @@ void describe("Pug Template Rendering", () => {
               reason: "Please add more photos and details",
               requestedBy: "Test Admin",
               requestedOn: "10/20/2025",
-              hasWitness: true,
             };
             break;
 
@@ -817,6 +819,392 @@ void describe("Pug Template Rendering", () => {
         });
       });
     }
+  });
+
+  /**
+   * ADR-0001: any member save voids a confirmed Witness, so the edit form
+   * warns before the member saves - and only when there is a Witness to lose.
+   */
+  void describe("Edit form Witness warning", () => {
+    const renderSubmit = pug.compileFile(path.join(viewsPath, "submit.pug"), {
+      basedir: viewsPath,
+      pretty: false,
+    });
+
+    const submitted = {
+      ...baseMockData.form,
+      id: 7,
+      member_id: 1,
+      submitted_on: new Date().toISOString(),
+    };
+
+    function render(data: Record<string, unknown>) {
+      return renderSubmit({ ...baseMockData, formAction: "/submit", ...data });
+    }
+
+    void test("a witnessed Submission's edit form warns that saving voids the Witness", () => {
+      const html = render({ form: submitted, witnessConfirmed: true });
+
+      assert.match(html, /witnessed again/);
+    });
+
+    void test("an unwitnessed Submission's edit form does not warn", () => {
+      const html = render({ form: submitted, witnessConfirmed: false });
+
+      assert.doesNotMatch(html, /witnessed again/);
+    });
+
+    void test("a request for changes no longer promises the Witness is kept", () => {
+      const html = render({
+        form: { ...submitted, changes_requested_on: new Date().toISOString() },
+        witnessConfirmed: true,
+        changesRequested: {
+          reason: "Please add a photo of the fry",
+          requestedBy: "Test Admin",
+          requestedOn: "10/20/2025",
+        },
+      });
+
+      assert.match(html, /witnessed again/);
+      assert.doesNotMatch(html, /preserved/);
+    });
+  });
+
+  /**
+   * The member's pick binds (CONTEXT.md, Bound). A bound form carries the
+   * Species id and warns that editing its species fields will unbind it; an
+   * unbound form carries no id and keeps the warning hidden until a pick.
+   */
+  void describe("Species binding notice", () => {
+    const renderSubmit = pug.compileFile(path.join(viewsPath, "submit.pug"), {
+      basedir: viewsPath,
+      pretty: false,
+    });
+    const render = (form: Record<string, unknown>) =>
+      renderSubmit({ ...baseMockData, formAction: "/submit", form: { ...baseMockData.form, ...form } });
+    const notice = (html: string) => /<div[^>]*id="species-binding-notice"[^>]*>/.exec(html)?.[0];
+
+    void test("a bound form carries its Species and warns that editing will unbind", () => {
+      const html = render({ id: 7, species_id: 12 });
+
+      assert.match(html, /<input type="hidden" name="species_id" id="species_id" value="12">/);
+      assert.ok(notice(html), "the notice is rendered");
+      assert.doesNotMatch(notice(html)!, /hidden/);
+      assert.match(html, /will unbind it/);
+    });
+
+    void test("an unbound form carries no Species and hides the warning", () => {
+      const html = render({ id: 7, species_id: null });
+
+      assert.match(html, /<input type="hidden" name="species_id" id="species_id" value="">/);
+      assert.match(notice(html)!, /hidden/);
+    });
+  });
+
+  /**
+   * The species views read Names in the catalogue's shape - `name_id` and
+   * `name`, by kind - and a refused delete has somewhere to say "merge".
+   */
+  /**
+   * The witness panel binds: bound, it names the Species and offers a rebind;
+   * unbound, it offers the catalogue typeahead and the create-Species dialog,
+   * and no confirmation until it is bound.
+   */
+  void describe("Witness panel", () => {
+    const render = (data: Record<string, unknown>) =>
+      pug.compileFile(path.join(viewsPath, "admin/witnessPanel.pug"), { basedir: viewsPath, pretty: false })({
+        ...baseMockData,
+        isAdmin: true,
+        submission: { id: 42, species_type: "Fish" },
+        allowed: { confirmWitness: true, bindSpecies: true, requestChanges: true },
+        ...data,
+      });
+    const bound = {
+      group_id: 7,
+      canonical_genus: "Poecilia",
+      canonical_species_name: "reticulata",
+      species_type: "Fish",
+      program_class: "Livebearers",
+    };
+
+    void test("bound: shows the Canonical name, a rebind, and the confirmation", () => {
+      const html = render({ boundSpecies: bound, boundSpeciesName: "Poecilia reticulata" });
+
+      assert.match(html, /id="witness-bound-species"[^>]*>Poecilia reticulata</);
+      assert.match(html, /Livebearers/);
+      assert.match(html, /Change Species/);
+      assert.match(html, /hx-post="\/admin\/submissions\/42\/bind-species"/);
+      assert.match(html, />Rebind</);
+      assert.match(html, /hx-post="\/admin\/submissions\/42\/confirm-witness"/);
+      assert.match(html, /Approve for Screening/);
+      assert.doesNotMatch(html, /Not bound to a Species/);
+    });
+
+    void test("unbound: offers the catalogue typeahead and create-Species dialog, and no confirmation", () => {
+      // The table refuses the Witness while unbound, so the move is not allowed
+      const html = render({
+        boundSpecies: null,
+        allowed: { confirmWitness: false, bindSpecies: true, requestChanges: true },
+      });
+
+      assert.match(html, /Not bound to a Species yet/);
+      assert.match(html, /<select[^>]*name="group_id"[^>]*data-api-url="\/api\/species\/search"/);
+      assert.match(html, /hx-post="\/admin\/submissions\/42\/bind-species"/);
+      assert.match(html, />Bind</);
+      assert.match(html, /hx-get="\/admin\/dialog\/species\/new\?submission_id=42"/);
+      assert.doesNotMatch(html, /Approve for Screening/);
+      assert.doesNotMatch(html, /confirm-witness/);
+      assert.match(html, /Bind a Species to approve for screening/);
+    });
+
+    void test("mismatch: highlights the disagreeing type or class, offers to adopt the Species' values, and no confirmation", () => {
+      const html = render({
+        submission: { id: 42, species_type: "Fish", species_class: "Cichlids - New World" },
+        boundSpecies: bound,
+        boundSpeciesName: "Poecilia reticulata",
+        classificationMismatch: true,
+        classificationAgreement: { speciesType: true, programClass: false },
+        allowed: { confirmWitness: false, bindSpecies: true, adoptSpeciesClassification: true, requestChanges: true },
+      });
+
+      assert.match(html, /id="witness-mismatch"/);
+      assert.match(html, /<tr class="font-semibold"><td class="pr-4">Program class<\/td><td class="pr-4">Cichlids - New World<\/td><td>Livebearers<\/td>/);
+      assert.match(html, /<tr><td class="pr-4">Species type<\/td>/, "the agreeing row is not highlighted");
+      assert.match(html, /hx-post="\/admin\/submissions\/42\/adopt-species-classification"/);
+      assert.match(html, /Use the Species&#39; type and class|Use the Species' type and class/);
+      assert.doesNotMatch(html, /Approve for Screening/);
+      assert.match(html, /Resolve the mismatch to approve for screening/);
+      assert.match(html, /Request Changes/);
+    });
+
+    void test("no mismatch: nothing is highlighted and nothing offered to adopt", () => {
+      const html = render({
+        submission: { id: 42, species_type: "Fish", species_class: "Livebearers" },
+        boundSpecies: bound,
+        boundSpeciesName: "Poecilia reticulata",
+        classificationMismatch: false,
+        allowed: { confirmWitness: true, bindSpecies: true, adoptSpeciesClassification: true, requestChanges: true },
+      });
+      assert.doesNotMatch(html, /witness-mismatch/);
+      assert.doesNotMatch(html, /adopt-species-classification/);
+      assert.match(html, /Approve for Screening/);
+    });
+
+    void test("Names to add: common offered ticked, Latin unticked, a Name already shown without a box, a blank not at all", () => {
+      const renderNames = (
+        spellingAgreement: Record<string, string>,
+        submission: Record<string, string> = {}
+      ) =>
+        render({
+          submission: {
+            id: 42,
+            species_type: "Fish",
+            species_common_name: "Fancy Guppy",
+            species_latin_name: "Poecilia reticulatta",
+            ...submission,
+          },
+          boundSpecies: bound,
+          boundSpeciesName: "Poecilia reticulata",
+          spellingAgreement,
+        });
+
+      // Neither is a Name yet: both offered, the common one ticked
+      let html = renderNames({ commonName: "not-a-name", latinName: "not-a-name" });
+      assert.match(html, /<input type="checkbox" name="add_common_name" value="on" checked="checked"\/>/);
+      assert.match(html, /<input type="checkbox" name="add_scientific_name" value="on"\/>/);
+      assert.match(html, /Fancy Guppy/);
+      assert.match(html, /Poecilia reticulatta/);
+
+      // Already Names: shown as such, with no box
+      html = renderNames({ commonName: "name", latinName: "name" });
+      assert.doesNotMatch(html, /add_common_name|add_scientific_name/);
+      assert.match(html, /id="witness-common-is-name"/);
+      assert.match(html, /id="witness-latin-is-name"/);
+      assert.match(html, /is already a Name/);
+
+      // Blank: nothing offered and nothing shown for it
+      html = renderNames({ commonName: "empty", latinName: "not-a-name" }, { species_common_name: "" });
+      assert.doesNotMatch(html, /add_common_name|witness-common-is-name|Add common name/);
+      assert.match(html, /add_scientific_name/);
+    });
+
+    void test("without the bind move, no bind controls are offered", () => {
+      const html = render({
+        boundSpecies: bound,
+        boundSpeciesName: "Poecilia reticulata",
+        allowed: { confirmWitness: true },
+      });
+      assert.doesNotMatch(html, /bind-species/);
+      assert.doesNotMatch(html, /dialog\/species\/new/);
+    });
+
+    void test("the create-Species dialog creates and binds in one request", () => {
+      const html = pug.compileFile(path.join(viewsPath, "admin/createSpeciesDialog.pug"), {
+        basedir: viewsPath,
+        pretty: false,
+      })({
+        ...baseMockData,
+        submission: { id: 42, species_type: "Fish", species_latin_name: "Newgenus novus" },
+        prefilled: { canonical_genus: "Newgenus", canonical_species_name: "novus", program_class: "" },
+        classOptions: [{ value: "Livebearers", text: "Livebearers" }],
+        errors: new Map([["_general", "The Species was created, but not bound"]]),
+      });
+      assert.match(html, /hx-post="\/admin\/submissions\/42\/species"/);
+      assert.match(html, /Create Species and Bind/);
+      assert.match(html, /value="Newgenus"/);
+      assert.match(html, /The Species was created, but not bound/);
+    });
+  });
+
+  /**
+   * Approval is about Points: the bound Species read-only with its Point
+   * class, Points prefilled from it, and no species step at all.
+   */
+  void describe("Approval panel", () => {
+    const render = (data: Record<string, unknown>) =>
+      pug.compileFile(path.join(viewsPath, "admin/approvalPanel.pug"), { basedir: viewsPath, pretty: false })({
+        ...baseMockData,
+        isAdmin: true,
+        submission: { id: 42, species_type: "Fish", program: "fish", points: null },
+        errors: new Map(),
+        ...data,
+      });
+    const approval = {
+      speciesName: "Poecilia reticulata",
+      speciesType: "Fish",
+      programClass: "Livebearers",
+      pointClass: 10,
+      isFirstTime: false,
+      priorBreedCount: 3,
+      isCaresSpecies: true,
+    };
+
+    void test("bound, with a Point class: the Species read-only and the Points prefilled from it", () => {
+      const html = render({ approval });
+
+      assert.match(html, /id="approval-species-name"[^>]*>Poecilia reticulata</);
+      assert.match(html, /Livebearers/);
+      assert.match(html, /id="approval-point-class"><span class="font-semibold">Point class:<\/span> <span>10<\/span>/);
+      assert.match(html, /<option value="10" selected="selected">10<\/option>/);
+      assert.match(html, /Previously bred 3 times/);
+      assert.match(html, /<input type="checkbox" id="cares" name="cares_species" checked="checked"\/>/);
+      assert.match(html, /hx-post="\/admin\/submissions\/42\/approve"/);
+      // No species step
+      assert.doesNotMatch(html, /tom-select|species-search|name="group_id"|dialog\/species\/new|approval-bonuses/);
+    });
+
+    void test("bound, with no Point class: nothing prefilled, and it says so", () => {
+      const html = render({ approval: { ...approval, pointClass: null } });
+
+      assert.match(html, /not set for this Species/);
+      assert.match(html, /<option value="" disabled="disabled" selected="selected">Base Points<\/option>/);
+      assert.doesNotMatch(html, /<option value="\d+" selected/);
+      assert.match(html, /Approve/);
+    });
+
+    void test("unbound: says it must be bound first, and offers no Approve", () => {
+      const html = render({ approval: null });
+
+      assert.match(html, /id="approval-unbound"/);
+      assert.match(html, /Not bound to a Species/);
+      assert.doesNotMatch(html, /\/approve"|>Approve</);
+      assert.doesNotMatch(html, /tom-select|name="group_id"/);
+      assert.match(html, /Request Changes/);
+      assert.match(html, /hx-delete="\/submissions\/42"/);
+    });
+  });
+
+  void describe("Species views read the catalogue's Names", () => {
+    const render = (template: string, data: Record<string, unknown>) =>
+      pug.compileFile(path.join(viewsPath, template), { basedir: viewsPath, pretty: false })({
+        ...baseMockData,
+        isAdmin: true,
+        ...data,
+      });
+
+    const common = [{ name_id: 11, species_id: 3, kind: "common", name: "Kribensis" }];
+    const scientific = [
+      { name_id: 22, species_id: 3, kind: "scientific", name: "Pelvicachromis pulcher" },
+    ];
+    const species = {
+      group_id: 3,
+      canonical_genus: "Pelvicachromis",
+      canonical_species_name: "pulcher",
+      species_type: "Fish",
+      program_class: "Cichlids - Old World",
+      base_points: 10,
+      is_cares_species: 0,
+    };
+
+    void test("the edit page lists each Name with a delete addressed by its id", () => {
+      const html = render("admin/speciesEdit.pug", {
+        species,
+        commonNames: common,
+        scientificNames: scientific,
+        classOptions: [],
+        speciesTypes: ["Fish"],
+        errors: new Map(),
+      });
+
+      assert.match(html, /Kribensis/);
+      assert.match(html, /Pelvicachromis pulcher/);
+      assert.match(html, /\/admin\/species\/3\/common-names\/11/);
+      assert.match(html, /\/admin\/species\/3\/scientific-names\/22/);
+    });
+
+    void test("the edit page offers no delete for the Canonical name", () => {
+      const html = render("admin/speciesEdit.pug", {
+        species,
+        commonNames: common,
+        scientificNames: [
+          { ...scientific[0], canonical: true },
+          { name_id: 23, species_id: 3, kind: "scientific", name: "Pelmatochromis pulcher", canonical: false },
+        ],
+        classOptions: [],
+        speciesTypes: ["Fish"],
+        errors: new Map(),
+      });
+
+      assert.doesNotMatch(html, /\/admin\/species\/3\/scientific-names\/22/);
+      assert.match(html, /\/admin\/species\/3\/scientific-names\/23/);
+      assert.match(html, />Canonical</);
+    });
+
+    void test("the edit page's save and delete each have a place for a refusal, and no force option", () => {
+      const html = render("admin/speciesEdit.pug", {
+        species,
+        commonNames: common,
+        scientificNames: scientific,
+        classOptions: [],
+        speciesTypes: ["Fish"],
+        errors: new Map(),
+      });
+
+      assert.match(html, /hx-target="#species-delete-refusal"/);
+      assert.match(html, /hx-target="#species-edit-refusal"/);
+      assert.match(html, /id="species-edit-refusal"/);
+      assert.match(html, /all its Names/);
+      assert.match(html, /id="species-delete-refusal"/);
+      assert.doesNotMatch(html, /force/);
+    });
+
+    void test("a new Name row renders the Name and its delete", () => {
+      const commonRow = render("admin/commonNameRow.pug", { name: common[0], groupId: 3 });
+      assert.match(commonRow, /Kribensis/);
+      assert.match(commonRow, /\/admin\/species\/3\/common-names\/11/);
+
+      const scientificRow = render("admin/scientificNameRow.pug", { name: scientific[0], groupId: 3 });
+      assert.match(scientificRow, /Pelvicachromis pulcher/);
+      assert.match(scientificRow, /\/admin\/species\/3\/scientific-names\/22/);
+    });
+
+    void test("the merge dialog counts the loser's Names by kind", () => {
+      const html = render("admin/mergeSpeciesDialog.pug", {
+        defunctSpecies: species,
+        defunctNames: { common, scientific: [...scientific, { ...scientific[0], name_id: 23 }] },
+      });
+      assert.match(html, /1 common names, 2 scientific names/);
+    });
   });
 
   void describe("Template Include Dependencies", () => {

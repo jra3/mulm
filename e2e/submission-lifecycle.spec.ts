@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { login, logout } from "./helpers/auth";
 import { TEST_USER, TEST_ADMIN, cleanupTestUserSubmissions, getTestDatabase, ensureTestUserExists } from "./helpers/testData";
 import { createTestSubmission } from "./helpers/submissions";
@@ -15,6 +15,58 @@ import { fillTomSelectTypeahead } from "./helpers/tomSelect";
  */
 
 test.describe.configure({ mode: 'serial' });
+
+/**
+ * Re-witness a Submission whose Witness a member's save voided (ADR-0001),
+ * then confirm on the submitter's behalf that it was brought to a meeting so it
+ * re-enters the approval queue. The caller must be logged in as a committee
+ * member who is not the submitter. The reproduction date is past the waiting
+ * period, so it goes straight to awaiting final submission.
+ *
+ * A Witness cannot be confirmed without a Species. A Submission the member
+ * bound by picking a Name opens in the panel already bound; an unbound one is
+ * bound here first, through the panel's typeahead.
+ */
+async function rewitnessAndQueue(page: Page, submissionId: number): Promise<void> {
+	await page.goto(`/submissions/${submissionId}`);
+	await page.waitForSelector("#witness-species");
+
+	if ((await page.locator("#witness-bound-species").count()) === 0) {
+		await expect(page.locator("#witness-species")).toContainText("Not bound to a Species yet");
+		await expect(page.locator('button:has-text("Approve for Screening")')).toHaveCount(0);
+		await fillTomSelectTypeahead(page, "group_id", "Poecilia reticulata", false, false);
+		await page.locator('#witness-species button[type="submit"]:has-text("Bind")').click();
+		// Binding reloads the page with the Species named in the panel
+		await expect(page.locator("#witness-bound-species")).toBeVisible({ timeout: 10000 });
+	}
+
+	const witnessButton = page.locator('button:has-text("Approve for Screening")');
+	await witnessButton.scrollIntoViewIfNeeded();
+	await witnessButton.click();
+	await page.waitForURL(/\/admin\/witness-queue\//, { timeout: 10000 });
+	await page.waitForLoadState("networkidle");
+
+	await page.goto(`/submissions/${submissionId}`);
+	await page.waitForSelector("body");
+
+	const queueButton = page.locator('button:has-text("Confirm on Submitter\'s Behalf")');
+	await queueButton.scrollIntoViewIfNeeded();
+	await queueButton.click();
+	await page.waitForLoadState("networkidle");
+
+	const db = await getTestDatabase();
+	try {
+		const submission = await db.get(
+			"SELECT witness_verification_status, final_submission_on, species_id FROM submissions WHERE id = ?",
+			submissionId
+		);
+		expect(submission.witness_verification_status).toBe("confirmed");
+		expect(submission.final_submission_on).toBeTruthy();
+		expect(submission.species_id).toBeTruthy();
+	} finally {
+		await db.close();
+	}
+}
 
 test.describe("Submission Complete Lifecycle", () => {
 	test.beforeEach(async () => {
@@ -60,6 +112,7 @@ test.describe("Submission Complete Lifecycle", () => {
 				witnessed: true,
 				witnessedBy: admin.id,
 				witnessedDaysAgo: 70, // 70 days ago - well past the 60-day requirement
+				bound: true, // the witness bound it; approval requires a Species
 			});
 		} finally {
 			await db.close();
@@ -105,11 +158,8 @@ test.describe("Submission Complete Lifecycle", () => {
 		// Wait for the approval form to fully load
 		await page.waitForLoadState("networkidle");
 
-		// Select species using Tom Select typeahead (required field)
-		await fillTomSelectTypeahead(page, "group_id", "Poecilia reticulata");
-
-		// Wait for HTMX to update the points dropdown based on selected species
-		await page.waitForTimeout(500);
+		// The approval panel shows the bound Species; there is no species step
+		await expect(page.locator("#approval-species-name")).toHaveText("Poecilia reticulata");
 
 		// Select base points from dropdown
 		await page.selectOption('select[name="points"]', "10");
@@ -128,6 +178,8 @@ test.describe("Submission Complete Lifecycle", () => {
 			expect(submission.approved_on).toBeTruthy();
 			expect(submission.approved_by).toBe(adminId);
 			expect(submission.points).toBe(10);
+			// Bound to the Species the committee picked
+			expect(submission.species_id).toBeTruthy();
 			// Witness data should still be preserved
 			expect(submission.witnessed_by).toBe(adminId);
 			expect(submission.witnessed_on).toBeTruthy();
@@ -144,7 +196,7 @@ test.describe("Submission Complete Lifecycle", () => {
 		}
 	});
 
-	test("changes path: draft → submit → witness → wait → changes → edit → resubmit → approve", async ({ page }) => {
+	test("changes path: draft → submit → witness → wait → changes → edit → resubmit → re-witness → approve", async ({ page }) => {
 		// Step 1: Create a submitted submission with witness confirmation (waiting period satisfied)
 		const db = await getTestDatabase();
 		let submissionId: number;
@@ -206,7 +258,7 @@ test.describe("Submission Complete Lifecycle", () => {
 			expect(submission.changes_requested_on).toBeTruthy();
 			expect(submission.changes_requested_by).toBe(adminId);
 			expect(submission.changes_requested_reason).toBe("Please add more photos of the fry");
-			// Witness data should be preserved
+			// Asking for changes does not void the Witness; the member's save will
 			expect(submission.witnessed_by).toBe(adminId);
 			expect(submission.witnessed_on).toBeTruthy();
 			expect(submission.witness_verification_status).toBe("confirmed");
@@ -240,7 +292,7 @@ test.describe("Submission Complete Lifecycle", () => {
 		await page.waitForURL(/\/submissions\/\d+/, { timeout: 10000 });
 		await page.waitForLoadState("networkidle");
 
-		// Step 4: Verify changes_requested fields cleared but witness data preserved
+		// Step 4: Verify changes_requested fields cleared and the Witness voided
 		const db3 = await getTestDatabase();
 		try {
 			const submission = await db3.get("SELECT * FROM submissions WHERE id = ?", submissionId);
@@ -250,17 +302,21 @@ test.describe("Submission Complete Lifecycle", () => {
 			// Edits should be saved
 			expect(submission.count).toBe("30");
 			expect(submission.temperature).toBe("76");
-			// Witness data should still be preserved
-			expect(submission.witnessed_by).toBe(adminId);
-			expect(submission.witnessed_on).toBeTruthy();
-			expect(submission.witness_verification_status).toBe("confirmed");
+			// The Witness attested to the form, so the member's edit voids it
+			// (ADR-0001) and the Submission awaits a Witness again
+			expect(submission.witnessed_by).toBeNull();
+			expect(submission.witnessed_on).toBeNull();
+			expect(submission.witness_verification_status).toBe("pending");
+			expect(submission.final_submission_on).toBeNull();
 		} finally {
 			await db3.close();
 		}
 
-		// Step 5: Logout member, login as admin, and approve
+		// Step 5: Logout member, login as admin, re-witness, queue, and approve
 		await logout(page);
 		await login(page, TEST_ADMIN);
+
+		await rewitnessAndQueue(page, submissionId);
 
 		await page.goto(`/submissions/${submissionId}`);
 		await page.waitForSelector("body");
@@ -272,9 +328,8 @@ test.describe("Submission Complete Lifecycle", () => {
 		// Wait for the approval form to fully load
 		await page.waitForLoadState("networkidle");
 
-		// Select species using Tom Select typeahead (required field)
-		await fillTomSelectTypeahead(page, "group_id", "Poecilia reticulata");
-		await page.waitForTimeout(500);
+		// The approval panel shows the bound Species; there is no species step
+		await expect(page.locator("#approval-species-name")).toHaveText("Poecilia reticulata");
 
 		// Select base points from dropdown
 		await page.selectOption('select[name="points"]', "10");
@@ -292,7 +347,7 @@ test.describe("Submission Complete Lifecycle", () => {
 			expect(submission.approved_on).toBeTruthy();
 			expect(submission.approved_by).toBe(adminId);
 			expect(submission.points).toBe(10);
-			// Witness data should still be preserved
+			// Re-witnessed after the edit
 			expect(submission.witnessed_by).toBe(adminId);
 			expect(submission.witnessed_on).toBeTruthy();
 		} finally {
@@ -380,7 +435,7 @@ test.describe("Submission Complete Lifecycle", () => {
 		await expect(page.locator("text=Please add photos that clearly show the fry.")).toBeVisible();
 	});
 
-	test("complex path: witness → changes → resubmit → changes again → approve", async ({ page }) => {
+	test("complex path: witness → changes → resubmit → changes again → resubmit → re-witness → approve", async ({ page }) => {
 		// Step 1: Create a witnessed submission (waiting period satisfied)
 		const db = await getTestDatabase();
 		let submissionId: number;
@@ -458,11 +513,14 @@ test.describe("Submission Complete Lifecycle", () => {
 			const submission = await db2.get("SELECT * FROM submissions WHERE id = ?", submissionId);
 			expect(submission.changes_requested_on).toBeNull();
 			expect(submission.ph).toBe("7.5");
+			// The resubmit voided the Witness (ADR-0001)
+			expect(submission.witness_verification_status).toBe("pending");
 		} finally {
 			await db2.close();
 		}
 
-		// Step 4: Admin requests changes again (second time)
+		// Step 4: Admin requests changes again (second time), now from the
+		// witness step
 		await logout(page);
 		await login(page, TEST_ADMIN);
 
@@ -499,9 +557,11 @@ test.describe("Submission Complete Lifecycle", () => {
 		await page.waitForURL(/\/submissions\/\d+/, { timeout: 10000 });
 		await page.waitForLoadState("networkidle");
 
-		// Step 6: Admin approves
+		// Step 6: Admin re-witnesses, queues it, and approves
 		await logout(page);
 		await login(page, TEST_ADMIN);
+
+		await rewitnessAndQueue(page, submissionId);
 
 		await page.goto(`/submissions/${submissionId}`);
 		await page.waitForSelector("body");
@@ -513,9 +573,8 @@ test.describe("Submission Complete Lifecycle", () => {
 		// Wait for the approval form to fully load
 		await page.waitForLoadState("networkidle");
 
-		// Select species using Tom Select typeahead (required field)
-		await fillTomSelectTypeahead(page, "group_id", "Poecilia reticulata");
-		await page.waitForTimeout(500);
+		// The approval panel shows the bound Species; there is no species step
+		await expect(page.locator("#approval-species-name")).toHaveText("Poecilia reticulata");
 
 		// Select base points from dropdown
 		await page.selectOption('select[name="points"]', "10");
@@ -526,7 +585,7 @@ test.describe("Submission Complete Lifecycle", () => {
 		await page.waitForURL(/\/admin\/queue\//, { timeout: 10000 });
 		await page.waitForLoadState("networkidle");
 
-		// Step 7: Verify final state - witness data preserved through multiple change cycles
+		// Step 7: Verify final state - witnessed again after the change cycles
 		const db3 = await getTestDatabase();
 		try {
 			const submission = await db3.get("SELECT * FROM submissions WHERE id = ?", submissionId);
@@ -534,7 +593,7 @@ test.describe("Submission Complete Lifecycle", () => {
 			expect(submission.changes_requested_on).toBeNull();
 			expect(submission.ph).toBe("7.5");
 			expect(submission.substrate_type).toBe("Sand");
-			// Witness data should still be preserved
+			// Confirmed by the re-witness, not carried over from before the edits
 			expect(submission.witnessed_by).toBe(adminId);
 			expect(submission.witnessed_on).toBeTruthy();
 			expect(submission.witness_verification_status).toBe("confirmed");

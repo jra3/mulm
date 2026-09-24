@@ -1,5 +1,6 @@
 import { query, writeConn } from './conn';
 import type { ImageMetadata } from '../utils/r2-client';
+import { anyNameSql, speciesJoinSql } from "@/species";
 
 export interface CollectionEntry {
   id: number;
@@ -116,14 +117,13 @@ export async function getCollectionForMember(
     SELECT
       c.*,
       sng.canonical_genus || ' ' || sng.canonical_species_name AS canonical_scientific_name,
-      (SELECT common_name FROM species_common_name
-       WHERE group_id = c.group_id LIMIT 1) AS canonical_common_name,
+      ${anyNameSql("common", "c.group_id")} AS canonical_common_name,
       sng.program_class,
       sng.species_type,
       sng.is_cares_species,
       m.display_name AS member_display_name
     FROM species_collection c
-    LEFT JOIN species_name_group sng ON c.group_id = sng.group_id
+    ${speciesJoinSql("c.group_id", "sng")}
     JOIN members m ON c.member_id = m.id
     WHERE c.member_id = ?
   `;
@@ -331,14 +331,13 @@ export async function getCollectionEntry(
     SELECT
       c.*,
       sng.canonical_species_name || ' ' || sng.canonical_genus AS canonical_scientific_name,
-      (SELECT common_name FROM species_common_name
-       WHERE group_id = c.group_id LIMIT 1) AS canonical_common_name,
+      ${anyNameSql("common", "c.group_id")} AS canonical_common_name,
       sng.program_class,
       sng.species_type,
       sng.is_cares_species,
       m.display_name AS member_display_name
     FROM species_collection c
-    LEFT JOIN species_name_group sng ON c.group_id = sng.group_id
+    ${speciesJoinSql("c.group_id", "sng")}
     JOIN members m ON c.member_id = m.id
     WHERE c.id = ?
   `;
@@ -396,7 +395,7 @@ export async function getCollectionStats(memberId: number): Promise<CollectionSt
       sng.program_class,
       COUNT(*) as count
     FROM species_collection c
-    JOIN species_name_group sng ON c.group_id = sng.group_id
+    ${speciesJoinSql("c.group_id", "sng", { required: true })}
     WHERE c.member_id = ? AND c.removed_date IS NULL
     GROUP BY sng.program_class`,
     [memberId]
@@ -407,7 +406,7 @@ export async function getCollectionStats(memberId: number): Promise<CollectionSt
       sng.species_type,
       COUNT(*) as count
     FROM species_collection c
-    JOIN species_name_group sng ON c.group_id = sng.group_id
+    ${speciesJoinSql("c.group_id", "sng", { required: true })}
     WHERE c.member_id = ? AND c.removed_date IS NULL
     GROUP BY sng.species_type`,
     [memberId]
@@ -472,14 +471,13 @@ export async function getRecentCollectionAdditions(limit = 10): Promise<Collecti
     `SELECT
       c.*,
       sng.canonical_species_name || ' ' || sng.canonical_genus AS scientific_name,
-      (SELECT common_name FROM species_common_name
-       WHERE group_id = c.group_id LIMIT 1) AS common_name,
+      ${anyNameSql("common", "c.group_id")} AS common_name,
       sng.program_class,
       sng.species_type,
       sng.is_cares_species,
       m.display_name AS member_display_name
     FROM species_collection c
-    JOIN species_name_group sng ON c.group_id = sng.group_id
+    ${speciesJoinSql("c.group_id", "sng", { required: true })}
     JOIN members m ON c.member_id = m.id
     WHERE c.visibility = 'public' AND c.removed_date IS NULL
     ORDER BY c.created_at DESC
