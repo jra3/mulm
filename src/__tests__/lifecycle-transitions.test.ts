@@ -574,7 +574,13 @@ void describe("Submission lifecycle - transitions", () => {
       ]);
 
       const fulfilled = results.filter((r) => r.status === "fulfilled");
+      const rejected = results.filter((r) => r.status === "rejected");
       assert.strictEqual(fulfilled.length, 1, "one confirmation, not two");
+      assert.strictEqual(rejected.length, 1);
+      assert.ok(
+        rejected[0].reason instanceof StateError,
+        `the loser is refused by the table, not by the driver: ${String(rejected[0].reason)}`
+      );
       assert.strictEqual((await readSubmission(id))!.witness_verification_status, "confirmed");
     });
 

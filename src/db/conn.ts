@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import sqlite3 from "sqlite3";
 import { open, Database } from "sqlite";
 import config from "../config.json";
@@ -163,11 +164,47 @@ export async function deleteOne(table: TableName, key: PartialRow) {
 }
 
 /**
- * Execute a function within a database transaction.
+ * The tail of the queue of transactions waiting for the write connection.
+ *
+ * Every transaction shares the one write connection, and SQLite refuses a
+ * second BEGIN on a connection while one is open. Queueing them means two
+ * requests racing for the same row run one after the other: the second reads
+ * what the first committed and is refused by the rules, not by the driver.
+ */
+let transactionQueue: Promise<unknown> = Promise.resolve();
+
+/**
+ * Marks the async context of a transaction's callback, so a nested call fails
+ * instead of waiting on itself. `open` goes false at commit or rollback: work
+ * the callback started without awaiting may still run later, and is free then
+ * to open a transaction of its own.
+ */
+const insideTransaction = new AsyncLocalStorage<{ open: boolean }>();
+
+/**
+ * Execute a function within a database transaction, after any transaction
+ * already running or waiting has finished.
  * The try/catch around ROLLBACK is intentional - it's the standard pattern
  * for the sqlite3 package which doesn't expose transaction state checking.
+ * @throws Error if called from inside another transaction's callback
  */
 export async function withTransaction<T>(fn: (db: Database) => Promise<T>): Promise<T> {
+  if (insideTransaction.getStore()?.open) {
+    throw new Error("withTransaction cannot be called inside another transaction");
+  }
+  const run = transactionQueue.then(async () => {
+    const context = { open: true };
+    try {
+      return await insideTransaction.run(context, () => runTransaction(fn));
+    } finally {
+      context.open = false;
+    }
+  });
+  transactionQueue = run.catch(() => undefined);
+  return run;
+}
+
+async function runTransaction<T>(fn: (db: Database) => Promise<T>): Promise<T> {
   const db = writeConn;
   await db.exec("BEGIN TRANSACTION;");
   try {

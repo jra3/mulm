@@ -1,5 +1,5 @@
 import { makePasswordEntry, ScryptPassword } from "../auth";
-import { db, query, deleteOne, insertOne, updateOne } from "./conn";
+import { db, query, deleteOne, insertOne, updateOne, withTransaction } from "./conn";
 import { logger } from "@/utils/logger";
 import { recordActivity, removeActivity } from "./activity";
 import { specialtyAwards, getCountableSpecialtyAwards } from "@/specialtyAwards";
@@ -145,49 +145,52 @@ export async function createMember(
   } = {},
   isAdmin: boolean = false
 ) {
-  const conn = db(true);
-  await conn.exec("BEGIN TRANSACTION;");
+  // Hash before taking the write connection: scrypt is slow, and every other
+  // transaction queues behind this one.
+  const passwordEntry = credentials.password
+    ? await makePasswordEntry(credentials.password)
+    : undefined;
 
   try {
-    const userStmt = await conn.prepare(
-      "INSERT INTO members (display_name, contact_email, is_admin) VALUES (?, ?, ?)"
-    );
-    // is this a bug... we should return the data, not the lastID
-    let memberId;
-    try {
-      memberId = (await userStmt.run(name, email, isAdmin ? 1 : 0)).lastID;
-    } finally {
-      await userStmt.finalize();
-    }
-
-    if (credentials.google_sub) {
-      const googleStmt = await conn.prepare(
-        "INSERT INTO google_account (google_sub, member_id, google_email) VALUES (?, ?, ?)"
+    return await withTransaction(async (conn) => {
+      const userStmt = await conn.prepare(
+        "INSERT INTO members (display_name, contact_email, is_admin) VALUES (?, ?, ?)"
       );
+      // is this a bug... we should return the data, not the lastID
+      let memberId;
       try {
-        await googleStmt.run(credentials.google_sub, memberId, email);
+        memberId = (await userStmt.run(name, email, isAdmin ? 1 : 0)).lastID;
       } finally {
-        await googleStmt.finalize();
+        await userStmt.finalize();
       }
-    }
 
-    if (credentials.password) {
-      const { N, r, p, salt, hash } = await makePasswordEntry(credentials.password);
-      const passwordStmt = await conn.prepare(
-        "INSERT INTO password_account (member_id, N, r, p, salt, hash) VALUES (?, ?, ?, ?, ?, ?)"
-      );
-      try {
-        await passwordStmt.run(memberId, N, r, p, salt, hash);
-      } finally {
-        await passwordStmt.finalize();
+      if (credentials.google_sub) {
+        const googleStmt = await conn.prepare(
+          "INSERT INTO google_account (google_sub, member_id, google_email) VALUES (?, ?, ?)"
+        );
+        try {
+          await googleStmt.run(credentials.google_sub, memberId, email);
+        } finally {
+          await googleStmt.finalize();
+        }
       }
-    }
 
-    await conn.exec("COMMIT;");
-    return memberId as number;
+      if (passwordEntry) {
+        const { N, r, p, salt, hash } = passwordEntry;
+        const passwordStmt = await conn.prepare(
+          "INSERT INTO password_account (member_id, N, r, p, salt, hash) VALUES (?, ?, ?, ?, ?, ?)"
+        );
+        try {
+          await passwordStmt.run(memberId, N, r, p, salt, hash);
+        } finally {
+          await passwordStmt.finalize();
+        }
+      }
+
+      return memberId as number;
+    });
   } catch (err) {
     logger.error("Failed to create member", err);
-    await conn.exec("ROLLBACK;");
     throw new Error("Failed to create member");
   }
 }
