@@ -25,15 +25,24 @@ const memberRecords = [
  * winner's, dropping any URL the winner already has; delete removes them.
  */
 const enrichment = [
-  { key: "images", table: "species_images", url: "image_url" },
-  { key: "externalReferences", table: "species_external_references", url: "reference_url" },
+  { key: "images", table: "species_images", column: "group_id", url: "image_url" },
+  {
+    key: "externalReferences",
+    table: "species_external_references",
+    column: "group_id",
+    url: "reference_url",
+  },
 ] as const;
 
 /**
  * Records of past syncs and IUCN suggestions about one Species' names. They
  * describe the loser, not the winner, so merge and delete both remove them.
  */
-const syncRecords = ["external_data_sync_log", "iucn_sync_log", "iucn_canonical_recommendations"];
+const syncRecords = [
+  { table: "external_data_sync_log", column: "group_id" },
+  { table: "iucn_sync_log", column: "group_id" },
+  { table: "iucn_canonical_recommendations", column: "group_id" },
+] as const;
 
 export type SpeciesReferences = Record<
   (typeof memberRecords)[number]["key"] | (typeof enrichment)[number]["key"],
@@ -42,10 +51,7 @@ export type SpeciesReferences = Record<
 
 /** How many rows elsewhere belong to this Species, by kind. */
 export async function countReferencesOfSpecies(speciesId: number): Promise<SpeciesReferences> {
-  const tables = [
-    ...memberRecords,
-    ...enrichment.map((e) => ({ key: e.key, table: e.table, column: "group_id" })),
-  ];
+  const tables = [...memberRecords, ...enrichment];
   const [row] = await query<SpeciesReferences>(
     `SELECT ${tables
       .map((t) => `(SELECT COUNT(*) FROM ${t.table} WHERE ${t.column} = ?) AS ${t.key}`)
@@ -90,15 +96,16 @@ export async function moveReferences(db: Database, winnerId: number, loserId: nu
     await db.run(`UPDATE ${t.table} SET ${t.column} = ? WHERE ${t.column} = ?`, [winnerId, loserId]);
   }
   for (const t of enrichment) {
+    const c = t.column;
     await db.run(
-      `DELETE FROM ${t.table} WHERE group_id = ? AND ${t.url} IN (SELECT ${t.url} FROM ${t.table} WHERE group_id = ?)`,
+      `DELETE FROM ${t.table} WHERE ${c} = ? AND ${t.url} IN (SELECT ${t.url} FROM ${t.table} WHERE ${c} = ?)`,
       [loserId, winnerId]
     );
     await db.run(
       `UPDATE ${t.table}
-       SET group_id = ?,
-           display_order = display_order + (SELECT COALESCE(MAX(display_order) + 1, 0) FROM ${t.table} WHERE group_id = ?)
-       WHERE group_id = ?`,
+       SET ${c} = ?,
+           display_order = display_order + (SELECT COALESCE(MAX(display_order) + 1, 0) FROM ${t.table} WHERE ${c} = ?)
+       WHERE ${c} = ?`,
       [winnerId, winnerId, loserId]
     );
   }
@@ -106,16 +113,16 @@ export async function moveReferences(db: Database, winnerId: number, loserId: nu
 }
 
 /** In delete's transaction: the Species' gallery, links and sync records go with it. */
-export async function deleteOwnedRows(db: Database, speciesId: number) {
+export async function deleteEnrichmentAndSyncRecords(db: Database, speciesId: number) {
   for (const t of enrichment) {
-    await db.run(`DELETE FROM ${t.table} WHERE group_id = ?`, [speciesId]);
+    await db.run(`DELETE FROM ${t.table} WHERE ${t.column} = ?`, [speciesId]);
   }
   await deleteSyncRecords(db, speciesId);
 }
 
 async function deleteSyncRecords(db: Database, speciesId: number) {
-  for (const table of syncRecords) {
-    await db.run(`DELETE FROM ${table} WHERE group_id = ?`, [speciesId]);
+  for (const t of syncRecords) {
+    await db.run(`DELETE FROM ${t.table} WHERE ${t.column} = ?`, [speciesId]);
   }
 }
 
@@ -123,5 +130,5 @@ async function deleteSyncRecords(db: Database, speciesId: number) {
 export const speciesReferenceTables: string[] = [
   ...memberRecords.map((t) => t.table),
   ...enrichment.map((t) => t.table),
-  ...syncRecords,
+  ...syncRecords.map((t) => t.table),
 ];

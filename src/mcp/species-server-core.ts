@@ -1142,8 +1142,18 @@ async function handleMergeSpeciesGroups(args: MergeSpeciesGroupsArgs) {
       defunct_canonical_name_kept_as_scientific_name: plan.keepsLoserCanonicalName,
       submissions_to_update: plan.submissions.total,
       approved_submissions_to_update: plan.submissions.approved,
-      references_to_move: plan.references,
-      members_keeping_both: plan.collectionConflicts,
+      references_to_move: {
+        collection_entries: plan.references.collection,
+        cares_articles: plan.references.caresArticles,
+        cares_fry_shares: plan.references.caresFryShares,
+        images: plan.references.images,
+        external_references: plan.references.externalReferences,
+      },
+      canonical_becomes_cares: plan.winnerBecomesCares,
+      members_keeping_both: plan.collectionConflicts.map((c) => ({
+        member_id: c.memberId,
+        display_name: c.displayName,
+      })),
     },
   };
 

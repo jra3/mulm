@@ -230,6 +230,37 @@ void describe("merge", () => {
     assert.strictEqual(moved.images, 1);
   });
 
+  void test("a CARES loser makes the winner CARES, so its records still count", async () => {
+    const winner = await createTestSpecies("Winnerus", "maximus");
+    const loser = await createTestSpecies("Loserus", "minimus");
+    await db.run("UPDATE species_name_group SET is_cares_species = 1 WHERE group_id = ?", [loser]);
+    await addToCollection(alice, loser, { caresRegistered: "2026-02-01" });
+
+    assert.strictEqual((await previewMerge(winner, loser)).winnerBecomesCares, true);
+    await mergeSpecies(winner, loser);
+
+    const row = await db.get<{ is_cares_species: number }>(
+      "SELECT is_cares_species FROM species_name_group WHERE group_id = ?",
+      [winner]
+    );
+    assert.strictEqual(row!.is_cares_species, 1);
+  });
+
+  void test("a non-CARES loser leaves the winner's CARES flag alone", async () => {
+    const winner = await createTestSpecies("Winnerus", "maximus");
+    const loser = await createTestSpecies("Loserus", "minimus");
+    await db.run("UPDATE species_name_group SET is_cares_species = 1 WHERE group_id = ?", [winner]);
+
+    assert.strictEqual((await previewMerge(winner, loser)).winnerBecomesCares, false);
+    await mergeSpecies(winner, loser);
+
+    const row = await db.get<{ is_cares_species: number }>(
+      "SELECT is_cares_species FROM species_name_group WHERE group_id = ?",
+      [winner]
+    );
+    assert.strictEqual(row!.is_cares_species, 1);
+  });
+
   void test("the preview counts what moves and names who blocks it", async () => {
     const winner = await createTestSpecies("Winnerus", "maximus");
     const loser = await createTestSpecies("Loserus", "minimus");

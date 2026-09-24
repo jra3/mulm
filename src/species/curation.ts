@@ -12,7 +12,7 @@ import { listNames, nameTable } from "./names";
 import { admitPointClass } from "./pointClass";
 import {
   countReferencesOfSpecies,
-  deleteOwnedRows,
+  deleteEnrichmentAndSyncRecords,
   findCollectionConflicts,
   moveReferences,
   type CollectionConflict,
@@ -326,6 +326,8 @@ export type MergePreview = {
   references: SpeciesReferences;
   /** Members who keep both Species now. While any do, merge is refused. */
   collectionConflicts: CollectionConflict[];
+  /** Whether the winner becomes a CARES Species, because the loser is one and it is not. */
+  winnerBecomesCares: boolean;
 };
 
 /**
@@ -368,6 +370,7 @@ export async function previewMerge(winnerId: number, loserId: number): Promise<M
     submissions,
     references,
     collectionConflicts,
+    winnerBecomesCares: Boolean(loser.is_cares_species) && !winner.is_cares_species,
   };
 }
 
@@ -387,7 +390,8 @@ function collectionConflictRefusal(conflicts: CollectionConflict[]): CatalogueRe
  * loser's Submissions are rebound to the winner, so approved Submissions and
  * their Points are untouched. Collection entries and CARES records move to the
  * winner, images and links too (less those the winner already has), and the
- * loser's sync records go (`references.ts`); then the loser is deleted.
+ * loser's sync records go (`references.ts`); a CARES loser makes the winner
+ * CARES; then the loser is deleted.
  * @throws CatalogueRefusal if either Species is missing, they are the same,
  *   or a member keeps both in their collection (code `referenced`)
  */
@@ -413,6 +417,11 @@ export async function mergeSpecies(winnerId: number, loserId: number): Promise<v
       await moveNames(db, "scientific", winnerId, loserId);
       await db.run("UPDATE submissions SET species_id = ? WHERE species_id = ?", [winnerId, loserId]);
       await moveReferences(db, winnerId, loserId);
+      // CARES records move to the winner, and CARES stats count only a CARES
+      // Species: a CARES loser makes the winner one.
+      if (loser.is_cares_species) {
+        await db.run("UPDATE species_name_group SET is_cares_species = 1 WHERE group_id = ?", [winnerId]);
+      }
 
       await db.run("DELETE FROM species_name_group WHERE group_id = ?", [loserId]);
     });
@@ -443,14 +452,13 @@ export async function deleteSpecies(speciesId: number): Promise<number> {
     countSubmissionsOfSpecies(speciesId),
     countReferencesOfSpecies(speciesId),
   ]);
+  const caresRecords = references.caresArticles + references.caresFryShares;
   const held = [
     submissions.total > 0
       ? `${submissions.total} submission(s), ${submissions.approved} of them approved`
       : null,
     references.collection > 0 ? `${references.collection} collection entr(ies)` : null,
-    references.caresArticles + references.caresFryShares > 0
-      ? `${references.caresArticles + references.caresFryShares} CARES record(s)`
-      : null,
+    caresRecords > 0 ? `${caresRecords} CARES record(s)` : null,
   ].filter((h) => h !== null);
   if (held.length > 0) {
     throw new CatalogueRefusal(
@@ -465,7 +473,7 @@ export async function deleteSpecies(speciesId: number): Promise<number> {
       for (const t of Object.values(nameTable)) {
         await db.run(`DELETE FROM ${t.table} WHERE group_id = ?`, [speciesId]);
       }
-      await deleteOwnedRows(db, speciesId);
+      await deleteEnrichmentAndSyncRecords(db, speciesId);
       const result = await db.run("DELETE FROM species_name_group WHERE group_id = ?", [speciesId]);
       changes = result.changes || 0;
     });

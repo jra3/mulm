@@ -91,7 +91,8 @@ through fragments: they go through a catalogue function.
   to the winner, so approved Submissions and their Points are untouched.
   Collection entries and CARES records move too; images and links move less
   those the winner already has; the loser's sync logs and IUCN
-  recommendations are dropped. Refused while a member keeps both Species in
+  recommendations are dropped. A CARES loser makes the winner CARES, so the
+  moved CARES records still count. Refused while a member keeps both Species in
   their collection: their two entries are theirs to reconcile.
   `previewMerge` reports the same plan without writing.
 - **Delete** is refused while any Submission (in any state), collection entry
@@ -126,18 +127,23 @@ through fragments: they go through a catalogue function.
   when the column is, not before. The one exception is the Submission
   form's hidden `species_id`, named for the Submission's column it claims.
 - **Collection and CARES** join a Species by `group_id` through the
-  fragments; their own behaviour is out of this module's scope.
+  fragments; their own behaviour is out of this module's scope. The one
+  exception is merge and delete (`references.ts`): they move or remove other
+  modules' rows by Species id, in the catalogue's transaction, because a
+  Species that goes must take its references with it.
 
 ## Things that are deliberately not here
 
 - External references and images: `src/db/speciesEnrichment.ts`. #404 keeps
   enrichment in its own modules; the detail read model reads it, the admin
-  edit route and the external-data sync write it.
+  edit route and the external-data sync write it. Merge and delete move or
+  remove them by Species id and nothing more (`references.ts`).
 - IUCN status logic and sync: `src/db/iucn.ts`, `src/integrations/iucn.ts`.
   The catalogue writes the IUCN columns (`status.ts`) and lists who is due a
   sync; it decides nothing about them.
 - The CARES registry: `src/db/cares.ts`. The catalogue knows the CARES flag
-  on a Species, nothing more.
+  on a Species; merge moves CARES records to the winner and delete refuses
+  while any exist, nothing more.
 - Moving Submissions: `src/lifecycle/`. The catalogue says which Species a
   Submission references and whether a form agrees with one; the lifecycle
   decides what happens to the Submission.
