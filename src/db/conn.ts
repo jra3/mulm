@@ -183,6 +183,14 @@ let transactionQueue: Promise<unknown> = Promise.resolve();
 const transactionContext = new AsyncLocalStorage<{ active: boolean }>();
 
 /**
+ * How long a transaction may hold the write connection before it is logged.
+ * Every other write waits behind it, so one that never finishes stalls the
+ * app; a timeout could not free the connection (its BEGIN is still open), but
+ * the log says which one to look at.
+ */
+export const TRANSACTION_SLOW_MS = 5000;
+
+/**
  * Execute a function within a database transaction, after any transaction
  * already running or waiting has finished.
  * The try/catch around ROLLBACK is intentional - it's the standard pattern
@@ -195,10 +203,26 @@ export async function withTransaction<T>(fn: (db: Database) => Promise<T>): Prom
   }
   const run = transactionQueue.then(async () => {
     const context = { active: true };
+    const started = Date.now();
+    let slow = false;
+    const watch = setTimeout(() => {
+      slow = true;
+      logger.warn("Transaction still holding the write connection; other writes are waiting", {
+        heldMs: Date.now() - started,
+        callback: fn.name || "(anonymous)",
+      });
+    }, TRANSACTION_SLOW_MS);
+    watch.unref();
     try {
       return await transactionContext.run(context, () => runTransaction(fn));
     } finally {
       context.active = false;
+      clearTimeout(watch);
+      if (slow) {
+        logger.warn("Slow transaction released the write connection", {
+          heldMs: Date.now() - started,
+        });
+      }
     }
   });
   transactionQueue = run.catch(() => undefined);

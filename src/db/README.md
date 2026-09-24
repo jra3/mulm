@@ -254,6 +254,7 @@ All transactions share the one write connection, and SQLite refuses a second `BE
 
 - Don't call `withTransaction()` from inside another transaction's callback. It throws instead of waiting on itself; pass the callback's `db` down instead.
 - Keep slow work (password hashing, network calls) outside the callback; everything else waits for it.
+- A transaction that holds the connection longer than `TRANSACTION_SLOW_MS` (5s) is logged with `logger.warn`, and again when it lets go. There is no timeout: its `BEGIN` is still open, so failing the writes queued behind it would not free the connection.
 - Only `withTransaction()` queues. A plain write on `writeConn` (`insertOne`, `updateOne`, a direct `run`) issued while another request's transaction is open joins that transaction and is rolled back with it.
 
 ### Transaction Error Handling

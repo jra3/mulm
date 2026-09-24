@@ -1,9 +1,10 @@
-import { describe, test, beforeEach, afterEach } from "node:test";
+import { describe, test, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
 import { Database, open } from "sqlite";
 import sqlite3 from "sqlite3";
-import { overrideConnection, withTransaction } from "../db/conn";
+import { overrideConnection, withTransaction, TRANSACTION_SLOW_MS } from "../db/conn";
 import { createMember } from "../db/members";
+import { logger } from "@/utils/logger";
 
 let db: Database;
 
@@ -67,6 +68,51 @@ void describe("withTransaction", () => {
   });
 });
 
+void describe("a transaction holding the queue too long", () => {
+  beforeEach(async () => {
+    db = await open({ filename: ":memory:", driver: sqlite3.Database });
+    overrideConnection(db);
+  });
+
+  afterEach(async () => {
+    mock.reset();
+    mock.timers.reset();
+    await db.close();
+  });
+
+  void test("is logged while it holds it and again when it lets go", async () => {
+    const warn = mock.method(logger, "warn", () => undefined);
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => (release = resolve));
+
+    let entered!: () => void;
+    const inside = new Promise<void>((resolve) => (entered = resolve));
+
+    mock.timers.enable({ apis: ["setTimeout"] });
+    const slow = withTransaction(async () => {
+      mock.timers.tick(TRANSACTION_SLOW_MS);
+      entered();
+      await held;
+    });
+    try {
+      await inside;
+      assert.strictEqual(warn.mock.callCount(), 1);
+      assert.match(String(warn.mock.calls[0].arguments[0]), /holding the write connection/);
+    } finally {
+      release();
+      await slow;
+    }
+    assert.strictEqual(warn.mock.callCount(), 2);
+    assert.match(String(warn.mock.calls[1].arguments[0]), /released the write connection/);
+  });
+
+  void test("a quick transaction logs nothing", async () => {
+    const warn = mock.method(logger, "warn", () => undefined);
+    await withTransaction(async () => undefined);
+    assert.strictEqual(warn.mock.callCount(), 0);
+  });
+});
+
 void describe("createMember", () => {
   beforeEach(async () => {
     db = await open({ filename: ":memory:", driver: sqlite3.Database });
@@ -92,5 +138,14 @@ void describe("createMember", () => {
     assert.strictEqual(count!.n, 2);
     const password = await db.get("SELECT 1 FROM password_account WHERE member_id = ?", memberId);
     assert.ok(password, "the password row committed with the member");
+  });
+
+  void test("stores the Google email trimmed, as it stores the member's", async () => {
+    const memberId = await createMember(" jane@example.com ", "Jane", { google_sub: "sub-1" });
+    const row = await db.get<{ google_email: string }>(
+      "SELECT google_email FROM google_account WHERE member_id = ?",
+      memberId
+    );
+    assert.strictEqual(row!.google_email, "jane@example.com");
   });
 });

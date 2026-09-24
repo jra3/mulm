@@ -153,6 +153,8 @@ export async function createMember(
       ? await makePasswordEntry(credentials.password)
       : undefined;
 
+    const address = email.trim();
+
     return await withTransaction(async (conn) => {
       const userStmt = await conn.prepare(
         "INSERT INTO members (display_name, contact_email, is_admin) VALUES (?, ?, ?)"
@@ -160,7 +162,7 @@ export async function createMember(
       // is this a bug... we should return the data, not the lastID
       let memberId;
       try {
-        memberId = (await userStmt.run(name, email.trim(), isAdmin ? 1 : 0)).lastID;
+        memberId = (await userStmt.run(name, address, isAdmin ? 1 : 0)).lastID;
       } finally {
         await userStmt.finalize();
       }
@@ -170,7 +172,7 @@ export async function createMember(
           "INSERT INTO google_account (google_sub, member_id, google_email) VALUES (?, ?, ?)"
         );
         try {
-          await googleStmt.run(credentials.google_sub, memberId, email);
+          await googleStmt.run(credentials.google_sub, memberId, address);
         } finally {
           await googleStmt.finalize();
         }
