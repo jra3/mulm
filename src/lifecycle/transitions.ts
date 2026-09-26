@@ -16,7 +16,14 @@ import type { ApprovalFormValues } from "@/forms/approval";
 import type { Program } from "@/levelManager";
 import { isProgramType } from "@/programs";
 import { programOfSpeciesType } from "@/points";
-import { addName, canonicalName, checkFormAgreement, findSpeciesById, type NameKind } from "@/species";
+import {
+  addName,
+  canonicalName,
+  checkFormAgreement,
+  findSpeciesById,
+  isScientificNameOf,
+  type NameKind,
+} from "@/species";
 import { logger } from "@/utils/logger";
 import { AuthorizationError, ValidationError, StateError } from "./errors";
 import { deriveState, hasChangesRequested, waitingPeriod } from "./state";
@@ -508,7 +515,8 @@ export type NamesToAdd = { common?: boolean; scientific?: boolean };
  * Add the chosen spellings as Names of the Species, inside the Witness's
  * transaction - the one place a Submission's spellings become Names. A
  * spelling that is blank or already a Name of that kind (as
- * `checkFormAgreement` decides: whole, any case) is never added.
+ * `checkFormAgreement` decides: whole, any case) is never added, nor is a
+ * common spelling that is one of the Species' scientific Names.
  * @returns the texts added, by kind
  */
 async function addSpellingsAsNames(
@@ -536,6 +544,8 @@ async function addSpellingsAsNames(
   for (const kind of ["common", "scientific"] as const) {
     const { spelling, agreement: spellingAgreement } = offered[kind];
     if (namesToAdd[kind] && spellingAgreement === "not-a-name") {
+      // The Latin name standing in for a common name (#421) is not a new one
+      if (kind === "common" && (await isScientificNameOf(speciesId, spelling))) continue;
       await addName(speciesId, kind, spelling);
       added[kind] = spelling;
     }

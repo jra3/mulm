@@ -104,7 +104,10 @@ through fragments: they go through a catalogue function.
   holding a Species id is listed in `references.ts`; a new one goes there.
 - **Names** are never invented. The typeahead gives a common Name the
   Canonical name as its scientific spelling, and a scientific Name the
-  Species' first common Name or nothing.
+  Species' first common Name or nothing. A Species with no common Name goes
+  by its Latin name: the submit form puts the Latin spelling in the common
+  field, and form agreement accepts it there (#421). No common Name row is
+  made from it.
 - **A Submission's spellings become Names only at the Witness**, when the
   witness ticks them on the witness panel (`confirmWitness` in
   `src/lifecycle`, which calls `addName`). Every other `addName` caller adds

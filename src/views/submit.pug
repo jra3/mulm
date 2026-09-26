@@ -118,13 +118,15 @@ html
 
                 // Sync the paired field (common <-> scientific)
                 const pairedId = target.id === 'species_common_name' ? 'species_latin_name' : 'species_common_name';
+                // A Species with no common Name goes by its Latin name, so that
+                // fills the common field (#421)
                 const pairedValue = target.id === 'species_common_name'
                     ? selectedOption.scientific_name
-                    : selectedOption.common_name;
+                    : (selectedOption.common_name || selectedOption.scientific_name);
                 const pairedField = document.getElementById(pairedId);
                 if (pairedField && pairedField.tomSelectInstance) {
                     const instance = pairedField.tomSelectInstance;
-                    // A Species with no Name of the paired kind clears the
+                    // A Species with no scientific Name to pair clears the
                     // paired field: a stale spelling would not agree with it
                     if (!pairedValue) {
                         instance.clear(true);
@@ -133,9 +135,11 @@ html
                     }
                     // Options are keyed by the field's own value
                     if (!instance.options[pairedValue]) {
+                        // Keyed and labelled by the paired field's own name,
+                        // which for the common field may be the Latin spelling
                         instance.addOption({
-                            common_name: selectedOption.common_name,
-                            scientific_name: selectedOption.scientific_name,
+                            common_name: pairedId === 'species_common_name' ? pairedValue : selectedOption.common_name,
+                            scientific_name: pairedId === 'species_latin_name' ? pairedValue : selectedOption.scientific_name,
                             group_id: selectedOption.group_id,
                             program_class: selectedOption.program_class
                         });

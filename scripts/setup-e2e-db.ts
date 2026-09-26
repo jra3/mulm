@@ -71,6 +71,12 @@ async function seedTestSpecies(db: any) {
 			commonNames: ["Platy", "Southern Platyfish"],
 			scientificNames: ["Xiphophorus maculatus"]
 		},
+		// A Species with no common Name: it goes by its Latin name (#421)
+		{
+			group: { canonical_genus: "Poeciliopsis", canonical_species_name: "nocommonus", program_class: "Livebearers", species_type: "Fish" },
+			commonNames: [],
+			scientificNames: ["Poeciliopsis nocommonus"]
+		},
 		// Plant species for E2E testing
 		{
 			group: { canonical_genus: "Cryptocoryne", canonical_species_name: "wendtii", program_class: "Cryptocoryne", species_type: "Plant" },

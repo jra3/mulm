@@ -13,8 +13,9 @@ export type FormSpellings = {
 
 /**
  * How one spelling relates to the Species: blank, one of its Names of the
- * matching kind (the Canonical name is a scientific Name), or not one of its
- * Names.
+ * matching kind (the Canonical name is a scientific Name; the common field
+ * takes a scientific Name when the Species has no common Name), or not one of
+ * its Names.
  */
 export type SpellingAgreement = "empty" | "name" | "not-a-name";
 
@@ -42,8 +43,9 @@ const texts = (names: Name[]) => names.map((n) => n.name);
 /**
  * Does this form agree with this Species? Spellings are compared to the
  * Species' Names whole and case-insensitively - the common spelling against
- * common Names, the Latin spelling against scientific Names, the Canonical
- * name among them - and the Species type and Program class must be equal.
+ * common Names (or, for a Species that has none, its scientific Names), the
+ * Latin spelling against scientific Names, the Canonical name among them -
+ * and the Species type and Program class must be equal.
  *
  * The answer is itemised so a caller can say what disagrees: the save
  * transitions read `agrees`, the witness panel reads the parts.
@@ -57,7 +59,10 @@ export async function checkFormAgreement(
   if (!species) return undefined;
   const names = await listNames(speciesId);
 
-  const commonName = spellingAgreement(form.species_common_name, texts(names.common));
+  // A Species with no common Names goes by its Latin name, so the submit form
+  // fills the common field with it (#421): any scientific Name will do there.
+  const namesForCommonField = names.common.length > 0 ? names.common : names.scientific;
+  const commonName = spellingAgreement(form.species_common_name, texts(namesForCommonField));
   const latinName = spellingAgreement(form.species_latin_name, texts(names.scientific));
   const speciesType = (form.species_type ?? "").trim() === species.species_type;
   const programClass = (form.species_class ?? "").trim() === species.program_class;
@@ -73,4 +78,16 @@ export async function checkFormAgreement(
     speciesType,
     programClass,
   };
+}
+
+/**
+ * Whether a spelling is one of the Species' scientific Names (whole, any
+ * case). The witness never adds such a spelling as a common Name: it is how a
+ * Species with no common Name goes by its Latin name (#421), not a new name.
+ */
+export async function isScientificNameOf(speciesId: number, spelling: string): Promise<boolean> {
+  const trimmed = spelling.trim().toLowerCase();
+  if (!trimmed) return false;
+  const names = await listNames(speciesId);
+  return names.scientific.some((n) => n.name.toLowerCase() === trimmed);
 }
