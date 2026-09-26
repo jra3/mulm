@@ -1,12 +1,4 @@
 /**
- * Import-only tooling: this script writes the species tables directly, not
- * through the Species catalogue (`@/species`). Do not copy this pattern into
- * `src/`. It is a CSV import of IUCN status; it opens its own connection for
- * its dry-run mode and writes the IUCN columns with raw SQL. The in-app path
- * (`src/db/iucn.ts` `updateIucnData`) writes through the catalogue's
- * `updateIucnStatus`.
- */
-/**
  * Import IUCN conservation status data from CARES species CSV file
  *
  * This script imports IUCN Red List conservation status data from a CSV file
@@ -36,13 +28,14 @@
 import * as fs from "fs/promises";
 import * as path from "path";
 import { parse } from "csv-parse/sync";
-import sqlite3 from "sqlite3";
-import { open, Database } from "sqlite";
-import config from "../src/config.json";
+import { ready, db as appDb } from "@/db/conn";
+import { recordIucnSync } from "@/db/iucn";
+import type { IUCNCategory } from "@/integrations/iucn";
+import { resolveSpecies, updateIucnStatus, type Species } from "@/species";
 
 // CARES uses "C" prefix for their classifications
 // Map them to standard IUCN categories
-const CARES_TO_IUCN_MAP: Record<string, string> = {
+const CARES_TO_IUCN_MAP: Record<string, IUCNCategory> = {
   // CARES codes (with C prefix)
   CVU: "VU", // CARES Vulnerable → Vulnerable
   CEN: "EN", // CARES Endangered → Endangered
@@ -84,7 +77,7 @@ interface ParsedSpecies {
   scientificName: string;
   genus: string;
   species: string;
-  iucnCategory: string;
+  iucnCategory: IUCNCategory;
   rawClassification: string;
 }
 
@@ -147,7 +140,7 @@ function parseScientificName(name: string): { genus: string; species: string } |
 }
 
 // Map CARES classification code to standard IUCN category
-function mapToIUCN(classification: string): string | null {
+function mapToIUCN(classification: string): IUCNCategory | null {
   const normalized = classification.trim().toUpperCase();
 
   // Direct mapping
@@ -219,83 +212,25 @@ async function parseCSV(filePath: string): Promise<ParsedSpecies[]> {
   return parsed;
 }
 
-// Find species group ID by scientific name
-async function findSpeciesGroup(
-  db: Database,
-  genus: string,
-  species: string,
-  verbose: boolean
-): Promise<number | null> {
-  // Try to match by canonical name
-  const result = await db.get(
-    `
-    SELECT group_id
-    FROM species_name_group
-    WHERE canonical_genus = ? AND canonical_species_name = ?
-    `,
-    [genus, species]
-  );
-
-  if (result) {
-    if (verbose) {
-      console.log(`  ✓ Found group_id ${result.group_id} for ${genus} ${species}`);
-    }
-    return result.group_id;
+// The Species this Latin name belongs to: any of its scientific Names,
+// matched exactly but in any case (resolveSpecies, as imports bind).
+async function findSpecies(genus: string, species: string, verbose: boolean): Promise<Species | null> {
+  const resolution = await resolveSpecies({ latinName: `${genus} ${species}` });
+  if (!resolution) return null;
+  if (verbose) {
+    console.log(`  ✓ Found group_id ${resolution.species.group_id} for ${genus} ${species}`);
   }
-
-  // Try to match by scientific name variants
-  const variantResult = await db.get(
-    `
-    SELECT sng.group_id
-    FROM species_name_group sng
-    INNER JOIN species_scientific_name ssn ON sng.group_id = ssn.group_id
-    WHERE ssn.scientific_name = ?
-    `,
-    [`${genus} ${species}`]
-  );
-
-  if (variantResult) {
-    if (verbose) {
-      console.log(`  ✓ Found group_id ${variantResult.group_id} via scientific name variant`);
-    }
-    return variantResult.group_id;
-  }
-
-  return null;
+  return resolution.species;
 }
 
-// Update species group with IUCN data
-async function updateSpeciesGroup(
-  db: Database,
-  groupId: number,
-  iucnCategory: string,
-  dryRun: boolean
-): Promise<void> {
+// Record the category through the Species catalogue, and log the import
+async function recordIucnCategory(groupId: number, iucnCategory: IUCNCategory, dryRun: boolean): Promise<void> {
   if (dryRun) {
     console.log(`  [DRY RUN] Would update group_id ${groupId} with IUCN category: ${iucnCategory}`);
     return;
   }
-
-  const now = new Date().toISOString();
-
-  await db.run(
-    `
-    UPDATE species_name_group
-    SET iucn_redlist_category = ?,
-        iucn_last_updated = ?
-    WHERE group_id = ?
-    `,
-    [iucnCategory, now, groupId]
-  );
-
-  // Log to sync table
-  await db.run(
-    `
-    INSERT INTO iucn_sync_log (group_id, sync_date, status, category_found, error_message)
-    VALUES (?, ?, ?, ?, ?)
-    `,
-    [groupId, now, "csv_import", iucnCategory, null]
-  );
+  await updateIucnStatus(groupId, { category: iucnCategory });
+  await recordIucnSync(appDb(true), groupId, "csv_import", { category: iucnCategory });
 }
 
 // Main import function
@@ -328,12 +263,9 @@ async function importIUCNData() {
     process.exit(0);
   }
 
-  // Connect to database
+  // The app's connection, migrated: the catalogue writes through it
   console.log("\nConnecting to database...");
-  const db = await open({
-    filename: config.databaseFile,
-    driver: sqlite3.Database,
-  });
+  await ready;
 
   const result: ImportResult = {
     matched: 0,
@@ -354,26 +286,18 @@ async function importIUCNData() {
     }
 
     try {
-      const groupId = await findSpeciesGroup(db, sp.genus, sp.species, verbose);
+      const found = await findSpecies(sp.genus, sp.species, verbose);
 
-      if (groupId) {
+      if (found) {
         result.matched++;
 
-        // Check if already has IUCN data
-        const existing = await db.get(
-          "SELECT iucn_redlist_category FROM species_name_group WHERE group_id = ?",
-          [groupId]
-        );
-
-        if (existing?.iucn_redlist_category) {
+        if (found.iucn_redlist_category) {
           if (verbose) {
-            console.log(
-              `  ℹ Skipping - already has IUCN data: ${existing.iucn_redlist_category}`
-            );
+            console.log(`  ℹ Skipping - already has IUCN data: ${found.iucn_redlist_category}`);
           }
           result.skipped++;
         } else {
-          await updateSpeciesGroup(db, groupId, sp.iucnCategory, dryRun);
+          await recordIucnCategory(found.group_id, sp.iucnCategory, dryRun);
           result.updated++;
           if (verbose) {
             console.log(`  ✓ Updated`);
@@ -390,8 +314,6 @@ async function importIUCNData() {
       console.error(`  ✗ Error: ${(error as Error).message}`);
     }
   }
-
-  await db.close();
 
   // Print summary
   console.log("\n=== Import Summary ===\n");
