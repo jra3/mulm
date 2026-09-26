@@ -81,6 +81,17 @@ test.describe("BAP Form - Field Linking", () => {
 		expect(parseInt(speciesId)).toBeGreaterThan(0);
 	});
 
+	test("fills the common name with the Latin name for a species that has no common name", async ({
+		page,
+	}) => {
+		// Seeded by scripts/setup-e2e-db.ts with no common Name (#421)
+		await fillTomSelectTypeahead(page, "species_latin_name", "Poeciliopsis nocommonus");
+
+		expect(await getTomSelectValue(page, "species_common_name")).toBe("Poeciliopsis nocommonus");
+		const speciesId = await page.inputValue('input[name="species_id"]');
+		expect(parseInt(speciesId)).toBeGreaterThan(0);
+	});
+
 	test("should update hidden species_id field when species is selected", async ({
 		page,
 	}) => {

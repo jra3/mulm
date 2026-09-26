@@ -17,7 +17,9 @@
 //-   "not-a-name" for each of the member's spellings, when bound. Confirming
 //-   adds the ticked spellings to the Species as Names: the common one is
 //-   offered ticked, the Latin one unticked, one that is already a Name is
-//-   shown as such with no box, and a blank one not at all.
+//-   shown as such with no box, and a blank one not at all. With
+//-   commonIsLatinName (the common spelling is one of the Species' scientific
+//-   Names, #421) the common one is shown with no box either.
 //- @param allowed      - the moves this viewer may make
 
 .status-panel.status-panel-admin#witnessPanel
@@ -106,6 +108,12 @@
                                     |  
                                     span.font-medium= submission.species_common_name
                                     |  is already a Name
+                            else if spellingAgreement.commonIsLatinName
+                                p#witness-common-is-latin
+                                    | Common name
+                                    |  
+                                    span.italic= submission.species_common_name
+                                    |  is this Species' Latin name, so it is not added as a common name
                             else if spellingAgreement.commonName === "not-a-name"
                                 label.flex.gap-2.items-center
                                     input(type="checkbox" name="add_common_name" value="on" checked)

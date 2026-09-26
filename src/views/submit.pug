@@ -126,7 +126,7 @@ html
                 const pairedField = document.getElementById(pairedId);
                 if (pairedField && pairedField.tomSelectInstance) {
                     const instance = pairedField.tomSelectInstance;
-                    // A Species with no Name of the paired kind clears the
+                    // A Species with no scientific Name to pair clears the
                     // paired field: a stale spelling would not agree with it
                     if (!pairedValue) {
                         instance.clear(true);
@@ -135,9 +135,11 @@ html
                     }
                     // Options are keyed by the field's own value
                     if (!instance.options[pairedValue]) {
+                        // Keyed and labelled by the paired field's own name,
+                        // which for the common field may be the Latin spelling
                         instance.addOption({
-                            common_name: selectedOption.common_name,
-                            scientific_name: selectedOption.scientific_name,
+                            common_name: pairedId === 'species_common_name' ? pairedValue : selectedOption.common_name,
+                            scientific_name: pairedId === 'species_latin_name' ? pairedValue : selectedOption.scientific_name,
                             group_id: selectedOption.group_id,
                             program_class: selectedOption.program_class
                         });

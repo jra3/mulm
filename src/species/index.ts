@@ -56,6 +56,7 @@ export {
 // Does a Submission's form agree with a Species?
 export {
   checkFormAgreement,
+  isScientificNameOf,
   type FormSpellings,
   type FormAgreement,
   type SpellingAgreement,
