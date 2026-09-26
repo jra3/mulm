@@ -118,9 +118,11 @@ html
 
                 // Sync the paired field (common <-> scientific)
                 const pairedId = target.id === 'species_common_name' ? 'species_latin_name' : 'species_common_name';
+                // A Species with no common Name goes by its Latin name, so that
+                // fills the common field (#421)
                 const pairedValue = target.id === 'species_common_name'
                     ? selectedOption.scientific_name
-                    : selectedOption.common_name;
+                    : (selectedOption.common_name || selectedOption.scientific_name);
                 const pairedField = document.getElementById(pairedId);
                 if (pairedField && pairedField.tomSelectInstance) {
                     const instance = pairedField.tomSelectInstance;

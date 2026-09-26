@@ -940,6 +940,27 @@ void describe("Submission lifecycle - transitions", () => {
       assert.strictEqual(await speciesIdOf(id), guppy);
     });
 
+    void test("picking a Species with no common Names binds, with its Latin name as the common name", async () => {
+      const speciesId = await createSpecies({
+        canonicalGenus: "Nocommonus",
+        canonicalSpeciesName: "latinus",
+        programClass: "Livebearers",
+        speciesType: "Fish",
+      });
+      // What the submit form sends after the pick: the Latin spelling in both fields
+      const pickedForm = {
+        ...form,
+        species_common_name: "Nocommonus latinus",
+        species_latin_name: "Nocommonus latinus",
+        species_id: speciesId,
+      };
+
+      const draft = await createSubmission(member, ctx.member.id, pickedForm, { submit: false });
+      assert.strictEqual(await speciesIdOf(draft), speciesId);
+      await saveDraft(member, draft, pickedForm);
+      assert.strictEqual(await speciesIdOf(draft), speciesId, "the binding survives the save");
+    });
+
     void test("submitting free text produces an unbound Submission", async () => {
       await ensureGuppySpecies(ctx.db);
       const id = await createSubmission(

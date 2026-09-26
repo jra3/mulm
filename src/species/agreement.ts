@@ -42,8 +42,9 @@ const texts = (names: Name[]) => names.map((n) => n.name);
 /**
  * Does this form agree with this Species? Spellings are compared to the
  * Species' Names whole and case-insensitively - the common spelling against
- * common Names, the Latin spelling against scientific Names, the Canonical
- * name among them - and the Species type and Program class must be equal.
+ * common Names (or, for a Species that has none, its scientific Names), the
+ * Latin spelling against scientific Names, the Canonical name among them -
+ * and the Species type and Program class must be equal.
  *
  * The answer is itemised so a caller can say what disagrees: the save
  * transitions read `agrees`, the witness panel reads the parts.
@@ -57,7 +58,10 @@ export async function checkFormAgreement(
   if (!species) return undefined;
   const names = await listNames(speciesId);
 
-  const commonName = spellingAgreement(form.species_common_name, texts(names.common));
+  // A Species with no common Names goes by its Latin name, so the submit form
+  // fills the common field with it (#421): any scientific Name will do there.
+  const commonNames = names.common.length > 0 ? names.common : names.scientific;
+  const commonName = spellingAgreement(form.species_common_name, texts(commonNames));
   const latinName = spellingAgreement(form.species_latin_name, texts(names.scientific));
   const speciesType = (form.species_type ?? "").trim() === species.species_type;
   const programClass = (form.species_class ?? "").trim() === species.program_class;
