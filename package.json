@@ -31,7 +31,7 @@
 		"lint:fix": "eslint 'src/**/*.ts' --fix",
 		"format": "prettier --write \"src/**/*.{ts,js,json}\" \"scripts/**/*.{ts,js}\"",
 		"format:check": "prettier --check \"src/**/*.{ts,js,json}\" \"scripts/**/*.{ts,js}\"",
-		"script": "ts-node",
+		"script": "tsx",
 		"prepare": "husky || true"
 	},
 	"repository": {
