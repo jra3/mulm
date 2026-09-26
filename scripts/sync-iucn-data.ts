@@ -25,8 +25,9 @@
  */
 
 import type { Database } from "sqlite";
-import { ready, db as appDb } from "../src/db/conn";
-import { getIUCNClient, IUCNAPIError } from "../src/integrations/iucn";
+import { ready, db as appDb } from "@/db/conn";
+import { findSpeciesById, speciesFromSql } from "@/species";
+import { getIUCNClient, IUCNAPIError } from "@/integrations/iucn";
 import {
   updateIucnData,
   recordIucnSync,
@@ -35,7 +36,7 @@ import {
   createCanonicalRecommendation,
   type IUCNData,
   type SyncStatus,
-} from "../src/db/iucn";
+} from "@/db/iucn";
 
 interface CLIOptions {
   dryRun: boolean;
@@ -145,12 +146,17 @@ Performance:
 async function getSpeciesToSync(db: Database, options: CLIOptions): Promise<SpeciesForSync[]> {
   if (options.speciesId) {
     // Single species by ID
-    const species = await db.get<SpeciesForSync>(
-      `SELECT group_id, canonical_genus, canonical_species_name, program_class
-       FROM species_name_group WHERE group_id = ?`,
-      [options.speciesId]
-    );
-    return species ? [species] : [];
+    const species = await findSpeciesById(options.speciesId);
+    if (!species) return [];
+    return [
+      {
+        group_id: species.group_id,
+        canonical_genus: species.canonical_genus,
+        canonical_species_name: species.canonical_species_name,
+        program_class: species.program_class,
+        iucn_redlist_category: species.iucn_redlist_category ?? undefined,
+      },
+    ];
   }
 
   if (options.missingOnly) {
@@ -165,9 +171,10 @@ async function getSpeciesToSync(db: Database, options: CLIOptions): Promise<Spec
 
   // All species (default)
   let query = `
-    SELECT group_id, canonical_genus, canonical_species_name, program_class, iucn_redlist_category
-    FROM species_name_group
-    ORDER BY canonical_genus, canonical_species_name
+    SELECT sng.group_id, sng.canonical_genus, sng.canonical_species_name, sng.program_class,
+           sng.iucn_redlist_category
+    FROM ${speciesFromSql("sng")}
+    ORDER BY sng.canonical_genus, sng.canonical_species_name
   `;
 
   if (options.limit) {
