@@ -26,7 +26,7 @@
 
 import type { Database } from "sqlite";
 import { ready, db as appDb } from "@/db/conn";
-import { findSpeciesById, speciesFromSql } from "@/species";
+import { findSpeciesById, speciesFromSql, type Species } from "@/species";
 import { getIUCNClient, IUCNAPIError } from "@/integrations/iucn";
 import {
   updateIucnData,
@@ -49,13 +49,8 @@ interface CLIOptions {
   checkSynonyms: boolean;
 }
 
-interface SpeciesForSync {
-  group_id: number;
-  canonical_genus: string;
-  canonical_species_name: string;
-  program_class?: string;
-  iucn_redlist_category?: string;
-}
+type SpeciesForSync = Pick<Species, "group_id" | "canonical_genus" | "canonical_species_name"> &
+  Partial<Pick<Species, "program_class" | "iucn_redlist_category">>;
 
 interface SyncResult {
   total: number;
@@ -147,16 +142,9 @@ async function getSpeciesToSync(db: Database, options: CLIOptions): Promise<Spec
   if (options.speciesId) {
     // Single species by ID
     const species = await findSpeciesById(options.speciesId);
-    if (!species) return [];
-    return [
-      {
-        group_id: species.group_id,
-        canonical_genus: species.canonical_genus,
-        canonical_species_name: species.canonical_species_name,
-        program_class: species.program_class,
-        iucn_redlist_category: species.iucn_redlist_category ?? undefined,
-      },
-    ];
+    // Named on purpose, so synced even if it already has a category: leave the
+    // category out, or the loop's "already has data" skip would pass it over
+    return species ? [{ ...species, iucn_redlist_category: undefined }] : [];
   }
 
   if (options.missingOnly) {
