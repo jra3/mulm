@@ -212,8 +212,8 @@ async function parseCSV(filePath: string): Promise<ParsedSpecies[]> {
   return parsed;
 }
 
-// The Species whose scientific Name (the Canonical name is one) is this
-// spelling, as imports bind: exact, any case. Never by common Name.
+// The Species this Latin name belongs to: any of its scientific Names,
+// matched exactly but in any case (resolveSpecies, as imports bind).
 async function findSpecies(genus: string, species: string, verbose: boolean): Promise<Species | null> {
   const resolution = await resolveSpecies({ latinName: `${genus} ${species}` });
   if (!resolution) return null;
@@ -224,7 +224,7 @@ async function findSpecies(genus: string, species: string, verbose: boolean): Pr
 }
 
 // Record the category through the Species catalogue, and log the import
-async function updateSpecies(groupId: number, iucnCategory: IUCNCategory, dryRun: boolean): Promise<void> {
+async function recordIucnCategory(groupId: number, iucnCategory: IUCNCategory, dryRun: boolean): Promise<void> {
   if (dryRun) {
     console.log(`  [DRY RUN] Would update group_id ${groupId} with IUCN category: ${iucnCategory}`);
     return;
@@ -297,7 +297,7 @@ async function importIUCNData() {
           }
           result.skipped++;
         } else {
-          await updateSpecies(found.group_id, sp.iucnCategory, dryRun);
+          await recordIucnCategory(found.group_id, sp.iucnCategory, dryRun);
           result.updated++;
           if (verbose) {
             console.log(`  ✓ Updated`);
