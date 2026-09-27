@@ -2,10 +2,6 @@ import * as z from "zod";
 import { refineProgramBonuses } from "@/points";
 
 const approvalFields = z.object({
-  id: z
-    .string()
-    .max(20, "ID too long")
-    .transform((val) => parseInt(val)),
   points: z
     .string()
     .max(10, "Points value too long")

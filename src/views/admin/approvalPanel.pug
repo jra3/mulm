@@ -31,8 +31,6 @@ if !approval
 else
     .container.mx-auto.flex.justify-center.space-x-4
         form(hx-post=`/admin/submissions/${submission.id}/approve` id="approval-form")
-            input(type="hidden" name="id" value=submission.id)
-
             .flex.flex-col.gap-3
                 // The bound Species, read-only
                 .text-white#approval-species

@@ -2,10 +2,9 @@ import { Response } from "express";
 import { MulmRequest } from "@/sessions";
 import type { Database } from "sqlite";
 import * as catalogue from "@/species";
-import { CatalogueRefusal, type RefusalCode, type SpeciesAdminFilters } from "@/species";
+import { CatalogueRefusal, type RefusalCode, type SpeciesAdminFilters, updateIucnStatus } from "@/species";
 import { setSpeciesExternalReferences, setSpeciesImages } from "@/db/speciesEnrichment";
 import {
-  updateIucnData,
   recordIucnSync,
   createCanonicalRecommendation,
   getCanonicalRecommendations,
@@ -58,12 +57,6 @@ function sendRefusal(res: Response, err: unknown): boolean {
  * Admin species list with filters and pagination
  */
 export const listSpecies = async (req: MulmRequest, res: Response) => {
-  const { viewer } = req;
-
-  if (!viewer?.is_admin) {
-    res.status(403).send("Admin access required");
-    return;
-  }
 
   // Parse query parameters for filters
   const filters: SpeciesAdminFilters = {
@@ -75,7 +68,7 @@ export const listSpecies = async (req: MulmRequest, res: Response) => {
     search: getQueryString(req, "search"),
   };
 
-  const sort = (getQueryString(req, "sort") as "name" | "points" | "class") || "name";
+  const sort = z.enum(["name", "points", "class"]).catch("name").parse(getQueryString(req, "sort"));
   const page = getQueryNumber(req, "page") || 1;
   const limit = 50;
   const offset = (page - 1) * limit;
@@ -96,7 +89,7 @@ export const listSpecies = async (req: MulmRequest, res: Response) => {
     filters,
     sort,
     classOptions,
-    speciesTypes: ["Fish", "Plant", "Invert", "Coral"],
+    speciesTypes: catalogue.speciesTypes,
     pagination: {
       currentPage: page,
       totalPages,
@@ -111,12 +104,6 @@ export const listSpecies = async (req: MulmRequest, res: Response) => {
  * Render edit sidebar for species (HTMX partial)
  */
 export const editSpeciesSidebar = async (req: MulmRequest, res: Response) => {
-  const { viewer } = req;
-
-  if (!viewer?.is_admin) {
-    res.status(403).send("Admin access required");
-    return;
-  }
 
   const groupId = parseInt(req.params.groupId);
   if (!groupId) {
@@ -142,7 +129,7 @@ export const editSpeciesSidebar = async (req: MulmRequest, res: Response) => {
     commonNames: names.common,
     scientificNames: names.scientific,
     classOptions,
-    speciesTypes: ["Fish", "Plant", "Invert", "Coral"],
+    speciesTypes: catalogue.speciesTypes,
     errors: new Map(),
   });
 };
@@ -152,12 +139,6 @@ export const editSpeciesSidebar = async (req: MulmRequest, res: Response) => {
  * Update species group metadata
  */
 export const updateSpecies = async (req: MulmRequest, res: Response) => {
-  const { viewer } = req;
-
-  if (!viewer?.is_admin) {
-    res.status(403).send("Admin access required");
-    return;
-  }
 
   const groupId = parseInt(req.params.groupId);
   if (!groupId) {
@@ -214,12 +195,6 @@ export const updateSpecies = async (req: MulmRequest, res: Response) => {
  * instead.
  */
 export const deleteSpecies = async (req: MulmRequest, res: Response) => {
-  const { viewer } = req;
-
-  if (!viewer?.is_admin) {
-    res.status(403).send("Admin access required");
-    return;
-  }
 
   const groupId = parseInt(req.params.groupId);
   if (!groupId) {
@@ -242,12 +217,6 @@ export const deleteSpecies = async (req: MulmRequest, res: Response) => {
  * Delete a common name
  */
 export const deleteCommonNameRoute = async (req: MulmRequest, res: Response) => {
-  const { viewer } = req;
-
-  if (!viewer?.is_admin) {
-    res.status(403).send("Admin access required");
-    return;
-  }
 
   const commonNameId = parseInt(req.params.commonNameId);
   if (!commonNameId) {
@@ -275,12 +244,6 @@ export const deleteCommonNameRoute = async (req: MulmRequest, res: Response) => 
  * Delete a scientific name
  */
 export const deleteScientificNameRoute = async (req: MulmRequest, res: Response) => {
-  const { viewer } = req;
-
-  if (!viewer?.is_admin) {
-    res.status(403).send("Admin access required");
-    return;
-  }
 
   const scientificNameId = parseInt(req.params.scientificNameId);
   if (!scientificNameId) {
@@ -311,12 +274,6 @@ export const deleteScientificNameRoute = async (req: MulmRequest, res: Response)
  * Add a new common name
  */
 export const addCommonNameRoute = async (req: MulmRequest, res: Response) => {
-  const { viewer } = req;
-
-  if (!viewer?.is_admin) {
-    res.status(403).send("Admin access required");
-    return;
-  }
 
   const groupId = parseInt(req.params.groupId);
   if (!groupId) {
@@ -346,12 +303,6 @@ export const addCommonNameRoute = async (req: MulmRequest, res: Response) => {
  * Add a new scientific name
  */
 export const addScientificNameRoute = async (req: MulmRequest, res: Response) => {
-  const { viewer } = req;
-
-  if (!viewer?.is_admin) {
-    res.status(403).send("Admin access required");
-    return;
-  }
 
   const groupId = parseInt(req.params.groupId);
   if (!groupId) {
@@ -381,12 +332,6 @@ export const addScientificNameRoute = async (req: MulmRequest, res: Response) =>
  * Render add common name form (HTMX partial)
  */
 export const addCommonNameForm = (req: MulmRequest, res: Response) => {
-  const { viewer } = req;
-
-  if (!viewer?.is_admin) {
-    res.status(403).send("Admin access required");
-    return;
-  }
 
   const groupId = parseInt(req.params.groupId);
 
@@ -398,12 +343,6 @@ export const addCommonNameForm = (req: MulmRequest, res: Response) => {
  * Render add scientific name form (HTMX partial)
  */
 export const addScientificNameForm = (req: MulmRequest, res: Response) => {
-  const { viewer } = req;
-
-  if (!viewer?.is_admin) {
-    res.status(403).send("Admin access required");
-    return;
-  }
 
   const groupId = parseInt(req.params.groupId);
 
@@ -713,7 +652,7 @@ export const bulkSyncIucn = async (req: MulmRequest, res: Response) => {
         const result = await iucnClient.getSpeciesByName(scientificName);
 
         if (result) {
-          await updateIucnData(database, species.group_id, {
+          await updateIucnStatus(species.group_id, {
             category: result.category,
             taxonId: result.taxonid,
             populationTrend: result.population_trend || undefined,
@@ -821,12 +760,6 @@ export const bulkSyncIucn = async (req: MulmRequest, res: Response) => {
  * Display IUCN canonical name recommendations with filters
  */
 export const listCanonicalRecommendations = async (req: MulmRequest, res: Response) => {
-  const { viewer } = req;
-
-  if (!viewer?.is_admin) {
-    res.status(403).send("Admin access required");
-    return;
-  }
 
   const statusFilter = getQueryString(req, "status") as RecommendationStatus | undefined;
 
@@ -867,10 +800,6 @@ export const listCanonicalRecommendations = async (req: MulmRequest, res: Respon
 export const acceptCanonicalRecommendationRoute = async (req: MulmRequest, res: Response) => {
   const { viewer } = req;
 
-  if (!viewer?.is_admin) {
-    res.status(403).send("Admin access required");
-    return;
-  }
 
   const recommendationId = parseInt(req.params.id);
   if (!recommendationId) {
@@ -881,7 +810,7 @@ export const acceptCanonicalRecommendationRoute = async (req: MulmRequest, res: 
   const database = db(true);
 
   try {
-    await acceptCanonicalRecommendation(database, recommendationId, viewer.id);
+    await acceptCanonicalRecommendation(database, recommendationId, viewer!.id);
 
     // Success - redirect back to the list
     res.set("HX-Redirect", "/admin/species/canonical-recommendations").status(200).send();
@@ -901,10 +830,6 @@ export const acceptCanonicalRecommendationRoute = async (req: MulmRequest, res: 
 export const rejectCanonicalRecommendationRoute = async (req: MulmRequest, res: Response) => {
   const { viewer } = req;
 
-  if (!viewer?.is_admin) {
-    res.status(403).send("Admin access required");
-    return;
-  }
 
   const recommendationId = parseInt(req.params.id);
   if (!recommendationId) {
@@ -915,7 +840,7 @@ export const rejectCanonicalRecommendationRoute = async (req: MulmRequest, res: 
   const database = db(true);
 
   try {
-    await rejectCanonicalRecommendation(database, recommendationId, viewer.id);
+    await rejectCanonicalRecommendation(database, recommendationId, viewer!.id);
 
     // Success - redirect back to the list
     res.set("HX-Redirect", "/admin/species/canonical-recommendations").status(200).send();
@@ -934,12 +859,6 @@ export const rejectCanonicalRecommendationRoute = async (req: MulmRequest, res: 
  * This is a long-running operation that processes species in batches
  */
 export const syncAllIucnData = async (req: MulmRequest, res: Response) => {
-  const { viewer } = req;
-
-  if (!viewer?.is_admin) {
-    res.status(403).send("Admin access required");
-    return;
-  }
 
   const database = db(true);
   const iucnClient = new IUCNClient();
@@ -1023,7 +942,7 @@ async function processRemainingBatches(
         const result = await iucnClient.getSpeciesByName(scientificName);
 
         if (result) {
-          await updateIucnData(database, sp.group_id, {
+          await updateIucnStatus(sp.group_id, {
             category: result.category,
             taxonId: result.taxonid,
             populationTrend: result.population_trend || undefined,
@@ -1064,7 +983,7 @@ async function processRemainingBatches(
           }
         } else {
           // Not found - still update timestamp
-          await updateIucnData(database, sp.group_id, {
+          await updateIucnStatus(sp.group_id, {
             category: "NE",
             taxonId: undefined,
             populationTrend: undefined,

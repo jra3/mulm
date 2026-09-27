@@ -3,8 +3,7 @@
  * through the Species catalogue (`@/species`). Do not copy this pattern into
  * `src/`. It is a CSV import of IUCN status; it opens its own connection for
  * its dry-run mode and writes the IUCN columns with raw SQL. The in-app path
- * (`src/db/iucn.ts` `updateIucnData`) writes through the catalogue's
- * `updateIucnStatus`.
+ * writes through the catalogue's `updateIucnStatus`.
  */
 /**
  * Import IUCN conservation status data from CARES species CSV file

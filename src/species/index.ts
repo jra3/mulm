@@ -20,6 +20,8 @@
 // What a Species, a Name and a Point class are.
 export {
   canonicalName,
+  speciesTypes,
+  isSpeciesType,
   type Species,
   type Name,
   type NameKind,

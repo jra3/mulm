@@ -1,4 +1,5 @@
 import * as z from "zod";
+import { formCheckbox } from "./formBoolean";
 
 export const mergeSpeciesSchema = z
   .object({
@@ -10,10 +11,7 @@ export const mergeSpeciesSchema = z
       .string()
       .min(1, "Canonical species required")
       .transform((val) => parseInt(val)),
-    confirm: z
-      .string()
-      .optional()
-      .transform((val) => val === "on" || val === "true"),
+    confirm: formCheckbox(),
   })
   .refine((data) => data.defunct_group_id !== data.canonical_group_id, {
     message: "Cannot merge a species into itself",

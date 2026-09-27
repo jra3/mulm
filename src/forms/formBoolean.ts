@@ -21,3 +21,12 @@ export function formBoolean() {
     return val === "1";
   }, z.boolean());
 }
+
+/**
+ * A plain checkbox: ticked posts "on", unticked posts nothing.
+ * Pass `strict` to reject any other value instead of reading it as unticked.
+ */
+export function formCheckbox(strict?: { error: string }) {
+  const value = strict ? z.literal("on", strict) : z.string();
+  return value.optional().transform((val) => val === "on");
+}

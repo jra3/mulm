@@ -1,10 +1,7 @@
 import { z } from "zod";
+import { formCheckbox } from "./formBoolean";
 
-/** A ticked checkbox posts "on"; an unticked one posts nothing. */
-const checkbox = z
-  .literal("on", { error: "Unexpected value for a Name to add" })
-  .optional()
-  .transform((val) => val === "on");
+const checkbox = formCheckbox({ error: "Unexpected value for a Name to add" });
 
 /**
  * The witness panel's confirm form: which of the Submission's spellings the

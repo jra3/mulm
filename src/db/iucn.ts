@@ -8,7 +8,7 @@
 import type { Database } from "sqlite";
 import type { IUCNCategory, PopulationTrend } from "@/integrations/iucn";
 import { logger } from "@/utils/logger";
-import { CatalogueRefusal, renameCanonical, speciesFromSql, updateIucnStatus } from "@/species";
+import { CatalogueRefusal, renameCanonical, speciesFromSql } from "@/species";
 
 /**
  * IUCN data to be stored/updated
@@ -68,27 +68,6 @@ export interface IUCNSyncStats {
   not_found_count: number;
   error_count: number;
   last_sync_date: string | null;
-}
-
-/**
- * Update IUCN data for a species group
- *
- * @param db - Database connection
- * @param groupId - Species group ID
- * @param data - IUCN data to update
- * @returns Number of rows affected (should be 1)
- * @throws {Error} If species group not found or database error
- */
-export async function updateIucnData(
-  db: Database,
-  groupId: number,
-  data: IUCNData
-): Promise<number> {
-  // The catalogue is the only writer of the Species row; `db` is kept for
-  // callers and is the same connection.
-  void db;
-  await updateIucnStatus(groupId, data);
-  return 1;
 }
 
 /**
