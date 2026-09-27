@@ -28,7 +28,6 @@ import type { Database } from "sqlite";
 import { ready, db as appDb } from "../src/db/conn";
 import { getIUCNClient, IUCNAPIError } from "../src/integrations/iucn";
 import {
-  updateIucnData,
   recordIucnSync,
   getSpeciesWithMissingIucn,
   getSpeciesNeedingResync,
@@ -36,6 +35,7 @@ import {
   type IUCNData,
   type SyncStatus,
 } from "../src/db/iucn";
+import { updateIucnStatus } from "../src/species";
 
 interface CLIOptions {
   dryRun: boolean;
@@ -210,7 +210,7 @@ async function syncSpecies(
     };
 
     if (!options.dryRun) {
-      await updateIucnData(db, species.group_id, data);
+      await updateIucnStatus(species.group_id, data);
       await recordIucnSync(db, species.group_id, "success", data);
     }
 

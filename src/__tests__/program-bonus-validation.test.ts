@@ -99,7 +99,7 @@ const forms = [
   {
     name: "approval",
     parse: (program: string, bonuses: Record<string, string>) =>
-      approvalSchema(program).safeParse({ id: "1", group_id: "42", points: "10", ...bonuses }),
+      approvalSchema(program).safeParse({ group_id: "42", points: "10", ...bonuses }),
   },
   {
     name: "approved edit",
@@ -207,7 +207,7 @@ void describe("Per-program bonuses - the approval panel shows the issue", () => 
 
 void describe("Per-program bonuses - refinement ordering", () => {
   void test("a body missing a required field reports only that field", () => {
-    const result = approvalSchema("fish").safeParse({ id: "1", flowered: "1" });
+    const result = approvalSchema("fish").safeParse({ flowered: "1" });
     const issues = result.success ? [] : result.error.issues;
 
     assert.deepStrictEqual(
@@ -218,7 +218,6 @@ void describe("Per-program bonuses - refinement ordering", () => {
 
   void test("a program name that is not one of ours still rejects a program-specific bonus", () => {
     const result = approvalSchema("terrestrial").safeParse({
-      id: "1",
       points: "10",
       cares_species: "1",
       first_time_species: "1",

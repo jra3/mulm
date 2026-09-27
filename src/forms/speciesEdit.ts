@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { formCheckbox } from "./formBoolean";
 import { pointClassField } from "./pointClass";
 
 /**
@@ -9,10 +10,7 @@ export const speciesEditForm = z.object({
   canonical_species_name: z.string().trim().min(1, "Species name cannot be empty").max(100),
   program_class: z.string().trim().min(1, "Program class cannot be empty").max(100),
   base_points: pointClassField,
-  is_cares_species: z
-    .string()
-    .optional()
-    .transform((val) => val === "on"),
+  is_cares_species: formCheckbox(),
   external_references: z
     .string()
     .optional()

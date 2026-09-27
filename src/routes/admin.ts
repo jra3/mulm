@@ -11,7 +11,6 @@ import {
 import {
   getQueue,
   getQueueCounts,
-  getSubmissionById,
   getSubmissionsByMember,
   getSubmissionSupplements,
 } from "@/db/submissions";
@@ -38,7 +37,7 @@ import {
   hasSpawnLocations,
 } from "@/forms/submission";
 import { findSpeciesById } from "@/species";
-import { getBodyParam, getBodyString } from "@/utils/request";
+import { getBodyString } from "@/utils/request";
 import { checkAllMemberLevels } from "@/levelManager";
 import { checkAllSpecialtyAwards } from "@/specialtyAwardManager";
 import { logger } from "@/utils/logger";
@@ -542,8 +541,9 @@ export const sendWelcomeEmail = async (req: MulmRequest, res: Response) => {
 export const approveSubmission = async (req: MulmRequest, res: Response) => {
   const { viewer } = req;
 
-  const id = getBodyParam(req, "id") as number;
-  const submission = (await getSubmissionById(id))!;
+  const submission = await validateSubmission(req, res);
+  if (!submission) return;
+  const id = submission.id;
 
   const errors = new Map<string, string>();
   const parsed = approvalSchema(submission.program).safeParse(req.body);

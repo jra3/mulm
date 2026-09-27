@@ -21,6 +21,7 @@ import { join, extname } from "path";
 import { foodTypes, spawnLocations } from "../forms/submission";
 import * as catalogue from "../species";
 import type { Species } from "../species";
+import { programOfSpeciesType } from "../points";
 
 // Type definitions
 
@@ -80,7 +81,7 @@ type RowValidation = {
     species_latin_name: string;
     species_type: string;
     species_class: string;
-    program: string;
+    program: string | null;
     water_type: string | null;
     reproduction_date: string | null;
     count: string | null;
@@ -260,18 +261,9 @@ function normalizeSpawnLocations(input: string | undefined): string | null {
   return matched.length > 0 ? JSON.stringify(matched) : null;
 }
 
-function deriveProgram(speciesType: string): string {
-  switch (speciesType) {
-    case "Fish":
-    case "Invert":
-      return "fish";
-    case "Plant":
-      return "plant";
-    case "Coral":
-      return "coral";
-    default:
-      return "fish";
-  }
+/** The row's Program, or null when its species type is not one we know. */
+function programOfRow(speciesType: string): string | null {
+  return catalogue.isSpeciesType(speciesType) ? programOfSpeciesType(speciesType) : null;
 }
 
 /** What an import takes from the Species a row binds to. */
@@ -436,7 +428,10 @@ async function handleValidateImport(args: ValidateImportArgs) {
 
     // Species type
     const speciesType = row.species_type || "Fish";
-    const program = deriveProgram(speciesType);
+    const program = programOfRow(speciesType);
+    if (!program) {
+      warnings.push(`Unknown species type: "${speciesType}"`);
+    }
 
     // Species class warning
     if (!speciesClass) {
@@ -587,7 +582,11 @@ async function handleImportSubmissions(args: ImportSubmissionsArgs) {
         }
 
         const speciesType = row.species_type || "Fish";
-        const program = deriveProgram(speciesType);
+        const program = programOfRow(speciesType);
+        if (!program) {
+          errors.push({ row_index: i, error: `Unknown species type: "${speciesType}"` });
+          continue;
+        }
         const waterType = normalizeWaterType(row.water_type);
         const foods = normalizeFoods(row.foods);
         const spawnLocs = normalizeSpawnLocations(row.spawn_locations);

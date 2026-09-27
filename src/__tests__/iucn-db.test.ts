@@ -8,7 +8,6 @@ import {
 } from "./helpers/testHelpers";
 // Import functions we're testing
 import {
-  updateIucnData,
   recordIucnSync,
   getIucnSyncLog,
   getSpeciesWithMissingIucn,
@@ -20,7 +19,7 @@ import {
   rejectCanonicalRecommendation,
   type IUCNData,
 } from "../db/iucn";
-import { addName, createSpecies, listNames, renameCanonical } from "@/species";
+import { addName, createSpecies, listNames, renameCanonical, updateIucnStatus } from "@/species";
 
 void describe("IUCN Database Operations", () => {
   let ctx: TestContext;
@@ -33,7 +32,7 @@ void describe("IUCN Database Operations", () => {
     await teardownTestDatabase(ctx);
   });
 
-  void describe("updateIucnData", () => {
+  void describe("updateIucnStatus", () => {
     void test("should update IUCN data for a species group", async () => {
       // Create a test species
       const species = await createTestSpeciesName(
@@ -52,7 +51,7 @@ void describe("IUCN Database Operations", () => {
         populationTrend: "Decreasing",
       };
 
-      await updateIucnData(ctx.db, species.group_id, iucnData);
+      await updateIucnStatus(species.group_id, iucnData);
 
       // Verify the update
       const result = await ctx.db.get(
@@ -77,7 +76,7 @@ void describe("IUCN Database Operations", () => {
         "Test"
       );
 
-      await updateIucnData(ctx.db, species.group_id, { category: "EN" });
+      await updateIucnStatus(species.group_id, { category: "EN" });
 
       const result = await ctx.db.get(
         `SELECT iucn_redlist_category, iucn_redlist_id FROM species_name_group WHERE group_id = ?`,
@@ -99,10 +98,10 @@ void describe("IUCN Database Operations", () => {
       );
 
       // First update
-      await updateIucnData(ctx.db, species.group_id, { category: "VU" });
+      await updateIucnStatus(species.group_id, { category: "VU" });
 
       // Second update (status changed)
-      await updateIucnData(ctx.db, species.group_id, {
+      await updateIucnStatus(species.group_id, {
         category: "EN",
         taxonId: 999,
       });
@@ -299,7 +298,7 @@ void describe("IUCN Database Operations", () => {
         "iucnus",
         "Test"
       );
-      await updateIucnData(ctx.db, species1.group_id, { category: "VU" });
+      await updateIucnStatus(species1.group_id, { category: "VU" });
 
       // Species without IUCN data
       const species2 = await createTestSpeciesName(
@@ -329,7 +328,7 @@ void describe("IUCN Database Operations", () => {
         "species",
         "Test"
       );
-      await updateIucnData(ctx.db, species.group_id, { category: "EN" });
+      await updateIucnStatus(species.group_id, { category: "EN" });
 
       const missing = await getSpeciesWithMissingIucn(ctx.db);
 
@@ -378,7 +377,7 @@ void describe("IUCN Database Operations", () => {
         "Test"
       );
 
-      await updateIucnData(ctx.db, species.group_id, { category: "EN" });
+      await updateIucnStatus(species.group_id, { category: "EN" });
 
       const needResync = await getSpeciesNeedingResync(ctx.db, 365);
 
@@ -465,7 +464,7 @@ void describe("IUCN Database Operations", () => {
       };
 
       // Update data
-      await updateIucnData(ctx.db, species.group_id, iucnData);
+      await updateIucnStatus(species.group_id, iucnData);
 
       // Log sync
       await recordIucnSync(ctx.db, species.group_id, "success", iucnData);

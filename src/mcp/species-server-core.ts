@@ -22,6 +22,7 @@ import {
   type Species,
   type SpeciesAdminFilters,
   type SpeciesAdminListItem,
+  updateIucnStatus,
 } from "../species";
 import {
   getSpeciesExternalReferences,
@@ -30,7 +31,6 @@ import {
   setSpeciesImages,
 } from "../db/speciesEnrichment";
 import {
-  updateIucnData,
   recordIucnSync,
   getIucnSyncLog,
   getSpeciesWithMissingIucn,
@@ -538,7 +538,7 @@ export function initializeSpeciesServer(server: Server): void {
               canonical_species_name: { type: "string", description: "Official species name" },
               species_type: {
                 type: "string",
-                enum: ["Fish", "Plant", "Invert", "Coral"],
+                enum: [...catalogue.speciesTypes],
                 description: "High-level category",
               },
               base_points: {
@@ -701,7 +701,7 @@ export function initializeSpeciesServer(server: Server): void {
               query: { type: "string", description: "Search text (searches the Canonical name and every Name)" },
               species_type: {
                 type: "string",
-                enum: ["Fish", "Plant", "Invert", "Coral"],
+                enum: [...catalogue.speciesTypes],
                 description: "Filter by species type",
               },
               program_class: { type: "string", description: "Filter by program class" },
@@ -1503,7 +1503,7 @@ async function handleSyncIucnData(args: SyncIucnDataArgs) {
         };
 
         // Update the database
-        await updateIucnData(database, species.group_id, iucnData);
+        await updateIucnStatus(species.group_id, iucnData);
       }
     } catch (error) {
       status = "api_error";
