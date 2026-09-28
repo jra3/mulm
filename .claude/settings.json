@@ -2,8 +2,7 @@
   "permissions": {
     "allow": [
       "Bash(./scripts/seed-staging-users.sh)",
-      "Bash(./scripts/seed-staging-users.sh:*)",
-      "Bash(flyctl ssh console --app basny-bap-staging:*)"
+      "Bash(./scripts/seed-staging-users.sh:*)"
     ]
   },
   "hooks": {

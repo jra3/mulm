@@ -52,25 +52,23 @@ flyctl machine restart "$MACHINE" --app basny-bap-staging   # start.sh restores 
 ./scripts/seed-staging-users.sh
 ```
 
-**Test accounts** (created by the seed script; same creds as `e2e/helpers/testData.ts`):
-
-| Role | Email | Password |
-|------|-------|----------|
-| admin | `baptest+admin@porcnick.com` | `AdminPassword123!` |
-| non-admin | `baptest+e2e@porcnick.com` | `TestPassword123!` |
+**Test accounts**: `baptest+admin@porcnick.com` (admin) and `baptest+e2e@porcnick.com`
+(non-admin). Passwords are random and rotated on every seed run; the script writes them
+to `~/.config/mulm/staging-test-users.env` (mode 600). Never commit them: staging is
+public and holds a copy of prod data, so a known password there is a real admin login.
 
 The seed script refuses to run against any machine without `STAGING=1` (prod safety),
-starts the scale-to-zero VM, and upserts via `ON CONFLICT`. Passkeys don't work on
-staging (wrong origin) — log in with a password.
+starts the scale-to-zero VM, and upserts via `ON CONFLICT`. Passkeys registered on prod
+don't work on staging (different WebAuthn origin) — log in with a password.
 
 **Verify a login without a browser** (`POST /auth/login`, fields `email` + `password`):
 
 ```bash
-HOST=https://basny-bap-staging.fly.dev
-curl -s -D - -o /dev/null -H "Origin: $HOST" \
-  --data-urlencode "email=baptest+admin@porcnick.com" \
-  --data-urlencode "password=AdminPassword123!" \
-  "$HOST/auth/login" | grep -iE '^HTTP/|^hx-redirect:|^set-cookie:'
+source ~/.config/mulm/staging-test-users.env
+curl -s -D - -o /dev/null -H "Origin: $STAGING_URL" \
+  --data-urlencode "email=$STAGING_ADMIN_EMAIL" \
+  --data-urlencode "password=$STAGING_ADMIN_PASSWORD" \
+  "$STAGING_URL/auth/login" | grep -iE '^HTTP/|^hx-redirect:|^set-cookie:'
 # Success = HX-Redirect: / + a session_id cookie. Failure = 200 body "Incorrect email or password".
 ```
 

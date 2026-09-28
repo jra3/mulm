@@ -14,9 +14,12 @@
 #     flyctl machine restart "$MACHINE" --app basny-bap-staging
 #   Then: ./scripts/seed-staging-users.sh
 #
-# Accounts created (same creds the E2E suite uses -- see e2e/helpers/testData.ts):
-#   admin     baptest+admin@porcnick.com / AdminPassword123!
-#   non-admin baptest+e2e@porcnick.com   / TestPassword123!
+# Accounts created:
+#   admin     baptest+admin@porcnick.com
+#   non-admin baptest+e2e@porcnick.com
+# Passwords are random per run -- never committed. Staging is public and holds a
+# copy of prod data, so a known password there is a real admin login. Each run
+# rotates both passwords and writes them to $CREDS_FILE (mode 600, outside the repo).
 #
 # Password hashing MUST match src/auth.ts makePasswordEntry():
 #   scrypt N=16384 r=8 p=1, keyLen=32, salt=16 random bytes, salt+hash base64.
@@ -25,8 +28,12 @@ set -euo pipefail
 APP="basny-bap-staging"
 DB_PATH="/mnt/app-data/database/database.db"
 
-ADMIN_EMAIL="baptest+admin@porcnick.com";  ADMIN_NAME="Staging Test Admin";  ADMIN_PW="AdminPassword123!"
-USER_EMAIL="baptest+e2e@porcnick.com";     USER_NAME="Staging Test User";    USER_PW="TestPassword123!"
+CREDS_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/mulm/staging-test-users.env"
+
+gen_password() { openssl rand -base64 24 | tr -d '/+=' ; }
+
+ADMIN_EMAIL="baptest+admin@porcnick.com";  ADMIN_NAME="Staging Test Admin";  ADMIN_PW=$(gen_password)
+USER_EMAIL="baptest+e2e@porcnick.com";     USER_NAME="Staging Test User";    USER_PW=$(gen_password)
 
 # Generate a "salt_b64 hash_b64" pair for a password, matching src/auth.ts exactly.
 gen_entry() {
@@ -48,9 +55,11 @@ SQL=$(cat <<SQL
 PRAGMA foreign_keys = ON;
 BEGIN;
 INSERT INTO members (contact_email, display_name, is_admin) VALUES ('${ADMIN_EMAIL}', '${ADMIN_NAME}', 1)
-  ON CONFLICT(contact_email) DO UPDATE SET display_name = excluded.display_name, is_admin = excluded.is_admin;
+  ON CONFLICT(contact_email) DO UPDATE SET display_name = excluded.display_name, is_admin = excluded.is_admin, locked_until = NULL;
 INSERT INTO members (contact_email, display_name, is_admin) VALUES ('${USER_EMAIL}', '${USER_NAME}', 0)
-  ON CONFLICT(contact_email) DO UPDATE SET display_name = excluded.display_name, is_admin = excluded.is_admin;
+  ON CONFLICT(contact_email) DO UPDATE SET display_name = excluded.display_name, is_admin = excluded.is_admin, locked_until = NULL;
+DELETE FROM failed_login_attempts WHERE member_id IN (SELECT id FROM members WHERE contact_email IN ('${ADMIN_EMAIL}', '${USER_EMAIL}'));
+DELETE FROM sessions WHERE member_id IN (SELECT id FROM members WHERE contact_email IN ('${ADMIN_EMAIL}', '${USER_EMAIL}'));
 INSERT INTO password_account (member_id, N, r, p, salt, hash)
   VALUES ((SELECT id FROM members WHERE contact_email = '${ADMIN_EMAIL}'), 16384, 8, 1, '${ADMIN_SALT}', '${ADMIN_HASH}')
   ON CONFLICT(member_id) DO UPDATE SET N=excluded.N, r=excluded.r, p=excluded.p, salt=excluded.salt, hash=excluded.hash;
@@ -69,7 +78,7 @@ if [ "\$STAGING" != "1" ]; then
   echo "REFUSING: \$FLY_APP_NAME is not a STAGING machine (STAGING != 1)" >&2
   exit 3
 fi
-printf %s '$(printf '%s' "$SQL" | base64 -w0)' | base64 -d | sqlite3 '${DB_PATH}'
+printf %s '$(printf '%s' "$SQL" | base64 -w0)' | base64 -d | sqlite3 -bail '${DB_PATH}'
 REMOTE
 )
 
@@ -81,8 +90,18 @@ MACHINE=$(flyctl machines list --app "$APP" --json | jq -r '.[0].id')
 echo "Ensuring machine ${MACHINE} is started..."
 flyctl machine start "$MACHINE" --app "$APP" >/dev/null 2>&1 || true
 
-flyctl ssh console --app "$APP" -C "/bin/sh -c 'echo $(printf '%s' "$REMOTE" | base64 -w0) | base64 -d | /bin/sh'"
+flyctl ssh console --app "$APP" --machine "$MACHINE" -C "/bin/sh -c 'echo $(printf '%s' "$REMOTE" | base64 -w0) | base64 -d | /bin/sh'"
+
+mkdir -p "$(dirname "$CREDS_FILE")"
+( umask 077
+  cat > "$CREDS_FILE" <<CREDS
+# Written by scripts/seed-staging-users.sh -- rotated on every run. Do not commit.
+STAGING_URL=https://${APP}.fly.dev
+STAGING_ADMIN_EMAIL=${ADMIN_EMAIL}
+STAGING_ADMIN_PASSWORD=${ADMIN_PW}
+STAGING_USER_EMAIL=${USER_EMAIL}
+STAGING_USER_PASSWORD=${USER_PW}
+CREDS
+)
 echo
-echo "Done. Log in at https://${APP}.fly.dev with:"
-echo "  admin     ${ADMIN_EMAIL} / ${ADMIN_PW}"
-echo "  non-admin ${USER_EMAIL} / ${USER_PW}"
+echo "Done. Credentials for https://${APP}.fly.dev written to ${CREDS_FILE}"
