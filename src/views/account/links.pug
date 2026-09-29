@@ -18,21 +18,6 @@ include ../mixins/emptyState.pug
 				a(href=googleURL alt='Continue with Google')
 					img(src='/google-continue-button.svg')
 
-	//- Facebook Account
-	if facebookURL
-		.grid.grid-cols-1.w-full.gap-2.mb-6(class="md:grid-cols-2")
-			if facebookAccount
-				.flex.gap-4.items-center#facebookAccount
-					span.font-bold Facebook
-					span.font-base= facebookAccount.facebook_email
-					button.destructive(
-						hx-target="#facebookAccount"
-						hx-delete="/account/facebook"
-					) Unlink
-			else
-				a(href=facebookURL alt='Continue with Facebook')
-					img(src='/facebook-signin-button.svg')
-
 	//- Passkeys Section
 	h3.text-lg.font-bold.mb-2 Passkeys
 	p.text-sm.text-gray-600.mb-4 Manage your passwordless authentication methods (Touch ID, Face ID, Windows Hello, etc.)

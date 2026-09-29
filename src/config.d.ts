@@ -24,10 +24,6 @@ declare module "@/config.json" {
         clientId: string;
         clientSecret: string;
       };
-      facebook?: {
-        appId: string;
-        appSecret: string;
-      };
     };
     storage: {
       s3AccessKeyId: string;

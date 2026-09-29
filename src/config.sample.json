@@ -21,10 +21,6 @@
     "google": {
       "clientId": "",
       "clientSecret": ""
-    },
-    "facebook": {
-      "appId": "",
-      "appSecret": ""
     }
   },
   "storage": {
