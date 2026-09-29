@@ -1,7 +1,8 @@
 /**
  * An email address is the same address whatever its case. Members are found by
- * email at login, password reset, signup and on a first Google login; a case mismatch there used to miss the member, and the OAuth paths
- * then created a second account for them.
+ * email at login, password reset, signup and on a first Google login; a case
+ * mismatch there used to miss the member, and the OAuth path then created a
+ * second account for them.
  */
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
