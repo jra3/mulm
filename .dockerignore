@@ -71,3 +71,7 @@ nginx/
 
 # Scripts that aren't needed in container
 scripts/
+# Local worktrees and one-off data; never part of the image
+.my-worktrees/
+backups/
+mulm_species_import_final.sql
