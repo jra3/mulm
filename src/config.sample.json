@@ -21,6 +21,12 @@
     "google": {
       "clientId": "",
       "clientSecret": ""
+    },
+    "apple": {
+      "teamId": "",
+      "keyId": "",
+      "servicesId": "",
+      "privateKey": ""
     }
   },
   "storage": {

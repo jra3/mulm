@@ -1,4 +1,5 @@
 import { makePasswordEntry, ScryptPassword } from "../auth";
+import type { Database } from "sqlite";
 import { db, query, deleteOne, insertOne, updateOne, withTransaction } from "./conn";
 import { logger } from "@/utils/logger";
 import { containsPattern, containsSql } from "./likePattern";
@@ -67,6 +68,79 @@ export async function deleteGoogleAccount(sub: string, memberId: number) {
   return deleteOne(googleAccountTableName, { google_sub: sub, member_id: memberId });
 }
 
+// ==================== Apple Account ====================
+
+const appleAccountTableName = "apple_account";
+
+export async function getAppleAccount(sub: string) {
+  const accounts = await query<{
+    apple_sub: string;
+    member_id: number;
+    apple_email: string;
+  }>(
+    `SELECT apple_sub, member_id, apple_email FROM ${appleAccountTableName} WHERE apple_sub = ?`,
+    [sub]
+  );
+  return accounts.pop();
+}
+
+export async function getAppleAccountByMemberId(member_id: number) {
+  const accounts = await query<{
+    apple_sub: string;
+    member_id: number;
+    apple_email: string;
+  }>(`SELECT apple_sub, member_id, apple_email FROM ${appleAccountTableName} WHERE member_id = ?`, [
+    member_id,
+  ]);
+  return accounts.pop();
+}
+
+export async function createAppleAccount(memberId: number, sub: string, email: string) {
+  return insertOne(appleAccountTableName, {
+    member_id: memberId,
+    apple_sub: sub,
+    apple_email: email,
+  });
+}
+
+export async function deleteAppleAccount(sub: string, memberId: number) {
+  return deleteOne(appleAccountTableName, { apple_sub: sub, member_id: memberId });
+}
+
+/**
+ * On a member merge, carry the source's ways of logging in over to the
+ * destination wherever the destination has none of that kind. Where it already
+ * has one, the source's is left to cascade away with the source row. Runs
+ * inside the merge transaction. Returns how many of each moved (0 or 1).
+ */
+export async function moveLoginMethods(
+  conn: Database,
+  fromMemberId: number,
+  toMemberId: number
+): Promise<{ google: number; apple: number; password: number }> {
+  const moved = { google: 0, apple: 0, password: 0 };
+  const tables: [keyof typeof moved, string][] = [
+    ["google", "google_account"],
+    ["apple", "apple_account"],
+    ["password", "password_account"],
+  ];
+  for (const [kind, table] of tables) {
+    const existing = await conn.get<{ member_id: number }>(
+      `SELECT member_id FROM ${table} WHERE member_id = ?`,
+      [toMemberId]
+    );
+    if (existing) {
+      continue;
+    }
+    const result = await conn.run(`UPDATE ${table} SET member_id = ? WHERE member_id = ?`, [
+      toMemberId,
+      fromMemberId,
+    ]);
+    moved[kind] = result.changes ?? 0;
+  }
+  return moved;
+}
+
 export async function createOrUpdatePassword(memberId: number, passwordEntry: ScryptPassword) {
   const conn = db(true);
   try {
@@ -105,6 +179,7 @@ export async function createMember(
   credentials: {
     password?: string;
     google_sub?: string;
+    apple_sub?: string;
   } = {},
   isAdmin: boolean = false
 ) {
@@ -137,6 +212,17 @@ export async function createMember(
           await googleStmt.run(credentials.google_sub, memberId, address);
         } finally {
           await googleStmt.finalize();
+        }
+      }
+
+      if (credentials.apple_sub) {
+        const appleStmt = await conn.prepare(
+          "INSERT INTO apple_account (apple_sub, member_id, apple_email) VALUES (?, ?, ?)"
+        );
+        try {
+          await appleStmt.run(credentials.apple_sub, memberId, address);
+        } finally {
+          await appleStmt.finalize();
         }
       }
 
@@ -209,6 +295,7 @@ export async function getRosterWithPoints() {
       coralTotalPoints: number;
       hasPassword: number;
       hasGoogleAccount: number;
+      hasAppleAccount: number;
     }
   >(`
 		SELECT
@@ -217,10 +304,12 @@ export async function getRosterWithPoints() {
 			COALESCE(plant_points.total, 0) as plantTotalPoints,
 			COALESCE(coral_points.total, 0) as coralTotalPoints,
 			CASE WHEN pa.member_id IS NOT NULL THEN 1 ELSE 0 END as hasPassword,
-			CASE WHEN ga.member_id IS NOT NULL THEN 1 ELSE 0 END as hasGoogleAccount
+			CASE WHEN ga.member_id IS NOT NULL THEN 1 ELSE 0 END as hasGoogleAccount,
+			CASE WHEN aa.member_id IS NOT NULL THEN 1 ELSE 0 END as hasAppleAccount
 		FROM members m
 		LEFT JOIN password_account pa ON m.id = pa.member_id
 		LEFT JOIN google_account ga ON m.id = ga.member_id
+		LEFT JOIN apple_account aa ON m.id = aa.member_id
 		LEFT JOIN (${programPointsSubquery("fish")}) fish_points ON m.id = fish_points.member_id
 		LEFT JOIN (${programPointsSubquery("plant")}) plant_points ON m.id = plant_points.member_id
 		LEFT JOIN (${programPointsSubquery("coral")}) coral_points ON m.id = coral_points.member_id
@@ -240,6 +329,7 @@ export async function getMemberWithPoints(memberId: number) {
       coralTotalPoints: number;
       hasPassword: number;
       hasGoogleAccount: number;
+      hasAppleAccount: number;
     }
   >(
     `
@@ -249,10 +339,12 @@ export async function getMemberWithPoints(memberId: number) {
 			COALESCE(plant_points.total, 0) as plantTotalPoints,
 			COALESCE(coral_points.total, 0) as coralTotalPoints,
 			CASE WHEN pa.member_id IS NOT NULL THEN 1 ELSE 0 END as hasPassword,
-			CASE WHEN ga.member_id IS NOT NULL THEN 1 ELSE 0 END as hasGoogleAccount
+			CASE WHEN ga.member_id IS NOT NULL THEN 1 ELSE 0 END as hasGoogleAccount,
+			CASE WHEN aa.member_id IS NOT NULL THEN 1 ELSE 0 END as hasAppleAccount
 		FROM members m
 		LEFT JOIN password_account pa ON m.id = pa.member_id
 		LEFT JOIN google_account ga ON m.id = ga.member_id
+		LEFT JOIN apple_account aa ON m.id = aa.member_id
 		LEFT JOIN (${programPointsSubquery("fish")}) fish_points ON m.id = fish_points.member_id
 		LEFT JOIN (${programPointsSubquery("plant")}) plant_points ON m.id = plant_points.member_id
 		LEFT JOIN (${programPointsSubquery("coral")}) coral_points ON m.id = coral_points.member_id

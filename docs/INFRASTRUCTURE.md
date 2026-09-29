@@ -54,6 +54,8 @@ The full app config (DB path, OAuth, SMTP, R2 credentials, etc.) is delivered as
 
 Rotate with `flyctl secrets set CONFIG_JSON="$(cat config.production.json)" --app <app>`.
 
+Sign in with Apple needs `oauth.apple = { teamId, keyId, servicesId, privateKey }`; `privateKey` is the `.p8` PEM with its newlines escaped as `\n` inside the JSON string. The Services ID lists both the prod and staging return URLs, so the same block works on both apps. The key lives in John's Bitwarden; it is never in the repo.
+
 ## Storage
 
 | What | Where |

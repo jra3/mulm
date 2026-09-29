@@ -13,7 +13,22 @@ import { forgotSchema, loginSchema, resetSchema, signupSchema } from "@/forms/lo
 import { validateFormResult } from "@/forms/utils";
 import { getBodyParam } from "@/utils/request";
 import { sendResetEmail } from "@/notifications";
-import { getGoogleUser, translateGoogleOAuthCode } from "@/oauth";
+import {
+  clearOAuthStateCookie,
+  consumeOAuthState,
+  getGoogleUser,
+  takeOAuthLinkMember,
+  translateGoogleOAuthCode,
+} from "@/oauth";
+import {
+  appleCallbackSchema,
+  appleErrorSchema,
+  appleUserName,
+  exchangeAppleCode,
+  getAppleConfig,
+  resolveAppleMember,
+  verifyAppleIdToken,
+} from "@/auth/apple";
 import { regenerateSession, destroyUserSession, MulmRequest } from "@/sessions";
 import { Response } from "express";
 import { logger } from "@/utils/logger";
@@ -254,22 +269,9 @@ export const googleOAuth = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  // Validate state parameter using cookie (works for both anonymous and logged-in users)
-  const storedState = String(req.cookies.oauth_state);
-
-  if (!storedState || storedState !== state) {
-    logger.warn("Invalid OAuth state parameter", {
-      storedState: storedState?.substring(0, 10) + "...",
-      receivedState: state?.substring(0, 10) + "...",
-    });
-    res
-      .status(403)
-      .send("Invalid OAuth state. This may be a CSRF attack. Please try logging in again.");
+  if (!consumeOAuthState(req, res, state)) {
     return;
   }
-
-  // Clear the state cookie (one-time use)
-  res.clearCookie("oauth_state");
 
   const resp = await translateGoogleOAuthCode(code as string);
   const payload: unknown = await resp.json();
@@ -290,10 +292,10 @@ export const googleOAuth = async (req: MulmRequest, res: Response) => {
 
   if (!record) {
     // We've never seen this google sub before!
-    const { viewer } = req;
-    if (viewer) {
-      // if we are already logged in, we should link to the current member
-      memberId = viewer.id;
+    const linkMemberId = (await takeOAuthLinkMember(state)) ?? req.viewer?.id;
+    if (linkMemberId !== undefined) {
+      // A signed-in member started this flow: link to them.
+      memberId = linkMemberId;
     } else {
       // We are not logged in, check if we can link to an existing member
       const member = await getMemberByEmail(googleUser.email);
@@ -319,3 +321,69 @@ export const googleOAuth = async (req: MulmRequest, res: Response) => {
   await regenerateSession(req, res, memberId);
   res.redirect("/");
 };
+
+/**
+ * POST /oauth/apple — Apple's form_post callback. Mounted ahead of the
+ * Origin/CSRF-token middleware in index.ts because the POST comes from
+ * appleid.apple.com; the state cookie is the CSRF control here.
+ */
+export interface AppleOAuthDeps {
+  config: typeof getAppleConfig;
+  exchange: typeof exchangeAppleCode;
+  verify: typeof verifyAppleIdToken;
+}
+
+export const createAppleOAuthHandler =
+  ({ config, exchange, verify }: AppleOAuthDeps) =>
+  async (req: MulmRequest, res: Response) => {
+  const cfg = config();
+  if (!cfg) {
+    res.status(404).send();
+    return;
+  }
+
+  const cancelled = appleErrorSchema.safeParse(req.body);
+  if (cancelled.success) {
+    // user_cancelled_authorize is the common one; nothing to do but go home.
+    logger.info("Apple sign-in returned an error", { error: cancelled.data.error });
+    clearOAuthStateCookie(res);
+    res.redirect("/");
+    return;
+  }
+
+  const parsed = appleCallbackSchema.safeParse(req.body);
+  if (!parsed.success) {
+    logger.warn("Malformed Apple OAuth callback");
+    res.status(400).send("Invalid OAuth request. Please try logging in again.");
+    return;
+  }
+
+  if (!consumeOAuthState(req, res, parsed.data.state)) {
+    return;
+  }
+
+  // The session cookie is SameSite=Lax and absent on this cross-site POST, so
+  // req.viewer is normally empty here; the state binding carries the member.
+  const linkMemberId = (await takeOAuthLinkMember(parsed.data.state)) ?? req.viewer?.id;
+
+  let memberId: number;
+  try {
+    const idToken = await exchange(parsed.data.code, cfg);
+    const identity = await verify(idToken, cfg);
+    const name = appleUserName(parsed.data.user, identity.email);
+    memberId = await resolveAppleMember(identity, name, linkMemberId);
+  } catch (err) {
+    logger.error("Apple sign-in failed", err);
+    res.status(401).send("Login Failed!");
+    return;
+  }
+
+  await regenerateSession(req, res, memberId);
+  res.redirect("/");
+  };
+
+export const appleOAuth = createAppleOAuthHandler({
+  config: getAppleConfig,
+  exchange: exchangeAppleCode,
+  verify: verifyAppleIdToken,
+});

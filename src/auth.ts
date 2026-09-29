@@ -2,7 +2,7 @@ import { randomBytes, scrypt } from "node:crypto";
 
 const kKeyLen = 32;
 
-type AuthCodePurpose = "email_verification" | "password_reset";
+type AuthCodePurpose = "email_verification" | "password_reset" | "oauth_link";
 export type AuthCode = {
   code: string;
   member_id: number;
