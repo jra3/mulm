@@ -4,7 +4,8 @@
  * Exposes MCP servers over HTTP using Streamable HTTP transport.
  * This allows remote access to MCP tools via HTTP endpoints.
  *
- * Only starts if mcp.enabled is true in config.
+ * Only starts if mcp.enabled is true in config. Any non-loopback host
+ * requires mcp.token; clients send it as `Authorization: Bearer <token>`.
  */
 
 import express from "express";
@@ -16,6 +17,7 @@ import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { initializeSpeciesServer } from "./species-server-core";
 import { initializeMemberServer } from "./member-server-core";
 import { initializeBackfillServer } from "./backfill-server-core";
+import { createMcpAuth, resolveMcpToken } from "./auth";
 import { logger } from "../utils/logger";
 import config from "@/config.json";
 import path from "path";
@@ -176,9 +178,13 @@ export async function startMcpHttpServer(): Promise<void> {
 
   const mcpPort = config.mcp.port || 3001;
   const mcpHost = config.mcp.host || "127.0.0.1";
+  // Typed read: a config.json without the optional key would otherwise type it as missing.
+  const mcpConfig: { token?: string } = config.mcp;
+  const token = resolveMcpToken(mcpHost, mcpConfig.token);
 
   const app = express();
 
+  app.use(createMcpAuth(token));
   app.use(express.json());
 
   // Health check endpoint
@@ -228,7 +234,9 @@ export async function startMcpHttpServer(): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     try {
       serverInstance = app.listen(mcpPort, mcpHost, () => {
-        logger.info(`MCP HTTP server listening on ${mcpHost}:${mcpPort}`);
+        logger.info(
+          `MCP HTTP server listening on ${mcpHost}:${mcpPort} (${token ? "bearer auth" : "no auth, loopback only"})`
+        );
         logger.info(`  Domain: ${domain}`);
         logger.info(`  Database: ${dbName}`);
         logger.info(`  Species MCP: http://${mcpHost}:${mcpPort}/mcp/species`);

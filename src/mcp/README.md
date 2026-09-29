@@ -4,7 +4,7 @@ Model Context Protocol (MCP) servers for managing Mulm's species and member data
 
 MCP servers are available via two transport methods:
 - **Stdio**: For local CLI usage (via `npm run mcp:species` or `npm run mcp:members`)
-- **HTTP/SSE**: For remote access via HTTP endpoints (requires SSH tunnel for production)
+- **HTTP/SSE**: For remote access via HTTP endpoints (bearer token required off loopback; `fly proxy` for production)
 
 ## Available Servers
 
@@ -61,49 +61,44 @@ Provides tools and resources for managing member accounts.
 
 ## Configuration
 
-### HTTP/SSE Transport (Remote Access)
+### HTTP Transport (Remote Access)
 
-The MCP HTTP server is available when the application is running and can be configured in `config.json`:
+The MCP HTTP server starts with the application when enabled in `config.json`:
 
 ```json
 {
   "mcp": {
     "enabled": true,
     "port": 3001,
-    "host": "127.0.0.1"
+    "host": "127.0.0.1",
+    "token": "<long random string>"
   }
 }
 ```
 
-**Important**: In production, the MCP port is bound to `127.0.0.1` only, requiring SSH tunnel access for security.
+The tools can delete members and grant admin, so auth is enforced at startup:
 
-#### Accessing Production MCP via SSH Tunnel
+- `host` on loopback (`127.0.0.1`, `localhost`, `::1`): `token` is optional. This is the local dev setup `.mcp.json` points at.
+- Any other `host` (production binds `0.0.0.0` so `fly proxy` can reach it): `token` is required, at least 16 characters, or the MCP server refuses to start. The web app keeps running either way.
 
-1. Create an SSH tunnel to the production server:
+Clients send the token as `Authorization: Bearer <token>`. Generate one with `openssl rand -hex 32` and put it in the `CONFIG_JSON` Fly secret.
+
+#### Accessing Production MCP via `fly proxy`
+
+1. Forward a local port to the prod machine over Fly's WireGuard network. Use a port other than 3001 if a local dev server is running:
 ```bash
-ssh -L 3001:localhost:3001 BAP
+fly proxy 13001:3001 -a basny-bap
 ```
+Prod scales to zero; `fly proxy` does not wake the machine, so load the site first if it is asleep.
 
-2. Keep the SSH connection open and connect to `http://localhost:3001/mcp/species` or `http://localhost:3001/mcp/members`
-
-#### MCP Client Configuration (via SSH Tunnel)
-
-Add to your MCP client configuration:
-
-```json
-{
-  "mcpServers": {
-    "mulm-species-prod": {
-      "url": "http://localhost:3001/mcp/species",
-      "transport": "sse"
-    },
-    "mulm-members-prod": {
-      "url": "http://localhost:3001/mcp/members",
-      "transport": "sse"
-    }
-  }
-}
+2. Register the servers with Claude Code for this session's user, with the token in a header:
+```bash
+claude mcp add --transport http mulm-species-prod http://localhost:13001/mcp/species \
+  --header "Authorization: Bearer $MULM_MCP_TOKEN"
+claude mcp add --transport http mulm-backfill-prod http://localhost:13001/mcp/backfill \
+  --header "Authorization: Bearer $MULM_MCP_TOKEN"
 ```
+Endpoints: `/mcp/species`, `/mcp/members`, `/mcp/backfill`.
 
 ### Stdio Transport (Local Development)
 
