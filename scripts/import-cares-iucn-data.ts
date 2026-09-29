@@ -2,14 +2,14 @@
  * Import IUCN conservation status data from CARES species CSV file
  *
  * This script imports IUCN Red List conservation status data from a CSV file
- * (typically from CARES Fish Preservation Program) and populates the species_name_group
- * table with IUCN classification data.
+ * (typically from CARES Fish Preservation Program) and records each Species'
+ * IUCN category through the Species catalogue.
  *
  * The CARES CSV uses prefixed codes (CVU, CEN, CCR, etc.) which are mapped to
  * standard IUCN categories (VU, EN, CR, etc.).
  *
  * Usage:
- *   npm run script scripts/import-cares-iucn-data.ts [options]
+ *   npm run script -- scripts/import-cares-iucn-data.ts [options]
  *
  * Options:
  *   --csv-file <path>   Path to CSV file (default: ./cares_species.csv)
@@ -21,8 +21,8 @@
  *                     iucn_classification, assessment_date, etc.
  *
  * Example:
- *   npm run script scripts/import-cares-iucn-data.ts --dry-run
- *   npm run script scripts/import-cares-iucn-data.ts --csv-file ~/Downloads/cares.csv
+ *   npm run script -- scripts/import-cares-iucn-data.ts --dry-run
+ *   npm run script -- scripts/import-cares-iucn-data.ts --csv-file ~/Downloads/cares.csv
  */
 
 import * as fs from "fs/promises";
@@ -108,7 +108,7 @@ function parseArgs(): { csvFile: string; dryRun: boolean; verbose: boolean } {
 Import IUCN conservation status data from CARES species CSV file
 
 Usage:
-  npm run script scripts/import-cares-iucn-data.ts [options]
+  npm run script -- scripts/import-cares-iucn-data.ts [options]
 
 Options:
   --csv-file <path>   Path to CSV file (default: ./cares_species.csv)
@@ -117,8 +117,8 @@ Options:
   --help, -h          Show this help message
 
 Example:
-  npm run script scripts/import-cares-iucn-data.ts --dry-run
-  npm run script scripts/import-cares-iucn-data.ts --csv-file ~/Downloads/cares.csv
+  npm run script -- scripts/import-cares-iucn-data.ts --dry-run
+  npm run script -- scripts/import-cares-iucn-data.ts --csv-file ~/Downloads/cares.csv
       `);
       process.exit(0);
     }
@@ -218,19 +218,19 @@ async function findSpecies(genus: string, species: string, verbose: boolean): Pr
   const resolution = await resolveSpecies({ latinName: `${genus} ${species}` });
   if (!resolution) return null;
   if (verbose) {
-    console.log(`  ✓ Found group_id ${resolution.species.group_id} for ${genus} ${species}`);
+    console.log(`  ✓ Found Species ${resolution.species.group_id} for ${genus} ${species}`);
   }
   return resolution.species;
 }
 
 // Record the category through the Species catalogue, and log the import
-async function recordIucnCategory(groupId: number, iucnCategory: IUCNCategory, dryRun: boolean): Promise<void> {
+async function recordIucnCategory(speciesId: number, iucnCategory: IUCNCategory, dryRun: boolean): Promise<void> {
   if (dryRun) {
-    console.log(`  [DRY RUN] Would update group_id ${groupId} with IUCN category: ${iucnCategory}`);
+    console.log(`  [DRY RUN] Would update Species ${speciesId} with IUCN category: ${iucnCategory}`);
     return;
   }
-  await updateIucnStatus(groupId, { category: iucnCategory });
-  await recordIucnSync(appDb(true), groupId, "csv_import", { category: iucnCategory });
+  await updateIucnStatus(speciesId, { category: iucnCategory });
+  await recordIucnSync(appDb(true), speciesId, "csv_import", { category: iucnCategory });
 }
 
 // Main import function
@@ -286,18 +286,18 @@ async function importIUCNData() {
     }
 
     try {
-      const found = await findSpecies(sp.genus, sp.species, verbose);
+      const match = await findSpecies(sp.genus, sp.species, verbose);
 
-      if (found) {
+      if (match) {
         result.matched++;
 
-        if (found.iucn_redlist_category) {
+        if (match.iucn_redlist_category) {
           if (verbose) {
-            console.log(`  ℹ Skipping - already has IUCN data: ${found.iucn_redlist_category}`);
+            console.log(`  ℹ Skipping - already has IUCN data: ${match.iucn_redlist_category}`);
           }
           result.skipped++;
         } else {
-          await recordIucnCategory(found.group_id, sp.iucnCategory, dryRun);
+          await recordIucnCategory(match.group_id, sp.iucnCategory, dryRun);
           result.updated++;
           if (verbose) {
             console.log(`  ✓ Updated`);

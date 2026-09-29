@@ -326,8 +326,8 @@ logger.error("IUCN API connection test failed", error);
 
 - **API Client:** `src/integrations/iucn.ts`
 - **Database Functions:** `src/db/iucn.ts` (Species IUCN columns are written through the catalogue's `updateIucnStatus`)
-- **Sync Script:** `scripts/sync-iucn-data.ts` (`npm run script scripts/sync-iucn-data.ts --help`)
-- **CSV Import:** `scripts/import-cares-iucn-data.ts` (`npm run script scripts/import-cares-iucn-data.ts --help`)
+- **Sync Script:** `scripts/sync-iucn-data.ts` (`npm run script -- scripts/sync-iucn-data.ts --help`)
+- **CSV Import:** `scripts/import-cares-iucn-data.ts` (`npm run script -- scripts/import-cares-iucn-data.ts --help`)
 - **Migration:** `db/migrations/036-add-iucn-integration.sql`
 - **Types:** `src/config.d.ts` (Config interface)
 
