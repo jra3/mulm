@@ -23,7 +23,7 @@ A web application for managing aquarium society Breeder Awards Programs (BAP), t
 - **Framework**: Express.js
 - **Database**: SQLite with migrations
 - **Session Management**: Cookie-based sessions
-- **Authentication**: OAuth integration (Google)
+- **Authentication**: Email/password, Google OAuth, Sign in with Apple
 - **Email**: Nodemailer for notifications
 - **Image Processing**: Sharp for image optimization
 - **Storage**: Cloudflare R2 for image storage

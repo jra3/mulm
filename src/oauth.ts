@@ -1,5 +1,7 @@
 import config from "./config.json";
 import { Response } from "express";
+import { MulmRequest } from "./sessions";
+import { logger } from "./utils/logger";
 import { generateRandomCode } from "./auth";
 
 /**
@@ -40,6 +42,29 @@ export function setOAuthStateCookie(res: Response): string {
 
 export function clearOAuthStateCookie(res: Response): void {
   res.clearCookie(OAUTH_STATE_COOKIE, { path: OAUTH_STATE_COOKIE_PATH });
+}
+
+/**
+ * The CSRF check on a provider callback: the `state` the provider echoed back
+ * must equal the one in the cookie set before the redirect. The cookie is
+ * consumed either way. On a mismatch the response is already sent (403) and
+ * the caller must stop.
+ */
+export function consumeOAuthState(req: MulmRequest, res: Response, state: string): boolean {
+  const cookies = req.cookies as Record<string, unknown> | undefined;
+  const stored = cookies?.[OAUTH_STATE_COOKIE];
+  clearOAuthStateCookie(res);
+  if (typeof stored !== "string" || stored.length === 0 || stored !== state) {
+    logger.warn("Invalid OAuth state parameter", {
+      storedState: typeof stored === "string" ? stored.substring(0, 10) + "..." : null,
+      receivedState: state.substring(0, 10) + "...",
+    });
+    res
+      .status(403)
+      .send("Invalid OAuth state. This may be a CSRF attack. Please try logging in again.");
+    return false;
+  }
+  return true;
 }
 
 export function getGoogleOAuthURL(state: string): string {

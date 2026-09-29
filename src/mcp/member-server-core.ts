@@ -181,6 +181,9 @@ export function initializeMemberServer(server: Server): void {
         const withGoogle = await query<{ count: number }>(
           "SELECT COUNT(*) as count FROM google_account"
         );
+        const withApple = await query<{ count: number }>(
+          "SELECT COUNT(*) as count FROM apple_account"
+        );
         const activeMembers = await query<{ count: number }>(`
           SELECT COUNT(DISTINCT member_id) as count FROM submissions WHERE approved_on IS NOT NULL
         `);
@@ -190,6 +193,7 @@ export function initializeMemberServer(server: Server): void {
           admin_count: adminCount[0].count,
           with_password: withPassword[0].count,
           with_google_oauth: withGoogle[0].count,
+          with_apple_oauth: withApple[0].count,
           active_members: activeMembers[0].count,
         };
 

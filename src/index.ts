@@ -41,7 +41,7 @@ import { csrfValidation } from "./middleware/csrfValidation";
 import { bonusFields } from "@/points";
 import helmet from "helmet";
 import { getGoogleOAuthURL, setOAuthStateCookie, isGoogleOAuthEnabled } from "./oauth";
-import { getAppleConfig, getAppleOAuthURL } from "./auth/apple";
+import { appleOAuthURL } from "./auth/apple";
 import { getQueryString, getBodyString } from "./utils/request";
 import { initR2 } from "./utils/r2-client";
 import {
@@ -172,11 +172,6 @@ app.use((_req, res, next) => {
 });
 
 const router = express.Router();
-
-function appleOAuthURL(state: string): string | null {
-  const cfg = getAppleConfig();
-  return cfg ? getAppleOAuthURL(state, cfg) : null;
-}
 
 router.get("/annual", (req, res) => {
   const year = getQueryString(req, "year");

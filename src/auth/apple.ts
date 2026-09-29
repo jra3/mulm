@@ -2,6 +2,7 @@ import config from "@/config.json";
 import { SignJWT, importPKCS8, jwtVerify, createRemoteJWKSet, type JWTVerifyGetKey } from "jose";
 import * as z from "zod";
 import { createAppleAccount, createMember, getAppleAccount, getMemberByEmail } from "@/db/members";
+import { logger } from "@/utils/logger";
 
 /**
  * Sign in with Apple, plain OAuth web flow (#442).
@@ -37,12 +38,14 @@ export function getAppleConfig(): AppleConfig | undefined {
   return apple;
 }
 
-export function isAppleOAuthEnabled(): boolean {
-  return getAppleConfig() !== undefined;
-}
-
 export function getAppleRedirectUri(): string {
   return `https://${config.server.domain}/oauth/apple`;
+}
+
+/** The Sign in with Apple link for a page, or null when Apple isn't configured. */
+export function appleOAuthURL(state: string): string | null {
+  const cfg = getAppleConfig();
+  return cfg ? getAppleOAuthURL(state, cfg) : null;
 }
 
 export function getAppleOAuthURL(state: string, cfg: AppleConfig): string {
@@ -199,8 +202,13 @@ export function appleUserName(userJson: string | undefined, email: string): stri
  * Find the member an Apple identity belongs to, linking or creating as needed.
  * Same policy as Google: a known `sub` logs in; otherwise a logged-in viewer
  * links; otherwise a member with the same email links; otherwise a new member
- * is created. A Hide My Email relay address never matches an existing member,
- * so it lands on the last branch; admins can merge later.
+ * is created with the link in the same transaction. A Hide My Email relay
+ * address never matches an existing member, so it lands on the last branch;
+ * admins can merge later.
+ *
+ * Apple always verifies the addresses it hands out, so `emailVerified` is
+ * false only if something upstream is wrong. An unverified address must not
+ * be allowed to claim an existing member.
  */
 export async function resolveAppleMember(
   identity: AppleIdentity,
@@ -212,14 +220,24 @@ export async function resolveAppleMember(
     return record.member_id;
   }
 
-  let memberId: number;
   if (viewerId !== undefined) {
-    memberId = viewerId;
-  } else {
-    const member = await getMemberByEmail(identity.email);
-    memberId = member ? member.id : await createMember(identity.email, name);
+    await createAppleAccount(viewerId, identity.sub, identity.email);
+    return viewerId;
   }
 
-  await createAppleAccount(memberId, identity.sub, identity.email);
-  return memberId;
+  const member = await getMemberByEmail(identity.email);
+  if (member) {
+    if (!identity.emailVerified) {
+      throw new Error("Apple did not verify the email address; refusing to link an existing member");
+    }
+    await createAppleAccount(member.id, identity.sub, identity.email);
+    return member.id;
+  }
+
+  if (identity.isPrivateEmail) {
+    logger.info("New member via an Apple relay address; may need merging with an existing account", {
+      email: identity.email,
+    });
+  }
+  return createMember(identity.email, name, { apple_sub: identity.sub });
 }

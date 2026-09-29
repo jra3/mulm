@@ -10,7 +10,7 @@ import {
 } from "@/db/members";
 import { updateSchema } from "@/forms/login";
 import { getGoogleOAuthURL, setOAuthStateCookie, isGoogleOAuthEnabled } from "@/oauth";
-import { getAppleConfig, getAppleOAuthURL } from "@/auth/apple";
+import { appleOAuthURL } from "@/auth/apple";
 import { MulmRequest } from "@/sessions";
 import { Response } from "express";
 import { logger } from "@/utils/logger";
@@ -32,8 +32,7 @@ export const viewAccountSettings = async (req: MulmRequest, res: Response) => {
 
   // Generate OAuth URLs synchronously (only if configured)
   const googleURL = isGoogleOAuthEnabled() ? getGoogleOAuthURL(oauthState) : null;
-  const appleConfig = getAppleConfig();
-  const appleURL = appleConfig ? getAppleOAuthURL(oauthState, appleConfig) : null;
+  const appleURL = appleOAuthURL(oauthState);
 
   // Fetch async data in parallel
   const [googleAccount, appleAccount, presets] = await Promise.all([

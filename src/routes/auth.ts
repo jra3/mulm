@@ -13,7 +13,7 @@ import { forgotSchema, loginSchema, resetSchema, signupSchema } from "@/forms/lo
 import { validateFormResult } from "@/forms/utils";
 import { getBodyParam } from "@/utils/request";
 import { sendResetEmail } from "@/notifications";
-import { clearOAuthStateCookie, getGoogleUser, translateGoogleOAuthCode } from "@/oauth";
+import { clearOAuthStateCookie, consumeOAuthState, getGoogleUser, translateGoogleOAuthCode } from "@/oauth";
 import {
   appleCallbackSchema,
   appleErrorSchema,
@@ -263,22 +263,9 @@ export const googleOAuth = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  // Validate state parameter using cookie (works for both anonymous and logged-in users)
-  const storedState = String(req.cookies.oauth_state);
-
-  if (!storedState || storedState !== state) {
-    logger.warn("Invalid OAuth state parameter", {
-      storedState: storedState?.substring(0, 10) + "...",
-      receivedState: state?.substring(0, 10) + "...",
-    });
-    res
-      .status(403)
-      .send("Invalid OAuth state. This may be a CSRF attack. Please try logging in again.");
+  if (!consumeOAuthState(req, res, state)) {
     return;
   }
-
-  // Clear the state cookie (one-time use)
-  clearOAuthStateCookie(res);
 
   const resp = await translateGoogleOAuthCode(code as string);
   const payload: unknown = await resp.json();
@@ -357,18 +344,9 @@ export const appleOAuth = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const storedState = String(req.cookies.oauth_state);
-  if (!storedState || storedState !== parsed.data.state) {
-    logger.warn("Invalid OAuth state parameter", {
-      storedState: storedState?.substring(0, 10) + "...",
-      receivedState: parsed.data.state.substring(0, 10) + "...",
-    });
-    res
-      .status(403)
-      .send("Invalid OAuth state. This may be a CSRF attack. Please try logging in again.");
+  if (!consumeOAuthState(req, res, parsed.data.state)) {
     return;
   }
-  clearOAuthStateCookie(res);
 
   let memberId: number;
   try {

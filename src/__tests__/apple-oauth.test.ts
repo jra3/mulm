@@ -222,6 +222,14 @@ void describe("Apple member resolution", () => {
     assert.strictEqual(await getAppleAccountByMemberId(other), undefined);
   });
 
+  void test("an unverified address cannot claim an existing member", async () => {
+    await createMember("real@example.com", "Real");
+    await assert.rejects(
+      resolveAppleMember({ ...identity("001.unverified", "real@example.com"), emailVerified: false }, "x")
+    );
+    assert.strictEqual(await getAppleAccountByMemberId(1), undefined);
+  });
+
   void test("a relay address never matches, so it becomes a new member", async () => {
     await createMember("real@example.com", "Real");
     const id = await resolveAppleMember(

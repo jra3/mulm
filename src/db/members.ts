@@ -144,6 +144,7 @@ export async function createMember(
   credentials: {
     password?: string;
     google_sub?: string;
+    apple_sub?: string;
   } = {},
   isAdmin: boolean = false
 ) {
@@ -176,6 +177,17 @@ export async function createMember(
           await googleStmt.run(credentials.google_sub, memberId, address);
         } finally {
           await googleStmt.finalize();
+        }
+      }
+
+      if (credentials.apple_sub) {
+        const appleStmt = await conn.prepare(
+          "INSERT INTO apple_account (apple_sub, member_id, apple_email) VALUES (?, ?, ?)"
+        );
+        try {
+          await appleStmt.run(credentials.apple_sub, memberId, address);
+        } finally {
+          await appleStmt.finalize();
         }
       }
 
