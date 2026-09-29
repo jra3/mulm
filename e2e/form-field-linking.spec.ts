@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { login } from "./helpers/auth";
+import { TEST_USER, getTestDatabase } from "./helpers/testData";
 import { fillTomSelectTypeahead, getTomSelectValue } from "./helpers/tomSelect";
 
 /**
@@ -81,7 +82,7 @@ test.describe("BAP Form - Field Linking", () => {
 		expect(parseInt(speciesId)).toBeGreaterThan(0);
 	});
 
-	test("fills the common name with the Latin name for a species that has no common name", async ({
+	test("a species with no common name fills the common name with its scientific name, and saving keeps the binding", async ({
 		page,
 	}) => {
 		// Seeded by scripts/setup-e2e-db.ts with no common Name (#421)
@@ -90,6 +91,28 @@ test.describe("BAP Form - Field Linking", () => {
 		expect(await getTomSelectValue(page, "species_common_name")).toBe("Poeciliopsis nocommonus");
 		const speciesId = await page.inputValue('input[name="species_id"]');
 		expect(parseInt(speciesId)).toBeGreaterThan(0);
+
+		// The scientific Name in the common field agrees with the Species, so the save keeps the pick
+		const draftButton = page.locator('button[name="draft"]');
+		await draftButton.scrollIntoViewIfNeeded();
+		await draftButton.click();
+		await page.waitForLoadState("networkidle");
+
+		const db = await getTestDatabase();
+		try {
+			const user = await db.get<{ id: number }>("SELECT id FROM members WHERE contact_email = ?", TEST_USER.email);
+			const saved = await db.get<{ id: number; species_id: number | null; species_common_name: string }>(
+				"SELECT id, species_id, species_common_name FROM submissions WHERE member_id = ? AND species_latin_name = ? ORDER BY id DESC",
+				user!.id,
+				"Poeciliopsis nocommonus"
+			);
+			expect(saved).toBeTruthy();
+			expect(saved!.species_common_name).toBe("Poeciliopsis nocommonus");
+			expect(saved!.species_id).toBe(parseInt(speciesId));
+			await db.run("DELETE FROM submissions WHERE id = ?", saved!.id);
+		} finally {
+			await db.close();
+		}
 	});
 
 	test("should update hidden species_id field when species is selected", async ({

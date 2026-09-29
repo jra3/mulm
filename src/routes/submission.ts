@@ -30,7 +30,6 @@ import {
   checkFormAgreement,
   countSubmissionsOfSpecies,
   findSpeciesById,
-  isScientificNameOf,
 } from "@/species";
 import * as lifecycle from "@/lifecycle";
 import { attempt, callerFor } from "./lifecycleErrors";
@@ -114,11 +113,6 @@ export const view = async (req: MulmRequest, res: Response) => {
   // type and Program class agree with the Submission's
   const boundSpecies = submission.species_id ? await findSpeciesById(submission.species_id) : undefined;
   const agreement = boundSpecies ? await checkFormAgreement(boundSpecies.group_id, submission) : undefined;
-  // The Latin name in the common field (#421): the witness panel never offers it as a common Name
-  const commonIsLatinName =
-    boundSpecies && agreement?.commonName === "not-a-name"
-      ? await isScientificNameOf(boundSpecies.group_id, submission.species_common_name)
-      : false;
 
   const aspect = {
     isSubmitted: submission.submitted_on != null,
@@ -217,13 +211,7 @@ export const view = async (req: MulmRequest, res: Response) => {
     classificationAgreement: agreement
       ? { speciesType: agreement.speciesType, programClass: agreement.programClass }
       : null,
-    spellingAgreement: agreement
-      ? {
-          commonName: agreement.commonName,
-          latinName: agreement.latinName,
-          commonIsLatinName,
-        }
-      : null,
+    spellingAgreement: agreement ? { commonName: agreement.commonName, latinName: agreement.latinName } : null,
     // The approval panel reads the bound Species; only a committee member sees it
     approval: aspect.isAdmin && state === "inApprovalQueue" ? await approvalPanelData(submission) : null,
     waitingPeriodStatus,

@@ -71,7 +71,7 @@ async function seedTestSpecies(db: any) {
 			commonNames: ["Platy", "Southern Platyfish"],
 			scientificNames: ["Xiphophorus maculatus"]
 		},
-		// A Species with no common Name: it goes by its Latin name (#421)
+		// A Species with no common Name: it goes by a scientific Name (#421)
 		{
 			group: { canonical_genus: "Poeciliopsis", canonical_species_name: "nocommonus", program_class: "Livebearers", species_type: "Fish" },
 			commonNames: [],

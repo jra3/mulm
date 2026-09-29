@@ -990,7 +990,7 @@ void describe("Pug Template Rendering", () => {
       assert.match(html, /Approve for Screening/);
     });
 
-    void test("Names to add: common offered ticked, Latin unticked, a Name already shown without a box, a blank not at all", () => {
+    void test("Names to add: common offered ticked, Latin unticked, a Name (or a scientific Name in the common field) shown without a box, a blank not at all", () => {
       const renderNames = (
         spellingAgreement: Record<string, string>,
         submission: Record<string, string> = {}
@@ -1021,6 +1021,16 @@ void describe("Pug Template Rendering", () => {
       assert.match(html, /id="witness-common-is-name"/);
       assert.match(html, /id="witness-latin-is-name"/);
       assert.match(html, /is already a Name/);
+
+      // A scientific Name in the common field (#421): shown as such, with no box
+      html = renderNames(
+        { commonName: "scientific-name", latinName: "name" },
+        { species_common_name: "Poecilia reticulata", species_latin_name: "Poecilia reticulata" }
+      );
+      assert.doesNotMatch(html, /add_common_name|witness-common-is-name/);
+      assert.match(html, /id="witness-common-is-scientific-name"/);
+      assert.match(html, /is one of this Species' scientific Names, so it is not added as a common name/);
+      assert.match(html, /id="witness-latin-is-name"/);
 
       // Blank: nothing offered and nothing shown for it
       html = renderNames({ commonName: "empty", latinName: "not-a-name" }, { species_common_name: "" });

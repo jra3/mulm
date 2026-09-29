@@ -940,7 +940,7 @@ void describe("Submission lifecycle - transitions", () => {
       assert.strictEqual(await speciesIdOf(id), guppy);
     });
 
-    void test("picking a Species with no common Names binds, with its Latin name as the common name", async () => {
+    void test("picking a Species with no common Names binds, with its scientific Name as the common name", async () => {
       const speciesId = await createSpecies({
         canonicalGenus: "Nocommonus",
         canonicalSpeciesName: "latinus",
@@ -961,7 +961,32 @@ void describe("Submission lifecycle - transitions", () => {
       assert.strictEqual(await speciesIdOf(draft), speciesId, "the binding survives the save");
     });
 
-    void test("the witness never adds the Latin spelling as a common Name, even once the Species has one", async () => {
+    void test("once the Species has a common Name, the scientific Name in the common field no longer binds", async () => {
+      const speciesId = await createSpecies({
+        canonicalGenus: "Nocommonus",
+        canonicalSpeciesName: "latinus",
+        programClass: "Livebearers",
+        speciesType: "Fish",
+      });
+      const pickedForm = {
+        ...form,
+        species_common_name: "Nocommonus latinus",
+        species_latin_name: "Nocommonus latinus",
+        species_id: speciesId,
+      };
+      const draft = await createSubmission(member, ctx.member.id, pickedForm, { submit: false });
+      assert.strictEqual(await speciesIdOf(draft), speciesId);
+
+      // The committee names it; the member's next save no longer agrees (the gap noted on #427)
+      await addName(speciesId, "common", "Late fish");
+      await saveDraft(member, draft, pickedForm);
+      assert.strictEqual(await speciesIdOf(draft), null);
+
+      const created = await createSubmission(member, ctx.member.id, pickedForm, { submit: true });
+      assert.strictEqual(await speciesIdOf(created), null);
+    });
+
+    void test("the witness never adds a scientific Name as a common Name, even once the Species has one", async () => {
       const speciesId = await createSpecies({
         canonicalGenus: "Nocommonus",
         canonicalSpeciesName: "latinus",
