@@ -30,11 +30,6 @@
     "s3Bucket": "",
     "r2PublicUrl": ""
   },
-  "webauthn": {
-    "rpName": "BAP Portal",
-    "rpID": "localhost",
-    "origin": "http://localhost:4200"
-  },
   "iucn": {
     "apiToken": "",
     "baseUrl": "https://api.iucnredlist.org/api/v4",
