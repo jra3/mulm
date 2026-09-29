@@ -24,6 +24,13 @@ declare module "@/config.json" {
         clientId: string;
         clientSecret: string;
       };
+      apple?: {
+        teamId: string;
+        keyId: string;
+        servicesId: string;
+        /** The .p8 contents, PEM, newlines escaped as \n inside CONFIG_JSON. */
+        privateKey: string;
+      };
     };
     storage: {
       s3AccessKeyId: string;
@@ -31,11 +38,6 @@ declare module "@/config.json" {
       s3Url: string;
       s3Bucket: string;
       r2PublicUrl: string;
-    };
-    webauthn?: {
-      rpName: string;
-      rpID: string;
-      origin: string;
     };
     iucn?: {
       apiToken: string;

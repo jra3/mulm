@@ -21,6 +21,12 @@
     "google": {
       "clientId": "",
       "clientSecret": ""
+    },
+    "apple": {
+      "teamId": "",
+      "keyId": "",
+      "servicesId": "",
+      "privateKey": ""
     }
   },
   "storage": {
@@ -29,11 +35,6 @@
     "s3Url": "",
     "s3Bucket": "",
     "r2PublicUrl": ""
-  },
-  "webauthn": {
-    "rpName": "BAP Portal",
-    "rpID": "localhost",
-    "origin": "http://localhost:4200"
   },
   "iucn": {
     "apiToken": "",

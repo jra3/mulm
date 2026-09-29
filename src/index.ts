@@ -40,7 +40,8 @@ import { originValidation } from "./middleware/originValidation";
 import { csrfValidation } from "./middleware/csrfValidation";
 import { bonusFields } from "@/points";
 import helmet from "helmet";
-import { getGoogleOAuthURL, setOAuthStateCookie, isGoogleOAuthEnabled } from "./oauth";
+import { getGoogleOAuthURL, beginOAuthFlow, isGoogleOAuthEnabled } from "./oauth";
+import { appleOAuthURL } from "./auth/apple";
 import { getQueryString, getBodyString } from "./utils/request";
 import { initR2 } from "./utils/r2-client";
 import {
@@ -108,12 +109,11 @@ app.use(
     reportOnly: true,
     directives: {
       defaultSrc: ["'self'"],
-      // esm.sh serves the SimpleWebAuthn passkey browser helper.
-      scriptSrc: ["'self'", "https://esm.sh"],
+      scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       // R2-hosted submission images + Open Graph images over https; data: for inline svg.
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https://esm.sh"],
+      connectSrc: ["'self'"],
       fontSrc: ["'self'", "data:"],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
@@ -143,6 +143,11 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(cookieParser());
 app.use(sessionMiddleware);
+
+// Sign in with Apple returns by cross-site POST from appleid.apple.com, which
+// the two CSRF middlewares below would reject. It goes ahead of them; the
+// handler validates the oauth_state cookie against the posted state instead.
+app.post("/oauth/apple", oauthRateLimiter, auth.appleOAuth);
 
 // CSRF backstop: reject state-changing requests (POST/PUT/PATCH/DELETE) whose
 // Origin/Referer isn't an allowlisted, same-site origin. This is the primary
@@ -180,13 +185,13 @@ router.get("/", async (req: MulmRequest, res) => {
   const isLoggedIn = Boolean(viewer);
   const isAdmin = viewer?.is_admin;
 
-  // Generate OAuth state for CSRF protection (stored in cookie)
-  const oauthState = setOAuthStateCookie(res);
+  const oauthState = await beginOAuthFlow(res, viewer?.id);
 
   const args = {
     title: "BAS BAP/HAP Portal",
     message: "Welcome to BAS!",
     googleURL: isGoogleOAuthEnabled() ? getGoogleOAuthURL(oauthState) : null,
+    appleURL: appleOAuthURL(oauthState),
     isLoggedIn,
     isAdmin,
   };
@@ -303,6 +308,7 @@ router.get("/species/:groupId", species.detail);
 router.get("/account", account.viewAccountSettings);
 router.patch("/account", account.updateAccountSettings);
 router.delete("/account/google", account.unlinkGoogleAccount);
+router.delete("/account/apple", account.unlinkAppleAccount);
 
 // Account tank preset management (RESTful routes)
 router.post("/account/tanks", account.saveTankPresetRoute);
@@ -334,25 +340,17 @@ router.get("/auth/set-password", auth.validateForgotPassword);
 router.post("/auth/forgot-password", forgotPasswordRateLimiter, auth.sendForgotPassword);
 router.post("/auth/reset-password", auth.resetPassword);
 
-// Passkey (WebAuthn) authentication
-router.post("/auth/passkey/register/options", auth.passkeyRegisterOptions);
-router.post("/auth/passkey/register/verify", auth.passkeyRegisterVerify);
-router.post("/auth/passkey/login/options", loginRateLimiter, auth.passkeyLoginOptions);
-router.post("/auth/passkey/login/verify", loginRateLimiter, auth.passkeyLoginVerify);
-router.delete("/auth/passkey/:id", auth.deletePasskey);
-router.patch("/auth/passkey/:id/name", auth.renamePasskey);
-
 // OAuth (external dependency - redirect_uri registered with providers)
 router.get("/oauth/google", oauthRateLimiter, auth.googleOAuth);
 
-router.get("/dialog/auth/signin", (req, res) => {
-  // Generate OAuth state for CSRF protection (stored in cookie)
-  const oauthState = setOAuthStateCookie(res);
+router.get("/dialog/auth/signin", async (req: MulmRequest, res) => {
+  const oauthState = await beginOAuthFlow(res, req.viewer?.id);
 
   res.render("account/signin", {
     viewer: {},
     errors: new Map(),
     googleURL: isGoogleOAuthEnabled() ? getGoogleOAuthURL(oauthState) : null,
+    appleURL: appleOAuthURL(oauthState),
   });
 });
 

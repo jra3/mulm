@@ -3,7 +3,7 @@
 // Reads the per-session token from <meta name="csrf-token"> (rendered into
 // authenticated pages) and echoes it back on every same-origin, state-changing
 // request as the `X-CSRF-Token` header. Covers both HTMX requests and raw
-// fetch() calls (image upload, passkey registration, collection images) so no
+// fetch() calls (image upload, collection images) so no
 // individual call site needs to be touched.
 (function () {
   "use strict";

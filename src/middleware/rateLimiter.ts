@@ -188,10 +188,6 @@ export const loginRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => {
-    // For passkey login endpoints, only use IP (no email in body)
-    if (req.path && req.path.includes("/passkey/")) {
-      return getIpKey(req);
-    }
     // Rate limit by IP + email to prevent targeted attacks. An address is one
     // address whatever its case, so case variants share a bucket.
     const email = String((req.body as { email?: string })?.email || "unknown")
@@ -200,12 +196,10 @@ export const loginRateLimiter = rateLimit({
     return `${getIpKey(req)}:${email}`;
   },
   handler: (_req, res) => {
-    // Don't log email for passkey endpoints (no email in body)
-    const logData: { ip?: string; email?: string } = { ip: _req.ip };
-    if (!_req.path || !_req.path.includes("/passkey/")) {
-      logData.email = (_req.body as { email?: string })?.email;
-    }
-    logger.warn("Login rate limit exceeded", logData);
+    logger.warn("Login rate limit exceeded", {
+      ip: _req.ip,
+      email: (_req.body as { email?: string })?.email,
+    });
     res.status(429).send("Too many login attempts. Please wait 15 minutes before trying again.");
   },
   skip: (req) => {

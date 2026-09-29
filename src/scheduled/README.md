@@ -18,10 +18,6 @@ The daily cleanup task (`cleanup.ts`) removes expired data from the database to 
    - Removes tokens that have expired
    - Password reset tokens typically expire after 1 hour
 
-2. **Expired WebAuthn Challenges** (`webauthn_challenges` table)
-   - Removes authentication challenges that have expired
-   - WebAuthn challenges expire after 5 minutes
-
 ### Implementation Details
 
 The cleanup is implemented in `src/scheduled/cleanup.ts` and integrated into the main application startup in `src/index.ts`.
@@ -39,7 +35,6 @@ startScheduledCleanup();
 All cleanup operations are logged with the following format:
 - Start: `Starting daily cleanup tasks`
 - Auth codes: `Deleted N expired auth codes`
-- WebAuthn challenges: `Deleted N expired WebAuthn challenges`
 - Complete: `Daily cleanup tasks completed successfully`
 - Errors: `Error during daily cleanup` (with error details)
 
@@ -64,5 +59,5 @@ stopScheduledCleanup();
 
 Monitor cleanup effectiveness by checking:
 1. Application logs for daily cleanup messages
-2. Database table sizes for `auth_codes` and `webauthn_challenges`
+2. Database table size for `auth_codes`
 3. Error logs for any cleanup failures

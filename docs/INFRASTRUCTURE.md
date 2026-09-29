@@ -45,14 +45,16 @@ Both apps:
 
 ## Configuration
 
-The full app config (DB path, OAuth, SMTP, R2 credentials, WebAuthn, etc.) is delivered as a single Fly secret named `CONFIG_JSON`. `start.sh` materializes it to `/app/src/config.json` on every boot.
+The full app config (DB path, OAuth, SMTP, R2 credentials, etc.) is delivered as a single Fly secret named `CONFIG_JSON`. `start.sh` materializes it to `/app/src/config.json` on every boot.
 
 | App | `CONFIG_JSON` overrides vs. real prod config |
 |---|---|
 | `basny-bap` | none — uses real config |
-| `basny-bap-staging` | `server.domain`, `webauthn.rpID`, `webauthn.origin` → `basny-bap-staging.fly.dev`; `email.disableEmails = true` |
+| `basny-bap-staging` | `server.domain` → `basny-bap-staging.fly.dev`; `email.disableEmails = true` |
 
 Rotate with `flyctl secrets set CONFIG_JSON="$(cat config.production.json)" --app <app>`.
+
+Sign in with Apple needs `oauth.apple = { teamId, keyId, servicesId, privateKey }`; `privateKey` is the `.p8` PEM with its newlines escaped as `\n` inside the JSON string. The Services ID lists both the prod and staging return URLs, so the same block works on both apps. The key lives in John's Bitwarden; it is never in the repo.
 
 ## Storage
 

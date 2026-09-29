@@ -23,7 +23,7 @@ A web application for managing aquarium society Breeder Awards Programs (BAP), t
 - **Framework**: Express.js
 - **Database**: SQLite with migrations
 - **Session Management**: Cookie-based sessions
-- **Authentication**: OAuth integration (Google)
+- **Authentication**: Email/password, Google OAuth, Sign in with Apple
 - **Email**: Nodemailer for notifications
 - **Image Processing**: Sharp for image optimization
 - **Storage**: Cloudflare R2 for image storage
@@ -87,11 +87,6 @@ Create `src/config.json` with the following structure (see `src/config.sample.js
   "s3Url": "",
   "s3Bucket": "",
   "r2PublicUrl": "",
-  "webauthn": {
-    "rpName": "BAP Portal",
-    "rpID": "localhost",
-    "origin": "http://localhost:4200"
-  },
   "mcp": {
     "enabled": false,
     "port": 3001,

@@ -13,7 +13,22 @@ import { forgotSchema, loginSchema, resetSchema, signupSchema } from "@/forms/lo
 import { validateFormResult } from "@/forms/utils";
 import { getBodyParam } from "@/utils/request";
 import { sendResetEmail } from "@/notifications";
-import { getGoogleUser, translateGoogleOAuthCode } from "@/oauth";
+import {
+  clearOAuthStateCookie,
+  consumeOAuthState,
+  getGoogleUser,
+  takeOAuthLinkMember,
+  translateGoogleOAuthCode,
+} from "@/oauth";
+import {
+  appleCallbackSchema,
+  appleErrorSchema,
+  appleUserName,
+  exchangeAppleCode,
+  getAppleConfig,
+  resolveAppleMember,
+  verifyAppleIdToken,
+} from "@/auth/apple";
 import { regenerateSession, destroyUserSession, MulmRequest } from "@/sessions";
 import { Response } from "express";
 import { logger } from "@/utils/logger";
@@ -254,22 +269,9 @@ export const googleOAuth = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  // Validate state parameter using cookie (works for both anonymous and logged-in users)
-  const storedState = String(req.cookies.oauth_state);
-
-  if (!storedState || storedState !== state) {
-    logger.warn("Invalid OAuth state parameter", {
-      storedState: storedState?.substring(0, 10) + "...",
-      receivedState: state?.substring(0, 10) + "...",
-    });
-    res
-      .status(403)
-      .send("Invalid OAuth state. This may be a CSRF attack. Please try logging in again.");
+  if (!consumeOAuthState(req, res, state)) {
     return;
   }
-
-  // Clear the state cookie (one-time use)
-  res.clearCookie("oauth_state");
 
   const resp = await translateGoogleOAuthCode(code as string);
   const payload: unknown = await resp.json();
@@ -290,10 +292,10 @@ export const googleOAuth = async (req: MulmRequest, res: Response) => {
 
   if (!record) {
     // We've never seen this google sub before!
-    const { viewer } = req;
-    if (viewer) {
-      // if we are already logged in, we should link to the current member
-      memberId = viewer.id;
+    const linkMemberId = (await takeOAuthLinkMember(state)) ?? req.viewer?.id;
+    if (linkMemberId !== undefined) {
+      // A signed-in member started this flow: link to them.
+      memberId = linkMemberId;
     } else {
       // We are not logged in, check if we can link to an existing member
       const member = await getMemberByEmail(googleUser.email);
@@ -320,151 +322,68 @@ export const googleOAuth = async (req: MulmRequest, res: Response) => {
   res.redirect("/");
 };
 
-// ==================== Passkey (WebAuthn) Authentication ====================
-
-import {
-  generateRegistrationOptionsForMember,
-  verifyAndSaveCredential,
-  generateAuthenticationOptionsForLogin,
-  verifyCredentialAndAuthenticate,
-} from "@/auth/webauthn";
-import { getCredentialById, deleteCredential, updateCredentialDeviceName } from "@/db/webauthn";
-
 /**
- * POST /auth/passkey/register/options
- * Generate options for registering a new passkey
- * Requires: User must be logged in
+ * POST /oauth/apple — Apple's form_post callback. Mounted ahead of the
+ * Origin/CSRF-token middleware in index.ts because the POST comes from
+ * appleid.apple.com; the state cookie is the CSRF control here.
  */
-export const passkeyRegisterOptions = async (req: MulmRequest, res: Response) => {
-  if (!req.viewer) {
-    res.status(401).json({ error: "Not authenticated" });
+export interface AppleOAuthDeps {
+  config: typeof getAppleConfig;
+  exchange: typeof exchangeAppleCode;
+  verify: typeof verifyAppleIdToken;
+}
+
+export const createAppleOAuthHandler =
+  ({ config, exchange, verify }: AppleOAuthDeps) =>
+  async (req: MulmRequest, res: Response) => {
+  const cfg = config();
+  if (!cfg) {
+    res.status(404).send();
     return;
   }
 
+  const cancelled = appleErrorSchema.safeParse(req.body);
+  if (cancelled.success) {
+    // user_cancelled_authorize is the common one; nothing to do but go home.
+    logger.info("Apple sign-in returned an error", { error: cancelled.data.error });
+    clearOAuthStateCookie(res);
+    res.redirect("/");
+    return;
+  }
+
+  const parsed = appleCallbackSchema.safeParse(req.body);
+  if (!parsed.success) {
+    logger.warn("Malformed Apple OAuth callback");
+    res.status(400).send("Invalid OAuth request. Please try logging in again.");
+    return;
+  }
+
+  if (!consumeOAuthState(req, res, parsed.data.state)) {
+    return;
+  }
+
+  // The session cookie is SameSite=Lax and absent on this cross-site POST, so
+  // req.viewer is normally empty here; the state binding carries the member.
+  const linkMemberId = (await takeOAuthLinkMember(parsed.data.state)) ?? req.viewer?.id;
+
+  let memberId: number;
   try {
-    const options = await generateRegistrationOptionsForMember(
-      req.viewer.id,
-      req.viewer.contact_email,
-      req.viewer.display_name
-    );
-    res.json(options);
+    const idToken = await exchange(parsed.data.code, cfg);
+    const identity = await verify(idToken, cfg);
+    const name = appleUserName(parsed.data.user, identity.email);
+    memberId = await resolveAppleMember(identity, name, linkMemberId);
   } catch (err) {
-    logger.error("Failed to generate registration options", err);
-    res.status(500).json({ error: "Failed to generate registration options" });
-  }
-};
-
-/**
- * POST /auth/passkey/register/verify
- * Verify passkey registration response
- * Requires: User must be logged in
- */
-export const passkeyRegisterVerify = async (req: MulmRequest, res: Response) => {
-  if (!req.viewer) {
-    res.status(401).json({ error: "Not authenticated" });
+    logger.error("Apple sign-in failed", err);
+    res.status(401).send("Login Failed!");
     return;
   }
 
-  try {
-    const { credential, deviceName } = req.body as { credential: unknown; deviceName?: string };
-    const result = await verifyAndSaveCredential(
-      req.viewer.id,
-      credential as Parameters<typeof verifyAndSaveCredential>[1],
-      deviceName
-    );
+  await regenerateSession(req, res, memberId);
+  res.redirect("/");
+  };
 
-    if (result.verified) {
-      res.json({ verified: true, credentialId: result.credentialId });
-    } else {
-      res.status(400).json({ error: "Verification failed" });
-    }
-  } catch (err) {
-    logger.error("Failed to verify registration", err);
-    res.status(500).json({ error: "Failed to verify registration" });
-  }
-};
-
-/**
- * POST /auth/passkey/login/options
- * Generate options for passkey login
- */
-export const passkeyLoginOptions = async (req: MulmRequest, res: Response) => {
-  try {
-    const options = await generateAuthenticationOptionsForLogin();
-    res.json(options);
-  } catch (err) {
-    logger.error("Failed to generate authentication options", err);
-    res.status(500).json({ error: "Failed to generate authentication options" });
-  }
-};
-
-/**
- * POST /auth/passkey/login/verify
- * Verify passkey authentication and log user in
- */
-export const passkeyLoginVerify = async (req: MulmRequest, res: Response) => {
-  try {
-    const credential = req.body as Parameters<typeof verifyCredentialAndAuthenticate>[0];
-    const result = await verifyCredentialAndAuthenticate(credential);
-
-    if (result.verified && result.memberId) {
-      await regenerateSession(req, res, result.memberId);
-      res.json({ verified: true });
-    } else {
-      res.status(401).json({ error: "Authentication failed" });
-    }
-  } catch (err) {
-    logger.error("Failed to verify authentication", err);
-    res.status(500).json({ error: "Failed to verify authentication" });
-  }
-};
-
-/**
- * DELETE /auth/passkey/:id
- * Delete a passkey (account management)
- * Requires: User must be logged in
- */
-export const deletePasskey = async (req: MulmRequest, res: Response) => {
-  if (!req.viewer) {
-    res.status(401).send("Not authenticated");
-    return;
-  }
-
-  const credentialId = parseInt(req.params.id);
-  const credential = await getCredentialById(credentialId);
-
-  // Verify ownership
-  if (!credential || credential.member_id !== req.viewer.id) {
-    res.status(404).send("Passkey not found");
-    return;
-  }
-
-  await deleteCredential(credentialId);
-  res.status(200).send();
-};
-
-/**
- * PATCH /auth/passkey/:id/name
- * Rename a passkey
- * Requires: User must be logged in
- */
-export const renamePasskey = async (req: MulmRequest, res: Response) => {
-  if (!req.viewer) {
-    res.status(401).send("Not authenticated");
-    return;
-  }
-
-  const credentialId = parseInt(req.params.id);
-  const { name } = req.body as { name: string };
-
-  const credential = await getCredentialById(credentialId);
-
-  // Verify ownership
-  if (!credential || credential.member_id !== req.viewer.id) {
-    res.status(404).send("Passkey not found");
-    return;
-  }
-
-  await updateCredentialDeviceName(credentialId, name);
-  res.status(200).send();
-};
+export const appleOAuth = createAppleOAuthHandler({
+  config: getAppleConfig,
+  exchange: exchangeAppleCode,
+  verify: verifyAppleIdToken,
+});

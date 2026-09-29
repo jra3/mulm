@@ -4,10 +4,13 @@ import {
   createOrUpdatePassword,
   updateMember,
   getGoogleAccountByMemberId,
+  getAppleAccountByMemberId,
   deleteGoogleAccount,
+  deleteAppleAccount,
 } from "@/db/members";
 import { updateSchema } from "@/forms/login";
-import { getGoogleOAuthURL, setOAuthStateCookie, isGoogleOAuthEnabled } from "@/oauth";
+import { getGoogleOAuthURL, beginOAuthFlow, isGoogleOAuthEnabled } from "@/oauth";
+import { appleOAuthURL } from "@/auth/apple";
 import { MulmRequest } from "@/sessions";
 import { Response } from "express";
 import { logger } from "@/utils/logger";
@@ -16,7 +19,6 @@ import { tankSettingsSchema } from "@/forms/tank";
 import { validateFormResult } from "@/forms/utils";
 import pug from "pug";
 import { getBodyString } from "@/utils/request";
-import { getCredentialsByMember } from "@/db/webauthn";
 
 export const viewAccountSettings = async (req: MulmRequest, res: Response) => {
   const { viewer } = req;
@@ -25,26 +27,29 @@ export const viewAccountSettings = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  // Generate OAuth state for CSRF protection (stored in cookie)
-  const oauthState = setOAuthStateCookie(res);
+  // Bound to the viewer so the provider callback links this member even
+  // without the session cookie (Apple's callback is a cross-site POST).
+  const oauthState = await beginOAuthFlow(res, viewer.id);
 
   // Generate OAuth URLs synchronously (only if configured)
   const googleURL = isGoogleOAuthEnabled() ? getGoogleOAuthURL(oauthState) : null;
+  const appleURL = appleOAuthURL(oauthState);
 
   // Fetch async data in parallel
-  const [googleAccount, presets, credentials] = await Promise.all([
+  const [googleAccount, appleAccount, presets] = await Promise.all([
     getGoogleAccountByMemberId(viewer.id),
+    getAppleAccountByMemberId(viewer.id),
     queryTankPresets(viewer.id),
-    getCredentialsByMember(viewer.id),
   ]);
 
   res.render("account/page", {
     title: "Account Settings",
     viewer,
     googleURL,
+    appleURL,
     googleAccount,
+    appleAccount,
     presets,
-    credentials,
     errors: new Map(),
   });
 };
@@ -122,6 +127,23 @@ export const unlinkGoogleAccount = async (req: MulmRequest, res: Response) => {
 
   await deleteGoogleAccount(googleAccount.google_sub, viewer.id);
   res.send("Unlinked Google account");
+};
+
+export const unlinkAppleAccount = async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+  if (!viewer) {
+    res.status(401).send();
+    return;
+  }
+
+  const appleAccount = await getAppleAccountByMemberId(viewer.id);
+  if (!appleAccount) {
+    res.status(404).send("No Apple account linked");
+    return;
+  }
+
+  await deleteAppleAccount(appleAccount.apple_sub, viewer.id);
+  res.send("Unlinked Apple account");
 };
 
 // Tank Preset Management Routes

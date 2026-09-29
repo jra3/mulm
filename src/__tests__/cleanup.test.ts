@@ -5,7 +5,6 @@ import sqlite3 from "sqlite3";
 import { overrideConnection } from "../db/conn";
 import { runDailyCleanup } from "@/scheduled/cleanup";
 import { createAuthCode } from "@/db/auth";
-import { saveChallenge } from "@/db/webauthn";
 import { query } from "@/db/conn";
 
 void describe("Scheduled Cleanup Tasks", () => {
@@ -70,38 +69,9 @@ void describe("Scheduled Cleanup Tasks", () => {
     assert.strictEqual(authCodes[0]?.code, "valid-test-code");
   });
 
-  void test("should delete expired WebAuthn challenges", async () => {
-    // Create an expired challenge
-    const expiredChallenge = "expired-challenge-" + Date.now();
-    await saveChallenge(expiredChallenge, "authentication");
-
-    // Manually update the challenge to be expired
-    await query(
-      "UPDATE webauthn_challenges SET expires_on = datetime('now', '-1 hour') WHERE challenge = ?",
-      [expiredChallenge]
-    );
-
-    // Create a valid challenge (will expire in 5 minutes by default)
-    const validChallenge = "valid-challenge-" + Date.now();
-    await saveChallenge(validChallenge, "authentication");
-
-    // Run cleanup
-    await runDailyCleanup();
-
-    // Verify only valid challenge remains
-    const challenges = await query<{ challenge: string }>(
-      "SELECT challenge FROM webauthn_challenges WHERE challenge IN (?, ?)",
-      [expiredChallenge, validChallenge]
-    );
-
-    assert.strictEqual(challenges.length, 1);
-    assert.strictEqual(challenges[0]?.challenge, validChallenge);
-  });
-
   void test("should handle cleanup when no expired data exists", async () => {
     // Clear all data
     await query("DELETE FROM auth_codes", []);
-    await query("DELETE FROM webauthn_challenges", []);
 
     // Run cleanup (should not throw)
     await runDailyCleanup();

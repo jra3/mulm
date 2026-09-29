@@ -13,6 +13,7 @@ import {
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { query, withTransaction } from "../db/conn";
+import { moveLoginMethods } from "../db/members";
 import { containsPattern, containsSql } from "../db/likePattern";
 import { anyProgramSpeciesTypeSql, totalPointsSql } from "../points";
 
@@ -181,6 +182,9 @@ export function initializeMemberServer(server: Server): void {
         const withGoogle = await query<{ count: number }>(
           "SELECT COUNT(*) as count FROM google_account"
         );
+        const withApple = await query<{ count: number }>(
+          "SELECT COUNT(*) as count FROM apple_account"
+        );
         const activeMembers = await query<{ count: number }>(`
           SELECT COUNT(DISTINCT member_id) as count FROM submissions WHERE approved_on IS NOT NULL
         `);
@@ -190,6 +194,7 @@ export function initializeMemberServer(server: Server): void {
           admin_count: adminCount[0].count,
           with_password: withPassword[0].count,
           with_google_oauth: withGoogle[0].count,
+          with_apple_oauth: withApple[0].count,
           active_members: activeMembers[0].count,
         };
 
@@ -507,7 +512,7 @@ async function handleGetMemberDetail(args: GetMemberDetailArgs) {
   };
 }
 
-async function handleMergeMembers(args: MergeMembersArgs) {
+export async function handleMergeMembers(args: MergeMembersArgs) {
   const { from_member_id, to_member_id, preview } = args;
 
   if (from_member_id === to_member_id) {
@@ -562,6 +567,7 @@ async function handleMergeMembers(args: MergeMembersArgs) {
       `Move ${submissionCount[0]?.count || 0} submissions`,
       `Move ${awardCount[0]?.count || 0} awards`,
       `Move ${tankPresetCount[0]?.count || 0} tank presets`,
+      `Move Google, Apple and password logins the destination lacks`,
       `Delete member ${from_member_id}`,
     ],
   };
@@ -603,7 +609,13 @@ async function handleMergeMembers(args: MergeMembersArgs) {
     const tankResult = await tankStmt.run(to_member_id, from_member_id);
     await tankStmt.finalize();
 
-    // Delete source member (cascades to password_account, google_account, sessions, auth_codes)
+    // Keep the source's logins where the destination has none of that kind,
+    // so a duplicate created by a Google or Apple sign-in (a Hide My Email
+    // relay address, say) still logs into the surviving member afterwards.
+    const loginsMoved = await moveLoginMethods(db, from_member_id, to_member_id);
+
+    // Delete source member (cascades whatever logins were not moved, plus
+    // sessions and auth_codes)
     const deleteStmt = await db.prepare("DELETE FROM members WHERE id = ?");
     await deleteStmt.run(from_member_id);
     await deleteStmt.finalize();
@@ -612,6 +624,7 @@ async function handleMergeMembers(args: MergeMembersArgs) {
       submissions_moved: subResult.changes,
       awards_moved: awardResult.changes,
       tank_presets_moved: tankResult.changes,
+      logins_moved: loginsMoved,
     };
   });
 

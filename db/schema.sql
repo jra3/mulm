@@ -107,6 +107,16 @@ CREATE TABLE google_account (
 		NOT NULL,
 	UNIQUE(member_id)
 );
+CREATE TABLE apple_account (
+	apple_sub TEXT PRIMARY KEY,
+	apple_email TEXT,
+	member_id INTEGER
+		REFERENCES members(id)
+		ON DELETE CASCADE
+		NOT NULL,
+	UNIQUE(member_id)
+);
+CREATE INDEX idx_apple_member_id ON apple_account (member_id);
 CREATE TABLE sessions (
 	session_id TEXT PRIMARY KEY,
 	member_id INTEGER

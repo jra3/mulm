@@ -15,7 +15,7 @@ import { logger } from "../utils/logger";
  * Scope:
  * - Only state-changing methods are checked.
  * - Only *authenticated* requests are checked — the token is issued at login,
- *   so pre-auth mutations (login/signup/password reset, passkey login) have no
+ *   so pre-auth mutations (login/signup/password reset) have no
  *   token yet and are already covered by Origin/Referer validation.
  * - Legacy sessions with no stored token are not blocked (the migration
  *   backfills tokens, but this guards against any gap).
