@@ -169,6 +169,22 @@ The assigning of points is based on:
 
 ---
 
+## Point Classification Lists
+
+This summary leaves out the manual's per-species point lists. The full text, extracted from the [published PDF](https://www.basny.org/Documents/BAP/BAS-BAP-Manual.pdf), is in [`BAS-BAP-Manual.txt`](BAS-BAP-Manual.txt). The coral and invertebrate list is short enough to repeat here:
+
+| Points | Common name |
+| :--- | :--- |
+| 5 | Any freshwater snail |
+| 15 | Any marine type snail |
+| 15 | Any freshwater shrimp |
+| 20 | Any marine shrimp |
+| 15 | Soft coral |
+| 20 | Hard coral |
+| 20 | Any marine fish |
+
+---
+
 ## [cite_start]Breeders Award Committee 
 
 * [cite_start]The committee consists of a chairperson and an even number of other members, appointed by the Board of Directors.
