@@ -4,6 +4,7 @@ include ../mixins/submissionVideo.pug
 include ../mixins/caresBadge.pug
 include ../mixins/iucnBadge.pug
 include ../mixins/emptyState.pug
+include ../mixins/bindSpeciesControls.pug
 
 mixin reviewTextInput(labelText, name, type="text")
     .grid.gap-2
@@ -280,6 +281,12 @@ html
                     .status-panel.status-panel-admin
                         .container.mx-auto.max-w-4xl
                             h3.text-white.text-lg.font-semibold.mb-4 Admin Actions
+                            if allowed.bindSpecies && !submission.species_id
+                                .text-white.mb-4
+                                    p.font-semibold Not bound to a Species
+                                    p.text-sm.text-gray-300 It cannot be approved until it is. Find it in the catalogue, or create it if it is not there.
+                                    +bindSpeciesControls(submission, false)
+                                    .text-sm.text-red-300.mt-2#committee-error(role="alert")
                             .flex.justify-center.gap-4
                                 if allowed.requestChanges
                                     button.destructive(

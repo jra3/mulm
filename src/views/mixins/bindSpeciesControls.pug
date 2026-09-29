@@ -1,0 +1,35 @@
+//- Bind a Submission to a Species: search the catalogue, or create the
+//- Species when none matches. Both reload the page on success; a refusal is
+//- swapped into #committee-error, which the including panel provides.
+//-
+//- @param submission - the Submission (id)
+//- @param bound - whether it is already bound, which makes this a rebind
+mixin bindSpeciesControls(submission, bound)
+    details(open=bound ? false : true)
+        summary.link.text-sm.mt-2= bound ? "Change Species" : "Choose Species"
+        form.flex.gap-2.items-center.mt-2(
+            hx-post=`/admin/submissions/${submission.id}/bind-species`
+            hx-disabled-elt="find button[type=submit]"
+        )
+            label.sr-only(for="bind-species-search") Species
+            //- Unfiltered by Species type: a Submission filed under the
+            //- wrong type is corrected by binding it to the right Species
+            //- and adopting that Species' classification.
+            select#bind-species-search.tom-select-typeahead.flex-1(
+                name="group_id"
+                data-api-url="/api/species/search"
+                data-value-field="group_id"
+                data-label-field="text"
+                data-search-fields="text,common_name,scientific_name"
+                data-min-query-length="2"
+                data-max-items="1"
+                data-placeholder="Search species..."
+                required
+            )
+            button.primary.text-sm(type="submit")= bound ? "Rebind" : "Bind"
+            button.outline.text-sm(
+                type="button"
+                hx-get=`/admin/dialog/species/new?submission_id=${submission.id}`
+                hx-target="body"
+                hx-swap="beforeend"
+            ) New Species

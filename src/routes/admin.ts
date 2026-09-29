@@ -26,7 +26,7 @@ import { Response, NextFunction } from "express";
 import { createAuthCode } from "@/db/auth";
 import { AuthCode, generateRandomCode } from "@/auth";
 import { validateFormResult } from "@/forms/utils";
-import { approvalPanelData, validateSubmission } from "./submission";
+import { allowedMoves, approvalPanelData, validateSubmission } from "./submission";
 import {
   isLivestock,
   foodTypes,
@@ -343,7 +343,7 @@ Substrate:
 /**
  * Run a witness-panel move (binding a Species, confirming the Witness) and
  * show a refusal in the panel's own alert. HTMX does not swap a 4xx body, so
- * a refusal sent as one reached nobody; this retargets `#witness-error`.
+ * a refusal sent as one reached nobody; this retargets `#committee-error`.
  * @returns whether the move ran; if not, the response has been sent
  */
 async function witnessPanelMove(
@@ -364,7 +364,7 @@ async function witnessPanelMove(
 }
 
 function sendWitnessPanelRefusal(res: Response, messages: string[]): void {
-  res.set("HX-Retarget", "#witness-error").set("HX-Reswap", "innerHTML");
+  res.set("HX-Retarget", "#committee-error").set("HX-Reswap", "innerHTML");
   res.render("admin/witnessErrors", { messages });
 }
 
@@ -556,6 +556,7 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
         program: submission.program,
       },
       approval: await approvalPanelData(submission),
+      allowed: allowedMoves(viewer, submission, lifecycle.deriveState(submission)),
       errors,
     });
     return;

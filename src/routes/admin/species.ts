@@ -473,7 +473,7 @@ type CreateSpeciesDialogValues = {
   program_class: string;
 };
 
-/** The create-Species dialog, for the witness panel's Submission. */
+/** The create-Species dialog, for an unbound or rebinding Submission. */
 function renderCreateSpeciesDialog(
   res: Response,
   submission: Submission,
@@ -490,7 +490,7 @@ function renderCreateSpeciesDialog(
 
 /**
  * GET /admin/dialog/species/new?submission_id=123
- * The witness panel's create-Species dialog, pre-filled from the Submission.
+ * The committee's create-Species dialog, pre-filled from the Submission.
  */
 export const createSpeciesDialog = async (req: MulmRequest, res: Response) => {
   const submissionId = parseInt(getQueryString(req, "submission_id", ""));
@@ -522,7 +522,7 @@ export const createSpeciesDialog = async (req: MulmRequest, res: Response) => {
 
 /**
  * POST /admin/submissions/:id/species
- * Create a Species from the witness panel and bind the Submission to it, in
+ * Create a Species from a committee panel and bind the Submission to it, in
  * one flow: the dialog's success is the binding. A refusal re-renders the
  * dialog with its errors; success reloads the page to show the Submission
  * bound.
