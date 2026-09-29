@@ -32,11 +32,6 @@ declare module "@/config.json" {
       s3Bucket: string;
       r2PublicUrl: string;
     };
-    webauthn?: {
-      rpName: string;
-      rpID: string;
-      origin: string;
-    };
     iucn?: {
       apiToken: string;
       baseUrl: string;

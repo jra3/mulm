@@ -87,11 +87,6 @@ Create `src/config.json` with the following structure (see `src/config.sample.js
   "s3Url": "",
   "s3Bucket": "",
   "r2PublicUrl": "",
-  "webauthn": {
-    "rpName": "BAP Portal",
-    "rpID": "localhost",
-    "origin": "http://localhost:4200"
-  },
   "mcp": {
     "enabled": false,
     "port": 3001,

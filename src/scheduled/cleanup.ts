@@ -1,5 +1,4 @@
 import { deleteExpiredAuthCodes } from "@/db/auth";
-import { deleteExpiredChallenges } from "@/db/webauthn";
 import { ready, query } from "@/db/conn";
 import { logger } from "@/utils/logger";
 import { listAllObjects, deleteImage, isR2Enabled, type ImageMetadata } from "@/utils/r2-client";
@@ -126,7 +125,6 @@ async function cleanupOrphanedImages(): Promise<{ deleted: number; skipped: numb
 /**
  * Run daily cleanup tasks for expired data
  * - Deletes expired password reset tokens (auth_codes)
- * - Deletes expired WebAuthn challenges
  * - Deletes orphaned images from R2 (older than 7 days)
  */
 export async function runDailyCleanup(): Promise<void> {
@@ -140,10 +138,6 @@ export async function runDailyCleanup(): Promise<void> {
     const authCodesResult = await deleteExpiredAuthCodes(new Date());
     const authCodesDeleted = authCodesResult.changes || 0;
     logger.info(`Deleted ${authCodesDeleted} expired auth codes`);
-
-    // Delete expired WebAuthn challenges
-    const challengesDeleted = await deleteExpiredChallenges();
-    logger.info(`Deleted ${challengesDeleted} expired WebAuthn challenges`);
 
     // Delete orphaned images from R2
     const imageCleanup = await cleanupOrphanedImages();

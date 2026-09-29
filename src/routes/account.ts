@@ -16,7 +16,6 @@ import { tankSettingsSchema } from "@/forms/tank";
 import { validateFormResult } from "@/forms/utils";
 import pug from "pug";
 import { getBodyString } from "@/utils/request";
-import { getCredentialsByMember } from "@/db/webauthn";
 
 export const viewAccountSettings = async (req: MulmRequest, res: Response) => {
   const { viewer } = req;
@@ -32,10 +31,9 @@ export const viewAccountSettings = async (req: MulmRequest, res: Response) => {
   const googleURL = isGoogleOAuthEnabled() ? getGoogleOAuthURL(oauthState) : null;
 
   // Fetch async data in parallel
-  const [googleAccount, presets, credentials] = await Promise.all([
+  const [googleAccount, presets] = await Promise.all([
     getGoogleAccountByMemberId(viewer.id),
     queryTankPresets(viewer.id),
-    getCredentialsByMember(viewer.id),
   ]);
 
   res.render("account/page", {
@@ -44,7 +42,6 @@ export const viewAccountSettings = async (req: MulmRequest, res: Response) => {
     googleURL,
     googleAccount,
     presets,
-    credentials,
     errors: new Map(),
   });
 };

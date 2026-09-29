@@ -108,12 +108,11 @@ app.use(
     reportOnly: true,
     directives: {
       defaultSrc: ["'self'"],
-      // esm.sh serves the SimpleWebAuthn passkey browser helper.
-      scriptSrc: ["'self'", "https://esm.sh"],
+      scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       // R2-hosted submission images + Open Graph images over https; data: for inline svg.
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https://esm.sh"],
+      connectSrc: ["'self'"],
       fontSrc: ["'self'", "data:"],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
@@ -333,14 +332,6 @@ router.get("/auth/forgot-password", auth.validateForgotPassword);
 router.get("/auth/set-password", auth.validateForgotPassword);
 router.post("/auth/forgot-password", forgotPasswordRateLimiter, auth.sendForgotPassword);
 router.post("/auth/reset-password", auth.resetPassword);
-
-// Passkey (WebAuthn) authentication
-router.post("/auth/passkey/register/options", auth.passkeyRegisterOptions);
-router.post("/auth/passkey/register/verify", auth.passkeyRegisterVerify);
-router.post("/auth/passkey/login/options", loginRateLimiter, auth.passkeyLoginOptions);
-router.post("/auth/passkey/login/verify", loginRateLimiter, auth.passkeyLoginVerify);
-router.delete("/auth/passkey/:id", auth.deletePasskey);
-router.patch("/auth/passkey/:id/name", auth.renamePasskey);
 
 // OAuth (external dependency - redirect_uri registered with providers)
 router.get("/oauth/google", oauthRateLimiter, auth.googleOAuth);

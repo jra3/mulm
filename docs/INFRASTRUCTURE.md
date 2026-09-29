@@ -45,12 +45,12 @@ Both apps:
 
 ## Configuration
 
-The full app config (DB path, OAuth, SMTP, R2 credentials, WebAuthn, etc.) is delivered as a single Fly secret named `CONFIG_JSON`. `start.sh` materializes it to `/app/src/config.json` on every boot.
+The full app config (DB path, OAuth, SMTP, R2 credentials, etc.) is delivered as a single Fly secret named `CONFIG_JSON`. `start.sh` materializes it to `/app/src/config.json` on every boot.
 
 | App | `CONFIG_JSON` overrides vs. real prod config |
 |---|---|
 | `basny-bap` | none — uses real config |
-| `basny-bap-staging` | `server.domain`, `webauthn.rpID`, `webauthn.origin` → `basny-bap-staging.fly.dev`; `email.disableEmails = true` |
+| `basny-bap-staging` | `server.domain` → `basny-bap-staging.fly.dev`; `email.disableEmails = true` |
 
 Rotate with `flyctl secrets set CONFIG_JSON="$(cat config.production.json)" --app <app>`.
 
