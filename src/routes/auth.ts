@@ -13,7 +13,16 @@ import { forgotSchema, loginSchema, resetSchema, signupSchema } from "@/forms/lo
 import { validateFormResult } from "@/forms/utils";
 import { getBodyParam } from "@/utils/request";
 import { sendResetEmail } from "@/notifications";
-import { getGoogleUser, translateGoogleOAuthCode } from "@/oauth";
+import { clearOAuthStateCookie, getGoogleUser, translateGoogleOAuthCode } from "@/oauth";
+import {
+  appleCallbackSchema,
+  appleErrorSchema,
+  appleUserName,
+  exchangeAppleCode,
+  getAppleConfig,
+  resolveAppleMember,
+  verifyAppleIdToken,
+} from "@/auth/apple";
 import { regenerateSession, destroyUserSession, MulmRequest } from "@/sessions";
 import { Response } from "express";
 import { logger } from "@/utils/logger";
@@ -269,7 +278,7 @@ export const googleOAuth = async (req: MulmRequest, res: Response) => {
   }
 
   // Clear the state cookie (one-time use)
-  res.clearCookie("oauth_state");
+  clearOAuthStateCookie(res);
 
   const resp = await translateGoogleOAuthCode(code as string);
   const payload: unknown = await resp.json();
@@ -313,6 +322,63 @@ export const googleOAuth = async (req: MulmRequest, res: Response) => {
 
   if (memberId == undefined) {
     res.status(401).send();
+    return;
+  }
+
+  await regenerateSession(req, res, memberId);
+  res.redirect("/");
+};
+
+/**
+ * POST /oauth/apple — Apple's form_post callback. Mounted ahead of the
+ * Origin/CSRF-token middleware in index.ts because the POST comes from
+ * appleid.apple.com; the state cookie is the CSRF control here.
+ */
+export const appleOAuth = async (req: MulmRequest, res: Response) => {
+  const cfg = getAppleConfig();
+  if (!cfg) {
+    res.status(404).send();
+    return;
+  }
+
+  const cancelled = appleErrorSchema.safeParse(req.body);
+  if (cancelled.success) {
+    // user_cancelled_authorize is the common one; nothing to do but go home.
+    logger.info("Apple sign-in returned an error", { error: cancelled.data.error });
+    clearOAuthStateCookie(res);
+    res.redirect("/");
+    return;
+  }
+
+  const parsed = appleCallbackSchema.safeParse(req.body);
+  if (!parsed.success) {
+    logger.warn("Malformed Apple OAuth callback");
+    res.status(400).send("Invalid OAuth request. Please try logging in again.");
+    return;
+  }
+
+  const storedState = String(req.cookies.oauth_state);
+  if (!storedState || storedState !== parsed.data.state) {
+    logger.warn("Invalid OAuth state parameter", {
+      storedState: storedState?.substring(0, 10) + "...",
+      receivedState: parsed.data.state.substring(0, 10) + "...",
+    });
+    res
+      .status(403)
+      .send("Invalid OAuth state. This may be a CSRF attack. Please try logging in again.");
+    return;
+  }
+  clearOAuthStateCookie(res);
+
+  let memberId: number;
+  try {
+    const idToken = await exchangeAppleCode(parsed.data.code, cfg);
+    const identity = await verifyAppleIdToken(idToken, cfg);
+    const name = appleUserName(parsed.data.user, identity.email);
+    memberId = await resolveAppleMember(identity, name, req.viewer?.id);
+  } catch (err) {
+    logger.error("Apple sign-in failed", err);
+    res.status(401).send("Login Failed!");
     return;
   }
 

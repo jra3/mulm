@@ -603,7 +603,7 @@ async function handleMergeMembers(args: MergeMembersArgs) {
     const tankResult = await tankStmt.run(to_member_id, from_member_id);
     await tankStmt.finalize();
 
-    // Delete source member (cascades to password_account, google_account, sessions, auth_codes)
+    // Delete source member (cascades to password_account, google_account, apple_account, sessions, auth_codes)
     const deleteStmt = await db.prepare("DELETE FROM members WHERE id = ?");
     await deleteStmt.run(from_member_id);
     await deleteStmt.finalize();

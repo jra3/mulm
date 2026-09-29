@@ -17,3 +17,18 @@ include ../mixins/emptyState.pug
 			else
 				a(href=googleURL alt='Continue with Google')
 					img(src='/google-continue-button.svg')
+
+	//- Apple Account
+	if appleURL
+		.grid.grid-cols-1.w-full.gap-2.mb-4(class="md:grid-cols-2")
+			if appleAccount
+				.flex.gap-4.items-center#appleAccount
+					span.font-bold Apple
+					span.font-base= appleAccount.apple_email
+					button.destructive(
+						hx-target="#appleAccount"
+						hx-delete="/account/apple"
+					) Unlink
+			else
+				a(href=appleURL alt='Continue with Apple')
+					img(src='/apple-signin-button.svg')

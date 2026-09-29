@@ -4,10 +4,13 @@ import {
   createOrUpdatePassword,
   updateMember,
   getGoogleAccountByMemberId,
+  getAppleAccountByMemberId,
   deleteGoogleAccount,
+  deleteAppleAccount,
 } from "@/db/members";
 import { updateSchema } from "@/forms/login";
 import { getGoogleOAuthURL, setOAuthStateCookie, isGoogleOAuthEnabled } from "@/oauth";
+import { getAppleConfig, getAppleOAuthURL } from "@/auth/apple";
 import { MulmRequest } from "@/sessions";
 import { Response } from "express";
 import { logger } from "@/utils/logger";
@@ -29,10 +32,13 @@ export const viewAccountSettings = async (req: MulmRequest, res: Response) => {
 
   // Generate OAuth URLs synchronously (only if configured)
   const googleURL = isGoogleOAuthEnabled() ? getGoogleOAuthURL(oauthState) : null;
+  const appleConfig = getAppleConfig();
+  const appleURL = appleConfig ? getAppleOAuthURL(oauthState, appleConfig) : null;
 
   // Fetch async data in parallel
-  const [googleAccount, presets] = await Promise.all([
+  const [googleAccount, appleAccount, presets] = await Promise.all([
     getGoogleAccountByMemberId(viewer.id),
+    getAppleAccountByMemberId(viewer.id),
     queryTankPresets(viewer.id),
   ]);
 
@@ -40,7 +46,9 @@ export const viewAccountSettings = async (req: MulmRequest, res: Response) => {
     title: "Account Settings",
     viewer,
     googleURL,
+    appleURL,
     googleAccount,
+    appleAccount,
     presets,
     errors: new Map(),
   });
@@ -119,6 +127,23 @@ export const unlinkGoogleAccount = async (req: MulmRequest, res: Response) => {
 
   await deleteGoogleAccount(googleAccount.google_sub, viewer.id);
   res.send("Unlinked Google account");
+};
+
+export const unlinkAppleAccount = async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+  if (!viewer) {
+    res.status(401).send();
+    return;
+  }
+
+  const appleAccount = await getAppleAccountByMemberId(viewer.id);
+  if (!appleAccount) {
+    res.status(404).send("No Apple account linked");
+    return;
+  }
+
+  await deleteAppleAccount(appleAccount.apple_sub, viewer.id);
+  res.send("Unlinked Apple account");
 };
 
 // Tank Preset Management Routes

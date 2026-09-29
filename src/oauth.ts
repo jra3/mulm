@@ -12,21 +12,34 @@ export function isGoogleOAuthEnabled(): boolean {
   );
 }
 
+export const OAUTH_STATE_COOKIE = "oauth_state";
+export const OAUTH_STATE_COOKIE_PATH = "/oauth";
+
 /**
- * Set OAuth state cookie for CSRF protection
- * Call this before redirecting user to the OAuth provider
- * Returns the generated state token
+ * Set the OAuth state cookie for CSRF protection before redirecting to a
+ * provider, and return the state to put in the redirect.
+ *
+ * `SameSite=None`, not Lax: Apple returns with a cross-site POST
+ * (`response_mode=form_post`), and browsers drop Lax cookies on those. It is
+ * safe for every provider because the cookie is httpOnly, ten minutes, scoped
+ * to /oauth and holds only this random token; an attacker can't read it, so
+ * can't forge a callback whose `state` matches. `Secure` is mandatory with
+ * None; Chrome and Firefox still accept it on http://localhost.
  */
 export function setOAuthStateCookie(res: Response): string {
   const state = generateRandomCode(32);
-  res.cookie("oauth_state", state, {
+  res.cookie(OAUTH_STATE_COOKIE, state, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/oauth",
+    secure: true,
+    sameSite: "none",
+    path: OAUTH_STATE_COOKIE_PATH,
     maxAge: 10 * 60 * 1000, // 10 minutes
   });
   return state;
+}
+
+export function clearOAuthStateCookie(res: Response): void {
+  res.clearCookie(OAUTH_STATE_COOKIE, { path: OAUTH_STATE_COOKIE_PATH });
 }
 
 export function getGoogleOAuthURL(state: string): string {

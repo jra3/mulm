@@ -67,6 +67,45 @@ export async function deleteGoogleAccount(sub: string, memberId: number) {
   return deleteOne(googleAccountTableName, { google_sub: sub, member_id: memberId });
 }
 
+// ==================== Apple Account ====================
+
+const appleAccountTableName = "apple_account";
+
+export async function getAppleAccount(sub: string) {
+  const accounts = await query<{
+    apple_sub: string;
+    member_id: number;
+    apple_email: string;
+  }>(
+    `SELECT apple_sub, member_id, apple_email FROM ${appleAccountTableName} WHERE apple_sub = ?`,
+    [sub]
+  );
+  return accounts.pop();
+}
+
+export async function getAppleAccountByMemberId(member_id: number) {
+  const accounts = await query<{
+    apple_sub: string;
+    member_id: number;
+    apple_email: string;
+  }>(`SELECT apple_sub, member_id, apple_email FROM ${appleAccountTableName} WHERE member_id = ?`, [
+    member_id,
+  ]);
+  return accounts.pop();
+}
+
+export async function createAppleAccount(memberId: number, sub: string, email: string) {
+  return insertOne(appleAccountTableName, {
+    member_id: memberId,
+    apple_sub: sub,
+    apple_email: email,
+  });
+}
+
+export async function deleteAppleAccount(sub: string, memberId: number) {
+  return deleteOne(appleAccountTableName, { apple_sub: sub, member_id: memberId });
+}
+
 export async function createOrUpdatePassword(memberId: number, passwordEntry: ScryptPassword) {
   const conn = db(true);
   try {
@@ -209,6 +248,7 @@ export async function getRosterWithPoints() {
       coralTotalPoints: number;
       hasPassword: number;
       hasGoogleAccount: number;
+      hasAppleAccount: number;
     }
   >(`
 		SELECT
@@ -217,10 +257,12 @@ export async function getRosterWithPoints() {
 			COALESCE(plant_points.total, 0) as plantTotalPoints,
 			COALESCE(coral_points.total, 0) as coralTotalPoints,
 			CASE WHEN pa.member_id IS NOT NULL THEN 1 ELSE 0 END as hasPassword,
-			CASE WHEN ga.member_id IS NOT NULL THEN 1 ELSE 0 END as hasGoogleAccount
+			CASE WHEN ga.member_id IS NOT NULL THEN 1 ELSE 0 END as hasGoogleAccount,
+			CASE WHEN aa.member_id IS NOT NULL THEN 1 ELSE 0 END as hasAppleAccount
 		FROM members m
 		LEFT JOIN password_account pa ON m.id = pa.member_id
 		LEFT JOIN google_account ga ON m.id = ga.member_id
+		LEFT JOIN apple_account aa ON m.id = aa.member_id
 		LEFT JOIN (${programPointsSubquery("fish")}) fish_points ON m.id = fish_points.member_id
 		LEFT JOIN (${programPointsSubquery("plant")}) plant_points ON m.id = plant_points.member_id
 		LEFT JOIN (${programPointsSubquery("coral")}) coral_points ON m.id = coral_points.member_id
@@ -240,6 +282,7 @@ export async function getMemberWithPoints(memberId: number) {
       coralTotalPoints: number;
       hasPassword: number;
       hasGoogleAccount: number;
+      hasAppleAccount: number;
     }
   >(
     `
@@ -249,10 +292,12 @@ export async function getMemberWithPoints(memberId: number) {
 			COALESCE(plant_points.total, 0) as plantTotalPoints,
 			COALESCE(coral_points.total, 0) as coralTotalPoints,
 			CASE WHEN pa.member_id IS NOT NULL THEN 1 ELSE 0 END as hasPassword,
-			CASE WHEN ga.member_id IS NOT NULL THEN 1 ELSE 0 END as hasGoogleAccount
+			CASE WHEN ga.member_id IS NOT NULL THEN 1 ELSE 0 END as hasGoogleAccount,
+			CASE WHEN aa.member_id IS NOT NULL THEN 1 ELSE 0 END as hasAppleAccount
 		FROM members m
 		LEFT JOIN password_account pa ON m.id = pa.member_id
 		LEFT JOIN google_account ga ON m.id = ga.member_id
+		LEFT JOIN apple_account aa ON m.id = aa.member_id
 		LEFT JOIN (${programPointsSubquery("fish")}) fish_points ON m.id = fish_points.member_id
 		LEFT JOIN (${programPointsSubquery("plant")}) plant_points ON m.id = plant_points.member_id
 		LEFT JOIN (${programPointsSubquery("coral")}) coral_points ON m.id = coral_points.member_id

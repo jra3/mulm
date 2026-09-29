@@ -24,6 +24,13 @@ declare module "@/config.json" {
         clientId: string;
         clientSecret: string;
       };
+      apple?: {
+        teamId: string;
+        keyId: string;
+        servicesId: string;
+        /** The .p8 contents, PEM, newlines escaped as \n inside CONFIG_JSON. */
+        privateKey: string;
+      };
     };
     storage: {
       s3AccessKeyId: string;
