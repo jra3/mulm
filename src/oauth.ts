@@ -3,6 +3,7 @@ import { Response } from "express";
 import { MulmRequest } from "./sessions";
 import { logger } from "./utils/logger";
 import { generateRandomCode } from "./auth";
+import { createAuthCode, deleteAuthCode, getAuthCode } from "./db/auth";
 
 /**
  * Check if Google OAuth is configured
@@ -38,6 +39,41 @@ export function setOAuthStateCookie(res: Response): string {
     maxAge: 10 * 60 * 1000, // 10 minutes
   });
   return state;
+}
+
+const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
+
+/**
+ * Start a provider flow. When a signed-in member starts it (linking from
+ * /account), the member is bound to the state server-side, because the
+ * session cookie is SameSite=Lax and will not accompany Apple's cross-site
+ * callback; `req.viewer` is empty there. The binding, not the session, says
+ * whom to link.
+ */
+export async function beginOAuthFlow(res: Response, linkMemberId?: number): Promise<string> {
+  const state = setOAuthStateCookie(res);
+  if (linkMemberId !== undefined) {
+    await createAuthCode({
+      code: state,
+      member_id: linkMemberId,
+      purpose: "oauth_link",
+      expires_on: new Date(Date.now() + OAUTH_STATE_TTL_MS),
+    });
+  }
+  return state;
+}
+
+/**
+ * The member bound to this state by {@link beginOAuthFlow}, if any. One-shot:
+ * the binding is deleted whether or not it is still valid.
+ */
+export async function takeOAuthLinkMember(state: string): Promise<number | undefined> {
+  const code = await getAuthCode(state);
+  if (!code || code.purpose !== "oauth_link") {
+    return undefined;
+  }
+  await deleteAuthCode(state);
+  return new Date(code.expires_on) > new Date() ? code.member_id : undefined;
 }
 
 export function clearOAuthStateCookie(res: Response): void {

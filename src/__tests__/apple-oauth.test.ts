@@ -6,6 +6,9 @@ import { describe, test, before, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
 import { generateKeyPair, exportPKCS8, importPKCS8, jwtVerify, SignJWT, type CryptoKey } from "jose";
 import type { Response } from "express";
+import express from "express";
+import cookieParser from "cookie-parser";
+import request from "supertest";
 import {
   APPLE_ISSUER,
   appleUserName,
@@ -16,7 +19,9 @@ import {
   type AppleConfig,
   type AppleIdentity,
 } from "@/auth/apple";
-import { setOAuthStateCookie, clearOAuthStateCookie } from "@/oauth";
+import { setOAuthStateCookie, clearOAuthStateCookie, beginOAuthFlow, takeOAuthLinkMember } from "@/oauth";
+import { createAppleOAuthHandler } from "@/routes/auth";
+import { query } from "@/db/conn";
 import { setupTestDatabase, type TestDatabase } from "./testDbHelper.helper";
 import { createMember, getAppleAccountByMemberId, getMember, getMemberByEmail } from "@/db/members";
 
@@ -239,5 +244,93 @@ void describe("Apple member resolution", () => {
     const member = await getMemberByEmail("k3j2h@privaterelay.appleid.com");
     assert.strictEqual(member?.id, id);
     assert.strictEqual(member?.display_name, "k3j2h");
+  });
+});
+
+void describe("Apple callback without the session cookie", () => {
+  let testDb: TestDatabase;
+  beforeEach(async () => {
+    testDb = await setupTestDatabase();
+  });
+  afterEach(async () => {
+    await testDb.cleanup();
+  });
+
+  function fakeResponse() {
+    const cookies: Record<string, string> = {};
+    const res = {
+      cookie(name: string, value: string) {
+        cookies[name] = value;
+        return res;
+      },
+    };
+    return { res: res as unknown as Response, cookies };
+  }
+
+  void test("links the member who started the flow, via the state binding", async () => {
+    const member = await createMember("starter@example.com", "Starter");
+    const { res, cookies } = fakeResponse();
+    const state = await beginOAuthFlow(res, member);
+    assert.strictEqual(cookies.oauth_state, state);
+    assert.strictEqual(await takeOAuthLinkMember(state), member);
+    // One-shot.
+    assert.strictEqual(await takeOAuthLinkMember(state), undefined);
+  });
+
+  void test("an anonymous start binds nobody", async () => {
+    const { res } = fakeResponse();
+    const state = await beginOAuthFlow(res);
+    assert.strictEqual(await takeOAuthLinkMember(state), undefined);
+  });
+
+  void test("an expired binding is ignored", async () => {
+    const member = await createMember("late@example.com", "Late");
+    const { res } = fakeResponse();
+    const state = await beginOAuthFlow(res, member);
+    await query("UPDATE auth_codes SET expires_on = ? WHERE code = ?", [
+      new Date(Date.now() - 60_000).toISOString(),
+      state,
+    ]);
+    assert.strictEqual(await takeOAuthLinkMember(state), undefined);
+  });
+
+  void test("the cross-site POST links the originating member with no session cookie sent", async () => {
+    const member = await createMember("linker@example.com", "Linker", { password: "Str0ng!Passw0rd" });
+
+    // Start the flow as the signed-in member: state cookie + binding.
+    const { res, cookies } = fakeResponse();
+    const state = await beginOAuthFlow(res, member);
+
+    const app = express();
+    app.use(express.urlencoded({ extended: true }));
+    app.use(cookieParser());
+    // No session middleware: exactly what a SameSite=Lax session cookie
+    // dropped on a cross-site POST looks like to the server.
+    app.post(
+      "/oauth/apple",
+      createAppleOAuthHandler({
+        config: () => cfg,
+        exchange: () => Promise.resolve("id-token"),
+        verify: () =>
+          Promise.resolve({
+            sub: "001.linker",
+            email: "other-address@privaterelay.appleid.com",
+            emailVerified: true,
+            isPrivateEmail: true,
+          }),
+      })
+    );
+
+    const response = await request(app)
+      .post("/oauth/apple")
+      .set("Cookie", `oauth_state=${cookies.oauth_state}`)
+      .type("form")
+      .send({ code: "apple-code", state });
+
+    assert.strictEqual(response.status, 302);
+    assert.strictEqual(response.headers.location, "/");
+    assert.strictEqual((await getAppleAccountByMemberId(member))?.apple_sub, "001.linker");
+    // No second member was created for the relay address.
+    assert.strictEqual(await getMemberByEmail("other-address@privaterelay.appleid.com"), undefined);
   });
 });

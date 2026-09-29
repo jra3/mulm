@@ -40,7 +40,7 @@ import { originValidation } from "./middleware/originValidation";
 import { csrfValidation } from "./middleware/csrfValidation";
 import { bonusFields } from "@/points";
 import helmet from "helmet";
-import { getGoogleOAuthURL, setOAuthStateCookie, isGoogleOAuthEnabled } from "./oauth";
+import { getGoogleOAuthURL, beginOAuthFlow, isGoogleOAuthEnabled } from "./oauth";
 import { appleOAuthURL } from "./auth/apple";
 import { getQueryString, getBodyString } from "./utils/request";
 import { initR2 } from "./utils/r2-client";
@@ -185,8 +185,7 @@ router.get("/", async (req: MulmRequest, res) => {
   const isLoggedIn = Boolean(viewer);
   const isAdmin = viewer?.is_admin;
 
-  // Generate OAuth state for CSRF protection (stored in cookie)
-  const oauthState = setOAuthStateCookie(res);
+  const oauthState = await beginOAuthFlow(res, viewer?.id);
 
   const args = {
     title: "BAS BAP/HAP Portal",
@@ -344,9 +343,8 @@ router.post("/auth/reset-password", auth.resetPassword);
 // OAuth (external dependency - redirect_uri registered with providers)
 router.get("/oauth/google", oauthRateLimiter, auth.googleOAuth);
 
-router.get("/dialog/auth/signin", (req, res) => {
-  // Generate OAuth state for CSRF protection (stored in cookie)
-  const oauthState = setOAuthStateCookie(res);
+router.get("/dialog/auth/signin", async (req: MulmRequest, res) => {
+  const oauthState = await beginOAuthFlow(res, req.viewer?.id);
 
   res.render("account/signin", {
     viewer: {},

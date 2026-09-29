@@ -1,4 +1,5 @@
 import { makePasswordEntry, ScryptPassword } from "../auth";
+import type { Database } from "sqlite";
 import { db, query, deleteOne, insertOne, updateOne, withTransaction } from "./conn";
 import { logger } from "@/utils/logger";
 import { containsPattern, containsSql } from "./likePattern";
@@ -104,6 +105,40 @@ export async function createAppleAccount(memberId: number, sub: string, email: s
 
 export async function deleteAppleAccount(sub: string, memberId: number) {
   return deleteOne(appleAccountTableName, { apple_sub: sub, member_id: memberId });
+}
+
+/**
+ * On a member merge, carry the source's ways of logging in over to the
+ * destination wherever the destination has none of that kind. Where it already
+ * has one, the source's is left to cascade away with the source row. Runs
+ * inside the merge transaction. Returns how many of each moved (0 or 1).
+ */
+export async function moveLoginMethods(
+  conn: Database,
+  fromMemberId: number,
+  toMemberId: number
+): Promise<{ google: number; apple: number; password: number }> {
+  const moved = { google: 0, apple: 0, password: 0 };
+  const tables: [keyof typeof moved, string][] = [
+    ["google", "google_account"],
+    ["apple", "apple_account"],
+    ["password", "password_account"],
+  ];
+  for (const [kind, table] of tables) {
+    const existing = await conn.get<{ member_id: number }>(
+      `SELECT member_id FROM ${table} WHERE member_id = ?`,
+      [toMemberId]
+    );
+    if (existing) {
+      continue;
+    }
+    const result = await conn.run(`UPDATE ${table} SET member_id = ? WHERE member_id = ?`, [
+      toMemberId,
+      fromMemberId,
+    ]);
+    moved[kind] = result.changes ?? 0;
+  }
+  return moved;
 }
 
 export async function createOrUpdatePassword(memberId: number, passwordEntry: ScryptPassword) {

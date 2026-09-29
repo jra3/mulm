@@ -13,7 +13,13 @@ import { forgotSchema, loginSchema, resetSchema, signupSchema } from "@/forms/lo
 import { validateFormResult } from "@/forms/utils";
 import { getBodyParam } from "@/utils/request";
 import { sendResetEmail } from "@/notifications";
-import { clearOAuthStateCookie, consumeOAuthState, getGoogleUser, translateGoogleOAuthCode } from "@/oauth";
+import {
+  clearOAuthStateCookie,
+  consumeOAuthState,
+  getGoogleUser,
+  takeOAuthLinkMember,
+  translateGoogleOAuthCode,
+} from "@/oauth";
 import {
   appleCallbackSchema,
   appleErrorSchema,
@@ -286,10 +292,10 @@ export const googleOAuth = async (req: MulmRequest, res: Response) => {
 
   if (!record) {
     // We've never seen this google sub before!
-    const { viewer } = req;
-    if (viewer) {
-      // if we are already logged in, we should link to the current member
-      memberId = viewer.id;
+    const linkMemberId = (await takeOAuthLinkMember(state)) ?? req.viewer?.id;
+    if (linkMemberId !== undefined) {
+      // A signed-in member started this flow: link to them.
+      memberId = linkMemberId;
     } else {
       // We are not logged in, check if we can link to an existing member
       const member = await getMemberByEmail(googleUser.email);
@@ -321,8 +327,16 @@ export const googleOAuth = async (req: MulmRequest, res: Response) => {
  * Origin/CSRF-token middleware in index.ts because the POST comes from
  * appleid.apple.com; the state cookie is the CSRF control here.
  */
-export const appleOAuth = async (req: MulmRequest, res: Response) => {
-  const cfg = getAppleConfig();
+export interface AppleOAuthDeps {
+  config: typeof getAppleConfig;
+  exchange: typeof exchangeAppleCode;
+  verify: typeof verifyAppleIdToken;
+}
+
+export const createAppleOAuthHandler =
+  ({ config, exchange, verify }: AppleOAuthDeps) =>
+  async (req: MulmRequest, res: Response) => {
+  const cfg = config();
   if (!cfg) {
     res.status(404).send();
     return;
@@ -348,12 +362,16 @@ export const appleOAuth = async (req: MulmRequest, res: Response) => {
     return;
   }
 
+  // The session cookie is SameSite=Lax and absent on this cross-site POST, so
+  // req.viewer is normally empty here; the state binding carries the member.
+  const linkMemberId = (await takeOAuthLinkMember(parsed.data.state)) ?? req.viewer?.id;
+
   let memberId: number;
   try {
-    const idToken = await exchangeAppleCode(parsed.data.code, cfg);
-    const identity = await verifyAppleIdToken(idToken, cfg);
+    const idToken = await exchange(parsed.data.code, cfg);
+    const identity = await verify(idToken, cfg);
     const name = appleUserName(parsed.data.user, identity.email);
-    memberId = await resolveAppleMember(identity, name, req.viewer?.id);
+    memberId = await resolveAppleMember(identity, name, linkMemberId);
   } catch (err) {
     logger.error("Apple sign-in failed", err);
     res.status(401).send("Login Failed!");
@@ -362,4 +380,10 @@ export const appleOAuth = async (req: MulmRequest, res: Response) => {
 
   await regenerateSession(req, res, memberId);
   res.redirect("/");
-};
+  };
+
+export const appleOAuth = createAppleOAuthHandler({
+  config: getAppleConfig,
+  exchange: exchangeAppleCode,
+  verify: verifyAppleIdToken,
+});

@@ -9,7 +9,7 @@ import {
   deleteAppleAccount,
 } from "@/db/members";
 import { updateSchema } from "@/forms/login";
-import { getGoogleOAuthURL, setOAuthStateCookie, isGoogleOAuthEnabled } from "@/oauth";
+import { getGoogleOAuthURL, beginOAuthFlow, isGoogleOAuthEnabled } from "@/oauth";
 import { appleOAuthURL } from "@/auth/apple";
 import { MulmRequest } from "@/sessions";
 import { Response } from "express";
@@ -27,8 +27,9 @@ export const viewAccountSettings = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  // Generate OAuth state for CSRF protection (stored in cookie)
-  const oauthState = setOAuthStateCookie(res);
+  // Bound to the viewer so the provider callback links this member even
+  // without the session cookie (Apple's callback is a cross-site POST).
+  const oauthState = await beginOAuthFlow(res, viewer.id);
 
   // Generate OAuth URLs synchronously (only if configured)
   const googleURL = isGoogleOAuthEnabled() ? getGoogleOAuthURL(oauthState) : null;
