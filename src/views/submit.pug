@@ -116,29 +116,34 @@ html
                     }
                 }
 
-                // Sync the paired field (common <-> scientific)
+                // Sync the paired field (common <-> scientific). Each field
+                // holds the option's Name of its kind
+                const nameKey = { species_common_name: 'common_name', species_latin_name: 'scientific_name' };
                 const pairedId = target.id === 'species_common_name' ? 'species_latin_name' : 'species_common_name';
-                const pairedValue = target.id === 'species_common_name'
-                    ? selectedOption.scientific_name
-                    : selectedOption.common_name;
+                // A Species with no common Name goes by a scientific Name, so
+                // that fills the common field (#421)
+                const pairedValue = selectedOption[nameKey[pairedId]] || selectedOption.scientific_name;
                 const pairedField = document.getElementById(pairedId);
                 if (pairedField && pairedField.tomSelectInstance) {
                     const instance = pairedField.tomSelectInstance;
-                    // A Species with no Name of the paired kind clears the
+                    // A Species with no scientific Name to pair clears the
                     // paired field: a stale spelling would not agree with it
                     if (!pairedValue) {
                         instance.clear(true);
                         pairedField.value = '';
                         return;
                     }
-                    // Options are keyed by the field's own value
+                    // Options are keyed by the field's own value, so the
+                    // paired field's option carries pairedValue as its Name
                     if (!instance.options[pairedValue]) {
-                        instance.addOption({
+                        const option = {
                             common_name: selectedOption.common_name,
                             scientific_name: selectedOption.scientific_name,
                             group_id: selectedOption.group_id,
                             program_class: selectedOption.program_class
-                        });
+                        };
+                        option[nameKey[pairedId]] = pairedValue;
+                        instance.addOption(option);
                     }
                     // Silent, so the paired field does not re-run this handler
                     instance.setValue(pairedValue, true);

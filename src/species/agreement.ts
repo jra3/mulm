@@ -13,10 +13,15 @@ export type FormSpellings = {
 
 /**
  * How one spelling relates to the Species: blank, one of its Names of the
- * matching kind (the Canonical name is a scientific Name), or not one of its
- * Names.
+ * matching kind (the Canonical name is a scientific Name), one of its
+ * scientific Names in the common field, or not one of its Names.
+ *
+ * "scientific-name" is only for the common field. A Species with no common
+ * Name goes by a scientific Name, which the submit form puts in the common
+ * field (#421): for such a Species the spelling agrees, for one with common
+ * Names it does not. Either way the witness never adds it as a common Name.
  */
-export type SpellingAgreement = "empty" | "name" | "not-a-name";
+export type SpellingAgreement = "empty" | "name" | "scientific-name" | "not-a-name";
 
 export type FormAgreement = {
   /** Spellings and classification both agree. */
@@ -39,14 +44,25 @@ function spellingAgreement(spelling: string | null | undefined, names: string[])
 
 const texts = (names: Name[]) => names.map((n) => n.name);
 
+/** The common spelling against the common Names, then the scientific Names. */
+function commonSpellingAgreement(
+  spelling: string | null | undefined,
+  names: { common: Name[]; scientific: Name[] }
+): SpellingAgreement {
+  const agreement = spellingAgreement(spelling, texts(names.common));
+  if (agreement !== "not-a-name") return agreement;
+  return spellingAgreement(spelling, texts(names.scientific)) === "name" ? "scientific-name" : "not-a-name";
+}
+
 /**
  * Does this form agree with this Species? Spellings are compared to the
  * Species' Names whole and case-insensitively - the common spelling against
- * common Names, the Latin spelling against scientific Names, the Canonical
- * name among them - and the Species type and Program class must be equal.
+ * common Names (or, for a Species that has none, its scientific Names), the
+ * Latin spelling against scientific Names, the Canonical name among them -
+ * and the Species type and Program class must be equal.
  *
  * The answer is itemised so a caller can say what disagrees: the save
- * transitions read `agrees`, the witness panel reads the parts.
+ * transitions read `agrees`, the witness panel and the Witness read the parts.
  * @returns undefined if the Species does not exist
  */
 export async function checkFormAgreement(
@@ -57,12 +73,15 @@ export async function checkFormAgreement(
   if (!species) return undefined;
   const names = await listNames(speciesId);
 
-  const commonName = spellingAgreement(form.species_common_name, texts(names.common));
+  const commonName = commonSpellingAgreement(form.species_common_name, names);
   const latinName = spellingAgreement(form.species_latin_name, texts(names.scientific));
   const speciesType = (form.species_type ?? "").trim() === species.species_type;
   const programClass = (form.species_class ?? "").trim() === species.program_class;
 
-  const spellingsAgree = commonName !== "not-a-name" && latinName !== "not-a-name";
+  // A scientific Name stands in for a common Name only while the Species has none (#421)
+  const commonAgrees =
+    commonName === "scientific-name" ? names.common.length === 0 : commonName !== "not-a-name";
+  const spellingsAgree = commonAgrees && latinName !== "not-a-name";
   const classificationAgrees = speciesType && programClass;
   return {
     agrees: spellingsAgree && classificationAgrees,

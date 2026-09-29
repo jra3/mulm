@@ -706,6 +706,36 @@ void describe("Species catalogue", () => {
       });
     });
 
+    void test("a Species with no common Names goes by a scientific Name in the common field", async () => {
+      const id = await speciesWith({ genus: "Nocommonus", epithet: "latinus", scientific: ["Oldus latinus"] });
+
+      for (const spelling of ["Nocommonus latinus", "oldus latinus"]) {
+        const agreement = await checkFormAgreement(id, {
+          species_common_name: spelling,
+          species_latin_name: "Nocommonus latinus",
+          species_type: "Fish",
+          species_class: "Livebearers",
+        });
+        assert.strictEqual(agreement?.commonName, "scientific-name", spelling);
+        assert.strictEqual(agreement?.agrees, true, spelling);
+      }
+    });
+
+    void test("a Species with common Names does not take a scientific Name in the common field", async () => {
+      const id = await speciesWith({ genus: "Hascommonus", epithet: "latinus", common: ["Has Fish"] });
+
+      const agreement = await checkFormAgreement(id, {
+        species_common_name: "Hascommonus latinus",
+        species_latin_name: "Hascommonus latinus",
+        species_type: "Fish",
+        species_class: "Livebearers",
+      });
+      // Reported as such, so the witness never adds it as a common Name; still a disagreement
+      assert.strictEqual(agreement?.commonName, "scientific-name");
+      assert.strictEqual(agreement?.spellingsAgree, false);
+      assert.strictEqual(agreement?.agrees, false);
+    });
+
     void test("reports a spelling that is not a Name, and a classification mismatch", async () => {
       const id = await speciesWith({ genus: "Agreeus", epithet: "notus", common: ["Agree Fish"] });
 

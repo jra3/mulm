@@ -507,8 +507,9 @@ export type NamesToAdd = { common?: boolean; scientific?: boolean };
 /**
  * Add the chosen spellings as Names of the Species, inside the Witness's
  * transaction - the one place a Submission's spellings become Names. A
- * spelling that is blank or already a Name of that kind (as
- * `checkFormAgreement` decides: whole, any case) is never added.
+ * spelling that is blank, already a Name of that kind, or a scientific Name
+ * in the common field (as `checkFormAgreement` decides: whole, any case) is
+ * never added.
  * @returns the texts added, by kind
  */
 async function addSpellingsAsNames(
