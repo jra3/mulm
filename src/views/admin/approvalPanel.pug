@@ -1,4 +1,5 @@
 include ../mixins/errorMessage.pug
+include ../mixins/bindSpeciesControls.pug
 
 - const hasPointsError = errors && errors.has && errors.has("points");
 
@@ -9,6 +10,7 @@ include ../mixins/errorMessage.pug
 //- @param submission - id, points, program and the bonus columns
 //- @param approval - the bound Species (`approvalPanelData` in
 //-   src/routes/submission.ts), or null when unbound
+//- @param allowed - the viewer's legal moves; unbound, it offers the binding
 //- @param errors - validation errors by field
 - const pointClass = approval ? approval.pointClass : null
 - const prefilledPoints = pointClass
@@ -17,7 +19,11 @@ include ../mixins/errorMessage.pug
 if !approval
     .container.mx-auto.max-w-4xl#approval-unbound
         h3.text-white.text-lg.font-semibold.mb-2 Not bound to a Species
-        p.text-white.mb-2 This Submission cannot be approved until it is bound to a Species, and there is no binding at approval: a committee member fixes it by hand.
+        p.text-white.mb-2 This Submission cannot be approved until it is bound to a Species. Find it in the catalogue, or create it if it is not there.
+        if allowed.bindSpecies
+            .text-white.mb-4
+                +bindSpeciesControls(submission, false)
+            .text-sm.text-red-300.mb-2#committee-error(role="alert")
         .flex.gap-4.items-center.justify-center
             button.destructive(
                 type="button"

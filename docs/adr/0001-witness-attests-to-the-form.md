@@ -18,4 +18,5 @@ date: 2026-09-22
 - Return to Draft no longer keeps a confirmed Witness once the member saves anything.
 - Requesting changes on a witnessed Submission sends it back through witnessing after the member resubmits.
 - Binding to a Species can move to the witness step because the witness now vouches for it. Approval no longer offers a species step; an unbound Submission cannot be witnessed or approved.
+  - *Amended 2026-09-28:* a Submission witnessed before binding existed can still be unbound after its Witness. For those, the post-witness admin panel and the approval panel offer the committee's bind (a move the lifecycle table already allowed in the four middle states) while the Submission is unbound. A bound Submission still gets no species step after its Witness.
 - Applies before approval only. Committee corrections to an Approved Submission are Points corrections with a stated reason; Approved is terminal.

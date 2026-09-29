@@ -21,6 +21,7 @@
 //-   unticked, one that is already a Name (or a scientific Name in the common
 //-   field) is shown as such with no box, and a blank one not at all.
 //- @param allowed      - the moves this viewer may make
+include ../mixins/bindSpeciesControls.pug
 
 .status-panel.status-panel-admin#witnessPanel
     .container.mx-auto.max-w-4xl
@@ -64,36 +65,9 @@
                 p.text-sm.text-gray-600.mb-2 Find it in the catalogue, or create it if it is not there. The witness cannot be confirmed until the Submission is bound.
 
             if allowed.bindSpecies
-                details(open=boundSpecies ? false : true)
-                    summary.link.text-sm.mt-2= boundSpecies ? "Change Species" : "Choose Species"
-                    form.flex.gap-2.items-center.mt-2(
-                        hx-post=`/admin/submissions/${submission.id}/bind-species`
-                        hx-disabled-elt="find button[type=submit]"
-                    )
-                        label.sr-only(for="witness-species-search") Species
-                        //- Unfiltered by Species type: a Submission filed under the
-                        //- wrong type is corrected by binding it to the right Species
-                        //- and adopting that Species' classification.
-                        select#witness-species-search.tom-select-typeahead.flex-1(
-                            name="group_id"
-                            data-api-url="/api/species/search"
-                            data-value-field="group_id"
-                            data-label-field="text"
-                            data-search-fields="text,common_name,scientific_name"
-                            data-min-query-length="2"
-                            data-max-items="1"
-                            data-placeholder="Search species..."
-                            required
-                        )
-                        button.primary.text-sm(type="submit")= boundSpecies ? "Rebind" : "Bind"
-                        button.outline.text-sm(
-                            type="button"
-                            hx-get=`/admin/dialog/species/new?submission_id=${submission.id}`
-                            hx-target="body"
-                            hx-swap="beforeend"
-                        ) New Species
+                +bindSpeciesControls(submission, Boolean(boundSpecies))
 
-            .text-sm.text-red-700.mt-2#witness-error(role="alert")
+            .text-sm.text-red-700.mt-2#committee-error(role="alert")
 
         div.flex.justify-center.max-w-4xl.mx-auto.text-center.gap-4
             //- The table refuses the Witness while unbound, so the button is not offered

@@ -460,6 +460,7 @@ void describe("Pug Template Rendering", () => {
       /^mixins\/caresBadge\.pug$/, // Mixin-only template
       /^mixins\/iucnBadge\.pug$/, // Mixin-only template
       /^mixins\/formCheckbox\.pug$/, // Mixin-only template
+      /^mixins\/bindSpeciesControls\.pug$/, // Mixin-only template
       /^mixins\/changesRequestedBanner\.pug$/, // Mixin-only template (tested via submit.pug)
       /^mixins\/emptyState\.pug$/, // Mixin-only template
       /^mixins\/loadingSpinner\.pug$/, // Mixin-only template
@@ -1112,15 +1113,59 @@ void describe("Pug Template Rendering", () => {
       assert.match(html, /Approve/);
     });
 
-    void test("unbound: says it must be bound first, and offers no Approve", () => {
-      const html = render({ approval: null });
+    void test("unbound: says it must be bound first, offers the binding, and no Approve", () => {
+      const html = render({ approval: null, allowed: { bindSpecies: true } });
 
       assert.match(html, /id="approval-unbound"/);
       assert.match(html, /Not bound to a Species/);
       assert.doesNotMatch(html, /\/approve"|>Approve</);
-      assert.doesNotMatch(html, /tom-select|name="group_id"/);
+      assert.match(html, /hx-post="\/admin\/submissions\/42\/bind-species"/);
+      assert.match(html, /hx-get="\/admin\/dialog\/species\/new\?submission_id=42"/);
+      assert.match(html, /id="committee-error"/);
       assert.match(html, /Request Changes/);
       assert.match(html, /hx-delete="\/submissions\/42"/);
+    });
+
+    void test("unbound, when the viewer may not bind: no binding offered", () => {
+      const html = render({ approval: null, allowed: { bindSpecies: false } });
+
+      assert.match(html, /Not bound to a Species/);
+      assert.doesNotMatch(html, /tom-select|name="group_id"|dialog\/species\/new/);
+    });
+  });
+
+  /**
+   * Between the Witness and the queue, a Submission witnessed before binding
+   * existed can be unbound; the admin panel offers the committee's bind.
+   */
+  void describe("Review page between the Witness and the queue", () => {
+    const render = (submission: Record<string, unknown>, allowed: Record<string, boolean>) =>
+      pug.compileFile(path.join(viewsPath, "submission/review.pug"), { basedir: viewsPath, pretty: false })({
+        ...baseMockData,
+        isAdmin: true,
+        isSelf: false,
+        photos: [],
+        state: "waitingPeriod",
+        changesRequested: false,
+        allowed: { requestChanges: true, deleteSubmission: true, ...allowed },
+        waitingPeriodStatus: { requiredDays: 60, elapsedDays: 10, daysRemaining: 50, elapsed: false },
+        submission: { ...(baseMockData.submission as Record<string, unknown>), id: 77, ...submission },
+      });
+
+    void test("unbound: offers the bind and New Species", () => {
+      const html = render({ species_id: null }, { bindSpecies: true });
+
+      assert.match(html, /Not bound to a Species/);
+      assert.match(html, /hx-post="\/admin\/submissions\/77\/bind-species"/);
+      assert.match(html, /hx-get="\/admin\/dialog\/species\/new\?submission_id=77"/);
+      assert.match(html, /id="committee-error"/);
+    });
+
+    void test("bound: no species step", () => {
+      const html = render({ species_id: 5 }, { bindSpecies: true });
+
+      assert.doesNotMatch(html, /bind-species"|dialog\/species\/new/);
+      assert.match(html, /Request Changes/);
     });
   });
 
