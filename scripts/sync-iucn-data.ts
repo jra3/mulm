@@ -5,28 +5,29 @@
  * in the database. Respects API rate limits and provides resume capability.
  *
  * Usage:
- *   npm run script scripts/sync-iucn-data.ts [options]
+ *   npm run script -- scripts/sync-iucn-data.ts [options]
  *
  * Options:
  *   --dry-run              Preview changes without updating database
  *   --limit N              Process only N species (for testing)
  *   --missing-only         Only sync species without IUCN data
  *   --stale-only [days]    Only sync species with data older than N days (default: 365)
- *   --species-id ID        Sync single species by group ID
+ *   --species-id ID        Sync single species by Species ID
  *   --check-synonyms       Check if IUCN has species under a different name
  *   --verbose              Show detailed progress information
  *   --resume              Resume from last failed sync
  *
  * Examples:
- *   npm run script scripts/sync-iucn-data.ts --dry-run --limit 10
- *   npm run script scripts/sync-iucn-data.ts --missing-only
- *   npm run script scripts/sync-iucn-data.ts --species-id 42
- *   npm run script scripts/sync-iucn-data.ts --stale-only 365
+ *   npm run script -- scripts/sync-iucn-data.ts --dry-run --limit 10
+ *   npm run script -- scripts/sync-iucn-data.ts --missing-only
+ *   npm run script -- scripts/sync-iucn-data.ts --species-id 42
+ *   npm run script -- scripts/sync-iucn-data.ts --stale-only 365
  */
 
 import type { Database } from "sqlite";
-import { ready, db as appDb } from "../src/db/conn";
-import { getIUCNClient, IUCNAPIError } from "../src/integrations/iucn";
+import { ready, db as appDb } from "@/db/conn";
+import { findSpeciesById, speciesFromSql, updateIucnStatus, type Species } from "@/species";
+import { getIUCNClient, IUCNAPIError } from "@/integrations/iucn";
 import {
   recordIucnSync,
   getSpeciesWithMissingIucn,
@@ -34,8 +35,7 @@ import {
   createCanonicalRecommendation,
   type IUCNData,
   type SyncStatus,
-} from "../src/db/iucn";
-import { updateIucnStatus } from "../src/species";
+} from "@/db/iucn";
 
 interface CLIOptions {
   dryRun: boolean;
@@ -48,13 +48,9 @@ interface CLIOptions {
   checkSynonyms: boolean;
 }
 
-interface SpeciesForSync {
-  group_id: number;
-  canonical_genus: string;
-  canonical_species_name: string;
-  program_class?: string;
-  iucn_redlist_category?: string;
-}
+// The missing-only query leaves the category out, hence Partial
+type SpeciesForSync = Pick<Species, "group_id" | "canonical_genus" | "canonical_species_name"> &
+  Partial<Pick<Species, "iucn_redlist_category">>;
 
 interface SyncResult {
   total: number;
@@ -63,6 +59,18 @@ interface SyncResult {
   errors: number;
   skipped: number;
   synonymsFound: number;
+}
+
+// A flag's value as a positive whole number. Anything else exits: parseInt
+// would give NaN, which the target checks read as "no flag", so a mistyped
+// --species-id used to sync the whole catalogue.
+function positiveInt(flag: string, value: string | undefined): number {
+  const n = Number(value);
+  if (value === undefined || !Number.isInteger(n) || n < 1) {
+    console.error(`${flag} needs a positive whole number${value === undefined ? "" : `, not "${value}"`}`);
+    process.exit(1);
+  }
+  return n;
 }
 
 // Parse command line arguments
@@ -79,15 +87,15 @@ function parseArgs(): CLIOptions {
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--dry-run") {
       options.dryRun = true;
-    } else if (args[i] === "--limit" && i + 1 < args.length) {
-      options.limit = parseInt(args[++i]);
+    } else if (args[i] === "--limit") {
+      options.limit = positiveInt("--limit", args[++i]);
     } else if (args[i] === "--missing-only") {
       options.missingOnly = true;
     } else if (args[i] === "--stale-only") {
-      const days = i + 1 < args.length && !args[i + 1].startsWith("--") ? parseInt(args[++i]) : 365;
+      const days = i + 1 < args.length && !args[i + 1].startsWith("--") ? positiveInt("--stale-only", args[++i]) : 365;
       options.staleOnly = days;
-    } else if (args[i] === "--species-id" && i + 1 < args.length) {
-      options.speciesId = parseInt(args[++i]);
+    } else if (args[i] === "--species-id") {
+      options.speciesId = positiveInt("--species-id", args[++i]);
     } else if (args[i] === "--verbose") {
       options.verbose = true;
     } else if (args[i] === "--resume") {
@@ -108,14 +116,14 @@ function printHelp() {
 Bulk Sync IUCN Red List Data from API
 
 Usage:
-  npm run script scripts/sync-iucn-data.ts [options]
+  npm run script -- scripts/sync-iucn-data.ts [options]
 
 Options:
   --dry-run              Preview changes without updating database
   --limit N              Process only N species (for testing)
   --missing-only         Only sync species without IUCN data
   --stale-only [days]    Only sync species with data older than N days (default: 365)
-  --species-id ID        Sync single species by group ID
+  --species-id ID        Sync single species by Species ID
   --check-synonyms       Check if IUCN has species under a different name
   --verbose              Show detailed progress information
   --resume               Resume from last failed sync
@@ -123,16 +131,16 @@ Options:
 
 Examples:
   # Test with 10 species (dry run)
-  npm run script scripts/sync-iucn-data.ts --dry-run --limit 10
+  npm run script -- scripts/sync-iucn-data.ts --dry-run --limit 10
 
   # Sync only species missing IUCN data
-  npm run script scripts/sync-iucn-data.ts --missing-only
+  npm run script -- scripts/sync-iucn-data.ts --missing-only
 
   # Sync single species
-  npm run script scripts/sync-iucn-data.ts --species-id 42
+  npm run script -- scripts/sync-iucn-data.ts --species-id 42
 
   # Re-sync species with data older than 1 year
-  npm run script scripts/sync-iucn-data.ts --stale-only 365
+  npm run script -- scripts/sync-iucn-data.ts --stale-only 365
 
 Performance:
   - Rate limited to 2 seconds between API calls (IUCN requirement)
@@ -145,11 +153,7 @@ Performance:
 async function getSpeciesToSync(db: Database, options: CLIOptions): Promise<SpeciesForSync[]> {
   if (options.speciesId) {
     // Single species by ID
-    const species = await db.get<SpeciesForSync>(
-      `SELECT group_id, canonical_genus, canonical_species_name, program_class
-       FROM species_name_group WHERE group_id = ?`,
-      [options.speciesId]
-    );
+    const species = await findSpeciesById(options.speciesId);
     return species ? [species] : [];
   }
 
@@ -165,9 +169,9 @@ async function getSpeciesToSync(db: Database, options: CLIOptions): Promise<Spec
 
   // All species (default)
   let query = `
-    SELECT group_id, canonical_genus, canonical_species_name, program_class, iucn_redlist_category
-    FROM species_name_group
-    ORDER BY canonical_genus, canonical_species_name
+    SELECT sng.group_id, sng.canonical_genus, sng.canonical_species_name, sng.iucn_redlist_category
+    FROM ${speciesFromSql("sng")}
+    ORDER BY sng.canonical_genus, sng.canonical_species_name
   `;
 
   if (options.limit) {
@@ -345,8 +349,9 @@ async function syncIUCNData() {
     const progress = `[${i + 1}/${allSpecies.length}]`;
     console.log(`${progress} ${scientificName}`);
 
-    // Check if already has recent data (skip if staleOnly not set)
-    if (!options.missingOnly && !options.staleOnly && species.iucn_redlist_category) {
+    // Skip a species that already has data, unless it was named with
+    // --species-id, or the query already chose by data age
+    if (!options.speciesId && !options.missingOnly && !options.staleOnly && species.iucn_redlist_category) {
       if (options.verbose) {
         console.log(`  ↪ Already has IUCN data: ${species.iucn_redlist_category} (skipping)`);
       }
