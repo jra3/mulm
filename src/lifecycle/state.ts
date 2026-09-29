@@ -133,3 +133,17 @@ export function deriveState(row: StateRow, now: Date = new Date()): SubmissionSt
   }
   return waitingPeriod(row, now).elapsed ? "awaitingFinalSubmission" : "waitingPeriod";
 }
+
+/**
+ * Whether a viewer may see a Submission's page. Approved work is public;
+ * anything short of approval belongs to its member and the committee, the
+ * same line the member profile draws.
+ */
+export function isVisibleTo(
+  row: Pick<Submission, "member_id" | "approved_on">,
+  viewer: { id: number; is_admin?: boolean } | undefined
+): boolean {
+  if (row.approved_on) return true;
+  if (!viewer) return false;
+  return Boolean(viewer.is_admin) || viewer.id === row.member_id;
+}

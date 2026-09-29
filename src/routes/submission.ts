@@ -78,12 +78,18 @@ export const renderSubmissionForm = async (req: MulmRequest, res: Response) => {
 };
 
 export const view = async (req: MulmRequest, res: Response) => {
-  // Everyone can view, but owners and admins have extra controls
   const submission = await validateSubmission(req, res);
   if (!submission) {
     return;
   }
   const { viewer } = req;
+
+  // Unapproved work is its member's and the committee's; to anyone else it
+  // doesn't exist.
+  if (!lifecycle.isVisibleTo(submission, viewer)) {
+    res.status(404).send("Submission not found");
+    return;
+  }
 
   const parseStringArray = (jsonString: string): string[] => {
     try {
