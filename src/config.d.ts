@@ -74,6 +74,8 @@ declare module "@/config.json" {
       enabled: boolean;
       port: number;
       host: string;
+      /** Bearer token; required when host is not loopback. */
+      token?: string;
     };
   }
 
