@@ -89,7 +89,6 @@ type TableName =
   | "sessions"
   | "auth_codes"
   | "google_account"
-  | "facebook_account"
   | "tank_presets"
   | "webauthn_credentials"
   | "webauthn_challenges";

@@ -13,18 +13,8 @@ export function isGoogleOAuthEnabled(): boolean {
 }
 
 /**
- * Check if Facebook OAuth is configured
- */
-export function isFacebookOAuthEnabled(): boolean {
-  return Boolean(
-    config.oauth?.facebook?.appId &&
-    config.oauth?.facebook?.appSecret
-  );
-}
-
-/**
  * Set OAuth state cookie for CSRF protection
- * Call this before redirecting user to OAuth provider (Google or Facebook)
+ * Call this before redirecting user to the OAuth provider
  * Returns the generated state token
  */
 export function setOAuthStateCookie(res: Response): string {
@@ -33,7 +23,7 @@ export function setOAuthStateCookie(res: Response): string {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
-    path: "/oauth", // Supports both /oauth/google and /oauth/facebook
+    path: "/oauth",
     maxAge: 10 * 60 * 1000, // 10 minutes
   });
   return state;
@@ -96,63 +86,5 @@ export async function getGoogleUser(
     sub: String(googleUser.sub),
     name: String(googleUser.name),
     email: String(googleUser.email),
-  };
-}
-
-// ==================== Facebook OAuth ====================
-
-export function getFacebookOAuthURL(state: string): string {
-  const endpoint = new URL("https://www.facebook.com/v18.0/dialog/oauth");
-  endpoint.searchParams.append("client_id", config.oauth.facebook.appId);
-  endpoint.searchParams.append("redirect_uri", `https://${config.server.domain}/oauth/facebook`);
-  endpoint.searchParams.append("scope", "email,public_profile");
-  endpoint.searchParams.append("response_type", "code");
-  endpoint.searchParams.append("state", state); // CSRF protection
-  return String(endpoint);
-}
-
-/**
- * https://developers.facebook.com/docs/facebook-login/guides/advanced/manual-flow#confirm
- */
-export async function translateFacebookOAuthCode(code: string) {
-  const endpoint = new URL("https://graph.facebook.com/v18.0/oauth/access_token");
-  endpoint.searchParams.append("client_id", config.oauth.facebook.appId);
-  endpoint.searchParams.append("client_secret", config.oauth.facebook.appSecret);
-  endpoint.searchParams.append("redirect_uri", `https://${config.server.domain}/oauth/facebook`);
-  endpoint.searchParams.append("code", code);
-  return fetch(endpoint, { method: "GET" });
-}
-
-export async function getFacebookUser(
-  accessToken: string
-): Promise<{ id: string; name: string; email: string }> {
-  const resp = await fetch(
-    `https://graph.facebook.com/me?fields=id,name,email&access_token=${accessToken}`
-  );
-  if (!resp.ok) {
-    throw new Error("Failed to fetch user from Facebook");
-  }
-  const respBody: unknown = await resp.json();
-
-  if (
-    typeof respBody !== "object" ||
-    respBody === null ||
-    !("name" in respBody) ||
-    !("email" in respBody) ||
-    !("id" in respBody)
-  ) {
-    throw new Error("Failed to fetch user from Facebook");
-  }
-
-  const facebookUser = respBody as { id: string; name: string; email: string };
-
-  if (facebookUser.name == null || facebookUser.email == null) {
-    throw new Error("Failed to fetch user from Facebook");
-  }
-
-  return {
-    id: String(facebookUser.id),
-    name: String(facebookUser.name),
-    email: String(facebookUser.email),
   };
 }
