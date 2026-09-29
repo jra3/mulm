@@ -129,10 +129,11 @@ describe('MyModule', () => {
 
 ## Authentication
 
-Two authentication methods supported:
+Three authentication methods supported:
 
 - **Password**: `src/auth/` (scrypt hashing)
 - **Google OAuth**: `src/oauth.ts` (OAuth 2.0 flow)
+- **Sign in with Apple**: `src/auth/apple.ts` (OAuth web flow with `form_post`; the client secret is a JWT signed with the portal key)
 
 ### Password Handling
 

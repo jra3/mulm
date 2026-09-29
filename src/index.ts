@@ -40,7 +40,8 @@ import { originValidation } from "./middleware/originValidation";
 import { csrfValidation } from "./middleware/csrfValidation";
 import { bonusFields } from "@/points";
 import helmet from "helmet";
-import { getGoogleOAuthURL, setOAuthStateCookie, isGoogleOAuthEnabled } from "./oauth";
+import { getGoogleOAuthURL, beginOAuthFlow, isGoogleOAuthEnabled } from "./oauth";
+import { appleOAuthURL } from "./auth/apple";
 import { getQueryString, getBodyString } from "./utils/request";
 import { initR2 } from "./utils/r2-client";
 import {
@@ -143,6 +144,11 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(sessionMiddleware);
 
+// Sign in with Apple returns by cross-site POST from appleid.apple.com, which
+// the two CSRF middlewares below would reject. It goes ahead of them; the
+// handler validates the oauth_state cookie against the posted state instead.
+app.post("/oauth/apple", oauthRateLimiter, auth.appleOAuth);
+
 // CSRF backstop: reject state-changing requests (POST/PUT/PATCH/DELETE) whose
 // Origin/Referer isn't an allowlisted, same-site origin. This is the primary
 // gap closed by issue #19 — it makes our `SameSite=Lax` cookie sufficient even
@@ -179,13 +185,13 @@ router.get("/", async (req: MulmRequest, res) => {
   const isLoggedIn = Boolean(viewer);
   const isAdmin = viewer?.is_admin;
 
-  // Generate OAuth state for CSRF protection (stored in cookie)
-  const oauthState = setOAuthStateCookie(res);
+  const oauthState = await beginOAuthFlow(res, viewer?.id);
 
   const args = {
     title: "BAS BAP/HAP Portal",
     message: "Welcome to BAS!",
     googleURL: isGoogleOAuthEnabled() ? getGoogleOAuthURL(oauthState) : null,
+    appleURL: appleOAuthURL(oauthState),
     isLoggedIn,
     isAdmin,
   };
@@ -302,6 +308,7 @@ router.get("/species/:groupId", species.detail);
 router.get("/account", account.viewAccountSettings);
 router.patch("/account", account.updateAccountSettings);
 router.delete("/account/google", account.unlinkGoogleAccount);
+router.delete("/account/apple", account.unlinkAppleAccount);
 
 // Account tank preset management (RESTful routes)
 router.post("/account/tanks", account.saveTankPresetRoute);
@@ -336,14 +343,14 @@ router.post("/auth/reset-password", auth.resetPassword);
 // OAuth (external dependency - redirect_uri registered with providers)
 router.get("/oauth/google", oauthRateLimiter, auth.googleOAuth);
 
-router.get("/dialog/auth/signin", (req, res) => {
-  // Generate OAuth state for CSRF protection (stored in cookie)
-  const oauthState = setOAuthStateCookie(res);
+router.get("/dialog/auth/signin", async (req: MulmRequest, res) => {
+  const oauthState = await beginOAuthFlow(res, req.viewer?.id);
 
   res.render("account/signin", {
     viewer: {},
     errors: new Map(),
     googleURL: isGoogleOAuthEnabled() ? getGoogleOAuthURL(oauthState) : null,
+    appleURL: appleOAuthURL(oauthState),
   });
 });
 

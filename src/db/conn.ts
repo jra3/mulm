@@ -89,6 +89,7 @@ type TableName =
   | "sessions"
   | "auth_codes"
   | "google_account"
+  | "apple_account"
   | "tank_presets";
 
 export async function insertOne(table: TableName, row: PartialRow) {
