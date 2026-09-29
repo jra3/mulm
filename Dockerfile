@@ -12,7 +12,7 @@ COPY postcss.config.mjs ./
 COPY src ./src
 COPY public ./public
 
-# Create config.json from sample for build (production uses mounted config)
+# Create config.json from sample for build (start.sh writes the real one from CONFIG_JSON)
 RUN cp src/config.sample.json src/config.json
 
 # Build the application
@@ -34,7 +34,7 @@ COPY --from=builder /app/dist/src/views ./src/views
 
 # Copy runtime files
 COPY start.sh ./
-COPY db ./db
+COPY db/migrations ./db/migrations
 
 # Install curl, jq, and Litestream for continuous replication
 COPY --from=litestream/litestream /usr/local/bin/litestream /usr/local/bin/litestream
