@@ -5,8 +5,7 @@ import {
   getRosterWithPoints,
   getMemberWithPoints,
   updateMember,
-  getMemberPassword,
-  getGoogleAccountByMemberId,
+  hasLoginCredential,
 } from "@/db/members";
 import {
   getQueue,
@@ -493,11 +492,7 @@ export const sendWelcomeEmail = async (req: MulmRequest, res: Response) => {
       return;
     }
 
-    // Check if member already has a password or Google account
-    const password = await getMemberPassword(member.id);
-    const googleAccount = await getGoogleAccountByMemberId(member.id);
-
-    if (password || googleAccount) {
+    if (await hasLoginCredential(member.id)) {
       res.status(400).send("Member already has login credentials");
       return;
     }
