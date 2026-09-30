@@ -21,7 +21,7 @@ void describe("oEmbed cache", () => {
     mock.restoreAll();
   });
 
-  void test("starts no timer when imported", () => {
+  void test("importing it leaves nothing holding the process open", () => {
     assert.ok(!process.getActiveResourcesInfo().includes("Timeout"));
   });
 
@@ -32,9 +32,9 @@ void describe("oEmbed cache", () => {
     assert.strictEqual(calls.length, 1);
   });
 
-  void test("a write sweeps entries older than an hour", async () => {
+  void test("a write sweeps entries an hour old, the age a lookup stops serving them", async () => {
     await fetchOEmbed("youtube", "https://youtu.be/old");
-    mock.timers.tick(HOUR + 1);
+    mock.timers.tick(HOUR);
 
     await fetchOEmbed("vimeo", "https://vimeo.com/1");
 
