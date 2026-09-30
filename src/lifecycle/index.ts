@@ -30,6 +30,7 @@ export {
   waitingPeriod,
   requiredWaitingDays,
   daysElapsedSince,
+  isVisibleTo,
   MIDDLE_STATES,
   type SubmissionState,
   type StateRow,
