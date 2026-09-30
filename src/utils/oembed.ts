@@ -115,12 +115,12 @@ export async function fetchOEmbed(
 /**
  * Clear expired cache entries
  */
-function clearExpiredCache(): number {
+function clearExpiredCache() {
   const now = Date.now();
   let cleared = 0;
 
   for (const [key, entry] of cache.entries()) {
-    if (now - entry.timestamp > CACHE_TTL) {
+    if (now - entry.timestamp >= CACHE_TTL) {
       cache.delete(key);
       cleared++;
     }
@@ -129,8 +129,6 @@ function clearExpiredCache(): number {
   if (cleared > 0) {
     logger.info(`Cleared ${cleared} expired oEmbed cache entries`);
   }
-
-  return cleared;
 }
 
 /**
