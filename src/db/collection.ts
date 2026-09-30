@@ -238,8 +238,18 @@ export async function updateCollectionEntry(
   const updateFields: string[] = ['updated_at = CURRENT_TIMESTAMP'];
   const params: (string | number | null)[] = [];
 
-  // If updating names, convert to custom entry (set group_id to NULL)
-  if (updates.common_name !== undefined || updates.scientific_name !== undefined) {
+  // Changing a name converts the entry to a custom one (group_id = NULL).
+  // The edit dialog always posts both names, so compare against what it showed.
+  // Empty and null count as equal, and surrounding whitespace is ignored.
+  const namesPosted = updates.common_name !== undefined || updates.scientific_name !== undefined;
+  const current = namesPosted ? await getCollectionEntry(id, memberId) : null;
+  const nameChanged = (posted: string | null | undefined, shown: string | null | undefined) =>
+    posted !== undefined && (posted?.trim() || null) !== (shown?.trim() || null);
+
+  if (
+    nameChanged(updates.common_name, current?.common_name) ||
+    nameChanged(updates.scientific_name, current?.scientific_name)
+  ) {
     updateFields.push('group_id = ?');
     params.push(null);
 
@@ -330,7 +340,7 @@ export async function getCollectionEntry(
   let sql = `
     SELECT
       c.*,
-      sng.canonical_species_name || ' ' || sng.canonical_genus AS canonical_scientific_name,
+      sng.canonical_genus || ' ' || sng.canonical_species_name AS canonical_scientific_name,
       ${anyNameSql("common", "c.group_id")} AS canonical_common_name,
       sng.program_class,
       sng.species_type,
@@ -470,7 +480,7 @@ export async function getRecentCollectionAdditions(limit = 10): Promise<Collecti
   const rows = await query<CollectionRow>(
     `SELECT
       c.*,
-      sng.canonical_species_name || ' ' || sng.canonical_genus AS scientific_name,
+      sng.canonical_genus || ' ' || sng.canonical_species_name AS scientific_name,
       ${anyNameSql("common", "c.group_id")} AS common_name,
       sng.program_class,
       sng.species_type,

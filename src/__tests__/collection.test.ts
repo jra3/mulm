@@ -295,6 +295,66 @@ void describe("Species Collection Database Module", () => {
       assert.equal(entry.notes, "Updated notes");
     });
 
+    void test("keeps group_id when the edit dialog posts back unchanged names", async () => {
+      // The edit dialog always posts both name fields, pre-filled from getCollectionEntry
+      const shown = await getCollectionEntry(entryId, memberId1);
+      assert.ok(shown);
+
+      await updateCollectionEntry(entryId, memberId1, {
+        common_name: shown.common_name ?? "",
+        scientific_name: shown.scientific_name ?? "",
+        notes: "Only the notes changed",
+      });
+
+      const entry = await db.get(
+        "SELECT * FROM species_collection WHERE id = ?",
+        entryId
+      );
+      assert.equal(entry.group_id, speciesId1);
+      assert.equal(entry.notes, "Only the notes changed");
+    });
+
+    void test("keeps group_id when stored free-text names differ from the catalogue", async () => {
+      await db.run(
+        "UPDATE species_collection SET common_name = ?, scientific_name = ? WHERE id = ?",
+        ["Old typed name", "Old typed sci", entryId]
+      );
+      const shown = await getCollectionEntry(entryId, memberId1);
+      assert.ok(shown);
+
+      await updateCollectionEntry(entryId, memberId1, {
+        common_name: `${shown.common_name} `,
+        scientific_name: shown.scientific_name ?? "",
+        notes: "Notes only",
+      });
+
+      const entry = await db.get(
+        "SELECT * FROM species_collection WHERE id = ?",
+        entryId
+      );
+      assert.equal(entry.group_id, speciesId1);
+    });
+
+    void test("unlinks from the species when a name is changed", async () => {
+      await updateCollectionEntry(entryId, memberId1, {
+        common_name: "My Renamed Fish",
+        scientific_name: "TestGenus testspecies1",
+      });
+
+      const entry = await db.get(
+        "SELECT * FROM species_collection WHERE id = ?",
+        entryId
+      );
+      assert.equal(entry.group_id, null);
+      assert.equal(entry.common_name, "My Renamed Fish");
+      assert.equal(entry.scientific_name, "TestGenus testspecies1");
+    });
+
+    void test("getCollectionEntry shows the scientific name genus first", async () => {
+      const shown = await getCollectionEntry(entryId, memberId1);
+      assert.equal(shown?.scientific_name, "TestGenus testspecies1");
+    });
+
     void test("should update visibility", async () => {
       await updateCollectionEntry(entryId, memberId1, {
         visibility: "private",
@@ -641,6 +701,11 @@ void describe("Species Collection Database Module", () => {
       const recent = await getRecentCollectionAdditions(10);
       assert.equal(recent[0].species?.common_name, "Test Livebearer 2");
       assert.equal(recent[1].species?.common_name, "Test Cichlid 1");
+    });
+
+    void test("shows the scientific name genus first", async () => {
+      const recent = await getRecentCollectionAdditions(10);
+      assert.equal(recent[1].species?.scientific_name, "TestGenus testspecies1");
     });
 
     void test("should exclude private entries", async () => {
