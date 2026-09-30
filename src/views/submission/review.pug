@@ -20,6 +20,7 @@ mixin reviewTextInput(labelText, name, type="text")
 //- called. Worked out once here rather than in each panel that says it.
 - const isFlora = submission.species_type === 'Plant' || submission.species_type === 'Coral'
 - const speciesText = isFlora ? 'propagation' : 'spawn'
+- const offspringText = submission.species_type === 'Plant' ? 'plants' : submission.species_type === 'Coral' ? 'corals' : 'fry'
 
 doctype html
 html
