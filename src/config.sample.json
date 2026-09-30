@@ -44,14 +44,6 @@
     "maxRetries": 3,
     "timeoutMs": 10000
   },
-  "fishbase": {
-    "baseUrl": "https://fishbase.ropensci.org",
-    "rateLimitMs": 1000,
-    "enableSync": true,
-    "maxRetries": 3,
-    "timeoutMs": 10000,
-    "defaultLimit": 10
-  },
   "wikipedia": {
     "baseUrl": "https://en.wikipedia.org/api/rest_v1",
     "wikidataUrl": "https://www.wikidata.org/w/api.php",

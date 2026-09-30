@@ -74,3 +74,34 @@
 - name: wontfix
   color: "ffffff"
   description: "This will not be worked on"
+
+# Triage roles (docs/agents/triage-labels.md)
+- name: needs-triage
+  color: "bfd4f2"
+  description: "Maintainer needs to evaluate this issue"
+- name: needs-info
+  color: "fbca04"
+  description: "Waiting on reporter for more information"
+- name: ready-for-agent
+  color: "0e8a16"
+  description: "Fully specified, ready for an AFK agent"
+- name: ready-for-human
+  color: "5319e7"
+  description: "Requires human implementation"
+
+# Wayfinder
+- name: wayfinder:map
+  color: "0052cc"
+  description: "Wayfinder map issue"
+- name: wayfinder:research
+  color: "1d76db"
+  description: "Wayfinder research ticket"
+- name: wayfinder:grilling
+  color: "d4c5f9"
+  description: "Wayfinder grilling ticket"
+- name: wayfinder:prototype
+  color: "c2e0c6"
+  description: "Wayfinder prototype ticket"
+- name: wayfinder:task
+  color: "fef2c0"
+  description: "Wayfinder task ticket"

@@ -4,8 +4,14 @@
   "required_status_checks": {
     "strict": true,
     "checks": [
-      {"context": "CI / test (20.x) (pull_request)"},
-      {"context": "CI / e2e-tests (20.x) (pull_request)"}
+      {
+        "context": "test (22.x)",
+        "app_id": 15368
+      },
+      {
+        "context": "e2e-tests (22.x)",
+        "app_id": 15368
+      }
     ]
   },
   "enforce_admins": false,

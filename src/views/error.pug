@@ -1,0 +1,14 @@
+include header.pug
+
+doctype html
+html
+	+headTag(title)
+
+	body.bg-white.text-gray-800
+		+pageHeader(isLoggedIn, message)
+
+		section.py-12
+			.max-w-4xl.mx-auto.px-4.text-center
+				a.link(href="/") Back to the home page
+
+		+footer()

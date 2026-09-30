@@ -26,4 +26,4 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           yaml-file: .github/labels.yml
           dry-run: false
-          skip-delete: false
+          skip-delete: true # never delete labels missing from labels.yml

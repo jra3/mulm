@@ -5,7 +5,7 @@ import path from "path";
 moduleAlias.addAlias("@", path.join(__dirname, "..", "src"));
 
 import { parseVideoUrlWithOEmbed } from "@/utils/videoParser";
-import { getCacheStats, clearExpiredCache } from "@/utils/oembed";
+import { getCacheStats } from "@/utils/oembed";
 
 const testUrls = [
   "https://www.youtube.com/watch?v=dQw4w9WgXcQ",

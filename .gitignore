@@ -16,6 +16,7 @@ db/database.db
 db/*.db
 db/*.db-shm
 db/*.db-wal
+db/database.db.*
 
 # Compiled CSS from PostCSS (src/ → public/)
 public/**/*.css
@@ -47,3 +48,7 @@ db/database*.prod-*
 *.html
 *.db
 test-results/network-latest.har
+
+# Script and test output
+test-images/
+test-output.log

@@ -33,6 +33,15 @@ const cache = new Map<string, CacheEntry>();
 const CACHE_TTL = 60 * 60 * 1000; // 1 hour in milliseconds
 
 /**
+ * Cache a lookup, first dropping expired entries. Sweeping on write keeps
+ * the Map bounded without a timer holding the process open.
+ */
+function remember(cacheKey: string, data: OEmbedData | null) {
+  clearExpiredCache();
+  cache.set(cacheKey, { data, timestamp: Date.now() });
+}
+
+/**
  * Get oEmbed endpoint URL for a video platform
  */
 function getOEmbedEndpoint(platform: "youtube" | "vimeo", videoUrl: string): string | null {
@@ -78,7 +87,7 @@ export async function fetchOEmbed(
 
     if (!response.ok) {
       logger.warn(`oEmbed fetch failed: ${response.status} ${response.statusText}`);
-      cache.set(cacheKey, { data: null, timestamp: Date.now() });
+      remember(cacheKey, null);
       return null;
     }
 
@@ -87,18 +96,18 @@ export async function fetchOEmbed(
     // Validate required fields
     if (!data.type || !data.version) {
       logger.warn("Invalid oEmbed response: missing required fields");
-      cache.set(cacheKey, { data: null, timestamp: Date.now() });
+      remember(cacheKey, null);
       return null;
     }
 
     // Cache the result
-    cache.set(cacheKey, { data, timestamp: Date.now() });
+    remember(cacheKey, data);
     logger.info(`oEmbed data cached for ${platform}: ${data.title || "untitled"}`);
 
     return data;
   } catch (error) {
     logger.error(`Error fetching oEmbed data from ${platform}:`, error);
-    cache.set(cacheKey, { data: null, timestamp: Date.now() });
+    remember(cacheKey, null);
     return null;
   }
 }
@@ -106,12 +115,12 @@ export async function fetchOEmbed(
 /**
  * Clear expired cache entries
  */
-export function clearExpiredCache(): number {
+function clearExpiredCache() {
   const now = Date.now();
   let cleared = 0;
 
   for (const [key, entry] of cache.entries()) {
-    if (now - entry.timestamp > CACHE_TTL) {
+    if (now - entry.timestamp >= CACHE_TTL) {
       cache.delete(key);
       cleared++;
     }
@@ -120,8 +129,6 @@ export function clearExpiredCache(): number {
   if (cleared > 0) {
     logger.info(`Cleared ${cleared} expired oEmbed cache entries`);
   }
-
-  return cleared;
 }
 
 /**
@@ -137,6 +144,3 @@ export function getCacheStats() {
     })),
   };
 }
-
-// Periodically clear expired cache entries (every 15 minutes)
-setInterval(clearExpiredCache, 15 * 60 * 1000);

@@ -531,6 +531,8 @@ export const sendWelcomeEmail = async (req: MulmRequest, res: Response) => {
     const memberWithPoints = await getMemberWithPoints(member.id);
     res.render("admin/singleMemberRow", {
       member: memberWithPoints,
+      getNextLevel,
+      programMetadata,
     });
   } catch (error) {
     logger.error("Error sending welcome email:", error);
