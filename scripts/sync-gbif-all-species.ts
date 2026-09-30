@@ -21,7 +21,7 @@
  * - Records sync operations in external_data_sync_log
  *
  * Supports ALL species types:
- * - Fish (additional data beyond FishBase)
+ * - Fish (species pages, images)
  * - Corals/Inverts (specimen photos, distribution)
  * - Plants (occurrence data, images)
  *
