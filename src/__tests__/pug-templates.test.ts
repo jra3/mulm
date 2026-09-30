@@ -1169,6 +1169,60 @@ void describe("Pug Template Rendering", () => {
     });
   });
 
+  void describe("Review page tells the member what to bring", () => {
+    const render = (state: string, species_type: string) =>
+      pug.compileFile(path.join(viewsPath, "submission/review.pug"), { basedir: viewsPath, pretty: false })({
+        ...baseMockData,
+        isAdmin: false,
+        isSelf: true,
+        photos: [],
+        state,
+        changesRequested: false,
+        allowed: {},
+        waitingPeriodStatus: { requiredDays: 60, elapsedDays: 10, daysRemaining: 50, elapsed: false },
+        submission: { ...(baseMockData.submission as Record<string, unknown>), id: 77, species_id: 5, species_type },
+      });
+
+    void test("waiting period: fish bring fry", () => {
+      const html = render("waitingPeriod", "Fish");
+
+      assert.match(html, /Bring fry to a monthly auction/);
+      assert.doesNotMatch(html, /Bring (the )?undefined/);
+    });
+
+    void test("past the waiting period: plants and corals bring what they propagated", () => {
+      assert.match(render("awaitingFinalSubmission", "Plant"), /Bring the plants to a monthly meeting/);
+      assert.match(render("awaitingFinalSubmission", "Coral"), /Bring the corals to a monthly meeting/);
+    });
+  });
+
+  void describe("Pages that pointed nowhere", () => {
+    const render = (view: string, data: Record<string, unknown>) =>
+      pug.compileFile(path.join(viewsPath, view), { basedir: viewsPath, pretty: false })({ ...baseMockData, ...data });
+
+    void test("the error page shows its message", () => {
+      const html = render("error.pug", { title: "Species Not Found", message: "Species not found" });
+
+      assert.match(html, /Species not found/);
+    });
+
+    void test("the landing page has no pasted tagline", () => {
+      assert.doesNotMatch(render("index.pug", {}), /Insights, tutorials/);
+    });
+
+    void test("the CARES page sends a member to their own collection", () => {
+      const html = render("cares.pug", {
+        stats: { speciesCount: 42, memberCount: 12 },
+        isParticipant: false,
+        memberSpeciesCount: 0,
+        viewerId: 42,
+      });
+
+      assert.match(html, /href="\/member\/42\/collection"/);
+      assert.doesNotMatch(html, /\/collection\/new/);
+    });
+  });
+
   void describe("Species views read the catalogue's Names", () => {
     const render = (template: string, data: Record<string, unknown>) =>
       pug.compileFile(path.join(viewsPath, template), { basedir: viewsPath, pretty: false })({

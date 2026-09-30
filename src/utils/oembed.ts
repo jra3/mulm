@@ -139,4 +139,4 @@ export function getCacheStats() {
 }
 
 // Periodically clear expired cache entries (every 15 minutes)
-setInterval(clearExpiredCache, 15 * 60 * 1000);
+setInterval(clearExpiredCache, 15 * 60 * 1000).unref();

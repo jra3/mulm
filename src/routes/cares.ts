@@ -557,6 +557,7 @@ router.get("/cares", async (req: MulmRequest, res: Response) => {
     stats,
     isParticipant,
     memberSpeciesCount,
+    viewerId: viewer?.id,
   });
 });
 
