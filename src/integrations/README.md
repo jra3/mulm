@@ -408,39 +408,6 @@ if (result.found) {
 
 ---
 
-## FishBase Integration
-
-**File:** `fishbase.ts`
-**Purpose:** Fetch fish species data from FishBase local DuckDB database
-**Documentation:** [Wiki - External Data Sources](https://github.com/jra3/mulm/wiki/External-Data-Sources)
-
-### Quick Start
-
-```typescript
-import { getExternalData } from "@/integrations/fishbase";
-
-const result = await getExternalData("Poecilia", "reticulata");
-
-if (result.found) {
-  console.log(`SpecCode: ${result.spec_code}`);
-  console.log(`FishBase URL: ${result.species_url}`);
-  console.log(`Images: ${result.images?.length ?? 0}`);
-}
-```
-
-### Features
-
-- Local DuckDB queries (no API calls)
-- Fish-only coverage (~1,800 species)
-- Images with CC BY-NC licensing
-- Fast lookups
-
-### Rate Limiting
-
-- None (local database queries)
-
----
-
 ## Integration Tests
 
 All integration clients have comprehensive test coverage to ensure reliability.
@@ -456,14 +423,12 @@ npm test -- src/__tests__/*-integration.test.ts
 ```bash
 npm test -- src/__tests__/wikipedia-integration.test.ts
 npm test -- src/__tests__/gbif-integration.test.ts
-npm test -- src/__tests__/fishbase-integration.test.ts
 ```
 
 ### Test Files
 
 - `src/__tests__/wikipedia-integration.test.ts` - Wikipedia/Wikidata client tests
 - `src/__tests__/gbif-integration.test.ts` - GBIF client tests
-- `src/__tests__/fishbase-integration.test.ts` - FishBase client tests
 
 ### What Tests Cover
 
@@ -481,13 +446,6 @@ npm test -- src/__tests__/fishbase-integration.test.ts
 - Match type validation (EXACT, FUZZY, etc.)
 - Coverage across all species types
 
-**FishBase Integration Tests:**
-- Local DuckDB queries
-- SpecCode lookup
-- Image retrieval with CC licensing
-- Performance (local queries should be fast)
-- Fish-only filtering
-
 ### GitHub Actions
 
 Integration tests run automatically:
@@ -502,7 +460,6 @@ View workflow: `.github/workflows/integration-tests.yml`
 
 **Real API Calls:**
 - Wikipedia and GBIF tests make REAL API calls
-- FishBase tests query local DuckDB database
 - Rate limiting is enforced in tests
 
 **Conservative Rate Limits:**
@@ -513,7 +470,6 @@ View workflow: `.github/workflows/integration-tests.yml`
 **Test Duration:**
 - Wikipedia: ~2-3 minutes (10+ API calls)
 - GBIF: ~2-3 minutes (10+ API calls)
-- FishBase: <1 minute (local queries)
 
 ### CI/CD Integration
 

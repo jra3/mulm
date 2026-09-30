@@ -47,14 +47,6 @@ declare module "@/config.json" {
       maxRetries: number;
       timeoutMs: number;
     };
-    fishbase?: {
-      baseUrl: string;
-      rateLimitMs: number;
-      enableSync: boolean;
-      maxRetries: number;
-      timeoutMs: number;
-      defaultLimit: number;
-    };
     gbif?: {
       baseUrl: string;
       rateLimitMs: number;

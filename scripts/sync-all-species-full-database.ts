@@ -2,12 +2,12 @@
  * Sync ALL Species - Full Database (Orchestrator)
  *
  * Master script that syncs ALL species in the database (not just those with submissions)
- * across all external data sources (Wikipedia, GBIF, FishBase).
+ * across all external data sources (Wikipedia, GBIF).
  *
  * Designed for comprehensive coverage of the entire species catalog.
  *
  * This script:
- * - Runs Wikipedia, GBIF, and FishBase syncs in sequence
+ * - Runs Wikipedia and GBIF syncs in sequence
  * - Processes ALL species (2,000+ species total)
  * - Uses conservative batch sizes and delays
  * - Logs all operations with timestamps
@@ -81,16 +81,6 @@ function parseStats(output: string): SyncStats {
 
   const imagesMatch = output.match(/Total new images:\s+(\d+)/);
   if (imagesMatch) stats.imagesAdded = parseInt(imagesMatch[1]);
-
-  // Also try FishBase format
-  const fbSuccessMatch = output.match(/✓ Successful:\s+(\d+)/);
-  if (fbSuccessMatch) stats.successCount = parseInt(fbSuccessMatch[1]);
-
-  const fbLinksMatch = output.match(/Links to add:\s+(\d+)/);
-  if (fbLinksMatch) stats.linksAdded = parseInt(fbLinksMatch[1]);
-
-  const fbImagesMatch = output.match(/Images to add:\s+(\d+)/);
-  if (fbImagesMatch) stats.imagesAdded = parseInt(fbImagesMatch[1]);
 
   return stats;
 }
@@ -176,7 +166,6 @@ async function main() {
   const speciesType = speciesTypeArg ? speciesTypeArg.split("=")[1] : undefined;
   const skipWikipedia = args.includes("--skip-wikipedia");
   const skipGbif = args.includes("--skip-gbif");
-  const skipFishbase = args.includes("--skip-fishbase");
 
   const overallStartTime = Date.now();
 
@@ -216,7 +205,7 @@ async function main() {
     );
     results.push(result);
 
-    if (!skipGbif || !skipFishbase) {
+    if (!skipGbif) {
       console.log("⏳ Waiting 30 seconds before next sync...\n");
       await sleep(30000);
     }
@@ -228,24 +217,6 @@ async function main() {
       "scripts/sync-gbif-all-species.ts",
       commonArgs,
       "GBIF (All Species)"
-    );
-    results.push(result);
-
-    if (!skipFishbase) {
-      console.log("⏳ Waiting 30 seconds before next sync...\n");
-      await sleep(30000);
-    }
-  }
-
-  // Run FishBase sync (fish only)
-  if (!skipFishbase) {
-    const fishArgs = [...commonArgs];
-    // FishBase is fish-only, so it handles filtering internally
-
-    const result = await runSyncScript(
-      "scripts/sync-fishbase-all-species.ts",
-      fishArgs,
-      "FishBase (Fish Only)"
     );
     results.push(result);
   }

@@ -19,9 +19,9 @@ import { getGBIFClient } from "@/integrations/gbif";
  * has no ts-node and doesn't ship scripts/).
  *
  * v1 scope: Wikipedia + GBIF reference links and (external) image URLs, over
- * species whose data is stale (>90 days) or never synced. FishBase (DuckDB +
- * parquet) and R2 image download/transcode are intentionally deferred — see
- * the per-source scripts for those, which remain available for CLI backfill.
+ * species whose data is stale (>90 days) or never synced. R2 image
+ * download/transcode is intentionally deferred — see the per-source scripts,
+ * which remain available for CLI backfill.
  */
 
 // Only the method we call, so tests can inject fakes without real HTTP.

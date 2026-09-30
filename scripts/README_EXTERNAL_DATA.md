@@ -22,9 +22,6 @@ npm run script scripts/sync-wikipedia-all-species.ts -- --execute --download-ima
 
 # GBIF (all species)
 npm run script scripts/sync-gbif-all-species.ts -- --execute --download-images --batch-size=500
-
-# FishBase (fish only)
-npm run script scripts/sync-fishbase-all-species.ts -- --execute --download-images --batch-size=500
 ```
 
 ## Scripts
@@ -34,7 +31,6 @@ npm run script scripts/sync-fishbase-all-species.ts -- --execute --download-imag
 | `sync-all-species-full-database.ts` | **Master orchestrator** - Syncs all sources with image download | All 2,279 species |
 | `sync-wikipedia-all-species.ts` | Wikipedia & Wikidata integration | All species types |
 | `sync-gbif-all-species.ts` | GBIF (Global Biodiversity Information Facility) | All species types |
-| `sync-fishbase-all-species.ts` | FishBase (via local DuckDB cache) | Fish only (~1,800 species) |
 
 ## Common Arguments
 
@@ -137,8 +133,7 @@ npm run script scripts/sync-all-species-full-database.ts -- --execute --download
 └────────┬────────┘
          │
          ├──► Wikipedia/Wikidata ──► Article URLs, Images
-         ├──► GBIF ──────────────► Species Pages, Specimen Photos
-         └──► FishBase ──────────► Fish Data, Images
+         └──► GBIF ──────────────► Species Pages, Specimen Photos
                 │
                 ▼
          ┌──────────────┐
@@ -156,7 +151,6 @@ Scripts are configured to be respectful to API providers:
 
 - **Wikipedia**: 100ms between requests
 - **GBIF**: 120ms between requests
-- **FishBase**: Local data (no API calls)
 - **Orchestrator**: 30 second pause between sources
 
 ### Sync Logic
