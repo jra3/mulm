@@ -95,6 +95,17 @@ export async function getAppleAccountByMemberId(member_id: number) {
   return accounts.pop();
 }
 
+/** Whether the member can already log in: a password, Google or Apple account. */
+export async function hasLoginCredential(member_id: number): Promise<boolean> {
+  const rows = await query<{ found: number }>(
+    `SELECT EXISTS (SELECT 1 FROM password_account WHERE member_id = ?)
+         OR EXISTS (SELECT 1 FROM ${googleAccountTableName} WHERE member_id = ?)
+         OR EXISTS (SELECT 1 FROM ${appleAccountTableName} WHERE member_id = ?) AS found`,
+    [member_id, member_id, member_id]
+  );
+  return rows[0]?.found === 1;
+}
+
 export async function createAppleAccount(memberId: number, sub: string, email: string) {
   return insertOne(appleAccountTableName, {
     member_id: memberId,

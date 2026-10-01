@@ -71,4 +71,21 @@ void describe("Send Welcome", () => {
     assert.strictEqual(res.status, 200);
     assert.match(res.text, /Invited Member/);
   });
+
+  const credentialCases: [string, Parameters<typeof createMember>[2]][] = [
+    ["Apple", { apple_sub: "apple-sub-1" }],
+    ["Google", { google_sub: "google-sub-1" }],
+    ["a password", { password: "correct horse battery staple" }],
+  ];
+  for (const [kind, credentials] of credentialCases) {
+    void test(`refuses a member who signs in with ${kind}`, async () => {
+      const memberId = await createMember("signed-in@example.com", "Signed In Member", credentials);
+      const app = appWith((a) => a.post("/admin/members/:memberId/send-welcome", admin.sendWelcomeEmail));
+
+      const res = await request(app).post(`/admin/members/${memberId}/send-welcome`);
+
+      assert.strictEqual(res.status, 400);
+      assert.match(res.text, /already has login credentials/);
+    });
+  }
 });
