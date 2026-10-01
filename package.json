@@ -4,7 +4,7 @@
 	"description": "a Breeder Awards Program management platform",
 	"main": "index.js",
 	"engines": {
-		"node": ">=22.13 <23"
+		"node": ">=24 <25"
 	},
 	"_moduleAliases": {
 		"@": "dist/src"
@@ -110,5 +110,10 @@
 			"eslint --fix"
 		]
 	},
-	"keywords": []
+	"keywords": [],
+	"allowScripts": {
+		"sqlite3": true,
+		"sharp": true,
+		"esbuild": true
+	}
 }

@@ -5,11 +5,11 @@
     "strict": true,
     "checks": [
       {
-        "context": "test (22.x)",
+        "context": "test (24.x)",
         "app_id": 15368
       },
       {
-        "context": "e2e-tests (22.x)",
+        "context": "e2e-tests (24.x)",
         "app_id": 15368
       }
     ]
