@@ -29,7 +29,8 @@ usage() {
 }
 
 machine_id() {
-  flyctl machines list --app "$APP" --json | jq -r '.[0].id'
+  flyctl machines list --app "$APP" --json | jq -er '.[0].id' ||
+    die "no machine found for ${APP}"
 }
 
 wait_healthy() {
@@ -113,14 +114,16 @@ cmd_seed() {
 
 cmd_login() {
   local role=${1:-} email password jar headers body status
+  case "$role" in admin | member) ;; *) usage ;; esac
   [ -f "$CREDS_FILE" ] || die "no ${CREDS_FILE}; run: $0 seed"
   # shellcheck disable=SC1090
   source "$CREDS_FILE"
-  case "$role" in
-    admin) email=$STAGING_ADMIN_EMAIL; password=$STAGING_ADMIN_PASSWORD ;;
-    member) email=$STAGING_USER_EMAIL; password=$STAGING_USER_PASSWORD ;;
-    *) usage ;;
-  esac
+  if [ "$role" = admin ]; then
+    email=${STAGING_ADMIN_EMAIL:-} password=${STAGING_ADMIN_PASSWORD:-}
+  else
+    email=${STAGING_USER_EMAIL:-} password=${STAGING_USER_PASSWORD:-}
+  fi
+  [ -n "$email" ] && [ -n "$password" ] || die "${CREDS_FILE} has no ${role} login; run: $0 seed"
 
   mkdir -p "$JAR_DIR"
   jar="${JAR_DIR}/staging-${role}.cookies"
@@ -138,11 +141,16 @@ cmd_login() {
   status=$(EMAIL=$email PASSWORD=$password \
     jq -rn '"email=\(env.EMAIL | @uri)&password=\(env.PASSWORD | @uri)"' |
     curl -s -D "$headers" -o "$body" -w '%{http_code}' -c "$jar" \
-      -H "Origin: ${URL}" --data-binary @- "${URL}/auth/login")
-  if [ "$status" != 200 ] || ! grep -qi '^hx-redirect:' "$headers"; then
+      -H "Origin: ${URL}" --data-binary @- "${URL}/auth/login") || status=000
+  if [ "$status" != 200 ] || ! grep -qi '^hx-redirect:' "$headers" ||
+    ! grep -q 'session_id' "$jar" 2>/dev/null; then
     echo "$(head -c 300 "$body")" >&2
     rm -f "$jar" "$headers" "$body"
-    die "login as ${email} failed (HTTP ${status}); passwords rotate on every seed, so try: $0 seed"
+    case "$status" in
+      429) die "login as ${email} rate-limited (HTTP 429); wait 15 minutes" ;;
+      403) die "login as ${email} locked out (HTTP 403); wait 15 minutes, or run: $0 seed" ;;
+      *) die "login as ${email} failed (HTTP ${status}); if the passwords are stale, run: $0 seed" ;;
+    esac
   fi
   rm -f "$headers" "$body"
   echo "$jar"

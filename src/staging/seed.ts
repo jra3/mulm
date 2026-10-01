@@ -1,7 +1,8 @@
 // Seeds the staging test logins. Runs inside the staging container, where
 // scripts/staging.sh calls it:  cd /app && node src/staging/seed.js
 // Prints the credentials as one JSON line on stdout (the only line starting
-// with "{"); everything else it logs is diagnostics.
+// with "{"); everything else it logs is diagnostics. It writes with console
+// rather than logger because stdout is that protocol.
 import "./requireStaging";
 import moduleAlias from "module-alias";
 import path from "path";
