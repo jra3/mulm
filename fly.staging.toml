@@ -3,8 +3,10 @@
 #   - app name: basny-bap-staging
 #   - STAGING=1 env: start.sh skips `litestream replicate`, so staging can
 #     restore from prod's R2 generation but never writes back to it.
+#   - STAGING=1 also turns email off (src/notifications.ts) and is the only
+#     place the test-login seed (src/staging/seed.ts) will run.
 #   - separate volume (basny_staging_data).
-# Deploy with: flyctl deploy --config fly.staging.toml --app basny-bap-staging
+# Deploy, refresh, seed and log in with scripts/staging.sh.
 app = "basny-bap-staging"
 primary_region = "ewr"
 

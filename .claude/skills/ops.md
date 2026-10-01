@@ -15,7 +15,7 @@ Use this skill for production operations, deployment, and infrastructure tasks.
 
 ```bash
 # Deploy to staging first, then prod (see docs/DEPLOY.md for the full flow)
-flyctl deploy --config fly.staging.toml --app basny-bap-staging
+./scripts/staging.sh deploy
 flyctl deploy --app basny-bap
 
 # Status / health
@@ -31,6 +31,28 @@ flyctl ssh console --app basny-bap
 # Pull prod DB into local dev (Litestream restore from R2)
 ./infrastructure/sync-db-from-production.sh
 ```
+
+## Staging
+
+`scripts/staging.sh` is the one entry point to staging (`basny-bap-staging`):
+
+| Verb | Does |
+|---|---|
+| `deploy` | Deploys the current checkout. Refuses a dirty tree; prints the commit deployed. |
+| `refresh` | Deletes staging's DB, restarts so `start.sh` restores prod's replica, then runs `seed`. |
+| `seed` | Starts the machine if needed and rotates the test logins' passwords. |
+| `login <admin\|member>` | Prints the path of a logged-in cookie jar, reusing it while the session is valid. |
+
+- Test logins: `baptest+admin@porcnick.com` (admin) and `baptest+e2e@porcnick.com` (member). Their passwords are random, new on every `seed`, and live only in `~/.config/mulm/staging-test-users.env` (mode 600). A `refresh` wipes the accounts; `refresh` reseeds them.
+- The seed is `src/staging/seed.ts`, run in the container. It refuses unless `STAGING=1` and touches no other account.
+- Use the jar instead of logging in per request: `/auth/login` returns `429` for 15 minutes after a few attempts. Admin POSTs also need `X-CSRF-Token` from the page's `<meta name="csrf-token">`:
+
+```bash
+JAR=$(./scripts/staging.sh login admin)
+curl -s -b "$JAR" https://basny-bap-staging.fly.dev/account
+```
+
+- `STAGING=1` turns email off in `src/notifications.ts` whatever staging's config says.
 
 ## Branch Protection
 
@@ -85,7 +107,7 @@ Repository settings in `.github/`:
 | Production | Fly secret `CONFIG_JSON`, written to `src/config.json` on boot by `start.sh` |
 | Test | Uses in-memory SQLite |
 
-`NODE_ENV` controls behavior: `test`, `development`, `production`
+`NODE_ENV` controls behavior: `test`, `development`, `production`. `STAGING=1` (set in `fly.staging.toml`) marks staging: no Litestream replication, no email.
 
 ## Infrastructure Documentation
 

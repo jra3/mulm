@@ -29,9 +29,10 @@ truth.)
 
 ## Staging
 
-On `basny-bap-staging`, the `CONFIG_JSON` override sets `email.disableEmails =
-true`, so staging never sends real mail. See the configuration table in
-`docs/INFRASTRUCTURE.md`.
+On `basny-bap-staging`, `STAGING=1` (from `fly.staging.toml`) turns email off in
+`src/notifications.ts` whatever the config says, so staging never sends real
+mail. Its `CONFIG_JSON` override also sets `email.disableEmails = true`. See the
+configuration table in `docs/INFRASTRUCTURE.md`.
 
 ## Verifying email
 

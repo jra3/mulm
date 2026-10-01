@@ -9,9 +9,23 @@ import { bonusBreakdown } from "./points";
 
 const DEBUG_EMAIL = process.env.DEBUG_EMAIL;
 const fromEmail = `BASNY Breeder Awards ${config.email.fromEmail}`;
-const EMAILS_DISABLED =
-  process.env.NODE_ENV === "test" || // Disable emails in test mode
-  config.email.disableEmails === true; // Config killswitch for local development
+
+/**
+ * Whether outgoing mail is off. Staging holds a copy of every real member's
+ * address, so STAGING=1 turns mail off whatever its config says.
+ */
+export function emailsDisabled(
+  env: Record<string, string | undefined>,
+  emailConfig: { disableEmails?: boolean }
+): boolean {
+  return (
+    env.NODE_ENV === "test" || // Disable emails in test mode
+    env.STAGING === "1" ||
+    emailConfig.disableEmails === true // Config killswitch for local development
+  );
+}
+
+const EMAILS_DISABLED = emailsDisabled(process.env, config.email);
 
 const transporter = nodemailer.createTransport({
   host: config.email.smtp.host,

@@ -50,7 +50,7 @@ The full app config (DB path, OAuth, SMTP, R2 credentials, etc.) is delivered as
 | App | `CONFIG_JSON` overrides vs. real prod config |
 |---|---|
 | `basny-bap` | none — uses real config |
-| `basny-bap-staging` | `server.domain` → `basny-bap-staging.fly.dev`; `email.disableEmails = true`; `storage.s3Bucket` → `basny-bap-staging-data`, with `storage.s3AccessKeyId` / `storage.s3Secret` the key scoped to that bucket |
+| `basny-bap-staging` | `server.domain` → `basny-bap-staging.fly.dev`; `email.disableEmails = true` (belt and braces: `STAGING=1` already turns email off); `storage.s3Bucket` → `basny-bap-staging-data`, with `storage.s3AccessKeyId` / `storage.s3Secret` the key scoped to that bucket |
 
 Rotate with `flyctl secrets set CONFIG_JSON="$(cat config.<app>.json)" --app <app>`, from a file that already carries that app's overrides. Never set staging's `CONFIG_JSON` from the prod config: that hands staging prod's bucket and write key.
 
@@ -83,8 +83,8 @@ The staging mode prevents staging from ever writing to R2, so it cannot pollute 
 # Production
 flyctl deploy --app basny-bap
 
-# Staging
-flyctl deploy --config fly.staging.toml --app basny-bap-staging
+# Staging (deploy, refresh, seed, login: see DEPLOY.md "Working with Staging")
+./scripts/staging.sh deploy
 ```
 
 Both build the same `Dockerfile`. Differences come from `fly.toml` vs. `fly.staging.toml` and from the `CONFIG_JSON` secret.

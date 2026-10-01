@@ -25,8 +25,8 @@ flyctl apps list | grep basny    # confirm you can see basny-bap and basny-bap-s
 # From main, with a clean tree:
 git checkout main && git pull
 
-# 1. Stage
-flyctl deploy --config fly.staging.toml --app basny-bap-staging
+# 1. Stage (refuses a dirty tree)
+./scripts/staging.sh deploy
 # Smoke check (see one-liner below), exercise the change at
 # https://basny-bap-staging.fly.dev, then proceed to prod.
 
@@ -60,18 +60,24 @@ WARNING The app is not listening on the expected address and will not be reachab
 
 It's transient — `flyctl` is checking the listener before Node has bound to `0.0.0.0:4200`. As long as the subsequent line is `✔ Machine <id> is now in a good state` and `flyctl status` shows `1 total, 1 passing` checks, ignore it. If checks stay failing past a minute, that's a real problem — see Rollback below.
 
-## Refreshing Staging Data First (optional)
+## Working with Staging
 
-Staging restores read-only from prod's Litestream replica, then mirrors prod's images (`basny-bap-data`) into its own bucket (`basny-bap-staging-data`) in the background. Both reads use the read-only `PROD_R2_READ_*` key; staging's own storage key reaches only its bucket. A boot more than 7 days after the last restore refreshes automatically. If you want fresh prod data sooner:
+`scripts/staging.sh` is the one entry point to staging:
 
 ```bash
-MACHINE=$(flyctl machines list --app basny-bap-staging --json | jq -r '.[0].id')
-flyctl ssh console --app basny-bap-staging \
-  -C "rm -f /mnt/app-data/database/database.db /mnt/app-data/database/database.db-shm /mnt/app-data/database/database.db-wal"
-flyctl machine restart "$MACHINE" --app basny-bap-staging
+./scripts/staging.sh deploy               # deploy this checkout; refuses a dirty tree
+./scripts/staging.sh refresh              # fresh prod data, then seed
+./scripts/staging.sh seed                 # rotate the test logins' passwords
+./scripts/staging.sh login admin          # prints a logged-in cookie jar path (or: member)
 ```
 
-On next boot, `start.sh` finds no DB, runs `litestream restore` from R2, and starts the image mirror (`src/staging/mirror-images.ts`). Staging test uploads are removed by the mirror, and test users are wiped with the DB.
+**Data.** Staging restores read-only from prod's Litestream replica and never replicates back, then mirrors prod's images (`basny-bap-data`) into its own bucket (`basny-bap-staging-data`) in the background (`src/staging/mirror-images.ts`). Both reads use the read-only `PROD_R2_READ_*` key; staging's own storage key reaches only its bucket. A boot more than 7 days after the last restore refreshes automatically. `refresh` deletes staging's DB files and restarts the machine; on boot `start.sh` finds no DB and restores from R2, and refuses to start if that restore fails rather than run on an empty DB. The restore wipes the test logins, so `refresh` reseeds them; the mirror removes staging test uploads.
+
+**Test logins.** `seed` runs `src/staging/seed.ts` inside the container, which refuses unless `STAGING=1`. It sets random passwords on `baptest+admin@porcnick.com` (admin) and `baptest+e2e@porcnick.com` (member), clears their lockouts and sessions, and touches no other account. The passwords are new on every run and stored only in `~/.config/mulm/staging-test-users.env` (mode 600).
+
+**Logging in.** `/auth/login` returns `429` for 15 minutes after a few attempts, so `login` writes a cookie jar under `~/.cache/mulm/` and reuses it while the session is valid. Admin POSTs also need the `X-CSRF-Token` header from the logged-in page's `<meta name="csrf-token">`.
+
+**Email.** Staging holds every member's real address. `STAGING=1` turns email off in `src/notifications.ts` whatever staging's `CONFIG_JSON` says.
 
 ## Rollback
 

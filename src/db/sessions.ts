@@ -36,3 +36,15 @@ export async function regenerateSessionInDB(
 
 // OAuth state functions removed - now using cookie-based approach
 // See src/oauth.ts: setOAuthStateCookie() and OAuth callback validation
+
+/** End every session a member has, signing them out everywhere. */
+export async function deleteSessionsForMember(memberId: number): Promise<void> {
+  await withTransaction(async (db) => {
+    const stmt = await db.prepare("DELETE FROM sessions WHERE member_id = ?");
+    try {
+      await stmt.run(memberId);
+    } finally {
+      await stmt.finalize();
+    }
+  });
+}
