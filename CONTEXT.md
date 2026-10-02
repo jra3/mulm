@@ -165,7 +165,7 @@ _Avoid_: program class, species class, category, kind
 
 ## CARES
 
-**CARES is a distinct conservation registry, not a points/awards program.** It runs alongside BAP/HAP/CAP with its own vocabulary and lifecycle. Members register at-risk species they *maintain* (keep alive) — as opposed to the breeding/propagation *achievements* the point programs reward. Source of truth: `src/db/cares.ts`, `src/views/cares.pug`. (Keep this separate from the level ladders. The one point of contact with the point system is the **+5 CARES bonus** a *breeding submission* of a CARES-listed species earns at approval — that bonus is not the registry.)
+**CARES is a distinct conservation registry, not a points/awards program.** It runs alongside BAP/HAP/CAP with its own vocabulary and lifecycle. Members register at-risk species they *maintain* (keep alive) — as opposed to the breeding/propagation *achievements* the point programs reward. Source of truth: `src/db/cares.ts`, `src/views/cares.pug`. (Keep this separate from the level ladders. The one point of contact with the point system is the **+5 CARES bonus** a *breeding submission* of a CARES-listed species earns at approval — that bonus is not the registry.) The registry is still in development and only admins can see it; the gate is `canSeeCaresRegistry` in `src/caresRegistry.ts`.
 
 **CARES**:
 "Conservation, Awareness, Recognition, Encouragement, Support" — an international initiative (founded 2004) enlisting hobbyists to maintain populations of at-risk freshwater fish in home aquariums. BAS participates as a member club.
