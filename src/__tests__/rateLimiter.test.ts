@@ -8,9 +8,8 @@ import { MulmRequest } from "../sessions";
 // Create rate limiters with test configuration
 const createTestRateLimiter = (options: Partial<Options>) => {
   return rateLimit({
-    store: undefined, // Use default memory store
     validate: false, // Disable validation in tests to avoid IPv6 warnings
-    ...(options as Options), // Spread options last so they can override defaults
+    ...options, // Spread options last so they can override defaults
   });
 };
 

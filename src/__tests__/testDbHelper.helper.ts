@@ -206,29 +206,3 @@ export async function createMultipleTestSubmissions(
   }
   return submissions;
 }
-
-/**
- * Jest suite-level database fixture
- * Sets up beforeEach and afterEach hooks for database management
- */
-export function useTestDatabase(): {
-  getDb: () => Database;
-  getTestDb: () => TestDatabase;
-} {
-  let testDb: TestDatabase;
-
-  beforeEach(async () => {
-    testDb = await setupTestDatabase();
-  });
-
-  afterEach(async () => {
-    if (testDb) {
-      await testDb.cleanup();
-    }
-  });
-
-  return {
-    getDb: () => testDb.db,
-    getTestDb: () => testDb,
-  };
-}

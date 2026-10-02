@@ -9,7 +9,9 @@ const TOKEN = "s3cret-token-value";
 function makeApp(token: string | undefined) {
   const app = express();
   app.use(createMcpAuth(token));
-  app.post("/mcp/species", (_req, res) => res.status(200).send("ok"));
+  app.post("/mcp/species", (_req, res) => {
+    res.status(200).send("ok");
+  });
   return app;
 }
 

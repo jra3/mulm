@@ -94,7 +94,7 @@ void describe("Edit Approved Submission", () => {
         firstTimeSpecies: false,
       });
 
-      await updateSubmission(submissionId, { first_time_species: 1 });
+      await updateSubmission(submissionId, { first_time_species: true });
 
       const submission = await getSubmissionById(submissionId);
       assert.strictEqual(submission?.first_time_species, 1);
@@ -106,7 +106,7 @@ void describe("Edit Approved Submission", () => {
         caresSpecies: false,
       });
 
-      await updateSubmission(submissionId, { cares_species: 1 });
+      await updateSubmission(submissionId, { cares_species: true });
 
       const submission = await getSubmissionById(submissionId);
       assert.strictEqual(submission?.cares_species, 1);
@@ -195,7 +195,7 @@ void describe("Edit Approved Submission", () => {
       await updateSubmission(submissionId, {
         points: 20,
         article_points: 5,
-        first_time_species: 1,
+        first_time_species: true,
         temperature: "82",
         ph: "7.8",
       });

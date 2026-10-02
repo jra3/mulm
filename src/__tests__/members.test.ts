@@ -167,15 +167,12 @@ void describe("getRosterWithPoints", () => {
       submissionId,
       speciesNameId.group_id,
       {
-        id: submissionId,
         points: 10,
         article_points: 3,
         first_time_species: true,
+        cares_species: false,
         flowered: false,
         sexual_reproduction: false,
-        group_id: speciesNameId.group_id,
-        canonical_genus: "Poecilia",
-        canonical_species_name: "reticulata",
       }
     );
 
@@ -231,15 +228,12 @@ void describe("getRosterWithPoints", () => {
       submissionId,
       plantSpeciesNameId.group_id,
       {
-        id: submissionId,
         points: 8,
         article_points: 2,
         first_time_species: true,
+        cares_species: false,
         flowered: true,
         sexual_reproduction: true,
-        group_id: plantSpeciesNameId.group_id,
-        canonical_genus: "Microsorum",
-        canonical_species_name: "pteropus",
       }
     );
 
@@ -294,15 +288,12 @@ void describe("getRosterWithPoints", () => {
       submissionId,
       coralSpeciesNameId.group_id,
       {
-        id: submissionId,
         points: 15,
         article_points: 5,
         first_time_species: true,
+        cares_species: false,
         flowered: false, // Not applicable for coral
         sexual_reproduction: false, // Not applicable for coral
-        group_id: coralSpeciesNameId.group_id,
-        canonical_genus: "Acropora",
-        canonical_species_name: "millepora",
       }
     );
 
@@ -351,15 +342,12 @@ void describe("getRosterWithPoints", () => {
       fishSubmissionId,
       fishSpeciesNameId.group_id,
       {
-        id: fishSubmissionId,
         points: 5,
         article_points: 0,
         first_time_species: false,
+        cares_species: false,
         flowered: false,
         sexual_reproduction: false,
-        group_id: fishSpeciesNameId.group_id,
-        canonical_genus: "Paracheirodon",
-        canonical_species_name: "innesi",
       }
     );
 
@@ -395,15 +383,12 @@ void describe("getRosterWithPoints", () => {
       plantSubmissionId,
       plantSpeciesNameId2.group_id,
       {
-        id: plantSubmissionId,
         points: 6,
         article_points: 1,
         first_time_species: true,
+        cares_species: false,
         flowered: false,
         sexual_reproduction: true,
-        group_id: plantSpeciesNameId2.group_id,
-        canonical_genus: "Echinodorus",
-        canonical_species_name: "grisebachii",
       }
     );
 
@@ -467,15 +452,12 @@ void describe("getRosterWithPoints", () => {
       approvedSubmissionId,
       mollySpeciesNameId.group_id,
       {
-        id: approvedSubmissionId,
         points: 7,
         article_points: 0,
         first_time_species: false,
+        cares_species: false,
         flowered: false,
         sexual_reproduction: false,
-        group_id: mollySpeciesNameId.group_id,
-        canonical_genus: "Poecilia",
-        canonical_species_name: "sphenops",
       }
     );
 
@@ -519,15 +501,12 @@ void describe("getRosterWithPoints", () => {
       submissionId,
       shrimpSpeciesNameId.group_id,
       {
-        id: submissionId,
         points: 4,
         article_points: 1,
         first_time_species: true,
+        cares_species: false,
         flowered: false,
         sexual_reproduction: false,
-        group_id: shrimpSpeciesNameId.group_id,
-        canonical_genus: "Neocaridina",
-        canonical_species_name: "davidi",
       }
     );
 
@@ -587,14 +566,12 @@ void describe("Points agreement across surfaces", () => {
       submissionId,
       speciesNameId.group_id,
       {
-        id: submissionId,
         points: 10,
         article_points: 3,
         first_time_species: true,
         cares_species: true,
         flowered: false,
         sexual_reproduction: false,
-        group_id: speciesNameId.group_id,
       }
     );
 
