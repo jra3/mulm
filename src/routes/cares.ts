@@ -24,8 +24,12 @@ import {
   uploadToR2,
   deleteImage,
 } from "@/utils/r2-client";
+import { requireCaresRegistry } from "@/caresRegistry";
 
 const router = Router();
+
+// Mounted at "/", so gate only the CARES paths, not every request passing through.
+router.use(["/cares", "/dialog/cares", "/api/cares"], requireCaresRegistry);
 
 // Configure multer for single photo upload
 const upload = multer({
