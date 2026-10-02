@@ -139,7 +139,7 @@ cmd_login() {
   body=$(mktemp)
   # Form body via env and stdin, so the password never appears in a command line.
   status=$(EMAIL=$email PASSWORD=$password \
-    jq -rn '"email=\(env.EMAIL | @uri)&password=\(env.PASSWORD | @uri)"' |
+    jq -jn '"email=\(env.EMAIL | @uri)&password=\(env.PASSWORD | @uri)"' |
     curl -s -D "$headers" -o "$body" -w '%{http_code}' -c "$jar" \
       -H "Origin: ${URL}" --data-binary @- "${URL}/auth/login") || status=000
   if [ "$status" != 200 ] || ! grep -qi '^hx-redirect:' "$headers" ||
