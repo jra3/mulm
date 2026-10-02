@@ -2,15 +2,12 @@ import { query, writeConn } from './conn';
 import { anyNameSql, speciesFromSql, speciesJoinSql } from "@/species";
 
 export interface CaresRegistration {
-  collection_id: number;
   group_id: number;
   common_name: string | null;
   scientific_name: string | null;
-  cares_registered_at: string;
-  cares_photo_key: string | null;
-  cares_photo_url: string | null;
-  cares_last_confirmed: string | null;
-  images: string | null; // JSON array of ImageMetadata from species_collection
+  registered_at: string;
+  last_confirmed: string | null;
+  photo_url: string | null;
   // Seal flags
   has_photo: boolean;
   has_article: boolean;
@@ -51,15 +48,12 @@ export interface CaresProfile {
 }
 
 interface RegistrationRow {
-  collection_id: number;
   group_id: number;
   common_name: string | null;
   scientific_name: string | null;
-  cares_registered_at: string;
-  cares_photo_key: string | null;
-  cares_photo_url: string | null;
-  cares_last_confirmed: string | null;
-  images: string | null;
+  registered_at: string;
+  last_confirmed: string | null;
+  photo_url: string | null;
   has_photo: number;
   article_count: number;
   internal_share_count: number;
@@ -90,8 +84,32 @@ interface FryShareRow {
 }
 
 /**
- * Register a collection entry for the CARES program.
- * Sets cares_registered_at and stores the photo key/URL.
+ * The Species of a member's current collection entry, and that member's CARES
+ * registration for it if any. Registrations belong to the member and Species,
+ * not to the entry: the entry is how a member reaches them from a card.
+ */
+async function entryRegistration(collectionEntryId: number, memberId: number) {
+  const rows = await query<{
+    group_id: number | null;
+    is_cares_species: number | null;
+    registered_at: string | null;
+    photo_key: string | null;
+    photo_url: string | null;
+  }>(
+    `SELECT c.group_id, sng.is_cares_species, r.registered_at, r.photo_key, r.photo_url
+     FROM species_collection c
+     ${speciesJoinSql("c.group_id", "sng")}
+     LEFT JOIN cares_registration r
+       ON r.member_id = c.member_id AND r.species_group_id = c.group_id
+     WHERE c.id = ? AND c.member_id = ? AND c.removed_date IS NULL`,
+    [collectionEntryId, memberId]
+  );
+  return rows[0] ?? null;
+}
+
+/**
+ * Register the Species of a member's collection entry for the CARES program,
+ * with the photo that earns its Gold seal.
  */
 export async function registerForCares(
   collectionEntryId: number,
@@ -99,26 +117,11 @@ export async function registerForCares(
   photoKey: string,
   photoUrl: string
 ): Promise<void> {
-  // Verify the entry exists, belongs to this member, is a CARES-eligible species,
-  // and is not already registered
-  const entries = await query<{
-    id: number;
-    group_id: number | null;
-    is_cares_species: number;
-    cares_registered_at: string | null;
-  }>(
-    `SELECT c.id, c.group_id, sng.is_cares_species, c.cares_registered_at
-     FROM species_collection c
-     ${speciesJoinSql("c.group_id", "sng")}
-     WHERE c.id = ? AND c.member_id = ? AND c.removed_date IS NULL`,
-    [collectionEntryId, memberId]
-  );
+  const entry = await entryRegistration(collectionEntryId, memberId);
 
-  if (entries.length === 0) {
+  if (!entry) {
     throw new Error('Collection entry not found or access denied');
   }
-
-  const entry = entries[0];
 
   if (!entry.group_id) {
     throw new Error('Only species linked to the database can be registered for CARES');
@@ -128,28 +131,24 @@ export async function registerForCares(
     throw new Error('This species is not part of the CARES priority list');
   }
 
-  if (entry.cares_registered_at) {
+  if (entry.registered_at) {
     throw new Error('This species is already registered for CARES');
   }
 
   const stmt = await writeConn.prepare(`
-    UPDATE species_collection
-    SET cares_registered_at = CURRENT_TIMESTAMP,
-        cares_photo_key = ?,
-        cares_photo_url = ?,
-        updated_at = CURRENT_TIMESTAMP
-    WHERE id = ? AND member_id = ?
+    INSERT INTO cares_registration (member_id, species_group_id, photo_key, photo_url)
+    VALUES (?, ?, ?, ?)
   `);
 
   try {
-    await stmt.run(photoKey, photoUrl, collectionEntryId, memberId);
+    await stmt.run(memberId, entry.group_id, photoKey, photoUrl);
   } finally {
     await stmt.finalize();
   }
 }
 
 /**
- * Update the CARES registration photo for a collection entry.
+ * Replace the photo of the CARES registration reached through a collection entry.
  */
 export async function updateCaresPhoto(
   collectionEntryId: number,
@@ -157,42 +156,29 @@ export async function updateCaresPhoto(
   photoKey: string,
   photoUrl: string
 ): Promise<{ oldPhotoKey: string | null }> {
-  // Get old photo key for cleanup
-  const entries = await query<{
-    cares_registered_at: string | null;
-    cares_photo_key: string | null;
-  }>(
-    `SELECT cares_registered_at, cares_photo_key
-     FROM species_collection
-     WHERE id = ? AND member_id = ? AND removed_date IS NULL`,
-    [collectionEntryId, memberId]
-  );
+  const entry = await entryRegistration(collectionEntryId, memberId);
 
-  if (entries.length === 0) {
+  if (!entry) {
     throw new Error('Collection entry not found or access denied');
   }
 
-  if (!entries[0].cares_registered_at) {
+  if (!entry.registered_at) {
     throw new Error('This species is not registered for CARES');
   }
 
-  const oldPhotoKey = entries[0].cares_photo_key;
-
   const stmt = await writeConn.prepare(`
-    UPDATE species_collection
-    SET cares_photo_key = ?,
-        cares_photo_url = ?,
-        updated_at = CURRENT_TIMESTAMP
-    WHERE id = ? AND member_id = ?
+    UPDATE cares_registration
+    SET photo_key = ?, photo_url = ?
+    WHERE member_id = ? AND species_group_id = ?
   `);
 
   try {
-    await stmt.run(photoKey, photoUrl, collectionEntryId, memberId);
+    await stmt.run(photoKey, photoUrl, memberId, entry.group_id);
   } finally {
     await stmt.finalize();
   }
 
-  return { oldPhotoKey };
+  return { oldPhotoKey: entry.photo_key };
 }
 
 /**
@@ -206,25 +192,13 @@ export async function getCaresEligibility(
   registered: boolean;
   photoUrl: string | null;
 } | null> {
-  const entries = await query<{
-    is_cares_species: number;
-    cares_registered_at: string | null;
-    cares_photo_url: string | null;
-  }>(
-    `SELECT sng.is_cares_species, c.cares_registered_at, c.cares_photo_url
-     FROM species_collection c
-     ${speciesJoinSql("c.group_id", "sng")}
-     WHERE c.id = ? AND c.member_id = ? AND c.removed_date IS NULL`,
-    [collectionEntryId, memberId]
-  );
+  const entry = await entryRegistration(collectionEntryId, memberId);
+  if (!entry) return null;
 
-  if (entries.length === 0) return null;
-
-  const entry = entries[0];
   return {
     eligible: Boolean(entry.is_cares_species),
-    registered: Boolean(entry.cares_registered_at),
-    photoUrl: entry.cares_photo_url,
+    registered: Boolean(entry.registered_at),
+    photoUrl: entry.photo_url,
   };
 }
 
@@ -236,48 +210,37 @@ export async function getCaresProfile(memberId: number): Promise<CaresProfile> {
   // Get CARES registrations with seal calculations
   const registrations = await query<RegistrationRow>(
     `SELECT
-      c.id AS collection_id,
-      c.group_id,
-      COALESCE(
-        ${anyNameSql("common", "c.group_id")},
-        c.common_name
-      ) AS common_name,
-      COALESCE(
-        sng.canonical_genus || ' ' || sng.canonical_species_name,
-        c.scientific_name
-      ) AS scientific_name,
-      c.cares_registered_at,
-      c.cares_photo_key,
-      c.cares_photo_url,
-      c.cares_last_confirmed,
-      c.images,
-      CASE WHEN c.images IS NOT NULL AND c.images != '[]' THEN 1 ELSE 0 END AS has_photo,
-      COALESCE((
+      r.species_group_id AS group_id,
+      ${anyNameSql("common", "r.species_group_id")} AS common_name,
+      sng.canonical_genus || ' ' || sng.canonical_species_name AS scientific_name,
+      r.registered_at,
+      r.last_confirmed,
+      r.photo_url,
+      CASE WHEN r.photo_key IS NOT NULL THEN 1 ELSE 0 END AS has_photo,
+      (
         SELECT COUNT(*) FROM cares_article ca
-        WHERE ca.member_id = c.member_id AND ca.species_group_id = c.group_id
-      ), 0) AS article_count,
-      COALESCE((
+        WHERE ca.member_id = r.member_id AND ca.species_group_id = r.species_group_id
+      ) AS article_count,
+      (
         SELECT COUNT(*) FROM cares_fry_share fs
-        WHERE fs.member_id = c.member_id AND fs.species_group_id = c.group_id
+        WHERE fs.member_id = r.member_id AND fs.species_group_id = r.species_group_id
           AND fs.recipient_member_id IS NOT NULL
-      ), 0) AS internal_share_count,
-      COALESCE((
+      ) AS internal_share_count,
+      (
         SELECT COUNT(*) FROM cares_fry_share fs
-        WHERE fs.member_id = c.member_id AND fs.species_group_id = c.group_id
+        WHERE fs.member_id = r.member_id AND fs.species_group_id = r.species_group_id
           AND fs.recipient_club IS NOT NULL AND fs.recipient_member_id IS NULL
-      ), 0) AS external_share_count,
+      ) AS external_share_count,
       CASE
-        WHEN c.cares_last_confirmed IS NOT NULL
-          AND julianday(c.cares_last_confirmed) - julianday(c.cares_registered_at) >= 730
+        WHEN r.last_confirmed IS NOT NULL
+          AND julianday(r.last_confirmed) - julianday(r.registered_at) >= 730
         THEN 1
         ELSE 0
       END AS years_confirmed
-    FROM species_collection c
-    ${speciesJoinSql("c.group_id", "sng")}
-    WHERE c.member_id = ?
-      AND c.cares_registered_at IS NOT NULL
-      AND c.removed_date IS NULL
-    ORDER BY c.cares_registered_at DESC`,
+    FROM cares_registration r
+    ${speciesJoinSql("r.species_group_id", "sng")}
+    WHERE r.member_id = ?
+    ORDER BY r.registered_at DESC`,
     [memberId]
   );
 
@@ -331,15 +294,12 @@ export async function getCaresProfile(memberId: number): Promise<CaresProfile> {
 
   return {
     registrations: registrations.map((r) => ({
-      collection_id: r.collection_id,
       group_id: r.group_id,
       common_name: r.common_name,
       scientific_name: r.scientific_name,
-      cares_registered_at: r.cares_registered_at,
-      cares_photo_key: r.cares_photo_key,
-      cares_photo_url: r.cares_photo_url,
-      cares_last_confirmed: r.cares_last_confirmed,
-      images: r.images,
+      registered_at: r.registered_at,
+      last_confirmed: r.last_confirmed,
+      photo_url: r.photo_url,
       has_photo: Boolean(r.has_photo),
       has_article: r.article_count > 0,
       has_internal_share: r.internal_share_count > 0,
@@ -376,33 +336,22 @@ export async function getCaresProfile(memberId: number): Promise<CaresProfile> {
  * Used by the fry sharing dialog to populate the species dropdown.
  */
 export async function getCaresRegistrations(memberId: number): Promise<Array<{
-  collection_id: number;
   group_id: number;
   common_name: string | null;
   scientific_name: string | null;
 }>> {
   return query<{
-    collection_id: number;
     group_id: number;
     common_name: string | null;
     scientific_name: string | null;
   }>(
     `SELECT
-      c.id AS collection_id,
-      c.group_id,
-      COALESCE(
-        ${anyNameSql("common", "c.group_id")},
-        c.common_name
-      ) AS common_name,
-      COALESCE(
-        sng.canonical_genus || ' ' || sng.canonical_species_name,
-        c.scientific_name
-      ) AS scientific_name
-    FROM species_collection c
-    ${speciesJoinSql("c.group_id", "sng")}
-    WHERE c.member_id = ?
-      AND c.cares_registered_at IS NOT NULL
-      AND c.removed_date IS NULL
+      r.species_group_id AS group_id,
+      ${anyNameSql("common", "r.species_group_id")} AS common_name,
+      sng.canonical_genus || ' ' || sng.canonical_species_name AS scientific_name
+    FROM cares_registration r
+    ${speciesJoinSql("r.species_group_id", "sng")}
+    WHERE r.member_id = ?
     ORDER BY common_name, scientific_name`,
     [memberId]
   );
@@ -422,8 +371,8 @@ export async function createFryShare(
 ): Promise<number> {
   // Verify member has this species registered for CARES
   const registered = await query<{ cnt: number }>(
-    `SELECT COUNT(*) AS cnt FROM species_collection
-     WHERE member_id = ? AND group_id = ? AND cares_registered_at IS NOT NULL AND removed_date IS NULL`,
+    `SELECT COUNT(*) AS cnt FROM cares_registration
+     WHERE member_id = ? AND species_group_id = ?`,
     [memberId, speciesGroupId]
   );
 
@@ -478,29 +427,15 @@ export async function getCaresStats(): Promise<CaresStats> {
  * Check if a member is participating in CARES (has at least one registered CARES species).
  */
 export async function isMemberCaresParticipant(memberId: number): Promise<boolean> {
-  const rows = await query<{ cnt: number }>(
-    `SELECT COUNT(*) AS cnt
-    FROM species_collection sc
-    ${speciesJoinSql("sc.group_id", "sng", { required: true })}
-    WHERE sc.member_id = ?
-      AND sng.is_cares_species = 1
-      AND sc.removed_date IS NULL`,
-    [memberId]
-  );
-  return (rows[0]?.cnt ?? 0) > 0;
+  return (await getMemberCaresCount(memberId)) > 0;
 }
 
 /**
- * Get count of CARES species a member is maintaining.
+ * Get count of CARES species a member has registered.
  */
 export async function getMemberCaresCount(memberId: number): Promise<number> {
   const rows = await query<{ cnt: number }>(
-    `SELECT COUNT(*) AS cnt
-    FROM species_collection sc
-    ${speciesJoinSql("sc.group_id", "sng", { required: true })}
-    WHERE sc.member_id = ?
-      AND sng.is_cares_species = 1
-      AND sc.removed_date IS NULL`,
+    `SELECT COUNT(*) AS cnt FROM cares_registration WHERE member_id = ?`,
     [memberId]
   );
   return rows[0]?.cnt ?? 0;
@@ -589,11 +524,13 @@ export async function getCaresMaintenersForSpecies(
   groupId: number
 ): Promise<Array<{ id: number; display_name: string; cares_registered_at: string | null }>> {
   return query<{ id: number; display_name: string; cares_registered_at: string | null }>(
-    `SELECT m.id, m.display_name, c.cares_registered_at
+    `SELECT m.id, m.display_name, r.registered_at AS cares_registered_at
      FROM species_collection c
      JOIN members m ON c.member_id = m.id
+     LEFT JOIN cares_registration r
+       ON r.member_id = c.member_id AND r.species_group_id = c.group_id
      WHERE c.group_id = ? AND c.removed_date IS NULL AND c.visibility = 'public'
-     ORDER BY c.cares_registered_at DESC NULLS LAST, m.display_name`,
+     ORDER BY r.registered_at DESC NULLS LAST, m.display_name`,
     [groupId]
   );
 }

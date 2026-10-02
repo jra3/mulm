@@ -8,6 +8,7 @@ import {
   type SpeciesFilters,
 } from "@/species";
 import { getCaresCoverageStats, getCaresMaintenersForSpecies } from "@/db/cares";
+import { canSeeCaresRegistry } from "@/caresRegistry";
 import { getSpeciesKeepers } from "@/db/collection";
 import { getClassOptions } from "@/forms/submission";
 import { speciesExplorerQuerySchema } from "@/forms/species-explorer";
@@ -38,7 +39,7 @@ export async function explorer(req: MulmRequest, res: Response) {
     const [species, filterOptions, caresStats] = await Promise.all([
       getSpeciesForExplorer(filters),
       getExplorerFilterOptions(),
-      caresOnly ? getCaresCoverageStats() : Promise.resolve(null),
+      caresOnly && canSeeCaresRegistry(viewer) ? getCaresCoverageStats() : Promise.resolve(null),
     ]);
 
     const classOptions = filters.species_type ? getClassOptions(filters.species_type) : [];
@@ -94,9 +95,10 @@ export async function detail(req: MulmRequest, res: Response) {
       return;
     }
 
-    const caresMaintainers = speciesDetail.is_cares_species
-      ? await getCaresMaintenersForSpecies(groupId)
-      : [];
+    const caresMaintainers =
+      speciesDetail.is_cares_species && canSeeCaresRegistry(viewer)
+        ? await getCaresMaintenersForSpecies(groupId)
+        : [];
 
     const displayName = `${speciesDetail.canonical_genus} ${speciesDetail.canonical_species_name}`;
 

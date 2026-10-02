@@ -107,7 +107,7 @@ mixin collectionCard(entry, canEdit = false, options = {})
 									span.text-sm.font-medium.text-gray-600= `+${entry.images.length - 3}`
 
 			//- CARES Gold Seal (if registered)
-			if entry.cares_registered_at
+			if showCaresRegistry && entry.cares_registered_at
 				.flex.items-center.gap-2.mb-3.bg-yellow-50.border.border-yellow-200.rounded-lg.px-3.py-2
 					.text-xl.flex-shrink-0 🟡
 					.flex-1
@@ -121,7 +121,7 @@ mixin collectionCard(entry, canEdit = false, options = {})
 						) Edit Photo
 
 			//- CARES photo (if registered and has photo)
-			if entry.cares_registered_at && entry.cares_photo_url
+			if showCaresRegistry && entry.cares_registered_at && entry.cares_photo_url
 				.mb-3
 					.relative.aspect-video.overflow-hidden.rounded-lg.border.border-yellow-200
 						img.w-full.h-full.object-cover(
@@ -161,7 +161,7 @@ mixin collectionCard(entry, canEdit = false, options = {})
 								+caresBadge('sm')
 
 			//- CARES registration CTA (for eligible, unregistered species)
-			if canEdit && isCanonical && species.is_cares_species && !entry.cares_registered_at
+			if showCaresRegistry && canEdit && isCanonical && species.is_cares_species && !entry.cares_registered_at
 				.mb-3
 					button.w-full.inline-flex.items-center.justify-center.gap-2.px-3.py-2.text-sm.font-medium.text-green-700.bg-green-50.hover_bg-green-100.rounded-md.border.border-green-200.transition(
 						hx-get=`/dialog/cares/register/${entry.id}`

@@ -12,12 +12,14 @@ import { query } from "@/db/conn";
 
 /**
  * A member's own records of a Species. Merge moves them to the winner (a
- * member keeping both Species keeps one current entry: see
- * `retireDuplicateEntries`); delete is refused while any exist, whatever
+ * member keeping both Species keeps one current entry, and a member
+ * registered for both keeps one registration: see `retireDuplicateEntries`
+ * and `combineRegistrations`); delete is refused while any exist, whatever
  * their state.
  */
 const memberRecords = [
   { key: "collection", table: "species_collection", column: "group_id" },
+  { key: "caresRegistrations", table: "cares_registration", column: "species_group_id" },
   { key: "caresArticles", table: "cares_article", column: "species_group_id" },
   { key: "caresFryShares", table: "cares_fry_share", column: "species_group_id" },
 ] as const;
@@ -82,58 +84,54 @@ export async function findMembersKeepingBoth(
   );
 }
 
-type CaresRegistration = {
-  registered: string | null;
-  confirmed: string | null;
-  photoKey: string | null;
-  photoUrl: string | null;
-};
-
 /**
  * A member keeps one current collection entry per Species. Where a member
  * keeps both, the winner's entry stays current and the loser's is marked
- * removed today, keeping its notes and photos as history. The kept entry
- * carries the member's CARES standing: the earlier registration (with its
- * photo) and the later confirmation of the two.
+ * removed today, keeping its notes and photos as history.
  */
 async function retireDuplicateEntries(db: Database, winnerId: number, loserId: number) {
-  const pairs = await db.all<
-    Array<{ kept: number; retired: number } & { [K in `${"w" | "l"}_${keyof CaresRegistration}`]: string | null }>
-  >(
-    `SELECT w.id AS kept, l.id AS retired,
-       w.cares_registered_at AS w_registered, w.cares_last_confirmed AS w_confirmed,
-       w.cares_photo_key AS w_photoKey, w.cares_photo_url AS w_photoUrl,
-       l.cares_registered_at AS l_registered, l.cares_last_confirmed AS l_confirmed,
-       l.cares_photo_key AS l_photoKey, l.cares_photo_url AS l_photoUrl
-     FROM species_collection w
-     JOIN species_collection l ON l.member_id = w.member_id
-     WHERE w.group_id = ? AND l.group_id = ?
-       AND w.removed_date IS NULL AND l.removed_date IS NULL`,
+  await db.run(
+    `UPDATE species_collection SET removed_date = CURRENT_DATE, updated_at = CURRENT_TIMESTAMP
+     WHERE group_id = ? AND removed_date IS NULL
+       AND member_id IN (
+         SELECT member_id FROM species_collection WHERE group_id = ? AND removed_date IS NULL
+       )`,
+    [loserId, winnerId]
+  );
+}
+
+/**
+ * A member has one CARES registration per Species. Where a member registered
+ * both, the winner's registration carries their standing: the earlier
+ * registration (with its photo) and the later confirmation of the two. The
+ * loser's then goes.
+ */
+async function combineRegistrations(db: Database, winnerId: number, loserId: number) {
+  await db.run(
+    `UPDATE cares_registration AS w
+     SET registered_at = CASE WHEN l.registered_at < w.registered_at THEN l.registered_at ELSE w.registered_at END,
+         photo_key = CASE WHEN l.registered_at < w.registered_at THEN l.photo_key ELSE w.photo_key END,
+         photo_url = CASE WHEN l.registered_at < w.registered_at THEN l.photo_url ELSE w.photo_url END,
+         last_confirmed = CASE
+           WHEN w.last_confirmed IS NULL OR l.last_confirmed > w.last_confirmed THEN l.last_confirmed
+           ELSE w.last_confirmed
+         END
+     FROM cares_registration AS l
+     WHERE w.species_group_id = ? AND l.species_group_id = ? AND l.member_id = w.member_id`,
     [winnerId, loserId]
   );
-  for (const p of pairs) {
-    const loserEarlier =
-      p.l_registered !== null && (p.w_registered === null || p.l_registered < p.w_registered);
-    const from = loserEarlier ? "l" : "w";
-    const confirmed = [p.w_confirmed, p.l_confirmed].filter((d) => d !== null).sort().pop() ?? null;
-    await db.run(
-      `UPDATE species_collection
-       SET cares_registered_at = ?, cares_photo_key = ?, cares_photo_url = ?,
-           cares_last_confirmed = ?, updated_at = CURRENT_TIMESTAMP
-       WHERE id = ?`,
-      [p[`${from}_registered`], p[`${from}_photoKey`], p[`${from}_photoUrl`], confirmed, p.kept]
-    );
-    await db.run(
-      `UPDATE species_collection SET removed_date = CURRENT_DATE, updated_at = CURRENT_TIMESTAMP
-       WHERE id = ?`,
-      [p.retired]
-    );
-  }
+  await db.run(
+    `DELETE FROM cares_registration
+     WHERE species_group_id = ?
+       AND member_id IN (SELECT member_id FROM cares_registration WHERE species_group_id = ?)`,
+    [loserId, winnerId]
+  );
 }
 
 /** In merge's transaction: every row of the loser's moves to the winner or goes. */
 export async function moveReferences(db: Database, winnerId: number, loserId: number) {
   await retireDuplicateEntries(db, winnerId, loserId);
+  await combineRegistrations(db, winnerId, loserId);
   for (const t of memberRecords) {
     await db.run(`UPDATE ${t.table} SET ${t.column} = ? WHERE ${t.column} = ?`, [winnerId, loserId]);
   }

@@ -2,6 +2,10 @@ import { query, writeConn } from './conn';
 import type { ImageMetadata } from '../utils/r2-client';
 import { anyNameSql, speciesJoinSql } from "@/species";
 
+/** A current entry shows its member's CARES registration for the Species. */
+const caresRegistrationJoinSql = `LEFT JOIN cares_registration r
+      ON r.member_id = c.member_id AND r.species_group_id = c.group_id AND c.removed_date IS NULL`;
+
 export interface CollectionEntry {
   id: number;
   member_id: number;
@@ -15,7 +19,7 @@ export interface CollectionEntry {
   visibility: 'public' | 'private';
   created_at: string;
   updated_at: string;
-  // CARES registration data
+  // The member's CARES registration for this Species (current entries only)
   cares_registered_at: string | null;
   cares_photo_url: string | null;
   // Joined canonical species data (if group_id is set)
@@ -121,9 +125,12 @@ export async function getCollectionForMember(
       sng.program_class,
       sng.species_type,
       sng.is_cares_species,
+      r.registered_at AS cares_registered_at,
+      r.photo_url AS cares_photo_url,
       m.display_name AS member_display_name
     FROM species_collection c
     ${speciesJoinSql("c.group_id", "sng")}
+    ${caresRegistrationJoinSql}
     JOIN members m ON c.member_id = m.id
     WHERE c.member_id = ?
   `;
@@ -345,9 +352,12 @@ export async function getCollectionEntry(
       sng.program_class,
       sng.species_type,
       sng.is_cares_species,
+      r.registered_at AS cares_registered_at,
+      r.photo_url AS cares_photo_url,
       m.display_name AS member_display_name
     FROM species_collection c
     ${speciesJoinSql("c.group_id", "sng")}
+    ${caresRegistrationJoinSql}
     JOIN members m ON c.member_id = m.id
     WHERE c.id = ?
   `;

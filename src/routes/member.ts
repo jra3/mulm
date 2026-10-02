@@ -2,6 +2,7 @@ import { getMemberWithAwards, getSpecialtyAwardProgress } from "@/db/members";
 import { getSubmissionsByMember } from "@/db/submissions";
 import { getCollectionForMember, getCollectionStats } from "@/db/collection";
 import { getCaresProfile } from "@/db/cares";
+import { canSeeCaresRegistry } from "@/caresRegistry";
 import { MulmRequest } from "@/sessions";
 import { Response } from "express";
 import { getStatusPresentation } from "@/utils/statusBadge";
@@ -56,8 +57,7 @@ export const view = async (req: MulmRequest, res: Response) => {
   // Get collection stats (just for link/badge, not full collection)
   const collectionStats = await getCollectionStats(memberId);
 
-  // Get CARES profile data
-  const caresProfile = await getCaresProfile(memberId);
+  const caresProfile = canSeeCaresRegistry(viewer) ? await getCaresProfile(memberId) : null;
 
   res.render("member", {
     member,
