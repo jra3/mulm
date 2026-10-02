@@ -54,8 +54,13 @@ void describe("CARES registry visibility", () => {
     `);
     groupId = species.lastID as number;
     await db.run(
-      `INSERT INTO species_collection (member_id, group_id, common_name, cares_registered_at, visibility)
-       VALUES (?, ?, 'Test Splitfin', '2026-01-01', 'public')`,
+      `INSERT INTO species_collection (member_id, group_id, common_name, visibility)
+       VALUES (?, ?, 'Test Splitfin', 'public')`,
+      [keeperId, groupId]
+    );
+    await db.run(
+      `INSERT INTO cares_registration (member_id, species_group_id, registered_at)
+       VALUES (?, ?, '2026-01-01')`,
       [keeperId, groupId]
     );
     viewers = {

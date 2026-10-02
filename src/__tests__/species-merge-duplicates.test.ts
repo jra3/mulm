@@ -61,8 +61,11 @@ void describe("Species merge with duplicate synonyms", () => {
       CREATE TABLE members (id INTEGER PRIMARY KEY, display_name TEXT);
       CREATE TABLE species_collection (
         id INTEGER PRIMARY KEY, member_id INTEGER, group_id INTEGER, removed_date TEXT,
-        updated_at TEXT, cares_registered_at TEXT, cares_last_confirmed TEXT,
-        cares_photo_key TEXT, cares_photo_url TEXT
+        updated_at TEXT
+      );
+      CREATE TABLE cares_registration (
+        id INTEGER PRIMARY KEY, member_id INTEGER, species_group_id INTEGER, registered_at TEXT,
+        last_confirmed TEXT, photo_key TEXT, photo_url TEXT
       );
       CREATE TABLE cares_article (id INTEGER PRIMARY KEY, species_group_id INTEGER);
       CREATE TABLE cares_fry_share (id INTEGER PRIMARY KEY, species_group_id INTEGER);

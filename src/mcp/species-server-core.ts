@@ -1144,6 +1144,7 @@ async function handleMergeSpeciesGroups(args: MergeSpeciesGroupsArgs) {
       approved_submissions_to_update: plan.submissions.approved,
       references_to_move: {
         collection_entries: plan.references.collection,
+        cares_registrations: plan.references.caresRegistrations,
         cares_articles: plan.references.caresArticles,
         cares_fry_shares: plan.references.caresFryShares,
         images: plan.references.images,
