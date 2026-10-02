@@ -18,14 +18,13 @@ import { searchMembers as searchMembersDb } from "@/db/members";
 import { caresRegistrationSchema, caresFryShareSchema } from "@/forms/cares";
 import { logger } from "@/utils/logger";
 import { processImage, ImageValidationError } from "@/utils/image-processor";
-import {
-  isR2Enabled,
-  getPublicUrl,
-  uploadToR2,
-  deleteImage,
-} from "@/utils/r2-client";
+import { isR2Enabled, getPublicUrl, uploadToR2, deleteImage } from "@/utils/r2-client";
+import { requireCaresRegistry } from "@/caresRegistry";
 
 const router = Router();
+
+// Mounted at "/", so gate only the CARES paths, not every request passing through.
+router.use(["/cares", "/dialog/cares", "/api/cares"], requireCaresRegistry);
 
 // Configure multer for single photo upload
 const upload = multer({
@@ -356,10 +355,7 @@ router.post(
       }
 
       if (error instanceof Error) {
-        if (
-          error.message.includes("not found") ||
-          error.message.includes("not registered")
-        ) {
+        if (error.message.includes("not found") || error.message.includes("not registered")) {
           res.status(400).send(`
             <div class="alert alert-warning" role="alert">
               <i class="fas fa-exclamation-triangle me-2"></i>

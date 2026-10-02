@@ -37,6 +37,7 @@ import {
   sessionCookieOptions,
 } from "./sessions";
 import { originValidation } from "./middleware/originValidation";
+import { exposeCaresRegistry } from "./caresRegistry";
 import { csrfValidation } from "./middleware/csrfValidation";
 import { bonusFields } from "@/points";
 import helmet from "helmet";
@@ -143,6 +144,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(cookieParser());
 app.use(sessionMiddleware);
+app.use(exposeCaresRegistry);
 
 // Sign in with Apple returns by cross-site POST from appleid.apple.com, which
 // the two CSRF middlewares below would reject. It goes ahead of them; the
