@@ -39,7 +39,8 @@ mixin navMenu(loggedIn)
 	nav.space-x-4.items-center(class="hidden md:flex")
 		a.link(href="/") Home
 		a.link(href="/species") Species
-		a.link(href="/cares") CARES
+		if showCaresRegistry
+			a.link(href="/cares") CARES
 		if loggedIn
 			a.link(href="/me") Me
 		a.link(href=`mailto:${bugReportEmail}` title="Report a bug") 🐛
@@ -71,7 +72,8 @@ mixin navMenu(loggedIn)
 			) &times;
 			a.link.text-lg.py-3.border-b.border-gray-100(href="/") Home
 			a.link.text-lg.py-3.border-b.border-gray-100(href="/species") Species
-			a.link.text-lg.py-3.border-b.border-gray-100(href="/cares") CARES
+			if showCaresRegistry
+				a.link.text-lg.py-3.border-b.border-gray-100(href="/cares") CARES
 			if loggedIn
 				a.link.text-lg.py-3.border-b.border-gray-100(href="/me") Me
 			a.link.text-lg.py-3.border-b.border-gray-100(href=`mailto:${bugReportEmail}`) 🐛 Report a bug
