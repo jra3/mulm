@@ -833,7 +833,7 @@ void describe("Pug Template Rendering", () => {
     });
 
     const submitted = {
-      ...baseMockData.form,
+      ...(baseMockData.form as Record<string, unknown>),
       id: 7,
       member_id: 1,
       submitted_on: new Date().toISOString(),
@@ -882,7 +882,7 @@ void describe("Pug Template Rendering", () => {
       pretty: false,
     });
     const render = (form: Record<string, unknown>) =>
-      renderSubmit({ ...baseMockData, formAction: "/submit", form: { ...baseMockData.form, ...form } });
+      renderSubmit({ ...baseMockData, formAction: "/submit", form: { ...(baseMockData.form as Record<string, unknown>), ...form } });
     const notice = (html: string) => /<div[^>]*id="species-binding-notice"[^>]*>/.exec(html)?.[0];
 
     void test("a bound form carries its Species and warns that editing will unbind", () => {

@@ -11,7 +11,9 @@ function makeApp() {
   app.use(express.json());
   app.use(createOriginValidation({ allowedOrigins: [ALLOWED] }));
   // Echo handlers for every method we care about.
-  const ok = (_req: express.Request, res: express.Response) => res.status(200).send("ok");
+  const ok = (_req: express.Request, res: express.Response) => {
+    res.status(200).send("ok");
+  };
   app.get("/thing", ok);
   app.post("/thing", ok);
   app.patch("/thing", ok);

@@ -261,7 +261,7 @@ void describe("Species Collection Database Module", () => {
 
     void test("should parse images JSON correctly", async () => {
       const images: ImageMetadata[] = [
-        { key: "test.jpg", url: "https://example.com/test.jpg", size: 12345 },
+        { key: "test.jpg", url: "https://example.com/test.jpg", size: 12345, uploadedAt: "2026-01-01T00:00:00Z" },
       ];
 
       const id = await addToCollection(memberId2, { group_id: speciesId1 });
@@ -395,8 +395,8 @@ void describe("Species Collection Database Module", () => {
 
     void test("should update images", async () => {
       const images: ImageMetadata[] = [
-        { key: "img1.jpg", url: "https://example.com/img1.jpg", size: 1000 },
-        { key: "img2.jpg", url: "https://example.com/img2.jpg", size: 2000 },
+        { key: "img1.jpg", url: "https://example.com/img1.jpg", size: 1000, uploadedAt: "2026-01-01T00:00:00Z" },
+        { key: "img2.jpg", url: "https://example.com/img2.jpg", size: 2000, uploadedAt: "2026-01-01T00:00:00Z" },
       ];
 
       await updateCollectionEntry(entryId, memberId1, { images });
@@ -699,13 +699,13 @@ void describe("Species Collection Database Module", () => {
 
     void test("should order by most recent first", async () => {
       const recent = await getRecentCollectionAdditions(10);
-      assert.equal(recent[0].species?.common_name, "Test Livebearer 2");
-      assert.equal(recent[1].species?.common_name, "Test Cichlid 1");
+      assert.equal(recent[0].common_name, "Test Livebearer 2");
+      assert.equal(recent[1].common_name, "Test Cichlid 1");
     });
 
     void test("shows the scientific name genus first", async () => {
       const recent = await getRecentCollectionAdditions(10);
-      assert.equal(recent[1].species?.scientific_name, "TestGenus testspecies1");
+      assert.equal(recent[1].scientific_name, "TestGenus testspecies1");
     });
 
     void test("should exclude private entries", async () => {
@@ -723,7 +723,7 @@ void describe("Species Collection Database Module", () => {
 
       const recent = await getRecentCollectionAdditions(10);
       assert.equal(recent.length, 1);
-      assert.equal(recent[0].species?.common_name, "Test Cichlid 1");
+      assert.equal(recent[0].common_name, "Test Cichlid 1");
     });
 
     void test("should respect limit parameter", async () => {
@@ -764,8 +764,8 @@ void describe("Species Collection Database Module", () => {
 
     void test("should update images successfully", async () => {
       const images: ImageMetadata[] = [
-        { key: "img1.jpg", url: "https://example.com/img1.jpg", size: 1000 },
-        { key: "img2.jpg", url: "https://example.com/img2.jpg", size: 2000 },
+        { key: "img1.jpg", url: "https://example.com/img1.jpg", size: 1000, uploadedAt: "2026-01-01T00:00:00Z" },
+        { key: "img2.jpg", url: "https://example.com/img2.jpg", size: 2000, uploadedAt: "2026-01-01T00:00:00Z" },
       ];
 
       await updateCollectionImages(entryId, memberId1, images);
@@ -785,6 +785,7 @@ void describe("Species Collection Database Module", () => {
           key: `img${i}.jpg`,
           url: `https://example.com/img${i}.jpg`,
           size: 1000,
+          uploadedAt: "2026-01-01T00:00:00Z",
         });
       }
 
@@ -801,6 +802,7 @@ void describe("Species Collection Database Module", () => {
           key: `img${i}.jpg`,
           url: `https://example.com/img${i}.jpg`,
           size: 1000,
+          uploadedAt: "2026-01-01T00:00:00Z",
         });
       }
 
@@ -816,12 +818,12 @@ void describe("Species Collection Database Module", () => {
 
     void test("should replace existing images", async () => {
       const oldImages: ImageMetadata[] = [
-        { key: "old.jpg", url: "https://example.com/old.jpg", size: 1000 },
+        { key: "old.jpg", url: "https://example.com/old.jpg", size: 1000, uploadedAt: "2026-01-01T00:00:00Z" },
       ];
       await updateCollectionImages(entryId, memberId1, oldImages);
 
       const newImages: ImageMetadata[] = [
-        { key: "new.jpg", url: "https://example.com/new.jpg", size: 2000 },
+        { key: "new.jpg", url: "https://example.com/new.jpg", size: 2000, uploadedAt: "2026-01-01T00:00:00Z" },
       ];
       await updateCollectionImages(entryId, memberId1, newImages);
 
@@ -836,7 +838,7 @@ void describe("Species Collection Database Module", () => {
 
     void test("should allow empty array to clear images", async () => {
       const images: ImageMetadata[] = [
-        { key: "img.jpg", url: "https://example.com/img.jpg", size: 1000 },
+        { key: "img.jpg", url: "https://example.com/img.jpg", size: 1000, uploadedAt: "2026-01-01T00:00:00Z" },
       ];
       await updateCollectionImages(entryId, memberId1, images);
 
@@ -851,7 +853,7 @@ void describe("Species Collection Database Module", () => {
 
     void test("should reject if member doesn't own entry", async () => {
       const images: ImageMetadata[] = [
-        { key: "img.jpg", url: "https://example.com/img.jpg", size: 1000 },
+        { key: "img.jpg", url: "https://example.com/img.jpg", size: 1000, uploadedAt: "2026-01-01T00:00:00Z" },
       ];
 
       await assert.rejects(
@@ -896,7 +898,7 @@ void describe("Species Collection Database Module", () => {
 
       const collection = await getCollectionForMember(memberId1);
       assert.ok(collection[0].species);
-      assert.equal(collection[0].species.common_name, null);
+      assert.strictEqual(collection[0].common_name, null);
     });
 
     void test("should handle concurrent additions of different species", async () => {

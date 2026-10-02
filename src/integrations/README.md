@@ -350,14 +350,15 @@ logger.error("IUCN API connection test failed", error);
 ### Quick Start
 
 ```typescript
-import { getExternalData } from "@/integrations/wikipedia";
+import { getWikipediaClient } from "@/integrations/wikipedia";
 
-const result = await getExternalData("Poecilia", "reticulata");
+// WikipediaResult, or null when Wikidata has no taxon by that exact name
+const result = await getWikipediaClient().getExternalData("Poecilia", "reticulata");
 
-if (result.found) {
-  console.log(`Wikidata ID: ${result.wikidata_id}`);
-  console.log(`Wikipedia URL: ${result.wikipedia_url}`);
-  console.log(`Images: ${result.images?.length ?? 0}`);
+if (result) {
+  console.log(`Wikidata ID: ${result.wikidataId}`);
+  console.log(`Wikipedia URL: ${result.wikipediaUrls.en}`);
+  console.log(`Images: ${result.imageUrls.length}`);
 }
 ```
 
@@ -383,15 +384,16 @@ if (result.found) {
 ### Quick Start
 
 ```typescript
-import { getExternalData } from "@/integrations/gbif";
+import { getGBIFClient } from "@/integrations/gbif";
 
-const result = await getExternalData("Poecilia", "reticulata");
+// GBIFResult, or null when GBIF has no match at 80% confidence or better
+const result = await getGBIFClient().getExternalData("Poecilia", "reticulata");
 
-if (result.found) {
-  console.log(`GBIF ID: ${result.gbif_id}`);
-  console.log(`Species URL: ${result.species_url}`);
+if (result) {
+  console.log(`GBIF ID: ${result.usageKey}`);
+  console.log(`Species URL: ${result.gbifUrl}`);
   console.log(`Confidence: ${result.confidence}%`);
-  console.log(`Occurrence Map: ${result.occurrence_map_url}`);
+  console.log(`Occurrence Map: ${result.occurrenceMapUrl}`);
 }
 ```
 

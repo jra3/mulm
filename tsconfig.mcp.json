@@ -3,6 +3,6 @@
   "compilerOptions": {
     "noEmit": true
   },
-  "include": ["src/mcp/**/*.ts"],
+  "include": ["src/mcp/**/*.ts", "src/config.d.ts"],
   "exclude": ["node_modules", "dist"]
 }
