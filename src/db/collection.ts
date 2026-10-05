@@ -101,6 +101,20 @@ interface TypeCountRow {
 }
 
 /**
+ * Blanks every `cares_*` column `c.*` brings along (registration date, photo,
+ * last confirmed), for viewers who can't see the CARES registry. Deliberately
+ * matches by prefix so a new registry column stays hidden without an edit here.
+ */
+function hideCaresRegistration<T extends CollectionEntry>(entry: T): T {
+  const hidden = Object.fromEntries(
+    Object.keys(entry)
+      .filter((key) => key.startsWith("cares_"))
+      .map((key) => [key, null])
+  );
+  return { ...entry, ...hidden };
+}
+
+/**
  * Get collection entries for a member
  */
 export async function getCollectionForMember(
@@ -109,9 +123,16 @@ export async function getCollectionForMember(
     includeRemoved?: boolean;
     includePrivate?: boolean;
     viewerId?: number | null;
+    /** Pass `canSeeCaresRegistry(viewer)`. Defaults to hidden. */
+    includeCaresRegistry?: boolean;
   }
 ): Promise<CollectionEntry[]> {
-  const { includeRemoved = false, includePrivate = false, viewerId = null } = options || {};
+  const {
+    includeRemoved = false,
+    includePrivate = false,
+    viewerId = null,
+    includeCaresRegistry = false,
+  } = options || {};
 
   let sql = `
     SELECT
@@ -145,7 +166,7 @@ export async function getCollectionForMember(
 
   const rows = await query<CollectionRow>(sql, params);
 
-  return rows.map(row => ({
+  const entries = rows.map(row => ({
     ...row,
     // Use canonical names if available, otherwise use free-text names
     common_name: row.canonical_common_name || row.common_name || null,
@@ -163,6 +184,8 @@ export async function getCollectionForMember(
       display_name: row.member_display_name || ''
     }
   }));
+
+  return includeCaresRegistry ? entries : entries.map(hideCaresRegistration);
 }
 
 /**

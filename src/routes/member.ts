@@ -103,6 +103,7 @@ export const viewCollection = async (req: MulmRequest, res: Response) => {
     includeRemoved: false,
     includePrivate,
     viewerId: viewer?.id,
+    includeCaresRegistry: canSeeCaresRegistry(viewer),
   });
   const collectionStats = await getCollectionStats(memberId);
 

@@ -7,7 +7,8 @@ import type { MulmRequest } from "@/sessions";
 import caresRouter from "@/routes/cares";
 import * as member from "@/routes/member";
 import * as species from "@/routes/species";
-import { exposeCaresRegistry } from "@/caresRegistry";
+import collectionRouter from "@/routes/collection";
+import { canSeeCaresRegistry } from "@/caresRegistry";
 import { createMember } from "@/db/members";
 import { setupTestDatabase, type TestDatabase } from "./testDbHelper.helper";
 
@@ -19,16 +20,18 @@ function appAs(viewer?: MulmRequest["viewer"]) {
   const app = express();
   app.set("views", path.join(__dirname, "../views"));
   app.set("view engine", "pug");
-  app.use((req: MulmRequest, _res, next) => {
+  app.use((req: MulmRequest, res, next) => {
     req.viewer = viewer;
+    // Mirrors the res.locals block in index.ts.
+    res.locals.showCaresRegistry = canSeeCaresRegistry(viewer);
     next();
   });
-  app.use(exposeCaresRegistry);
   app.get("/member/:memberId", member.view);
   app.get("/member/:memberId/collection", member.viewCollection);
   app.get("/species", species.explorer);
   app.get("/species/:groupId", species.detail);
   app.use("/", caresRouter);
+  app.use("/", collectionRouter);
   return app;
 }
 
@@ -107,6 +110,16 @@ void describe("CARES registry visibility", () => {
         assert.doesNotMatch(res.text, /\/dialog\/cares\//);
       });
 
+      void test("the collection API carries no registration fields", async () => {
+        const res = await request(appAs(viewers[who])).get(`/api/collection/${keeperId}`);
+        assert.strictEqual(res.status, 200);
+        const [entry] = res.body.collection as Record<string, unknown>[];
+        for (const [key, value] of Object.entries(entry)) {
+          if (key.startsWith("cares_")) assert.strictEqual(value, null, key);
+        }
+        assert.strictEqual(entry.cares_registered_at, null);
+      });
+
       void test("species pages keep the CARES badge but drop the registry", async () => {
         const app = appAs(viewers[who]);
         const detail = await request(app).get(`/species/${groupId}`);
@@ -134,6 +147,9 @@ void describe("CARES registry visibility", () => {
 
       const collection = await request(app).get(`/member/${keeperId}/collection`);
       assert.match(collection.text, /CARES Registered/);
+
+      const api = await request(app).get(`/api/collection/${keeperId}`);
+      assert.strictEqual(api.body.collection[0].cares_registered_at, "2026-01-01");
 
       const detail = await request(app).get(`/species/${groupId}`);
       assert.match(detail.text, /maintaining this species/);
