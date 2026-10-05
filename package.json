@@ -27,6 +27,7 @@
 		"mcp:species": "tsx src/mcp/species-server.ts",
 		"mcp:members": "tsx src/mcp/member-server.ts",
 		"mcp:backfill": "tsx src/mcp/backfill-server.ts",
+		"typecheck": "tsc --noEmit -p tsconfig.json && tsc -p tsconfig.test.json && tsc -p tsconfig.mcp.json",
 		"lint": "eslint 'src/**/*.ts'",
 		"lint:fix": "eslint 'src/**/*.ts' --fix",
 		"format": "prettier --write \"src/**/*.{ts,js,json}\" \"scripts/**/*.{ts,js}\"",

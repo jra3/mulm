@@ -126,6 +126,7 @@ void describe("Example Test Using Helpers", () => {
       });
 
       const submission = await getSubmissionById(submissionId);
+      assert.ok(submission);
       assert.strictEqual(submission.species_type, "Plant");
       assert.strictEqual(submission.species_common_name, "Amazon Sword");
       assert.strictEqual(submission.program, "plant");

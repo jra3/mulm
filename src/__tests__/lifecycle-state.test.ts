@@ -154,11 +154,11 @@ void describe("The waiting-period clock", () => {
 void describe("A Witness a member's save would void", () => {
   void test("only a confirmed, unapproved Submission carries one", () => {
     assert.strictEqual(
-      hasConfirmedWitness({ witness_verification_status: "confirmed", approved_on: undefined }),
+      hasConfirmedWitness({ witness_verification_status: "confirmed", approved_on: null }),
       true
     );
     assert.strictEqual(
-      hasConfirmedWitness({ witness_verification_status: "pending", approved_on: undefined }),
+      hasConfirmedWitness({ witness_verification_status: "pending", approved_on: null }),
       false
     );
     assert.strictEqual(

@@ -492,20 +492,25 @@ export function generateTestEmail(prefix = "test"): string {
  * });
  * ```
  */
-export function assertSubmissionState(
-  submission: {
+export function assertSubmissionState<
+  T extends {
     submitted_on: string | null;
     witnessed_on: string | null;
     approved_on: string | null;
     denied_on: string | null;
   },
+>(
+  submission: T | undefined,
   expected: {
     submitted?: boolean;
     witnessed?: boolean;
     approved?: boolean;
     denied?: boolean;
   }
-): void {
+): asserts submission is T {
+  if (!submission) {
+    throw new Error("Expected a submission, but got none");
+  }
   if (expected.submitted !== undefined) {
     if (expected.submitted) {
       if (submission.submitted_on === null) {

@@ -521,9 +521,9 @@ export async function getRecentCollectionAdditions(limit = 10): Promise<Collecti
   return rows.map(row => ({
     ...row,
     images: row.images ? JSON.parse(row.images) as ImageMetadata[] : null,
+    common_name: row.common_name || null,
+    scientific_name: row.scientific_name || null,
     species: {
-      common_name: row.common_name || null,
-      scientific_name: row.scientific_name || null,
       program_class: row.program_class || null,
       species_type: row.species_type || null,
       is_cares_species: Boolean(row.is_cares_species)

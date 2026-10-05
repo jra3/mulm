@@ -587,12 +587,12 @@ void describe("Species catalogue: create, classify, rename, delete, Point class"
 
       assert.strictEqual(changes, 3, "Should update all 3 species");
 
-      const updated = await db.all<{ base_points: number | null }>(
+      const updated = await db.all<Array<{ base_points: number | null }>>(
         "SELECT base_points FROM species_name_group WHERE group_id IN (?, ?, ?)",
         [groupId1, groupId2, groupId3]
       );
 
-      assert.ok(updated.every((s: { base_points: number | null }) => s.base_points === 15));
+      assert.ok(updated.every((s) => s.base_points === 15));
     });
 
     void test("should update single species", async () => {
@@ -612,11 +612,11 @@ void describe("Species catalogue: create, classify, rename, delete, Point class"
 
       assert.strictEqual(changes, 2);
 
-      const updated = await db.all<{ base_points: number | null }>(
+      const updated = await db.all<Array<{ base_points: number | null }>>(
         "SELECT base_points FROM species_name_group WHERE group_id IN (?, ?)",
         [groupId2, groupId3]
       );
-      assert.ok(updated.every((s: { base_points: number | null }) => s.base_points === null));
+      assert.ok(updated.every((s) => s.base_points === null));
     });
 
     void test("should handle mix of existing and non-existent IDs", async () => {
