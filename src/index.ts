@@ -37,6 +37,7 @@ import {
   sessionCookieOptions,
 } from "./sessions";
 import { originValidation } from "./middleware/originValidation";
+import { canSeeCaresRegistry } from "./caresRegistry";
 import { csrfValidation } from "./middleware/csrfValidation";
 import { bonusFields } from "@/points";
 import helmet from "helmet";
@@ -161,13 +162,14 @@ app.use(originValidation);
 app.use(csrfValidation);
 
 // Make config available to all templates via res.locals
-app.use((_req, res, next) => {
+app.use((req: MulmRequest, res, next) => {
   res.locals.bugReportEmail = config.email.bugReportEmail;
   res.locals.domain = config.server.domain;
   // The bonus fields the approval panel's error mixin loops over. Set here
   // rather than per-route so a new render site cannot forget it and quietly
   // drop the per-Program bonus errors.
   res.locals.bonusFields = bonusFields;
+  res.locals.showCaresRegistry = canSeeCaresRegistry(req.viewer);
   next();
 });
 
