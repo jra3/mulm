@@ -52,7 +52,12 @@ void describe("CARES registration", () => {
 
   async function registeredEntry(): Promise<number> {
     const entryId = await addToCollection(memberId, { group_id: caresSpecies });
-    await registerForCares(entryId, memberId, "cares/1-original.jpg", "https://r2/cares/1-original.jpg");
+    await registerForCares(
+      entryId,
+      memberId,
+      "cares/1-original.jpg",
+      "https://r2/cares/1-original.jpg"
+    );
     return entryId;
   }
 
@@ -64,22 +69,25 @@ void describe("CARES registration", () => {
       registered: true,
       photoUrl: "https://r2/cares/1-original.jpg",
     });
-    const [entry] = await getCollectionForMember(memberId, { viewerId: memberId });
+    const [entry] = await getCollectionForMember(memberId, {
+      viewerId: memberId,
+      includeCaresRegistry: true,
+    });
     assert.ok(entry.cares_registered_at);
     assert.strictEqual(entry.cares_photo_url, "https://r2/cares/1-original.jpg");
   });
 
   void test("refuses a second registration for the same Species", async () => {
     const entryId = await registeredEntry();
-    await assert.rejects(
-      () => registerForCares(entryId, memberId, "k", "u"),
-      /already registered/
-    );
+    await assert.rejects(() => registerForCares(entryId, memberId, "k", "u"), /already registered/);
   });
 
   void test("refuses a Species not on the CARES list", async () => {
     const entryId = await addToCollection(memberId, { group_id: otherSpecies });
-    await assert.rejects(() => registerForCares(entryId, memberId, "k", "u"), /not part of the CARES/);
+    await assert.rejects(
+      () => registerForCares(entryId, memberId, "k", "u"),
+      /not part of the CARES/
+    );
   });
 
   void test("survives an edit of the entry's names", async () => {
@@ -102,7 +110,10 @@ void describe("CARES registration", () => {
 
     const readded = await addToCollection(memberId, { group_id: caresSpecies });
     assert.strictEqual((await getCaresEligibility(readded, memberId))?.registered, true);
-    const current = await getCollectionForMember(memberId, { viewerId: memberId });
+    const current = await getCollectionForMember(memberId, {
+      viewerId: memberId,
+      includeCaresRegistry: true,
+    });
     assert.ok(current[0].cares_registered_at);
   });
 
@@ -113,6 +124,7 @@ void describe("CARES registration", () => {
     const [removed] = await getCollectionForMember(memberId, {
       viewerId: memberId,
       includeRemoved: true,
+      includeCaresRegistry: true,
     });
     assert.strictEqual(removed.cares_registered_at, null);
   });
