@@ -172,11 +172,11 @@ _Avoid_: program class, species class, category, kind
 _Avoid_: conservation program, endangered-species program
 
 **CARES registration**:
-A member's record that they are currently maintaining a specific CARES-listed species in their collection (`cares_registered_at`, tied to a species-collection entry). Members register a species and provide a photo.
+A member's record that they are maintaining a specific CARES-listed species (`cares_registration`, one per member and Species). Members register from a collection entry and provide a photo, but the registration belongs to the member and Species, not the entry: editing, removing or re-adding the entry leaves it in place.
 _Avoid_: enrollment, sign-up, entry
 
 **Annual re-confirmation**:
-The yearly action a member takes to affirm they are still maintaining a registered species, keeping the registration active (`cares_last_confirmed`, `years_confirmed`).
+The yearly action a member takes to affirm they are still maintaining a registered species, keeping the registration active (`last_confirmed`, `years_confirmed`).
 _Avoid_: renewal, annual review
 
 **At-risk / priority species**:

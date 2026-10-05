@@ -14,16 +14,14 @@ mixin sealPill(label, color, icon, earned)
 
 //- CARES species card
 mixin caresSpeciesCard(reg)
-	- const parsedImages = reg.images ? JSON.parse(reg.images) : []
-	- const hasImage = parsedImages.length > 0
 	.bg-white.rounded-lg.shadow-md.p-4.border-l-4.border-green-500
 		.flex.gap-4
-			//- Photo thumbnail
-			if hasImage
+			//- Registration photo thumbnail
+			if reg.photo_url
 				.flex-shrink-0
 					.w-20.h-20.rounded-lg.overflow-hidden
 						img.w-full.h-full.object-cover(
-							src=parsedImages[0].url.replace('-original', '-thumb')
+							src=reg.photo_url.replace('-original', '-thumb')
 							alt=`${reg.common_name || reg.scientific_name || 'Species'} photo`
 							loading="lazy"
 						)
@@ -54,12 +52,12 @@ mixin caresSpeciesCard(reg)
 				.text-xs.text-gray-500.mt-2
 					span Registered:
 					= ' '
-					+shortDate(reg.cares_registered_at, "Registered on")
-					if reg.cares_last_confirmed
+					+shortDate(reg.registered_at, "Registered on")
+					if reg.last_confirmed
 						span.mx-1 ·
 						span Last confirmed:
 						= ' '
-						+shortDate(reg.cares_last_confirmed, "Last confirmed on")
+						+shortDate(reg.last_confirmed, "Last confirmed on")
 
 //- Main CARES section (called from member.pug)
 mixin caresSection(caresProfile)
