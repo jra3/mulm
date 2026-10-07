@@ -165,18 +165,18 @@ _Avoid_: program class, species class, category, kind
 
 ## CARES
 
-**CARES is a distinct conservation registry, not a points/awards program.** It runs alongside BAP/HAP/CAP with its own vocabulary and lifecycle. Members register at-risk species they *maintain* (keep alive) — as opposed to the breeding/propagation *achievements* the point programs reward. Source of truth: `src/db/cares.ts`, `src/views/cares.pug`. (Keep this separate from the level ladders. The one point of contact with the point system is the **+5 CARES bonus** a *breeding submission* of a CARES-listed species earns at approval — that bonus is not the registry.)
+**CARES is a distinct conservation registry, not a points/awards program.** It runs alongside BAP/HAP/CAP with its own vocabulary and lifecycle. Members register at-risk species they *maintain* (keep alive) — as opposed to the breeding/propagation *achievements* the point programs reward. Source of truth: `src/db/cares.ts`, `src/views/cares.pug`. (Keep this separate from the level ladders. The one point of contact with the point system is the **+5 CARES bonus** a *breeding submission* of a CARES-listed species earns at approval — that bonus is not the registry.) The registry is still in development and only admins can see it; the gate is `canSeeCaresRegistry` in `src/caresRegistry.ts`.
 
 **CARES**:
 "Conservation, Awareness, Recognition, Encouragement, Support" — an international initiative (founded 2004) enlisting hobbyists to maintain populations of at-risk freshwater fish in home aquariums. BAS participates as a member club.
 _Avoid_: conservation program, endangered-species program
 
 **CARES registration**:
-A member's record that they are currently maintaining a specific CARES-listed species in their collection (`cares_registered_at`, tied to a species-collection entry). Members register a species and provide a photo.
+A member's record that they are maintaining a specific CARES-listed species (`cares_registration`, one per member and Species). Members register from a collection entry and provide a photo, but the registration belongs to the member and Species, not the entry: editing, removing or re-adding the entry leaves it in place.
 _Avoid_: enrollment, sign-up, entry
 
 **Annual re-confirmation**:
-The yearly action a member takes to affirm they are still maintaining a registered species, keeping the registration active (`cares_last_confirmed`, `years_confirmed`).
+The yearly action a member takes to affirm they are still maintaining a registered species, keeping the registration active (`last_confirmed`, `years_confirmed`).
 _Avoid_: renewal, annual review
 
 **At-risk / priority species**:

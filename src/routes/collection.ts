@@ -12,6 +12,7 @@ import {
   getCollectionStats,
 } from "@/db/collection";
 import { findSpeciesById } from "@/species";
+import { canSeeCaresRegistry } from "@/caresRegistry";
 import {
   addToCollectionSchema,
   updateCollectionSchema,
@@ -68,6 +69,7 @@ router.get("/api/collection/:memberId", async (req: MulmRequest, res: Response) 
       includeRemoved: Boolean(includeRemoved),
       includePrivate,
       viewerId: viewer?.id,
+      includeCaresRegistry: canSeeCaresRegistry(viewer),
     });
 
     const stats = await getCollectionStats(memberId);

@@ -161,7 +161,7 @@ mixin collectionCard(entry, canEdit = false, options = {})
 								+caresBadge('sm')
 
 			//- CARES registration CTA (for eligible, unregistered species)
-			if canEdit && isCanonical && species.is_cares_species && !entry.cares_registered_at
+			if showCaresRegistry && canEdit && isCanonical && species.is_cares_species && !entry.cares_registered_at
 				.mb-3
 					button.w-full.inline-flex.items-center.justify-center.gap-2.px-3.py-2.text-sm.font-medium.text-green-700.bg-green-50.hover_bg-green-100.rounded-md.border.border-green-200.transition(
 						hx-get=`/dialog/cares/register/${entry.id}`

@@ -444,7 +444,8 @@ export async function deleteSpecies(speciesId: number): Promise<number> {
     countSubmissionsOfSpecies(speciesId),
     countReferencesOfSpecies(speciesId),
   ]);
-  const caresRecords = references.caresArticles + references.caresFryShares;
+  const caresRecords =
+    references.caresRegistrations + references.caresArticles + references.caresFryShares;
   const held = [
     submissions.total > 0
       ? `${submissions.total} submission(s), ${submissions.approved} of them approved`

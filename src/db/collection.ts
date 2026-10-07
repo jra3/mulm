@@ -2,6 +2,10 @@ import { query, writeConn } from './conn';
 import type { ImageMetadata } from '../utils/r2-client';
 import { anyNameSql, speciesJoinSql } from "@/species";
 
+/** A current entry shows its member's CARES registration for the Species. */
+const caresRegistrationJoinSql = `LEFT JOIN cares_registration r
+      ON r.member_id = c.member_id AND r.species_group_id = c.group_id AND c.removed_date IS NULL`;
+
 export interface CollectionEntry {
   id: number;
   member_id: number;
@@ -15,7 +19,7 @@ export interface CollectionEntry {
   visibility: 'public' | 'private';
   created_at: string;
   updated_at: string;
-  // CARES registration data
+  // The member's CARES registration for this Species (current entries only)
   cares_registered_at: string | null;
   cares_photo_url: string | null;
   // Joined canonical species data (if group_id is set)
@@ -101,6 +105,20 @@ interface TypeCountRow {
 }
 
 /**
+ * Blanks every `cares_*` column `c.*` brings along (registration date, photo,
+ * last confirmed), for viewers who can't see the CARES registry. Deliberately
+ * matches by prefix so a new registry column stays hidden without an edit here.
+ */
+function hideCaresRegistration<T extends CollectionEntry>(entry: T): T {
+  const hidden = Object.fromEntries(
+    Object.keys(entry)
+      .filter((key) => key.startsWith("cares_"))
+      .map((key) => [key, null])
+  );
+  return { ...entry, ...hidden };
+}
+
+/**
  * Get collection entries for a member
  */
 export async function getCollectionForMember(
@@ -109,9 +127,16 @@ export async function getCollectionForMember(
     includeRemoved?: boolean;
     includePrivate?: boolean;
     viewerId?: number | null;
+    /** Pass `canSeeCaresRegistry(viewer)`. Defaults to hidden. */
+    includeCaresRegistry?: boolean;
   }
 ): Promise<CollectionEntry[]> {
-  const { includeRemoved = false, includePrivate = false, viewerId = null } = options || {};
+  const {
+    includeRemoved = false,
+    includePrivate = false,
+    viewerId = null,
+    includeCaresRegistry = false,
+  } = options || {};
 
   let sql = `
     SELECT
@@ -121,9 +146,12 @@ export async function getCollectionForMember(
       sng.program_class,
       sng.species_type,
       sng.is_cares_species,
+      r.registered_at AS cares_registered_at,
+      r.photo_url AS cares_photo_url,
       m.display_name AS member_display_name
     FROM species_collection c
     ${speciesJoinSql("c.group_id", "sng")}
+    ${caresRegistrationJoinSql}
     JOIN members m ON c.member_id = m.id
     WHERE c.member_id = ?
   `;
@@ -145,7 +173,7 @@ export async function getCollectionForMember(
 
   const rows = await query<CollectionRow>(sql, params);
 
-  return rows.map(row => ({
+  const entries = rows.map(row => ({
     ...row,
     // Use canonical names if available, otherwise use free-text names
     common_name: row.canonical_common_name || row.common_name || null,
@@ -163,6 +191,8 @@ export async function getCollectionForMember(
       display_name: row.member_display_name || ''
     }
   }));
+
+  return includeCaresRegistry ? entries : entries.map(hideCaresRegistration);
 }
 
 /**
@@ -345,9 +375,12 @@ export async function getCollectionEntry(
       sng.program_class,
       sng.species_type,
       sng.is_cares_species,
+      r.registered_at AS cares_registered_at,
+      r.photo_url AS cares_photo_url,
       m.display_name AS member_display_name
     FROM species_collection c
     ${speciesJoinSql("c.group_id", "sng")}
+    ${caresRegistrationJoinSql}
     JOIN members m ON c.member_id = m.id
     WHERE c.id = ?
   `;

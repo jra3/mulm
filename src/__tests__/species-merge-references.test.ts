@@ -1,6 +1,6 @@
 /**
  * Merge and delete account for everything else that points at a Species
- * (#420): a member's collection, CARES articles and fry shares, images,
+ * (#420): a member's collection, CARES registrations, articles and fry shares, images,
  * external links, and the IUCN and external-data sync records.
  *
  * Production runs with foreign keys off, so nothing cascades there: a row the
@@ -39,14 +39,43 @@ async function createTestSpecies(genus: string, epithet: string): Promise<number
 async function addToCollection(
   memberId: number,
   groupId: number,
-  opts: { removed?: string; caresRegistered?: string } = {}
+  opts: { removed?: string } = {}
 ): Promise<number> {
   const { lastID } = await db.run(
-    `INSERT INTO species_collection (member_id, group_id, removed_date, cares_registered_at)
-     VALUES (?, ?, ?, ?)`,
-    [memberId, groupId, opts.removed ?? null, opts.caresRegistered ?? null]
+    `INSERT INTO species_collection (member_id, group_id, removed_date) VALUES (?, ?, ?)`,
+    [memberId, groupId, opts.removed ?? null]
   );
   return lastID as number;
+}
+
+async function registerForCares(
+  memberId: number,
+  groupId: number,
+  registeredAt: string,
+  opts: { confirmed?: string; photo?: string } = {}
+) {
+  await db.run(
+    `INSERT INTO cares_registration
+       (member_id, species_group_id, registered_at, last_confirmed, photo_key, photo_url)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [
+      memberId,
+      groupId,
+      registeredAt,
+      opts.confirmed ?? null,
+      opts.photo ? `${opts.photo}-k` : null,
+      opts.photo ? `${opts.photo}-u` : null,
+    ]
+  );
+}
+
+async function registrationOf(memberId: number, groupId: number) {
+  const row = await db.get<Record<string, string | null>>(
+    `SELECT registered_at, last_confirmed, photo_key, photo_url FROM cares_registration
+     WHERE member_id = ? AND species_group_id = ?`,
+    [memberId, groupId]
+  );
+  return row ? { ...row } : undefined;
 }
 
 async function addCaresRecords(memberId: number, groupId: number) {
@@ -87,6 +116,9 @@ async function rowsFor(groupId: number): Promise<Record<string, number>> {
   const count = async (sql: string) => (await db.get<{ n: number }>(sql, [groupId]))!.n;
   return {
     collection: await count("SELECT COUNT(*) AS n FROM species_collection WHERE group_id = ?"),
+    caresRegistrations: await count(
+      "SELECT COUNT(*) AS n FROM cares_registration WHERE species_group_id = ?"
+    ),
     caresArticles: await count("SELECT COUNT(*) AS n FROM cares_article WHERE species_group_id = ?"),
     caresFryShares: await count("SELECT COUNT(*) AS n FROM cares_fry_share WHERE species_group_id = ?"),
     images: await count("SELECT COUNT(*) AS n FROM species_images WHERE group_id = ?"),
@@ -103,6 +135,7 @@ async function rowsFor(groupId: number): Promise<Record<string, number>> {
 
 const none = {
   collection: 0,
+  caresRegistrations: 0,
   caresArticles: 0,
   caresFryShares: 0,
   images: 0,
@@ -129,7 +162,8 @@ void describe("merge", () => {
   void test("moves the loser's collection entries and CARES records to the winner", async () => {
     const winner = await createTestSpecies("Winnerus", "maximus");
     const loser = await createTestSpecies("Loserus", "minimus");
-    await addToCollection(alice, loser, { caresRegistered: "2026-02-01" });
+    await addToCollection(alice, loser);
+    await registerForCares(alice, loser, "2026-02-01");
     await addToCollection(bob, loser, { removed: "2025-12-01" });
     await addCaresRecords(alice, loser);
 
@@ -137,13 +171,10 @@ void describe("merge", () => {
 
     const moved = await rowsFor(winner);
     assert.strictEqual(moved.collection, 2);
+    assert.strictEqual(moved.caresRegistrations, 1);
     assert.strictEqual(moved.caresArticles, 1);
     assert.strictEqual(moved.caresFryShares, 1);
-    const entry = await db.get<{ cares_registered_at: string }>(
-      "SELECT cares_registered_at FROM species_collection WHERE member_id = ? AND group_id = ?",
-      [alice, winner]
-    );
-    assert.strictEqual(entry!.cares_registered_at, "2026-02-01");
+    assert.strictEqual((await registrationOf(alice, winner))?.registered_at, "2026-02-01");
     assert.deepStrictEqual(await rowsFor(loser), none);
   });
 
@@ -212,56 +243,46 @@ void describe("merge", () => {
     assert.deepStrictEqual(await rowsFor(loser), none);
   });
 
-  void test("the kept entry takes the loser's CARES registration when it has none", async () => {
+  void test("a registration moves with no current collection entry behind it", async () => {
     const winner = await createTestSpecies("Winnerus", "maximus");
     const loser = await createTestSpecies("Loserus", "minimus");
-    const kept = await addToCollection(alice, winner);
-    const retired = await addToCollection(alice, loser, { caresRegistered: "2024-03-01" });
-    await db.run(
-      "UPDATE species_collection SET cares_last_confirmed = '2026-03-01', cares_photo_key = 'k', cares_photo_url = 'u' WHERE id = ?",
-      [retired]
-    );
+    await addToCollection(alice, loser, { removed: "2025-06-01" });
+    await registerForCares(alice, loser, "2024-03-01", { confirmed: "2026-03-01", photo: "p" });
 
     await mergeSpecies(winner, loser);
 
-    const entry = await db.get(
-      "SELECT cares_registered_at, cares_last_confirmed, cares_photo_key, cares_photo_url FROM species_collection WHERE id = ?",
-      [kept]
-    );
-    assert.deepStrictEqual({ ...entry }, {
-      cares_registered_at: "2024-03-01",
-      cares_last_confirmed: "2026-03-01",
-      cares_photo_key: "k",
-      cares_photo_url: "u",
+    assert.deepStrictEqual(await registrationOf(alice, winner), {
+      registered_at: "2024-03-01",
+      last_confirmed: "2026-03-01",
+      photo_key: "p-k",
+      photo_url: "p-u",
     });
+    assert.deepStrictEqual(await rowsFor(loser), none);
   });
 
-  void test("when both are registered, the kept entry has the earlier registration and the later confirmation", async () => {
+  void test("a member registered for both keeps the earlier registration and the later confirmation", async () => {
     const winner = await createTestSpecies("Winnerus", "maximus");
     const loser = await createTestSpecies("Loserus", "minimus");
-    const kept = await addToCollection(alice, winner, { caresRegistered: "2025-06-01" });
-    await db.run(
-      "UPDATE species_collection SET cares_last_confirmed = '2026-06-01', cares_photo_key = 'winner-k', cares_photo_url = 'winner-u' WHERE id = ?",
-      [kept]
-    );
-    const retired = await addToCollection(alice, loser, { caresRegistered: "2024-01-01" });
-    await db.run(
-      "UPDATE species_collection SET cares_last_confirmed = '2025-01-01', cares_photo_key = 'loser-k', cares_photo_url = 'loser-u' WHERE id = ?",
-      [retired]
-    );
+    await registerForCares(alice, winner, "2025-06-01", { confirmed: "2026-06-01", photo: "winner" });
+    await registerForCares(alice, loser, "2024-01-01", { confirmed: "2025-01-01", photo: "loser" });
+    await registerForCares(bob, winner, "2025-01-01", { photo: "bob-winner" });
+    await registerForCares(bob, loser, "2025-02-01", { confirmed: "2026-02-01", photo: "bob-loser" });
 
     await mergeSpecies(winner, loser);
 
-    const entry = await db.get(
-      "SELECT cares_registered_at, cares_last_confirmed, cares_photo_key, cares_photo_url FROM species_collection WHERE id = ?",
-      [kept]
-    );
-    assert.deepStrictEqual({ ...entry }, {
-      cares_registered_at: "2024-01-01",
-      cares_last_confirmed: "2026-06-01",
-      cares_photo_key: "loser-k",
-      cares_photo_url: "loser-u",
+    assert.deepStrictEqual(await registrationOf(alice, winner), {
+      registered_at: "2024-01-01",
+      last_confirmed: "2026-06-01",
+      photo_key: "loser-k",
+      photo_url: "loser-u",
     });
+    assert.deepStrictEqual(await registrationOf(bob, winner), {
+      registered_at: "2025-01-01",
+      last_confirmed: "2026-02-01",
+      photo_key: "bob-winner-k",
+      photo_url: "bob-winner-u",
+    });
+    assert.deepStrictEqual(await rowsFor(loser), none);
   });
 
   void test("a member who removed one of the two may still be merged", async () => {
@@ -295,7 +316,8 @@ void describe("merge", () => {
     const winner = await createTestSpecies("Winnerus", "maximus");
     const loser = await createTestSpecies("Loserus", "minimus");
     await db.run("UPDATE species_name_group SET is_cares_species = 1 WHERE group_id = ?", [loser]);
-    await addToCollection(alice, loser, { caresRegistered: "2026-02-01" });
+    await addToCollection(alice, loser);
+    await registerForCares(alice, loser, "2026-02-01");
 
     assert.strictEqual((await previewMerge(winner, loser)).winnerBecomesCares, true);
     await mergeSpecies(winner, loser);
@@ -329,11 +351,13 @@ void describe("merge", () => {
     await addToCollection(alice, loser);
     await addToCollection(bob, loser);
     await addCaresRecords(bob, loser);
+    await registerForCares(bob, loser, "2026-01-01");
     await addEnrichment(loser, "l");
 
     const plan = await previewMerge(winner, loser);
     assert.deepStrictEqual(plan.references, {
       collection: 2,
+      caresRegistrations: 1,
       caresArticles: 1,
       caresFryShares: 1,
       images: 1,
@@ -363,6 +387,17 @@ void describe("delete", () => {
     await assert.rejects(
       () => deleteSpecies(id),
       (err: unknown) => err instanceof CatalogueRefusal && err.code === "referenced" && /CARES/.test(err.message)
+    );
+  });
+
+  void test("is refused while a CARES registration names the Species", async () => {
+    const id = await createTestSpecies("Caresus", "species");
+    await registerForCares(alice, id, "2026-01-01");
+
+    await assert.rejects(
+      () => deleteSpecies(id),
+      (err: unknown) =>
+        err instanceof CatalogueRefusal && err.code === "referenced" && /1 CARES record/.test(err.message)
     );
   });
 
