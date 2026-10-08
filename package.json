@@ -54,7 +54,7 @@
 		"csv-parse": "^6.1.0",
 		"express": "^5.2.1",
 		"express-rate-limit": "^8.0.1",
-		"helmet": "^8.2.0",
+		"helmet": "^8.3.0",
 		"jose": "^6.2.12",
 		"marked": "^17.0.0",
 		"module-alias": "^2.2.3",
