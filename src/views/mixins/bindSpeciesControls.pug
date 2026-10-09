@@ -4,9 +4,10 @@
 //-
 //- @param submission - the Submission (id)
 //- @param bound - whether it is already bound, which makes this a rebind
-mixin bindSpeciesControls(submission, bound)
+//- @param onDark - the including panel is dark, so the summary link is light
+mixin bindSpeciesControls(submission, bound, onDark)
     details(open=bound ? false : true)
-        summary.link.text-sm.mt-2= bound ? "Change Species" : "Choose Species"
+        summary.link.text-sm.mt-2(class=onDark ? "light" : "")= bound ? "Change Species" : "Choose Species"
         form.flex.gap-2.items-center.mt-2(
             hx-post=`/admin/submissions/${submission.id}/bind-species`
             hx-disabled-elt="find button[type=submit]"
@@ -15,17 +16,20 @@ mixin bindSpeciesControls(submission, bound)
             //- Unfiltered by Species type: a Submission filed under the
             //- wrong type is corrected by binding it to the right Species
             //- and adopting that Species' classification.
-            select#bind-species-search.tom-select-typeahead.flex-1(
-                name="group_id"
-                data-api-url="/api/species/search"
-                data-value-field="group_id"
-                data-label-field="text"
-                data-search-fields="text,common_name,scientific_name"
-                data-min-query-length="2"
-                data-max-items="1"
-                data-placeholder="Search species..."
-                required
-            )
+            //- Own text colour: dark panels set text-white, which the
+            //- white typeahead input and dropdown would otherwise inherit.
+            .flex-1.text-gray-900
+                select#bind-species-search.tom-select-typeahead(
+                    name="group_id"
+                    data-api-url="/api/species/search"
+                    data-value-field="group_id"
+                    data-label-field="text"
+                    data-search-fields="text,common_name,scientific_name"
+                    data-min-query-length="2"
+                    data-max-items="1"
+                    data-placeholder="Search species..."
+                    required
+                )
             button.primary.text-sm(type="submit")= bound ? "Rebind" : "Bind"
             button.outline.text-sm(
                 type="button"
