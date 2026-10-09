@@ -28,7 +28,8 @@ export function currentDigestSlot(now: Date): Date {
 /**
  * Run the digest at most once per daily slot. The machine scales to zero and
  * every boot calls this, so without the recorded last run each cold start
- * would mail the committee again. A failed send is not recorded, so the next
+ * would mail the committee again. A pass that finds every queue empty still
+ * counts as the slot's run. A send that throws is not recorded, so the next
  * boot retries it.
  */
 export async function runCommitteeDigest(now: Date = new Date()): Promise<boolean> {
