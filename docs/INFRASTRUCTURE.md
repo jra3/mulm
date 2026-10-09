@@ -62,8 +62,8 @@ Sign in with Apple needs `oauth.apple = { teamId, keyId, servicesId, privateKey 
 |---|---|
 | SQLite database | Fly volume `/mnt/app-data/database/database.db` |
 | WAL replica | Cloudflare R2 bucket `basny-db-replica` (continuous via Litestream) |
-| Image uploads | Cloudflare R2 bucket `basny-bap-data` (S3 SDK) |
-| Litestream config | `litestream.yml` — bucket name + R2 endpoint hardcoded; credentials from `LITESTREAM_*` env, derived from `CONFIG_JSON.storage.s3*` in `start.sh` |
+| Image uploads | Cloudflare R2 bucket `basny-bap-data` (S3 SDK); staging uses its own `basny-bap-staging-data` |
+| Litestream config | `litestream.yml` — bucket name + R2 endpoint hardcoded; credentials from `LITESTREAM_*` env, derived from `CONFIG_JSON.storage.s3*` in `start.sh` (on staging, from the read-only `PROD_R2_READ_*` secrets) |
 
 ## Litestream Behavior by Environment
 
@@ -72,8 +72,10 @@ Sign in with Apple needs `oauth.apple = { teamId, keyId, servicesId, privateKey 
 | `STAGING` env var | unset | `STAGING=1` |
 | On boot, if local DB missing | `litestream restore` from R2 | same |
 | While running | `litestream replicate` (continuous WAL → R2) | **disabled** — runs `node` directly |
+| After a restore | — | mirrors `basny-bap-data` into `basny-bap-staging-data` in the background |
+| Auto-refresh | — | on a boot more than 7 days after the last restore |
 
-The staging mode prevents staging from ever writing to R2, so it cannot pollute prod's generation history.
+The staging mode prevents staging from ever writing to R2, so it cannot pollute prod's generation history. Staging holds no prod write key: `CONFIG_JSON.storage` points at its own bucket with a key scoped to it, and `PROD_R2_READ_ACCESS_KEY_ID` / `PROD_R2_READ_SECRET_ACCESS_KEY` are read-only on `basny-bap-data` and `basny-db-replica`.
 
 ## Deploy
 
