@@ -192,7 +192,7 @@ export async function createSubmissionRow(
     });
   } catch (err) {
     logger.error("Failed to add submission", err);
-    throw new Error("Failed to add submission");
+    throw new Error("Failed to add submission", { cause: err });
   }
 }
 
@@ -393,7 +393,7 @@ export async function updateSubmission(id: number, updates: UpdateFor<Submission
     }
   } catch (err) {
     logger.error("Failed to update submission", err);
-    throw new Error("Failed to update submission");
+    throw new Error("Failed to update submission", { cause: err });
   }
 }
 
@@ -557,7 +557,7 @@ export async function addSubmissionImage(
     if (err instanceof Error && err.message.includes("UNIQUE constraint")) {
       throw err;
     }
-    throw new Error("Failed to add submission image");
+    throw new Error("Failed to add submission image", { cause: err });
   }
 }
 
@@ -579,7 +579,7 @@ export async function deleteSubmissionImage(
     }
   } catch (err) {
     logger.error("Failed to delete submission image", err);
-    throw new Error("Failed to delete submission image");
+    throw new Error("Failed to delete submission image", { cause: err });
   }
 }
 
@@ -687,6 +687,6 @@ export async function setSubmissionSupplements(
     }
   } catch (err) {
     logger.error("Failed to set submission supplements", err);
-    throw new Error("Failed to set submission supplements");
+    throw new Error("Failed to set submission supplements", { cause: err });
   }
 }

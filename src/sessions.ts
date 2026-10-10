@@ -147,7 +147,7 @@ export async function destroyUserSession(req: MulmRequest, res: Response) {
       }
     } catch (err) {
       logger.error("Failed to delete session", err);
-      throw new Error("Failed to delete session");
+      throw new Error("Failed to delete session", { cause: err });
     }
   }
 }

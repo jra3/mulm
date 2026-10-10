@@ -172,7 +172,7 @@ export async function createOrUpdatePassword(memberId: number, passwordEntry: Sc
     }
   } catch (err) {
     logger.error("Failed to set password", err);
-    throw new Error("Failed to set password");
+    throw new Error("Failed to set password", { cause: err });
   }
 }
 
@@ -253,7 +253,7 @@ export async function createMember(
     });
   } catch (err) {
     logger.error("Failed to create member", err);
-    throw new Error("Failed to create member");
+    throw new Error("Failed to create member", { cause: err });
   }
 }
 
@@ -624,7 +624,7 @@ export async function grantAward(
     }
   } catch (err) {
     logger.error("Failed to grant award", err);
-    throw new Error("Failed to grant award");
+    throw new Error("Failed to grant award", { cause: err });
   }
 }
 
@@ -650,7 +650,7 @@ export async function revokeAward(memberId: number, awardName: string) {
     await removeActivity("award_granted", memberId, awardName);
   } catch (err) {
     logger.error("Failed to revoke award", err);
-    throw new Error("Failed to revoke award");
+    throw new Error("Failed to revoke award", { cause: err });
   }
 }
 

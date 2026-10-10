@@ -112,7 +112,7 @@ export async function addName(speciesId: number, kind: NameKind, text: string): 
   } catch (err) {
     if (isUniqueViolation(err)) throw duplicateName(kind, trimmed);
     logger.error(`Failed to add ${kind} Name`, err);
-    throw new Error(`Failed to add ${kind} name`);
+    throw new Error(`Failed to add ${kind} name`, { cause: err });
   }
 }
 
@@ -148,7 +148,7 @@ export async function removeName(kind: NameKind, nameIds: number | number[]): Pr
   } catch (err) {
     if (err instanceof CatalogueRefusal) throw err;
     logger.error(`Failed to remove ${kind} Name`, err);
-    throw new Error(`Failed to delete ${kind} name`);
+    throw new Error(`Failed to delete ${kind} name`, { cause: err });
   }
 }
 
@@ -182,7 +182,7 @@ export async function updateName(kind: NameKind, nameId: number, text: string): 
   } catch (err) {
     if (isUniqueViolation(err)) throw duplicateName(kind, trimmed);
     logger.error(`Failed to update ${kind} Name`, err);
-    throw new Error(`Failed to update ${kind} name`);
+    throw new Error(`Failed to update ${kind} name`, { cause: err });
   }
 }
 

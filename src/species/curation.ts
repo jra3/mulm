@@ -80,7 +80,7 @@ export async function createSpecies(data: NewSpecies): Promise<number> {
       throw new CatalogueRefusal(`Species "${name}" already exists`, "duplicate");
     }
     logger.error("Failed to create species", err);
-    throw new Error("Failed to create species");
+    throw new Error("Failed to create species", { cause: err });
   }
   logger.info("Created species", { speciesId, canonicalName: name, speciesType, programClass });
   return speciesId;
@@ -135,7 +135,7 @@ export async function updateSpecies(speciesId: number, update: SpeciesUpdate): P
     }
   } catch (err) {
     logger.error("Failed to update species", err);
-    throw new Error("Failed to update species");
+    throw new Error("Failed to update species", { cause: err });
   }
 }
 
@@ -163,7 +163,7 @@ export async function setPointClass(speciesIds: number[], pointClass: number | n
     }
   } catch (err) {
     logger.error("Failed to set Point class", err);
-    throw new Error("Failed to set point class");
+    throw new Error("Failed to set point class", { cause: err });
   }
 }
 
@@ -270,7 +270,7 @@ export async function renameCanonical(
       throw new CatalogueRefusal("A species with this canonical name already exists", "duplicate");
     }
     logger.error("Failed to rename species", err);
-    throw new Error("Failed to rename species");
+    throw new Error("Failed to rename species", { cause: err });
   }
   logger.info("Renamed species", { speciesId, from: previous, to: next });
 }
@@ -420,7 +420,7 @@ export async function mergeSpecies(winnerId: number, loserId: number): Promise<v
   } catch (err) {
     if (err instanceof CatalogueRefusal) throw err;
     logger.error("Failed to merge species", err);
-    throw new Error("Failed to merge species");
+    throw new Error("Failed to merge species", { cause: err });
   }
   logger.info("Merged species", {
     winnerId,
@@ -472,7 +472,7 @@ export async function deleteSpecies(speciesId: number): Promise<number> {
     });
   } catch (err) {
     logger.error("Failed to delete species", err);
-    throw new Error("Failed to delete species");
+    throw new Error("Failed to delete species", { cause: err });
   }
   logger.info("Deleted species", { speciesId, canonicalName: canonicalName(species) });
   return changes;

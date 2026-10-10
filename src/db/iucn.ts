@@ -111,7 +111,7 @@ export async function recordIucnSync(
     }
   } catch (err) {
     logger.error("Failed to record IUCN sync", { groupId, status, error: err });
-    throw new Error("Failed to record sync log");
+    throw new Error("Failed to record sync log", { cause: err });
   }
 }
 
@@ -314,13 +314,13 @@ export async function createCanonicalRecommendation(
     }
   } catch (err) {
     if (err instanceof Error && err.message.includes("UNIQUE constraint")) {
-      throw new Error(`Pending recommendation already exists for group ${recommendation.groupId}`);
+      throw new Error(`Pending recommendation already exists for group ${recommendation.groupId}`, { cause: err });
     }
     logger.error("Failed to create canonical recommendation", {
       recommendation,
       error: err,
     });
-    throw new Error("Failed to create canonical recommendation");
+    throw new Error("Failed to create canonical recommendation", { cause: err });
   }
 }
 
@@ -440,7 +440,7 @@ export async function acceptCanonicalRecommendation(
     if (err instanceof Error && err.message.includes("not found")) {
       throw err;
     }
-    throw new Error("Failed to accept canonical recommendation");
+    throw new Error("Failed to accept canonical recommendation", { cause: err });
   }
 }
 
@@ -485,6 +485,6 @@ export async function rejectCanonicalRecommendation(
     if (err instanceof Error && err.message.includes("not found")) {
       throw err;
     }
-    throw new Error("Failed to reject canonical recommendation");
+    throw new Error("Failed to reject canonical recommendation", { cause: err });
   }
 }

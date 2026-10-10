@@ -288,7 +288,7 @@ export const googleOAuth = async (req: MulmRequest, res: Response) => {
   const googleUser = await getGoogleUser(token);
   const record = await getGoogleAccount(googleUser.sub);
 
-  let memberId: number | undefined = undefined;
+  let memberId: number | undefined;
 
   if (!record) {
     // We've never seen this google sub before!
