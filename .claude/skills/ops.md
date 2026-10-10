@@ -107,7 +107,7 @@ Repository settings in `.github/`:
 | Production | Fly secret `CONFIG_JSON`, written to `src/config.json` on boot by `start.sh` |
 | Test | Uses in-memory SQLite |
 
-`NODE_ENV` controls behavior: `test`, `development`, `production`. `STAGING=1` (set in `fly.staging.toml`) marks staging: no Litestream replication, no email.
+`NODE_ENV` controls behavior: `test`, `development`, `production`. `STAGING=1` (set in `fly.staging.toml`) marks staging: no Litestream replication, no email, no scheduled jobs. In code, check it with `isStaging()` / `isLiveProduction()` from `src/utils/environment.ts`, not `process.env` directly.
 
 ## Infrastructure Documentation
 

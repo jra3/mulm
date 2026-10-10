@@ -61,6 +61,7 @@ import { startFinalSubmissionReminders } from "./scheduled/finalSubmissionRemind
 import { startCommitteeDigest } from "./scheduled/committeeDigest";
 import { startMcpHttpServer } from "./mcp/http-server";
 import { logger } from "./utils/logger";
+import { isLiveProduction } from "./utils/environment";
 
 const app = express();
 
@@ -496,7 +497,7 @@ async function main() {
     // Staging runs NODE_ENV=production against a stale copy of prod's DB.
     // Its jobs would email real members from that copy, so they only run on
     // prod.
-    if (process.env.NODE_ENV === "production" && process.env.STAGING !== "1") {
+    if (isLiveProduction()) {
       startScheduledCleanup();
       startFinalSubmissionReminders();
       startCommitteeDigest();

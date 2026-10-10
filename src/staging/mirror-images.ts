@@ -5,12 +5,13 @@
 import { S3Client } from "@aws-sdk/client-s3";
 import config from "../config.json";
 import { logger } from "../utils/logger";
+import { isStaging } from "../utils/environment";
 import { mirrorBucket } from "./mirrorImages";
 
 const PROD_BUCKET = process.env.PROD_R2_BUCKET || "basny-bap-data";
 
 async function main() {
-  if (process.env.STAGING !== "1") {
+  if (!isStaging()) {
     throw new Error("mirror-images only runs on staging (STAGING=1)");
   }
   const accessKeyId = process.env.PROD_R2_READ_ACCESS_KEY_ID;
