@@ -212,7 +212,7 @@ export function initializeMemberServer(server: Server): void {
       throw new Error(`Unknown resource URI: ${uri}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
-      throw new Error(`Failed to read resource ${uri}: ${message}`);
+      throw new Error(`Failed to read resource ${uri}: ${message}`, { cause: error });
     }
   });
 

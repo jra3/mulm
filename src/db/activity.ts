@@ -84,7 +84,7 @@ export async function recordActivity(
     logger.info(`Recorded activity: ${activityType} for member ${memberId}`);
   } catch (error) {
     logger.error("Failed to record activity feed entry", error);
-    throw new Error("Failed to record activity feed entry");
+    throw new Error("Failed to record activity feed entry", { cause: error });
   }
 }
 
@@ -112,7 +112,7 @@ export async function removeActivity(
     }
   } catch (error) {
     logger.error("Failed to remove activity feed entry", error);
-    throw new Error("Failed to remove activity feed entry");
+    throw new Error("Failed to remove activity feed entry", { cause: error });
   }
 }
 

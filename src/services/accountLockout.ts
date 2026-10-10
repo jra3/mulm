@@ -29,7 +29,7 @@ export async function recordFailedAttempt(memberId: number, ipAddress: string): 
       FROM failed_login_attempts
       WHERE member_id = ? AND attempted_at > ?
     `);
-    let attemptCount = 0;
+    let attemptCount: number;
     try {
       const result = await countStmt.get<{ count: number }>(memberId, windowStart);
       attemptCount = result?.count || 0;

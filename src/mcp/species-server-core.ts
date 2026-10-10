@@ -513,7 +513,7 @@ export function initializeSpeciesServer(server: Server): void {
       throw new Error(`Unknown resource URI: ${uri}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
-      throw new Error(`Failed to read resource ${uri}: ${message}`);
+      throw new Error(`Failed to read resource ${uri}: ${message}`, { cause: error });
     }
   });
 
@@ -1276,7 +1276,7 @@ async function handleSetBasePoints(args: SetBasePointsArgs) {
   admitPointClass(base_points);
 
   // Determine which species to update
-  let targetGroupIds: number[] = [];
+  let targetGroupIds: number[];
 
   if (group_id) {
     targetGroupIds = [group_id];
@@ -1415,7 +1415,7 @@ async function handleSyncIucnData(args: SyncIucnDataArgs) {
   const { group_id, group_ids, sync_missing, days_old, limit = 10, preview = false } = args;
 
   const database = db(true); // Write access for IUCN data updates
-  let targetSpecies: { group_id: number; canonical_genus: string; canonical_species_name: string }[] = [];
+  let targetSpecies: { group_id: number; canonical_genus: string; canonical_species_name: string }[];
 
   // Determine which species to sync
   if (group_id) {

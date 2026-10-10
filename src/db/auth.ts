@@ -28,6 +28,6 @@ export async function deleteExpiredAuthCodes(cutoff: Date) {
     }
   } catch (err) {
     logger.error("Failed to delete auth codes", err);
-    throw new Error("Failed to delete auth codes");
+    throw new Error("Failed to delete auth codes", { cause: err });
   }
 }

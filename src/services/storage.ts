@@ -43,7 +43,7 @@ export async function uploadPhoto(
     return { key, url };
   } catch (error) {
     logger.error("Failed to upload photo:", error);
-    throw new Error("Failed to upload photo");
+    throw new Error("Failed to upload photo", { cause: error });
   }
 }
 
@@ -58,7 +58,7 @@ export async function deletePhoto(key: string): Promise<void> {
     logger.info(`Photo deleted successfully: ${key}`);
   } catch (error) {
     logger.error("Failed to delete photo:", error);
-    throw new Error("Failed to delete photo");
+    throw new Error("Failed to delete photo", { cause: error });
   }
 }
 

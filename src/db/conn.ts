@@ -107,7 +107,7 @@ export async function insertOne(table: TableName, row: PartialRow) {
       await stmt.finalize();
     }
   } catch (error) {
-    throw new Error(`SQLite insert query failed: ${(error as Error).message}`);
+    throw new Error(`SQLite insert query failed: ${(error as Error).message}`, { cause: error });
   }
 }
 
@@ -126,7 +126,7 @@ export async function updateOne(table: TableName, key: PartialRow, fields: Parti
       await stmt.finalize();
     }
   } catch (error) {
-    throw new Error(`SQLite update query failed: ${(error as Error).message}`);
+    throw new Error(`SQLite update query failed: ${(error as Error).message}`, { cause: error });
   }
 }
 
@@ -141,7 +141,7 @@ export async function query<T>(sql: string, params: unknown[] = []): Promise<T[]
       await stmt.finalize();
     }
   } catch (error) {
-    throw new Error(`SQLite query failed: ${(error as Error).message}`);
+    throw new Error(`SQLite query failed: ${(error as Error).message}`, { cause: error });
   }
 }
 
@@ -157,7 +157,7 @@ export async function deleteOne(table: TableName, key: PartialRow) {
       await deleteRow.finalize();
     }
   } catch (error) {
-    throw new Error(`SQLite delete failed: ${(error as Error).message}`);
+    throw new Error(`SQLite delete failed: ${(error as Error).message}`, { cause: error });
   }
 }
 

@@ -76,7 +76,7 @@ export async function setSpeciesExternalReferences(
     });
   } catch (err) {
     logger.error("Failed to set species external references", err);
-    throw new Error("Failed to set species external references");
+    throw new Error("Failed to set species external references", { cause: err });
   }
 }
 
@@ -124,7 +124,7 @@ export async function setSpeciesImages(groupId: number, imageUrls: string[]): Pr
     });
   } catch (err) {
     logger.error("Failed to set species images", err);
-    throw new Error("Failed to set species images");
+    throw new Error("Failed to set species images", { cause: err });
   }
 }
 
@@ -187,6 +187,6 @@ export async function setSpeciesImagesWithMetadata(
     });
   } catch (err) {
     logger.error("Failed to set species images with metadata", err);
-    throw new Error("Failed to set species images with metadata");
+    throw new Error("Failed to set species images with metadata", { cause: err });
   }
 }
