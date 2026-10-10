@@ -50,9 +50,9 @@ The full app config (DB path, OAuth, SMTP, R2 credentials, etc.) is delivered as
 | App | `CONFIG_JSON` overrides vs. real prod config |
 |---|---|
 | `basny-bap` | none — uses real config |
-| `basny-bap-staging` | `server.domain` → `basny-bap-staging.fly.dev`; `email.disableEmails = true` |
+| `basny-bap-staging` | `server.domain` → `basny-bap-staging.fly.dev`; `email.disableEmails = true`; `storage.s3Bucket` → `basny-bap-staging-data`, with `storage.s3AccessKeyId` / `storage.s3Secret` the key scoped to that bucket |
 
-Rotate with `flyctl secrets set CONFIG_JSON="$(cat config.production.json)" --app <app>`.
+Rotate with `flyctl secrets set CONFIG_JSON="$(cat config.<app>.json)" --app <app>`, from a file that already carries that app's overrides. Never set staging's `CONFIG_JSON` from the prod config: that hands staging prod's bucket and write key.
 
 Sign in with Apple needs `oauth.apple = { teamId, keyId, servicesId, privateKey }`; `privateKey` is the `.p8` PEM with its newlines escaped as `\n` inside the JSON string. The Services ID lists both the prod and staging return URLs, so the same block works on both apps. The key lives in John's Bitwarden; it is never in the repo.
 
@@ -62,18 +62,20 @@ Sign in with Apple needs `oauth.apple = { teamId, keyId, servicesId, privateKey 
 |---|---|
 | SQLite database | Fly volume `/mnt/app-data/database/database.db` |
 | WAL replica | Cloudflare R2 bucket `basny-db-replica` (continuous via Litestream) |
-| Image uploads | Cloudflare R2 bucket `basny-bap-data` (S3 SDK) |
-| Litestream config | `litestream.yml` — bucket name + R2 endpoint hardcoded; credentials from `LITESTREAM_*` env, derived from `CONFIG_JSON.storage.s3*` in `start.sh` |
+| Image uploads | Cloudflare R2 bucket `basny-bap-data` (S3 SDK); staging uses its own `basny-bap-staging-data` |
+| Litestream config | `litestream.yml` — bucket name + R2 endpoint hardcoded; credentials from `LITESTREAM_*` env, derived from `CONFIG_JSON.storage.s3*` in `start.sh` (on staging, from the read-only `PROD_R2_READ_*` secrets) |
 
 ## Litestream Behavior by Environment
 
 | | Production | Staging |
 |---|---|---|
 | `STAGING` env var | unset | `STAGING=1` |
-| On boot, if local DB missing | `litestream restore` from R2 | same |
+| On boot, if local DB missing | `litestream restore` from R2; starts fresh if there is no replica | restores with the `PROD_R2_READ_*` key; refuses to start if that fails |
 | While running | `litestream replicate` (continuous WAL → R2) | **disabled** — runs `node` directly |
+| After a restore | — | mirrors `basny-bap-data` into `basny-bap-staging-data` in the background |
+| Auto-refresh | — | on a boot more than 7 days after the last restore; restores to a side file and keeps the old DB if the refresh fails |
 
-The staging mode prevents staging from ever writing to R2, so it cannot pollute prod's generation history.
+The staging mode prevents staging from ever writing to R2, so it cannot pollute prod's generation history. Staging holds no prod write key: `CONFIG_JSON.storage` points at its own bucket with a key scoped to it, and `PROD_R2_READ_ACCESS_KEY_ID` / `PROD_R2_READ_SECRET_ACCESS_KEY` are read-only on `basny-bap-data` and `basny-db-replica`.
 
 ## Deploy
 

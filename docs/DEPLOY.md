@@ -62,7 +62,7 @@ It's transient — `flyctl` is checking the listener before Node has bound to `0
 
 ## Refreshing Staging Data First (optional)
 
-Staging restores read-only from prod's Litestream replica. If you want fresh prod data before testing:
+Staging restores read-only from prod's Litestream replica, then mirrors prod's images (`basny-bap-data`) into its own bucket (`basny-bap-staging-data`) in the background. Both reads use the read-only `PROD_R2_READ_*` key; staging's own storage key reaches only its bucket. A boot more than 7 days after the last restore refreshes automatically. If you want fresh prod data sooner:
 
 ```bash
 MACHINE=$(flyctl machines list --app basny-bap-staging --json | jq -r '.[0].id')
@@ -71,7 +71,7 @@ flyctl ssh console --app basny-bap-staging \
 flyctl machine restart "$MACHINE" --app basny-bap-staging
 ```
 
-On next boot, `start.sh` finds no DB and runs `litestream restore` from R2.
+On next boot, `start.sh` finds no DB, runs `litestream restore` from R2, and starts the image mirror (`src/staging/mirror-images.ts`). Staging test uploads are removed by the mirror, and test users are wiped with the DB.
 
 ## Rollback
 
