@@ -1,6 +1,6 @@
-import moduleAlias from "module-alias";
+import { addAlias } from "module-alias";
 import path from "path";
-moduleAlias.addAlias("@", path.join(__dirname));
+addAlias("@", path.join(__dirname));
 
 import fs from "fs";
 import Papa from "papaparse";
