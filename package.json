@@ -70,7 +70,7 @@
 	"devDependencies": {
 		"@eslint/js": "^9.39.2",
 		"@faker-js/faker": "^10.6.0",
-		"@playwright/test": "^1.63.0",
+		"@playwright/test": "^1.64.0",
 		"@tailwindcss/oxide": "^4.3.3",
 		"@tailwindcss/postcss": "^4.3.3",
 		"@types/cookie-parser": "^1.4.10",
@@ -79,8 +79,8 @@
 		"@types/papaparse": "^5.5.2",
 		"@types/pug": "^2.0.10",
 		"@types/supertest": "^7.2.1",
-		"@typescript-eslint/eslint-plugin": "^8.70.1",
-		"@typescript-eslint/parser": "^8.70.1",
+		"@typescript-eslint/eslint-plugin": "^8.71.1",
+		"@typescript-eslint/parser": "^8.71.1",
 		"autoprefixer": "^10.6.1",
 		"concurrently": "^9.2.1",
 		"eslint": "^10.12.0",
@@ -92,7 +92,7 @@
 		"nodemon": "^3.1.14",
 		"papaparse": "^5.7.0",
 		"playwright": "^1.56.1",
-		"postcss": "^8.5.28",
+		"postcss": "^8.5.29",
 		"postcss-cli": "^11.0.1",
 		"prettier": "^3.9.9",
 		"supertest": "^7.3.1",
@@ -100,7 +100,7 @@
 		"ts-node": "^10.9.2",
 		"tsx": "^4.23.15",
 		"typescript": "^5.9.3",
-		"typescript-eslint": "^8.70.1"
+		"typescript-eslint": "^8.71.1"
 	},
 	"lint-staged": {
 		"src/**/*.ts": [
