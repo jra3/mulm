@@ -1,4 +1,4 @@
-import sharp from "sharp";
+import sharp, { type FitEnum } from "sharp";
 import { logger } from "./logger";
 
 export interface ProcessedImage {
@@ -96,7 +96,7 @@ async function processVariant(
   options: {
     width?: number;
     height?: number;
-    fit?: keyof sharp.FitEnum;
+    fit?: keyof FitEnum;
     format: "jpeg" | "webp";
     quality: number;
   }

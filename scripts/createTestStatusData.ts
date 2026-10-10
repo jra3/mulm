@@ -1,6 +1,6 @@
 import * as path from "path";
-import moduleAlias from "module-alias";
-moduleAlias.addAlias("@", path.join(__dirname, "../src"));
+import { addAlias } from "module-alias";
+addAlias("@", path.join(__dirname, "../src"));
 
 import { db } from "@/db/conn";
 import { createMember } from "@/db/members";

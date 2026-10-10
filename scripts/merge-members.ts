@@ -7,9 +7,9 @@
  * Usage: npm run script scripts/merge-members.ts <from_member_id> <to_member_id>
  */
 
-import moduleAlias from "module-alias";
+import { addAlias } from "module-alias";
 import path from "path";
-moduleAlias.addAlias("@", path.join(__dirname, "..", "src"));
+addAlias("@", path.join(__dirname, "..", "src"));
 
 import { init, withTransaction, query } from "@/db/conn";
 import { Database } from "sqlite";

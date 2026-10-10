@@ -1,6 +1,6 @@
-import moduleAlias from "module-alias";
+import { addAlias } from "module-alias";
 import path from "path";
-moduleAlias.addAlias("@", path.join(__dirname));
+addAlias("@", path.join(__dirname));
 
 import config from "@/config.json";
 import express from "express";

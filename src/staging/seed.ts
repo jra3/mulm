@@ -4,9 +4,9 @@
 // with "{"); everything else it logs is diagnostics. It writes with console
 // rather than logger because stdout is that protocol.
 import "./requireStaging";
-import moduleAlias from "module-alias";
+import { addAlias } from "module-alias";
 import path from "path";
-moduleAlias.addAlias("@", path.join(__dirname, ".."));
+addAlias("@", path.join(__dirname, ".."));
 
 import { ready, readOnlyConn, writeConn } from "../db/conn";
 import { seedStagingUsers } from "./seedUsers";

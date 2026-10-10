@@ -1,6 +1,6 @@
-import moduleAlias from "module-alias";
+import { addAlias } from "module-alias";
 import path from "path";
-moduleAlias.addAlias("@", path.join(__dirname, "..", "src"));
+addAlias("@", path.join(__dirname, "..", "src"));
 
 import { init } from "@/db/conn";
 import { sweepMemberLevels } from "@/scheduled/level-sweep";

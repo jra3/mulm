@@ -1,8 +1,8 @@
 #!/usr/bin/env tsx
 
-import moduleAlias from "module-alias";
+import { addAlias } from "module-alias";
 import path from "path";
-moduleAlias.addAlias("@", path.join(__dirname, "..", "src"));
+addAlias("@", path.join(__dirname, "..", "src"));
 
 import { parseVideoUrlWithOEmbed } from "@/utils/videoParser";
 import { getCacheStats } from "@/utils/oembed";
