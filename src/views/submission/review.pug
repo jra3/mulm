@@ -286,7 +286,7 @@ html
                                 .text-white.mb-4
                                     p.font-semibold Not bound to a Species
                                     p.text-sm.text-gray-300 It cannot be approved until it is. Find it in the catalogue, or create it if it is not there.
-                                    +bindSpeciesControls(submission, false)
+                                    +bindSpeciesControls(submission, false, true)
                                     .text-sm.text-red-300.mt-2#committee-error(role="alert")
                             .flex.justify-center.gap-4
                                 if allowed.requestChanges
