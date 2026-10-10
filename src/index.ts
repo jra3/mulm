@@ -494,8 +494,8 @@ async function main() {
     console.log(`Server running at https://${config.server.domain}`);
 
     // Staging runs NODE_ENV=production against a stale copy of prod's DB.
-    // Its jobs would email real members and sweep R2 for "orphans" its old
-    // DB doesn't know about, so they only run on prod.
+    // Its jobs would email real members from that copy, so they only run on
+    // prod.
     if (process.env.NODE_ENV === "production" && process.env.STAGING !== "1") {
       startScheduledCleanup();
       startFinalSubmissionReminders();
