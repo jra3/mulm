@@ -22,7 +22,7 @@ if !approval
         p.text-white.mb-2 This Submission cannot be approved until it is bound to a Species. Find it in the catalogue, or create it if it is not there.
         if allowed.bindSpecies
             .text-white.mb-4
-                +bindSpeciesControls(submission, false)
+                +bindSpeciesControls(submission, false, true)
             .text-sm.text-red-300.mb-2#committee-error(role="alert")
         .flex.gap-4.items-center.justify-center
             button.destructive(
