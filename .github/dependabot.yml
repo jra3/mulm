@@ -15,11 +15,16 @@ updates:
       - "jra3"
     labels:
       - "dependencies"
-      - "security"
-    # Group non-security development dependencies together
+    # Group minor/patch bumps so each week brings two PRs, not one per package.
+    # Majors still arrive one per PR so they can be reviewed on their own.
     groups:
       development-dependencies:
         dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+      production-dependencies:
+        dependency-type: "production"
         update-types:
           - "minor"
           - "patch"
@@ -27,10 +32,8 @@ updates:
     commit-message:
       prefix: "deps"
       prefix-development: "deps-dev"
-    # Allow both direct and indirect updates
-    allow:
-      - dependency-type: "all"
-    # Security updates should be merged quickly
+    # Only packages listed in package.json. Indirect packages move when their
+    # parent does; one PR per transitive bump was mostly noise.
     assignees:
       - "jra3"
 
