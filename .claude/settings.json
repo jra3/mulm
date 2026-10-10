@@ -1,4 +1,5 @@
 {
+  "permissions": {"allow": ["Bash(./scripts/staging.sh:*)"]},
   "hooks": {
     "SessionStart": [
       {

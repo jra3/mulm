@@ -215,8 +215,8 @@ Comprehensive documentation is available in the [GitHub Wiki](https://github.com
 Production runs on Fly.io. From `main` with a clean tree:
 
 ```bash
-# Stage first
-flyctl deploy --config fly.staging.toml --app basny-bap-staging
+# Stage first (see docs/DEPLOY.md "Working with Staging")
+./scripts/staging.sh deploy
 
 # Then prod
 flyctl deploy --app basny-bap

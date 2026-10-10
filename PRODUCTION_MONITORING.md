@@ -24,7 +24,7 @@ prod.
 
 ```bash
 # Staging first
-flyctl deploy --config fly.staging.toml --app basny-bap-staging
+./scripts/staging.sh deploy
 
 # Then production
 flyctl deploy --app basny-bap
