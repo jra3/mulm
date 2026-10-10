@@ -7,6 +7,7 @@ import {
 } from "../db/members";
 import { deleteSessionsForMember } from "../db/sessions";
 import { clearFailedAttempts } from "../services/accountLockout";
+import { type Env, isStaging } from "../utils/environment";
 
 export const STAGING_ADMIN_EMAIL = "baptest+admin@porcnick.com";
 export const STAGING_MEMBER_EMAIL = "baptest+e2e@porcnick.com";
@@ -22,10 +23,8 @@ export type StagingCredentials = { admin: Login; member: Login };
  *
  * Refuses to run anywhere but staging.
  */
-export async function seedStagingUsers(
-  env: Record<string, string | undefined>
-): Promise<StagingCredentials> {
-  if (env.STAGING !== "1") {
+export async function seedStagingUsers(env: Env): Promise<StagingCredentials> {
+  if (!isStaging(env)) {
     throw new Error("Refusing to seed: STAGING is not 1, so this is not staging");
   }
   return {

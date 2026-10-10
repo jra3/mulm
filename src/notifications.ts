@@ -4,6 +4,7 @@ import { type Submission } from "./db/submissions";
 import { MemberRecord } from "./db/members";
 import * as pug from "pug";
 import { logger } from "@/utils/logger";
+import { type Env, isStaging } from "@/utils/environment";
 import { sendEmailWithRetry } from "./services/emailService";
 import { bonusBreakdown } from "./points";
 
@@ -15,12 +16,12 @@ const fromEmail = `BASNY Breeder Awards ${config.email.fromEmail}`;
  * address, so STAGING=1 turns mail off whatever its config says.
  */
 export function emailsDisabled(
-  env: Record<string, string | undefined>,
+  env: Env,
   emailConfig: { disableEmails?: boolean }
 ): boolean {
   return (
     env.NODE_ENV === "test" || // Disable emails in test mode
-    env.STAGING === "1" ||
+    isStaging(env) ||
     emailConfig.disableEmails === true // Config killswitch for local development
   );
 }
