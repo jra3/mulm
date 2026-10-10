@@ -91,25 +91,40 @@ export async function mirrorBucket(
     `Mirroring ${source.bucket} → ${dest.bucket}: ${plan.copy.length} to copy, ${plan.remove.length} to remove`
   );
 
-  let failed = 0;
+  let copyFailed = 0;
   await inBatches(plan.copy, 8, async (key) => {
     try {
       await copyObject(source, dest, key);
     } catch (err) {
-      failed++;
+      copyFailed++;
       logger.warn(`Failed to copy ${key}`, err);
     }
   });
 
-  // DeleteObjects takes up to 1000 keys per call.
+  // DeleteObjects takes up to 1000 keys per call, and reports a key it could
+  // not delete in Errors rather than rejecting the whole call.
+  let removed = 0;
+  let removeFailed = 0;
   for (let i = 0; i < plan.remove.length; i += 1000) {
-    await dest.client.send(
-      new DeleteObjectsCommand({
-        Bucket: dest.bucket,
-        Delete: { Objects: plan.remove.slice(i, i + 1000).map((Key) => ({ Key })) },
-      })
-    );
+    const batch = plan.remove.slice(i, i + 1000);
+    try {
+      const result = await dest.client.send(
+        new DeleteObjectsCommand({
+          Bucket: dest.bucket,
+          Delete: { Objects: batch.map((Key) => ({ Key })) },
+        })
+      );
+      const errors = result.Errors ?? [];
+      for (const e of errors) {
+        logger.warn(`Failed to remove ${e.Key}`, { code: e.Code, message: e.Message });
+      }
+      removeFailed += errors.length;
+      removed += batch.length - errors.length;
+    } catch (err) {
+      removeFailed += batch.length;
+      logger.warn(`Failed to remove ${batch.length} objects`, err);
+    }
   }
 
-  return { copied: plan.copy.length - failed, removed: plan.remove.length, failed };
+  return { copied: plan.copy.length - copyFailed, removed, failed: copyFailed + removeFailed };
 }

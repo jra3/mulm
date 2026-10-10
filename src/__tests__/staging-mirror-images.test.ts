@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert";
-import { S3Client } from "@aws-sdk/client-s3";
+import { S3Client, ListObjectsV2Command, DeleteObjectsCommand } from "@aws-sdk/client-s3";
 import { planMirror, mirrorBucket } from "../staging/mirrorImages";
 
 const obj = (key: string, size = 10, etag = `"${key}"`) => ({ key, size, etag });
@@ -33,5 +33,26 @@ void describe("mirrorBucket", () => {
       mirrorBucket({ client, bucket: "basny-bap-data" }, { client, bucket: "basny-bap-data" }),
       /onto itself/
     );
+  });
+
+  void test("counts keys DeleteObjects reports in Errors as failed, not removed", async () => {
+    const source = new S3Client({ region: "auto" });
+    const dest = new S3Client({ region: "auto" });
+    source.send = (async () => ({ Contents: [] })) as typeof source.send;
+    dest.send = (async (command: unknown) => {
+      if (command instanceof ListObjectsV2Command) {
+        return { Contents: [obj("x"), obj("y")].map((o) => ({ Key: o.key, Size: o.size, ETag: o.etag })) };
+      }
+      if (command instanceof DeleteObjectsCommand) {
+        return { Deleted: [{ Key: "x" }], Errors: [{ Key: "y", Code: "AccessDenied" }] };
+      }
+      throw new Error("unexpected command");
+    }) as typeof dest.send;
+
+    const result = await mirrorBucket(
+      { client: source, bucket: "basny-bap-data" },
+      { client: dest, bucket: "basny-bap-staging-data" }
+    );
+    assert.deepStrictEqual(result, { copied: 0, removed: 1, failed: 1 });
   });
 });
