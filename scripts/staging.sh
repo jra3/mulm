@@ -59,8 +59,10 @@ remote_sh() {
 }
 
 cmd_deploy() {
+  local status
   cd "$(git rev-parse --show-toplevel)"
-  if [ -n "$(git status --porcelain)" ]; then
+  status=$(git status --porcelain) || die "git status failed; refusing to deploy"
+  if [ -n "$status" ]; then
     git status --short >&2
     die "refusing to deploy a dirty tree; commit or stash first"
   fi
