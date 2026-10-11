@@ -8,6 +8,7 @@ import { Response } from "express";
 import { getStatusPresentation } from "@/utils/statusBadge";
 import { getTrophyDataWithAwards } from "@/utils/awards";
 import { isInProgram } from "@/points";
+import { pendingPoints } from "./submission";
 
 export const view = async (req: MulmRequest, res: Response) => {
   const memberId = parseInt(req.params.memberId);
@@ -29,19 +30,24 @@ export const view = async (req: MulmRequest, res: Response) => {
 
   const submissions = await getSubmissionsByMember(memberId, isSelf, isSelf || isAdmin);
 
-  // Add status info to each submission
+  // Each row's badge, and for the owner the points a witness has set but
+  // the committee has not yet awarded (#523); null for every other viewer
   const submissionsWithStatus = submissions.map((sub) => ({
     ...sub,
     statusInfo: getStatusPresentation(sub),
+    pendingPoints: pendingPoints(sub, viewer),
   }));
 
   const fishSubs = submissionsWithStatus.filter((sub) => isInProgram("fish", sub.species_type));
   const plantSubs = submissionsWithStatus.filter((sub) => isInProgram("plant", sub.species_type));
   const coralSubs = submissionsWithStatus.filter((sub) => isInProgram("coral", sub.species_type));
 
+  // Awarded points only: a witnessed row carries its points before approval,
+  // and those count toward nothing yet
   const calculateTotalPoints = (subs: typeof submissions) => {
     let total = 0;
     for (const sub of subs) {
+      if (sub.approved_on == null) continue;
       total += sub.total_points || 0;
     }
     return total;

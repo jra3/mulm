@@ -60,6 +60,10 @@ _Avoid_: extra credit, adjustments
 A member's cumulative `total_points`, per program, from approved submissions. Cumulative over an indefinite period; never expires; changes to a species' value are not applied retroactively.
 _Avoid_: score, credits
 
+**Pending approval**:
+The member-facing name for points a witness has set that the committee has not yet awarded. The Submission's owner, and only the owner, sees them on their own Submission page and their own submissions list, itemised the way the witness email puts them: base points, then each bonus that is set, adding up to the total (`pointsBreakdown` in `src/points.ts`; `pendingPoints` in `src/routes/submission.ts` decides who gets them). Nowhere else: a public Submission page does not exist before approval, a member's profile seen by anyone else lists an unapproved row as unapproved whatever its columns hold, the profile's totals and the standings sum awarded points alone, and the committee reads the points on its own panels. First-time is not among them, since approval computes it.
+_Avoid_: provisional points, projected points, estimated points, unapproved points
+
 **Level**:
 The earned title a member holds in a program once their points (and per-class distribution rules) cross a threshold. Each program has its own ordered ladder in `levelRules` (`src/programs.ts`); computed by `calculateLevel`, applied by `src/levelManager.ts`, stored as `fish_level`/`plant_level`/`coral_level` on the member.
 Ladder lengths differ (confirmed against `levelRules`): **BAP/fish** → Participant … Grand Poobah Yoda Breeder (4000 pts); **HAP/plant** → … Senior Premier Aquatic Horticulturist (2000 pts); **CAP/coral** is shortest → tops out at **Senior Grand Master Coral Propagator (1000 pts)** and has no per-class distribution rules.

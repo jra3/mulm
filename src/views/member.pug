@@ -64,8 +64,29 @@ mixin submissionTable(submissions, totalPoints)
 									+caresBadge('sm')
 						td(class=stringCell)
 							+shortDate(sub.submitted_on, "Submitted on")
-						td(class=numberCell)= sub.points || "Unapproved"
-						td(class=numberCell)= sub.total_points || "Unapproved"
+						//- Awarded points, or for the owner the points a witness set that
+						//- are still pending approval (#523), itemised the way the witness
+						//- email puts them. Anyone else sees an unapproved row as unapproved,
+						//- whatever its columns hold. data-sort keeps the column sortable
+						//- as a number whatever the cell says.
+						- const awarded = sub.approved_on != null
+						td(class=numberCell data-sort=(awarded || sub.pendingPoints) ? sub.points : 0)
+							if awarded
+								= sub.points
+							else if sub.pendingPoints
+								= sub.points
+								.text-xs.font-normal.text-gray-500 pending approval
+							else
+								| Unapproved
+						td(class=numberCell data-sort=awarded ? sub.total_points : sub.pendingPoints ? sub.pendingPoints.total : 0)
+							if awarded
+								= sub.total_points
+							else if sub.pendingPoints
+								span.pending-points-total= `${sub.pendingPoints.total} pts`
+								.text-xs.font-normal.text-gray-500 pending approval
+								.text-xs.font-normal.text-gray-500.whitespace-normal= sub.pendingPoints.lines.map((line) => `${line.label} ${line.amount}`).join(" + ")
+							else
+								| Unapproved
 
 			if totalPoints > 0
 				tfoot

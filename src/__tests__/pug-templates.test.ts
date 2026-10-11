@@ -1574,6 +1574,129 @@ void describe("Pug Template Rendering", () => {
     });
   });
 
+  /**
+   * Points a witness set but the committee has not awarded are the owner's to
+   * see (#523): on their Submission page as the itemised breakdown the witness
+   * email uses, and on their submissions list. The route passes pendingPoints
+   * for the owner alone, so these renders prove what each shape of local shows
+   * and that an unapproved page offers no awarded-points fields to anyone.
+   */
+  void describe("The owner sees pending points", () => {
+    const pending = {
+      lines: [
+        { label: "Base points", amount: 10 },
+        { label: "Article Bonus", amount: 5 },
+        { label: "CARES Species Bonus", amount: 5 },
+      ],
+      total: 20,
+    };
+    const review = (locals: Record<string, unknown>) =>
+      pug.compileFile(path.join(viewsPath, "submission/review.pug"), { basedir: viewsPath, pretty: false })({
+        ...baseMockData,
+        isAdmin: false,
+        isSelf: true,
+        isApproved: false,
+        photos: [],
+        state: "waitingPeriod",
+        changesRequested: false,
+        allowed: {},
+        pendingPoints: null,
+        waitingPeriodStatus: { requiredDays: 60, elapsedDays: 10, daysRemaining: 50, elapsed: false },
+        submission: {
+          ...(baseMockData.submission as Record<string, unknown>),
+          id: 77,
+          species_id: 5,
+          points: 10,
+          total_points: 20,
+          witnessed: "Jane Ortiz - Oct 9, 2026",
+        },
+        ...locals,
+      });
+
+    void test("Submission page: the owner's breakdown, labelled pending approval, adding up to the total", () => {
+      const html = review({ pendingPoints: pending });
+
+      assert.match(html, /id="pending-points"/);
+      assert.match(html, /Base points<\/td><td[^>]*>10</);
+      assert.match(html, /Article Bonus<\/td><td[^>]*>\+5</);
+      assert.match(html, /CARES Species Bonus<\/td><td[^>]*>\+5</);
+      assert.match(html, /pending approval/);
+      assert.match(html, /id="pending-points-total">20 pts</);
+      assert.match(html, /Set at the Witness \(Jane Ortiz - Oct 9, 2026\)/);
+      assert.doesNotMatch(html, /name="total_points"|name="points"/, "awarded-points fields wait for approval");
+    });
+
+    void test("Submission page: without the owner's local there is no breakdown, and no awarded points before approval", () => {
+      const html = review({ isSelf: false, isAdmin: true, allowed: { requestChanges: true } });
+
+      assert.doesNotMatch(html, /pending-points|pending approval/);
+      assert.doesNotMatch(html, /name="total_points"|name="points"/);
+    });
+
+    void test("Submission page: an approved Submission shows the awarded points as before", () => {
+      const html = review({
+        isApproved: true,
+        state: "approved",
+        submission: { ...(baseMockData.submission as Record<string, unknown>), id: 77, points: 10, total_points: 20, approved: "Sam Lee - Oct 20, 2026" },
+      });
+
+      assert.match(html, /name="points"[^>]*/);
+      assert.match(html, /value="20"[^>]*name="total_points"|name="total_points"[^>]*value="20"/);
+      assert.doesNotMatch(html, /pending-points|pending approval/);
+    });
+
+    const memberPage = (rows: Record<string, unknown>[], totals = 0) =>
+      pug.compileFile(path.join(viewsPath, "member.pug"), { basedir: viewsPath, pretty: false })({
+        ...baseMockData,
+        isSelf: true,
+        isAdmin: false,
+        fishSubs: rows,
+        plantSubs: [],
+        coralSubs: [],
+        fishTotalPoints: totals,
+        plantTotalPoints: 0,
+        coralTotalPoints: 0,
+      });
+    const row = (overrides: Record<string, unknown>) => ({
+      id: 5,
+      species_class: "Livebearers",
+      species_common_name: "Guppy",
+      species_latin_name: "Poecilia reticulata",
+      submitted_on: "2026-09-01T00:00:00.000Z",
+      points: 10,
+      total_points: 20,
+      approved_on: null,
+      pendingPoints: null,
+      statusInfo: { status: "waitingPeriod", label: "Awaiting Auction", icon: "x", color: "", bgColor: "", rowColor: "" },
+      ...overrides,
+    });
+
+    void test("submissions list: the owner's pending row carries the total, the label and the lines", () => {
+      const html = memberPage([row({ pendingPoints: pending })]);
+
+      assert.match(html, /class="pending-points-total">20 pts</);
+      assert.match(html, /pending approval/);
+      assert.match(html, /Base points 10 \+ Article Bonus 5 \+ CARES Species Bonus 5/);
+      assert.match(html, /data-sort="20"/, "sorts as its number, not as its words");
+      assert.doesNotMatch(html, /Unapproved/);
+    });
+
+    void test("submissions list: an unapproved row with no pending local is unapproved, whatever its columns hold", () => {
+      const html = memberPage([row({})]);
+
+      assert.match(html, /Unapproved/);
+      assert.doesNotMatch(html, /pending approval|pending-points-total/);
+      assert.doesNotMatch(html, /data-sort="20"/);
+    });
+
+    void test("submissions list: an approved row shows its awarded points as before", () => {
+      const html = memberPage([row({ approved_on: "2026-10-20T00:00:00.000Z", statusInfo: { status: "approved", label: "Approved", icon: "x", color: "", bgColor: "", rowColor: "" } })], 20);
+
+      assert.match(html, /data-sort="20">20</);
+      assert.doesNotMatch(html, /pending approval|Unapproved/);
+    });
+  });
+
   void describe("Pages that pointed nowhere", () => {
     const render = (view: string, data: Record<string, unknown>) =>
       pug.compileFile(path.join(viewsPath, view), { basedir: viewsPath, pretty: false })({ ...baseMockData, ...data });

@@ -129,6 +129,26 @@ export function bonusBreakdown(row: PointsRow): BonusLine[] {
   return lines;
 }
 
+/** A row's points itemised for display: base points first, then each bonus that is set, and their sum. */
+export type PointsBreakdown = {
+  lines: BonusLine[];
+  total: number;
+};
+
+/**
+ * The whole itemised sum a member or a committee member is shown: a "Base
+ * points" line, then `bonusBreakdown`, and `totalPoints` as the total. Every
+ * surface that prints points with their lines reads this (the witness panel's
+ * bar, the owner's "pending approval" view, the witness email), so the lines
+ * add up to the total wherever they appear.
+ */
+export function pointsBreakdown(row: PointsRow): PointsBreakdown {
+  return {
+    lines: [{ label: "Base points", amount: row.points ?? 0 }, ...bonusBreakdown(row)],
+    total: totalPoints(row),
+  };
+}
+
 /** Which submissions count toward a program, as SQL. */
 export function programSpeciesTypeSql(alias: SubmissionAlias, program: ProgramType): string {
   const types = programSpeciesTypes[program].map((type) => `'${type}'`).join(", ");
