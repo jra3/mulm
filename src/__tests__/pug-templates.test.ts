@@ -926,6 +926,7 @@ void describe("Pug Template Rendering", () => {
       commonName: "Guppy",
       speciesType: "Fish",
       programClass: "Livebearers",
+      program: "fish",
       pointClass: 10,
       isFirstTime: false,
       priorBreedCount: 3,
@@ -1019,7 +1020,7 @@ void describe("Pug Template Rendering", () => {
           reproduction_date: "Sep 12, 2026",
           article_link: "https://example.com/article",
         },
-        speciesFacts: { ...facts, speciesType: "Plant", programClass: "Cryptocoryne", isCaresSpecies: false },
+        speciesFacts: { ...facts, speciesType: "Plant", programClass: "Cryptocoryne", program: "plant", isCaresSpecies: false },
       });
       assert.doesNotMatch(hap, /name="cares_species"/);
       assert.match(hap, /<input class="peer sr-only" type="checkbox" name="flowered" value="on"\/>/);
@@ -1027,6 +1028,40 @@ void describe("Pug Template Rendering", () => {
       assert.match(hap, /name="article_points" value="5" id="witness-article-5" checked="checked"/, "+5 when the member linked an article");
       assert.match(hap, /The member linked one/);
       assert.match(hap, /HAP submission/);
+    });
+
+    void test("the bonuses offered are the bound Species' Program's, since confirming adopts it", () => {
+      // A plant Submission bound to a Fish Species is about to be a BAP row:
+      // CARES is offered, flowered and sexual reproduction are not
+      const plantOnFish = render({
+        submission: {
+          id: 42,
+          program: "plant",
+          species_type: "Plant",
+          species_class: "Cryptocoryne",
+          species_common_name: "Guppy",
+          species_latin_name: "Poecilia reticulata",
+          member_name: "Priya Shah",
+          reproduction_date: "Sep 12, 2026",
+          article_link: null,
+        },
+        classificationMismatch: true,
+      });
+      assert.match(plantOnFish, /HAP submission/, "the header says what the member filed");
+      assert.match(plantOnFish, /name="cares_species"/);
+      assert.doesNotMatch(plantOnFish, /name="flowered"|name="sexual_reproduction"/);
+      assert.match(
+        plantOnFish,
+        /id="witness-mismatch"[^>]*>The submission says Plant · Cryptocoryne\. Confirming records it as Fish · Livebearers and moves it to BAP\./
+      );
+
+      // And a fish Submission bound to a Plant Species offers the HAP bonuses
+      const fishOnPlant = render({
+        speciesFacts: { ...facts, speciesType: "Plant", programClass: "Cryptocoryne", program: "plant", isCaresSpecies: false },
+      });
+      assert.doesNotMatch(fishOnPlant, /name="cares_species"/);
+      assert.match(fishOnPlant, /name="flowered"/);
+      assert.match(fishOnPlant, /name="sexual_reproduction"/);
     });
 
     void test("the first-time line is informational: never a control", () => {

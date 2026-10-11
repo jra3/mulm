@@ -210,15 +210,44 @@ export const bonusFields: readonly BonusField[] = Object.keys(bonusNames) as Bon
 /** The bonus fields a refinement reads, as the form schemas produce them. */
 export type BonusFields = Partial<Record<BonusField, boolean | number | null>>;
 
+/** A bonus set on a row whose program cannot carry it, and what to tell the committee. */
+export type BonusIssue = {
+  field: BonusField;
+  message: string;
+};
+
 /**
- * A Zod refinement that rejects a bonus the submission's program cannot carry:
- * one issue per offending field, on that field's own path, so the error map
- * lands the message at the control that set it.
+ * The bonuses in `fields` that `program` cannot carry, in the formula's order,
+ * each with its message. Empty when every set bonus applies.
  *
  * Rejection, not correction - nothing is zeroed silently. Through the witness
  * and approval panels an inapplicable flag cannot be sent, so its arrival
  * means a stale form, a bug, or a hand-crafted request, all of which should
- * be visible.
+ * be visible. The Zod refinement below and `confirmWitness` both read this,
+ * so the form and the transition refuse the same thing in the same words.
+ *
+ * `program` is the plain string the submissions table stores; a name that is
+ * not one of our programs carries only the bonuses every program carries.
+ */
+export function bonusesOutsideProgram(program: string, fields: BonusFields): BonusIssue[] {
+  const valid = bonusesForProgram(program);
+  const issues: BonusIssue[] = [];
+  for (const bonus of bonusFields) {
+    if (!flag(fields[bonus]) || valid.includes(bonus)) {
+      continue;
+    }
+    issues.push({
+      field: bonus,
+      message: `The ${bonusNames[bonus]} bonus does not apply to ${programName(program)} submissions`,
+    });
+  }
+  return issues;
+}
+
+/**
+ * `bonusesOutsideProgram` as a Zod refinement: one issue per offending field,
+ * on that field's own path, so the error map lands the message at the control
+ * that set it.
  *
  * Attach it to the object schema the program's form parses:
  *
@@ -226,25 +255,21 @@ export type BonusFields = Partial<Record<BonusField, boolean | number | null>>;
  *
  * Note that an object-level refinement does not run when the base parse fails,
  * so a body that is also missing a required field reports only that.
- *
- * `program` is the plain string the submissions table stores; a name that is
- * not one of our programs carries only the bonuses every program carries.
  */
 export function refineProgramBonuses(program: string) {
-  const valid = bonusesForProgram(program);
-
   return (fields: BonusFields, ctx: z.core.$RefinementCtx): void => {
-    for (const bonus of bonusFields) {
-      if (!flag(fields[bonus]) || valid.includes(bonus)) {
-        continue;
-      }
-      ctx.addIssue({
-        code: "custom",
-        path: [bonus],
-        message: `The ${bonusNames[bonus]} bonus does not apply to ${programName(program)} submissions`,
-      });
+    for (const issue of bonusesOutsideProgram(program, fields)) {
+      ctx.addIssue({ code: "custom", path: [issue.field], message: issue.message });
     }
   };
+}
+
+/** The article bonus a committee member can award, besides none (null). */
+export const articleBonuses: readonly number[] = [5, 10];
+
+/** Whether `value` is an article bonus as stored: null for none, or one of `articleBonuses`. */
+export function isArticleBonus(value: number | null): boolean {
+  return value === null || articleBonuses.includes(value);
 }
 
 function bonusesForProgram(program: string): readonly BonusField[] {
