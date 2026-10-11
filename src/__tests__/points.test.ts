@@ -6,6 +6,7 @@ import {
   bonusesOutsideProgram,
   isArticleBonus,
   isInProgram,
+  pointsBreakdown,
   programSpeciesTypeSql,
   totalPoints,
   totalPointsSql,
@@ -396,6 +397,50 @@ void describe("Points - bonus breakdown", () => {
         { label: "Sexual Reproduction Bonus", amount: 10 },
       ]
     );
+  });
+});
+
+/**
+ * The itemised sum every points display reads (#523): the witness bar, the
+ * owner's pending-approval view and the witness email all print these lines,
+ * so this is where "the lines add up to the total" is proved once.
+ */
+void describe("Points - itemised breakdown", () => {
+  void test("base points first, then each bonus that is set, summing to the rule's total", () => {
+    const row: PointsRow = { points: 10, article_points: 5, cares_species: 1 };
+    const breakdown = pointsBreakdown(row);
+
+    assert.deepStrictEqual(breakdown.lines, [
+      { label: "Base points", amount: 10 },
+      { label: "Article Bonus", amount: 5 },
+      { label: "CARES Species Bonus", amount: 5 },
+    ]);
+    assert.strictEqual(breakdown.total, 20);
+    assert.strictEqual(breakdown.total, totalPoints(row));
+  });
+
+  for (const { name, row, expected } of cases) {
+    void test(`${name}: the lines add up to the total`, () => {
+      const breakdown = pointsBreakdown(row);
+      const summed = breakdown.lines.reduce((total, line) => total + line.amount, 0);
+
+      assert.strictEqual(summed, breakdown.total);
+      assert.strictEqual(breakdown.total, expected);
+    });
+  }
+
+  void test("a row with no bonuses is the base line alone", () => {
+    assert.deepStrictEqual(pointsBreakdown({ points: 15 }), {
+      lines: [{ label: "Base points", amount: 15 }],
+      total: 15,
+    });
+  });
+
+  void test("a row the witness has not valued yet sums to nothing", () => {
+    assert.deepStrictEqual(pointsBreakdown({ points: null, cares_species: 1 }), {
+      lines: [{ label: "Base points", amount: 0 }, { label: "CARES Species Bonus", amount: 5 }],
+      total: 5,
+    });
   });
 });
 

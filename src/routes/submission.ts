@@ -39,7 +39,7 @@ import * as lifecycle from "@/lifecycle";
 import { attempt, callerFor } from "./lifecycleErrors";
 import { getNotesForSubmission, type SubmissionNote } from "@/db/submission_notes";
 import { formatShortDate } from "@/utils/dateFormat";
-import { bonusBreakdown, programOfSpeciesType, totalPoints, type BonusLine } from "@/points";
+import { pointsBreakdown, programOfSpeciesType, type PointsBreakdown, type PointsRow } from "@/points";
 import { parseVideoUrlWithOEmbed, isValidVideoUrl } from "@/utils/videoParser";
 import config from "@/config.json";
 
@@ -176,6 +176,9 @@ export const view = async (req: MulmRequest, res: Response) => {
       ? await boundSpeciesFacts(submission)
       : null;
 
+  // What the witness set, shown to the owner alone until it is awarded
+  const pending = pendingPoints(submission, viewer);
+
   // Fetch oEmbed data for video if present
   let videoMetadata = null;
   if (submission.video_url) {
@@ -227,6 +230,7 @@ export const view = async (req: MulmRequest, res: Response) => {
     // The approval panel says so when the witness recorded the Species
     speciesRecordedByWitness: speciesRecordedByWitness(adminNotes),
     ...witnessPanel,
+    pendingPoints: pending,
     waitingPeriodStatus,
     adminNotes,
     videoMetadata,
@@ -476,19 +480,34 @@ export async function witnessPanelLocals(
 }
 
 /** The witness panel's sticky bar: ready to confirm, or why not yet. */
-export type WitnessSummary = {
+export type WitnessSummary = PointsBreakdown & {
   ready: boolean;
-  /** Base points first, then each bonus that is set, in the formula's order. */
-  lines: BonusLine[];
-  total: number;
   /** What is still missing, when not ready. */
   hint: string | null;
 };
 
 /**
+ * The points a Submission's owner is shown before they are awarded (#523):
+ * itemised as the witness set them, labelled "pending approval" by the views.
+ * Null for everyone and everything else: the public never sees an unapproved
+ * Submission, the committee reads the points on its own panels, and an
+ * approved Submission shows what was awarded instead. A row with points but
+ * no approval is always witnessed (the invariant ADR-0003 states), so "the
+ * witness set them" needs no second check.
+ */
+export function pendingPoints(
+  submission: Pick<db.Submission, "member_id" | "approved_on"> & PointsRow,
+  viewer: MulmRequest["viewer"]
+): PointsBreakdown | null {
+  if (!viewer || viewer.id !== submission.member_id) return null;
+  if (submission.approved_on != null || submission.points == null) return null;
+  return pointsBreakdown(submission);
+}
+
+/**
  * Sum what the witness panel has set so far, over the one Points rule
- * (`bonusBreakdown` and `totalPoints`, src/points.ts), so the bar's lines add
- * up to its total. Not ready until the Species is settled and the base points
+ * (`pointsBreakdown`, src/points.ts), so the bar's lines add up to its
+ * total. Not ready until the Species is settled and the base points
  * chosen, in that order, which is also the order the panel asks them in.
  */
 export function witnessSummary(values: {
@@ -505,17 +524,15 @@ export function witnessSummary(values: {
   if (!values.species_settled) return notYet("Is the species right? Answer above first");
   if (values.points == null) return notYet("Choose the base points");
 
-  const row = {
-    points: values.points,
-    article_points: values.article_points,
-    cares_species: values.cares_species,
-    flowered: values.flowered,
-    sexual_reproduction: values.sexual_reproduction,
-  };
   return {
     ready: true,
-    lines: [{ label: "Base points", amount: values.points }, ...bonusBreakdown(row)],
-    total: totalPoints(row),
+    ...pointsBreakdown({
+      points: values.points,
+      article_points: values.article_points,
+      cares_species: values.cares_species,
+      flowered: values.flowered,
+      sexual_reproduction: values.sexual_reproduction,
+    }),
     hint: null,
   };
 }

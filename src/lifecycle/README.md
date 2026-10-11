@@ -87,7 +87,10 @@ is about to have, not the one the member filed under (`bonusesOutsideProgram`
 in src/points.ts, the same rule the form's schema applies): a plant Submission
 the witness settles on a Fish Species cannot carry a flowered bonus. The
 points count for nothing until approval: every total-reporting query filters
-on `approved_on`.
+on `approved_on`. The owner sees them meanwhile as "pending approval", on
+their own Submission page and submissions list and nowhere else
+(`pendingPoints` in src/routes/submission.ts, over `pointsBreakdown` in
+src/points.ts, the same itemised sum the witness panel's bar prints).
 
 When the catalogue has no Species for what the member bred, the witness
 records one on the panel (#522): `WitnessPoints.new_species` carries its

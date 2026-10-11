@@ -6,10 +6,15 @@ import request from "supertest";
 import type { MulmRequest } from "@/sessions";
 import * as species from "@/routes/species";
 import * as admin from "@/routes/admin";
+import * as member from "@/routes/member";
+import * as submission from "@/routes/submission";
 import { createMember } from "@/db/members";
 import { resolveSpecies } from "@/species";
+import { confirmWitness, resetNotifier } from "@/lifecycle";
+import { bonusFields } from "@/points";
 import { setupTestDatabase, type TestDatabase } from "./testDbHelper.helper";
-import { createTestSubmission as createUnboundSubmission } from "./helpers/testHelpers";
+import { createTestSubmission as createUnboundSubmission, ensureGuppySpecies } from "./helpers/testHelpers";
+import { recordNotifications, submissionInState, witnessPoints } from "./helpers/lifecycleFixtures";
 
 /**
  * Handlers rendered through the real Express view engine, so a missing
@@ -189,5 +194,116 @@ void describe("Record new species step", () => {
       .type("form")
       .send({ new_scientific_name: "Apistogramma sp. 'Rio Mamuru'", species_settled: "1", points: "15", cares_species: "on" });
     assert.match(bar.text, /id="witness-sum-total">20 pts</);
+  });
+});
+
+/**
+ * Points a witness set but the committee has not awarded (#523): the owner
+ * sees them, itemised and "pending approval", on their Submission page and
+ * their submissions list; nobody else does, and the list's footer still sums
+ * awarded points alone. Rendered through the real routes, so the locals the
+ * views read are the ones the handlers pass.
+ */
+void describe("Pending points are the owner's alone", () => {
+  let testDb: TestDatabase;
+  let ownerId: number;
+  let owner: MulmRequest["viewer"];
+  let committee: MulmRequest["viewer"];
+  let bystander: MulmRequest["viewer"];
+  let pendingId: number;
+
+  beforeEach(async () => {
+    testDb = await setupTestDatabase();
+    recordNotifications();
+    ownerId = await createMember("breeder@example.com", "Dan Wu");
+    const committeeId = await createMember("witness@example.com", "Jane Ortiz");
+    const bystanderId = await createMember("other@example.com", "Sam Lee");
+    owner = { id: ownerId, display_name: "Dan Wu", contact_email: "breeder@example.com", is_admin: false };
+    committee = { id: committeeId, display_name: "Jane Ortiz", contact_email: "witness@example.com", is_admin: true };
+    bystander = { id: bystanderId, display_name: "Sam Lee", contact_email: "other@example.com", is_admin: false };
+
+    // One witnessed Submission with points pending, one approved for 15
+    pendingId = await submissionInState(testDb.db, "pendingWitness", { memberId: ownerId });
+    await confirmWitness(
+      { id: committeeId, isAdmin: true },
+      pendingId,
+      witnessPoints({ points: 10, article_points: 5, cares_species: true })
+    );
+    await submissionInState(testDb.db, "approved", {
+      memberId: ownerId,
+      witnessedBy: committeeId,
+      points: 15,
+      speciesId: await ensureGuppySpecies(testDb.db),
+    });
+  });
+  afterEach(async () => {
+    resetNotifier();
+    await testDb.cleanup();
+  });
+
+  const app = (viewer: MulmRequest["viewer"]) =>
+    appWith((a) => {
+      // The approval panel's error mixin reads this local, which src/index.ts sets app-wide
+      a.use((_req, res, next) => {
+        res.locals.bonusFields = bonusFields;
+        next();
+      });
+      a.get("/submissions/:id", submission.view);
+      a.get("/member/:memberId", member.view);
+    }, viewer);
+
+  void test("the owner's Submission page itemises the pending points, with no awarded-points fields", async () => {
+    const res = await request(app(owner)).get(`/submissions/${pendingId}`);
+
+    assert.strictEqual(res.status, 200);
+    assert.match(res.text, /id="pending-points"/);
+    assert.match(res.text, /Base points<\/td><td[^>]*>10</);
+    assert.match(res.text, /Article Bonus<\/td><td[^>]*>\+5</);
+    assert.match(res.text, /CARES Species Bonus<\/td><td[^>]*>\+5</);
+    assert.match(res.text, /id="pending-points-total">20 pts</);
+    assert.match(res.text, /Set at the Witness \(Jane Ortiz - /);
+    assert.doesNotMatch(res.text, /name="total_points"|name="points"/);
+  });
+
+  void test("a committee member's view of the same page carries no pending block and no awarded points", async () => {
+    const res = await request(app(committee)).get(`/submissions/${pendingId}`);
+
+    assert.strictEqual(res.status, 200);
+    assert.doesNotMatch(res.text, /pending-points|pending approval/);
+    // The approval panel has its own points select; the awarded Total Points field is what waits
+    assert.doesNotMatch(res.text, /name="total_points"/);
+  });
+
+  void test("to anyone else an unapproved Submission does not exist", async () => {
+    assert.strictEqual((await request(app(bystander)).get(`/submissions/${pendingId}`)).status, 404);
+    assert.strictEqual((await request(app(undefined)).get(`/submissions/${pendingId}`)).status, 404);
+  });
+
+  void test("the owner's submissions list shows the pending row's total and lines; the footer sums awarded points only", async () => {
+    const res = await request(app(owner)).get(`/member/${ownerId}`);
+
+    assert.strictEqual(res.status, 200);
+    assert.match(res.text, /class="pending-points-total">20 pts</);
+    assert.match(res.text, /pending approval/);
+    assert.match(res.text, /Base points 10 \+ Article Bonus 5 \+ CARES Species Bonus 5/);
+    assert.match(res.text, /Total:[\s\S]*?<td[^>]*>15<\/td>/, "the footer is the awarded 15, not 35");
+    assert.doesNotMatch(res.text, /<td[^>]*>35<\/td>/);
+  });
+
+  void test("a committee member's view of the list says Unapproved for the pending row, and the footer is unchanged", async () => {
+    const res = await request(app(committee)).get(`/member/${ownerId}`);
+
+    assert.strictEqual(res.status, 200);
+    assert.match(res.text, /Unapproved/);
+    assert.doesNotMatch(res.text, /pending approval|pending-points-total/);
+    assert.match(res.text, /Total:[\s\S]*?<td[^>]*>15<\/td>/);
+  });
+
+  void test("the public list carries only the approved row", async () => {
+    const res = await request(app(undefined)).get(`/member/${ownerId}`);
+
+    assert.strictEqual(res.status, 200);
+    assert.doesNotMatch(res.text, /pending approval|Unapproved/);
+    assert.match(res.text, /data-sort="15">15</);
   });
 });

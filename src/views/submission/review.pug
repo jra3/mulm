@@ -102,14 +102,45 @@ html
                     +reviewTextInput("Substrate Color", "substrate_color")
 
 
+            //- Points the witness set but the committee has not awarded are
+            //- the owner's to see (#523): itemised, as the witness email puts
+            //- them, and plainly "pending approval". The route passes
+            //- pendingPoints for the owner alone; everyone else sees points
+            //- only once they are awarded, below.
+            if pendingPoints
+                div.max-w-4xl.mx-auto.text-left.px-4.pb-6#pending-points
+                    h2(class="text-l font-bold mb-4") Points
+                    .bg-white.rounded-lg.border.border-gray-200.p-4
+                        table.w-full.text-sm.tabular-nums
+                            tbody
+                                each line, index in pendingPoints.lines
+                                    tr.border-b.border-gray-100
+                                        td.py-1.text-gray-700= line.label
+                                        td.py-1.text-right.text-gray-900= index === 0 ? line.amount : `+${line.amount}`
+                            tfoot
+                                tr.border-t-2.border-gray-800.font-bold
+                                    td.pt-2
+                                        | Total
+                                        span.ml-2.font-normal.text-xs.text-gray-500 pending approval
+                                    td.pt-2.text-right#pending-points-total= `${pendingPoints.total} pts`
+                        p.text-sm.text-gray-600.mt-3
+                            if submission.witnessed
+                                | Set at the Witness (#{submission.witnessed}).
+                                = ' '
+                            | The points count once a committee member approves the submission at a meeting; a first-time species bonus, if any, is added there.
+
             div.max-w-4xl.mx-auto.text-left.px-4.pb-6
                 h2(class="text-l font-bold mb-4") Approval Details
                 div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
                     +reviewTextInput("Submitted On", "submitted_on")
                     +reviewTextInput("Witnessed", "witnessed")
                     +reviewTextInput("Approved", "approved")
-                    +reviewTextInput("Points", "points")
-                    +reviewTextInput("Total Points", "total_points")
+                    //- Awarded points only: before approval the columns may
+                    //- already hold what the witness set, which is the
+                    //- owner's to see above and nobody else's yet.
+                    if isApproved
+                        +reviewTextInput("Points", "points")
+                        +reviewTextInput("Total Points", "total_points")
 
         // Dialog container for edit approved submission modal
         if isAdmin && isApproved && !isSelf
