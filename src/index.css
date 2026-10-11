@@ -33,6 +33,13 @@ button.primary {
 	@apply bg-blue-500 text-white hover:bg-blue-700 focus:ring-blue-500;
 }
 
+/* A disabled primary button reads as off. Written here rather than as
+   disabled: utilities on the element because these component rules sit
+   outside Tailwind's layers and so win over any utility class. */
+button.primary:disabled {
+	@apply bg-gray-500 text-gray-200 cursor-not-allowed;
+}
+
 button.destructive {
 	@apply bg-red-500 text-white hover:bg-red-700 focus:ring-red-500;
 }
