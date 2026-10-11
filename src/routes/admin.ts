@@ -12,11 +12,12 @@ import {
   getQueueCounts,
   getSubmissionsByMember,
   getSubmissionSupplements,
+  type Submission,
 } from "@/db/submissions";
 import { approvalSchema } from "@/forms/approval";
 import { approvedEditSchema } from "@/forms/approvedEdit";
 import { bindSpeciesForm } from "@/forms/bindSpecies";
-import { confirmWitnessSchema, witnessSummaryForm } from "@/forms/confirmWitness";
+import { chosenSpeciesForm, confirmWitnessSchema, witnessSummaryForm } from "@/forms/confirmWitness";
 import { inviteSchema } from "@/forms/member";
 import { sendInviteEmail } from "@/notifications";
 import { getNextLevel, programMetadata, programs } from "@/programs";
@@ -36,6 +37,7 @@ import {
   hasSpawnLocations,
 } from "@/forms/submission";
 import { findSpeciesById } from "@/species";
+import { programOfSpeciesType } from "@/points";
 import { getBodyString } from "@/utils/request";
 import { checkAllMemberLevels } from "@/levelManager";
 import { checkAllSpecialtyAwards } from "@/specialtyAwardManager";
@@ -368,10 +370,23 @@ function sendWitnessPanelRefusal(res: Response, messages: string[]): void {
 }
 
 /**
+ * The Program a Submission has once the Witness is confirmed: its chosen
+ * Species' Program, since the confirm adopts it. The Submission's own Program
+ * stands in while the form names no Species that exists; the schema then
+ * refuses the Species anyway.
+ */
+async function programAfterConfirm(body: unknown, submission: Pick<Submission, "program">): Promise<string> {
+  const chosen = chosenSpeciesForm.safeParse(body);
+  const species = chosen.success ? await findSpeciesById(chosen.data.species_id) : undefined;
+  return species ? programOfSpeciesType(species.species_type) : submission.program;
+}
+
+/**
  * POST /admin/submissions/:id/confirm-witness
  * The witness panel's confirm: the Species the witness settled on, the base
- * points and bonuses, and which spellings become Names, validated per
- * Program and written in the Witness's one transaction.
+ * points and bonuses, and which spellings become Names, validated against
+ * the Program that Species belongs to and written in the Witness's one
+ * transaction.
  */
 export const confirmWitnessAction = async (req: MulmRequest, res: Response) => {
   const submission = await validateSubmission(req, res);
@@ -379,7 +394,8 @@ export const confirmWitnessAction = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const parsed = confirmWitnessSchema(submission.program).safeParse(req.body ?? {});
+  const body: unknown = req.body ?? {};
+  const parsed = confirmWitnessSchema(await programAfterConfirm(body, submission)).safeParse(body);
   if (!parsed.success) {
     sendWitnessPanelRefusal(res, parsed.error.issues.map((issue) => issue.message));
     return;

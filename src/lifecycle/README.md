@@ -67,8 +67,12 @@ disagree (both on the changelog, as "Settled at the Witness"), writes the
 points fields, confirms the Witness, values the Species if the catalogue had
 not (the chosen base points become its Point class, with no opt-out), and
 adds the chosen spellings as Names. A refused confirmation does none of it.
-The points count for nothing until approval: every total-reporting query
-filters on `approved_on`.
+The bonuses are judged against the Species' Program, the one the Submission
+is about to have, not the one the member filed under (`bonusesOutsideProgram`
+in src/points.ts, the same rule the form's schema applies): a plant Submission
+the witness settles on a Fish Species cannot carry a flowered bonus. The
+points count for nothing until approval: every total-reporting query filters
+on `approved_on`.
 
 ## Things that are deliberately not here
 

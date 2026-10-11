@@ -1302,6 +1302,54 @@ void describe("Submission lifecycle - transitions", () => {
       );
     });
 
+    void test("a bonus is judged against the Species' Program, not the one the member filed under", async () => {
+      // A plant Submission the witness settles on a Fish Species (the default
+      // binding) becomes a BAP row, so a flowered bonus on it is refused even
+      // though the Submission's own Program would have allowed it
+      const id = await submissionInState(ctx.db, "pendingWitness", {
+        memberId: ctx.member.id,
+        program: "plant",
+        speciesType: "Plant",
+        speciesClass: "Cryptocoryne",
+      });
+
+      await assert.rejects(
+        () => confirmWitness(committee, id, witnessPoints({ flowered: true })),
+        (err: unknown) =>
+          err instanceof ValidationError &&
+          err.message === "The flowered bonus does not apply to Breeders Awards Program submissions"
+      );
+
+      const after = (await readSubmission(id))!;
+      assert.strictEqual(after.witness_verification_status, "pending");
+      assert.strictEqual(after.points, null);
+      assert.strictEqual(after.flowered, null);
+      assert.deepStrictEqual([after.program, after.species_type, after.species_class], ["plant", "Plant", "Cryptocoryne"]);
+      assert.deepStrictEqual(await changelog(id), []);
+
+      // The other way round, a fish Submission settled on a Plant Species may
+      // carry the HAP bonuses, and leaves as a HAP row carrying them
+      const plant = await unvaluedSpecies("florens", { speciesType: "Plant", programClass: "Cryptocoryne", pointClass: 10 });
+      const fishy = await at("pendingWitness");
+      assert.strictEqual(
+        await refusal(() => confirmWitness(committee, fishy, witnessPoints({ species_id: plant, cares_species: true }))),
+        "validation",
+        "CARES is BAP's, and this one is about to be HAP"
+      );
+      await confirmWitness(committee, fishy, witnessPoints({ species_id: plant, flowered: true }));
+      const moved = (await readSubmission(fishy))!;
+      assert.strictEqual(moved.program, "plant");
+      assert.strictEqual(moved.flowered, 1);
+      assert.strictEqual(moved.witness_verification_status, "confirmed");
+    });
+
+    void test("the article bonus is none, 5 or 10, whatever the form let through", async () => {
+      const id = await at("pendingWitness");
+      assert.strictEqual(await refusal(() => confirmWitness(committee, id, witnessPoints({ article_points: 7 }))), "validation");
+      assert.strictEqual(await refusal(() => confirmWitness(committee, id, witnessPoints({ article_points: 0 }))), "validation");
+      assert.strictEqual((await readSubmission(id))!.points, null);
+    });
+
     void test("a refused confirmation sets no points, values no Species, and binds nothing", async () => {
       const species = await unvaluedSpecies("negatus");
       const id = await at("pendingWitness");

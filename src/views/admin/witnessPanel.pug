@@ -11,8 +11,10 @@
 //-   reproduction_date formatted, article_link)
 //- @param speciesFacts - the bound Species (`boundSpeciesFacts` in
 //-   src/routes/submission.ts), or null when unbound: speciesId, speciesName,
-//-   commonName, speciesType, programClass, pointClass, isFirstTime,
-//-   priorBreedCount, isCaresSpecies
+//-   commonName, speciesType, programClass, program, pointClass, isFirstTime,
+//-   priorBreedCount, isCaresSpecies. Confirming gives the Submission the
+//-   Species' Program, so the bonuses offered are that Program's, not the
+//-   one the member filed under.
 //- @param speciesChosenByWitness - whether the committee, not the member,
 //-   chose the bound Species, so there is no "is that right?" left to ask
 //- @param classificationMismatch - whether the Submission's Species type or
@@ -27,10 +29,14 @@
 //- @param changesRequested - whether the committee has changes outstanding:
 //-   the ball is with the member, so the panel offers nothing
 
-- const programShort = { fish: "BAP", plant: "HAP", coral: "CAP" }[submission.program] || submission.program
-- const isBap = submission.program === "fish"
-- const isHap = submission.program === "plant"
+- const shortNames = { fish: "BAP", plant: "HAP", coral: "CAP" }
+- const programShort = shortNames[submission.program] || submission.program
 - const bound = Boolean(speciesFacts)
+//- The Program the Submission will have once confirmed: the bound Species'
+- const settledProgram = bound ? speciesFacts.program : submission.program
+- const isBap = settledProgram === "fish"
+- const isHap = settledProgram === "plant"
+- const programMoves = bound ? speciesFacts.program !== submission.program : false
 - const settled = bound ? Boolean(speciesChosenByWitness) : false
 - const prefilledPoints = bound ? speciesFacts.pointClass : null
 - const prefilledArticle = submission.article_link ? 5 : 0
@@ -103,7 +109,10 @@ mixin witnessSwitch(name, label, amount, note, checked)
 							input.peer.sr-only(type="checkbox" id="witness-species-no")
 						if classificationMismatch
 							.bg-amber-50.border.border-amber-300.rounded.p-2.mt-2.text-sm#witness-mismatch(role="note")
-								| The submission says #{submission.species_type} · #{submission.species_class}. Confirming records it as #{speciesFacts.speciesType} · #{speciesFacts.programClass}.
+								| The submission says #{submission.species_type} · #{submission.species_class}. Confirming records it as #{speciesFacts.speciesType} · #{speciesFacts.programClass}
+								if programMoves
+									|  and moves it to #{shortNames[speciesFacts.program] || speciesFacts.program}
+								| .
 						if !settled
 							p.font-semibold.mt-3.mb-2 Is that right?
 							.grid.grid-cols-2.gap-2

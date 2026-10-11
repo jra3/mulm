@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { refineProgramBonuses } from "@/points";
+import { articleBonuses, refineProgramBonuses } from "@/points";
 import { isPointClass, pointClasses } from "@/species";
 import { formCheckbox } from "./formBoolean";
 
@@ -12,17 +12,26 @@ const articlePoints = z
   .string()
   .optional()
   .transform((val) => (val === undefined || val === "" ? 0 : Number(val)))
-  .refine((val) => val === 0 || val === 5 || val === 10, {
-    message: "The article bonus is None, 5 or 10",
+  .refine((val) => val === 0 || articleBonuses.includes(val), {
+    message: `The article bonus is None, ${articleBonuses.join(" or ")}`,
   })
   .transform((val) => (val === 0 ? null : val));
 
+/** The Species the witness settled on: the one bound, or the one chosen instead. */
+const speciesId = z.coerce
+  .number({ error: "Choose the Species first" })
+  .int()
+  .positive("Choose the Species first");
+
+/**
+ * Just the Species from the confirm form, read ahead of the rest: the route
+ * validates the bonuses against that Species' Program, since the confirm
+ * gives the Submission the Species' Program (see `confirmWitnessSchema`).
+ */
+export const chosenSpeciesForm = z.object({ species_id: speciesId });
+
 const confirmWitnessFields = z.object({
-  /** The Species the witness settled on: the one bound, or the one chosen instead. */
-  species_id: z.coerce
-    .number({ error: "Choose the Species first" })
-    .int()
-    .positive("Choose the Species first"),
+  species_id: speciesId,
   /** The base points, one of the Point classes. */
   points: z.coerce
     .number({ error: "Choose the base points" })
@@ -36,13 +45,19 @@ const confirmWitnessFields = z.object({
 });
 
 /**
- * The witness panel's confirm form for a Submission in `program`: the Species,
- * the base points and every bonus but first-time, which approval computes, and
- * which of the Submission's spellings become Names. The per-program bonus rule
- * from src/points.ts rides along, as it does on the approval form: CARES on
- * BAP only, flowered and sexual reproduction on HAP only. There is no
- * program-less export, because a schema that does not know the program cannot
- * tell a bonus that applies from one that does not.
+ * The witness panel's confirm form: the Species, the base points and every
+ * bonus but first-time, which approval computes, and which of the
+ * Submission's spellings become Names. The per-program bonus rule from
+ * src/points.ts rides along, as it does on the approval form: CARES on BAP
+ * only, flowered and sexual reproduction on HAP only.
+ *
+ * `program` is the Program the Submission will have once confirmed, which is
+ * the chosen Species' Program, not necessarily the one the member filed under:
+ * the confirm adopts the Species' Program, and the bonus rule has to be judged
+ * against that one. `confirmWitness` checks the same rule again against the
+ * Species it resolves, so this schema is the panel's early word, not the
+ * only one. There is no program-less export, because a schema that does not
+ * know the program cannot tell a bonus that applies from one that does not.
  */
 export function confirmWitnessSchema(program: string) {
   return confirmWitnessFields.superRefine(refineProgramBonuses(program));

@@ -37,7 +37,7 @@ import * as lifecycle from "@/lifecycle";
 import { attempt, callerFor } from "./lifecycleErrors";
 import { getNotesForSubmission, type SubmissionNote } from "@/db/submission_notes";
 import { formatShortDate } from "@/utils/dateFormat";
-import { bonusBreakdown, totalPoints, type BonusLine } from "@/points";
+import { bonusBreakdown, programOfSpeciesType, totalPoints, type BonusLine } from "@/points";
 import { parseVideoUrlWithOEmbed, isValidVideoUrl } from "@/utils/videoParser";
 import config from "@/config.json";
 
@@ -235,7 +235,7 @@ export const view = async (req: MulmRequest, res: Response) => {
       species_settled: speciesChosenByWitness,
       points: speciesFacts?.pointClass ?? null,
       article_points: submission.article_link ? 5 : null,
-      cares_species: submission.program === "fish" ? Boolean(speciesFacts?.isCaresSpecies) : false,
+      cares_species: speciesFacts?.program === "fish" ? speciesFacts.isCaresSpecies : false,
       flowered: false,
       sexual_reproduction: false,
     }),
@@ -351,9 +351,11 @@ export const renderEdit = async (req: MulmRequest, res: Response) => {
 /**
  * What the witness panel and the approval panel show about the Species a
  * Submission is bound to: its Canonical name, a common Name, its
- * classification, its Point class (which prefills the base points), and the
- * bonuses it implies - first time in the Program for this Species, and CARES.
- * Null when the Submission is unbound, which each panel says in its own way.
+ * classification and the Program it belongs to (which decides the bonuses the
+ * witness panel offers, since confirming adopts it), its Point class (which
+ * prefills the base points), and the bonuses it implies - first time in the
+ * Program for this Species, and CARES. Null when the Submission is unbound,
+ * which each panel says in its own way.
  */
 export async function boundSpeciesFacts(submission: Pick<db.Submission, "species_id">) {
   const species = submission.species_id ? await findSpeciesById(submission.species_id) : undefined;
@@ -369,6 +371,7 @@ export async function boundSpeciesFacts(submission: Pick<db.Submission, "species
     commonName: names.common[0]?.name ?? null,
     speciesType: species.species_type,
     programClass: species.program_class,
+    program: programOfSpeciesType(species.species_type),
     pointClass: species.base_points,
     isFirstTime: submissionsOfSpecies.approved === 0,
     priorBreedCount: submissionsOfSpecies.approved,

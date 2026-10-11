@@ -3,6 +3,8 @@ import assert from "node:assert";
 import {
   anyProgramSpeciesTypeSql,
   bonusBreakdown,
+  bonusesOutsideProgram,
+  isArticleBonus,
   isInProgram,
   programSpeciesTypeSql,
   totalPoints,
@@ -394,6 +396,38 @@ void describe("Points - bonus breakdown", () => {
         { label: "Sexual Reproduction Bonus", amount: 10 },
       ]
     );
+  });
+});
+
+void describe("Points - bonuses outside a program", () => {
+  void test("names each set bonus the program cannot carry, in the formula's order", () => {
+    assert.deepStrictEqual(
+      bonusesOutsideProgram("fish", { cares_species: true, flowered: 1, sexual_reproduction: true }),
+      [
+        { field: "flowered", message: "The flowered bonus does not apply to Breeders Awards Program submissions" },
+        {
+          field: "sexual_reproduction",
+          message: "The sexual reproduction bonus does not apply to Breeders Awards Program submissions",
+        },
+      ]
+    );
+    assert.deepStrictEqual(bonusesOutsideProgram("plant", { cares_species: true }), [
+      { field: "cares_species", message: "The CARES species bonus does not apply to Horticultural Awards Program submissions" },
+    ]);
+  });
+
+  void test("a bonus that is unset, false or 0 raises nothing, whatever the program", () => {
+    assert.deepStrictEqual(bonusesOutsideProgram("fish", { flowered: false, sexual_reproduction: 0 }), []);
+    assert.deepStrictEqual(bonusesOutsideProgram("plant", { cares_species: null }), []);
+    assert.deepStrictEqual(bonusesOutsideProgram("coral", {}), []);
+  });
+
+  void test("the article bonus is none, 5 or 10", () => {
+    assert.strictEqual(isArticleBonus(null), true);
+    assert.strictEqual(isArticleBonus(5), true);
+    assert.strictEqual(isArticleBonus(10), true);
+    assert.strictEqual(isArticleBonus(0), false);
+    assert.strictEqual(isArticleBonus(7), false);
   });
 });
 

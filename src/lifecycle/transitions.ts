@@ -14,8 +14,8 @@ import { recordActivity } from "@/db/activity";
 import type { FormValues } from "@/forms/submission";
 import type { ApprovalFormValues } from "@/forms/approval";
 import type { Program } from "@/levelManager";
-import { isProgramType } from "@/programs";
-import { programOfSpeciesType } from "@/points";
+import { isProgramType, type ProgramType } from "@/programs";
+import { bonusesOutsideProgram, isArticleBonus, programOfSpeciesType, type BonusFields } from "@/points";
 import {
   addName,
   canonicalName,
@@ -495,6 +495,11 @@ export type WitnessPoints = {
  * rather than trusted. Refused on a Submission bound to no Species that the
  * confirm names none for either, so nothing enters the waiting period
  * without one.
+ *
+ * The bonuses are judged against the Program the Submission will have once
+ * confirmed, the chosen Species' Program, not the one the member filed under:
+ * a plant Submission the witness settles on a Fish Species becomes a BAP row,
+ * and a flowered bonus on it is refused here, whatever the panel's form said.
  */
 export async function confirmWitness(
   caller: Caller,
@@ -524,6 +529,7 @@ export async function confirmWitness(
     });
     // The guard refused an unbound Submission above, so there is a Species
     const chosen = species!;
+    assertBonusesFit(programOfSpeciesType(chosen.species_type), witness);
 
     const speciesChanges = await settleSpecies(db, submission, chosen);
 
@@ -579,6 +585,23 @@ export async function confirmWitness(
     speciesChanges,
     namesAdded: added,
   });
+}
+
+/**
+ * Refuse a bonus that `program` cannot carry, and an article bonus outside
+ * none, 5 or 10. The route's schema asks the same of the form; this is the
+ * transition's own word, so a bonus that fits the Program the Submission had
+ * but not the one it is about to have is never written.
+ */
+function assertBonusesFit(program: ProgramType, witness: WitnessPoints): void {
+  if (!isArticleBonus(witness.article_points)) {
+    throw new ValidationError("The article bonus is None, 5 or 10", "article_points", witness.article_points);
+  }
+  const bonuses: BonusFields = witness;
+  const [issue] = bonusesOutsideProgram(program, bonuses);
+  if (issue) {
+    throw new ValidationError(issue.message, issue.field, bonuses[issue.field]);
+  }
 }
 
 /**
