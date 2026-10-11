@@ -37,16 +37,26 @@ export async function getNotesForSubmission(submissionId: number): Promise<Submi
  * (`confirmWitness`, src/lifecycle/transitions.ts). One query for a whole
  * queue page, where `speciesRecordedByWitness` (src/routes/submission.ts)
  * reads one Submission's notes.
+ *
+ * Plain-text notes (committee notes, the Witness reset note) share the table
+ * with the changelog, and `json_extract` or `json_each` on one of them is an
+ * error, not a NULL. The CTE keeps only the valid JSON changelog entries, and
+ * every JSON function still reads through a `json_valid` CASE, so no planner
+ * ordering can hand prose to one of them.
  */
 export async function findSubmissionsWithRecordedSpecies(submissionIds: number[]): Promise<Set<number>> {
   if (submissionIds.length === 0) return new Set();
   const rows = await query<{ submission_id: number }>(
-    `SELECT DISTINCT sn.submission_id
-     FROM submission_notes sn,
-          json_each(CASE WHEN json_valid(sn.note_text) THEN sn.note_text ELSE '{}' END, '$.changes') change
-     WHERE sn.submission_id IN (${submissionIds.map(() => "?").join(", ")})
-       AND json_extract(sn.note_text, '$.type') = 'admin_edit'
-       AND json_extract(change.value, '$.field') = 'new_species'`,
+    `WITH entry AS (
+       SELECT sn.submission_id, sn.note_text
+       FROM submission_notes sn
+       WHERE sn.submission_id IN (${submissionIds.map(() => "?").join(", ")})
+         AND json_valid(sn.note_text)
+         AND json_extract(CASE WHEN json_valid(sn.note_text) THEN sn.note_text ELSE '{}' END, '$.type') = 'admin_edit'
+     )
+     SELECT DISTINCT entry.submission_id
+     FROM entry, json_each(CASE WHEN json_valid(entry.note_text) THEN entry.note_text ELSE '{}' END, '$.changes') change
+     WHERE json_extract(change.value, '$.field') = 'new_species'`,
     submissionIds
   );
   return new Set(rows.map((row) => row.submission_id));
