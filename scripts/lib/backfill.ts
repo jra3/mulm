@@ -40,14 +40,6 @@ export async function backfillWitness(
   });
 }
 
-/** Put a Submission in the approval queue, as bringing it to a meeting would. */
-export async function backfillQueued(
-  submissionId: number,
-  queuedOn: Date = new Date()
-): Promise<void> {
-  await updateSubmission(submissionId, { final_submission_on: queuedOn.toISOString() });
-}
-
 /**
  * Stamp a Submission approved with its Points, bound to its Species. Sends
  * nothing and recomputes nothing - run `scripts/sweep-member-levels.ts`
@@ -70,6 +62,5 @@ export async function backfillApproval(
     sexual_reproduction: approval.sexual_reproduction ? 1 : 0,
     approved_by: approvedBy,
     approved_on: approvedOn.toISOString(),
-    final_submission_on: approvedOn.toISOString(),
   } as never);
 }

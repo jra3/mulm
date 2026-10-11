@@ -200,9 +200,6 @@ export const view = async (req: MulmRequest, res: Response) => {
       submitted_on: formatShortDate(submission.submitted_on),
       witnessed_on: formatShortDate(submission.witnessed_on),
       approved_on: formatShortDate(submission.approved_on),
-      final_submission_on: submission.final_submission_on
-        ? formatShortDate(submission.final_submission_on)
-        : null,
       approved_by: approver?.display_name,
       witnessed:
         witness && submission.witnessed_on
@@ -687,52 +684,6 @@ export const remove = async (req: MulmRequest, res: Response) => {
   }
 
   res.set("HX-Redirect", "/").send();
-};
-
-/** POST /submissions/:id/final-submit - brought to a meeting, now queue it. */
-export const finalSubmit = async (req: MulmRequest, res: Response) => {
-  const submission = await validateSubmission(req, res);
-  if (!submission) {
-    return;
-  }
-
-  const { viewer } = req;
-  if (!viewer) {
-    res.status(401).send();
-    return;
-  }
-
-  const done = await attempt(res, { submissionId: submission.id, by: viewer.id }, () =>
-    lifecycle.enterApprovalQueue(callerFor(viewer), submission.id)
-  );
-  if (!done.ran) {
-    return;
-  }
-
-  res.set("HX-Redirect", `/submissions/${submission.id}`).status(200).send();
-};
-
-/** DELETE /submissions/:id/final-submit - take it back out of the queue. */
-export const unfinalSubmit = async (req: MulmRequest, res: Response) => {
-  const submission = await validateSubmission(req, res);
-  if (!submission) {
-    return;
-  }
-
-  const { viewer } = req;
-  if (!viewer) {
-    res.status(401).send();
-    return;
-  }
-
-  const done = await attempt(res, { submissionId: submission.id, by: viewer.id }, () =>
-    lifecycle.removeFromQueue(callerFor(viewer), submission.id)
-  );
-  if (!done.ran) {
-    return;
-  }
-
-  res.set("HX-Redirect", `/submissions/${submission.id}`).status(200).send();
 };
 
 /**

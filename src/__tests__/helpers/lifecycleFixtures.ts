@@ -8,7 +8,7 @@ import type { Database } from "sqlite";
 /**
  * Put a Submission into a named lifecycle state.
  *
- * The clock is not a seam: Waiting period and Awaiting final submission are
+ * The clock is not a seam: Waiting period and the approval queue are
  * separated only by a date comparison, so a fixture straddles that edge by
  * writing a reproduction date in the past, the way the rest of the suite does.
  *
@@ -45,30 +45,17 @@ export async function submissionInState(
       return createTestSubmission(db, { ...base, submitted: true, witnessStatus: "pending" });
 
     case "waitingPeriod":
-    case "awaitingFinalSubmission":
+    case "inApprovalQueue":
       return createTestSubmission(db, { ...base, submitted: true, witnessStatus: "confirmed" });
 
-    case "inApprovalQueue": {
-      const id = await createTestSubmission(db, {
-        ...base,
-        submitted: true,
-        witnessStatus: "confirmed",
-      });
-      await setColumn(id, "final_submission_on", today);
-      return id;
-    }
-
-    case "approved": {
-      const id = await createTestSubmission(db, {
+    case "approved":
+      return createTestSubmission(db, {
         ...base,
         submitted: true,
         witnessStatus: "confirmed",
         approved: true,
         approvedBy: options.witnessedBy,
       });
-      await setColumn(id, "final_submission_on", today);
-      return id;
-    }
   }
 }
 
@@ -100,15 +87,6 @@ export async function requestChangesFixture(
   );
   try {
     await stmt.run(new Date().toISOString(), adminId, reason, submissionId);
-  } finally {
-    await stmt.finalize();
-  }
-}
-
-async function setColumn(submissionId: number, column: string, value: unknown): Promise<void> {
-  const stmt = await writeConn.prepare(`UPDATE submissions SET ${column} = ? WHERE id = ?`);
-  try {
-    await stmt.run(value, submissionId);
   } finally {
     await stmt.finalize();
   }

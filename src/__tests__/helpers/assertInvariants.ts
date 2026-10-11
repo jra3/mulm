@@ -49,11 +49,6 @@ export async function assertSubmissionInvariantsHold(submission: Submission | nu
     }
   }
 
-  // Nothing reaches the approval queue unscreened.
-  if (submission.final_submission_on && submission.witness_verification_status !== "confirmed") {
-    violation("is in the approval queue without a confirmed Witness");
-  }
-
   // The Witness sets the points (ADR-0003), and a member's save voids both
   // together: an unapproved row carrying points is always witnessed. First-time
   // is approval's to compute, so it is never set before then.

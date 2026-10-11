@@ -21,16 +21,6 @@ export interface TestSubmissionOptions {
 	points?: number;
 
 	/**
-	 * Whether the submitter has clicked "Brought to Meeting" to enter the
-	 * approval queue. Defaults to true when approved (so historical approved
-	 * rows look consistent with the migration backfill) and false otherwise.
-	 * Tests that simulate a submission already in the approval queue should
-	 * pass true explicitly. Tests that exercise the awaiting-final-submission
-	 * state should leave it as the default.
-	 */
-	finalSubmitted?: boolean;
-
-	/**
 	 * Bind the Submission to the Species whose Canonical name is its Latin
 	 * spelling (the e2e seed has Poecilia reticulata, Cryptocoryne wendtii and
 	 * Acropora millepora), as a witness would have. A Witness cannot be
@@ -86,12 +76,6 @@ export async function createTestSubmission(options: TestSubmissionOptions): Prom
 	const reproductionDate = new Date(Date.now() - reproductionDaysAgo * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
 	const approvedOn = options.approved ? now : null;
-
-	// Approved submissions always have final_submission_on set (matches the
-	// migration backfill). Otherwise default to false so tests are explicit
-	// about whether the submitter has clicked "Brought to Meeting".
-	const shouldSetFinalSubmission = options.finalSubmitted ?? Boolean(options.approved);
-	const finalSubmissionOn = shouldSetFinalSubmission ? now : null;
 
 	// Set defaults based on species type
 	const speciesType = options.speciesType || "Fish";
@@ -169,9 +153,8 @@ export async function createTestSubmission(options: TestSubmissionOptions): Prom
 			approved_on,
 			approved_by,
 			points,
-			final_submission_on,
 			species_id
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		options.memberId,
 		program,
 		speciesType,
@@ -206,7 +189,6 @@ export async function createTestSubmission(options: TestSubmissionOptions): Prom
 		approvedOn,
 		options.approvedBy || null,
 		options.points || null,
-		finalSubmissionOn,
 		speciesId
 	);
 

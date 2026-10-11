@@ -50,14 +50,13 @@ test.describe("Admin - Changes Requested Workflow", () => {
 			adminId = admin.id;
 
 			// Create a submission already in the approval queue: witnessed past
-			// waiting period and submitter has clicked "Brought to Meeting"
+			// its waiting period, which is all it takes
 			submissionId = await createTestSubmission({
 				memberId: user.id,
 				submitted: true,
 				witnessed: true,
 				witnessedBy: admin.id,
 				witnessedDaysAgo: 70,
-				finalSubmitted: true,
 			});
 		} finally {
 			await db.close();
@@ -132,15 +131,14 @@ test.describe("Admin - Changes Requested Workflow", () => {
 				throw new Error("Test users not found in database");
 			}
 
-			// Create submission already in the approval queue (past waiting
-			// period and submitter has clicked "Brought to Meeting")
+			// Create submission already in the approval queue (past its waiting
+			// period, which is all it takes)
 			submissionId = await createTestSubmission({
 				memberId: user.id,
 				submitted: true,
 				witnessed: true,
 				witnessedBy: admin.id,
 				witnessedDaysAgo: 70,
-				finalSubmitted: true,
 			});
 		} finally {
 			await db.close();
@@ -220,7 +218,6 @@ test.describe("Admin - Changes Requested Workflow", () => {
 			expect(submission.witnessed_by).toBeNull();
 			expect(submission.witnessed_on).toBeNull();
 			expect(submission.witness_verification_status).toBe("pending");
-			expect(submission.final_submission_on).toBeNull();
 		} finally {
 			await dbTest2c.close();
 		}
@@ -252,7 +249,6 @@ test.describe("Admin - Changes Requested Workflow", () => {
 				witnessed: true,
 				witnessedBy: admin.id,
 				witnessedDaysAgo: 70,
-				finalSubmitted: true,
 			});
 
 			// Set changes_requested fields directly in database
@@ -311,7 +307,6 @@ test.describe("Admin - Changes Requested Workflow", () => {
 			expect(submission.witnessed_by).toBeNull();
 			expect(submission.witnessed_on).toBeNull();
 			expect(submission.witness_verification_status).toBe("pending");
-			expect(submission.final_submission_on).toBeNull();
 
 			// Verify edits persisted
 			expect(submission.ph).toBe("7.4");

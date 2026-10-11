@@ -703,6 +703,5 @@ export async function approveSubmissionFixture(
     sexual_reproduction: approval.sexual_reproduction ? 1 : 0,
     approved_by: approvedBy,
     approved_on: now,
-    final_submission_on: now,
   } as never);
 }

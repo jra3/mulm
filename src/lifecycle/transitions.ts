@@ -28,7 +28,7 @@ import {
 } from "@/species";
 import { logger } from "@/utils/logger";
 import { AuthorizationError, ValidationError, StateError } from "./errors";
-import { deriveState, hasChangesRequested, waitingPeriod } from "./state";
+import { deriveState, hasChangesRequested } from "./state";
 import { assertMoveIsLegal, Actor, MoveDefinition, moves } from "./table";
 import { notifier } from "./consequences";
 import { recomputeStanding } from "./standing";
@@ -64,7 +64,7 @@ export type Caller = {
 
 /** The columns every guard reads. */
 const STATE_COLUMNS = `id, member_id, program, submitted_on, approved_on,
-   witness_verification_status, final_submission_on, changes_requested_on,
+   witness_verification_status, changes_requested_on,
    reproduction_date, species_type, species_class, species_id`;
 
 /**
@@ -198,8 +198,8 @@ async function writeContent(
  * A Witness attests to the fry and to the form, so every member save of a
  * submitted Submission voids it and the Submission awaits a Witness again. One
  * rule, no field list and no diff: saving is the edit, even if nothing changed.
- * The approval queue entry goes too, because nothing is queued for approval
- * unwitnessed; the member queues it again once it has been re-witnessed.
+ * Its place in the approval queue goes with the Witness, since the queue is
+ * derived from it: once re-witnessed, the clock puts it back.
  *
  * The points the Witness set go with it (ADR-0003): they were set against the
  * form the witness saw, and the next witness starts from the catalogue's
@@ -216,7 +216,6 @@ async function voidWitness(db: Database, submissionId: number, move: MoveDefinit
        witness_verification_status = 'pending',
        witnessed_by = NULL,
        witnessed_on = NULL,
-       final_submission_on = NULL,
        points = NULL,
        article_points = NULL,
        cares_species = NULL,
@@ -742,9 +741,9 @@ export async function bindSpecies(caller: Caller, submissionId: number, speciesI
  * nothing and records nothing.
  *
  * The adopted classification can carry a longer waiting period than the one
- * the Submission entered the approval queue under. Approval is asked only of
- * a Submission whose clock has run out, so a queued one whose new clock has
- * not leaves the queue and waits again; the member re-enters it when it has.
+ * the Submission reached the approval queue under. The queue is derived from
+ * the clock, so a queued Submission whose new clock has not run is simply in
+ * its waiting period again, with nothing else written; the clock returns it.
  */
 export async function adoptSpeciesClassification(caller: Caller, submissionId: number): Promise<void> {
   const changes = await withTransaction(async (db) => {
@@ -759,18 +758,14 @@ export async function adoptSpeciesClassification(caller: Caller, submissionId: n
       species_class: species.program_class,
       program: programOfSpeciesType(species.species_type),
     };
-    const leavesQueue =
-      submission.final_submission_on != null && !waitingPeriod({ ...submission, ...adopted }).elapsed;
-    const updates = leavesQueue ? { ...adopted, final_submission_on: null } : adopted;
-    const diff = changesBetween(submission, updates);
+    const diff = changesBetween(submission, adopted);
     if (diff.length === 0) return diff;
 
     await runUpdate(
       db,
-      `UPDATE submissions SET species_type = ?, species_class = ?, program = ?,
-         final_submission_on = CASE WHEN ? THEN NULL ELSE final_submission_on END
+      `UPDATE submissions SET species_type = ?, species_class = ?, program = ?
          WHERE id = ? AND approved_on IS NULL`,
-      [adopted.species_type, adopted.species_class, adopted.program, leavesQueue ? 1 : 0, submissionId],
+      [adopted.species_type, adopted.species_class, adopted.program, submissionId],
       moves.adoptSpeciesClassification
     );
     return diff;
@@ -780,41 +775,6 @@ export async function adoptSpeciesClassification(caller: Caller, submissionId: n
   await recordAdminEdit(submissionId, caller, changes, "Adopted the Species' type and class");
 
   logger.info("Submission adopted its Species' classification", { submissionId, changes, by: caller.id });
-}
-
-/**
- * Enter the approval queue: the member (or a committee member on their behalf)
- * confirms the fry were brought to a meeting.
- */
-export async function enterApprovalQueue(caller: Caller, submissionId: number): Promise<void> {
-  await withTransaction(async (db) => {
-    await guard(db, moves.enterApprovalQueue, caller, submissionId);
-    await runUpdate(
-      db,
-      `UPDATE submissions SET final_submission_on = ?
-         WHERE id = ? AND final_submission_on IS NULL AND approved_on IS NULL`,
-      [new Date().toISOString(), submissionId],
-      moves.enterApprovalQueue
-    );
-  });
-
-  logger.info("Submission queued for approval", { submissionId, by: caller.id });
-}
-
-/** Take a Submission back out of the approval queue. */
-export async function removeFromQueue(caller: Caller, submissionId: number): Promise<void> {
-  await withTransaction(async (db) => {
-    await guard(db, moves.removeFromQueue, caller, submissionId);
-    await runUpdate(
-      db,
-      `UPDATE submissions SET final_submission_on = NULL
-         WHERE id = ? AND final_submission_on IS NOT NULL AND approved_on IS NULL`,
-      [submissionId],
-      moves.removeFromQueue
-    );
-  });
-
-  logger.info("Submission removed from approval queue", { submissionId, by: caller.id });
 }
 
 /**

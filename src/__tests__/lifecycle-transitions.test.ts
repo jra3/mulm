@@ -14,10 +14,8 @@ import {
   createSubmission,
   deleteSubmission,
   deriveState,
-  enterApprovalQueue,
   hasChangesRequested,
   queueFor,
-  removeFromQueue,
   requestChanges,
   resetNotifier,
   resubmit,
@@ -59,7 +57,6 @@ const ALL_STATES: SubmissionState[] = [
   "draft",
   "pendingWitness",
   "waitingPeriod",
-  "awaitingFinalSubmission",
   "inApprovalQueue",
   "approved",
 ];
@@ -147,12 +144,12 @@ void describe("Submission lifecycle - transitions", () => {
       { move: "submit", legal: ["draft"], run: (id) => submit(member, id, form) },
       {
         move: "saveChanges",
-        legal: ["pendingWitness", "waitingPeriod", "awaitingFinalSubmission", "inApprovalQueue"],
+        legal: ["pendingWitness", "waitingPeriod", "inApprovalQueue"],
         run: (id) => saveChanges(member, id, form),
       },
       {
         move: "returnToDraft",
-        legal: ["pendingWitness", "waitingPeriod", "awaitingFinalSubmission"],
+        legal: ["pendingWitness", "waitingPeriod", "inApprovalQueue"],
         run: (id) => returnToDraft(member, id),
       },
       {
@@ -161,18 +158,8 @@ void describe("Submission lifecycle - transitions", () => {
         run: (id) => confirmWitness(committee, id, witnessPoints()),
       },
       {
-        move: "enterApprovalQueue",
-        legal: ["awaitingFinalSubmission"],
-        run: (id) => enterApprovalQueue(member, id),
-      },
-      {
-        move: "removeFromQueue",
-        legal: ["inApprovalQueue"],
-        run: (id) => removeFromQueue(member, id),
-      },
-      {
         move: "requestChanges",
-        legal: ["pendingWitness", "waitingPeriod", "awaitingFinalSubmission", "inApprovalQueue"],
+        legal: ["pendingWitness", "waitingPeriod", "inApprovalQueue"],
         run: (id) => requestChanges(committee, id, "Please add a photo"),
       },
       {
@@ -321,14 +308,13 @@ void describe("Submission lifecycle - transitions", () => {
       assert.strictEqual(await readSubmission(id), undefined);
     });
 
-    void test("a member may queue their own Submission, and so may the committee", async () => {
-      const mine = await at("awaitingFinalSubmission");
-      await enterApprovalQueue(member, mine);
-      assert.strictEqual(await stateOf(mine), "inApprovalQueue");
-
-      const onBehalf = await at("awaitingFinalSubmission");
-      await enterApprovalQueue(committee, onBehalf);
-      assert.strictEqual(await stateOf(onBehalf), "inApprovalQueue");
+    void test("a witnessed Submission reaches the approval queue with no member action", async () => {
+      // The member's "brought it to a meeting" step is gone: once witnessed,
+      // the clock running out is the whole mechanism.
+      const id = await at("inApprovalQueue");
+      assert.strictEqual(await stateOf(id), "inApprovalQueue");
+      assert.strictEqual(queueFor((await readSubmission(id))!), "approval");
+      assert.strictEqual(await refusal(() => approve(committee, id, mockApprovalData)), "allowed");
     });
   });
 
@@ -353,12 +339,6 @@ void describe("Submission lifecycle - transitions", () => {
         "state"
       );
       assert.strictEqual(await refusal(() => deleteSubmission(committee, queued)), "allowed");
-    });
-
-    void test("nothing enters the approval queue while changes are outstanding", async () => {
-      const id = await at("awaitingFinalSubmission");
-      await requestChangesFixture(id, ctx.admin.id);
-      assert.strictEqual(await refusal(() => enterApprovalQueue(member, id)), "state");
     });
 
     void test("resubmitting clears the flag and keeps an unwitnessed Submission where it was", async () => {
@@ -387,7 +367,6 @@ void describe("Submission lifecycle - transitions", () => {
       assert.strictEqual(deriveState(after), "pendingWitness");
       assert.strictEqual(queueFor(after), "witness");
       assert.strictEqual(after.witnessed_by, null);
-      assert.strictEqual(after.final_submission_on, null);
       assert.strictEqual(after.submitted_on, before.submitted_on, "keeps its submission date");
       await assertSubmissionInvariantsHold(after);
     });
@@ -421,11 +400,7 @@ void describe("Submission lifecycle - transitions", () => {
       await assertSubmissionInvariantsHold(after);
     });
 
-    for (const state of [
-      "waitingPeriod",
-      "awaitingFinalSubmission",
-      "inApprovalQueue",
-    ] as SubmissionState[]) {
+    for (const state of ["waitingPeriod", "inApprovalQueue"] as SubmissionState[]) {
       void test(`editing a witnessed ${state} Submission sends it back to the witness queue`, async () => {
         const id = await at(state);
         const before = (await readSubmission(id))!;
@@ -438,7 +413,6 @@ void describe("Submission lifecycle - transitions", () => {
         assert.strictEqual(after.witness_verification_status, "pending");
         assert.strictEqual(after.witnessed_by, null);
         assert.strictEqual(after.witnessed_on, null);
-        assert.strictEqual(after.final_submission_on, null, "it must be witnessed before it queues");
         assert.strictEqual(after.submitted_on, before.submitted_on, "keeps its submission date");
         assert.strictEqual(after.count, "40", "the edit itself landed");
         await assertSubmissionInvariantsHold(after);
@@ -507,10 +481,15 @@ void describe("Submission lifecycle - transitions", () => {
       await assertSubmissionInvariantsHold(resubmitted);
     });
 
-    void test("Return to Draft takes the Submission out of the approval queue's reach", async () => {
-      const id = await at("awaitingFinalSubmission");
+    void test("Return to Draft takes a Submission out of the approval queue", async () => {
+      const id = await at("inApprovalQueue");
       await returnToDraft(member, id);
-      assert.strictEqual(await refusal(() => enterApprovalQueue(member, id)), "state");
+
+      const after = (await readSubmission(id))!;
+      assert.strictEqual(deriveState(after), "draft");
+      assert.strictEqual(queueFor(after), null);
+      assert.strictEqual(await refusal(() => approve(committee, id, mockApprovalData)), "state");
+      await assertSubmissionInvariantsHold(after);
     });
 
     void test("submitting answers an outstanding request for changes", async () => {
@@ -852,8 +831,10 @@ void describe("Submission lifecycle - transitions", () => {
       await assert.rejects(() => adoptSpeciesClassification(committee, unbound), UnboundError);
     });
 
-    void test("adopting a classification with a longer waiting period takes a queued Submission back out of the queue", async () => {
-      // Queued as Fish/Marine (30 days) at 40 days old; Guppy is Fish/Livebearers (60 days)
+    void test("adopting a classification with a longer waiting period takes a queued Submission back to the waiting period", async () => {
+      // Queued as Fish/Marine (30 days) at 40 days old; Guppy is Fish/Livebearers (60 days).
+      // The clock is the whole mechanism: the classification changes and the
+      // state follows, with nothing else written.
       const fortyDaysAgo = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString();
       const id = await submissionInState(ctx.db, "inApprovalQueue", {
         memberId: ctx.member.id,
@@ -861,21 +842,22 @@ void describe("Submission lifecycle - transitions", () => {
         speciesClass: "Marine",
         reproductionDate: fortyDaysAgo,
       });
+      assert.strictEqual(await stateOf(id), "inApprovalQueue");
 
       await adoptSpeciesClassification(committee, id);
 
       const after = (await readSubmission(id))!;
       assert.strictEqual(after.species_class, "Livebearers");
-      assert.strictEqual(after.final_submission_on, null);
       assert.strictEqual(deriveState(after), "waitingPeriod");
       assert.strictEqual(await refusal(() => approve(committee, id, mockApprovalData)), "state");
       const notes = await query<{ note_text: string }>(
         "SELECT note_text FROM submission_notes WHERE submission_id = ?",
         [id]
       );
-      assert.ok(
-        (JSON.parse(notes[0].note_text) as { changes: Change[] }).changes.some((c) => c.field === "final_submission_on"),
-        "leaving the queue is on the changelog"
+      assert.deepStrictEqual(
+        (JSON.parse(notes[0].note_text) as { changes: Change[] }).changes.map((c) => c.field).sort(),
+        ["species_class"],
+        "only the classification is on the changelog"
       );
 
       // A queued Submission whose new clock has already run stays queued
@@ -1420,8 +1402,8 @@ void describe("Submission lifecycle - transitions", () => {
     void test("the approval that follows awards the points the Witness set", async () => {
       const id = await at("pendingWitness");
       await confirmWitness(committee, id, witnessPoints({ points: 15, cares_species: true }));
-      await ctx.db.run("UPDATE submissions SET final_submission_on = ? WHERE id = ?", [new Date().toISOString(), id]);
       const witnessed = (await readSubmission(id))!;
+      assert.strictEqual(deriveState(witnessed), "inApprovalQueue", "the clock ran long ago; nothing else is needed");
 
       await approve(committee, id, {
         ...mockApprovalData,
@@ -1552,7 +1534,6 @@ void describe("Submission lifecycle - transitions", () => {
       assert.strictEqual(after.witness_verification_status, "confirmed");
       assert.strictEqual(after.witnessed_by, before.witnessed_by);
       assert.strictEqual(after.witnessed_on, before.witnessed_on);
-      assert.strictEqual(after.final_submission_on, before.final_submission_on);
       await assertSubmissionInvariantsHold(after);
     });
   });

@@ -24,7 +24,6 @@ function row(overrides: Partial<StateRow> = {}): StateRow {
     submitted_on: null,
     approved_on: null,
     witness_verification_status: "pending",
-    final_submission_on: null,
     reproduction_date: daysAgo(100),
     species_type: "Fish",
     species_class: "Livebearers",
@@ -53,27 +52,26 @@ void describe("Derived state", () => {
     assert.strictEqual(state, "waitingPeriod");
   });
 
-  void test("past the waiting period it waits on the member to bring it to a meeting", () => {
+  void test("once the clock has run, a witnessed Submission is in the approval queue with no member action", () => {
     const state = deriveState(
       row({ submitted_on: daysAgo(70), witness_verification_status: "confirmed" })
-    );
-    assert.strictEqual(state, "awaitingFinalSubmission");
-  });
-
-  void test("confirming it was brought to a meeting puts it in the approval queue", () => {
-    const state = deriveState(
-      row({
-        submitted_on: daysAgo(70),
-        witness_verification_status: "confirmed",
-        final_submission_on: daysAgo(1),
-      })
     );
     assert.strictEqual(state, "inApprovalQueue");
   });
 
+  void test("the dead final-submission date changes nothing", () => {
+    // The column is still on the row but no longer read: a stale value from
+    // the old "brought it to a meeting" step neither queues nor unqueues.
+    const withStaleDate = {
+      ...row({ submitted_on: daysAgo(1), witness_verification_status: "confirmed", reproduction_date: daysAgo(10) }),
+      final_submission_on: daysAgo(1),
+    };
+    assert.strictEqual(deriveState(withStaleDate), "waitingPeriod");
+  });
+
   void test("Approved wins over everything, because it is terminal", () => {
     const state = deriveState(
-      row({ submitted_on: daysAgo(70), approved_on: daysAgo(1), final_submission_on: daysAgo(2) })
+      row({ submitted_on: daysAgo(70), approved_on: daysAgo(1) })
     );
     assert.strictEqual(state, "approved");
   });
@@ -82,7 +80,6 @@ void describe("Derived state", () => {
     const flagged = row({
       submitted_on: daysAgo(70),
       witness_verification_status: "confirmed",
-      final_submission_on: daysAgo(1),
       changes_requested_on: daysAgo(1),
     });
     assert.strictEqual(deriveState(flagged), "inApprovalQueue");

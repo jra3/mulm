@@ -11,22 +11,20 @@ import { AuthorizationError, StateError, UnboundError } from "./errors";
  * |-------------------------|-----------------------------------------|---------------------|--------------------|
  * | saveDraft               | draft                                   | draft               | member             |
  * | submit                  | draft                                   | pendingWitness      | member             |
- * | saveChanges             | the four middle states                  | same, or            | member             |
+ * | saveChanges             | the three middle states                 | same, or            | member             |
  * |                         |                                         | pendingWitness if   |                    |
  * |                         |                                         | it was witnessed    |                    |
- * | returnToDraft           | pendingWitness .. awaitingFinalSubmission| draft              | member             |
- * | confirmWitness          | pendingWitness, bound                   | waitingPeriod,      | committee, not the submitter |
- * |                         | (takes the Species, base points and     | points set          |                    |
- * |                         | bonuses; rebinds and adopts the         |                     |                    |
- * |                         | Species' classification as needed)      |                     |                    |
- * | bindSpecies             | the four middle states, no changes      | same, bound         | committee, not the submitter |
+ * | returnToDraft           | the three middle states                 | draft               | member             |
+ * | confirmWitness          | pendingWitness, bound                   | waitingPeriod (or   | committee, not the submitter |
+ * |                         | (takes the Species, base points and     | inApprovalQueue, if |                    |
+ * |                         | bonuses; rebinds and adopts the         | the clock has run), |                    |
+ * |                         | Species' classification as needed)      | points set          |                    |
+ * | bindSpecies             | the three middle states, no changes     | same, bound         | committee, not the submitter |
  * |                         | requested                               |                     |                    |
- * | adoptSpeciesClassification | the four middle states, bound, no    | same, agreeing (or  | committee, not the submitter |
+ * | adoptSpeciesClassification | the three middle states, bound, no   | same, agreeing (or  | committee, not the submitter |
  * |                         | changes requested                       | waitingPeriod, if the new clock has not run) | |
- * | enterApprovalQueue      | awaitingFinalSubmission                 | inApprovalQueue     | member or committee|
- * | removeFromQueue         | inApprovalQueue                         | awaitingFinalSubmission | member or committee |
- * | requestChanges          | the four middle states                  | same, flag set      | committee          |
- * | resubmit                | the four middle states                  | as saveChanges,     | member             |
+ * | requestChanges          | the three middle states                 | same, flag set      | committee          |
+ * | resubmit                | the three middle states                 | as saveChanges,     | member             |
  * |                         |                                         | flag cleared        |                    |
  * | approve                 | inApprovalQueue, bound to a Species     | approved            | committee          |
  * | correctPoints           | approved                                | approved            | committee          |
@@ -41,9 +39,11 @@ import { AuthorizationError, StateError, UnboundError } from "./errors";
  * A member save also clears a binding the saved form no longer agrees with
  * (CONTEXT.md, Bound; `bindingAfterSave` in transitions.ts).
  *
- * The fifteenth move is the clock: the waiting period elapsing carries a
- * Submission from waitingPeriod to awaitingFinalSubmission with nobody
+ * The thirteenth move is the clock: the waiting period elapsing carries a
+ * Submission from waitingPeriod into the approval queue with nobody
  * performing anything. It is computed in `state.ts` rather than listed here.
+ * The member does nothing to enter the queue; they bring the fry, plants or
+ * coral to a meeting, and a committee member approves it there.
  */
 
 /** Who is asking. A committee member is a member with `is_admin`. */
@@ -57,8 +57,6 @@ export type MoveId =
   | "confirmWitness"
   | "bindSpecies"
   | "adoptSpeciesClassification"
-  | "enterApprovalQueue"
-  | "removeFromQueue"
   | "requestChanges"
   | "resubmit"
   | "approve"
@@ -128,12 +126,13 @@ export const moves = {
 
   /**
    * Withdrawing, as an explicit named action rather than a side effect of
-   * editing. Not legal from the approval queue: a member walks it back one
-   * named step at a time, so leaving the queue comes first.
+   * editing. Legal from anywhere short of Approved, the approval queue
+   * included: there is no queue entry to leave first, since the clock put it
+   * there.
    */
   returnToDraft: {
     id: "returnToDraft",
-    from: ["pendingWitness", "waitingPeriod", "awaitingFinalSubmission"],
+    from: MIDDLE_STATES,
     actors: MEMBER_ONLY,
     ownerOnly: true,
   },
@@ -181,21 +180,6 @@ export const moves = {
     requiresNoChangesPending: true,
     neverSubmitter: true,
     requiresBound: true,
-  },
-
-  enterApprovalQueue: {
-    id: "enterApprovalQueue",
-    from: ["awaitingFinalSubmission"],
-    actors: EITHER,
-    requiresNoChangesPending: true,
-    ownerOnly: true,
-  },
-
-  removeFromQueue: {
-    id: "removeFromQueue",
-    from: ["inApprovalQueue"],
-    actors: EITHER,
-    ownerOnly: true,
   },
 
   requestChanges: {
@@ -371,10 +355,6 @@ function describe(id: MoveId, object: string): string {
       return `choose the Species of ${object}`;
     case "adoptSpeciesClassification":
       return `give ${object} its Species' type and class`;
-    case "enterApprovalQueue":
-      return `queue ${object} for approval`;
-    case "removeFromQueue":
-      return `remove ${object} from the approval queue`;
     case "requestChanges":
       return `request changes on ${object}`;
     case "resubmit":
@@ -413,8 +393,6 @@ export function label(state: SubmissionState): string {
       return "pending screening";
     case "waitingPeriod":
       return "in its waiting period";
-    case "awaitingFinalSubmission":
-      return "awaiting confirmation it was brought to a meeting";
     case "inApprovalQueue":
       return "in the approval queue";
     case "approved":

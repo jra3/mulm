@@ -112,7 +112,14 @@ export type Submission = {
   changes_requested_by: number | null;
   changes_requested_reason: string | null;
 
+  /**
+   * DEAD COLUMN. It recorded the member confirming they had brought the fry
+   * to a meeting, which was once the step into the approval queue. The queue
+   * is now derived from the Witness and the clock, so nothing reads or writes
+   * it; it is kept rather than dropped, like the denied_* columns above.
+   */
   final_submission_on: string | null;
+  /** When the waiting-period reminder went out. Never cleared: one per Submission. */
   final_submission_reminder_sent_on: string | null;
 
   is_cares_species?: number | null;

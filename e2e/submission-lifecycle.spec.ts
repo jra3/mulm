@@ -17,11 +17,10 @@ import { fillTomSelectTypeahead } from "./helpers/tomSelect";
 test.describe.configure({ mode: 'serial' });
 
 /**
- * Re-witness a Submission whose Witness a member's save voided (ADR-0001),
- * then confirm on the submitter's behalf that it was brought to a meeting so it
- * re-enters the approval queue. The caller must be logged in as a committee
- * member who is not the submitter. The reproduction date is past the waiting
- * period, so it goes straight to awaiting final submission.
+ * Re-witness a Submission whose Witness a member's save voided (ADR-0001).
+ * The caller must be logged in as a committee member who is not the
+ * submitter. The reproduction date is past the waiting period, so the confirm
+ * puts it straight back in the approval queue; there is no member step.
  *
  * A Witness cannot be confirmed without a Species, and the witness sets the
  * points (ADR-0003). A Submission the member bound by picking a Name opens in
@@ -29,7 +28,7 @@ test.describe.configure({ mode: 'serial' });
  * chosen here first, through the panel's search. Then the base points (10)
  * and Confirm.
  */
-async function rewitnessAndQueue(page: Page, submissionId: number): Promise<void> {
+async function rewitness(page: Page, submissionId: number): Promise<void> {
 	await page.goto(`/submissions/${submissionId}`);
 	await page.waitForSelector("#witness-species");
 
@@ -55,22 +54,13 @@ async function rewitnessAndQueue(page: Page, submissionId: number): Promise<void
 	await page.waitForURL(/\/admin\/witness-queue\//, { timeout: 10000 });
 	await page.waitForLoadState("networkidle");
 
-	await page.goto(`/submissions/${submissionId}`);
-	await page.waitForSelector("body");
-
-	const queueButton = page.locator('button:has-text("Confirm on Submitter\'s Behalf")');
-	await queueButton.scrollIntoViewIfNeeded();
-	await queueButton.click();
-	await page.waitForLoadState("networkidle");
-
 	const db = await getTestDatabase();
 	try {
 		const submission = await db.get(
-			"SELECT witness_verification_status, final_submission_on, species_id FROM submissions WHERE id = ?",
+			"SELECT witness_verification_status, species_id FROM submissions WHERE id = ?",
 			submissionId
 		);
 		expect(submission.witness_verification_status).toBe("confirmed");
-		expect(submission.final_submission_on).toBeTruthy();
 		expect(submission.species_id).toBeTruthy();
 	} finally {
 		await db.close();
@@ -87,10 +77,10 @@ test.describe("Submission Complete Lifecycle", () => {
 		await ensureTestUserExists(TEST_ADMIN.email, TEST_ADMIN.password, TEST_ADMIN.displayName, true);
 	});
 
-	test("happy path: draft → submit → witness → wait → bring to meeting → approve", async ({ page }) => {
-		// Step 1: Create a witnessed submission directly (witnessed 70 days ago to satisfy waiting period).
-		// final_submission_on is intentionally null so we can exercise the
-		// "Brought to Meeting" click as a real step in the flow.
+	test("happy path: draft → submit → witness → wait → approve", async ({ page }) => {
+		// Step 1: Create a witnessed submission directly (witnessed 70 days ago
+		// to satisfy the waiting period). That alone puts it in the approval
+		// queue: the member has nothing to click.
 		const db = await getTestDatabase();
 		let submissionId: number;
 		let memberId: number;
@@ -127,30 +117,15 @@ test.describe("Submission Complete Lifecycle", () => {
 			await db.close();
 		}
 
-		// Step 2: Member confirms they brought the fish to a meeting.
-		// Without this, the submission stays in awaiting-final-submission and
-		// admins can't see it in the approval queue.
+		// Step 2: The member sees that it is time to bring the fry to a meeting,
+		// with nothing to click
 		await login(page, TEST_USER);
 
 		await page.goto(`/submissions/${submissionId}`);
 		await page.waitForSelector("body");
 
-		const broughtToMeetingButton = page.locator('button:has-text("Confirm: Brought to Meeting")');
-		await broughtToMeetingButton.scrollIntoViewIfNeeded();
-		await broughtToMeetingButton.click();
-		await page.waitForLoadState("networkidle");
-
-		// Verify final_submission_on was set
-		const dbAfterFinalSubmit = await getTestDatabase();
-		try {
-			const submission = await dbAfterFinalSubmit.get(
-				"SELECT final_submission_on FROM submissions WHERE id = ?",
-				submissionId
-			);
-			expect(submission.final_submission_on).toBeTruthy();
-		} finally {
-			await dbAfterFinalSubmit.close();
-		}
+		await expect(page.locator('h3:has-text("Bring to Meeting")')).toBeVisible();
+		await expect(page.locator('button:has-text("Brought to Meeting")')).toHaveCount(0);
 
 		await logout(page);
 
@@ -227,15 +202,14 @@ test.describe("Submission Complete Lifecycle", () => {
 
 			adminId = admin.id;
 
-			// Create submission already in the approval queue (witnessed past waiting
-			// period and submitter has clicked "Brought to Meeting")
+			// Create submission already in the approval queue (witnessed past
+			// its waiting period, which is all it takes)
 			submissionId = await createTestSubmission({
 				memberId: user.id,
 				submitted: true,
 				witnessed: true,
 				witnessedBy: admin.id,
 				witnessedDaysAgo: 70,
-				finalSubmitted: true,
 			});
 		} finally {
 			await db.close();
@@ -316,16 +290,15 @@ test.describe("Submission Complete Lifecycle", () => {
 			expect(submission.witnessed_by).toBeNull();
 			expect(submission.witnessed_on).toBeNull();
 			expect(submission.witness_verification_status).toBe("pending");
-			expect(submission.final_submission_on).toBeNull();
 		} finally {
 			await db3.close();
 		}
 
-		// Step 5: Logout member, login as admin, re-witness, queue, and approve
+		// Step 5: Logout member, login as admin, re-witness and approve
 		await logout(page);
 		await login(page, TEST_ADMIN);
 
-		await rewitnessAndQueue(page, submissionId);
+		await rewitness(page, submissionId);
 
 		await page.goto(`/submissions/${submissionId}`);
 		await page.waitForSelector("body");
@@ -467,14 +440,13 @@ test.describe("Submission Complete Lifecycle", () => {
 			adminId = admin.id;
 
 			// Create submission already in the approval queue (witnessed past
-			// waiting period and submitter has clicked "Brought to Meeting")
+			// its waiting period, which is all it takes)
 			submissionId = await createTestSubmission({
 				memberId: user.id,
 				submitted: true,
 				witnessed: true,
 				witnessedBy: admin.id,
 				witnessedDaysAgo: 70,
-				finalSubmitted: true,
 			});
 		} finally {
 			await db.close();
@@ -566,11 +538,11 @@ test.describe("Submission Complete Lifecycle", () => {
 		await page.waitForURL(/\/submissions\/\d+/, { timeout: 10000 });
 		await page.waitForLoadState("networkidle");
 
-		// Step 6: Admin re-witnesses, queues it, and approves
+		// Step 6: Admin re-witnesses and approves
 		await logout(page);
 		await login(page, TEST_ADMIN);
 
-		await rewitnessAndQueue(page, submissionId);
+		await rewitness(page, submissionId);
 
 		await page.goto(`/submissions/${submissionId}`);
 		await page.waitForSelector("body");
@@ -612,14 +584,14 @@ test.describe("Submission Complete Lifecycle", () => {
 	});
 });
 
-test.describe("Bring-to-Meeting (manual approval queue gating)", () => {
+test.describe("The approval queue needs no member action", () => {
 	test.beforeEach(async () => {
 		await cleanupTestUserSubmissions(TEST_USER.email);
 		await ensureTestUserExists(TEST_USER.email, TEST_USER.password, TEST_USER.displayName, false);
 		await ensureTestUserExists(TEST_ADMIN.email, TEST_ADMIN.password, TEST_ADMIN.displayName, true);
 	});
 
-	test("witnessed-but-not-final-submitted submissions stay out of the admin queue until the submitter clicks; un-queue removes them again", async ({ page }) => {
+	test("a witnessed submission past its waiting period is in the admin queue with nothing for the submitter to click", async ({ page }) => {
 		const db = await getTestDatabase();
 		let submissionId: number;
 
@@ -637,7 +609,7 @@ test.describe("Bring-to-Meeting (manual approval queue gating)", () => {
 				throw new Error("Test users not found in database");
 			}
 
-			// Witnessed past the waiting period but no final_submission_on yet
+			// Witnessed past the waiting period, and nothing else
 			submissionId = await createTestSubmission({
 				memberId: user.id,
 				submitted: true,
@@ -650,82 +622,24 @@ test.describe("Bring-to-Meeting (manual approval queue gating)", () => {
 			await db.close();
 		}
 
-		// Step 1: Admin queue should NOT contain this submission yet
+		// Step 1: The admin queue already contains it
 		await login(page, TEST_ADMIN);
 		await page.goto("/admin/queue/fish");
 		await page.waitForLoadState("networkidle");
 
-		const queueLinkBefore = page.locator(`a[href="/submissions/${submissionId}"]`);
-		await expect(queueLinkBefore).toHaveCount(0);
+		const queueLink = page.locator(`a[href="/submissions/${submissionId}"]`);
+		await expect(queueLink).toHaveCount(1);
 
 		await logout(page);
 
-		// Step 2: Submitter sees the "Bring to Meeting" panel and clicks the button
+		// Step 2: The submitter sees the "Bring to Meeting" panel, with no
+		// button to enter or leave the queue
 		await login(page, TEST_USER);
 		await page.goto(`/submissions/${submissionId}`);
 		await page.waitForSelector("body");
 
 		await expect(page.locator('h3:has-text("Bring to Meeting")')).toBeVisible();
-
-		const broughtToMeetingButton = page.locator('button:has-text("Confirm: Brought to Meeting")');
-		await broughtToMeetingButton.scrollIntoViewIfNeeded();
-		await broughtToMeetingButton.click();
-		await page.waitForLoadState("networkidle");
-
-		// final_submission_on is set
-		const dbAfterFinalSubmit = await getTestDatabase();
-		try {
-			const submission = await dbAfterFinalSubmit.get(
-				"SELECT final_submission_on FROM submissions WHERE id = ?",
-				submissionId
-			);
-			expect(submission.final_submission_on).toBeTruthy();
-		} finally {
-			await dbAfterFinalSubmit.close();
-		}
-
-		await logout(page);
-
-		// Step 3: Admin queue now contains the submission
-		await login(page, TEST_ADMIN);
-		await page.goto("/admin/queue/fish");
-		await page.waitForLoadState("networkidle");
-
-		const queueLinkAfter = page.locator(`a[href="/submissions/${submissionId}"]`);
-		await expect(queueLinkAfter).toHaveCount(1);
-
-		await logout(page);
-
-		// Step 4: Submitter un-queues
-		await login(page, TEST_USER);
-		await page.goto(`/submissions/${submissionId}`);
-		await page.waitForSelector("body");
-
-		page.on("dialog", (dialog) => dialog.accept());
-		const removeFromQueueButton = page.locator('button:has-text("Remove from Queue")');
-		await removeFromQueueButton.scrollIntoViewIfNeeded();
-		await removeFromQueueButton.click();
-		await page.waitForLoadState("networkidle");
-
-		const dbAfterUnqueue = await getTestDatabase();
-		try {
-			const submission = await dbAfterUnqueue.get(
-				"SELECT final_submission_on FROM submissions WHERE id = ?",
-				submissionId
-			);
-			expect(submission.final_submission_on).toBeNull();
-		} finally {
-			await dbAfterUnqueue.close();
-		}
-
-		await logout(page);
-
-		// Step 5: Admin queue is empty again
-		await login(page, TEST_ADMIN);
-		await page.goto("/admin/queue/fish");
-		await page.waitForLoadState("networkidle");
-
-		const queueLinkAfterUnqueue = page.locator(`a[href="/submissions/${submissionId}"]`);
-		await expect(queueLinkAfterUnqueue).toHaveCount(0);
+		await expect(page.locator('button:has-text("Brought to Meeting")')).toHaveCount(0);
+		await expect(page.locator('button:has-text("Remove from Queue")')).toHaveCount(0);
 	});
 });

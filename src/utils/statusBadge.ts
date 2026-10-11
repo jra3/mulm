@@ -81,7 +81,7 @@ export function getStatusPresentation(row: BadgeRow): StatusInfo {
       };
     }
 
-    case "awaitingFinalSubmission":
+    case "inApprovalQueue":
       return {
         status: state,
         label: "Bring to Meeting",
@@ -89,18 +89,7 @@ export function getStatusPresentation(row: BadgeRow): StatusInfo {
         color: "text-teal-800",
         bgColor: "bg-teal-100",
         rowColor: "bg-teal-50",
-        description: "Bring to a monthly meeting and confirm to enter the approval queue",
-      };
-
-    case "inApprovalQueue":
-      return {
-        status: state,
-        label: "Pending Review",
-        icon: "🔵",
-        color: "text-blue-800",
-        bgColor: "bg-blue-100",
-        rowColor: "bg-blue-50",
-        description: "Ready for committee approval",
+        description: "Bring to a monthly meeting; a committee member approves it there",
       };
 
     case "approved":

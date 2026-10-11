@@ -166,15 +166,15 @@ a template.
 - **Draft**: `bg-yellow-100 text-yellow-800` with 📝 icon
 - **Pending Screening**: `bg-purple-100 text-purple-800` with 👁️ icon
 - **Awaiting Auction** (in its waiting period): `bg-orange-100 text-orange-800` with ⏳ icon
-- **Bring to Meeting**: `bg-teal-100 text-teal-800` with 🐟 icon
-- **Pending Review** (in the approval queue): `bg-blue-100 text-blue-800` with 🔵 icon
+- **Bring to Meeting** (in the approval queue): `bg-teal-100 text-teal-800` with 🐟 icon
 - **Approved**: `bg-green-100 text-green-800` with ✅ icon
 - **Changes Requested** (an overlay, not a state — it wins the badge while set): `bg-orange-100 text-orange-800` with 📝 icon
 
 Teal is the one colour outside the palette below, and it earns its place: "Bring
 to Meeting" is the only state where the Portal is waiting on the member to do
-something physical, and it must not read as either the orange it follows or the
-blue it precedes.
+something physical (bring the fry to a meeting, where the committee approves
+it), and it must not read as either the orange it follows or the green that
+ends it.
 
 Denied is gone — the state was deleted along with the rest of the denial path.
 
