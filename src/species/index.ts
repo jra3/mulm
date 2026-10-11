@@ -66,7 +66,7 @@ export {
 } from "./agreement";
 
 // The Species-Submission relation, one definition.
-export { countSubmissionsOfSpecies } from "./submissions";
+export { countSubmissionsOfSpecies, countApprovedBySpecies } from "./submissions";
 
 // Columns other modules own the meaning of; the catalogue writes them.
 export { updateIucnStatus, updateLastExternalSync, type IucnStatus } from "./status";

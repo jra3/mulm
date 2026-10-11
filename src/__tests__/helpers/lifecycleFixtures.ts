@@ -1,8 +1,9 @@
 import { query, writeConn } from "../../db/conn";
 import type { Submission } from "../../db/submissions";
 import type { MemberRecord } from "../../db/members";
-import type { Notifier, SubmissionState, WitnessedFacts, WitnessPoints } from "../../lifecycle";
-import { setNotifier } from "../../lifecycle";
+import type { Caller, Notifier, SubmissionState, WitnessedFacts, WitnessPoints } from "../../lifecycle";
+import { approve, previewApproval, setNotifier } from "../../lifecycle";
+import { countSubmissionsOfSpecies } from "../../species";
 import { createTestSubmission, ensureGuppySpecies, type CreateSubmissionOptions } from "./testHelpers";
 import type { Database } from "sqlite";
 
@@ -74,6 +75,26 @@ export function witnessPoints(overrides: Partial<WitnessPoints> = {}): WitnessPo
     sexual_reproduction: false,
     ...overrides,
   };
+}
+
+/**
+ * The total the approval queue would show for a Submission right now: the
+ * points the Witness set plus first-time if its Species has no approved
+ * Submission yet. What the approve button posts.
+ */
+export async function shownTotal(submissionId: number): Promise<number> {
+  const row = (await readSubmission(submissionId))!;
+  const approvedBefore = row.species_id == null ? 0 : (await countSubmissionsOfSpecies(row.species_id)).approved;
+  return previewApproval(row, approvedBefore).total;
+}
+
+/**
+ * Approve as a committee member who has just read the queue page: the total
+ * posted is the one it shows. For a test about approval's other refusals;
+ * a test about the stale total passes its own number to `approve`.
+ */
+export async function approveAsShown(caller: Caller, submissionId: number): Promise<void> {
+  await approve(caller, submissionId, await shownTotal(submissionId));
 }
 
 /** Lay the Changes requested overlay over whatever state a Submission is in. */

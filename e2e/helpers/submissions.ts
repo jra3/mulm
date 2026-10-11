@@ -18,6 +18,7 @@ export interface TestSubmissionOptions {
 	reproductionDaysAgo?: number; // How many days ago reproduction occurred (default: 70 for old spawns)
 	approved?: boolean;
 	approvedBy?: number;
+	/** Base points, as the Witness set them. A witnessed fixture gets 10 unless told otherwise. */
 	points?: number;
 
 	/**
@@ -188,7 +189,8 @@ export async function createTestSubmission(options: TestSubmissionOptions): Prom
 		options.witnessed ? "confirmed" : "pending",
 		approvedOn,
 		options.approvedBy || null,
-		options.points || null,
+		// The Witness sets the points (ADR-0003): a witnessed fixture carries them
+		options.points ?? (options.witnessed ? 10 : null),
 		speciesId
 	);
 

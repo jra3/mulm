@@ -27,7 +27,9 @@ import { AuthorizationError, StateError, UnboundError } from "./errors";
  * | requestChanges          | the three middle states                 | same, flag set      | committee          |
  * | resubmit                | the three middle states                 | as saveChanges,     | member             |
  * |                         |                                         | flag cleared        |                    |
- * | approve                 | inApprovalQueue, bound to a Species     | approved            | committee          |
+ * | approve                 | inApprovalQueue, bound, with points     | approved: first-    | committee, not the submitter |
+ * |                         | (takes the total the approver saw, and  | time computed, the  |                    |
+ * |                         | refuses if the row awards another)      | points awarded      |                    |
  * | correctPoints           | approved                                | approved            | committee          |
  * | deleteSubmission        | draft (member); draft .. inApprovalQueue (committee) | gone   | member or committee|
  *
@@ -204,12 +206,18 @@ export const moves = {
   },
 
   /**
+   * One button at the meeting (ADR-0003): approval records that the member
+   * brought the fry, plants or coral, and awards the points the Witness set.
+   * It takes no form; the only thing it decides is first-time, counted in
+   * its own transaction so the first click wins, and it refuses when the
+   * total it would award is not the one the approver was shown.
+   *
    * Never the submitter, as with the Witness: awarding yourself points is the
-   * same conflict as inspecting your own fry. The Portal already hid the
-   * approval panel from a Submission's owner; this makes it a rule. Never on a
-   * Submission bound to no Species, so Points are never awarded to no Species;
-   * there is no binding at approval, so one past its Witness unbound is fixed
-   * by hand.
+   * same conflict as inspecting your own fry. Never on a Submission bound to
+   * no Species, so Points are never awarded to no Species; there is no
+   * binding at approval. After migration 066 a witnessed Submission is always
+   * bound and always carries points, so these refusals guard rows written
+   * around the lifecycle.
    */
   approve: {
     id: "approve",

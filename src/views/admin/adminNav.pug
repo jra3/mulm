@@ -15,9 +15,9 @@ mixin adminNav(currentQueue, programCounts, witnessCounts)
 						a.link(href="/admin/waiting-period/fish") Waiting Period
 					span.text-gray-400 |
 					if currentQueue === "approval"
-						span.font-bold.text-blue-600 Approval Queues
+						span.font-bold.text-blue-600 Approval Queue
 					else
-						a.link(href="/admin/queue/fish") Approval Queues
+						a.link(href="/admin/queue") Approval Queue
 			
 			// Program buttons for current queue type
 			.flex.justify-center.space-x-4

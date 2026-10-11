@@ -360,3 +360,133 @@ void describe("Pending points are the owner's alone", () => {
     assert.match(res.text, /data-sort="15">15</);
   });
 });
+
+/**
+ * The approval queue through the real routes (#527): the page lists what is
+ * ready with the total the button will post, and the button's refusals come
+ * back as the sheet, swapped over the page's placeholder, while a good
+ * approval redirects back to the queue.
+ */
+void describe("Approval queue and the one button", () => {
+  let testDb: TestDatabase;
+  let committee: MulmRequest["viewer"];
+  let committeeId: number;
+  let ownerId: number;
+  let readyId: number;
+
+  beforeEach(async () => {
+    testDb = await setupTestDatabase();
+    recordNotifications();
+    ownerId = await createMember("breeder@example.com", "Dan Wu");
+    committeeId = await createMember("witness@example.com", "Jane Ortiz");
+    committee = { id: committeeId, display_name: "Jane Ortiz", contact_email: "witness@example.com", is_admin: true };
+    readyId = await submissionInState(testDb.db, "inApprovalQueue", {
+      memberId: ownerId,
+      witnessedBy: committeeId,
+      points: 10,
+      caresSpecies: true,
+    });
+  });
+  afterEach(async () => {
+    resetNotifier();
+    await testDb.cleanup();
+  });
+
+  const app = (viewer: MulmRequest["viewer"] = committee) =>
+    appWith((a) => {
+      a.use(express.urlencoded({ extended: true }));
+      a.get("/admin/queue{/:program}", admin.showQueue);
+      a.post("/admin/submissions/:id/approve", admin.approveSubmission);
+    }, viewer);
+
+  void test("the page lists the ready row with the total it will post, first-time included", async () => {
+    const waitingId = await submissionInState(testDb.db, "waitingPeriod", { memberId: ownerId, witnessedBy: committeeId });
+    const res = await request(app()).get("/admin/queue");
+
+    assert.strictEqual(res.status, 200);
+    assert.match(res.text, new RegExp(`id="queue-row-${readyId}"`));
+    assert.match(res.text, new RegExp(`id="queue-total-${readyId}">20<`), "base 10, CARES 5, first-time 5");
+    assert.match(res.text, new RegExp(`id="queue-lines-${readyId}"[^>]*>Base points 10 \\+ First Time Species Bonus 5 \\+ CARES Species Bonus 5<`));
+    assert.match(res.text, new RegExp(`<input type="hidden" name="expected_total" value="20">`));
+    assert.match(res.text, new RegExp(`id="queue-approve-${readyId}">Approve · 15 pts \\+ 5 first-time<`));
+    assert.match(res.text, new RegExp(`id="queue-waiting-${waitingId}"`));
+    assert.doesNotMatch(res.text, new RegExp(`submissions/${waitingId}/approve`));
+    assert.match(res.text, /All · 1<\/a>/);
+  });
+
+  void test("a Program page lists that Program alone; an unknown one is a 404", async () => {
+    assert.match((await request(app()).get("/admin/queue/fish")).text, new RegExp(`id="queue-row-${readyId}"`));
+    assert.doesNotMatch((await request(app()).get("/admin/queue/plant")).text, new RegExp(`id="queue-row-${readyId}"`));
+    assert.strictEqual((await request(app()).get("/admin/queue/terrestrial")).status, 404);
+  });
+
+  void test("approving at the shown total awards it and sends the approver back to the queue they were on", async () => {
+    const res = await request(app())
+      .post(`/admin/submissions/${readyId}/approve`)
+      .set("HX-Current-URL", "http://localhost/admin/queue/fish")
+      .type("form")
+      .send({ expected_total: "20" });
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.headers["hx-redirect"], "/admin/queue/fish");
+    const page = await request(app()).get("/admin/queue");
+    assert.match(page.text, new RegExp(`id="queue-approved-${readyId}">[\\s\\S]*?Dan Wu · Guppy[\\s\\S]*?by Jane Ortiz[\\s\\S]*?20 pts<`));
+    assert.doesNotMatch(page.text, new RegExp(`id="queue-row-${readyId}"`));
+  });
+
+  void test("a stale total comes back as the sheet with the fresh one, and nothing is approved", async () => {
+    const res = await request(app())
+      .post(`/admin/submissions/${readyId}/approve`)
+      .type("form")
+      .send({ expected_total: "15" });
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.headers["hx-retarget"], "#approve-sheet");
+    assert.strictEqual(res.headers["hx-reswap"], "outerHTML");
+    assert.strictEqual(res.headers["hx-redirect"], undefined);
+    assert.match(res.text, /id="approve-sheet-title">The points changed</);
+    assert.match(res.text, /Dan Wu now gets <b>20 pts<\/b>, not 15\./);
+    assert.match(res.text, /<input type="hidden" name="expected_total" value="20"\/>/);
+    assert.match(res.text, /id="approve-sheet-approve"[^>]*>Approve · 20 pts</);
+    assert.match(res.text, /id="approve-sheet-close" href="\/admin\/queue"/);
+    assert.doesNotMatch(await request(app()).get("/admin/queue").then((r) => r.text), /queue-approved-/);
+  });
+
+  void test("the approver's own Submission is refused with the sheet, not approved", async () => {
+    const own = await submissionInState(testDb.db, "inApprovalQueue", { memberId: committeeId, witnessedBy: ownerId });
+    const page = await request(app()).get("/admin/queue");
+    assert.match(page.text, new RegExp(`id="queue-own-${own}"`));
+
+    const res = await request(app())
+      .post(`/admin/submissions/${own}/approve`)
+      .type("form")
+      .send({ expected_total: "15" });
+
+    assert.strictEqual(res.headers["hx-retarget"], "#approve-sheet");
+    assert.match(res.text, /id="approve-sheet-title">Not approved</);
+    assert.match(res.text, /your own submission/);
+    assert.doesNotMatch(res.text, /expected_total/);
+  });
+
+  void test("a body without the total is refused with the sheet", async () => {
+    const res = await request(app()).post(`/admin/submissions/${readyId}/approve`).type("form").send({});
+    assert.strictEqual(res.headers["hx-retarget"], "#approve-sheet");
+    assert.match(res.text, /Reload the queue/);
+  });
+
+  void test("the review page tells the committee what approval would award and points at the queue", async () => {
+    const page = appWith((a) => {
+      a.use((_req, res, next) => {
+        res.locals.bonusFields = bonusFields;
+        next();
+      });
+      a.get("/submissions/:id", submission.view);
+    }, committee);
+    const res = await request(page).get(`/submissions/${readyId}`);
+
+    assert.strictEqual(res.status, 200);
+    assert.match(res.text, /id="approval-preview">Base points 10 \+ First Time Species Bonus 5 \+ CARES Species Bonus 5 = <b>20 pts<\/b></);
+    assert.match(res.text, new RegExp(`id="approval-queue-link" href="/admin/queue#queue-row-${readyId}"`));
+    assert.doesNotMatch(res.text, /\/approve"|name="points"/);
+  });
+});

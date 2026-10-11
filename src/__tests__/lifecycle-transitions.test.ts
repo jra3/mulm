@@ -2,6 +2,7 @@ import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
 import {
   AuthorizationError,
+  StalePointsError,
   StateError,
   ValidationError,
   approve,
@@ -15,6 +16,7 @@ import {
   deleteSubmission,
   deriveState,
   hasChangesRequested,
+  previewApproval,
   queueFor,
   requestChanges,
   resetNotifier,
@@ -30,7 +32,6 @@ import { query } from "@/db/conn";
 import { addName, checkFormAgreement, createSpecies, findSpeciesById, listNames, resolveSpecies } from "@/species";
 import { addNote, findSubmissionsWithRecordedSpecies } from "@/db/submission_notes";
 import {
-  mockApprovalData,
   ensureGuppySpecies,
   setupTestDatabase,
   teardownTestDatabase,
@@ -38,9 +39,11 @@ import {
 } from "./helpers/testHelpers";
 import { getMemberWithPoints } from "@/db/members";
 import {
+  approveAsShown,
   readSubmission,
   recordNotifications,
   requestChangesFixture,
+  shownTotal,
   submissionInState,
   witnessPoints,
 } from "./helpers/lifecycleFixtures";
@@ -127,6 +130,7 @@ void describe("Submission lifecycle - transitions", () => {
       if (err instanceof AuthorizationError) return "authorization";
       if (err instanceof StateError) return "state";
       if (err instanceof ValidationError) return "validation";
+      if (err instanceof StalePointsError) return "stale";
       throw err;
     }
   }
@@ -166,7 +170,7 @@ void describe("Submission lifecycle - transitions", () => {
       {
         move: "approve",
         legal: ["inApprovalQueue"],
-        run: (id) => approve(committee, id, mockApprovalData),
+        run: (id) => approveAsShown(committee, id),
       },
       {
         move: "correctPoints",
@@ -290,7 +294,7 @@ void describe("Submission lifecycle - transitions", () => {
         witnessedBy: ctx.otherAdmin!.id,
       });
       assert.strictEqual(
-        await refusal(() => approve(committee, id, mockApprovalData)),
+        await refusal(() => approveAsShown(committee, id)),
         "authorization"
       );
     });
@@ -315,7 +319,7 @@ void describe("Submission lifecycle - transitions", () => {
       const id = await at("inApprovalQueue");
       assert.strictEqual(await stateOf(id), "inApprovalQueue");
       assert.strictEqual(queueFor((await readSubmission(id))!), "approval");
-      assert.strictEqual(await refusal(() => approve(committee, id, mockApprovalData)), "allowed");
+      assert.strictEqual(await refusal(() => approveAsShown(committee, id)), "allowed");
     });
   });
 
@@ -336,7 +340,7 @@ void describe("Submission lifecycle - transitions", () => {
       const queued = await at("inApprovalQueue");
       await requestChangesFixture(queued, ctx.admin.id);
       assert.strictEqual(
-        await refusal(() => approve(committee, queued, mockApprovalData)),
+        await refusal(() => approveAsShown(committee, queued)),
         "state"
       );
       assert.strictEqual(await refusal(() => deleteSubmission(committee, queued)), "allowed");
@@ -489,7 +493,7 @@ void describe("Submission lifecycle - transitions", () => {
       const after = (await readSubmission(id))!;
       assert.strictEqual(deriveState(after), "draft");
       assert.strictEqual(queueFor(after), null);
-      assert.strictEqual(await refusal(() => approve(committee, id, mockApprovalData)), "state");
+      assert.strictEqual(await refusal(() => approveAsShown(committee, id)), "state");
       await assertSubmissionInvariantsHold(after);
     });
 
@@ -850,7 +854,7 @@ void describe("Submission lifecycle - transitions", () => {
       const after = (await readSubmission(id))!;
       assert.strictEqual(after.species_class, "Livebearers");
       assert.strictEqual(deriveState(after), "waitingPeriod");
-      assert.strictEqual(await refusal(() => approve(committee, id, mockApprovalData)), "state");
+      assert.strictEqual(await refusal(() => approveAsShown(committee, id)), "state");
       const notes = await query<{ note_text: string }>(
         "SELECT note_text FROM submission_notes WHERE submission_id = ?",
         [id]
@@ -1406,12 +1410,9 @@ void describe("Submission lifecycle - transitions", () => {
       const witnessed = (await readSubmission(id))!;
       assert.strictEqual(deriveState(witnessed), "inApprovalQueue", "the clock ran long ago; nothing else is needed");
 
-      await approve(committee, id, {
-        ...mockApprovalData,
-        points: witnessed.points!,
-        cares_species: Boolean(witnessed.cares_species),
-        first_time_species: true,
-      });
+      // Base 15, CARES 5, and the first-time 5 approval computes: the total the queue shows
+      assert.strictEqual(await shownTotal(id), 25);
+      await approve(committee, id, 25);
 
       const after = (await readSubmission(id))!;
       assert.strictEqual(after.points, 15);
@@ -1646,14 +1647,18 @@ void describe("Submission lifecycle - transitions", () => {
   // -------------------------------------------------------------------------
 
   void describe("Approve and Correct the Points", () => {
-    void test("approving records the Points and is terminal", async () => {
-      const id = await at("inApprovalQueue");
+    void test("approving awards the points the Witness set and is terminal", async () => {
+      const id = await submissionInState(ctx.db, "inApprovalQueue", {
+        memberId: ctx.member.id,
+        witnessedBy: ctx.admin.id,
+        points: 15,
+      });
 
-      await approve(committee, id, { ...mockApprovalData, points: 15 });
+      await approveAsShown(committee, id);
 
       const after = (await readSubmission(id))!;
       assert.strictEqual(deriveState(after), "approved");
-      assert.strictEqual(after.points, 15);
+      assert.strictEqual(after.points, 15, "the Witness's base points, untouched");
       assert.strictEqual(after.approved_by, ctx.admin.id);
       await assertSubmissionInvariantsHold(after);
 
@@ -1678,7 +1683,7 @@ void describe("Submission lifecycle - transitions", () => {
         speciesId,
       });
 
-      await approve(committee, id, mockApprovalData);
+      await approveAsShown(committee, id);
 
       const after = (await readSubmission(id))!;
       assert.strictEqual(after.species_id, speciesId);
@@ -1695,7 +1700,7 @@ void describe("Submission lifecycle - transitions", () => {
       });
 
       await assert.rejects(
-        () => approve(committee, id, mockApprovalData),
+        () => approveAsShown(committee, id),
         (err: unknown) =>
           err instanceof UnboundError &&
           err.message === "Bind this Submission to a Species before you approve it" &&
@@ -1703,7 +1708,7 @@ void describe("Submission lifecycle - transitions", () => {
       );
       const after = (await readSubmission(id))!;
       assert.strictEqual(deriveState(after), "inApprovalQueue");
-      assert.strictEqual(after.points, null, "no Points awarded to no Species");
+      assert.strictEqual(after.approved_on, null, "no Points awarded to no Species");
     });
 
     void test("a correction needs a stated reason and an actual change", async () => {
@@ -1756,6 +1761,156 @@ void describe("Submission lifecycle - transitions", () => {
       assert.strictEqual(after.witnessed_by, before.witnessed_by);
       assert.strictEqual(after.witnessed_on, before.witnessed_on);
       await assertSubmissionInvariantsHold(after);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Approval is one button (#527)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Approval takes no form: it records that the member brought the fry to a
+   * meeting and awards what the Witness set. The one thing it decides is
+   * first-time, counted inside its transaction, and it refuses when the
+   * total it would award is not the one the approver was shown.
+   */
+  void describe("Approval is one button", () => {
+    /** A second Species, so first-time can be exercised without the Guppy's history. */
+    const freshSpecies = (epithet: string) =>
+      createSpecies({
+        canonicalGenus: "Ameca",
+        canonicalSpeciesName: epithet,
+        programClass: "Livebearers",
+        speciesType: "Fish",
+      });
+
+    const queued = (speciesId: number, memberId = ctx.member.id, overrides = {}) =>
+      submissionInState(ctx.db, "inApprovalQueue", {
+        memberId,
+        witnessedBy: ctx.admin.id,
+        latinName: "Ameca splendens",
+        commonName: "Butterfly Goodeid",
+        speciesId,
+        ...overrides,
+      });
+
+    void test("the first approval of a Species earns first-time; the next does not", async () => {
+      const speciesId = await freshSpecies("splendens");
+      const jane = await queued(speciesId, ctx.member.id, { points: 10, caresSpecies: true });
+      const sam = await queued(speciesId, ctx.otherAdmin!.id, { points: 10 });
+
+      // Both rows preview first-time while nobody has been approved
+      assert.strictEqual(await shownTotal(jane), 20, "base 10 + CARES 5 + first-time 5");
+      assert.strictEqual(await shownTotal(sam), 15);
+
+      await approve(committee, jane, 20);
+      const first = (await readSubmission(jane))!;
+      assert.strictEqual(first.first_time_species, 1);
+      assert.strictEqual(first.total_points ?? (await getMemberWithPoints(ctx.member.id)).fishTotalPoints, 20);
+      await assertSubmissionInvariantsHold(first);
+
+      // Sam's preview has lost the bonus; approving at the new total gives none
+      assert.strictEqual(await shownTotal(sam), 10);
+      await approve(committee, sam, 10);
+      const second = (await readSubmission(sam))!;
+      assert.strictEqual(second.first_time_species, 0, "only the first gets first-time");
+      assert.strictEqual((await getMemberWithPoints(ctx.otherAdmin!.id)).fishTotalPoints, 10);
+      await assertSubmissionInvariantsHold(second);
+    });
+
+    void test("a stale total is refused and writes nothing", async () => {
+      const speciesId = await freshSpecies("stalus");
+      const jane = await queued(speciesId, ctx.member.id, { points: 10 });
+      const sam = await queued(speciesId, ctx.otherAdmin!.id, { points: 10 });
+      const shownToSamsApprover = await shownTotal(sam);
+      assert.strictEqual(shownToSamsApprover, 15);
+
+      // Jane is approved first, so Sam's page is now out of date
+      await approve(committee, jane, 15);
+
+      await assert.rejects(
+        () => approve(committee, sam, shownToSamsApprover),
+        (err: unknown) =>
+          err instanceof StalePointsError &&
+          err.message === "The points changed: now 10 pts, not 15" &&
+          err.context.expectedTotal === 15 &&
+          err.context.currentTotal === 10
+      );
+      const after = (await readSubmission(sam))!;
+      assert.strictEqual(after.approved_on, null, "nothing written");
+      assert.strictEqual(after.approved_by, null);
+      assert.strictEqual(after.first_time_species, null);
+      assert.strictEqual(deriveState(after), "inApprovalQueue");
+      await assertSubmissionInvariantsHold(after);
+
+      // The fresh total the refusal names is accepted
+      await approve(committee, sam, 10);
+      assert.strictEqual(deriveState((await readSubmission(sam))!), "approved");
+    });
+
+    void test("a total that is too low is as stale as one too high", async () => {
+      const id = await at("inApprovalQueue");
+      const shown = await shownTotal(id);
+      assert.strictEqual(await refusal(() => approve(committee, id, shown - 5)), "stale");
+      assert.strictEqual(await refusal(() => approve(committee, id, shown + 5)), "stale");
+      assert.strictEqual((await readSubmission(id))!.approved_on, null);
+    });
+
+    void test("a witnessed row with no points is refused: it needs a Witness, not an approval", async () => {
+      // Written around the lifecycle, as the rows migration 066 reset were
+      const id = await at("inApprovalQueue");
+      await query("UPDATE submissions SET points = NULL WHERE id = ?", [id]);
+
+      await assert.rejects(
+        () => approve(committee, id, 0),
+        (err: unknown) => err instanceof ValidationError && err.context.field === "points"
+      );
+      assert.strictEqual((await readSubmission(id))!.approved_on, null);
+    });
+
+    void test("the preview counts the Species' approved Submissions, not the row's own first-time column", async () => {
+      const speciesId = await freshSpecies("previewus");
+      const id = await queued(speciesId, ctx.member.id, { points: 10 });
+      const row = (await readSubmission(id))!;
+      assert.strictEqual(row.first_time_species, null);
+
+      assert.deepStrictEqual(previewApproval(row, 0), {
+        firstTime: true,
+        total: 15,
+        lines: [
+          { label: "Base points", amount: 10 },
+          { label: "First Time Species Bonus", amount: 5 },
+        ],
+      });
+      assert.deepStrictEqual(previewApproval(row, 3), {
+        firstTime: false,
+        total: 10,
+        lines: [{ label: "Base points", amount: 10 }],
+      });
+      // A row that somehow carries first-time already is not believed
+      assert.strictEqual(previewApproval({ ...row, first_time_species: 1 }, 3).total, 10);
+    });
+
+    void test("approving is refused on every ground the table names, with nothing written", async () => {
+      const flagged = await at("inApprovalQueue");
+      await requestChangesFixture(flagged, ctx.admin.id);
+      assert.strictEqual(await refusal(() => approveAsShown(committee, flagged)), "state");
+
+      const own = await submissionInState(ctx.db, "inApprovalQueue", {
+        memberId: ctx.admin.id,
+        witnessedBy: ctx.otherAdmin!.id,
+      });
+      assert.strictEqual(await refusal(() => approveAsShown(committee, own)), "authorization");
+
+      const waiting = await at("waitingPeriod");
+      assert.strictEqual(await refusal(() => approveAsShown(committee, waiting)), "state");
+
+      const done = await at("approved");
+      assert.strictEqual(await refusal(() => approveAsShown(committee, done)), "state");
+
+      for (const id of [flagged, own, waiting]) {
+        assert.strictEqual((await readSubmission(id))!.approved_on, null);
+      }
     });
   });
 

@@ -1,19 +1,17 @@
 import { describe, test } from "node:test";
 import assert from "node:assert";
-import path from "path";
-import pug from "pug";
-import { approvalSchema } from "../forms/approval";
 import { approvedEditSchema } from "../forms/approvedEdit";
 import { confirmWitnessSchema, recordSpeciesForm } from "../forms/confirmWitness";
-import { bonusFields, programBonuses } from "../points";
+import { programBonuses } from "../points";
 import type { ProgramType } from "../programs";
 
 /**
  * Per-program bonus enforcement at the points-setting schemas.
  *
- * Which bonuses a program may carry is data in src/points.ts, and the witness,
- * approval and approved-edit schemas are factories that take the submission's
- * program and refuse a bonus that does not apply to it. These tests parse bodies
+ * Which bonuses a program may carry is data in src/points.ts, and the witness
+ * and approved-edit schemas are factories that take the submission's program
+ * and refuse a bonus that does not apply to it. Approval has no schema of its
+ * own any more: it takes no bonuses (#527). These tests parse bodies
  * through those factories: no database, no routes.
  *
  * Every body below carries the fields the base object requires, because an
@@ -103,16 +101,11 @@ const forms = [
       confirmWitnessSchema(program).safeParse({
         species_id: "42",
         points: "10",
-        // The witness panel's switches post "on"; the approval form's post "1"
+        // The witness panel's switches post "on"; the approved-edit form's post "1"
         ...Object.fromEntries(
           Object.entries(bonuses).map(([field, value]) => [field, field === "article_points" ? value : "on"])
         ),
       }),
-  },
-  {
-    name: "approval",
-    parse: (program: string, bonuses: Record<string, string>) =>
-      approvalSchema(program).safeParse({ group_id: "42", points: "10", ...bonuses }),
   },
   {
     name: "approved edit",
@@ -328,57 +321,9 @@ void describe("Per-program bonuses - the exported set", () => {
   });
 });
 
-void describe("Per-program bonuses - the approval panel shows the issue", () => {
-  const viewsPath = path.join(__dirname, "../views");
-
-  const approval = {
-    speciesName: "Apistogramma cacatuoides",
-    speciesType: "Fish",
-    programClass: "Cichlids - New World",
-    pointClass: 10,
-    isFirstTime: true,
-    priorBreedCount: 0,
-    isCaresSpecies: false,
-  };
-
-  function render(template: string, locals: Record<string, unknown>): string {
-    const compiled = pug.compileFile(path.join(viewsPath, template), { basedir: viewsPath });
-    return compiled(locals);
-  }
-
-  // A rejected bonus is one the program cannot carry, so its checkbox is never
-  // on the page: without these messages the approval would fail silently.
-  void test("a flowered issue reaches the panel of a fish submission", () => {
-    const message = "The flowered bonus does not apply to Breeders Awards Program submissions";
-    const html = render("admin/approvalPanel.pug", {
-      submission: { id: 1, points: 10, species_class: "Cichlids", program: "fish" },
-      speciesFacts: approval,
-      bonusFields,
-      errors: new Map([["flowered", message]]),
-    });
-
-    assert.ok(!html.includes('name="flowered"'), "a fish submission has no flowered checkbox");
-    assert.ok(html.includes(message), "the flowered message must still be on the page");
-  });
-
-  void test("a CARES issue reaches the bonus section of a plant submission", () => {
-    const message =
-      "The CARES species bonus does not apply to Horticultural Awards Program submissions";
-    const html = render("admin/approvalPanel.pug", {
-      submission: { id: 1, points: 10, species_class: "Cryptocoryne", program: "plant" },
-      speciesFacts: { ...approval, speciesType: "Plant", programClass: "Cryptocoryne" },
-      bonusFields,
-      errors: new Map([["cares_species", message]]),
-    });
-
-    assert.ok(!html.includes('name="cares_species"'), "a plant submission has no CARES checkbox");
-    assert.ok(html.includes(message), "the CARES message must still be on the page");
-  });
-});
-
 void describe("Per-program bonuses - refinement ordering", () => {
   void test("a body missing a required field reports only that field", () => {
-    const result = approvalSchema("fish").safeParse({ flowered: "1" });
+    const result = confirmWitnessSchema("fish").safeParse({ flowered: "on" });
     const issues = result.success ? [] : result.error.issues;
 
     assert.deepStrictEqual(
@@ -388,10 +333,10 @@ void describe("Per-program bonuses - refinement ordering", () => {
   });
 
   void test("a program name that is not one of ours still rejects a program-specific bonus", () => {
-    const result = approvalSchema("terrestrial").safeParse({
+    const result = confirmWitnessSchema("terrestrial").safeParse({
+      species_id: "7",
       points: "10",
-      cares_species: "1",
-      first_time_species: "1",
+      cares_species: "on",
     });
     const issues = result.success ? [] : result.error.issues;
 

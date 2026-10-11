@@ -1,7 +1,6 @@
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
 import {
-  approve,
   confirmWitness,
   correctPoints,
   createSubmission,
@@ -18,16 +17,16 @@ import {
   type Caller,
 } from "@/lifecycle";
 import { query } from "@/db/conn";
-import { updateMember } from "@/db/members";
+import { getMemberWithPoints, updateMember } from "@/db/members";
 import { markFinalSubmissionReminderSent } from "@/db/submissions";
 import {
   createTestMember,
-  mockApprovalData,
   setupTestDatabase,
   teardownTestDatabase,
   type TestContext,
 } from "./helpers/testHelpers";
 import {
+  approveAsShown,
   readSubmission,
   recordNotifications,
   requestChangesFixture,
@@ -252,7 +251,7 @@ void describe("Submission lifecycle - consequences", () => {
     const id = await at("inApprovalQueue");
     sent.clear();
 
-    await approve(committee, id, { ...mockApprovalData, points: 10 });
+    await approveAsShown(committee, id);
 
     assert.ok(sent.kinds.includes("approved"));
     assert.deepStrictEqual(sent.of("approved")[0].to, [ctx.member.contact_email]);
@@ -265,7 +264,7 @@ void describe("Submission lifecycle - consequences", () => {
 
   void test("correcting an approval updates its entry rather than announcing it again", async () => {
     const id = await at("inApprovalQueue");
-    await approve(committee, id, { ...mockApprovalData, points: 10 });
+    await approveAsShown(committee, id);
     sent.clear();
 
     await correctPoints(committee, id, { points: 20 }, "Wrong point class");
@@ -282,7 +281,7 @@ void describe("Submission lifecycle - consequences", () => {
 
   void test("correcting an approval emails the member nothing at all", async () => {
     const id = await at("inApprovalQueue");
-    await approve(committee, id, { ...mockApprovalData, points: 10 });
+    await approveAsShown(committee, id);
     sent.clear();
 
     await correctPoints(committee, id, { points: 5 }, "Wrong point class");
@@ -296,11 +295,17 @@ void describe("Submission lifecycle - consequences", () => {
 
   void test("approving is the only way Points are ever awarded", async () => {
     const id = await at("inApprovalQueue");
-    assert.strictEqual((await readSubmission(id))!.points, null);
+    const before = (await readSubmission(id))!;
+    assert.strictEqual(before.points, 10, "set at the Witness");
+    assert.strictEqual(before.approved_on, null, "but awarded to nobody yet");
+    assert.strictEqual((await getMemberWithPoints(ctx.member.id)).fishTotalPoints, 0);
 
-    await approve(committee, id, { ...mockApprovalData, points: 15 });
+    await approveAsShown(committee, id);
 
-    assert.strictEqual((await readSubmission(id))!.points, 15);
+    const after = (await readSubmission(id))!;
+    assert.strictEqual(after.points, 10);
+    assert.ok(after.approved_on);
+    assert.strictEqual((await getMemberWithPoints(ctx.member.id)).fishTotalPoints, 15, "base 10 and first-time 5");
   });
 
   // -------------------------------------------------------------------------

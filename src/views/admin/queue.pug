@@ -1,83 +1,129 @@
 include ../header.pug
-include queueButton.pug
-include adminNav.pug
-include ../mixins/submissionImages.pug
-include ../mixins/date.pug
-include ../mixins/caresBadge.pug
 include ../mixins/emptyState.pug
 
-- const stringCell = ['p-3', 'text-left', 'border-b', 'border-gray-200'];
-- const heading = ['p-3', 'text-left', 'font-bold', 'text-gray-900', 'border-b-2', 'border-gray-300', 'bg-gray-50', 'cursor-pointer', 'select-none', 'hover:bg-gray-100'];
-- const nonSortableHeading = ['p-3', 'text-left', 'font-bold', 'text-gray-900', 'border-b-2', 'border-gray-300', 'bg-gray-50', 'no-sort'];
+//- The approval queue at a meeting, phone first (#527; prototype
+//- approval-queue-phone.html, variant 1 "one list, tap twice"). One scroll:
+//- what is ready to approve, what was approved tonight, what is still in
+//- its waiting period. Approval is one button: tapping a row opens it, the
+//- first tap on Approve arms it, the second posts the total the row showed.
+//- The lifecycle computes first-time in its own transaction and refuses when
+//- the row would award another total; the route answers with a sheet
+//- (admin/approveSheet.pug) over #approve-sheet carrying the fresh total.
+//- Arming and cancelling are a checkbox the buttons read; no script.
+//-
+//- @param ready - ReadyRow[] (src/routes/admin.ts): id, member_id,
+//-   member_name, firstName, program, programShort, species_common_name,
+//-   species_latin_name, newSpecies, preview ({ lines, total, firstTime }),
+//-   witnessedOn, mine
+//- @param approvedTonight - ApprovedRow[]: id, member_name,
+//-   species_common_name, programShort, total, approvedBy
+//- @param waiting - WaitingRow[]: id, member_name, species_common_name,
+//-   programShort, readyOn
+//- @param program - the Program listed, or null for every Program
+//- @param counts - { all, fish, plant, coral }: how many are ready
+//- @param queuePath - this page's path, which the sheet's "Not now" returns to
 
-mixin approvalQueueTable(submissions)
-	.overflow-x-auto.w-full
-		table(data-sortable class="w-full bg-white shadow-sm rounded-lg")
-			thead
-				tr
-					th(class=heading) Status
-					th(class=heading) Member Name
-					th(class=heading) Species Class
-					th(class=heading) Common Name
-					th(class=heading) Latin Name
-					th(class=heading data-sort-method="date" data-sort-default) Submitted On
-					th(class="p-3 text-left font-bold text-gray-900 border-b-2 border-gray-300 bg-gray-50" data-sort-method="none") Actions
+- const eyebrow = "text-xs font-semibold uppercase tracking-wide text-gray-300"
+- const chipClass = (short) => short === "HAP" ? "bg-green-100 text-green-800" : short === "CAP" ? "bg-purple-100 text-purple-800" : "bg-blue-100 text-blue-800"
+- const filterClass = (active) => active ? "bg-white text-gray-900 border-white" : "text-gray-200 border-gray-500 hover:bg-gray-600"
+- const sumOf = (lines) => lines.map((line) => `${line.label} ${line.amount}`).join(" + ")
+- const approveLabel = (preview) => preview.firstTime ? `Approve · ${preview.total - 5} pts + 5 first-time` : `Approve · ${preview.total} pts`
 
-			tbody
-				each sub in submissions
-					- const rowClass = sub.statusInfo ? `hover:bg-gray-50 ${sub.statusInfo.rowColor}` : "hover:bg-gray-50"
-					tr(class=rowClass)
-						td(class=stringCell)
-							if sub.statusInfo
-								- const icon = sub.statusInfo.icon
-								span(
-									class=`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${sub.statusInfo.bgColor} ${sub.statusInfo.color}`
-									title=sub.statusInfo.description
-								)
-									span.mr-1= icon
-									span= sub.statusInfo.label
-									if sub.statusInfo.daysRemaining !== undefined
-										span.ml-1.font-normal= `(${sub.statusInfo.daysRemaining}d)`
-							else
-								span.text-gray-500 Unknown
-						td(class=stringCell)
-							a.link(href=`/member/${sub.member_id}`)= sub.member_name
-						td(class=stringCell)= sub.species_class
-						td(class=stringCell)= sub.species_common_name
-						td(class=stringCell)
-							.flex.items-center.gap-2
-								span= sub.species_latin_name
-								if sub.is_cares_species == 1
-									+caresBadge('sm')
-						td(class=stringCell)
-							+shortDate(sub.submitted_on, "Submitted on")
-						td(class=stringCell)
-							a(class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors" href=`/submissions/${sub.id}`) Review
+mixin programChip(short)
+	span.inline-block.text-xs.font-semibold.px-2.rounded-full.align-middle(class=chipClass(short))= short
 
 doctype html
 html
 	+headTag(title)
-		script(src='/tablesort.min.js')
-		script(src='/tablesort.number.min.js')
-		script(src='/tablesort.date.min.js')
-		script.
-			document.addEventListener('DOMContentLoaded', function() {
-				const tables = document.querySelectorAll('table[data-sortable]');
-				tables.forEach(table => {
-					new Tablesort(table, {
-						descending: true // Default to descending for date (most recent first)
-					});
-				});
-			});
 
-	body.bg-white.text-gray-800
+	body.bg-gray-700.text-gray-900
 		+pageHeader(true, title, subtitle)
 
-		.container.mx-auto.px-4.py-6
-			if submissions && submissions.length > 0
-				+approvalQueueTable(submissions)
-			else
-				.text-center.py-12
-					+emptyState(`No pending submissions for ${subtitle.toLowerCase()}.`, { size: "lg", subtitle: "Check other programs using the navigation below." })
+		main.mx-auto.max-w-lg.px-3.py-4.flex.flex-col.gap-3(class="md:max-w-2xl")
+			//- Which Programs, and the committee's other queues
+			nav.flex.flex-wrap.items-center.gap-2.text-sm#queue-programs(aria-label="Programs")
+				a.px-3.py-1.rounded-full.border(href="/admin/queue" class=filterClass(!program))= `All · ${counts.all}`
+				a.px-3.py-1.rounded-full.border(href="/admin/queue/fish" class=filterClass(program === "fish"))= `BAP · ${counts.fish}`
+				a.px-3.py-1.rounded-full.border(href="/admin/queue/plant" class=filterClass(program === "plant"))= `HAP · ${counts.plant}`
+				a.px-3.py-1.rounded-full.border(href="/admin/queue/coral" class=filterClass(program === "coral"))= `CAP · ${counts.coral}`
+			p.text-xs.text-gray-300#queue-other-queues #[a.underline(href="/admin/witness-queue/fish") Witness queue] · #[a.underline(href="/admin/waiting-period/fish") Waiting period]
 
-		+adminNav("approval", programCounts, witnessCounts)
+			//- Ready to approve
+			section#queue-ready.flex.flex-col.gap-2
+				h2(class=eyebrow) Ready to approve
+				p.text-sm.text-gray-300.-mt-1 Witnessed and past the waiting period. Approve what's on the table.
+				if ready.length === 0
+					.bg-white.rounded-lg.p-4.text-center.text-gray-500#queue-ready-empty Nothing left to approve.
+				each row in ready
+					details.bg-white.rounded-lg.shadow-sm.overflow-hidden(id=`queue-row-${row.id}`)
+						summary.list-none.cursor-pointer.p-3.flex.gap-3.items-start(class="[&::-webkit-details-marker]:hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400")
+							.flex-1.min-w-0
+								.font-semibold
+									| #{row.member_name}
+									| #{' '}
+									+programChip(row.programShort)
+								.truncate #{row.species_common_name} #[i.text-gray-500 #{row.species_latin_name}]
+								if row.newSpecies
+									.text-xs.text-gray-500(id=`queue-new-species-${row.id}`) New species recorded by the witness
+							.text-right.flex-none
+								.text-xl.font-bold(id=`queue-total-${row.id}`)= row.preview.total
+								.text-xs.text-gray-500 pts
+						.px-3.pb-3.pt-2.border-t.border-gray-100
+							p.text-sm.text-gray-600(id=`queue-lines-${row.id}`)= sumOf(row.preview.lines)
+							if row.preview.firstTime
+								p.text-xs.text-amber-700.mt-1(id=`queue-first-time-${row.id}`) First approval of this species · +5 goes to whoever is approved first
+							p.text-xs.text-gray-500.mt-1(id=`queue-witnessed-${row.id}`) Witnessed #{row.witnessedOn} · #[a.underline(href=`/submissions/${row.id}`) full Submission] · #[a.underline(href=`/admin/submissions/${row.id}/correct-points`) correct points]
+							.mt-3
+								if row.mine
+									.text-sm.text-gray-600.bg-gray-100.rounded.p-3(id=`queue-own-${row.id}`) Your own Submission. Another committee member approves it.
+								else
+									//- Two taps: the checkbox arms, the buttons read it. Cancel unticks it.
+									form(hx-post=`/admin/submissions/${row.id}/approve` hx-disabled-elt="find button")
+										input(type="hidden" name="expected_total" value=row.preview.total)
+										input.peer.sr-only(type="checkbox" id=`queue-arm-${row.id}` aria-label=`Arm Approve for ${row.member_name}`)
+										label.block.w-full.text-center.py-3.rounded-lg.bg-blue-600.text-white.font-semibold.cursor-pointer(
+											for=`queue-arm-${row.id}`
+											id=`queue-approve-${row.id}`
+											class="peer-checked:hidden peer-focus-visible:ring-2 peer-focus-visible:ring-amber-400"
+										)= approveLabel(row.preview)
+										.hidden(class="peer-checked:block")
+											button.block.w-full.text-center.py-3.rounded-lg.bg-green-600.text-white.font-semibold(
+												type="submit"
+												id=`queue-confirm-${row.id}`
+											)= `Tap again: ${row.firstName} brought it · ${row.preview.total} pts`
+											label.block.w-full.text-center.py-2.text-sm.text-gray-500.cursor-pointer(
+												for=`queue-arm-${row.id}`
+												id=`queue-cancel-${row.id}`
+											) Cancel
+
+			//- Approved tonight
+			if approvedTonight.length > 0
+				section#queue-approved.flex.flex-col.gap-2
+					h2(class=eyebrow) Approved tonight
+					each row in approvedTonight
+						.bg-white.rounded-lg.px-4.py-2.flex.justify-between.items-center.gap-3.text-sm(id=`queue-approved-${row.id}`)
+							span.min-w-0
+								| ✓ #{row.member_name} · #{row.species_common_name}
+								| #{' '}
+								+programChip(row.programShort)
+								if row.approvedBy
+									span.block.text-xs.text-gray-500= `by ${row.approvedBy}`
+							b.whitespace-nowrap= `${row.total} pts`
+
+			//- Still waiting
+			section#queue-waiting.flex.flex-col.gap-2
+				h2(class=eyebrow) Still waiting
+				if waiting.length === 0
+					p.text-sm.text-gray-300#queue-waiting-empty Nothing in its waiting period.
+				each row in waiting
+					.bg-white.rounded-lg.px-4.py-2.flex.justify-between.items-center.gap-3.text-sm.text-gray-500.opacity-75(id=`queue-waiting-${row.id}`)
+						span.min-w-0
+							| #{row.member_name} · #{row.species_common_name}
+							| #{' '}
+							+programChip(row.programShort)
+						span.whitespace-nowrap= `ready ${row.readyOn}`
+
+			.h-6
+
+		//- The approve button's refusals swap a sheet over this
+		#approve-sheet

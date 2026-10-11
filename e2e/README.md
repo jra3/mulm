@@ -359,7 +359,7 @@ await page.waitForSelector('input[name="count"]:visible', { state: 'visible' });
 
 **Why this happens**: HTMX loads HTML with disabled inputs, then makes a follow-up request to populate/enable them.
 
-**Real example from submission-lifecycle tests**: The approval panel loads with all inputs disabled, then HTMX populates them based on the submission data.
+**Real example from submission-lifecycle tests**: The witness panel's sticky bar loads with Confirm disabled, then HTMX re-sums it on every change to the form.
 
 ### Lesson 2: HTMX Dialogs - Two-Step Loading
 
@@ -411,12 +411,12 @@ When form submission doesn't redirect or show an error:
 
 ```typescript
 // Form submission that appears to do nothing:
-await page.click('button:has-text("Approve")');
-await page.waitForURL(/\/admin\/queue\//); // TIMEOUT!
+await page.click('button:has-text("Confirm witness")');
+await page.waitForURL(/\/admin\/witness-queue\//); // TIMEOUT!
 
-// Why? Check the form schema in src/forms/approval.ts:
-// - points must be provided
-// - approve is refused on a Submission bound to no Species
+// Why? Check the form schema in src/forms/confirmWitness.ts:
+// - the Species must be settled (Yes, or the witness's own choice) and base points chosen
+// - a bonus the Program cannot carry is refused
 ```
 
 **Debugging strategy**:
@@ -612,29 +612,21 @@ const id = await createTestSubmission({
 });
 
 await login(page, TEST_ADMIN);
-await page.goto(`/submissions/${id}`);
 
-// Wait for approval panel to load
-const approveButton = page.locator('button:has-text("Approve")').first();
-await approveButton.scrollIntoViewIfNeeded();
-await page.waitForLoadState("networkidle");
-
-// The panel shows the bound Species; there is no species step. The
-// Submission must be bound (createTestSubmission({ ..., bound: true }), or
-// bound in the witness panel) or the panel offers no Approve.
-
-// Select base points
-await page.selectOption('select[name="points"]', "10");
-
-// Submit
-await approveButton.click();
-await page.waitForURL(/\/admin\/(witness-queue|queue)\//);
+// Approval is one button on the queue page (#527): open the row, tap
+// Approve to arm it, tap again to confirm. It posts the total the row shows.
+await page.goto("/admin/queue");
+await page.locator(`#queue-row-${id} summary`).click();
+await page.locator(`#queue-approve-${id}`).click();
+await page.locator(`#queue-confirm-${id}`).click();
+await page.waitForURL(/\/admin\/queue/);
 ```
 
 **Key requirements**:
 1. Submission must be past waiting period (check reproduction_date)
 2. Must be bound to a Species (`bound: true`, or bind in the witness panel)
-3. Must select points from dropdown (not text input); it is prefilled from the Species' Point class when it has one
+3. Must carry points: a witnessed fixture gets 10 unless `points` says otherwise, as the Witness would have set them
+4. Not the admin's own: their rows have no button ("Another committee member approves it")
 
 ### Pattern: Changes Requested Workflow
 
@@ -979,17 +971,13 @@ const id = await createTestSubmission({
 });
 
 await login(page, TEST_ADMIN);
-await page.goto(`/submissions/${id}`);
+await page.goto("/admin/queue");
 
-const approveButton = page.locator('button:has-text("Approve")').first();
-await approveButton.scrollIntoViewIfNeeded();
-await page.waitForLoadState("networkidle");
+await page.locator(`#queue-row-${id} summary`).click();
+await page.locator(`#queue-approve-${id}`).click();
+await page.locator(`#queue-confirm-${id}`).click();
 
-
-await page.selectOption('select[name="points"]', "10");
-await approveButton.click();
-
-await page.waitForURL(/\/admin\/(witness-queue|queue)\//);
+await page.waitForURL(/\/admin\/queue/);
 
 const db = await getTestDatabase();
 const submission = await db.get("SELECT * FROM submissions WHERE id = ?", id);

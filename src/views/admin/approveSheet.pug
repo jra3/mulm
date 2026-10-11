@@ -1,0 +1,31 @@
+//- The sheet the approve button's refusals come back as (#527), swapped over
+//- the queue page's #approve-sheet placeholder. When the points changed
+//- since the page was loaded (a correction landed, or another approval of
+//- the same Species took the first-time bonus) it carries the fresh total
+//- and a fresh Approve; any other refusal says what was refused and why.
+//- "Not now" reloads the queue, which is the only way the sheet closes.
+//-
+//- @param submission - id, member_name, species_common_name
+//- @param preview - what approving would award now ({ lines, total,
+//-   firstTime }), or null for a plain refusal
+//- @param expectedTotal - the total the approver saw, when preview is set
+//- @param message - the refusal, when preview is null
+//- @param queuePath - the queue page to return to
+
+- const sumOf = (lines) => lines.map((line) => `${line.label} ${line.amount}`).join(" + ")
+- const lostFirstTime = preview ? !preview.firstTime && expectedTotal - preview.total === 5 : false
+- const why = (lostFirstTime ? `Someone approved another ${submission.species_common_name} first, so the first-time +5 has gone. ` : "") + `${submission.member_name} now gets`
+
+#approve-sheet.fixed.inset-0.z-50.flex.items-end.justify-center(class="bg-black/50 sm:items-center" role="dialog" aria-modal="true" aria-labelledby="approve-sheet-title")
+	.bg-white.w-full.max-w-lg.rounded-t-2xl.p-4.text-gray-900(class="sm:rounded-2xl sm:mx-4")
+		if preview
+			h2.text-lg.font-bold#approve-sheet-title The points changed
+			p.text-sm.text-gray-700.mt-1#approve-sheet-why #{why} #[b #{preview.total} pts], not #{expectedTotal}.
+			p.text-sm.text-gray-600.mt-1#approve-sheet-lines= sumOf(preview.lines)
+			form(hx-post=`/admin/submissions/${submission.id}/approve` hx-disabled-elt="find button")
+				input(type="hidden" name="expected_total" value=preview.total)
+				button.block.w-full.text-center.py-3.mt-3.rounded-lg.bg-blue-600.text-white.font-semibold#approve-sheet-approve(type="submit")= `Approve · ${preview.total} pts`
+		else
+			h2.text-lg.font-bold#approve-sheet-title Not approved
+			p.text-sm.text-gray-700.mt-1#approve-sheet-message= message
+		a.block.w-full.text-center.py-2.mt-1.text-gray-500#approve-sheet-close(href=queuePath) Not now

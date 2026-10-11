@@ -270,12 +270,10 @@ html
 
                 //- The clock has run out: the Submission is in the approval queue
                 //- with nothing for the member to click. They bring it to a
-                //- meeting, and a committee member approves it there.
+                //- meeting, and a committee member approves it there, on the
+                //- queue page (#527); the committee's panel below points there.
                 if state === 'inApprovalQueue'
-                    if isAdmin && !isSelf && !changesRequested
-                        .status-panel.status-panel-admin#adminPanel
-                            include ../admin/approvalPanel.pug
-                    else if isSelf
+                    if isSelf
                         .status-panel.status-panel-warning
                             .container.mx-auto.max-w-4xl
                                 h3.text-yellow-800.text-lg.font-semibold.mb-2 🐟 Bring to Meeting
@@ -283,14 +281,28 @@ html
                                 if isAdmin
                                     p.text-yellow-600.text-sm.mb-4 You cannot award points to your own submissions.
 
-                //- Committee actions on work between the Witness and the queue.
-                //- The screening panel and the approval panel carry their own
-                //- copies of these, so this covers only the state in between,
-                //- otherwise the page offers the same button twice.
-                if isAdmin && !isSelf && state === 'waitingPeriod'
-                    .status-panel.status-panel-admin
+                //- Committee actions on work past the Witness. The witness panel
+                //- carries its own copies of these, so this covers the waiting
+                //- period and the approval queue, otherwise the page offers the
+                //- same button twice. Approval itself is one button on the queue
+                //- page, at the meeting; here the committee sees what it would award.
+                if isAdmin && !isSelf && (state === 'waitingPeriod' || state === 'inApprovalQueue')
+                    .status-panel.status-panel-admin#adminPanel
                         .container.mx-auto.max-w-4xl
                             h3.text-white.text-lg.font-semibold.mb-4 Admin Actions
+                            if state === 'inApprovalQueue'
+                                .text-white.mb-4#approval-ready
+                                    p.font-semibold Ready to approve
+                                    if approvalPreview
+                                        p.text-sm.text-gray-300#approval-preview
+                                            | #{approvalPreview.lines.map((line) => `${line.label} ${line.amount}`).join(" + ")} = 
+                                            b= `${approvalPreview.total} pts`
+                                        if approvalPreview.firstTime
+                                            p.text-xs.text-green-300#approval-first-time No one has had this species approved yet: the first-time +5 goes to whoever is approved first.
+                                        if speciesRecordedByWitness
+                                            p.text-sm.text-green-300#approval-new-species New species recorded by the witness
+                                    p.text-sm.text-gray-300= `Approve it on the approval queue at the meeting, once ${submission.member_name} has brought the ${offspringText}.`
+                                    a.link.light.text-sm#approval-queue-link(href=`/admin/queue#queue-row-${submission.id}`) Open the approval queue
                             if allowed.bindSpecies && !submission.species_id
                                 .text-white.mb-4
                                     p.font-semibold Not bound to a Species

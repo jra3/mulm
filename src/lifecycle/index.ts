@@ -71,6 +71,7 @@ export {
   confirmWitness,
   requestChanges,
   approve,
+  previewApproval,
   correctPoints,
   bindSpecies,
   adoptSpeciesClassification,
@@ -82,6 +83,7 @@ export {
   type NamesToAdd,
   type WitnessPoints,
   type NewSpeciesAtWitness,
+  type ApprovalPreview,
 } from "./transitions";
 
 // The clock's consequence, and the committee's standing view of its own work.
@@ -114,6 +116,7 @@ export {
   AuthorizationError,
   StateError,
   UnboundError,
+  StalePointsError,
   isLifecycleError,
 } from "./errors";
 

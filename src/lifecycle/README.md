@@ -127,6 +127,24 @@ demo page cannot disagree. Reply-To is the committee's address: a dispute is
 a reply for now. A member's save that voids the Witness earns a new letter
 with the new points when the Submission is witnessed again.
 
+## Approval is one button
+
+`approve` takes the total the approver was shown and nothing else (#527).
+Inside its transaction it reads the row, refuses one with no points (it
+needs a Witness, not an approval), counts the Species' approved Submissions
+on the same connection to decide first-time, so of two members bringing the
+same Species the first click wins the +5, and works out the total it would
+award over the one Points rule (`previewApproval`, exported for the queue
+page, which shows the same sum and posts it as `expected_total`). When that
+differs from what the approver saw it refuses with `StalePointsError` and
+writes nothing: a correction landed, or another approval of the same
+Species took the first-time bonus since the page was loaded. The route
+answers with a sheet naming the current total and a fresh Approve. Otherwise
+it writes `first_time_species`, `approved_by` and `approved_on`, and the
+consequences follow as before: the approval email, the feed entry, the
+standing recompute. The table's other refusals still apply: the approval
+queue only, bound only, no changes outstanding, never the submitter.
+
 ## In-flight Submissions went back for a Witness
 
 Points are set at the Witness now, and a Submission witnessed before that
@@ -161,10 +179,11 @@ Program rules and the Level ladder all stay outside. The module takes values
 already validated and resolved, and calls the Level and Specialty Award modules
 as consequences rather than absorbing them.
 
-`approve` is about Points: it takes no Species, uses the one the Submission
-is bound to, and is refused on an unbound Submission (`requiresBound`, an
-`UnboundError`). There is no binding at approval; an unbound Submission past
-its Witness is fixed by hand. It never adds Names to the Species.
+`approve` takes no Species and no points: it awards what the Witness set to
+the Species the Submission is bound to, and is refused on an unbound one
+(`requiresBound`, an `UnboundError`) or one with no points. There is no
+binding at approval; after migration 066 neither case arises through the
+lifecycle. It never adds Names to the Species.
 
 `bindSpecies` is the witness's move: the committee binds or rebinds a
 Submission to a Species anywhere between submission and approval, never on
