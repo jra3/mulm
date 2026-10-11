@@ -1,6 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert";
-import { speciesChosenByCommittee, speciesRecordedByWitness, witnessSummary } from "../routes/submission";
+import { witnessSummary } from "../routes/submission";
+import { speciesChosenByCommittee, speciesRecordedByWitness } from "../db/submission_notes";
 import { totalPoints } from "../points";
 
 /**
@@ -102,7 +103,7 @@ void describe("Whether the committee chose the Species", () => {
 
   void test("a member's save after the choice takes it back; a choice after the save stands", () => {
     const chose = note({ type: "admin_edit", changes: [{ field: "species", old: null, new: "Poecilia wingei" }], reason: "Bound to a Species" });
-    const saved = note({ type: "member_save", member_id: 7, timestamp: "2026-10-11T12:00:00.000Z" });
+    const saved = note({ type: "member_save", voided: "choice", member_id: 7, timestamp: "2026-10-11T12:00:00.000Z" });
 
     assert.strictEqual(speciesChosenByCommittee([chose, saved]), false, "ADR-0001: the save voids the Witness, and the question with it");
     assert.strictEqual(speciesChosenByCommittee([saved, chose]), true);

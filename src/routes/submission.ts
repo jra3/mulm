@@ -1,5 +1,4 @@
 import { Response } from "express";
-import { z } from "zod";
 import {
   getBapFormTitle,
   getClassOptions,
@@ -37,7 +36,7 @@ import {
 } from "@/species";
 import * as lifecycle from "@/lifecycle";
 import { attempt, callerFor } from "./lifecycleErrors";
-import { getNotesForSubmission, type SubmissionNote } from "@/db/submission_notes";
+import { getNotesForSubmission, speciesChosenByCommittee, speciesRecordedByWitness, type SubmissionNote } from "@/db/submission_notes";
 import { formatShortDate } from "@/utils/dateFormat";
 import { pointsBreakdown, programOfSpeciesType, type PointsBreakdown, type PointsRow } from "@/points";
 import { parseVideoUrlWithOEmbed, isValidVideoUrl } from "@/utils/videoParser";
@@ -663,68 +662,6 @@ export function witnessSummary(values: {
     }),
     hint: null,
   };
-}
-
-/** The shape of a changelog note, as `recordAdminEdit` writes it. */
-const adminEditNote = z.object({
-  type: z.literal("admin_edit"),
-  changes: z.array(z.object({ field: z.string() })),
-});
-
-/** The shape of the changelog note `voidWitness` writes on a member's save (ADR-0001). */
-const memberSaveNote = z.object({ type: z.literal("member_save") });
-
-/** The note parsed as JSON, or undefined for prose. */
-function parsedNote(note: Pick<SubmissionNote, "note_text">): unknown {
-  try {
-    return JSON.parse(note.note_text);
-  } catch {
-    return undefined;
-  }
-}
-
-/** Whether this changelog entry changed `field`. A note that is not JSON, or not an edit, changed nothing. */
-function noteChanged(note: Pick<SubmissionNote, "note_text">, field: string): boolean {
-  const entry = adminEditNote.safeParse(parsedNote(note));
-  return entry.success && entry.data.changes.some((change) => change.field === field);
-}
-
-/** Whether any changelog entry changed `field`. */
-function changelogChanged(notes: Pick<SubmissionNote, "note_text">[], field: string): boolean {
-  return notes.some((note) => noteChanged(note, field));
-}
-
-/** The index of the last note that satisfies `test`, or -1. */
-function lastIndexWhere<T>(items: T[], test: (item: T) => boolean): number {
-  for (let i = items.length - 1; i >= 0; i--) {
-    if (test(items[i])) return i;
-  }
-  return -1;
-}
-
-/**
- * Whether the committee bound or rebound the Submission since the member last
- * saved it: a changelog entry that changed its `species`, with no `member_save`
- * entry after it. The member's own pick leaves no such entry, and a member's
- * save voids the Witness (ADR-0001), so a Species the committee chose before
- * it is one the next witness must be asked about again. `notes` are read in
- * changelog order, oldest first, as `getNotesForSubmission` returns them.
- */
-export function speciesChosenByCommittee(notes: Pick<SubmissionNote, "note_text">[]): boolean {
-  const lastChoice = lastIndexWhere(notes, (note) => noteChanged(note, "species"));
-  const lastSave = lastIndexWhere(notes, (note) => memberSaveNote.safeParse(parsedNote(note)).success);
-  return lastChoice > lastSave;
-}
-
-/**
- * Whether the witness recorded the Species because the catalogue lacked it
- * (#522): the "Settled at the Witness" entry then carries a `new_species`
- * change. The approval queue reads it as "New species recorded by the
- * witness"; `findSubmissionsWithRecordedSpecies` (src/db/submission_notes.ts)
- * answers the same for a whole page of rows.
- */
-export function speciesRecordedByWitness(notes: Pick<SubmissionNote, "note_text">[]): boolean {
-  return changelogChanged(notes, "new_species");
 }
 
 /**

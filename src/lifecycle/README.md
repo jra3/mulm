@@ -103,7 +103,7 @@ another Species holds, rolls the Species back with everything else; the
 panel's Record species and continue step writes nothing on its own. The
 "Settled at the Witness" entry then carries a `new_species` change, which is
 how the approval queue knows to say "New species recorded by the witness"
-(`speciesRecordedByWitness` in src/routes/submission.ts for one Submission,
+(`speciesRecordedByWitness` in src/db/submission_notes.ts for one Submission,
 `findSubmissionsWithRecordedSpecies` in src/db/submission_notes.ts for a
 page of them). A recorded Species gets no spellings added as Names: its
 names are the ones the witness gave it.

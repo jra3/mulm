@@ -9,7 +9,7 @@ import {
   Submission,
 } from "@/db/submissions";
 import { getMember, MemberRecord } from "@/db/members";
-import { addNote } from "@/db/submission_notes";
+import { addNote, getNotesForSubmission, speciesChosenByCommittee, type MemberSaveVoided } from "@/db/submission_notes";
 import { recordActivity } from "@/db/activity";
 import type { FormValues } from "@/forms/submission";
 import type { Program } from "@/levelManager";
@@ -219,13 +219,21 @@ async function writeContent(
  * Only member saves call this. Committee moves, including a Points correction,
  * never touch the Witness.
  *
- * The save goes on the changelog as a `member_save` entry, so what the
- * committee settled before it can be told from what it settled since: the
- * witness panel's "You chose" (`speciesChosenByCommittee`,
- * src/routes/submission.ts) holds only for a Species chosen after the
- * member's last save, since the next witness attests to the form as it is now.
+ * When the save invalidates something, it goes on the changelog as a
+ * `member_save` entry saying what: a confirmed Witness, or only a Species
+ * the committee had chosen, whose "You chose" on the witness panel
+ * (`speciesChosenByCommittee`, src/db/submission_notes.ts) holds only for a
+ * choice made after the member's last save, since the next witness attests
+ * to the form as it is now. A save with neither, a fresh Submission's first
+ * submit above all, leaves no entry: there was nothing to void.
  */
-async function voidWitness(db: Database, submissionId: number, caller: Caller, move: MoveDefinition): Promise<void> {
+async function voidWitness(
+  db: Database,
+  submission: Pick<Submission, "id" | "witness_verification_status">,
+  caller: Caller,
+  move: MoveDefinition
+): Promise<void> {
+  const submissionId = submission.id;
   await runUpdate(
     db,
     `UPDATE submissions SET
@@ -241,21 +249,40 @@ async function voidWitness(db: Database, submissionId: number, caller: Caller, m
     [submissionId],
     move
   );
-  await recordMemberSave(submissionId, caller);
+
+  const voided = await voidedBySave(submission);
+  if (voided) {
+    await recordMemberSave(submissionId, caller, voided);
+  }
+}
+
+/**
+ * What a member's save of this row invalidates, read before the save lands
+ * on the changelog: the Witness when one was confirmed (the row as the guard
+ * read it), else the committee's choice of Species when one stands, else
+ * nothing.
+ */
+async function voidedBySave(
+  submission: Pick<Submission, "id" | "witness_verification_status">
+): Promise<MemberSaveVoided | null> {
+  if (submission.witness_verification_status === "confirmed") return "witness";
+  if (speciesChosenByCommittee(await getNotesForSubmission(submission.id))) return "choice";
+  return null;
 }
 
 /**
  * Put a member's save of a submitted Submission on the changelog: the
- * `member_save` entry the review page shows as one line, and which
- * `speciesChosenByCommittee` reads as the point the committee's earlier
- * choices stop counting.
+ * `member_save` entry the review page shows as one line, saying what it
+ * voided, and which `speciesChosenByCommittee` reads as the point the
+ * committee's earlier choices stop counting.
  */
-async function recordMemberSave(submissionId: number, caller: Caller): Promise<void> {
+async function recordMemberSave(submissionId: number, caller: Caller, voided: MemberSaveVoided): Promise<void> {
   await addNote(
     submissionId,
     caller.id,
     JSON.stringify({
       type: "member_save",
+      voided,
       timestamp: new Date().toISOString(),
       member_id: caller.id,
     })
@@ -405,7 +432,7 @@ export async function submit(
       [new Date().toISOString(), submissionId],
       moves.submit
     );
-    await voidWitness(db, submissionId, caller, moves.submit);
+    await voidWitness(db, submission, caller, moves.submit);
 
     return submission.member_id;
   });
@@ -432,7 +459,7 @@ export async function saveChanges(
   await withTransaction(async (db) => {
     const { submission } = await guard(db, moves.saveChanges, caller, submissionId);
     await writeContent(db, submission, form);
-    await voidWitness(db, submissionId, caller, moves.saveChanges);
+    await voidWitness(db, submission, caller, moves.saveChanges);
   });
 
   await setSubmissionSupplements(submissionId, supplementsFromForm(form));
@@ -477,7 +504,7 @@ export async function resubmit(
   await withTransaction(async (db) => {
     const { submission } = await guard(db, moves.resubmit, caller, submissionId);
     await writeContent(db, submission, form);
-    await voidWitness(db, submissionId, caller, moves.resubmit);
+    await voidWitness(db, submission, caller, moves.resubmit);
     await runUpdate(
       db,
       `UPDATE submissions SET
