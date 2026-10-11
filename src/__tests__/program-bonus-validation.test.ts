@@ -4,7 +4,7 @@ import path from "path";
 import pug from "pug";
 import { approvalSchema } from "../forms/approval";
 import { approvedEditSchema } from "../forms/approvedEdit";
-import { confirmWitnessSchema } from "../forms/confirmWitness";
+import { confirmWitnessSchema, recordSpeciesForm } from "../forms/confirmWitness";
 import { bonusFields, programBonuses } from "../points";
 import type { ProgramType } from "../programs";
 
@@ -168,6 +168,7 @@ void describe("The confirm-witness schema", () => {
     assert.ok(result.success);
     assert.deepStrictEqual(result.data, {
       species_id: 7,
+      new_species: undefined,
       points: 10,
       article_points: 5,
       cares_species: true,
@@ -208,6 +209,102 @@ void describe("The confirm-witness schema", () => {
     const result = parse({ first_time_species: "on" });
     assert.ok(result.success);
     assert.ok(!("first_time_species" in result.data));
+  });
+
+  /**
+   * The witness recorded a Species the catalogue lacks (#522): the new
+   * Species rides on the confirm in place of a species_id, so the one
+   * transaction creates it and confirms the Witness.
+   */
+  const newSpecies = {
+    new_scientific_name: "Apistogramma sp. 'Rio Mamuru'",
+    new_common_name: "Apisto Rio Mamuru",
+    new_point_class: "15",
+    new_cares_species: "on",
+  };
+
+  void test("a new Species stands in for the species_id, parsed to the transition's shape", () => {
+    const result = confirmWitnessSchema("fish").safeParse({ points: "15", ...newSpecies });
+    assert.ok(result.success, JSON.stringify(result.error?.issues));
+    assert.strictEqual(result.data.species_id, undefined);
+    assert.deepStrictEqual(result.data.new_species, {
+      canonicalGenus: "Apistogramma",
+      canonicalSpeciesName: "sp. 'Rio Mamuru'",
+      commonName: "Apisto Rio Mamuru",
+      pointClass: 15,
+      isCaresSpecies: true,
+    });
+  });
+
+  void test("a Species and a new Species together are refused, as is neither", () => {
+    const both = confirmWitnessSchema("fish").safeParse({ species_id: "7", points: "15", ...newSpecies });
+    assert.ok(!both.success);
+    assert.deepStrictEqual(both.error.issues.map((issue) => String(issue.path[0])), ["species_id"]);
+
+    const neither = confirmWitnessSchema("fish").safeParse({ points: "15" });
+    assert.ok(!neither.success);
+    assert.deepStrictEqual(neither.error.issues.map((issue) => [String(issue.path[0]), issue.message]), [
+      ["species_id", "Choose the Species first"],
+    ]);
+  });
+
+  void test("a new Species' own refusals are the confirm's refusals", () => {
+    const result = confirmWitnessSchema("fish").safeParse({ points: "15", ...newSpecies, new_point_class: "12" });
+    assert.ok(!result.success);
+    assert.deepStrictEqual(result.error.issues.map((issue) => String(issue.path[0])), ["new_point_class"]);
+  });
+});
+
+/**
+ * The panel's Record new species step (#522): the scientific name as genus
+ * and epithet, an optional common name, the Point class and CARES. Nothing is
+ * written from it; the panel carries the values back to the confirm.
+ */
+void describe("The record-species form", () => {
+  const parse = (body: Record<string, string>) =>
+    recordSpeciesForm.safeParse({ new_scientific_name: "Ameca splendens", new_point_class: "10", ...body });
+  const issuesOf = (body: Record<string, string>) => {
+    const result = parse(body);
+    return result.success ? [] : result.error.issues.map((issue) => [String(issue.path[0]), issue.message]);
+  };
+
+  void test("splits the scientific name into genus and epithet, trims, and reads an empty common name as none", () => {
+    const result = parse({ new_scientific_name: "  Ameca   splendens ", new_common_name: "  " });
+    assert.ok(result.success);
+    assert.deepStrictEqual(result.data, {
+      canonicalGenus: "Ameca",
+      canonicalSpeciesName: "splendens",
+      commonName: null,
+      pointClass: 10,
+      isCaresSpecies: false,
+    });
+    assert.strictEqual(parse({ new_common_name: " Butterfly goodeid " }).data?.commonName, "Butterfly goodeid");
+    assert.strictEqual(parse({ new_cares_species: "on" }).data?.isCaresSpecies, true);
+  });
+
+  void test("the epithet may be several words, as in a sp. name", () => {
+    assert.deepStrictEqual(
+      [parse({ new_scientific_name: "Apistogramma sp. 'Rio Mamuru'" }).data?.canonicalGenus,
+        parse({ new_scientific_name: "Apistogramma sp. 'Rio Mamuru'" }).data?.canonicalSpeciesName],
+      ["Apistogramma", "sp. 'Rio Mamuru'"]
+    );
+  });
+
+  void test("a scientific name needs a genus and a species", () => {
+    assert.deepStrictEqual(issuesOf({ new_scientific_name: "Ameca" }), [
+      ["new_scientific_name", "Give the scientific name as genus and species, like Poecilia reticulata"],
+    ]);
+    assert.deepStrictEqual(issuesOf({ new_scientific_name: "" }), [
+      ["new_scientific_name", "Give the scientific name as genus and species, like Poecilia reticulata"],
+    ]);
+  });
+
+  void test("the Point class is required and one of 5, 10, 15 or 20", () => {
+    assert.deepStrictEqual(issuesOf({ new_point_class: "" }), [["new_point_class", "Choose the Point class"]]);
+    assert.deepStrictEqual(issuesOf({ new_point_class: "12" }), [["new_point_class", "The Point class is 5, 10, 15 or 20"]]);
+    for (const pc of ["5", "10", "15", "20"]) {
+      assert.strictEqual(parse({ new_point_class: pc }).data?.pointClass, Number(pc));
+    }
   });
 });
 

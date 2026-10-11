@@ -15,10 +15,11 @@ import { AuthorizationError, StateError, UnboundError } from "./errors";
  * |                         |                                         | pendingWitness if   |                    |
  * |                         |                                         | it was witnessed    |                    |
  * | returnToDraft           | the three middle states                 | draft               | member             |
- * | confirmWitness          | pendingWitness, bound                   | waitingPeriod (or   | committee, not the submitter |
- * |                         | (takes the Species, base points and     | inApprovalQueue, if |                    |
- * |                         | bonuses; rebinds and adopts the         | the clock has run), |                    |
- * |                         | Species' classification as needed)      | points set          |                    |
+ * | confirmWitness          | pendingWitness, bound or recording a    | waitingPeriod (or   | committee, not the submitter |
+ * |                         | Species (takes the Species or a new one | inApprovalQueue, if |                    |
+ * |                         | to create, base points and bonuses;     | the clock has run), |                    |
+ * |                         | rebinds and adopts the Species'         | points set          |                    |
+ * |                         | classification as needed)               |                     |                    |
  * | bindSpecies             | the three middle states, no changes     | same, bound         | committee, not the submitter |
  * |                         | requested                               |                     |                    |
  * | adoptSpeciesClassification | the three middle states, bound, no   | same, agreeing (or  | committee, not the submitter |

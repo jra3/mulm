@@ -19,7 +19,7 @@ import {
   type SpeciesReferences,
 } from "./references";
 import { countSubmissionsOfSpecies } from "./submissions";
-import { canonicalName, isSpeciesType, nameKinds, speciesTypes, type NameKind } from "./types";
+import { canonicalName, isSpeciesType, nameKinds, speciesTypes, type NameKind, type Species } from "./types";
 
 function admitSpeciesType(value: string): string {
   if (!isSpeciesType(value)) {
@@ -44,46 +44,107 @@ export type NewSpecies = {
   speciesType: string;
   pointClass?: number | null;
   isCaresSpecies?: boolean;
+  /** A common Name to add alongside the Canonical name, if the Species has one. */
+  commonName?: string | null;
 };
 
+/** A new Species' fields, admitted: trimmed, typed and within the catalogue's rules. */
+function admitNewSpecies(data: NewSpecies) {
+  const genus = requireText(data.canonicalGenus, "Canonical genus");
+  const epithet = requireText(data.canonicalSpeciesName, "Canonical species name");
+  const commonName = data.commonName?.trim() || null;
+  return {
+    genus,
+    epithet,
+    name: canonicalName({ canonical_genus: genus, canonical_species_name: epithet }),
+    programClass: requireText(data.programClass, "Program class"),
+    speciesType: admitSpeciesType(data.speciesType),
+    pointClass: admitPointClass(data.pointClass ?? null),
+    isCaresSpecies: data.isCaresSpecies ? 1 : 0,
+    commonName,
+  };
+}
+
+/** Insert the Species row, its flagged scientific Name and its common Name, on `db`. */
+async function insertSpecies(db: Database, admitted: ReturnType<typeof admitNewSpecies>): Promise<Species> {
+  const row = await db.get<Species>(
+    `INSERT INTO species_name_group (
+      program_class, species_type, canonical_genus, canonical_species_name,
+      base_points, is_cares_species
+    ) VALUES (?, ?, ?, ?, ?, ?)
+    RETURNING *`,
+    [admitted.programClass, admitted.speciesType, admitted.genus, admitted.epithet, admitted.pointClass, admitted.isCaresSpecies]
+  );
+  if (!row) throw new Error("Failed to create species");
+  await insertCanonicalName(db, row.group_id, admitted.name);
+  if (admitted.commonName) {
+    const common = nameTable.common;
+    await db.run(`INSERT INTO ${common.table} (group_id, ${common.text}) VALUES (?, ?)`, [
+      row.group_id,
+      admitted.commonName,
+    ]);
+  }
+  return row;
+}
+
 /**
- * Create a Species, with its Canonical name as its one flagged scientific Name.
+ * Create a Species, with its Canonical name as its one flagged scientific Name
+ * and its common Name if it was given one.
  * @returns the new Species' id
  * @throws CatalogueRefusal on empty or invalid fields, a Point class outside
  *   the tally keys, or a Canonical name another Species already has
  */
 export async function createSpecies(data: NewSpecies): Promise<number> {
-  const genus = requireText(data.canonicalGenus, "Canonical genus");
-  const epithet = requireText(data.canonicalSpeciesName, "Canonical species name");
-  const name = canonicalName({ canonical_genus: genus, canonical_species_name: epithet });
-  const programClass = requireText(data.programClass, "Program class");
-  const speciesType = admitSpeciesType(data.speciesType);
-  const pointClass = admitPointClass(data.pointClass ?? null);
+  const admitted = admitNewSpecies(data);
 
   let speciesId: number;
   try {
-    speciesId = await withTransaction(async (db) => {
-      const row = await db.get<{ group_id: number }>(
-        `INSERT INTO species_name_group (
-          program_class, species_type, canonical_genus, canonical_species_name,
-          base_points, is_cares_species
-        ) VALUES (?, ?, ?, ?, ?, ?)
-        RETURNING group_id`,
-        [programClass, speciesType, genus, epithet, pointClass, data.isCaresSpecies ? 1 : 0]
-      );
-      if (!row) throw new Error("Failed to create species");
-      await insertCanonicalName(db, row.group_id, name);
-      return row.group_id;
-    });
+    speciesId = await withTransaction(async (db) => (await insertSpecies(db, admitted)).group_id);
   } catch (err) {
     if (isUniqueViolation(err)) {
-      throw new CatalogueRefusal(`Species "${name}" already exists`, "duplicate");
+      throw new CatalogueRefusal(`Species "${admitted.name}" already exists`, "duplicate");
     }
     logger.error("Failed to create species", err);
     throw new Error("Failed to create species", { cause: err });
   }
-  logger.info("Created species", { speciesId, canonicalName: name, speciesType, programClass });
+  logger.info("Created species", {
+    speciesId,
+    canonicalName: admitted.name,
+    speciesType: admitted.speciesType,
+    programClass: admitted.programClass,
+  });
   return speciesId;
+}
+
+/**
+ * Create a Species inside the caller's transaction: the witness recording a
+ * Species the catalogue lacks, in the one transaction that confirms the
+ * Witness (ADR-0003, #522). A refused confirmation rolls the Species back
+ * with everything else, so abandoning the panel creates nothing.
+ *
+ * The same rules as `createSpecies`; the returned row is read on `db`, since
+ * another connection cannot see it until the caller commits.
+ * @throws CatalogueRefusal on empty or invalid fields, a Point class outside
+ *   the tally keys, or a Canonical name another Species already has
+ */
+export async function createSpeciesOn(db: Database, data: NewSpecies): Promise<Species> {
+  const admitted = admitNewSpecies(data);
+  try {
+    const species = await insertSpecies(db, admitted);
+    logger.info("Created species", {
+      speciesId: species.group_id,
+      canonicalName: admitted.name,
+      speciesType: admitted.speciesType,
+      programClass: admitted.programClass,
+      inTransaction: true,
+    });
+    return species;
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      throw new CatalogueRefusal(`Species "${admitted.name}" already exists`, "duplicate");
+    }
+    throw err;
+  }
 }
 
 export type SpeciesUpdate = {

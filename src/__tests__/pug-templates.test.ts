@@ -662,8 +662,16 @@ void describe("Pug Template Rendering", () => {
             templateData.spellingAgreement = null;
             templateData.speciesFacts = null;
             templateData.speciesChosenByWitness = false;
+            templateData.suggestions = [];
+            templateData.newSpecies = null;
             templateData.summary = { ready: false, lines: [], total: 0, hint: "Choose the species first" };
             templateData.allowed = { confirmWitness: false, bindSpecies: true, requestChanges: true };
+            break;
+
+          case "admin/recordSpeciesForm.pug":
+            templateData.program = "fish";
+            templateData.values = { new_scientific_name: "", new_common_name: "", new_point_class: null, new_cares_species: false };
+            templateData.errors = new Map();
             break;
 
           case "admin/editApprovedErrors.pug":
@@ -951,10 +959,17 @@ void describe("Pug Template Rendering", () => {
         speciesChosenByWitness: false,
         classificationMismatch: false,
         spellingAgreement: { commonName: "name", latinName: "name" },
+        suggestions: [],
+        newSpecies: null,
         summary: notReady,
         allowed: { confirmWitness: true, bindSpecies: true, requestChanges: true },
         ...data,
       });
+    /** Two catalogue neighbours of what the member wrote, as `suggestSpecies` shapes them for the panel. */
+    const neighbours = [
+      { speciesId: 8, commonName: "Butterfly Goodeid", speciesName: "Ameca splendens", speciesType: "Fish", programClass: "Livebearers", pointClass: 10 },
+      { speciesId: 9, commonName: null, speciesName: "Ilyodon whitei", speciesType: "Fish", programClass: "Livebearers", pointClass: null },
+    ];
 
     void test("header: member, Program, reproduction date, and a link to the form", () => {
       const html = render({});
@@ -981,7 +996,26 @@ void describe("Pug Template Rendering", () => {
       assert.match(html, /class="mt-3 hidden group-has-\[#witness-species-no:checked\]:block" id="witness-species-other"/);
       assert.match(html, /hx-post="\/admin\/submissions\/42\/bind-species"/);
       assert.match(html, /Record new species/);
-      assert.match(html, /hx-get="\/admin\/dialog\/species\/new\?submission_id=42"/);
+      assert.match(html, /hx-get="\/admin\/submissions\/42\/record-species"/);
+      assert.doesNotMatch(html, /dialog\/species\/new/, "the dialog that created and bound outside the Witness is not the panel's");
+    });
+
+    void test("No on the member's pick leads to the suggestions, the search and Record new species", () => {
+      const html = render({ suggestions: neighbours });
+      const other = html.slice(html.indexOf('id="witness-species-other"'), html.indexOf('id="witness-points"'));
+
+      assert.match(other, /Which species is it\?/);
+      assert.match(other, /Did they mean one of these\?/);
+      assert.match(other, /id="witness-suggestion-8"/);
+      assert.match(other, /Butterfly Goodeid/);
+      assert.match(other, /Ameca splendens/);
+      assert.match(other, /Fish · Livebearers · Point class 10/);
+      assert.match(other, /id="witness-suggestion-9"/);
+      assert.match(other, /Ilyodon whitei/);
+      assert.match(other, /no Point class yet/);
+      assert.match(other, /hx-post="\/admin\/submissions\/42\/bind-species"[^>]*hx-vals="\{&quot;group_id&quot;:8\}"[^>]*>This one</);
+      assert.match(other, /name="group_id"[^>]*data-api-url="\/api\/species\/search"/);
+      assert.match(other, /Record new species/);
     });
 
     void test("the Points card is gated until Yes, and the base points are prefilled from the Point class", () => {
@@ -1103,23 +1137,130 @@ void describe("Pug Template Rendering", () => {
       assert.match(html, /class="bg-white rounded-lg p-4 text-gray-900" id="witness-points"/, "the Points card is open");
     });
 
-    void test("unbound: shows what the member wrote, the search and Record new species, and the Points card closed", () => {
+    void test("unbound: shows what the member wrote, the suggestions, the search and Record new species, and the Points card closed", () => {
       const html = render({
         speciesFacts: null,
         spellingAgreement: null,
+        suggestions: neighbours,
         summary: { ready: false, lines: [], total: 0, hint: "Choose the species first" },
       });
 
       assert.match(html, /The member wrote/);
       assert.match(html, /Poecilia reticulata/);
-      assert.doesNotMatch(html, /name="species_id"|Is that right/);
+      assert.doesNotMatch(html, /name="species_id"|Is that right|Which species is it/);
       assert.match(html, /class="mt-3" id="witness-species-other"/, "the search is open");
+      assert.match(html, /Did they mean one of these\?/);
+      assert.match(html, /id="witness-suggestion-8"/);
+      assert.match(html, /hx-post="\/admin\/submissions\/42\/bind-species"[^>]*hx-vals="\{&quot;group_id&quot;:9\}"[^>]*>This one</);
       assert.match(html, /<select[^>]*name="group_id"[^>]*data-api-url="\/api\/species\/search"/);
       assert.match(html, /Use this species/);
-      assert.match(html, /Record new species/);
+      assert.match(html, /Not in the catalogue\?/);
+      // Record new species: a grey secondary button that swaps the record form into the Species card
+      assert.match(
+        html,
+        /<button class="outline w-full mt-1" id="witness-species-new" type="button" hx-get="\/admin\/submissions\/42\/record-species" hx-target="#witness-species" hx-swap="innerHTML">Record new species</
+      );
       assert.match(html, /class="bg-white rounded-lg p-4 text-gray-900 opacity-40 pointer-events-none" id="witness-points"/);
       assert.match(html, /Choose the species first/);
       assert.match(html, /id="witness-confirm"[^>]*disabled/);
+    });
+
+    void test("unbound with nothing close in the catalogue: no suggestions heading, just the search and Record new species", () => {
+      const html = render({ speciesFacts: null, spellingAgreement: null, suggestions: [] });
+      assert.doesNotMatch(html, /Did they mean one of these|witness-suggestion-/);
+      assert.match(html, /Use this species/);
+      assert.match(html, /Record new species/);
+    });
+
+    /**
+     * After Record species and continue: the panel comes back with the new
+     * Species settled but not yet created. Its details ride in hidden fields
+     * for the confirm to create it in the Witness's transaction; the Points
+     * card is open and prefilled from the Point class and CARES the witness
+     * chose. Abandoning the page creates nothing.
+     */
+    void test("recording a new Species: settled, carried in hidden fields, the Points card open and prefilled from it", () => {
+      const html = render({
+        speciesFacts: null,
+        spellingAgreement: null,
+        submission: {
+          id: 42,
+          program: "fish",
+          species_type: "Fish",
+          species_class: "Cichlids - New World",
+          species_common_name: "Apisto Rio Mamuru",
+          species_latin_name: "Apistogramma sp. Rio Mamuru",
+          member_name: "Dan Wu",
+          reproduction_date: "Sep 28, 2026",
+          article_link: null,
+        },
+        newSpecies: {
+          scientificName: "Apistogramma sp. 'Rio Mamuru'",
+          commonName: "Apisto Rio Mamuru",
+          speciesType: "Fish",
+          programClass: "Cichlids - New World",
+          program: "fish",
+          pointClass: 15,
+          isCaresSpecies: true,
+        },
+        summary: { ready: true, lines: [{ label: "Base points", amount: 15 }, { label: "CARES Species Bonus", amount: 5 }], total: 20, hint: null },
+      });
+
+      assert.match(html, /id="witness-recording"/);
+      assert.match(html, /You(&#39;|')re recording a new species/);
+      assert.match(html, /id="witness-bound-common"[^>]*>Apisto Rio Mamuru</);
+      assert.match(html, /id="witness-bound-species"[^>]*>Apistogramma sp\. (&#39;|')Rio Mamuru(&#39;|')</);
+      assert.match(html, /Fish · Cichlids - New World · Point class 15 · CARES/);
+      assert.match(html, /Member wrote: Apisto Rio Mamuru · Apistogramma sp\. Rio Mamuru/);
+      assert.match(html, /Wrong species\? Choose another/);
+      // The new Species rides to the confirm in hidden fields, inside the card so choosing another drops them
+      assert.match(html, /<input type="hidden" name="new_scientific_name" value="Apistogramma sp\. (&#39;|')Rio Mamuru(&#39;|')"\/>/);
+      assert.match(html, /<input type="hidden" name="new_common_name" value="Apisto Rio Mamuru"\/>/);
+      assert.match(html, /<input type="hidden" name="new_point_class" value="15"\/>/);
+      assert.match(html, /<input type="hidden" name="new_cares_species" value="on"\/>/);
+      assert.match(html, /<input type="hidden" name="species_settled" value="1"\/>/);
+      assert.doesNotMatch(html, /name="species_id"|Is that right|witness-names/);
+      // Points: open, prefilled from what the witness chose for the Species
+      assert.match(html, /class="bg-white rounded-lg p-4 text-gray-900" id="witness-points"/, "the Points card is open");
+      assert.match(html, /<input class="peer sr-only" type="radio" name="points" value="15" id="witness-points-15" checked="checked"\/>/);
+      assert.match(html, /id="witness-point-class"[^>]*>From the Point class you chose \(15\)\.</);
+      assert.match(html, /<input class="peer sr-only" type="checkbox" name="cares_species" value="on" checked="checked"\/>/);
+      assert.match(html, /Not yet in the catalogue/);
+      assert.match(html, /id="witness-first-time"[^>]*>No one has had this species approved yet/);
+      assert.match(html, /id="witness-confirm"[^>]*type="submit">Confirm witness · 20 pts</);
+    });
+
+    void test("recording a Plant: the HAP switches, no CARES, and no new_cares_species field", () => {
+      const html = render({
+        speciesFacts: null,
+        spellingAgreement: null,
+        submission: {
+          id: 42,
+          program: "plant",
+          species_type: "Plant",
+          species_class: "Cryptocoryne",
+          species_common_name: "Mamuru crypt",
+          species_latin_name: "Cryptocoryne mamuruensis",
+          member_name: "Priya Shah",
+          reproduction_date: "Sep 12, 2026",
+          article_link: null,
+        },
+        newSpecies: {
+          scientificName: "Cryptocoryne mamuruensis",
+          commonName: null,
+          speciesType: "Plant",
+          programClass: "Cryptocoryne",
+          program: "plant",
+          pointClass: 10,
+          isCaresSpecies: false,
+        },
+        summary: ready,
+      });
+      assert.match(html, /name="flowered"/);
+      assert.match(html, /name="sexual_reproduction"/);
+      assert.doesNotMatch(html, /name="cares_species"|name="new_cares_species"|name="new_common_name"/);
+      assert.match(html, /id="witness-bound-common"[^>]*>Cryptocoryne mamuruensis</, "no common name: the scientific one stands in");
+      assert.match(html, /Plant · Cryptocoryne · Point class 10</);
     });
 
     void test("a classification mismatch is said, not refused: confirming records the Species' values", () => {
@@ -1195,7 +1336,63 @@ void describe("Pug Template Rendering", () => {
     void test("Request changes is offered; without the moves, no search and no Request changes", () => {
       assert.match(render({}), /hx-get="\/admin\/dialog\/submissions\/42\/request-changes"[^>]*>Request changes</);
       const html = render({ allowed: { confirmWitness: true } });
-      assert.doesNotMatch(html, /bind-species|dialog\/species\/new|request-changes/);
+      assert.doesNotMatch(html, /bind-species|record-species|request-changes/);
+    });
+
+    /**
+     * The Record new species step, swapped into the Species card: names
+     * prefilled from the member's spelling, type and class from the
+     * Submission, the Point class and CARES to choose. Nothing is created
+     * until the Witness is confirmed.
+     */
+    void describe("Record new species form", () => {
+      const renderForm = (data: Record<string, unknown>) =>
+        pug.compileFile(path.join(viewsPath, "admin/recordSpeciesForm.pug"), { basedir: viewsPath, pretty: false })({
+          ...baseMockData,
+          submission: { id: 42, species_type: "Fish", species_class: "Cichlids - New World" },
+          program: "fish",
+          values: { new_scientific_name: "Apistogramma sp. Rio Mamuru", new_common_name: "Apisto Rio Mamuru", new_point_class: null, new_cares_species: false },
+          errors: new Map(),
+          ...data,
+        });
+
+      void test("prefilled from the member's spelling, with the Submission's type and class, Point class and CARES to choose", () => {
+        const html = renderForm({});
+
+        assert.match(html, /id="witness-record"/);
+        assert.match(html, /Record new species/);
+        assert.match(html, /<input[^>]*name="new_scientific_name"[^>]*value="Apistogramma sp\. Rio Mamuru"/);
+        assert.match(html, /<input[^>]*name="new_common_name"[^>]*value="Apisto Rio Mamuru"/);
+        assert.match(html, /Fish · Cichlids - New World/);
+        for (const pc of [5, 10, 15, 20]) {
+          assert.match(html, new RegExp(`<input class="peer sr-only" type="radio" name="new_point_class" value="${pc}" id="witness-new-point-class-${pc}"\\/>`));
+        }
+        assert.match(html, /This submission(&#39;|')s base points, and every later one(&#39;|')s\./);
+        assert.match(html, /<input[^>]*type="checkbox"[^>]*name="new_cares_species"[^>]*value="on"/);
+        assert.match(
+          html,
+          /<button class="primary w-full h-12 text-base" id="witness-record-continue" type="button" hx-post="\/admin\/submissions\/42\/record-species" hx-include="#witness-record" hx-target="#witness-species" hx-swap="innerHTML">Record species and continue</
+        );
+        // Back fetches the page and keeps only the panel, so nothing is created or lost
+        assert.match(html, /hx-get="\/submissions\/42"[^>]*hx-select="#witnessPanel"[^>]*hx-target="#witnessPanel"[^>]*hx-swap="outerHTML"[^>]*>Back</);
+        assert.doesNotMatch(html, /<form/, "it sits inside the panel's form, so it is not one itself");
+      });
+
+      void test("a Plant has no CARES to choose; a chosen Point class and CARES come back ticked, with the refusals beside their fields", () => {
+        const plant = renderForm({
+          submission: { id: 42, species_type: "Plant", species_class: "Cryptocoryne" },
+          program: "plant",
+        });
+        assert.doesNotMatch(plant, /new_cares_species/);
+
+        const refused = renderForm({
+          values: { new_scientific_name: "Apistogramma", new_common_name: "", new_point_class: 15, new_cares_species: true },
+          errors: new Map([["new_scientific_name", "Give the scientific name as genus and species, like Poecilia reticulata"]]),
+        });
+        assert.match(refused, /<input class="peer sr-only" type="radio" name="new_point_class" value="15" id="witness-new-point-class-15" checked="checked"\/>/);
+        assert.match(refused, /name="new_cares_species"[^>]*checked="checked"/);
+        assert.match(refused, /id="new_scientific_name-error"[^>]*>Give the scientific name as genus and species, like Poecilia reticulata</);
+      });
     });
 
     void test("the create-Species dialog creates and binds in one request", () => {
@@ -1252,6 +1449,12 @@ void describe("Pug Template Rendering", () => {
       assert.match(html, /hx-post="\/admin\/submissions\/42\/approve"/);
       // No species step
       assert.doesNotMatch(html, /tom-select|species-search|name="group_id"|dialog\/species\/new|approval-bonuses/);
+      assert.doesNotMatch(html, /recorded by the witness/);
+    });
+
+    void test("a Species the witness recorded is said so", () => {
+      const html = render({ speciesFacts: approval, speciesRecordedByWitness: true });
+      assert.match(html, /id="approval-new-species"[^>]*>New species recorded by the witness</);
     });
 
     void test("witnessed with points: the Points and bonuses prefilled from what the Witness set", () => {

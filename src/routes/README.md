@@ -144,7 +144,10 @@ GET    /admin/submissions/:id/edit             - Edit submission (admin view)
 POST   /admin/submissions/:id/bind-species     - Bind (or rebind) to a Species (witness panel)
 POST   /admin/submissions/:id/species          - Create a Species and bind to it (witness panel)
 POST   /admin/submissions/:id/adopt-species-classification - Take the bound Species' type and class (witness panel)
-POST   /admin/submissions/:id/confirm-witness  - Confirm witness (refused while unbound)
+POST   /admin/submissions/:id/confirm-witness  - Confirm witness with the points, or with a new Species to record (refused while unbound)
+POST   /admin/submissions/:id/witness-summary  - The witness panel's sticky bar, summed on the server
+GET    /admin/submissions/:id/record-species   - The witness panel's Record new species step (creates nothing)
+POST   /admin/submissions/:id/record-species   - Record species and continue: the panel again, the new Species settled
 POST   /admin/submissions/:id/decline-witness  - Decline witness
 POST   /admin/submissions/:id/request-changes  - Request changes from submitter
 ```

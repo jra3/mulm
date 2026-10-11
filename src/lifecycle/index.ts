@@ -80,6 +80,7 @@ export {
   type Change,
   type NamesToAdd,
   type WitnessPoints,
+  type NewSpeciesAtWitness,
 } from "./transitions";
 
 // The clock's consequence, and the committee's standing view of its own work.

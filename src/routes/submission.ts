@@ -31,7 +31,9 @@ import {
   checkFormAgreement,
   countSubmissionsOfSpecies,
   findSpeciesById,
+  isSpeciesType,
   listNames,
+  suggestSpecies,
 } from "@/species";
 import * as lifecycle from "@/lifecycle";
 import { attempt, callerFor } from "./lifecycleErrors";
@@ -118,10 +120,8 @@ export const view = async (req: MulmRequest, res: Response) => {
 
   const state = lifecycle.deriveState(submission);
 
-  // The Species the Submission is bound to, if any, and whether its Species
-  // type and Program class agree with the Submission's
+  // The Species the Submission is bound to, if any
   const boundSpecies = submission.species_id ? await findSpeciesById(submission.species_id) : undefined;
-  const agreement = boundSpecies ? await checkFormAgreement(boundSpecies.group_id, submission) : undefined;
 
   const aspect = {
     isSubmitted: submission.submitted_on != null,
@@ -164,12 +164,17 @@ export const view = async (req: MulmRequest, res: Response) => {
   // Fetch admin notes if viewer is an admin
   const adminNotes = aspect.isAdmin ? await getNotesForSubmission(submission.id) : [];
 
-  // The witness panel and the approval panel both read the bound Species
-  const speciesFacts =
-    aspect.isAdmin && (state === "pendingWitness" || state === "inApprovalQueue")
+  // The witness panel's locals while a Witness is awaited; the approval panel
+  // reads the bound Species once the Submission is in the queue
+  const witnessPanel =
+    viewer && aspect.isAdmin && state === "pendingWitness"
+      ? await witnessPanelLocals(submission, viewer, { notes: adminNotes })
+      : null;
+  const speciesFacts = witnessPanel
+    ? witnessPanel.speciesFacts
+    : aspect.isAdmin && state === "inApprovalQueue"
       ? await boundSpeciesFacts(submission)
       : null;
-  const speciesChosenByWitness = speciesChosenByCommittee(adminNotes);
 
   // Fetch oEmbed data for video if present
   let videoMetadata = null;
@@ -218,24 +223,10 @@ export const view = async (req: MulmRequest, res: Response) => {
     name: speciesShown,
     boundSpecies: boundSpecies ?? null,
     boundSpeciesName: boundSpecies ? canonicalNameOf(boundSpecies) : null,
-    classificationMismatch: agreement ? !agreement.classificationAgrees : false,
-    // Which spellings are already Names of the Species, for the witness
-    // panel's Names to add
-    spellingAgreement: agreement ? { commonName: agreement.commonName, latinName: agreement.latinName } : null,
     speciesFacts,
-    // Whether the committee, not the member, chose the bound Species: the
-    // witness panel then shows it as the witness's choice, not the member's
-    speciesChosenByWitness,
-    // The witness panel's sticky bar, as the panel's prefill sums
-    summary: witnessSummary({
-      bound: speciesFacts != null,
-      species_settled: speciesChosenByWitness,
-      points: speciesFacts?.pointClass ?? null,
-      article_points: submission.article_link ? 5 : null,
-      cares_species: speciesFacts?.program === "fish" ? speciesFacts.isCaresSpecies : false,
-      flowered: false,
-      sexual_reproduction: false,
-    }),
+    // The approval panel says so when the witness recorded the Species
+    speciesRecordedByWitness: speciesRecordedByWitness(adminNotes),
+    ...witnessPanel,
     waitingPeriodStatus,
     adminNotes,
     videoMetadata,
@@ -376,6 +367,114 @@ export async function boundSpeciesFacts(submission: Pick<db.Submission, "species
   };
 }
 
+/**
+ * The Program a Submission belongs to by its Species type, which is what a
+ * Species recorded at the Witness takes (#522); the filed Program stands in
+ * for a type the Programs do not know.
+ */
+export function programOfSubmission(submission: Pick<db.Submission, "species_type" | "program">): string {
+  return isSpeciesType(submission.species_type) ? programOfSpeciesType(submission.species_type) : submission.program;
+}
+
+/** A catalogue neighbour of what the member wrote, as the witness panel lists it under "Did they mean one of these?". */
+export type SpeciesSuggestionFacts = {
+  speciesId: number;
+  commonName: string | null;
+  speciesName: string;
+  speciesType: string;
+  programClass: string;
+  pointClass: number | null;
+};
+
+/**
+ * A Species the witness is recording, as the panel shows it between Record
+ * species and continue and the confirm: not yet in the catalogue, so these
+ * are the form's values plus the Submission's type and class, which the
+ * Species will take (`recordSpecies`, src/lifecycle/transitions.ts).
+ */
+export type NewSpeciesFacts = {
+  scientificName: string;
+  commonName: string | null;
+  speciesType: string;
+  programClass: string;
+  program: string;
+  pointClass: number;
+  isCaresSpecies: boolean;
+};
+
+/**
+ * Everything the witness panel renders from, for the Submission page and for
+ * the Record new species step, which re-renders the panel with the new
+ * Species settled (#522). `newSpecies` is that Species as the step validated
+ * it, carried in the panel's hidden fields until the confirm creates it;
+ * `notes` are the Submission's changelog, passed in when the caller already
+ * has them.
+ */
+export async function witnessPanelLocals(
+  submission: db.Submission,
+  viewer: NonNullable<MulmRequest["viewer"]>,
+  options: { notes?: SubmissionNote[]; newSpecies?: lifecycle.NewSpeciesAtWitness | null } = {}
+) {
+  const state = lifecycle.deriveState(submission);
+  const notes = options.notes ?? (await getNotesForSubmission(submission.id));
+  const [speciesFacts, agreement, suggested] = await Promise.all([
+    boundSpeciesFacts(submission),
+    submission.species_id ? checkFormAgreement(submission.species_id, submission) : undefined,
+    suggestSpecies(
+      { commonName: submission.species_common_name, latinName: submission.species_latin_name },
+      { exclude: submission.species_id }
+    ),
+  ]);
+  const speciesChosenByWitness = speciesChosenByCommittee(notes);
+  const draft = options.newSpecies ?? null;
+  const newSpecies: NewSpeciesFacts | null = draft
+    ? {
+        scientificName: `${draft.canonicalGenus} ${draft.canonicalSpeciesName}`,
+        commonName: draft.commonName,
+        speciesType: submission.species_type,
+        programClass: submission.species_class,
+        program: programOfSubmission(submission),
+        pointClass: draft.pointClass,
+        isCaresSpecies: draft.isCaresSpecies,
+      }
+    : null;
+  const settledProgram = newSpecies ? newSpecies.program : speciesFacts?.program;
+
+  return {
+    speciesFacts,
+    // Whether the committee, not the member, chose the bound Species: the
+    // panel then shows it as the witness's choice, not the member's
+    speciesChosenByWitness,
+    classificationMismatch: agreement ? !agreement.classificationAgrees : false,
+    // Which spellings are already Names of the Species, for the Names to add
+    spellingAgreement: agreement ? { commonName: agreement.commonName, latinName: agreement.latinName } : null,
+    suggestions: suggested.map(
+      (species): SpeciesSuggestionFacts => ({
+        speciesId: species.group_id,
+        commonName: species.common_name,
+        speciesName: canonicalNameOf(species),
+        speciesType: species.species_type,
+        programClass: species.program_class,
+        pointClass: species.base_points,
+      })
+    ),
+    newSpecies,
+    // The sticky bar, as the panel's prefill sums
+    summary: witnessSummary({
+      bound: newSpecies != null || speciesFacts != null,
+      species_settled: newSpecies != null || speciesChosenByWitness,
+      points: newSpecies ? newSpecies.pointClass : (speciesFacts?.pointClass ?? null),
+      article_points: submission.article_link ? 5 : null,
+      cares_species:
+        settledProgram === "fish" ? Boolean(newSpecies ? newSpecies.isCaresSpecies : speciesFacts?.isCaresSpecies) : false,
+      flowered: false,
+      sexual_reproduction: false,
+    }),
+    allowed: allowedMoves(viewer, submission, state),
+    changesRequested: lifecycle.hasChangesRequested(submission),
+  };
+}
+
 /** The witness panel's sticky bar: ready to confirm, or why not yet. */
 export type WitnessSummary = {
   ready: boolean;
@@ -427,11 +526,8 @@ const adminEditNote = z.object({
   changes: z.array(z.object({ field: z.string() })),
 });
 
-/**
- * Whether the committee bound or rebound the Submission: a changelog entry
- * that changed its `species`. The member's own pick leaves no such entry.
- */
-export function speciesChosenByCommittee(notes: Pick<SubmissionNote, "note_text">[]): boolean {
+/** Whether any changelog entry changed `field`. A note that is not JSON, or not an edit, changed nothing. */
+function changelogChanged(notes: Pick<SubmissionNote, "note_text">[], field: string): boolean {
   return notes.some((note) => {
     let parsed: unknown;
     try {
@@ -440,8 +536,27 @@ export function speciesChosenByCommittee(notes: Pick<SubmissionNote, "note_text"
       return false;
     }
     const entry = adminEditNote.safeParse(parsed);
-    return entry.success && entry.data.changes.some((change) => change.field === "species");
+    return entry.success && entry.data.changes.some((change) => change.field === field);
   });
+}
+
+/**
+ * Whether the committee bound or rebound the Submission: a changelog entry
+ * that changed its `species`. The member's own pick leaves no such entry.
+ */
+export function speciesChosenByCommittee(notes: Pick<SubmissionNote, "note_text">[]): boolean {
+  return changelogChanged(notes, "species");
+}
+
+/**
+ * Whether the witness recorded the Species because the catalogue lacked it
+ * (#522): the "Settled at the Witness" entry then carries a `new_species`
+ * change. The approval queue reads it as "New species recorded by the
+ * witness"; `findSubmissionsWithRecordedSpecies` (src/db/submission_notes.ts)
+ * answers the same for a whole page of rows.
+ */
+export function speciesRecordedByWitness(notes: Pick<SubmissionNote, "note_text">[]): boolean {
+  return changelogChanged(notes, "new_species");
 }
 
 /**

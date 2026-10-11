@@ -44,6 +44,7 @@ export { listNames, findNames, addName, removeName, updateName } from "./names";
 // Curating Species identity.
 export {
   createSpecies,
+  createSpeciesOn,
   updateSpecies,
   setPointClass,
   ensurePointClass,
@@ -79,9 +80,11 @@ export {
   anyNameSql,
 } from "./sql";
 
-// Read models: typeahead, explorer, admin list, detail, breeders, IUCN due list, statistics.
+// Read models: typeahead, suggestions, explorer, admin list, detail, breeders, IUCN due list, statistics.
 export {
   searchSpeciesTypeahead,
+  suggestSpecies,
+  type SpeciesSuggestion,
   getSpeciesForExplorer,
   getSpeciesForAdmin,
   getSpeciesDetail,

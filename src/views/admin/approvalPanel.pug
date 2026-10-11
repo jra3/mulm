@@ -13,6 +13,9 @@ include ../mixins/bindSpeciesControls.pug
 //- @param submission - id, points, program and the bonus columns
 //- @param speciesFacts - the bound Species (`boundSpeciesFacts` in
 //-   src/routes/submission.ts), or null when unbound
+//- @param speciesRecordedByWitness - whether the witness recorded the Species
+//-   because the catalogue lacked it (#522), said so the committee knows the
+//-   Point class is the witness's
 //- @param allowed - the viewer's legal moves; unbound, it offers the binding
 //- @param errors - validation errors by field
 - const approval = speciesFacts
@@ -57,6 +60,8 @@ else
                             span= pointClass
                         else
                             span.text-yellow-300 not set for this Species - choose the Points
+                    if speciesRecordedByWitness
+                        p.text-sm.text-green-300#approval-new-species New species recorded by the witness
 
                 // Points, prefilled from what the Witness set (or the Point class) and still the committee's to change
                 .flex.gap-4.items-center

@@ -19,7 +19,9 @@ import { bonusesOutsideProgram, isArticleBonus, programOfSpeciesType, type Bonus
 import {
   addName,
   canonicalName,
+  CatalogueRefusal,
   checkFormAgreement,
+  createSpeciesOn,
   ensurePointClass,
   findSpeciesById,
   isPointClass,
@@ -470,12 +472,28 @@ export async function resubmit(
  * `article_points` null means no article bonus.
  */
 export type WitnessPoints = {
+  /** The Species the witness settled on; omitted means the bound Species. Not alongside `new_species`. */
   species_id?: number;
+  /** A Species the catalogue lacks, recorded in the Witness's transaction and settled on (#522). */
+  new_species?: NewSpeciesAtWitness;
   points: number;
   article_points: number | null;
   cares_species: boolean;
   flowered: boolean;
   sexual_reproduction: boolean;
+};
+
+/**
+ * A Species the witness records because the catalogue has none for what the
+ * member bred: its names, Point class and CARES flag from the panel's form.
+ * Its Species type and Program class are the Submission's.
+ */
+export type NewSpeciesAtWitness = {
+  canonicalGenus: string;
+  canonicalSpeciesName: string;
+  commonName: string | null;
+  pointClass: number;
+  isCaresSpecies: boolean;
 };
 
 /**
@@ -510,9 +528,16 @@ export async function confirmWitness(
     throw new ValidationError("Choose the base points: 5, 10, 15 or 20", "points", witness.points);
   }
 
+  if (witness.new_species && witness.species_id != null) {
+    throw new ValidationError("Choose a Species or record a new one, not both", "species_id", witness.species_id);
+  }
+  if (witness.new_species && !isPointClass(witness.new_species.pointClass)) {
+    throw new ValidationError("The Point class is 5, 10, 15 or 20", "new_point_class", witness.new_species.pointClass);
+  }
+
   const { memberId, added, species, speciesChanges, valued } = await withTransaction(async (db) => {
     const submission = await readForGuard(db, submissionId);
-    const speciesId = witness.species_id ?? submission.species_id;
+    const speciesId = witness.new_species ? null : (witness.species_id ?? submission.species_id);
     const species = speciesId == null ? undefined : await findSpeciesById(speciesId);
     if (speciesId != null && !species) {
       throw new ValidationError("Choose a Species that exists", "species_id", speciesId);
@@ -524,13 +549,18 @@ export async function confirmWitness(
       actor: actorFor(caller, submission),
       actorId: caller.id,
       isOwner: submission.member_id === caller.id,
-      bound: species != null,
+      // A Species about to be recorded settles the Submission as a bound one does
+      bound: species != null || witness.new_species != null,
     });
-    // The guard refused an unbound Submission above, so there is a Species
-    const chosen = species!;
+    // The guard refused an unbound Submission above, so there is a Species,
+    // or one to record: created here so a refusal below rolls it back
+    const chosen = witness.new_species ? await recordSpecies(db, submission, witness.new_species) : species!;
     assertBonusesFit(programOfSpeciesType(chosen.species_type), witness);
 
     const speciesChanges = await settleSpecies(db, submission, chosen);
+    if (witness.new_species) {
+      speciesChanges.unshift({ field: "new_species", old: null, new: canonicalName(chosen) });
+    }
 
     await runUpdate(
       db,
@@ -558,7 +588,9 @@ export async function confirmWitness(
     );
 
     const valued = chosen.base_points == null && (await ensurePointClass(db, chosen.group_id, witness.points));
-    const added = await addSpellingsAsNames(db, submissionId, chosen.group_id, namesToAdd);
+    // A recorded Species already carries the names the witness gave it, and
+    // the agreement check reads on another connection, which cannot see it yet
+    const added = witness.new_species ? {} : await addSpellingsAsNames(db, submissionId, chosen.group_id, namesToAdd);
     return { memberId: submission.member_id, added, species: chosen, speciesChanges, valued };
   });
 
@@ -592,6 +624,32 @@ export async function confirmWitness(
  * transition's own word, so a bonus that fits the Program the Submission had
  * but not the one it is about to have is never written.
  */
+/**
+ * Record the Species the witness says the catalogue lacks, inside the
+ * Witness's transaction: its names, Point class and CARES flag from the
+ * panel, its Species type and Program class from the Submission. The
+ * catalogue's refusals (a Canonical name another Species holds, an empty
+ * name) become the confirm's.
+ */
+async function recordSpecies(db: Database, submission: Submission, draft: NewSpeciesAtWitness): Promise<Species> {
+  try {
+    return await createSpeciesOn(db, {
+      canonicalGenus: draft.canonicalGenus,
+      canonicalSpeciesName: draft.canonicalSpeciesName,
+      commonName: draft.commonName,
+      programClass: submission.species_class,
+      speciesType: submission.species_type,
+      pointClass: draft.pointClass,
+      isCaresSpecies: draft.isCaresSpecies,
+    });
+  } catch (err) {
+    if (err instanceof CatalogueRefusal) {
+      throw new ValidationError(err.message, "new_scientific_name", draft.canonicalGenus);
+    }
+    throw err;
+  }
+}
+
 function assertBonusesFit(program: ProgramType, witness: WitnessPoints): void {
   if (!isArticleBonus(witness.article_points)) {
     throw new ValidationError("The article bonus is None, 5 or 10", "article_points", witness.article_points);

@@ -12,6 +12,7 @@ import sqlite3 from "sqlite3";
 import { overrideConnection } from "../db/conn";
 import {
   searchSpeciesTypeahead,
+  suggestSpecies,
   createSpecies,
   addName,
 } from "@/species";
@@ -510,6 +511,74 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
       const results = await searchSpeciesTypeahead("zztest");
       const names = results.map((r) => r.scientific_name);
       assert.deepStrictEqual(names, ["ZZTEST splendens", "ZZTEST var. blue", "ZZTEST var. red"]);
+    });
+  });
+
+  /**
+   * The witness panel's "Did they mean one of these?" (#522): the closest
+   * Species to a member's spellings, which an exact lookup would miss when
+   * the member misspelt the name. A heuristic, not a search engine: a Species
+   * scores a point per word of the spellings one of its Names contains, and a
+   * half point for a word's stem, so a misspelt epithet still finds it.
+   */
+  void describe("suggestSpecies - the closest Species to a member's spellings", () => {
+    let ameca: number;
+    let ilyodon: number;
+
+    beforeEach(async () => {
+      ameca = await createSpecies({
+        programClass: "Livebearers",
+        speciesType: "Fish",
+        canonicalGenus: "Zzameca",
+        canonicalSpeciesName: "zzsplendens",
+        pointClass: 10,
+      });
+      await addName(ameca, "common", "Zzbutterfly Zzgoodeid");
+      ilyodon = await createSpecies({
+        programClass: "Livebearers",
+        speciesType: "Fish",
+        canonicalGenus: "Zzilyodon",
+        canonicalSpeciesName: "zzwhitei",
+      });
+      await addName(ilyodon, "common", "Zzwhitei Zzgoodeid");
+      const tetra = await createSpecies({
+        programClass: "Characins",
+        speciesType: "Fish",
+        canonicalGenus: "Zzparacheirodon",
+        canonicalSpeciesName: "zzinnesi",
+      });
+      await addName(tetra, "common", "Zzneon Zztetra");
+    });
+
+    void test("a misspelt common and Latin name find the Species they were aiming at first", async () => {
+      const found = await suggestSpecies({ commonName: "zzbutterfly zzgoodied", latinName: "Zzameca zzsplendans" });
+      assert.deepStrictEqual(
+        found.map((s) => s.group_id),
+        [ameca, ilyodon],
+        "Zzameca by genus, common-name word and the stems; Zzilyodon by the goodeid stem alone"
+      );
+      assert.deepStrictEqual(
+        [found[0].common_name, found[0].canonical_genus, found[0].canonical_species_name, found[0].base_points, found[0].program_class],
+        ["Zzbutterfly Zzgoodeid", "Zzameca", "zzsplendens", 10, "Livebearers"]
+      );
+    });
+
+    void test("the Species the member picked can be left out, and the list is capped", async () => {
+      const without = await suggestSpecies({ commonName: "zzgoodeid", latinName: "" }, { exclude: ameca });
+      assert.deepStrictEqual(without.map((s) => s.group_id), [ilyodon]);
+
+      const capped = await suggestSpecies({ commonName: "zzgoodeid", latinName: "" }, { limit: 1 });
+      assert.strictEqual(capped.length, 1);
+    });
+
+    void test("spellings that resemble nothing suggest nothing, and short words do not count", async () => {
+      assert.deepStrictEqual(await suggestSpecies({ commonName: "zxqv plork", latinName: "Qwerty uiop" }), []);
+      assert.deepStrictEqual(await suggestSpecies({ commonName: "a te", latinName: "" }), []);
+      assert.deepStrictEqual(await suggestSpecies({ commonName: "", latinName: "  " }), []);
+    });
+
+    void test("LIKE wildcards in the spelling match themselves", async () => {
+      assert.deepStrictEqual(await suggestSpecies({ commonName: "%%%%", latinName: "____ ____" }), []);
     });
   });
 });
