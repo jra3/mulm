@@ -414,6 +414,8 @@ html
                     });
                 }
 
-                document.addEventListener('DOMContentLoaded', function() {
-                    initializeTypeaheads();
-                });
+                // The witness panel is swapped in whole (Back from Record new
+                // species, the record-species answer), so the search is set up
+                // again on every swap, not only on load
+                document.addEventListener('DOMContentLoaded', initializeTypeaheads);
+                document.addEventListener('htmx:load', initializeTypeaheads);
