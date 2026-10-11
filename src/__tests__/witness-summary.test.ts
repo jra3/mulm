@@ -1,7 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert";
 import { witnessSummary } from "../routes/submission";
-import { speciesChosenByCommittee, speciesRecordedByWitness } from "../db/submission_notes";
+import { committeeSpeciesChoice, speciesChosenByCommittee, speciesRecordedByWitness } from "../db/submission_notes";
 import { totalPoints } from "../points";
 
 /**
@@ -114,6 +114,18 @@ void describe("Whether the committee chose the Species", () => {
       false,
       "a later edit that did not touch the Species does not count as a choice"
     );
+  });
+
+  void test("the choice that stands is the entry itself, so the panel can say who made it", () => {
+    const don = { admin_id: 3, admin_name: "Don Lang", ...note({ type: "admin_edit", changes: [{ field: "species", old: null, new: "Poecilia wingei" }], reason: "Bound" }) };
+    const jane = { admin_id: 4, admin_name: "Jane Ortiz", ...note({ type: "admin_edit", changes: [{ field: "species", old: "Poecilia wingei", new: "Poecilia reticulata" }], reason: "Settled" }) };
+    const saved = { admin_id: null, admin_name: null, ...note({ type: "member_save", voided: "choice", member_id: 7, timestamp: "2026-10-11T12:00:00.000Z" }) };
+
+    assert.strictEqual(committeeSpeciesChoice([don]), don);
+    assert.strictEqual(committeeSpeciesChoice([don, jane]), jane, "the last choice");
+    assert.strictEqual(committeeSpeciesChoice([don, saved]), null);
+    assert.strictEqual(committeeSpeciesChoice([don, saved, jane]), jane);
+    assert.strictEqual(committeeSpeciesChoice([]), null);
   });
 });
 

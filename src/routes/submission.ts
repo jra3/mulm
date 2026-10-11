@@ -36,7 +36,7 @@ import {
 } from "@/species";
 import * as lifecycle from "@/lifecycle";
 import { attempt, callerFor } from "./lifecycleErrors";
-import { getNotesForSubmission, speciesChosenByCommittee, speciesRecordedByWitness, type SubmissionNote } from "@/db/submission_notes";
+import { committeeSpeciesChoice, getNotesForSubmission, speciesRecordedByWitness, type SubmissionNote } from "@/db/submission_notes";
 import { formatShortDate } from "@/utils/dateFormat";
 import { pointsBreakdown, programOfSpeciesType, type PointsBreakdown, type PointsRow } from "@/points";
 import { parseVideoUrlWithOEmbed, isValidVideoUrl } from "@/utils/videoParser";
@@ -435,7 +435,11 @@ export async function witnessPanelLocals(
       { exclude: submission.species_id }
     ),
   ]);
-  const speciesChosenByWitness = speciesChosenByCommittee(notes);
+  // The committee's choice of Species that stands, and who made it: this
+  // witness, or another committee member whose bind outlived a reset (#524)
+  const choice = committeeSpeciesChoice(notes);
+  const speciesChosenByWitness = choice !== null;
+  const speciesChooser = choice ? { name: choice.admin_name, isViewer: choice.admin_id === viewer.id } : null;
   // Who saw the fry before migration 066 reset the Witness (#524), so the
   // re-witnesser knows no fresh sighting is needed
   const original = lifecycle.originalWitnessFromNotes(notes);
@@ -456,8 +460,10 @@ export async function witnessPanelLocals(
   return {
     speciesFacts,
     // Whether the committee, not the member, chose the bound Species: the
-    // panel then shows it as the witness's choice, not the member's
+    // panel then shows it as the committee's choice, not the member's, and
+    // says whose
     speciesChosenByWitness,
+    speciesChooser,
     originalWitness: original ? { name: original.name, date: formatShortDate(original.date) } : null,
     classificationMismatch: agreement ? !agreement.classificationAgrees : false,
     // Which spellings are already Names of the Species, for the Names to add
@@ -569,6 +575,7 @@ export async function correctionPanelLocals(
   return {
     speciesFacts,
     speciesChosenByWitness: true,
+    speciesChooser: null,
     originalWitness: null,
     classificationMismatch: agreement ? !agreement.classificationAgrees : false,
     spellingAgreement: null,

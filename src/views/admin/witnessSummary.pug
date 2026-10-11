@@ -17,4 +17,5 @@ if summary.ready
 	button.primary.w-full.h-12.text-base(id=button.id type="submit")= `${button.label} · ${summary.total} pts`
 else
 	.text-gray-200.text-sm.mb-2#witness-sum-hint= summary.hint
-	button.primary.w-full.h-12.text-base(id=button.id type="submit" disabled)= button.label
+	//- Visibly off, not the enabled blue: the panel's own gate, before the server's
+	button.primary.w-full.h-12.text-base(id=button.id type="submit" disabled class="disabled:bg-gray-500 disabled:text-gray-200 disabled:opacity-60 disabled:cursor-not-allowed")= button.label

@@ -231,13 +231,19 @@ html
             section.bg-gray-100
                 // Screening Actions Panel - only show while awaiting a Witness
                 if state === 'pendingWitness'
-                    if isSelf
-                        // Show message for self-screening case
-                        .status-panel.status-panel-warning
+                    if isSelf && isAdmin
+                        // A committee member's own: another committee member witnesses it
+                        .status-panel.status-panel-warning#witness-self-note
                             .container.mx-auto.max-w-4xl
-                                h3.text-yellow-800.text-lg.font-semibold.mb-2 📋 Admin Screening Needed
-                                p.text-yellow-700.mb-2= `Your ${speciesText} needs to be screened by a different program admin for completeness.`
-                                p.text-yellow-600.text-sm You cannot screen your own submissions. Please contact another admin to review this submission.
+                                h3.text-yellow-800.text-lg.font-semibold.mb-2 📋 Awaiting a witness
+                                p.text-yellow-700.mb-2= `Your ${speciesText} needs to be witnessed by a different committee member.`
+                                p.text-yellow-600.text-sm You cannot witness your own submissions. Ask another committee member to confirm it and set the points.
+                    else if isSelf
+                        // The member's own: nothing to do until a committee member sees it
+                        .status-panel.status-panel-pending#witness-awaiting-note
+                            .container.mx-auto.max-w-4xl
+                                h3.text-blue-800.text-lg.font-semibold.mb-2 ⏳ Awaiting a witness
+                                p.text-blue-700.mb-2= `A committee member will confirm the ${offspringText} and set the points.`
                     else if isAdmin
                         // The witness settles the Species and sets the points, then confirms
                         include ../admin/witnessPanel.pug

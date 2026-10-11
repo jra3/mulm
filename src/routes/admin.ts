@@ -53,7 +53,14 @@ import {
   hasFoods,
   hasSpawnLocations,
 } from "@/forms/submission";
-import { countApprovedBySpecies, countSubmissionsOfSpecies, findSpeciesById } from "@/species";
+import {
+  canonicalName as canonicalNameOf,
+  countApprovedBySpecies,
+  countSubmissionsOfSpecies,
+  findSpeciesById,
+  findSpeciesByName,
+  listNames,
+} from "@/species";
 import { findSubmissionsWithRecordedSpecies } from "@/db/submission_notes";
 import { programOfSpeciesType } from "@/points";
 import { formatShortDate } from "@/utils/dateFormat";
@@ -182,7 +189,9 @@ export type ReadyRow = {
   firstName: string;
   program: string;
   programShort: string;
+  /** The bound Species' common Name, or its Canonical name when it has none; the member's spelling only when unbound. */
   species_common_name: string;
+  /** The bound Species' Canonical name, which is the common one again when it has no common Name. */
   species_latin_name: string;
   /** The witness recorded the Species because the catalogue lacked it (#522). */
   newSpecies: boolean;
@@ -213,6 +222,21 @@ export type WaitingRow = {
 };
 
 const PROGRAM_SHORT: Record<string, string> = { fish: "BAP", plant: "HAP", coral: "CAP" };
+
+/**
+ * The names a queue row shows (#527): the bound Species' common Name and
+ * Canonical name, which are what the witness settled, not the member's
+ * spelling. A Species with no common Name goes by its Canonical name alone;
+ * an unbound row has only the member's spelling to show.
+ */
+function speciesNamesOf(
+  row: Pick<QueueSubmission, "species_common_name" | "species_latin_name" | "bound_species_name" | "bound_common_name">
+): { common: string; latin: string } {
+  if (!row.bound_species_name) {
+    return { common: row.species_common_name, latin: row.species_latin_name };
+  }
+  return { common: row.bound_common_name ?? row.bound_species_name, latin: row.bound_species_name };
+}
 
 /** The path this queue page lives at, which the approve button's redirect and the sheet's "Not now" return to. */
 function queuePath(program: string | null): string {
@@ -248,8 +272,8 @@ export async function approvalQueueLocals(viewer: NonNullable<MulmRequest["viewe
     firstName: row.member_name.trim().split(/\s+/)[0] || row.member_name,
     program: row.program,
     programShort: short(row),
-    species_common_name: row.species_common_name,
-    species_latin_name: row.species_latin_name,
+    species_common_name: speciesNamesOf(row).common,
+    species_latin_name: speciesNamesOf(row).latin,
     newSpecies: recorded.has(row.id),
     preview: lifecycle.previewApproval(row, row.species_id == null ? 0 : (approvedBefore.get(row.species_id) ?? 0)),
     witnessedOn: formatShortDate(row.witnessed_on),
@@ -258,7 +282,7 @@ export async function approvalQueueLocals(viewer: NonNullable<MulmRequest["viewe
   const approvedTonight: ApprovedRow[] = approvedRows.map((row) => ({
     id: row.id,
     member_name: row.member_name,
-    species_common_name: row.species_common_name,
+    species_common_name: speciesNamesOf(row).common,
     programShort: short(row),
     total: row.total_points ?? 0,
     approvedBy: row.approved_by_name ?? null,
@@ -271,7 +295,7 @@ export async function approvalQueueLocals(viewer: NonNullable<MulmRequest["viewe
   const waiting: WaitingRow[] = waitingRows.map(({ row, endsOn }) => ({
     id: row.id,
     member_name: row.member_name,
-    species_common_name: row.species_common_name,
+    species_common_name: speciesNamesOf(row).common,
     programShort: short(row),
     readyOn: formatShortDate(endsOn),
   }));
@@ -555,7 +579,8 @@ function renderRecordSpeciesForm(
   submission: Submission,
   values: Record<string, unknown>,
   errors: Map<string, string>,
-  correction: boolean
+  correction: boolean,
+  existing: ExistingSpeciesFacts | null = null
 ): void {
   res.render("admin/recordSpeciesForm", {
     submission,
@@ -563,8 +588,25 @@ function renderRecordSpeciesForm(
     values,
     errors,
     correction,
+    existing,
     backUrl: correction ? `/admin/submissions/${submission.id}/correct-points` : `/submissions/${submission.id}`,
   });
+}
+
+/** The Species that already holds the scientific name the witness tried to record, as the step offers it with This one. */
+type ExistingSpeciesFacts = { speciesId: number; speciesName: string; commonName: string | null };
+
+/**
+ * The Species the catalogue already lists under this scientific name, or
+ * null: the lookup `createSpecies` refuses on, asked before the step accepts
+ * the name, so the witness hears it here, beside the field, and not after
+ * choosing the points. The confirm's transaction checks it again.
+ */
+async function speciesAlreadyNamed(scientificName: string): Promise<ExistingSpeciesFacts | null> {
+  const [species] = await findSpeciesByName(scientificName, "scientific");
+  if (!species) return null;
+  const names = await listNames(species.group_id);
+  return { speciesId: species.group_id, speciesName: canonicalNameOf(species), commonName: names.common[0]?.name ?? null };
 }
 
 /**
@@ -618,6 +660,22 @@ export const recordSpeciesAction = async (req: MulmRequest, res: Response) => {
       typed,
       new Map(parsed.error.issues.map((issue) => [String(issue.path[0]), issue.message])),
       correction
+    );
+    return;
+  }
+
+  // A name the catalogue holds is refused here, where the witness can tap
+  // This one on the Species that holds it, not after the points are chosen
+  const existing = await speciesAlreadyNamed(`${parsed.data.canonicalGenus} ${parsed.data.canonicalSpeciesName}`);
+  if (existing) {
+    const listedAs = existing.commonName ? `${existing.commonName}, ${existing.speciesName}` : existing.speciesName;
+    renderRecordSpeciesForm(
+      res,
+      submission,
+      recordSpeciesDraftForm.parse(body),
+      new Map([["new_scientific_name", `The catalogue already has this species (${listedAs}). Tap This one to choose it.`]]),
+      correction,
+      existing
     );
     return;
   }
@@ -1308,14 +1366,18 @@ export const saveApprovedSubmissionEdits = async (req: MulmRequest, res: Respons
   const { reason, foods, spawn_locations, reproduction_date, ...rest } = parsed.data;
   const details: lifecycle.ApprovedDetails = { ...rest };
 
-  // Preserve the time component of reproduction_date if the date changed:
-  // the form posts a day, the column holds an instant.
+  // The form posts a day, the column holds an instant. The day the dialog
+  // showed is the stored instant's UTC day: posted back unchanged, it is no
+  // edit at all, so nothing is proposed and the changelog records nothing.
+  // A changed day keeps the stored time of day.
   if (reproduction_date && submission.reproduction_date) {
     const oldDate = new Date(submission.reproduction_date);
-    const [year, month, day] = reproduction_date.split("-").map(Number);
-    details.reproduction_date = new Date(
-      Date.UTC(year, month - 1, day, oldDate.getUTCHours(), oldDate.getUTCMinutes(), oldDate.getUTCSeconds())
-    ).toISOString();
+    if (reproduction_date !== oldDate.toISOString().split("T")[0]) {
+      const [year, month, day] = reproduction_date.split("-").map(Number);
+      details.reproduction_date = new Date(
+        Date.UTC(year, month - 1, day, oldDate.getUTCHours(), oldDate.getUTCMinutes(), oldDate.getUTCSeconds())
+      ).toISOString();
+    }
   } else if (reproduction_date) {
     details.reproduction_date = reproduction_date;
   }

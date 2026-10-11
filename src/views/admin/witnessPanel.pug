@@ -27,6 +27,9 @@
 //-   form is settled on, bound or chosen.
 //- @param speciesChosenByWitness - whether the committee, not the member,
 //-   chose the bound Species, so there is no "is that right?" left to ask
+//- @param speciesChooser - who made that choice, { name, isViewer }, or null
+//-   when the member's own pick stands: "You chose" for the viewer, "<Name>
+//-   chose" for another committee member (a re-witness after #524's reset)
 //- @param originalWitness - { name, date formatted } when migration 066 reset
 //-   the Witness (#524): who saw the fry under the old flow, read off the
 //-   reset note, so the re-witnesser asks for no fresh sighting. Null otherwise.
@@ -78,6 +81,16 @@
 - const prefilledSexual = correcting ? correction.current.sexual_reproduction : false
 - const offerCommon = spellingAgreement ? spellingAgreement.commonName === "not-a-name" : false
 - const offerLatin = spellingAgreement ? spellingAgreement.latinName === "not-a-name" : false
+//- The member's common spelling is offered ticked as a Name only of the Species the member picked (the witness answered Yes); of one the committee chose instead it is offered unticked
+- const tickCommon = !speciesChosenByWitness
+//- Who chose the bound Species, when the committee did: `speciesChooser` names them; absent, the viewer is taken to be the chooser
+- const chooser = typeof speciesChooser === "object" && speciesChooser !== null ? speciesChooser : null
+- const chooserIsViewer = chooser ? chooser.isViewer : true
+- const chooserName = chooser && chooser.name ? chooser.name : "The committee"
+//- What the card shows for the Species, against what the member wrote
+- const shownCommon = bound ? (speciesFacts.commonName || speciesFacts.speciesName) : ""
+- const sameSpelling = (a, b) => String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase()
+- const memberSpellingDiffers = bound ? !sameSpelling(submission.species_common_name, shownCommon) || !sameSpelling(submission.species_latin_name, speciesFacts.speciesName) : false
 //- Who may choose another Species here: the witness while binding is legal, the corrector always (Save carries it)
 - const canChoose = correcting ? true : Boolean(allowed.bindSpecies)
 - const blocked = changesRequested ? !correcting : false
@@ -176,9 +189,14 @@ mixin witnessSuggestions()
 				p.font-semibold Waiting on the member
 				p.text-sm.text-gray-600 Changes were requested. The Witness can be confirmed once the member resubmits.
 		else
+			//- Only the form's own submit names the bar's button in
+			//- hx-disabled-elt: a request from inside the form that inherited it
+			//- (Record new species, the bar's own refresh) would re-enable a
+			//- button the server rendered disabled, so the inheritance is cut
 			form.group.flex.flex-col.gap-3#witness-form(
 				hx-post=formAction
 				hx-disabled-elt=correcting ? "#correction-save" : "#witness-confirm"
+				hx-disinherit="hx-disabled-elt"
 			)
 				if correcting
 					input(type="hidden" name="correction" value="1")
@@ -216,10 +234,11 @@ mixin witnessSuggestions()
 						if correcting
 							p.text-sm.text-gray-600= correction.speciesChanged ? "You chose" : "Currently"
 						else if settled
-							p.text-sm.text-gray-600 You chose
+							//- Who chose it: this witness, or another committee member before them
+							p.text-sm.text-gray-600#witness-chooser= chooserIsViewer ? "You chose" : `${chooserName} chose`
 						else
 							p.text-sm.text-gray-600 The member says it's
-						p.font-semibold.text-lg.leading-tight#witness-bound-common= speciesFacts.commonName || speciesFacts.speciesName
+						p.font-semibold.text-lg.leading-tight#witness-bound-common= shownCommon
 						p.italic#witness-bound-species= speciesFacts.speciesName
 						p.text-sm.text-gray-600#witness-bound-class
 							| #{speciesFacts.speciesType} · #{speciesFacts.programClass}
@@ -227,8 +246,10 @@ mixin witnessSuggestions()
 								|  · Point class #{speciesFacts.pointClass}
 							else
 								|  · no Point class yet
+						//- What the member actually wrote, wherever it is not what is shown, so a mismatch is seen before Yes
+						if memberSpellingDiffers
+							p.text-xs.text-gray-500.mt-1#witness-member-wrote Member wrote: #{submission.species_common_name} · #{submission.species_latin_name}
 						if settled
-							p.text-xs.text-gray-500.mt-1 Member wrote: #{submission.species_common_name} · #{submission.species_latin_name}
 							//- Not posted: it only reveals the search below
 							input.peer.sr-only(type="checkbox" id="witness-species-no")
 						if classificationMismatch
@@ -290,6 +311,7 @@ mixin witnessSuggestions()
 								hx-get=recordUrl
 								hx-target="#witness-species"
 								hx-swap="innerHTML"
+								hx-disabled-elt="this"
 							) Record new species
 					if settled && canChoose
 						label.block.mt-3.text-sm.text-blue-700.underline.cursor-pointer(for="witness-species-no" class="group-has-[#witness-species-no:checked]:hidden") Wrong species? Choose another
@@ -343,7 +365,7 @@ mixin witnessSuggestions()
 						p.font-semibold.mb-1 Save the member's spelling
 						if offerCommon
 							label.flex.gap-2.items-start.py-1
-								input.mt-1(type="checkbox" name="add_common_name" value="on" checked)
+								input.mt-1(type="checkbox" name="add_common_name" value="on" checked=tickCommon)
 								span
 									| "
 									span.font-medium= submission.species_common_name
@@ -378,10 +400,13 @@ mixin witnessSuggestions()
 						hx-target="closest body"
 						hx-swap="beforeend") Request changes
 
-				//- The sticky bar: the sum is the server's, refreshed on every change
+				//- The sticky bar: the sum is the server's, refreshed on every
+				//- change to what it sums, the Species and Points cards. Not the
+				//- Names or the reason: a refresh swaps the button out, and a
+				//- textarea's change fires on blur, under the tap on Save.
 				.sticky.bottom-0.bg-gray-700.rounded-lg.p-3#witness-footer(
 					hx-post=`/admin/submissions/${submission.id}/witness-summary`
-					hx-trigger="change from:#witness-form"
+					hx-trigger="change from:#witness-species, change from:#witness-points"
 					hx-include="#witness-form"
 					hx-swap="innerHTML"
 				)

@@ -43,8 +43,12 @@ export function programClassOfSubmissionSql(submission: SubmissionAlias, species
   return `COALESCE(${speciesAlias}.program_class, ${submission}.species_class)`;
 }
 
-/** One Name of the kind for the Species `speciesIdExpr`, or NULL: a scalar subquery. */
+/**
+ * One Name of the kind for the Species `speciesIdExpr`, or NULL: a scalar
+ * subquery. The first by text, which is the one `listNames` lists first, so
+ * a page and a query agree on which common Name a Species goes by.
+ */
 export function anyNameSql(kind: NameKind, speciesIdExpr: string): string {
   const t = nameTable[kind];
-  return `(SELECT ${t.text} FROM ${t.table} WHERE group_id = ${speciesIdExpr} LIMIT 1)`;
+  return `(SELECT ${t.text} FROM ${t.table} WHERE group_id = ${speciesIdExpr} ORDER BY ${t.text} LIMIT 1)`;
 }

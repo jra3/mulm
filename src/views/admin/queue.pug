@@ -62,7 +62,11 @@ html
 									| #{row.member_name}
 									| #{' '}
 									+programChip(row.programShort)
-								.truncate #{row.species_common_name} #[i.text-gray-500 #{row.species_latin_name}]
+								//- The Species as settled, common and Latin; a Species with no common Name goes by its Latin one alone
+								.truncate(id=`queue-species-${row.id}`)
+									| #{row.species_common_name}
+									if row.species_latin_name !== row.species_common_name
+										|  #[i.text-gray-500 #{row.species_latin_name}]
 								if row.newSpecies
 									.text-xs.text-gray-500(id=`queue-new-species-${row.id}`) New species recorded by the witness
 							.text-right.flex-none

@@ -1243,13 +1243,51 @@ void describe("Pug Template Rendering", () => {
         summary: ready,
       });
 
-      assert.match(html, /You chose/);
+      assert.match(html, /id="witness-chooser">You chose</);
       assert.doesNotMatch(html, /Is that right/);
       assert.match(html, /<input type="hidden" name="species_settled" value="1"\/>/);
-      assert.match(html, /Member wrote: Millions fish · Poecilia reticulatta/);
+      assert.match(html, /id="witness-member-wrote">Member wrote: Millions fish · Poecilia reticulatta/);
       assert.match(html, /Wrong species\? Choose another/);
       assert.match(html, /<input class="peer sr-only" type="checkbox" id="witness-species-no"\/>/);
       assert.match(html, /class="bg-white rounded-lg p-4 text-gray-900" id="witness-points"/, "the Points card is open");
+    });
+
+    void test("another committee member chose the Species: the panel says who, not 'You'", () => {
+      const html = render({ speciesChosenByWitness: true, speciesChooser: { name: "Don Lang", isViewer: false }, summary: ready });
+      assert.match(html, /id="witness-chooser">Don Lang chose</);
+      assert.doesNotMatch(html, /You chose/);
+
+      const mine = render({ speciesChosenByWitness: true, speciesChooser: { name: "Jane Ortiz", isViewer: true }, summary: ready });
+      assert.match(mine, /id="witness-chooser">You chose</);
+
+      const unnamed = render({ speciesChosenByWitness: true, speciesChooser: { name: null, isViewer: false }, summary: ready });
+      assert.match(unnamed, /id="witness-chooser">The committee chose</, "a deleted member still chose it");
+    });
+
+    void test("before Yes, the member's spelling is shown wherever it is not what the card shows, so a mismatch is seen", () => {
+      const spelt = {
+        id: 42,
+        program: "fish",
+        species_type: "Fish",
+        species_class: "Livebearers",
+        species_common_name: "Endler",
+        species_latin_name: "Poecilia reticulata",
+        member_name: "Jane Ortiz",
+        reproduction_date: "Sep 20, 2026",
+        article_link: null,
+      };
+      const html = render({ submission: spelt, speciesFacts: { ...facts, commonName: "Campoma Guppy" } });
+      assert.match(html, /The member says it&#39;s|The member says it's/);
+      assert.match(html, /id="witness-member-wrote">Member wrote: Endler · Poecilia reticulata</);
+
+      // The same names, spelt as the catalogue has them: nothing to point out
+      assert.doesNotMatch(render({}), /witness-member-wrote/);
+      assert.doesNotMatch(render({ submission: { ...spelt, species_common_name: "guppy " } }), /witness-member-wrote/, "case and space are not a mismatch");
+      // A Species with no common Name shows its Latin one, so a member's common spelling of it is a mismatch worth seeing
+      assert.match(
+        render({ submission: { ...spelt, species_common_name: "Guppy" }, speciesFacts: { ...facts, commonName: null } }),
+        /id="witness-member-wrote">Member wrote: Guppy · Poecilia reticulata</
+      );
     });
 
     void test("unbound: shows what the member wrote, the suggestions, the search and Record new species, and the Points card closed", () => {
@@ -1273,7 +1311,7 @@ void describe("Pug Template Rendering", () => {
       // Record new species: a grey secondary button that swaps the record form into the Species card
       assert.match(
         html,
-        /<button class="outline w-full mt-1" id="witness-species-new" type="button" hx-get="\/admin\/submissions\/42\/record-species" hx-target="#witness-species" hx-swap="innerHTML">Record new species</
+        /<button class="outline w-full mt-1" id="witness-species-new" type="button" hx-get="\/admin\/submissions\/42\/record-species" hx-target="#witness-species" hx-swap="innerHTML" hx-disabled-elt="this">Record new species</
       );
       assert.match(html, /class="bg-white rounded-lg p-4 text-gray-900 opacity-40 pointer-events-none" id="witness-points"/);
       assert.match(html, /Choose the species first/);
@@ -1415,6 +1453,11 @@ void describe("Pug Template Rendering", () => {
       assert.match(html, /Fancy Guppy/);
       assert.match(html, /Poecilia reticulatta/);
 
+      // Of a Species the committee chose instead of the member's pick, the spelling is offered unticked: it may name something else
+      html = render({ submission: spelt, speciesChosenByWitness: true, spellingAgreement: { commonName: "not-a-name", latinName: "not-a-name" } });
+      assert.match(html, /<input class="mt-1" type="checkbox" name="add_common_name" value="on"\/>/);
+      assert.match(html, /<input class="mt-1" type="checkbox" name="add_scientific_name" value="on"\/>/);
+
       html = render({ submission: spelt, spellingAgreement: { commonName: "name", latinName: "name" } });
       assert.doesNotMatch(html, /witness-names|add_common_name|add_scientific_name/);
 
@@ -1426,10 +1469,12 @@ void describe("Pug Template Rendering", () => {
       assert.doesNotMatch(html, /add_common_name/);
     });
 
-    void test("the sticky bar: the server's sum and the Confirm button, refreshed on every change", () => {
+    void test("the sticky bar: the server's sum and the Confirm button, refreshed on a change to the Species or Points cards", () => {
       const html = render({ summary: ready });
       assert.match(html, /id="witness-footer"[^>]*hx-post="\/admin\/submissions\/42\/witness-summary"/);
-      assert.match(html, /hx-trigger="change from:#witness-form"/);
+      // Not the whole form: the Names checkboxes change no sum, and a refresh swaps the button out
+      assert.match(html, /hx-trigger="change from:#witness-species, change from:#witness-points"/);
+      assert.doesNotMatch(html, /hx-trigger="change from:#witness-form"/);
       assert.match(html, /hx-include="#witness-form"/);
       assert.match(html, /id="witness-sum-lines">Base points 10 \+ CARES Species Bonus 5</);
       assert.match(html, /id="witness-sum-total">15 pts</);
@@ -1439,6 +1484,18 @@ void describe("Pug Template Rendering", () => {
       const waiting = render({ summary: notReady });
       assert.match(waiting, /id="witness-sum-hint">Is the species right\? Answer above first</);
       assert.match(waiting, /id="witness-confirm"[^>]*disabled/);
+      assert.match(waiting, /<button class="primary w-full h-12 text-base disabled:bg-gray-500[^"]*disabled:opacity-60[^"]*" id="witness-confirm"/, "visibly off, not the enabled blue");
+    });
+
+    void test("only the form's own submit names the Confirm button in hx-disabled-elt: requests from inside the form do not inherit it", () => {
+      const html = render({ summary: notReady, suggestions: neighbours });
+      assert.match(html, /<form[^>]*id="witness-form"[^>]*hx-disabled-elt="#witness-confirm"[^>]*hx-disinherit="hx-disabled-elt"/);
+      // Every other request in the form names itself or nothing, so a swap that leaves the button in place cannot re-enable it
+      const inside = html.slice(html.indexOf(">", html.indexOf('id="witness-form"')), html.indexOf('id="witness-footer"'));
+      for (const match of inside.matchAll(/hx-disabled-elt="([^"]*)"/g)) {
+        assert.strictEqual(match[1], "this");
+      }
+      assert.doesNotMatch(html.slice(html.indexOf('id="witness-footer"')), /hx-disabled-elt/);
     });
 
     void test("while changes are outstanding the panel offers nothing: the ball is with the member", () => {
@@ -1499,6 +1556,11 @@ void describe("Pug Template Rendering", () => {
         // The reason, and the bar's button
         assert.match(html, /id="witness-reason"/);
         assert.match(html, /<textarea class="text-input w-full" id="correction-reason" name="reason" rows="3" required="required" maxlength="2000"/);
+        // Typing the reason never refreshes the bar: a textarea's change fires on blur, which would swap Save out from under the tap
+        const reason = html.slice(html.indexOf('id="witness-reason"'), html.indexOf('id="committee-error"'));
+        assert.doesNotMatch(reason, /hx-trigger|hx-post|hx-get/);
+        assert.match(html, /id="witness-footer"[^>]*hx-trigger="change from:#witness-species, change from:#witness-points"/);
+        assert.doesNotMatch(html, /hx-trigger="[^"]*#witness-form[^"]*"|hx-trigger="[^"]*#witness-reason[^"]*"/);
         assert.match(html, /the member reads it in the email/);
         assert.match(html, /id="correction-save" type="submit">Save correction · 20 pts</);
         assert.doesNotMatch(html, /witness-confirm|Confirm witness/);
@@ -1606,11 +1668,37 @@ void describe("Pug Template Rendering", () => {
         assert.match(html, /<input[^>]*type="checkbox"[^>]*name="new_cares_species"[^>]*value="on"/);
         assert.match(
           html,
-          /<button class="primary w-full h-12 text-base" id="witness-record-continue" type="button" hx-post="\/admin\/submissions\/42\/record-species" hx-include="#witness-record" hx-target="#witness-species" hx-swap="innerHTML">Record species and continue</
+          /<button class="primary w-full h-12 text-base" id="witness-record-continue" type="button" hx-post="\/admin\/submissions\/42\/record-species" hx-include="#witness-record" hx-target="#witness-species" hx-swap="innerHTML" hx-disabled-elt="this">Record species and continue</
         );
         // Back fetches the page and keeps only the panel, so nothing is created or lost
-        assert.match(html, /hx-get="\/submissions\/42"[^>]*hx-select="#witnessPanel"[^>]*hx-target="#witnessPanel"[^>]*hx-swap="outerHTML"[^>]*>Back</);
+        assert.match(html, /hx-get="\/submissions\/42"[^>]*hx-select="#witnessPanel"[^>]*hx-target="#witnessPanel"[^>]*hx-swap="outerHTML"[^>]*hx-disabled-elt="this"[^>]*>Back</);
         assert.doesNotMatch(html, /<form/, "it sits inside the panel's form, so it is not one itself");
+        assert.doesNotMatch(html, /witness-confirm|correction-save/, "no request here names the bar's button, which the server renders disabled");
+        assert.doesNotMatch(html, /witness-record-existing/);
+      });
+
+      void test("a scientific name the catalogue holds: refused beside the field, with This one on the Species that holds it", () => {
+        const refused = renderForm({
+          values: { new_scientific_name: "Puntius conchonius", new_common_name: "Longfin Rosey Barb", new_point_class: 10, new_cares_species: false },
+          errors: new Map([["new_scientific_name", "The catalogue already has this species (Rosy Barb, Puntius conchonius). Tap This one to choose it."]]),
+          existing: { speciesId: 31, speciesName: "Puntius conchonius", commonName: "Rosy Barb" },
+        });
+        assert.match(refused, /id="new_scientific_name-error"[^>]*>The catalogue already has this species \(Rosy Barb, Puntius conchonius\)\. Tap This one to choose it\.</);
+        const existing = refused.slice(refused.indexOf('id="witness-record-existing"'), refused.indexOf('for="witness-new-common-name"'));
+        assert.match(existing, /Rosy Barb/);
+        assert.match(existing, /<span class="block italic text-sm">Puntius conchonius</);
+        // The witness panel binds it, as a suggestion's This one does
+        assert.match(existing, /id="witness-record-existing-choose" type="button" hx-post="\/admin\/submissions\/42\/bind-species" hx-vals="\{&quot;group_id&quot;:31\}" hx-disabled-elt="this">This one</);
+
+        // The correction form asks for itself again with it settled
+        const correcting = renderForm({
+          correction: true,
+          errors: new Map([["new_scientific_name", "already"]]),
+          existing: { speciesId: 31, speciesName: "Puntius conchonius", commonName: null },
+        });
+        assert.match(correcting, /id="witness-record-existing-choose" type="button" hx-get="\/admin\/submissions\/42\/correct-points" hx-vals="\{&quot;species_id&quot;:31\}" hx-target="#witnessPanel" hx-swap="outerHTML" hx-disabled-elt="this">This one</);
+        assert.match(correcting, /<span class="block font-semibold leading-tight">Puntius conchonius</, "no common Name: the scientific one stands in");
+        assert.doesNotMatch(correcting, /block italic text-sm/);
       });
 
       void test("a Plant has no CARES to choose; a chosen Point class and CARES come back ticked, with the refusals beside their fields", () => {
@@ -1664,6 +1752,11 @@ void describe("Pug Template Rendering", () => {
       assert.match(html, /id="queue-new-species-101"[^>]*>New species recorded by the witness</);
       assert.match(html, /id="queue-total-101"[^>]*>20</);
       assert.doesNotMatch(html, /queue-new-species-105/);
+      assert.match(html, /id="queue-species-101">Butterfly Goodeid <i class="text-gray-500">Ameca splendens<\/i></);
+
+      // A Species with no common Name goes by its Latin one, once, not twice
+      const latinOnly = render({ ready: [{ ...sampleQueue.ready[0], species_common_name: "Ilyodon whitei", species_latin_name: "Ilyodon whitei" }] });
+      assert.match(latinOnly, /id="queue-species-101">Ilyodon whitei<\/div>/);
     });
 
     void test("opened, a row itemises the points with first-time, names the witness date and links to the Submission and the correction", () => {
@@ -1962,6 +2055,31 @@ void describe("Pug Template Rendering", () => {
         waitingPeriodStatus: { requiredDays: 60, elapsedDays: 10, daysRemaining: 50, elapsed: false },
         submission: { ...(baseMockData.submission as Record<string, unknown>), id: 77, species_id: 5, species_type },
       });
+
+    void test("awaiting a witness: the member is told a committee member will confirm it, not to screen it themselves", () => {
+      const html = render("pendingWitness", "Fish");
+      assert.match(html, /id="witness-awaiting-note"/);
+      assert.match(html, /Awaiting a witness/);
+      assert.match(html, /A committee member will confirm the fry and set the points\./);
+      assert.doesNotMatch(html, /Admin Screening|screen your own|contact another admin|witnessPanel/);
+      assert.match(render("pendingWitness", "Plant"), /will confirm the plants and set the points/);
+
+      // A committee member's own: the self-witness note stays, and no panel
+      const own = pug.compileFile(path.join(viewsPath, "submission/review.pug"), { basedir: viewsPath, pretty: false })({
+        ...baseMockData,
+        isAdmin: true,
+        isSelf: true,
+        photos: [],
+        state: "pendingWitness",
+        changesRequested: false,
+        allowed: {},
+        waitingPeriodStatus: { requiredDays: 60, elapsedDays: 10, daysRemaining: 50, elapsed: false },
+        submission: { ...(baseMockData.submission as Record<string, unknown>), id: 77, species_id: 5, species_type: "Fish" },
+      });
+      assert.match(own, /id="witness-self-note"/);
+      assert.match(own, /You cannot witness your own submissions/);
+      assert.doesNotMatch(own, /witness-awaiting-note|witnessPanel|confirm-witness/);
+    });
 
     void test("waiting period: fish bring fry", () => {
       const html = render("waitingPeriod", "Fish");

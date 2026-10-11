@@ -23,11 +23,20 @@ include ../mixins/errorMessage.pug
 //-   which carries the flag so the server answers with that form again
 //- @param backUrl - the page Back fetches the panel from: the Submission page,
 //-   or the correction form
+//- @param existing - the Species that already holds the scientific name the
+//-   witness typed ({ speciesId, speciesName, commonName }), or null: the
+//-   catalogue refuses a second one, so the step offers This one on it
+//-   instead, beside the refusal
+//-
+//- The buttons here name only themselves in hx-disabled-elt: the panel's form
+//- names its Confirm button, and a request from inside the form that
+//- inherited that would re-enable a button the server rendered disabled.
 
 - const eyebrow = "text-xs font-semibold uppercase tracking-wide text-gray-500"
 - const chip = "block text-center py-2 rounded-lg border border-gray-300 bg-white font-semibold text-gray-900 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 peer-focus-visible:ring-2 peer-focus-visible:ring-amber-400"
 
 - const back = typeof backUrl === "string" ? backUrl : `/submissions/${submission.id}`
+- const duplicate = typeof existing === "object" && existing !== null ? existing : null
 
 #witness-record(hx-on:keydown="if (event.key === 'Enter') event.preventDefault()")
 	if correction
@@ -46,6 +55,30 @@ include ../mixins/errorMessage.pug
 		required
 	)
 	+errorMessage('new_scientific_name', 'block mb-2')
+	if duplicate
+		//- The Species that holds the name, a tap away: the witness panel binds
+		//- it and reloads; the correction form asks for itself with it settled
+		.flex.items-center.gap-2.border.border-amber-300.bg-amber-50.rounded-lg.px-3.py-2.mb-3#witness-record-existing
+			span.flex-1.min-w-0
+				span.block.font-semibold.leading-tight= duplicate.commonName || duplicate.speciesName
+				if duplicate.commonName
+					span.block.italic.text-sm= duplicate.speciesName
+			if correction
+				button.outline.text-sm.flex-none#witness-record-existing-choose(
+					type="button"
+					hx-get=`/admin/submissions/${submission.id}/correct-points`
+					hx-vals=JSON.stringify({ species_id: duplicate.speciesId })
+					hx-target="#witnessPanel"
+					hx-swap="outerHTML"
+					hx-disabled-elt="this"
+				) This one
+			else
+				button.outline.text-sm.flex-none#witness-record-existing-choose(
+					type="button"
+					hx-post=`/admin/submissions/${submission.id}/bind-species`
+					hx-vals=JSON.stringify({ group_id: duplicate.speciesId })
+					hx-disabled-elt="this"
+				) This one
 
 	label.block.text-sm.font-semibold.mt-2(for="witness-new-common-name") Common name
 	input.text-input.w-full.mb-1#witness-new-common-name(
@@ -80,6 +113,7 @@ include ../mixins/errorMessage.pug
 		hx-include="#witness-record"
 		hx-target="#witness-species"
 		hx-swap="innerHTML"
+		hx-disabled-elt="this"
 	) Record species and continue
 	button.outline.w-full.mt-2(
 		type="button"
@@ -87,4 +121,5 @@ include ../mixins/errorMessage.pug
 		hx-select="#witnessPanel"
 		hx-target="#witnessPanel"
 		hx-swap="outerHTML"
+		hx-disabled-elt="this"
 	) Back
