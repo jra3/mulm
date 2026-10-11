@@ -2241,6 +2241,27 @@ void describe("Submission lifecycle - transitions", () => {
       assert.deepStrictEqual(await changelog(theirs), []);
     });
 
+    void test("the same instant spelt another way is not a date change: only the fields that moved are recorded", async () => {
+      const id = await submissionInState(ctx.db, "approved", { memberId: ctx.member.id, witnessedBy: ctx.admin.id, reproductionDate: "2024-01-01" });
+
+      const changes = await editApprovedDetails(
+        committee,
+        id,
+        { reproduction_date: "2024-01-01T00:00:00.000Z", count: "40" },
+        "The member counted again"
+      );
+
+      assert.deepStrictEqual(changes.map((c) => c.field), ["count"]);
+      const after = (await readSubmission(id))!;
+      assert.strictEqual(after.count, "40");
+      assert.strictEqual(after.reproduction_date, "2024-01-01T00:00:00.000Z", "written as proposed, since the instant is the same");
+      assert.strictEqual(
+        await refusal(() => editApprovedDetails(committee, id, { reproduction_date: "2024-01-01" }, "Same day")),
+        "validation"
+      );
+      assert.strictEqual((await changelog(id)).length, 1);
+    });
+
     void test("a reproduction date edit changes nothing but the date on an Approved Submission", async () => {
       const id = await at("approved");
 

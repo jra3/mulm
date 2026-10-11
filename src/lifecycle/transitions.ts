@@ -1457,12 +1457,26 @@ export function changesBetween(before: Submission, updates: Record<string, unkno
       continue;
     }
 
+    if (DATE_FIELDS.has(field) && sameInstant(current, proposed)) {
+      continue;
+    }
+
     if (normalize(current) !== normalize(proposed)) {
       changes.push({ field, old: current, new: proposed });
     }
   }
 
   return changes;
+}
+
+/** Columns that hold an instant, which an edit may spell differently ("2026-05-15" against "2026-05-15T00:00:00.000Z") without changing. */
+const DATE_FIELDS = new Set(["reproduction_date"]);
+
+/** Whether two spellings of a date name the same instant; two that do not both parse are left to the plain comparison. */
+function sameInstant(a: unknown, b: unknown): boolean {
+  if (typeof a !== "string" || typeof b !== "string") return false;
+  const [x, y] = [Date.parse(a), Date.parse(b)];
+  return !Number.isNaN(x) && !Number.isNaN(y) && x === y;
 }
 
 function normalize(value: unknown): string | number | boolean | null {

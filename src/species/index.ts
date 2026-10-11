@@ -34,6 +34,7 @@ export { CatalogueRefusal, type RefusalCode } from "./errors";
 export {
   findSpeciesById,
   findSpeciesByIds,
+  findSpeciesByName,
   resolveSpecies,
   type Resolution,
 } from "./lookup";

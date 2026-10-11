@@ -90,9 +90,19 @@ function lastIndexWhere<T>(items: T[], test: (item: T) => boolean): number {
  * know whether a save has such a choice to reset.
  */
 export function speciesChosenByCommittee(notes: Pick<SubmissionNote, "note_text">[]): boolean {
+  return committeeSpeciesChoice(notes) !== null;
+}
+
+/**
+ * The changelog entry of the committee's choice of Species that still
+ * stands (see `speciesChosenByCommittee`), or null. The witness panel reads
+ * who made it off `admin_id` and `admin_name`: "You chose" when it was this
+ * witness, "<Name> chose" when another committee member bound it first.
+ */
+export function committeeSpeciesChoice<T extends Pick<SubmissionNote, "note_text">>(notes: T[]): T | null {
   const lastChoice = lastIndexWhere(notes, (note) => noteChanged(note, "species"));
   const lastSave = lastIndexWhere(notes, (note) => memberSaveNote.safeParse(parsedNote(note)).success);
-  return lastChoice > lastSave;
+  return lastChoice > lastSave ? notes[lastChoice] : null;
 }
 
 /**

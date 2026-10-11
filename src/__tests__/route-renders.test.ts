@@ -165,6 +165,31 @@ void describe("Record new species step", () => {
     assert.deepStrictEqual(await resolveSpecies({ latinName: "Apistogramma" }), null);
   });
 
+  void test("a scientific name the catalogue holds is refused at the step, beside the field, with This one on the Species that holds it", async () => {
+    const guppy = await ensureGuppySpecies(testDb.db);
+
+    const res = await request(app())
+      .post(`/admin/submissions/${submissionId}/record-species`)
+      .type("form")
+      .send({ new_scientific_name: "poecilia  Reticulata", new_common_name: "Fancy guppy", new_point_class: "15", new_cares_species: "on" });
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.headers["hx-retarget"], undefined, "back into the Species card, not the panel with it settled");
+    assert.match(res.text, /id="witness-record"/);
+    assert.match(res.text, /id="new_scientific_name-error"[^>]*>The catalogue already has this species \(Guppy, Poecilia reticulata\)\. Tap This one to choose it\.</);
+    assert.match(res.text, new RegExp(`id="witness-record-existing-choose" type="button" hx-post="/admin/submissions/${submissionId}/bind-species" hx-vals="\\{&quot;group_id&quot;:${guppy}\\}"`));
+    assert.match(res.text, /name="new_scientific_name"[^>]*value="poecilia {2}Reticulata"/, "the values typed come back");
+    assert.match(res.text, /id="witness-new-point-class-15" checked="checked"/);
+    assert.doesNotMatch(res.text, /witness-recording|name="points"/);
+
+    // On the correction form the step comes back as the step too, This one asking for the form with the Species
+    const correcting = await request(app())
+      .post(`/admin/submissions/${submissionId}/record-species`)
+      .type("form")
+      .send({ correction: "1", new_scientific_name: "Poecilia reticulata", new_point_class: "10" });
+    assert.match(correcting.text, new RegExp(`id="witness-record-existing-choose" type="button" hx-get="/admin/submissions/${submissionId}/correct-points" hx-vals="\\{&quot;species_id&quot;:${guppy}\\}"`));
+  });
+
   void test("an accepted step answers with the whole panel, the new Species settled and nothing created", async () => {
     const res = await request(app())
       .post(`/admin/submissions/${submissionId}/record-species`)
@@ -400,6 +425,40 @@ void describe("Approval queue and the one button", () => {
     assert.match(res.text, new RegExp(`id="queue-waiting-${waitingId}"`));
     assert.doesNotMatch(res.text, new RegExp(`submissions/${waitingId}/approve`));
     assert.match(res.text, /All · 1<\/a>/);
+  });
+
+  void test("rows show the Species the witness settled, common and Latin, not the member's spelling", async () => {
+    const barb = await createSpecies({
+      canonicalGenus: "Puntius",
+      canonicalSpeciesName: "queuetestus",
+      programClass: "Cyprinids",
+      speciesType: "Fish",
+      pointClass: 10,
+      commonName: "Queue Barb",
+    });
+    const spelt = { commonName: "Longfin Rosey Barbs", latinName: "Puntius stagingtestus", memberId: ownerId, witnessedBy: committeeId, speciesId: barb, points: 10 };
+    const ready = await submissionInState(testDb.db, "inApprovalQueue", spelt);
+    const waiting = await submissionInState(testDb.db, "waitingPeriod", spelt);
+    const approved = await submissionInState(testDb.db, "approved", spelt);
+
+    const res = await request(app()).get("/admin/queue");
+
+    assert.match(res.text, new RegExp(`id="queue-species-${ready}">Queue Barb <i class="text-gray-500">Puntius queuetestus</i>`));
+    assert.match(res.text, new RegExp(`id="queue-waiting-${waiting}"[\\s\\S]*?Dan Wu · Queue Barb`));
+    assert.match(res.text, new RegExp(`id="queue-approved-${approved}"[\\s\\S]*?Dan Wu · Queue Barb`));
+    assert.doesNotMatch(res.text, /Longfin Rosey Barbs|stagingtestus/);
+  });
+
+  void test("a Species with no common Name goes by its Latin one; an unbound row has only the member's spelling", async () => {
+    const nameless = await createSpecies({ canonicalGenus: "Ilyodon", canonicalSpeciesName: "queuetestus", programClass: "Livebearers", speciesType: "Fish", pointClass: 10 });
+    const latinOnly = await submissionInState(testDb.db, "inApprovalQueue", { memberId: ownerId, witnessedBy: committeeId, speciesId: nameless, points: 10, commonName: "White's goodeid" });
+    const unbound = await submissionInState(testDb.db, "waitingPeriod", { memberId: ownerId, witnessedBy: committeeId, speciesId: null, commonName: "Mystery fish", latinName: "Genus incognita" });
+
+    const res = await request(app()).get("/admin/queue");
+
+    assert.match(res.text, new RegExp(`id="queue-species-${latinOnly}">Ilyodon queuetestus</div>`));
+    assert.doesNotMatch(res.text, /White's goodeid|White&#39;s goodeid/);
+    assert.match(res.text, new RegExp(`id="queue-waiting-${unbound}"[\\s\\S]*?Dan Wu · Mystery fish`));
   });
 
   void test("a Program page lists that Program alone; an unknown one is a 404", async () => {
@@ -762,6 +821,33 @@ void describe("The Edit Approved dialog edits details only", () => {
     assert.deepStrictEqual(sent.kinds, [], "no email of any kind");
   });
 
+  void test("the day the dialog showed, posted back unchanged, is no edit: only the fields that moved reach the changelog", async () => {
+    const stored = (await getSubmissionById(approvedId))!.reproduction_date;
+    const shownDay = new Date(stored).toISOString().split("T")[0];
+
+    const res = await request(app())
+      .post(`/admin/submissions/${approvedId}/edit-approved`)
+      .type("form")
+      .send({ count: "40", reproduction_date: shownDay, reason: "The member counted again" });
+
+    assert.strictEqual(res.headers["hx-redirect"], `/submissions/${approvedId}`);
+    const row = (await getSubmissionById(approvedId))!;
+    assert.strictEqual(row.count, "40");
+    assert.strictEqual(row.reproduction_date, stored, "the instant is left exactly as stored");
+    const notes = await getNotesForSubmission(approvedId);
+    assert.strictEqual(notes.length, 1);
+    const note = JSON.parse(notes[0].note_text) as { changes: { field: string }[] };
+    assert.deepStrictEqual(note.changes.map((c) => c.field), ["count"]);
+
+    // The day alone, unchanged, is nothing to save
+    const nothing = await request(app())
+      .post(`/admin/submissions/${approvedId}/edit-approved`)
+      .type("form")
+      .send({ reproduction_date: shownDay, reason: "Looked at it again" });
+    assert.strictEqual(nothing.headers["hx-retarget"], "#edit-approved-errors");
+    assert.match(nothing.text, /No changes detected/);
+  });
+
   void test("a points or Species field in the body is dropped: the dialog cannot change them", async () => {
     const res = await request(app())
       .post(`/admin/submissions/${approvedId}/edit-approved`)
@@ -909,8 +995,15 @@ void describe("The witness confirms from the panel", () => {
     );
     const chosen = await request(app()).get(`/submissions/${pendingId}`);
     assert.strictEqual(chosen.status, 200);
-    assert.match(chosen.text, /You chose/);
+    assert.match(chosen.text, /id="witness-chooser">You chose</);
     assert.doesNotMatch(chosen.text, /Is that right\?/);
+
+    // Another committee member sees who chose it, by name
+    const otherId = await createMember("other@example.com", "Don Lang");
+    const other = appWith((a) => a.get("/submissions/:id", submission.view), { id: otherId, display_name: "Don Lang", contact_email: "other@example.com", is_admin: true });
+    const theirs = await request(other).get(`/submissions/${pendingId}`);
+    assert.match(theirs.text, /id="witness-chooser">Jane Ortiz chose</);
+    assert.doesNotMatch(theirs.text, /You chose/);
 
     await addNote(pendingId, ownerId, JSON.stringify({ type: "member_save", voided: "choice", member_id: ownerId, timestamp: new Date().toISOString() }));
     const saved = await request(app()).get(`/submissions/${pendingId}`);

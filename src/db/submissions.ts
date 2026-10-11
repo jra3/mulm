@@ -4,7 +4,7 @@ import { logger } from "@/utils/logger";
 import { filterQueue, queueSql, type QueueName } from "@/lifecycle/queues";
 import { programOfSpeciesType, totalPointsSql } from "@/points";
 import type { Database } from "sqlite";
-import { speciesOfSubmissionJoinSql } from "@/species";
+import { anyNameSql, speciesOfSubmissionJoinSql } from "@/species";
 
 // New normalized table types
 export type SubmissionImage = {
@@ -129,7 +129,17 @@ export type Submission = {
 export type QueueSubmission = Submission & {
   witnessed_by_name?: string | null;
   approved_by_name?: string | null;
+  /** The bound Species' Canonical name, or null when unbound: what a queue row shows in place of the member's spelling (#527). */
+  bound_species_name?: string | null;
+  /** A common Name of the bound Species, or null when it has none or the row is unbound. */
+  bound_common_name?: string | null;
 };
+
+/** The bound Species' names as columns, for a query that joined it as `alias` (`speciesOfSubmissionJoinSql`). */
+function boundSpeciesNamesSql(alias: string): string {
+  return `${alias}.canonical_genus || ' ' || ${alias}.canonical_species_name as bound_species_name,
+      ${anyNameSql("common", `${alias}.group_id`)} as bound_common_name`;
+}
 
 /**
  * The form-to-database mapper: a Submission's *contents*, as columns.
@@ -308,7 +318,8 @@ export async function getQueue(queue: QueueName, program: string) {
 			${totalPointsSql("submissions")} as total_points,
 			members.display_name as member_name,
 			witnessed_members.display_name as witnessed_by_name,
-			sng.is_cares_species
+			sng.is_cares_species,
+			${boundSpeciesNamesSql("sng")}
 		FROM submissions
 		JOIN members ON submissions.member_id == members.id
 		LEFT JOIN members as witnessed_members ON submissions.witnessed_by == witnessed_members.id
@@ -334,10 +345,12 @@ export async function getApprovedSince(since: string, program?: string): Promise
 			submissions.*,
 			${totalPointsSql("submissions")} as total_points,
 			members.display_name as member_name,
-			approvers.display_name as approved_by_name
+			approvers.display_name as approved_by_name,
+			${boundSpeciesNamesSql("sng")}
 		FROM submissions
 		JOIN members ON submissions.member_id == members.id
 		LEFT JOIN members as approvers ON submissions.approved_by == approvers.id
+		${speciesOfSubmissionJoinSql("submissions", "sng")}
 		WHERE submissions.approved_on >= ?
 		${program ? "AND submissions.program = ?" : ""}
 		ORDER BY submissions.approved_on DESC`,
