@@ -5,7 +5,7 @@ import path from "path";
 import fs from "fs";
 import { faker } from "@faker-js/faker";
 import { getNextLevel, programMetadata } from "../programs";
-import { bonusBreakdown, bonusFields } from "../points";
+import { bonusBreakdown } from "../points";
 
 /**
  * The approval queue page's locals (#527), as `approvalQueueLocals` in
@@ -305,9 +305,6 @@ void describe("Pug Template Rendering", () => {
     // Itemised bonuses for the approval email; the CARES suite at the bottom of
     // this file renders that template with a real breakdown
     bonusLines: [],
-
-    // The bonus fields the approval panel's error mixin loops over
-    bonusFields,
 
     // Tank data
     tanks: [

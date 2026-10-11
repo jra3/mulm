@@ -10,7 +10,9 @@ export type SubmissionNote = {
 };
 
 /**
- * Fetch all notes for a submission, ordered chronologically (oldest first)
+ * Fetch all notes for a submission, ordered chronologically (oldest first);
+ * `created_at` is to the second, so the id breaks ties, which keeps two
+ * changelog entries written in the same second in the order they happened.
  * Includes admin name (or null if admin was deleted)
  */
 export async function getNotesForSubmission(submissionId: number): Promise<SubmissionNote[]> {
@@ -25,7 +27,7 @@ export async function getNotesForSubmission(submissionId: number): Promise<Submi
 		FROM submission_notes sn
 		LEFT JOIN members m ON sn.admin_id = m.id
 		WHERE sn.submission_id = ?
-		ORDER BY sn.created_at ASC`,
+		ORDER BY sn.created_at ASC, sn.id ASC`,
     [submissionId]
   );
   return notes;
@@ -40,9 +42,10 @@ export async function getNotesForSubmission(submissionId: number): Promise<Submi
  *
  * Plain-text notes (committee notes, the Witness reset note) share the table
  * with the changelog, and `json_extract` or `json_each` on one of them is an
- * error, not a NULL. The CTE keeps only the valid JSON changelog entries, and
- * every JSON function still reads through a `json_valid` CASE, so no planner
- * ordering can hand prose to one of them.
+ * error, not a NULL. The CTE keeps only the valid JSON `admin_edit` entries
+ * (a `member_save` entry has no changes), and every JSON function still reads
+ * through a `json_valid` CASE, so no planner ordering can hand prose to one
+ * of them.
  */
 export async function findSubmissionsWithRecordedSpecies(submissionIds: number[]): Promise<Set<number>> {
   if (submissionIds.length === 0) return new Set();

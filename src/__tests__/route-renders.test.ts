@@ -13,7 +13,6 @@ import { getSubmissionById } from "@/db/submissions";
 import { createSpecies, resolveSpecies } from "@/species";
 import { confirmWitness, resetNotifier, WITNESS_RESET_NOTE } from "@/lifecycle";
 import { addNote, getNotesForSubmission } from "@/db/submission_notes";
-import { bonusFields } from "@/points";
 import { setupTestDatabase, type TestDatabase } from "./testDbHelper.helper";
 import { createTestSubmission as createUnboundSubmission, ensureGuppySpecies } from "./helpers/testHelpers";
 import { recordNotifications, submissionInState, witnessPoints } from "./helpers/lifecycleFixtures";
@@ -226,14 +225,7 @@ void describe("A reset Submission names its original witness on the panel", () =
     await testDb.cleanup();
   });
 
-  const app = () =>
-    appWith((a) => {
-      a.use((_req, res, next) => {
-        res.locals.bonusFields = bonusFields;
-        next();
-      });
-      a.get("/submissions/:id", submission.view);
-    }, committee);
+  const app = () => appWith((a) => a.get("/submissions/:id", submission.view), committee);
 
   void test("the header says who witnessed it before and when", async () => {
     const id = await submissionInState(testDb.db, "pendingWitness", { memberId: ownerId });
@@ -297,11 +289,6 @@ void describe("Pending points are the owner's alone", () => {
 
   const app = (viewer: MulmRequest["viewer"]) =>
     appWith((a) => {
-      // The approval panel's error mixin reads this local, which src/index.ts sets app-wide
-      a.use((_req, res, next) => {
-        res.locals.bonusFields = bonusFields;
-        next();
-      });
       a.get("/submissions/:id", submission.view);
       a.get("/member/:memberId", member.view);
     }, viewer);
@@ -476,13 +463,7 @@ void describe("Approval queue and the one button", () => {
   });
 
   void test("the review page tells the committee what approval would award and points at the queue", async () => {
-    const page = appWith((a) => {
-      a.use((_req, res, next) => {
-        res.locals.bonusFields = bonusFields;
-        next();
-      });
-      a.get("/submissions/:id", submission.view);
-    }, committee);
+    const page = appWith((a) => a.get("/submissions/:id", submission.view), committee);
     const res = await request(page).get(`/submissions/${readyId}`);
 
     assert.strictEqual(res.status, 200);
@@ -525,10 +506,6 @@ void describe("The committee corrects Species and points", () => {
   const app = (viewer: MulmRequest["viewer"] = committee) =>
     appWith((a) => {
       a.use(express.urlencoded({ extended: true }));
-      a.use((_req, res, next) => {
-        res.locals.bonusFields = bonusFields;
-        next();
-      });
       a.get("/submissions/:id", submission.view);
       a.get("/admin/submissions/:id/correct-points", admin.correctPointsFormAction);
       a.post("/admin/submissions/:id/correct-points", admin.correctPointsAction);
@@ -830,5 +807,118 @@ void describe("The Edit Approved dialog edits details only", () => {
     const waitingSave = await request(app()).post(`/admin/submissions/${waiting}/edit-approved`).type("form").send({ tank_size: "20", reason: "Early" });
     assert.strictEqual(waitingSave.status, 400);
     assert.notStrictEqual((await getSubmissionById(waiting))!.tank_size, "20");
+  });
+});
+
+/**
+ * The witness panel's confirm (#521), through the route: a valid body lands
+ * the Witness and sends the witness to the queue of the Program the
+ * Submission settled in; a refused one comes back into the panel's alert and
+ * writes nothing.
+ */
+void describe("The witness confirms from the panel", () => {
+  let testDb: TestDatabase;
+  let committee: MulmRequest["viewer"];
+  let committeeId: number;
+  let ownerId: number;
+  let pendingId: number;
+  let guppy: number;
+
+  beforeEach(async () => {
+    testDb = await setupTestDatabase();
+    recordNotifications();
+    ownerId = await createMember("breeder@example.com", "Dan Wu");
+    committeeId = await createMember("witness@example.com", "Jane Ortiz");
+    committee = { id: committeeId, display_name: "Jane Ortiz", contact_email: "witness@example.com", is_admin: true };
+    guppy = await ensureGuppySpecies(testDb.db);
+    pendingId = await submissionInState(testDb.db, "pendingWitness", { memberId: ownerId });
+  });
+  afterEach(async () => {
+    resetNotifier();
+    await testDb.cleanup();
+  });
+
+  const app = (viewer: MulmRequest["viewer"] = committee) =>
+    appWith((a) => {
+      a.use(express.urlencoded({ extended: true }));
+      a.get("/submissions/:id", submission.view);
+      a.post("/admin/submissions/:id/confirm-witness", admin.confirmWitnessAction);
+    }, viewer);
+
+  const confirm = (id: number, body: Record<string, string>) =>
+    request(app()).post(`/admin/submissions/${id}/confirm-witness`).type("form").send(body);
+
+  void test("a valid body confirms the Witness with its points and redirects to the Program's witness queue", async () => {
+    const res = await confirm(pendingId, { species_id: String(guppy), points: "10", article_points: "5", cares_species: "on" });
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.headers["hx-redirect"], "/admin/witness-queue/fish");
+    const row = (await getSubmissionById(pendingId))!;
+    assert.strictEqual(row.witness_verification_status, "confirmed");
+    assert.strictEqual(row.witnessed_by, committeeId);
+    assert.strictEqual(row.points, 10);
+    assert.strictEqual(row.article_points, 5);
+    assert.strictEqual(row.cares_species, 1);
+    assert.strictEqual(row.species_id, guppy);
+  });
+
+  void test("a refusal renders into the panel's alert and writes nothing: points outside the classes, a HAP bonus on a fish", async () => {
+    const seven = await confirm(pendingId, { species_id: String(guppy), points: "7" });
+    assert.strictEqual(seven.status, 200);
+    assert.strictEqual(seven.headers["hx-retarget"], "#committee-error");
+    assert.strictEqual(seven.headers["hx-reswap"], "innerHTML");
+    assert.strictEqual(seven.headers["hx-redirect"], undefined);
+    assert.match(seven.text, /Not done:/);
+    assert.match(seven.text, /Base points must be 5, 10, 15 or 20/);
+
+    const flowered = await confirm(pendingId, { species_id: String(guppy), points: "10", flowered: "on" });
+    assert.strictEqual(flowered.headers["hx-retarget"], "#committee-error");
+    assert.match(flowered.text, /The flowered bonus does not apply to Breeders Awards Program submissions/);
+
+    const row = (await getSubmissionById(pendingId))!;
+    assert.strictEqual(row.witness_verification_status, "pending");
+    assert.strictEqual(row.witnessed_by, null);
+    assert.strictEqual(row.points, null);
+    assert.strictEqual(row.flowered, null);
+  });
+
+  void test("settled on a plant Species, a fish Submission leaves as a HAP row and the redirect follows it", async () => {
+    const plant = await createSpecies({
+      canonicalGenus: "Cryptocoryne",
+      canonicalSpeciesName: "witnessata",
+      programClass: "Cryptocoryne",
+      speciesType: "Plant",
+      pointClass: 10,
+    });
+
+    const res = await confirm(pendingId, { species_id: String(plant), points: "10", flowered: "on" });
+
+    assert.strictEqual(res.headers["hx-redirect"], "/admin/witness-queue/plant");
+    const row = (await getSubmissionById(pendingId))!;
+    assert.strictEqual(row.program, "plant");
+    assert.strictEqual(row.species_id, plant);
+    assert.strictEqual(row.flowered, 1);
+    assert.strictEqual(row.witness_verification_status, "confirmed");
+  });
+
+  void test("the panel asks 'Is that right?' again once the member has saved since the committee chose the Species", async () => {
+    await addNote(
+      pendingId,
+      committeeId,
+      JSON.stringify({ type: "admin_edit", changes: [{ field: "species", old: null, new: "Poecilia reticulata" }], reason: "Bound to a Species" })
+    );
+    const chosen = await request(app()).get(`/submissions/${pendingId}`);
+    assert.strictEqual(chosen.status, 200);
+    assert.match(chosen.text, /You chose/);
+    assert.doesNotMatch(chosen.text, /Is that right\?/);
+
+    await addNote(pendingId, ownerId, JSON.stringify({ type: "member_save", member_id: ownerId, timestamp: new Date().toISOString() }));
+    const saved = await request(app()).get(`/submissions/${pendingId}`);
+    assert.strictEqual(saved.status, 200);
+    assert.match(saved.text, /Is that right\?/);
+    assert.doesNotMatch(saved.text, /You chose/);
+    // The save is one line on the changelog, not raw JSON
+    assert.match(saved.text, /Dan Wu<\/span> saved the form/);
+    assert.doesNotMatch(saved.text, /member_save/);
   });
 });

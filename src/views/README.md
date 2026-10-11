@@ -66,7 +66,6 @@ Status badges use a consistent pattern: `bg-{color}-100 text-{color}-800` for ba
 **Blue** (`bg-blue-50/100`, `text-blue-600/700/800/900`)
 - Primary actions, pending approval, links, informational states
 - Buttons: `button.primary` uses `bg-blue-500 hover:bg-blue-700`
-- Status: "Pending Review" submissions
 - Links: Active navigation, clickable items
 - Info panels: Witness verification info, waiting period display
 

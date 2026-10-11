@@ -218,8 +218,14 @@ async function writeContent(
  *
  * Only member saves call this. Committee moves, including a Points correction,
  * never touch the Witness.
+ *
+ * The save goes on the changelog as a `member_save` entry, so what the
+ * committee settled before it can be told from what it settled since: the
+ * witness panel's "You chose" (`speciesChosenByCommittee`,
+ * src/routes/submission.ts) holds only for a Species chosen after the
+ * member's last save, since the next witness attests to the form as it is now.
  */
-async function voidWitness(db: Database, submissionId: number, move: MoveDefinition): Promise<void> {
+async function voidWitness(db: Database, submissionId: number, caller: Caller, move: MoveDefinition): Promise<void> {
   await runUpdate(
     db,
     `UPDATE submissions SET
@@ -234,6 +240,25 @@ async function voidWitness(db: Database, submissionId: number, move: MoveDefinit
      WHERE id = ? AND submitted_on IS NOT NULL AND approved_on IS NULL`,
     [submissionId],
     move
+  );
+  await recordMemberSave(submissionId, caller);
+}
+
+/**
+ * Put a member's save of a submitted Submission on the changelog: the
+ * `member_save` entry the review page shows as one line, and which
+ * `speciesChosenByCommittee` reads as the point the committee's earlier
+ * choices stop counting.
+ */
+async function recordMemberSave(submissionId: number, caller: Caller): Promise<void> {
+  await addNote(
+    submissionId,
+    caller.id,
+    JSON.stringify({
+      type: "member_save",
+      timestamp: new Date().toISOString(),
+      member_id: caller.id,
+    })
   );
 }
 
@@ -380,7 +405,7 @@ export async function submit(
       [new Date().toISOString(), submissionId],
       moves.submit
     );
-    await voidWitness(db, submissionId, moves.submit);
+    await voidWitness(db, submissionId, caller, moves.submit);
 
     return submission.member_id;
   });
@@ -407,7 +432,7 @@ export async function saveChanges(
   await withTransaction(async (db) => {
     const { submission } = await guard(db, moves.saveChanges, caller, submissionId);
     await writeContent(db, submission, form);
-    await voidWitness(db, submissionId, moves.saveChanges);
+    await voidWitness(db, submissionId, caller, moves.saveChanges);
   });
 
   await setSubmissionSupplements(submissionId, supplementsFromForm(form));
@@ -452,7 +477,7 @@ export async function resubmit(
   await withTransaction(async (db) => {
     const { submission } = await guard(db, moves.resubmit, caller, submissionId);
     await writeContent(db, submission, form);
-    await voidWitness(db, submissionId, moves.resubmit);
+    await voidWitness(db, submissionId, caller, moves.resubmit);
     await runUpdate(
       db,
       `UPDATE submissions SET

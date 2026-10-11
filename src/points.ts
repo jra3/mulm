@@ -221,11 +221,8 @@ const bonusNames: Record<BonusField, string> = {
   sexual_reproduction: "sexual reproduction",
 };
 
-/**
- * Every bonus, in the order the formula states them. Exported so the approval
- * panel's error mixin loops over it instead of listing the fields a third time.
- */
-export const bonusFields: readonly BonusField[] = Object.keys(bonusNames) as BonusField[];
+/** Every bonus, in the order the formula states them, read off `bonusNames` rather than listed a third time. */
+const bonusFields: readonly BonusField[] = Object.keys(bonusNames) as BonusField[];
 
 /** The bonus fields a refinement reads, as the form schemas produce them. */
 export type BonusFields = Partial<Record<BonusField, boolean | number | null>>;
@@ -240,11 +237,11 @@ export type BonusIssue = {
  * The bonuses in `fields` that `program` cannot carry, in the formula's order,
  * each with its message. Empty when every set bonus applies.
  *
- * Rejection, not correction - nothing is zeroed silently. Through the witness
- * panel and the approved-edit dialog an inapplicable flag cannot be sent, so its arrival
- * means a stale form, a bug, or a hand-crafted request, all of which should
- * be visible. The Zod refinement below and `confirmWitness` both read this,
- * so the form and the transition refuse the same thing in the same words.
+ * Rejection, not correction - nothing is zeroed silently. The witness panel
+ * and the correction form hide a bonus their Program cannot carry, so its
+ * arrival means a stale form, a bug, or a hand-crafted request, all of which
+ * should be visible. The Zod refinement below and `confirmWitness` both read
+ * this, so the form and the transition refuse the same thing in the same words.
  *
  * `program` is the plain string the submissions table stores; a name that is
  * not one of our programs carries only the bonuses every program carries.

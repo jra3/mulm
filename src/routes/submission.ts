@@ -671,26 +671,49 @@ const adminEditNote = z.object({
   changes: z.array(z.object({ field: z.string() })),
 });
 
-/** Whether any changelog entry changed `field`. A note that is not JSON, or not an edit, changed nothing. */
+/** The shape of the changelog note `voidWitness` writes on a member's save (ADR-0001). */
+const memberSaveNote = z.object({ type: z.literal("member_save") });
+
+/** The note parsed as JSON, or undefined for prose. */
+function parsedNote(note: Pick<SubmissionNote, "note_text">): unknown {
+  try {
+    return JSON.parse(note.note_text);
+  } catch {
+    return undefined;
+  }
+}
+
+/** Whether this changelog entry changed `field`. A note that is not JSON, or not an edit, changed nothing. */
+function noteChanged(note: Pick<SubmissionNote, "note_text">, field: string): boolean {
+  const entry = adminEditNote.safeParse(parsedNote(note));
+  return entry.success && entry.data.changes.some((change) => change.field === field);
+}
+
+/** Whether any changelog entry changed `field`. */
 function changelogChanged(notes: Pick<SubmissionNote, "note_text">[], field: string): boolean {
-  return notes.some((note) => {
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(note.note_text);
-    } catch {
-      return false;
-    }
-    const entry = adminEditNote.safeParse(parsed);
-    return entry.success && entry.data.changes.some((change) => change.field === field);
-  });
+  return notes.some((note) => noteChanged(note, field));
+}
+
+/** The index of the last note that satisfies `test`, or -1. */
+function lastIndexWhere<T>(items: T[], test: (item: T) => boolean): number {
+  for (let i = items.length - 1; i >= 0; i--) {
+    if (test(items[i])) return i;
+  }
+  return -1;
 }
 
 /**
- * Whether the committee bound or rebound the Submission: a changelog entry
- * that changed its `species`. The member's own pick leaves no such entry.
+ * Whether the committee bound or rebound the Submission since the member last
+ * saved it: a changelog entry that changed its `species`, with no `member_save`
+ * entry after it. The member's own pick leaves no such entry, and a member's
+ * save voids the Witness (ADR-0001), so a Species the committee chose before
+ * it is one the next witness must be asked about again. `notes` are read in
+ * changelog order, oldest first, as `getNotesForSubmission` returns them.
  */
 export function speciesChosenByCommittee(notes: Pick<SubmissionNote, "note_text">[]): boolean {
-  return changelogChanged(notes, "species");
+  const lastChoice = lastIndexWhere(notes, (note) => noteChanged(note, "species"));
+  const lastSave = lastIndexWhere(notes, (note) => memberSaveNote.safeParse(parsedNote(note)).success);
+  return lastChoice > lastSave;
 }
 
 /**
