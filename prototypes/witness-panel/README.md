@@ -7,3 +7,7 @@ Answers "What does the merged witness panel look like?" (#503, map #498). Not pr
 - `species-step-wording.html`: wording options for the species step. **Option E won.**
 
 Open any file directly in a browser.
+
+## Approval queue (#508)
+
+- `approval-queue-phone.html`: three phone takes on the approval queue and the Approve button. **Variant 1 (one list, tap twice) won**; the member's "I brought it" step is dropped.
