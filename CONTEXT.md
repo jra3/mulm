@@ -49,7 +49,7 @@ _Avoid_: raw points, species points
 Extras added on top of base points, stored on the submission. The witness sets every one of them except first-time when confirming the Witness (`src/forms/confirmWitness.ts`; [ADR-0003](docs/adr/0003-points-are-set-at-the-witness.md)); first-time is approval's to compute. The one rule for turning a submission's flags into a total lives in `src/points.ts`, which exports it both as a SQL fragment (composed into every query that reports a total) and as a TypeScript function (used for the itemised breakdown, the witness panel's running sum, and tests):
 `total_points = points + article_points + first_time_species×5 + cares_species×5 + flowered×points + sexual_reproduction×points`
 So: first-time species = flat +5; `article_points` = None, 5 or 10 at the Witness (starts at 5 when the member linked an article); CARES-listed species = +5, prefilled from the catalogue; and flowering / sexual reproduction each add the plant's own point value. (The manual's "+10 for a first-time spawn with an article" is realized here as first-time +5 plus article_points.)
-Which bonuses a Program may carry (ruled 2026-09-17; enforced in the witness, correction and approved-edit Zod schemas, which take the Program; approval takes no bonuses):
+Which bonuses a Program may carry (ruled 2026-09-17; enforced in the witness and correction Zod schemas, `src/forms/confirmWitness.ts` and `src/forms/correctPoints.ts`, which take the Program; approval takes no bonuses and the Edit Approved dialog has no bonus fields, #529):
 - first-time species, article: **all Programs**
 - CARES: **BAP only**
 - flowered, sexual reproduction: **HAP only**
