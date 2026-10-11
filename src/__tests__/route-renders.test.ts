@@ -12,7 +12,7 @@ import { createMember } from "@/db/members";
 import { getSubmissionById } from "@/db/submissions";
 import { createSpecies, resolveSpecies } from "@/species";
 import { confirmWitness, resetNotifier, WITNESS_RESET_NOTE } from "@/lifecycle";
-import { addNote } from "@/db/submission_notes";
+import { addNote, getNotesForSubmission } from "@/db/submission_notes";
 import { bonusFields } from "@/points";
 import { setupTestDatabase, type TestDatabase } from "./testDbHelper.helper";
 import { createTestSubmission as createUnboundSubmission, ensureGuppySpecies } from "./helpers/testHelpers";
@@ -707,5 +707,128 @@ void describe("The committee corrects Species and points", () => {
     assert.match(bar.text, /id="witness-sum-lines">Base points 10 \+ First Time Species Bonus 5</);
     assert.match(bar.text, /id="correction-save" type="submit">Save correction · 15 pts</);
     assert.doesNotMatch(bar.text, /witness-confirm/);
+  });
+});
+
+void describe("The Edit Approved dialog edits details only", () => {
+  let testDb: TestDatabase;
+  let committee: MulmRequest["viewer"];
+  let committeeId: number;
+  let ownerId: number;
+  let approvedId: number;
+  let sent: ReturnType<typeof recordNotifications>;
+
+  beforeEach(async () => {
+    testDb = await setupTestDatabase();
+    sent = recordNotifications();
+    ownerId = await createMember("breeder@example.com", "Dan Wu");
+    committeeId = await createMember("witness@example.com", "Jane Ortiz");
+    committee = { id: committeeId, display_name: "Jane Ortiz", contact_email: "witness@example.com", is_admin: true };
+    approvedId = await submissionInState(testDb.db, "approved", {
+      memberId: ownerId,
+      witnessedBy: committeeId,
+      points: 10,
+    });
+  });
+  afterEach(async () => {
+    resetNotifier();
+    await testDb.cleanup();
+  });
+
+  const app = (viewer: MulmRequest["viewer"] = committee) =>
+    appWith((a) => {
+      a.use(express.urlencoded({ extended: true }));
+      a.get("/admin/submissions/:id/edit-approved", admin.editApprovedSubmissionForm);
+      a.post("/admin/submissions/:id/edit-approved", admin.saveApprovedSubmissionEdits);
+    }, viewer);
+
+  void test("the dialog carries the details and a link to the correction form, and no Species or points fields", async () => {
+    const res = await request(app()).get(`/admin/submissions/${approvedId}/edit-approved`);
+
+    assert.strictEqual(res.status, 200);
+    assert.match(res.text, /Edit Approved Submission/);
+    assert.match(res.text, /Dan Wu/);
+    assert.match(res.text, /name="tank_size"/);
+    assert.match(res.text, /name="reason"/);
+    assert.match(res.text, new RegExp(`id="edit-approved-correct-link" href="/admin/submissions/${approvedId}/correct-points"`));
+    assert.doesNotMatch(res.text, /name="points"|name="group_id"|name="first_time_species"|name="cares_species"|name="article_points"/);
+  });
+
+  void test("saving writes the details with the reason on the changelog, returns to the Submission, and tells nobody", async () => {
+    const res = await request(app())
+      .post(`/admin/submissions/${approvedId}/edit-approved`)
+      .type("form")
+      .send({
+        tank_size: "20 gallon",
+        temperature: "78",
+        foods: ["Frozen", "Pellets"],
+        reproduction_date: "2024-02-01",
+        reason: "The paper form says a 20 gallon tank",
+      });
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.headers["hx-redirect"], `/submissions/${approvedId}`);
+    const row = (await getSubmissionById(approvedId))!;
+    assert.strictEqual(row.tank_size, "20 gallon");
+    assert.strictEqual(row.temperature, "78");
+    assert.strictEqual(row.foods, JSON.stringify(["Frozen", "Pellets"]));
+    assert.match(row.reproduction_date, /^2024-02-01T/, "the day moved, the time of day kept");
+    assert.strictEqual(row.points, 10, "not a points edit");
+    assert.ok(row.approved_on, "still Approved");
+
+    const notes = await getNotesForSubmission(approvedId);
+    assert.strictEqual(notes.length, 1);
+    const note = JSON.parse(notes[0].note_text) as { type: string; reason: string; changes: { field: string }[] };
+    assert.strictEqual(note.type, "admin_edit");
+    assert.strictEqual(note.reason, "The paper form says a 20 gallon tank");
+    assert.deepStrictEqual(note.changes.map((c) => c.field).sort(), ["foods", "reproduction_date", "tank_size", "temperature"]);
+    assert.deepStrictEqual(sent.kinds, [], "no email of any kind");
+  });
+
+  void test("a points or Species field in the body is dropped: the dialog cannot change them", async () => {
+    const res = await request(app())
+      .post(`/admin/submissions/${approvedId}/edit-approved`)
+      .type("form")
+      .send({ tank_size: "20 gallon", points: "20", group_id: "999", first_time_species: "1", reason: "Trying it on" });
+
+    assert.strictEqual(res.headers["hx-redirect"], `/submissions/${approvedId}`);
+    const row = (await getSubmissionById(approvedId))!;
+    assert.strictEqual(row.tank_size, "20 gallon");
+    assert.strictEqual(row.points, 10);
+    assert.strictEqual(row.species_id, await ensureGuppySpecies(testDb.db));
+  });
+
+  void test("a refusal lands in the dialog's banner: no reason, or nothing changed", async () => {
+    const noReason = await request(app())
+      .post(`/admin/submissions/${approvedId}/edit-approved`)
+      .type("form")
+      .send({ tank_size: "20 gallon" });
+    assert.strictEqual(noReason.status, 200);
+    assert.strictEqual(noReason.headers["hx-retarget"], "#edit-approved-errors");
+    assert.match(noReason.text, /Say why the details are being changed/);
+
+    const before = (await getSubmissionById(approvedId))!;
+    const unchanged = await request(app())
+      .post(`/admin/submissions/${approvedId}/edit-approved`)
+      .type("form")
+      .send({ tank_size: before.tank_size ?? "", reason: "Nothing really" });
+    assert.strictEqual(unchanged.headers["hx-retarget"], "#edit-approved-errors");
+    assert.match(unchanged.text, /No changes detected/);
+    assert.strictEqual((await getNotesForSubmission(approvedId)).length, 0);
+  });
+
+  void test("the committee's own Submission and one not yet Approved get no dialog", async () => {
+    const own = await submissionInState(testDb.db, "approved", { memberId: committeeId, witnessedBy: ownerId });
+    const ownRes = await request(app()).get(`/admin/submissions/${own}/edit-approved`);
+    assert.strictEqual(ownRes.status, 403);
+    const ownSave = await request(app()).post(`/admin/submissions/${own}/edit-approved`).type("form").send({ tank_size: "20", reason: "Mine" });
+    assert.strictEqual(ownSave.status, 403);
+
+    const waiting = await submissionInState(testDb.db, "waitingPeriod", { memberId: ownerId, witnessedBy: committeeId });
+    const waitingRes = await request(app()).get(`/admin/submissions/${waiting}/edit-approved`);
+    assert.strictEqual(waitingRes.status, 400);
+    const waitingSave = await request(app()).post(`/admin/submissions/${waiting}/edit-approved`).type("form").send({ tank_size: "20", reason: "Early" });
+    assert.strictEqual(waitingSave.status, 400);
+    assert.notStrictEqual((await getSubmissionById(waiting))!.tank_size, "20");
   });
 });

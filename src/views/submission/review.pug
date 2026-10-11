@@ -163,27 +163,12 @@ html
                     });
                 }
 
-                function initEditFormTypeaheads() {
-                    const typeaheadElements = document.querySelectorAll('#edit-approved-dialog select.tom-select-typeahead:not(.tomselected)');
-                    typeaheadElements.forEach(function(element) {
-                        const config = getTypeaheadConfig(element);
-                        const tomSelectOptions = buildTomSelectOptions(element, config);
-                        const tomSelect = new TomSelect(element, tomSelectOptions);
-                        element.tomSelectInstance = tomSelect;
-                        if (config.maxItems === 1) {
-                            tomSelect.control.classList.add('single-value');
-                        }
-                        element.classList.add('tomselected');
-                    });
-                }
-
                 // Listen for HTMX content loads
                 document.addEventListener("htmx:load", function (event) {
                     const target = event.detail.elt;
                     // Reinitialize when dialog content is loaded
                     if (target && target.closest && target.closest('#edit-approved-dialog')) {
                         initEditFormMultiSelects();
-                        initEditFormTypeaheads();
                     }
                 });
 
@@ -333,7 +318,7 @@ html
                         p.text-sm.text-gray-300.mb-4 Private notes and actions visible only to program admins
 
                         //- Species and points are corrected on the correction form (#528);
-                        //- the dialog edits the rest, for now (#529)
+                        //- the dialog edits the member's details (#529)
                         if isApproved && !isSelf
                             div.mb-6.flex.flex-wrap.gap-3
                                 a.primary(class="px-4 py-2 text-sm" id="correct-points-link" href=`/admin/submissions/${submission.id}/correct-points`) Correct species and points

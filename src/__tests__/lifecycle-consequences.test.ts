@@ -5,6 +5,7 @@ import {
   correctPoints,
   createSubmission,
   deleteSubmission,
+  editApprovedDetails,
   requestChanges,
   resetNotifier,
   resubmit,
@@ -16,8 +17,8 @@ import {
   sendMeetingReminder,
   type Caller,
 } from "@/lifecycle";
-import { query } from "@/db/conn";
-import { getMemberWithPoints, updateMember } from "@/db/members";
+import { query, writeConn } from "@/db/conn";
+import { getMember, getMemberWithPoints, updateMember } from "@/db/members";
 import { markFinalSubmissionReminderSent } from "@/db/submissions";
 import {
   createTestMember,
@@ -305,6 +306,30 @@ void describe("Submission lifecycle - consequences", () => {
     await confirmWitness(committee, id, witnessPoints());
 
     assert.strictEqual(sent.witnessed[0].facts.correctionReason, undefined);
+  });
+
+  void test("editing an Approved Submission's details tells nobody and leaves the feed entry and the standing alone", async () => {
+    const id = await at("inApprovalQueue");
+    await approveAsShown(committee, id);
+    assert.strictEqual((await getMember(ctx.member.id))!.fish_level, "Participant", "15 points: on the ladder");
+    // Make the standing stale on purpose, so a recompute would be visible:
+    // 30 points awarded would make a Hobbyist.
+    await writeConn.run("UPDATE submissions SET points = 20, article_points = 10 WHERE id = ?", id);
+    sent.clear();
+
+    const changes = await editApprovedDetails(committee, id, { tank_size: "20 gallon" }, "Paper form says 20");
+
+    assert.deepStrictEqual(changes.map((c) => c.field), ["tank_size"]);
+    assert.deepStrictEqual(sent.kinds, [], "no letter of any kind: not the approval email, not a level");
+    assert.strictEqual((await getMember(ctx.member.id))!.fish_level, "Participant", "the standing was not recomputed");
+    const approvals = (await feed()).filter((e) => e.activity_type === "submission_approved");
+    assert.strictEqual(approvals.length, 1);
+    assert.match(approvals[0].activity_data, /"points":10/, "the feed entry still says what approval announced");
+
+    // The contrast: a correction of the same row does recompute, and does tell
+    await correctPoints(committee, id, await correctionOf(id, { points: 15, article_points: 10 }), "The article was missed");
+    assert.strictEqual((await getMember(ctx.member.id))!.fish_level, "Hobbyist", "15 + 10 + first-time 5");
+    assert.strictEqual(sent.of("approved").length, 1);
   });
 
   void test("approving is the only way Points are ever awarded", async () => {
