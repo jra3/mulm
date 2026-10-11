@@ -28,7 +28,7 @@ import {
 } from "@/lifecycle";
 import { query } from "@/db/conn";
 import { addName, checkFormAgreement, createSpecies, findSpeciesById, listNames, resolveSpecies } from "@/species";
-import { findSubmissionsWithRecordedSpecies } from "@/db/submission_notes";
+import { addNote, findSubmissionsWithRecordedSpecies } from "@/db/submission_notes";
 import {
   mockApprovalData,
   ensureGuppySpecies,
@@ -1500,7 +1500,19 @@ void describe("Submission lifecycle - transitions", () => {
           ],
         ]
       );
-      assert.deepStrictEqual(await findSubmissionsWithRecordedSpecies([id, await at("pendingWitness")]), new Set([id]));
+      // Plain-text notes sit beside the changelog (committee notes, the
+      // Witness reset note), and JSON notes need not carry changes; neither
+      // may break the queue's read.
+      const other = await at("pendingWitness");
+      for (const submissionId of [id, other]) {
+        await addNote(
+          submissionId,
+          ctx.admin.id,
+          "Witness reset when points moved to the Witness; originally witnessed by Pat on 2026-01-02"
+        );
+      }
+      await addNote(other, ctx.admin.id, '{"type":"admin_edit"}');
+      assert.deepStrictEqual(await findSubmissionsWithRecordedSpecies([id, other]), new Set([id]));
     });
 
     void test("a new Species with no common name has only its Canonical name; the spellings are not re-added", async () => {
