@@ -238,17 +238,16 @@ export const showWaitingPeriod = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  // Everything that has been screened but is not yet in the approval queue:
-  // the two states between the Witness and the queue. The approval queue
-  // itself is a different page, and no Submission can appear on both.
-  const [waiting, awaitingMeeting, programCounts, witnessCounts] = await Promise.all([
+  // Everything screened whose clock has not run. The approval queue is a
+  // different page, and the clock alone decides which of the two a witnessed
+  // Submission is on.
+  const [waiting, programCounts, witnessCounts] = await Promise.all([
     getQueue("waitingPeriod", program),
-    getQueue("awaitingFinalSubmission", program),
     getQueueCounts("approval"),
     getQueueCounts("witness"),
   ]);
 
-  const submissionsWithStatus = [...waiting, ...awaitingMeeting].map((sub) => ({
+  const submissionsWithStatus = waiting.map((sub) => ({
     ...sub,
     waitingStatus: lifecycle.waitingPeriod(sub),
   }));

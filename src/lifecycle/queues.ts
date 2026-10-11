@@ -10,7 +10,7 @@ import { deriveState, hasChangesRequested, StateRow, SubmissionState } from "./s
  * and as a TypeScript predicate applied to the rows that come back. This
  * follows the precedent `src/points.ts` set for the Points rule.
  *
- * The four queues are exactly the four middle states, so no two of them can
+ * The three queues are exactly the three middle states, so no two of them can
  * claim the same Submission. Compose them; do not restate them.
  */
 export type QueueName =
@@ -18,23 +18,25 @@ export type QueueName =
   | "witness"
   /** Waiting on the clock. */
   | "waitingPeriod"
-  /** Waiting on the member to bring it to a meeting. */
-  | "awaitingFinalSubmission"
-  /** Waiting on a committee member to award points. */
+  /**
+   * Waiting on the member to bring it to a meeting, where a committee member
+   * approves it. The clock puts a witnessed Submission here; the member does
+   * nothing to enter it.
+   */
   | "approval";
 
 /** The state each queue holds. */
 const queueState: Record<QueueName, SubmissionState> = {
   witness: "pendingWitness",
   waitingPeriod: "waitingPeriod",
-  awaitingFinalSubmission: "awaitingFinalSubmission",
   approval: "inApprovalQueue",
 };
 
 /**
- * The queues that are waiting on the committee. Work sitting in one of these
- * is what the daily digest reports, and what a Submission leaves when the
- * committee requests changes on it.
+ * The queues a committee member acts on: what a Submission leaves when the
+ * committee requests changes on it. The daily digest reports only the witness
+ * queue (see digest.ts): the approval queue waits on the member coming to a
+ * meeting, not on the committee.
  */
 export const COMMITTEE_QUEUES: readonly QueueName[] = ["witness", "approval"];
 
@@ -43,8 +45,8 @@ export const COMMITTEE_QUEUES: readonly QueueName[] = ["witness", "approval"];
  *
  * While changes are outstanding the ball is with the member, and no committee
  * action but Delete is legal - so a committee queue must not show the work, or
- * it advertises something nobody may act on. The two member-and-clock queues
- * keep flagged work, because that work still has a waiting period to serve.
+ * it advertises something nobody may act on. The waiting-period queue keeps
+ * flagged work, because that work still has a waiting period to serve.
  */
 function excludesFlagged(queue: QueueName): boolean {
   return COMMITTEE_QUEUES.includes(queue);
@@ -62,16 +64,12 @@ export type QueueRow = StateRow & Pick<Submission, "changes_requested_on">;
 export function queueSql(queue: QueueName, alias: "submissions" | "s" = "submissions"): string {
   const clauses = [`${alias}.submitted_on IS NOT NULL`, `${alias}.approved_on IS NULL`];
 
+  // The waiting-period and approval queues are stored identically; only the
+  // clock, applied by `filterQueue`, tells them apart.
   if (queue === "witness") {
     clauses.push(`${alias}.witness_verification_status != 'confirmed'`);
   } else {
     clauses.push(`${alias}.witness_verification_status = 'confirmed'`);
-  }
-
-  if (queue === "approval") {
-    clauses.push(`${alias}.final_submission_on IS NOT NULL`);
-  } else if (queue !== "witness") {
-    clauses.push(`${alias}.final_submission_on IS NULL`);
   }
 
   if (excludesFlagged(queue)) {

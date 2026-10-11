@@ -4,35 +4,39 @@ import type { Submission } from "@/db/submissions";
  * A Submission's state, derived from its row in one place.
  *
  * A badge, a queue and a guard all read this, so they cannot disagree about
- * where a Submission is. Deleted is a seventh state with no row to derive it
+ * where a Submission is. Deleted is a sixth state with no row to derive it
  * from, so it is not in this union: a deleted Submission is simply gone.
  *
- * | State                   | Stored as                                           |
- * |-------------------------|-----------------------------------------------------|
- * | draft                   | submitted_on null                                   |
- * | pendingWitness          | submitted, witness_verification_status = 'pending'   |
- * | waitingPeriod           | witness confirmed, waiting period not yet elapsed    |
- * | awaitingFinalSubmission | witness confirmed, elapsed, final_submission_on null |
- * | inApprovalQueue         | final_submission_on set                             |
- * | approved                | approved_on set - terminal                           |
+ * | State           | Stored as                                          |
+ * |-----------------|----------------------------------------------------|
+ * | draft           | submitted_on null                                  |
+ * | pendingWitness  | submitted, witness_verification_status = 'pending'  |
+ * | waitingPeriod   | witness confirmed, waiting period not yet elapsed   |
+ * | inApprovalQueue | witness confirmed, waiting period elapsed           |
+ * | approved        | approved_on set - terminal                          |
+ *
+ * The approval queue needs no member action: a witnessed Submission is in it
+ * the day its clock runs out. The member brings the fry, plants or coral to a
+ * meeting and a committee member approves it there. (`final_submission_on`,
+ * which once recorded the member saying they had brought it, is a dead
+ * column: see the `Submission` type.)
  */
 export type SubmissionState =
   | "draft"
   | "pendingWitness"
   | "waitingPeriod"
-  | "awaitingFinalSubmission"
   | "inApprovalQueue"
   | "approved";
 
 /**
- * The four states a submitted, unapproved Submission can be in: everything
- * between Draft and Approved. Save Changes, Request changes and Resubmit are
- * legal from all four, so the table names this rather than listing them.
+ * The three states a submitted, unapproved Submission can be in: everything
+ * between Draft and Approved. Save Changes, Request changes, Resubmit and
+ * Return to Draft are legal from all three, so the table names this rather
+ * than listing them.
  */
 export const MIDDLE_STATES = [
   "pendingWitness",
   "waitingPeriod",
-  "awaitingFinalSubmission",
   "inApprovalQueue",
 ] as const satisfies readonly SubmissionState[];
 
@@ -42,7 +46,6 @@ export type StateRow = Pick<
   | "submitted_on"
   | "approved_on"
   | "witness_verification_status"
-  | "final_submission_on"
   | "reproduction_date"
   | "species_type"
   | "species_class"
@@ -50,9 +53,8 @@ export type StateRow = Pick<
   Partial<Pick<Submission, "changes_requested_on">>;
 
 /**
- * How long a Submission must age from its reproduction_date before it may
- * enter the approval queue: 30 days for marine fish, 60 days for everything
- * else.
+ * How long a Submission must age from its reproduction_date before it is in
+ * the approval queue: 30 days for marine fish, 60 days for everything else.
  */
 export function requiredWaitingDays(
   row: Pick<Submission, "species_type" | "species_class">
@@ -70,9 +72,9 @@ export function daysElapsedSince(reproductionDate: string, now: Date = new Date(
  * The waiting-period clock for one Submission.
  *
  * This is the one edge the module computes rather than performs: Waiting period
- * and Awaiting final submission are stored identically and separated only by
- * this comparison. It is in the table because entering the approval queue is
- * legal on one side of it and not the other.
+ * and the approval queue are stored identically and separated only by this
+ * comparison. It is in the table because approval is legal on one side of it
+ * and not the other.
  */
 export function waitingPeriod(
   row: Pick<Submission, "species_type" | "species_class" | "reproduction_date">,
@@ -110,7 +112,7 @@ export function hasConfirmedWitness(
  *
  * Read top to bottom: Approved wins over everything (it is terminal), then the
  * absence of a submission date means Draft, then the Witness gate, then the
- * clock, then whether the member has brought it to a meeting.
+ * clock.
  *
  * Changes requested is deliberately absent - it is an overlay, not a state, so
  * flagged work stays where it is and keeps its place in the pipeline.
@@ -128,10 +130,7 @@ export function deriveState(row: StateRow, now: Date = new Date()): SubmissionSt
   if (row.witness_verification_status !== "confirmed") {
     return "pendingWitness";
   }
-  if (row.final_submission_on) {
-    return "inApprovalQueue";
-  }
-  return waitingPeriod(row, now).elapsed ? "awaitingFinalSubmission" : "waitingPeriod";
+  return waitingPeriod(row, now).elapsed ? "inApprovalQueue" : "waitingPeriod";
 }
 
 /**

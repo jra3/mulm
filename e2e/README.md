@@ -684,7 +684,7 @@ await db.close();
 
 **Critical verifications**:
 - `changes_requested_*` fields are cleared on resubmit
-- Any member save of a witnessed Submission voids the Witness (ADR-0001): `witness_verification_status` is back to `pending`, `witnessed_by`/`witnessed_on`/`final_submission_on` are null. The points the Witness set go too (ADR-0003). To approve it afterwards, re-witness (Yes, base points, `#witness-confirm`) and confirm it was brought to a meeting first (see `rewitnessAndQueue` in `submission-lifecycle.spec.ts`)
+- Any member save of a witnessed Submission voids the Witness (ADR-0001): `witness_verification_status` is back to `pending`, `witnessed_by`/`witnessed_on` are null. The points the Witness set go too (ADR-0003). To approve it afterwards, re-witness (Yes, base points, `#witness-confirm`); a reproduction date past the waiting period puts it straight back in the approval queue, with no member step (see `rewitness` in `submission-lifecycle.spec.ts`)
 - Requesting changes alone leaves the Witness in place
 
 ### Pattern: Witness Confirmation/Decline

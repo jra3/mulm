@@ -3,7 +3,7 @@ import { getQueue, type QueueSubmission } from "@/db/submissions";
 import { programs, isProgramType, programMetadata } from "@/programs";
 import { logger } from "@/utils/logger";
 import type { CommitteeDigest, DigestSection } from "@/notifications";
-import { COMMITTEE_QUEUES, type QueueName } from "./queues";
+import type { QueueName } from "./queues";
 import { notifier } from "./consequences";
 
 /**
@@ -12,22 +12,22 @@ import { notifier } from "./consequences";
  * This replaces cc'ing three committee members on every member's confirmation
  * letter. One email, sent only when something is waiting, and it keeps arriving
  * while a queue is non-empty - which per-event mail cannot do, and with a
- * committee of three, work being forgotten is the actual failure mode. It also
- * gives the approval queue a push for the first time: nothing previously fired
- * when a Submission became approvable.
+ * committee of three, work being forgotten is the actual failure mode.
+ *
+ * Only the witness queue is reported. The approval queue waits on the member
+ * bringing the fry, plants or coral to a meeting, where a committee member
+ * approves it on the spot; a daily nag about rows nobody on the committee can
+ * move would teach them to ignore the digest.
  *
  * The digest is not scoped per Program member: `is_admin` is a single boolean
  * with no Program dimension, and all three committee members already see all
  * three Programs. Every committee member gets every Program's section.
  */
 
-/** How each committee queue is named to a committee member. */
-const QUEUE_TITLES: Record<QueueName, string> = {
-  witness: "Waiting to be screened",
-  approval: "Ready for points",
-  waitingPeriod: "In the waiting period",
-  awaitingFinalSubmission: "Waiting to be brought to a meeting",
-};
+/** The queues the digest reports, and how each is named to a committee member. */
+const REPORTED_QUEUES: ReadonlyArray<{ queue: QueueName; title: string }> = [
+  { queue: "witness", title: "Waiting to be screened" },
+];
 
 /**
  * Build the digest, or return null when every queue is empty - no digest at
@@ -40,14 +40,14 @@ export async function buildCommitteeDigest(): Promise<CommitteeDigest | null> {
     if (!isProgramType(program)) {
       continue;
     }
-    for (const queue of COMMITTEE_QUEUES) {
+    for (const { queue, title } of REPORTED_QUEUES) {
       const submissions = await getQueue(queue, program);
       if (submissions.length > 0) {
         sections.push({
           program,
           programName: programMetadata[program].name,
           queue,
-          title: QUEUE_TITLES[queue],
+          title,
           submissions: submissions.map(summarize),
         });
       }

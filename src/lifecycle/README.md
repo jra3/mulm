@@ -23,7 +23,7 @@ from `src/points.ts`. One definition, many queries.
 | File | What it holds |
 |---|---|
 | `index.ts` | The interface. Start here. |
-| `state.ts` | The six stored states, derived in one place, and the waiting-period clock. |
+| `state.ts` | The five stored states, derived in one place, and the waiting-period clock. |
 | `table.ts` | The transition table: which moves are legal from which states, and for whom. |
 | `transitions.ts` | One exported function per move. |
 | `queues.ts` | Queue membership, one definition per queue, as SQL and as a predicate. |
@@ -50,12 +50,27 @@ from `src/points.ts`. One definition, many queries.
 A Witness attests to the fry and to the form
 ([ADR-0001](../../docs/adr/0001-witness-attests-to-the-form.md)). Every member
 save of a submitted Submission - Save Changes, Resubmit, and Submit after
-Return to Draft - voids a confirmed Witness, clears the approval queue entry,
-clears the points the Witness set
+Return to Draft - voids a confirmed Witness, clears the points the Witness set
 ([ADR-0003](../../docs/adr/0003-points-are-set-at-the-witness.md)), and leaves
-the Submission in Pending Witness, back in the witness queue. There is no
-field list and no diff: saving is the edit. Committee moves, including a
-Points correction to an Approved Submission, never touch the Witness.
+the Submission in Pending Witness, back in the witness queue. Its place in
+the approval queue goes with the Witness, since the queue is derived from it.
+There is no field list and no diff: saving is the edit. Committee moves,
+including a Points correction to an Approved Submission, never touch the
+Witness.
+
+## The member does nothing to enter the approval queue
+
+A witnessed Submission is in the approval queue the day its waiting period
+ends (`deriveState`): confirmed and the clock has run. There is no move for
+it and no column; the old "brought it to a meeting" step, its
+`enterApprovalQueue` and `removeFromQueue` moves and its `final_submission_on`
+column are gone (the column is dead, documented on the `Submission` type and
+never dropped). The member brings the fry, plants or coral to a meeting and a
+committee member approves it there. `reminders.ts` tells them once, the day
+the clock runs out, selecting from the approval queue and keyed off
+`final_submission_reminder_sent_on`, which is never cleared. The digest does
+not report the approval queue: its rows wait on the member coming to a
+meeting, not on the committee.
 
 ## The Witness sets the points
 
@@ -119,7 +134,8 @@ so the confirm gives the Submission the Species' type, class and Program, on
 the changelog (a spelling that is not a Name changes nothing). After the
 Witness the same answer is `adoptSpeciesClassification` - Witness untouched;
 a queued Submission whose adopted classification asks a longer waiting period
-leaves the approval queue and waits again.
+is simply in its waiting period again, with nothing else written, and the
+clock returns it.
 
 `confirmWitness` also takes the witness's choice of the Submission's own
 spellings to add to the bound Species as Names (`NamesToAdd`; the panel

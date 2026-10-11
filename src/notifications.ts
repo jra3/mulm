@@ -138,11 +138,24 @@ export async function onSubmissionApprove(sub: Submission, member: MemberRecord)
 }
 
 const renderWaitingPeriodComplete = pug.compileFile("src/views/email/onWaitingPeriodComplete.pug");
+
+/** What the member brings to the meeting, by Species type. */
+function offspringOf(sub: Pick<Submission, "species_type">): string {
+  switch (sub.species_type) {
+    case "Plant":
+      return "plants";
+    case "Coral":
+      return "corals";
+    default:
+      return "fry";
+  }
+}
 /**
- * Nudge sent when a submission's waiting period elapses, prompting the submitter
- * to bring the fish/plant/coral to the next meeting and click "Brought to
- * Meeting" so it enters the approval queue. Non-critical (the daily job logs and
- * continues on failure; it will not be marked reminded, so it retries next run).
+ * Reminder sent when a submission's waiting period elapses: bring the fish,
+ * plants or coral to a meeting, where a committee member approves it. There is
+ * nothing to click; the Submission is already in the approval queue.
+ * Non-critical (the daily job logs and continues on failure; it will not be
+ * marked reminded, so it retries next run).
  */
 export async function onWaitingPeriodComplete(
   sub: Submission,
@@ -161,11 +174,12 @@ export async function onWaitingPeriodComplete(
         from: fromEmail,
         to: member.contact_email,
         bcc: DEBUG_EMAIL,
-        subject: `Ready for the next meeting - ${sub.species_common_name}`,
+        subject: `Bring ${sub.species_common_name} to the next meeting`,
         html: renderWaitingPeriodComplete({
           domain: config.server.domain,
           submission: sub,
           member,
+          offspring: offspringOf(sub),
         }),
       }),
     {

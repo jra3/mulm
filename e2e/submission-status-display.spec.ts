@@ -54,7 +54,6 @@ test.describe("Changes-Requested Status Display", () => {
 				witnessedBy: admin.id,
 				witnessedDaysAgo: 70,
 				reproductionDaysAgo: 70,
-				finalSubmitted: true,
 			});
 
 			// Set changes_requested fields

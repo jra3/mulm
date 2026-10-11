@@ -589,8 +589,6 @@ void describe("Pug Template Rendering", () => {
               saveChanges: true,
               returnToDraft: false,
               confirmWitness: false,
-              enterApprovalQueue: false,
-              removeFromQueue: true,
               requestChanges: true,
               resubmit: false,
               approve: true,
@@ -1365,9 +1363,11 @@ void describe("Pug Template Rendering", () => {
       assert.doesNotMatch(html, /Bring (the )?undefined/);
     });
 
-    void test("past the waiting period: plants and corals bring what they propagated", () => {
-      assert.match(render("awaitingFinalSubmission", "Plant"), /Bring the plants to a monthly meeting/);
-      assert.match(render("awaitingFinalSubmission", "Coral"), /Bring the corals to a monthly meeting/);
+    void test("in the approval queue: plants and corals bring what they propagated, and there is nothing to click", () => {
+      const plant = render("inApprovalQueue", "Plant");
+      assert.match(plant, /Bring the plants to a monthly meeting/);
+      assert.match(render("inApprovalQueue", "Coral"), /Bring the corals to a monthly meeting/);
+      assert.doesNotMatch(plant, /final-submit|Brought to Meeting|Remove from Queue|enter the approval queue/);
     });
   });
 

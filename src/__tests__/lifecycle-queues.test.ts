@@ -18,23 +18,17 @@ import { recordNotifications, requestChangesFixture, submissionInState } from ".
 /**
  * Queue membership, defined once per queue.
  *
- * The four queues are exactly the four middle states, which is what makes the
- * disagreement this work removes impossible: no Submission can be claimed by
- * two of them.
+ * The three queues are exactly the three middle states, which is what makes
+ * the disagreement this work removes impossible: no Submission can be claimed
+ * by two of them.
  */
 
-const ALL_QUEUES: QueueName[] = [
-  "witness",
-  "waitingPeriod",
-  "awaitingFinalSubmission",
-  "approval",
-];
+const ALL_QUEUES: QueueName[] = ["witness", "waitingPeriod", "approval"];
 
 /** Which queue each state belongs to. Draft and Approved belong to none. */
 const QUEUE_OF: Partial<Record<SubmissionState, QueueName>> = {
   pendingWitness: "witness",
   waitingPeriod: "waitingPeriod",
-  awaitingFinalSubmission: "awaitingFinalSubmission",
   inApprovalQueue: "approval",
 };
 
@@ -42,7 +36,6 @@ const EVERY_STATE: SubmissionState[] = [
   "draft",
   "pendingWitness",
   "waitingPeriod",
-  "awaitingFinalSubmission",
   "inApprovalQueue",
   "approved",
 ];
@@ -98,20 +91,22 @@ void describe("Submission lifecycle - queues", () => {
   });
 
   void test("the approval queue and the waiting-period list cannot overlap", async () => {
-    await at("waitingPeriod");
-    await at("awaitingFinalSubmission");
+    // Stored identically: only the clock separates them, and the member does
+    // nothing to cross it.
+    const waiting = await at("waitingPeriod");
     const queued = await at("inApprovalQueue");
 
     const approval = await getQueue("approval", "fish");
-    const waiting = await getQueue("waitingPeriod", "fish");
-    const awaiting = await getQueue("awaitingFinalSubmission", "fish");
+    const inWaiting = await getQueue("waitingPeriod", "fish");
 
     assert.deepStrictEqual(
       approval.map((s) => s.id),
       [queued]
     );
-    assert.ok(!waiting.some((s) => s.id === queued));
-    assert.ok(!awaiting.some((s) => s.id === queued));
+    assert.deepStrictEqual(
+      inWaiting.map((s) => s.id),
+      [waiting]
+    );
   });
 
   void describe("work the committee has sent back", () => {
@@ -159,9 +154,12 @@ void describe("Submission lifecycle - queues", () => {
     await at("pendingWitness");
     await at("pendingWitness");
     await at("inApprovalQueue");
+    // Stored the same as the queued one; the count must apply the clock too
+    await at("waitingPeriod");
 
     assert.deepStrictEqual(await getQueueCounts("witness"), { fish: 2 });
     assert.deepStrictEqual(await getQueueCounts("approval"), { fish: 1 });
+    assert.deepStrictEqual(await getQueueCounts("waitingPeriod"), { fish: 1 });
     assert.strictEqual((await getQueue("witness", "fish")).length, 2);
   });
 

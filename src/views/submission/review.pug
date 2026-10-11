@@ -237,23 +237,9 @@ html
                                 p.text-blue-800.font-semibold Days until eligible for auction: #{waitingPeriodStatus.daysRemaining}
                                 p.text-blue-600.text-sm.mt-1 Elapsed: #{waitingPeriodStatus.elapsedDays} of #{waitingPeriodStatus.requiredDays} days
 
-                // The clock has run out; the member brings it to a meeting
-                if state === 'awaitingFinalSubmission'
-                    .status-panel.status-panel-warning
-                        .container.mx-auto.max-w-4xl
-                            h3.text-yellow-800.text-lg.font-semibold.mb-2 🐟 Bring to Meeting
-                            p.text-yellow-700.mb-2= `This ${speciesText} is past its waiting period. Bring the ${offspringText} to a monthly meeting, then click below to enter the approval queue.`
-                            p.text-yellow-600.text-sm.mb-4 Until you confirm, admins won't see this submission in the approval queue.
-                            if allowed.enterApprovalQueue
-                                .flex.justify-center
-                                    form(hx-post=`/submissions/${submission.id}/final-submit`)
-                                        button.primary(type="submit")
-                                            if isAdmin && !isSelf
-                                                | Confirm on Submitter's Behalf
-                                            else
-                                                | Confirm: Brought to Meeting
-
-                // In the approval queue
+                //- The clock has run out: the Submission is in the approval queue
+                //- with nothing for the member to click. They bring it to a
+                //- meeting, and a committee member approves it there.
                 if state === 'inApprovalQueue'
                     if isAdmin && !isSelf && !changesRequested
                         .status-panel.status-panel-admin#adminPanel
@@ -261,24 +247,16 @@ html
                     else if isSelf
                         .status-panel.status-panel-warning
                             .container.mx-auto.max-w-4xl
-                                h3.text-yellow-800.text-lg.font-semibold.mb-2 ✅ In Approval Queue
-                                p.text-yellow-700.mb-2= `Your ${speciesText} is in the approval queue and awaiting admin review.`
-                                p.text-yellow-600.text-sm.mb-4 You cannot award points to your own submissions.
-
-                    if allowed.removeFromQueue
-                        .status-panel.status-panel-admin
-                            .container.mx-auto.max-w-4xl
-                                if submission.final_submission_on
-                                    p.text-white.text-sm.mb-2 Confirmed as brought to a meeting on #{submission.final_submission_on}.
-                                .flex.justify-center
-                                    form(hx-delete=`/submissions/${submission.id}/final-submit` hx-confirm="Remove this submission from the approval queue? You can re-queue it later.")
-                                        button.destructive(type="submit") Remove from Queue
+                                h3.text-yellow-800.text-lg.font-semibold.mb-2 🐟 Bring to Meeting
+                                p.text-yellow-700.mb-2= `This ${speciesText} is past its waiting period. Bring the ${offspringText} to a monthly meeting; a committee member approves it there and the points are awarded.`
+                                if isAdmin
+                                    p.text-yellow-600.text-sm.mb-4 You cannot award points to your own submissions.
 
                 //- Committee actions on work between the Witness and the queue.
                 //- The screening panel and the approval panel carry their own
-                //- copies of these, so this covers only the two states in
-                //- between — otherwise the page offers the same button twice.
-                if isAdmin && !isSelf && (state === 'waitingPeriod' || state === 'awaitingFinalSubmission')
+                //- copies of these, so this covers only the state in between,
+                //- otherwise the page offers the same button twice.
+                if isAdmin && !isSelf && state === 'waitingPeriod'
                     .status-panel.status-panel-admin
                         .container.mx-auto.max-w-4xl
                             h3.text-white.text-lg.font-semibold.mb-4 Admin Actions

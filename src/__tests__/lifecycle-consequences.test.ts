@@ -6,8 +6,6 @@ import {
   correctPoints,
   createSubmission,
   deleteSubmission,
-  enterApprovalQueue,
-  removeFromQueue,
   requestChanges,
   resetNotifier,
   resubmit,
@@ -149,20 +147,6 @@ void describe("Submission lifecycle - consequences", () => {
     assert.deepStrictEqual(sent.of("witnessConfirmed")[0].to, [ctx.member.contact_email]);
   });
 
-  void test("entering and leaving the approval queue tells nobody by mail", async () => {
-    const id = await at("awaitingFinalSubmission");
-    sent.clear();
-
-    await enterApprovalQueue(member, id);
-    await removeFromQueue(member, id);
-
-    assert.deepStrictEqual(
-      sent.kinds,
-      [],
-      "the committee learns from the digest, not from per-event mail"
-    );
-  });
-
   void test("requesting changes tells the member what the committee wants", async () => {
     const id = await at("waitingPeriod");
     sent.clear();
@@ -185,7 +169,7 @@ void describe("Submission lifecycle - consequences", () => {
   });
 
   void test("the waiting period elapsing nudges the member once", async () => {
-    const id = await at("awaitingFinalSubmission");
+    const id = await at("inApprovalQueue");
     sent.clear();
 
     const due = await submissionsDueForMeetingReminder();
@@ -205,10 +189,11 @@ void describe("Submission lifecycle - consequences", () => {
     );
   });
 
-  void test("only work awaiting a meeting is due a nudge", async () => {
+  void test("only work in the approval queue is due a nudge", async () => {
     await at("waitingPeriod");
-    await at("inApprovalQueue");
     await at("pendingWitness");
+    await at("draft");
+    await at("approved");
 
     assert.deepStrictEqual(await submissionsDueForMeetingReminder(), []);
   });
@@ -320,7 +305,7 @@ void describe("Submission lifecycle - consequences", () => {
     });
 
     void test("it keeps arriving while a queue is non-empty", async () => {
-      await at("inApprovalQueue");
+      await at("pendingWitness");
       sent.clear();
 
       assert.strictEqual(await sendCommitteeDigest(), true);
@@ -329,7 +314,7 @@ void describe("Submission lifecycle - consequences", () => {
     });
 
     void test("work the committee has sent back leaves the digest until the member answers", async () => {
-      const id = await at("inApprovalQueue");
+      const id = await at("pendingWitness");
       await requestChanges(committee, id, "Please add a photo");
       sent.clear();
 
@@ -351,6 +336,13 @@ void describe("Submission lifecycle - consequences", () => {
       sent.clear();
 
       assert.strictEqual(await sendCommitteeDigest(), false);
+    });
+
+    void test("work in the approval queue is waiting on the member coming to a meeting, not the committee", async () => {
+      await at("inApprovalQueue");
+      sent.clear();
+
+      assert.strictEqual(await sendCommitteeDigest(), false, "the digest reports only the witness queue");
     });
   });
 });

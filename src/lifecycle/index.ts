@@ -68,8 +68,6 @@ export {
   returnToDraft,
   resubmit,
   confirmWitness,
-  enterApprovalQueue,
-  removeFromQueue,
   requestChanges,
   approve,
   correctPoints,

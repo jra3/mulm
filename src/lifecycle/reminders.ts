@@ -18,11 +18,13 @@ export interface MeetingReminderDue extends Submission {
 }
 
 /**
- * Members whose waiting period has been served and who have not yet been told.
+ * Members whose waiting period has been served and who have not yet been told:
+ * the approval queue, less the rows already reminded.
  *
  * The SQL selects everything expressible in SQL; the per-species waiting period
- * is applied afterwards by the queue predicate, which is the same rule the
- * "Bring to Meeting" page reads.
+ * is applied afterwards by the queue predicate, the same rule the approval
+ * queue page reads. The sent-flag is never cleared, so a Submission is
+ * reminded once, however many times it is re-witnessed.
  */
 export async function submissionsDueForMeetingReminder(
   now: Date = new Date()
@@ -37,12 +39,13 @@ export async function submissionsDueForMeetingReminder(
       WHERE submissions.final_submission_reminder_sent_on IS NULL`
   );
 
-  return filterQueue("awaitingFinalSubmission", candidates, now);
+  return filterQueue("approval", candidates, now);
 }
 
 /**
- * Tell one member their waiting period is served. Returns whether the letter
- * was delivered, so the caller knows whether to record it as sent.
+ * Tell one member their waiting period is served and the fry, plants or coral
+ * can come to a meeting. Returns whether the letter was delivered, so the
+ * caller knows whether to record it as sent.
  */
 export async function sendMeetingReminder(due: MeetingReminderDue): Promise<boolean> {
   if (!due.contact_email) {
