@@ -32,7 +32,8 @@ import {
 } from "@/lifecycle";
 import { query } from "@/db/conn";
 import { addName, checkFormAgreement, createSpecies, findSpeciesById, listNames, resolveSpecies } from "@/species";
-import { addNote, findSubmissionsWithRecordedSpecies } from "@/db/submission_notes";
+import { addNote, findSubmissionsWithRecordedSpecies, getNotesForSubmission } from "@/db/submission_notes";
+import { speciesChosenByCommittee } from "@/routes/submission";
 import {
   ensureGuppySpecies,
   setupTestDatabase,
@@ -456,6 +457,37 @@ void describe("Submission lifecycle - transitions", () => {
       await saveChanges(member, id, await formFor(id));
 
       assert.strictEqual(await stateOf(id), "pendingWitness");
+    });
+
+    void test("the save goes on the changelog, and a Species the committee chose before it is no longer 'You chose'", async () => {
+      // The witness panel pre-settles a Species the committee bound and asks
+      // no "is that right?"; a member's save voids the Witness, so the next
+      // witness is attesting to a form the member has changed since and is
+      // asked again. Only a choice made after the save counts.
+      const id = await submissionInState(ctx.db, "pendingWitness", { memberId: ctx.member.id, speciesId: null });
+      const guppy = await ensureGuppySpecies(ctx.db);
+      await bindSpecies(committee, id, guppy);
+      await confirmWitness(committee, id, witnessPoints());
+      assert.strictEqual(speciesChosenByCommittee(await getNotesForSubmission(id)), true);
+
+      await saveChanges(member, id, { ...(await formFor(id)), count: "40" });
+
+      const notes = await getNotesForSubmission(id);
+      assert.strictEqual(speciesChosenByCommittee(notes), false, "the bind came before the member's save");
+      assert.strictEqual((await readSubmission(id))!.species_id, guppy, "the binding itself holds: the form still agrees");
+      const last = JSON.parse(notes[notes.length - 1].note_text) as { type: string; member_id: number };
+      assert.strictEqual(last.type, "member_save");
+      assert.strictEqual(last.member_id, ctx.member.id);
+      assert.strictEqual(notes[notes.length - 1].admin_name, ctx.member.display_name, "attributed to the member");
+
+      // Chosen again after the save, it is the committee's choice once more
+      await bindSpecies(committee, id, await createSpecies({
+        canonicalGenus: "Resettled",
+        canonicalSpeciesName: "iterum",
+        programClass: "Livebearers",
+        speciesType: "Fish",
+      }));
+      assert.strictEqual(speciesChosenByCommittee(await getNotesForSubmission(id)), true);
     });
 
     void test("a voided Submission can be witnessed again", async () => {

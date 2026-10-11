@@ -39,7 +39,6 @@ import {
 import { originValidation } from "./middleware/originValidation";
 import { canSeeCaresRegistry } from "./caresRegistry";
 import { csrfValidation } from "./middleware/csrfValidation";
-import { bonusFields } from "@/points";
 import helmet from "helmet";
 import { getGoogleOAuthURL, beginOAuthFlow, isGoogleOAuthEnabled } from "./oauth";
 import { appleOAuthURL } from "./auth/apple";
@@ -166,10 +165,6 @@ app.use(csrfValidation);
 app.use((req: MulmRequest, res, next) => {
   res.locals.bugReportEmail = config.email.bugReportEmail;
   res.locals.domain = config.server.domain;
-  // The bonus fields the approved-edit dialog's error mixin loops over. Set here
-  // rather than per-route so a new render site cannot forget it and quietly
-  // drop the per-Program bonus errors.
-  res.locals.bonusFields = bonusFields;
   res.locals.showCaresRegistry = canSeeCaresRegistry(req.viewer);
   next();
 });

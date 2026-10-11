@@ -737,17 +737,18 @@ Tells you:
 Before writing form tests, check the validation schema:
 
 ```bash
-cat src/forms/approval.ts
+cat src/forms/approve.ts
 ```
 
 ```typescript
-export const approvalSchema = z.object({
-  points: z.string().transform(val => parseInt(val)),
-  // ... optional fields ...
+export const approveForm = z.object({
+  expected_total: z.coerce.number().int().nonnegative(),
 });
 ```
 
-Tells you which fields are required and their constraints.
+Tells you which fields are required and their constraints: the approval
+queue's one button posts only the total it showed (the Witness set the
+points; `src/forms/confirmWitness.ts` is the schema for those).
 
 ### 3. Use Headed Mode for Visual Debugging
 

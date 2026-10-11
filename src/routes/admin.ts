@@ -11,6 +11,7 @@ import {
   getApprovedSince,
   getQueue,
   getQueueCounts,
+  getSubmissionById,
   getSubmissionsByMember,
   type QueueSubmission,
   type Submission,
@@ -29,7 +30,7 @@ import { correctPointsSchema } from "@/forms/correctPoints";
 import { z } from "zod";
 import { inviteSchema } from "@/forms/member";
 import { sendInviteEmail } from "@/notifications";
-import { getNextLevel, programMetadata, programs } from "@/programs";
+import { getNextLevel, isProgramType, programMetadata, programs } from "@/programs";
 import { MulmRequest } from "@/sessions";
 import { Response, NextFunction } from "express";
 import { createAuthCode } from "@/db/auth";
@@ -284,7 +285,7 @@ export async function approvalQueueLocals(viewer: NonNullable<MulmRequest["viewe
 
   return {
     title: "Approval queue",
-    subtitle: program ? programMetadata[program as keyof typeof programMetadata]?.name : "Every Program",
+    subtitle: program !== null && isProgramType(program) ? programMetadata[program].name : "Every Program",
     program,
     queuePath: queuePath(program),
     ready,
@@ -531,8 +532,11 @@ export const confirmWitnessAction = async (req: MulmRequest, res: Response) => {
   );
   if (!ran) return;
 
-  // Redirect to witness queue for the submission's program
-  res.set("HX-Redirect", `/admin/witness-queue/${submission.program}`).send();
+  // The confirm gives the Submission its Species' Program, so the queue to
+  // return to is the settled one, read after the write, not the one it was
+  // filed under
+  const settled = await getSubmissionById(submission.id);
+  res.set("HX-Redirect", `/admin/witness-queue/${settled?.program ?? submission.program}`).send();
 };
 
 /** Whether a witness-panel request belongs to the correction form (#528): it says so in a `correction` field. */

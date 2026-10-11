@@ -1,18 +1,31 @@
 //- Single admin note display
 //- Used for rendering individual notes (including HTMX insertions)
-//- Check if this is a structured edit log or a regular note
+//- Check if this is a structured edit log, a member's save, or a regular note
 -
 	let editLog = null;
+	let memberSave = false;
 	try {
 		const parsed = JSON.parse(note.note_text);
 		if (parsed.type === 'admin_edit') {
 			editLog = parsed;
+		} else if (parsed.type === 'member_save') {
+			memberSave = true;
 		}
 	} catch (e) {
 		// Not JSON, treat as regular note
 	}
 
-if editLog
+if memberSave
+	//- A member's save of a submitted Submission (`voidWitness`, src/lifecycle/transitions.ts):
+	//- one line, not deletable, since the witness panel reads it to know which
+	//- committee choices came before the member's last edit
+	div.rounded.border.border-gray-200.bg-gray-50.px-3.py-2.text-xs.text-gray-600(id=`note-${note.id}`)
+		span.font-semibold.text-gray-700= note.admin_name || 'The member'
+		|  saved the form
+		span.text-gray-500= ' · ' + new Date(note.created_at).toLocaleString()
+		| . A Witness confirmed before this is void.
+
+else if editLog
 	//- Render as formatted edit log
 	-
 		function fieldDisplayName(field) {
