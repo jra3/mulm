@@ -195,6 +195,25 @@ void describe("Migration 066: in-flight Submissions go back for a Witness", () =
     ]);
   });
 
+  void test("a confirmed row with no witnessed_on is still reset, its note dated from updated_on", async () => {
+    const jane = await member("Jane");
+    const pat = await member("Pat");
+    const undated = await submission(jane, { witnessedBy: pat, witnessedOn: null });
+    await db.run("UPDATE submissions SET updated_on = ? WHERE id = ?", ["2026-03-04T05:06:07.000Z", undated]);
+
+    await db.migrate({ migrationsPath: allMigrations });
+
+    assert.strictEqual((await row(undated)).witness_verification_status, "pending");
+    assert.deepStrictEqual(await notes(undated), [
+      {
+        submission_id: undated,
+        admin_id: pat,
+        note_text: "Witness reset when points moved to the Witness; originally witnessed by Pat on 2026-03-04",
+      },
+    ]);
+    await assertNoWitnessedRowLacksPoints(db);
+  });
+
   void test("rolls back: the Witness returns from the note, to the day, where nobody has re-witnessed since", async () => {
     const ids = await seed();
     await db.migrate({ migrationsPath: allMigrations });

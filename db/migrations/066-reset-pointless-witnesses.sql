@@ -11,13 +11,16 @@
 -- The note first, while witnessed_by and witnessed_on are still there to read.
 -- It is attributed to the original witness; one who is no longer a member is
 -- named as such and attributed to nobody, since admin_id must point at a row.
+-- A row confirmed without a witnessed_on is dated from updated_on, which is
+-- never NULL, so the note always ends in a date the rollback can read.
 INSERT INTO submission_notes (submission_id, admin_id, note_text)
 SELECT s.id,
        m.id,
        'Witness reset when points moved to the Witness; originally witnessed by '
          || COALESCE(m.display_name, 'a former committee member')
          || ' on '
-         || COALESCE(date(s.witnessed_on), substr(s.witnessed_on, 1, 10))
+         || COALESCE(date(s.witnessed_on), substr(s.witnessed_on, 1, 10),
+                     date(s.updated_on), substr(s.updated_on, 1, 10))
 FROM submissions s
 LEFT JOIN members m ON m.id = s.witnessed_by
 WHERE s.witness_verification_status = 'confirmed'
