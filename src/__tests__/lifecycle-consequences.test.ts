@@ -21,6 +21,7 @@ import { query } from "@/db/conn";
 import { updateMember } from "@/db/members";
 import { markFinalSubmissionReminderSent } from "@/db/submissions";
 import {
+  createTestMember,
   mockApprovalData,
   setupTestDatabase,
   teardownTestDatabase,
@@ -137,14 +138,36 @@ void describe("Submission lifecycle - consequences", () => {
     assert.deepStrictEqual(sent.kinds, []);
   });
 
-  void test("confirming the Witness tells the member their spawn was inspected", async () => {
+  void test("confirming the Witness tells the member their spawn was inspected, and what it is worth", async () => {
     const id = await at("pendingWitness");
     sent.clear();
 
-    await confirmWitness(committee, id, witnessPoints());
+    await confirmWitness(committee, id, witnessPoints({ points: 15, article_points: 5 }));
 
     assert.deepStrictEqual(sent.kinds, ["witnessConfirmed"]);
     assert.deepStrictEqual(sent.of("witnessConfirmed")[0].to, [ctx.member.contact_email]);
+    // One letter, carrying the row as the Witness left it: the email prints
+    // the points off the Submission, so they are what was written
+    const [letter] = sent.witnessed;
+    assert.strictEqual(letter.submission.points, 15);
+    assert.strictEqual(letter.submission.article_points, 5);
+    assert.strictEqual(letter.witness.id, ctx.admin.id);
+  });
+
+  void test("the Witness letter says whether the Species is a first, as of the Witness", async () => {
+    // Nobody has had the guppy approved: the member may be first
+    const first = await at("pendingWitness");
+    sent.clear();
+    await confirmWitness(committee, first, witnessPoints());
+    assert.strictEqual(sent.witnessed[0].facts.firstTime, true);
+
+    // Another member's guppy is approved: no first-time line for the next one
+    const other = await createTestMember({ email: `other-${Date.now()}@example.com` });
+    await submissionInState(ctx.db, "approved", { memberId: other.id, witnessedBy: ctx.admin.id });
+    const second = await at("pendingWitness");
+    sent.clear();
+    await confirmWitness(committee, second, witnessPoints());
+    assert.strictEqual(sent.witnessed[0].facts.firstTime, false);
   });
 
   void test("requesting changes tells the member what the committee wants", async () => {

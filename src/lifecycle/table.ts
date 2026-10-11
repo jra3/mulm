@@ -18,8 +18,8 @@ import { AuthorizationError, StateError, UnboundError } from "./errors";
  * | confirmWitness          | pendingWitness, bound or recording a    | waitingPeriod (or   | committee, not the submitter |
  * |                         | Species (takes the Species or a new one | inApprovalQueue, if |                    |
  * |                         | to create, base points and bonuses;     | the clock has run), |                    |
- * |                         | rebinds and adopts the Species'         | points set          |                    |
- * |                         | classification as needed)               |                     |                    |
+ * |                         | rebinds and adopts the Species'         | points set; the     |                    |
+ * |                         | classification as needed)               | member emailed them |                    |
  * | bindSpecies             | the three middle states, no changes     | same, bound         | committee, not the submitter |
  * |                         | requested                               |                     |                    |
  * | adoptSpeciesClassification | the three middle states, bound, no   | same, agreeing (or  | committee, not the submitter |

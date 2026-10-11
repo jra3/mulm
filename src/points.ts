@@ -284,6 +284,19 @@ export function refineProgramBonuses(program: string) {
   };
 }
 
+/**
+ * The bonuses a member can still earn after approval, so a letter names only
+ * those: the article bonus while none is counted, and on HAP flowering and
+ * sexual reproduction while unset. Never CARES, a fact about the Species the
+ * witness already settled, nor first-time, which approval computes. In the
+ * formula's order. `program` as `bonusesOutsideProgram` takes it.
+ */
+export function bonusesStillPossible(program: string, row: PointsRow): BonusField[] {
+  const valid = bonusesForProgram(program);
+  const later: BonusField[] = ["article_points", "flowered", "sexual_reproduction"];
+  return later.filter((bonus) => valid.includes(bonus) && !flag(row[bonus]));
+}
+
 /** The article bonus a committee member can award, besides none (null). */
 export const articleBonuses: readonly number[] = [5, 10];
 

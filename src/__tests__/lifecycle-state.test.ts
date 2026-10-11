@@ -5,6 +5,7 @@ import {
   hasChangesRequested,
   requiredWaitingDays,
   waitingPeriod,
+  waitingPeriodEndsOn,
   type StateRow,
   hasConfirmedWitness,
 } from "@/lifecycle";
@@ -144,6 +145,34 @@ void describe("The waiting-period clock", () => {
       waitingPeriod({ species_type: "Fish", species_class: "Livebearers", reproduction_date })
         .elapsed,
       false
+    );
+  });
+
+  void test("the day the waiting period ends is the reproduction day plus the required days, as a UTC day", () => {
+    assert.strictEqual(
+      waitingPeriodEndsOn({
+        species_type: "Fish",
+        species_class: "Livebearers",
+        reproduction_date: "2026-09-20T00:00:00.000Z",
+      }),
+      "2026-11-19"
+    );
+    assert.strictEqual(
+      waitingPeriodEndsOn({
+        species_type: "Fish",
+        species_class: "Marine",
+        reproduction_date: "2026-09-20T00:00:00.000Z",
+      }),
+      "2026-10-20"
+    );
+    // A timestamp late in the day does not slip to the next day
+    assert.strictEqual(
+      waitingPeriodEndsOn({
+        species_type: "Plant",
+        species_class: "Cryptocoryne",
+        reproduction_date: "2026-08-30T23:30:00.000Z",
+      }),
+      "2026-10-29"
     );
   });
 });

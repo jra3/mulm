@@ -109,6 +109,24 @@ how the approval queue knows to say "New species recorded by the witness"
 page of them). A recorded Species gets no spellings added as Names: its
 names are the ones the witness gave it.
 
+## The witness email carries the points
+
+`confirmWitness`'s one consequence beyond the row is the witness email
+(`notifier().witnessConfirmed`, #526): the member's single letter at the
+Witness, replacing the "Screening Approved" and "Witness Confirmed" notices.
+The transition hands the notifier the row as written, the witness, and
+`WitnessedFacts`: whether the Species had no approved Submission at the
+Witness, which is the one fact the letter needs that the row does not carry
+(`countSubmissionsOfSpecies`, read after the commit; approval decides
+first-time for real). Everything else the letter says, the subject's total,
+the itemised points over `pointsBreakdown`, the bonuses still possible after
+approval (`bonusesStillPossible`), the day the waiting period ends
+(`waitingPeriodEndsOn`, beside the clock in `state.ts`), is worked out in
+`witnessLetter` (src/notifications.ts), so the subject, the template and the
+demo page cannot disagree. Reply-To is the committee's address: a dispute is
+a reply for now. A member's save that voids the Witness earns a new letter
+with the new points when the Submission is witnessed again.
+
 ## In-flight Submissions went back for a Witness
 
 Points are set at the Witness now, and a Submission witnessed before that

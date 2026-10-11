@@ -28,6 +28,7 @@ export {
   hasChangesRequested,
   hasConfirmedWitness,
   waitingPeriod,
+  waitingPeriodEndsOn,
   requiredWaitingDays,
   daysElapsedSince,
   isVisibleTo,
@@ -119,4 +120,4 @@ export {
 // The module's own test seam. Not for callers: swapping the notifier changes
 // who gets told, which is the one consequence a test cannot read back out of
 // the database.
-export { setNotifier, resetNotifier, type Notifier } from "./consequences";
+export { setNotifier, resetNotifier, type Notifier, type WitnessedFacts } from "./consequences";

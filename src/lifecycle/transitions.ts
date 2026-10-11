@@ -21,6 +21,7 @@ import {
   canonicalName,
   CatalogueRefusal,
   checkFormAgreement,
+  countSubmissionsOfSpecies,
   createSpeciesOn,
   ensurePointClass,
   findSpeciesById,
@@ -598,13 +599,18 @@ export async function confirmWitness(
     await recordAdminEdit(submissionId, caller, speciesChanges, "Settled at the Witness");
   }
 
-  const [submission, member, witnessMember] = await Promise.all([
+  // The letter says whether the member may be first with this Species: a fact
+  // of the catalogue at the Witness, which approval decides for real
+  const [submission, member, witnessMember, submissionsOfSpecies] = await Promise.all([
     getSubmissionById(submissionId),
     getMember(memberId),
     getMember(caller.id),
+    countSubmissionsOfSpecies(species.group_id),
   ]);
   if (submission && member && witnessMember) {
-    await notifier().witnessConfirmed(submission, member, witnessMember);
+    await notifier().witnessConfirmed(submission, member, witnessMember, {
+      firstTime: submissionsOfSpecies.approved === 0,
+    });
   }
 
   logger.info("Witness confirmed", {

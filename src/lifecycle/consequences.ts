@@ -4,7 +4,7 @@ import type { Program } from "@/levelManager";
 import {
   onChangesRequested,
   onLevelUpgrade,
-  onScreeningApproved,
+  onWitnessConfirmed,
   onSpecialtyAward,
   onSubmissionApprove,
   onSubmissionDeleted,
@@ -15,6 +15,16 @@ import {
   type CommitteeDigest,
 } from "@/notifications";
 import type { RewitnessPending } from "./rewitness";
+
+/**
+ * What the Witness letter says beyond the row itself: whether the Species
+ * had no approved Submission at the Witness, so the member may be the first
+ * to bring it in and earn the first-time bonus at the meeting. Approval
+ * computes first-time; the letter only says it is possible.
+ */
+export type WitnessedFacts = {
+  firstTime: boolean;
+};
 
 /**
  * Who gets told what, as one interface.
@@ -29,11 +39,16 @@ import type { RewitnessPending } from "./rewitness";
 export interface Notifier {
   /** A member's Submission reached the committee. */
   submissionReceived(submission: Submission, member: MemberRecord): Promise<void>;
-  /** A committee member inspected the spawn; the waiting period has started. */
+  /**
+   * A committee member inspected the spawn and set the points (#526): the one
+   * letter the member gets at the Witness, carrying the full breakdown off the
+   * row as written, while there is still time to dispute it.
+   */
   witnessConfirmed(
     submission: Submission,
     member: MemberRecord,
-    witness: MemberRecord
+    witness: MemberRecord,
+    facts: WitnessedFacts
   ): Promise<void>;
   /** The waiting period is served. Returns whether the letter was delivered. */
   waitingPeriodComplete(
@@ -71,7 +86,7 @@ export interface Notifier {
 /** The real notifier: the Portal's email templates, unchanged. */
 const emailNotifier: Notifier = {
   submissionReceived: onSubmissionSend,
-  witnessConfirmed: onScreeningApproved,
+  witnessConfirmed: onWitnessConfirmed,
   waitingPeriodComplete: onWaitingPeriodComplete,
   changesRequested: onChangesRequested,
   approved: onSubmissionApprove,

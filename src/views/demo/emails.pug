@@ -51,11 +51,14 @@ html
 
 			h2.text-2xl.font-bold.mb-6 Email Templates Preview
 
-			//- Email 1: Screening Approved
-			.email-container.mb-8
-				.email-label 1. Screening Approved Email
-				div
-					include ../email/onScreeningApproved.pug
+			//- Email 1: Witnessed (#526), one preview per Species type. The
+			//- template reads one `letter`, so each pass of the loop rebinds it.
+			each witnessed, index in witnessLetters
+				.email-container.mb-8
+					.email-label 1#{String.fromCharCode(97 + index)}. Witnessed Email: #{witnessed.programAbbreviation}, #{witnessed.speciesCommonName}#{witnessed.firstTime ? ", first-time line" : ""}#{witnessed.laterBonuses ? ", bonuses still possible" : ""}
+					div
+						- const letter = witnessed
+						include ../email/onWitnessConfirmed.pug
 
 			//- Email 2: Changes Requested
 			.email-container.mb-8
@@ -116,9 +119,15 @@ html
 				div
 					include ../email/onRewitnessPending.pug
 
-			//- Email 11: Member Invitation (skip for now - complex)
+			//- Email 11: Waiting period over (#525)
 			.email-container.mb-8
-				.email-label 11. Member Invitation Email (Complex - See invite.pug)
+				.email-label 11. Waiting Period Over Reminder
+				div
+					include ../email/onWaitingPeriodComplete.pug
+
+			//- Email 12: Member Invitation (skip for now - complex)
+			.email-container.mb-8
+				.email-label 12. Member Invitation Email (Complex - See invite.pug)
 				div(style="padding: 20px; font-family: Arial, sans-serif;")
 					p Member invitation with full submission tables
 					p See src/views/email/invite.pug for current implementation
