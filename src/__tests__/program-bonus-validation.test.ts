@@ -4,15 +4,16 @@ import path from "path";
 import pug from "pug";
 import { approvalSchema } from "../forms/approval";
 import { approvedEditSchema } from "../forms/approvedEdit";
+import { confirmWitnessSchema } from "../forms/confirmWitness";
 import { bonusFields, programBonuses } from "../points";
 import type { ProgramType } from "../programs";
 
 /**
- * Per-program bonus enforcement at the approval schemas.
+ * Per-program bonus enforcement at the points-setting schemas.
  *
- * Which bonuses a program may carry is data in src/points.ts, and the approval
- * and approved-edit schemas are factories that take the submission's program
- * and refuse a bonus that does not apply to it. These tests parse bodies
+ * Which bonuses a program may carry is data in src/points.ts, and the witness,
+ * approval and approved-edit schemas are factories that take the submission's
+ * program and refuse a bonus that does not apply to it. These tests parse bodies
  * through those factories: no database, no routes.
  *
  * Every body below carries the fields the base object requires, because an
@@ -97,6 +98,18 @@ const cases: BonusCase[] = [
 
 const forms = [
   {
+    name: "witness",
+    parse: (program: string, bonuses: Record<string, string>) =>
+      confirmWitnessSchema(program).safeParse({
+        species_id: "42",
+        points: "10",
+        // The witness panel's switches post "on"; the approval form's post "1"
+        ...Object.fromEntries(
+          Object.entries(bonuses).map(([field, value]) => [field, field === "article_points" ? value : "on"])
+        ),
+      }),
+  },
+  {
     name: "approval",
     parse: (program: string, bonuses: Record<string, string>) =>
       approvalSchema(program).safeParse({ group_id: "42", points: "10", ...bonuses }),
@@ -136,6 +149,67 @@ for (const form of forms) {
     }
   });
 }
+
+/**
+ * The witness panel's form: the Species, the base points as one of the Point
+ * classes, the article bonus as None, 5 or 10, and no first-time field at all,
+ * since approval computes it (ADR-0003).
+ */
+void describe("The confirm-witness schema", () => {
+  const parse = (body: Record<string, string>) =>
+    confirmWitnessSchema("fish").safeParse({ species_id: "7", points: "10", ...body });
+  const issuesOf = (body: Record<string, string>) => {
+    const result = parse(body);
+    return result.success ? [] : result.error.issues.map((issue) => [String(issue.path[0]), issue.message]);
+  };
+
+  void test("a complete body parses to the transition's shape", () => {
+    const result = parse({ article_points: "5", cares_species: "on", add_common_name: "on" });
+    assert.ok(result.success);
+    assert.deepStrictEqual(result.data, {
+      species_id: 7,
+      points: 10,
+      article_points: 5,
+      cares_species: true,
+      flowered: false,
+      sexual_reproduction: false,
+      add_common_name: true,
+      add_scientific_name: false,
+    });
+  });
+
+  void test("the Species and the base points are required", () => {
+    const noSpecies = confirmWitnessSchema("fish").safeParse({ points: "10" });
+    assert.ok(!noSpecies.success);
+    assert.deepStrictEqual(noSpecies.error.issues.map((issue) => String(issue.path[0])), ["species_id"]);
+
+    const noPoints = confirmWitnessSchema("fish").safeParse({ species_id: "7" });
+    assert.ok(!noPoints.success);
+    assert.deepStrictEqual(noPoints.error.issues.map((issue) => String(issue.path[0])), ["points"]);
+  });
+
+  void test("base points must be a Point class: 5, 10, 15 or 20", () => {
+    for (const points of ["5", "10", "15", "20"]) {
+      assert.ok(parse({ points }).success, points);
+    }
+    assert.deepStrictEqual(issuesOf({ points: "12" }), [["points", "Base points must be 5, 10, 15 or 20"]]);
+    assert.deepStrictEqual(issuesOf({ points: "0" }), [["points", "Base points must be 5, 10, 15 or 20"]]);
+  });
+
+  void test("the article bonus is None (null), 5 or 10", () => {
+    assert.strictEqual(parse({}).data?.article_points, null);
+    assert.strictEqual(parse({ article_points: "" }).data?.article_points, null);
+    assert.strictEqual(parse({ article_points: "0" }).data?.article_points, null);
+    assert.strictEqual(parse({ article_points: "10" }).data?.article_points, 10);
+    assert.deepStrictEqual(issuesOf({ article_points: "7" }), [["article_points", "The article bonus is None, 5 or 10"]]);
+  });
+
+  void test("first-time is not the witness's to set", () => {
+    const result = parse({ first_time_species: "on" });
+    assert.ok(result.success);
+    assert.ok(!("first_time_species" in result.data));
+  });
+});
 
 void describe("Per-program bonuses - the exported set", () => {
   void test("BAP (fish) carries article, first-time species and CARES", () => {
@@ -181,7 +255,7 @@ void describe("Per-program bonuses - the approval panel shows the issue", () => 
     const message = "The flowered bonus does not apply to Breeders Awards Program submissions";
     const html = render("admin/approvalPanel.pug", {
       submission: { id: 1, points: 10, species_class: "Cichlids", program: "fish" },
-      approval,
+      speciesFacts: approval,
       bonusFields,
       errors: new Map([["flowered", message]]),
     });
@@ -195,7 +269,7 @@ void describe("Per-program bonuses - the approval panel shows the issue", () => 
       "The CARES species bonus does not apply to Horticultural Awards Program submissions";
     const html = render("admin/approvalPanel.pug", {
       submission: { id: 1, points: 10, species_class: "Cryptocoryne", program: "plant" },
-      approval: { ...approval, speciesType: "Plant", programClass: "Cryptocoryne" },
+      speciesFacts: { ...approval, speciesType: "Plant", programClass: "Cryptocoryne" },
       bonusFields,
       errors: new Map([["cares_species", message]]),
     });

@@ -446,8 +446,8 @@ console.log("Errors:", errors);
 // ❌ Based on docs/TESTING_STRATEGY.md
 await page.click('button:has-text("Confirm Witness")'); // Doesn't exist!
 
-// ✅ Actual button text in src/views/submission/review.pug
-await page.click('button:has-text("Approve for Screening")');
+// ✅ Actual button in src/views/admin/witnessPanel.pug (text carries the total)
+await page.click('#witness-confirm');
 ```
 
 **How to find actual text**:
@@ -459,7 +459,7 @@ await page.click('button:has-text("Approve for Screening")');
 **Examples discovered**:
 | Documentation | Actual UI |
 |---------------|-----------|
-| "Confirm Witness" | "Approve for Screening" |
+| "Confirm Witness" | "Confirm witness · 10 pts" (`#witness-confirm`) |
 | "Decline Witness" | "Request More Info" |
 | "Edit" | "Edit Approved Submission" |
 
@@ -684,20 +684,23 @@ await db.close();
 
 **Critical verifications**:
 - `changes_requested_*` fields are cleared on resubmit
-- Any member save of a witnessed Submission voids the Witness (ADR-0001): `witness_verification_status` is back to `pending`, `witnessed_by`/`witnessed_on`/`final_submission_on` are null. To approve it afterwards, re-witness ("Approve for Screening") and confirm it was brought to a meeting first (see `rewitnessAndQueue` in `submission-lifecycle.spec.ts`)
+- Any member save of a witnessed Submission voids the Witness (ADR-0001): `witness_verification_status` is back to `pending`, `witnessed_by`/`witnessed_on`/`final_submission_on` are null. The points the Witness set go too (ADR-0003). To approve it afterwards, re-witness (Yes, base points, `#witness-confirm`) and confirm it was brought to a meeting first (see `rewitnessAndQueue` in `submission-lifecycle.spec.ts`)
 - Requesting changes alone leaves the Witness in place
 
 ### Pattern: Witness Confirmation/Decline
 
 ```typescript
-// "Approve for Screening" is offered only once the Submission is bound to a
-// Species. Bind it in the witness panel first (see rewitnessAndQueue), or
-// create it bound with createTestSubmission({ ..., bound: true }).
+// The witness settles the Species and sets the points (ADR-0003). An
+// unbound Submission is chosen in the panel's search first (see
+// rewitnessAndQueue), or create it bound with
+// createTestSubmission({ ..., bound: true }); a bound one is answered Yes.
 await fillTomSelectTypeahead(page, "group_id", "Poecilia reticulata", false, false);
-await page.locator('#witness-species button[type="submit"]:has-text("Bind")').click();
+await page.locator("#witness-species-use").click();
 
-// Witness confirmation (approve for screening)
-await page.click('button:has-text("Approve for Screening")');
+// Witness confirmation: Yes to the Species, the base points, then Confirm
+await page.locator("label:has(#witness-species-yes)").click();
+await page.locator("label:has(#witness-points-10)").click();
+await page.click("#witness-confirm");
 await page.waitForURL(/\/admin\/(witness-queue|queue)\//);
 
 // Witness decline (request more info - opens dialog)
@@ -709,7 +712,7 @@ await page.waitForURL(/\/admin\/(witness-queue|queue)\//);
 ```
 
 **Key insights**:
-- "Approve for Screening" = confirm witness (not "Confirm Witness")
+- `#witness-confirm` ("Confirm witness · N pts") = confirm witness; it is disabled until the Species is settled and the base points chosen
 - "Request More Info" = decline witness (opens dialog, not immediate action)
 - Decline dialog requires reason with at least 10 characters
 

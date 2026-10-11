@@ -81,6 +81,7 @@ export {
   type Caller,
   type Change,
   type NamesToAdd,
+  type WitnessPoints,
 } from "./transitions";
 
 // The clock's consequence, and the committee's standing view of its own work.
@@ -101,7 +102,6 @@ export {
   AuthorizationError,
   StateError,
   UnboundError,
-  MismatchError,
   isLifecycleError,
 } from "./errors";
 

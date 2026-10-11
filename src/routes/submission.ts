@@ -1,4 +1,5 @@
 import { Response } from "express";
+import { z } from "zod";
 import {
   getBapFormTitle,
   getClassOptions,
@@ -30,11 +31,13 @@ import {
   checkFormAgreement,
   countSubmissionsOfSpecies,
   findSpeciesById,
+  listNames,
 } from "@/species";
 import * as lifecycle from "@/lifecycle";
 import { attempt, callerFor } from "./lifecycleErrors";
-import { getNotesForSubmission } from "@/db/submission_notes";
+import { getNotesForSubmission, type SubmissionNote } from "@/db/submission_notes";
 import { formatShortDate } from "@/utils/dateFormat";
+import { bonusBreakdown, totalPoints, type BonusLine } from "@/points";
 import { parseVideoUrlWithOEmbed, isValidVideoUrl } from "@/utils/videoParser";
 import config from "@/config.json";
 
@@ -131,7 +134,7 @@ export const view = async (req: MulmRequest, res: Response) => {
     // Which moves this viewer may actually make, asked of the same table the
     // transitions guard against - so nobody is shown a button that will refuse
     // them.
-    allowed: allowedMoves(viewer, submission, state, agreement?.classificationAgrees),
+    allowed: allowedMoves(viewer, submission, state),
   };
 
   // A Draft has nothing to review, so its owner goes straight to the form.
@@ -160,6 +163,13 @@ export const view = async (req: MulmRequest, res: Response) => {
 
   // Fetch admin notes if viewer is an admin
   const adminNotes = aspect.isAdmin ? await getNotesForSubmission(submission.id) : [];
+
+  // The witness panel and the approval panel both read the bound Species
+  const speciesFacts =
+    aspect.isAdmin && (state === "pendingWitness" || state === "inApprovalQueue")
+      ? await boundSpeciesFacts(submission)
+      : null;
+  const speciesChosenByWitness = speciesChosenByCommittee(adminNotes);
 
   // Fetch oEmbed data for video if present
   let videoMetadata = null;
@@ -212,14 +222,23 @@ export const view = async (req: MulmRequest, res: Response) => {
     boundSpecies: boundSpecies ?? null,
     boundSpeciesName: boundSpecies ? canonicalNameOf(boundSpecies) : null,
     classificationMismatch: agreement ? !agreement.classificationAgrees : false,
-    // Which of the two disagree, for the witness panel's highlight, and which
-    // spellings are already Names of the Species, for its Names to add
-    classificationAgreement: agreement
-      ? { speciesType: agreement.speciesType, programClass: agreement.programClass }
-      : null,
+    // Which spellings are already Names of the Species, for the witness
+    // panel's Names to add
     spellingAgreement: agreement ? { commonName: agreement.commonName, latinName: agreement.latinName } : null,
-    // The approval panel reads the bound Species; only a committee member sees it
-    approval: aspect.isAdmin && state === "inApprovalQueue" ? await approvalPanelData(submission) : null,
+    speciesFacts,
+    // Whether the committee, not the member, chose the bound Species: the
+    // witness panel then shows it as the witness's choice, not the member's
+    speciesChosenByWitness,
+    // The witness panel's sticky bar, as the panel's prefill sums
+    summary: witnessSummary({
+      bound: speciesFacts != null,
+      species_settled: speciesChosenByWitness,
+      points: speciesFacts?.pointClass ?? null,
+      article_points: submission.article_link ? 5 : null,
+      cares_species: submission.program === "fish" ? Boolean(speciesFacts?.isCaresSpecies) : false,
+      flowered: false,
+      sexual_reproduction: false,
+    }),
     waitingPeriodStatus,
     adminNotes,
     videoMetadata,
@@ -330,19 +349,24 @@ export const renderEdit = async (req: MulmRequest, res: Response) => {
 };
 
 /**
- * What the approval panel shows about the Species a Submission is bound to:
- * its Canonical name and classification, its Point class (which prefills the
- * Points), and the bonuses it implies - first time in the Program for this
- * Species, and CARES. Null when the Submission is unbound, which the panel
- * says and offers no Approve for.
+ * What the witness panel and the approval panel show about the Species a
+ * Submission is bound to: its Canonical name, a common Name, its
+ * classification, its Point class (which prefills the base points), and the
+ * bonuses it implies - first time in the Program for this Species, and CARES.
+ * Null when the Submission is unbound, which each panel says in its own way.
  */
-export async function approvalPanelData(submission: Pick<db.Submission, "species_id">) {
+export async function boundSpeciesFacts(submission: Pick<db.Submission, "species_id">) {
   const species = submission.species_id ? await findSpeciesById(submission.species_id) : undefined;
   if (!species) return null;
   // First-time is program-wide: no member has had this Species approved yet
-  const submissionsOfSpecies = await countSubmissionsOfSpecies(species.group_id);
+  const [submissionsOfSpecies, names] = await Promise.all([
+    countSubmissionsOfSpecies(species.group_id),
+    listNames(species.group_id),
+  ]);
   return {
+    speciesId: species.group_id,
     speciesName: canonicalNameOf(species),
+    commonName: names.common[0]?.name ?? null,
     speciesType: species.species_type,
     programClass: species.program_class,
     pointClass: species.base_points,
@@ -350,6 +374,74 @@ export async function approvalPanelData(submission: Pick<db.Submission, "species
     priorBreedCount: submissionsOfSpecies.approved,
     isCaresSpecies: species.is_cares_species === 1,
   };
+}
+
+/** The witness panel's sticky bar: ready to confirm, or why not yet. */
+export type WitnessSummary = {
+  ready: boolean;
+  /** Base points first, then each bonus that is set, in the formula's order. */
+  lines: BonusLine[];
+  total: number;
+  /** What is still missing, when not ready. */
+  hint: string | null;
+};
+
+/**
+ * Sum what the witness panel has set so far, over the one Points rule
+ * (`bonusBreakdown` and `totalPoints`, src/points.ts), so the bar's lines add
+ * up to its total. Not ready until the Species is settled and the base points
+ * chosen, in that order, which is also the order the panel asks them in.
+ */
+export function witnessSummary(values: {
+  bound: boolean;
+  species_settled: boolean;
+  points: number | null;
+  article_points: number | null;
+  cares_species: boolean;
+  flowered: boolean;
+  sexual_reproduction: boolean;
+}): WitnessSummary {
+  const notYet = (hint: string): WitnessSummary => ({ ready: false, lines: [], total: 0, hint });
+  if (!values.bound) return notYet("Choose the species first");
+  if (!values.species_settled) return notYet("Is the species right? Answer above first");
+  if (values.points == null) return notYet("Choose the base points");
+
+  const row = {
+    points: values.points,
+    article_points: values.article_points,
+    cares_species: values.cares_species,
+    flowered: values.flowered,
+    sexual_reproduction: values.sexual_reproduction,
+  };
+  return {
+    ready: true,
+    lines: [{ label: "Base points", amount: values.points }, ...bonusBreakdown(row)],
+    total: totalPoints(row),
+    hint: null,
+  };
+}
+
+/** The shape of a changelog note, as `recordAdminEdit` writes it. */
+const adminEditNote = z.object({
+  type: z.literal("admin_edit"),
+  changes: z.array(z.object({ field: z.string() })),
+});
+
+/**
+ * Whether the committee bound or rebound the Submission: a changelog entry
+ * that changed its `species`. The member's own pick leaves no such entry.
+ */
+export function speciesChosenByCommittee(notes: Pick<SubmissionNote, "note_text">[]): boolean {
+  return notes.some((note) => {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(note.note_text);
+    } catch {
+      return false;
+    }
+    const entry = adminEditNote.safeParse(parsed);
+    return entry.success && entry.data.changes.some((change) => change.field === "species");
+  });
 }
 
 /**
@@ -360,8 +452,7 @@ export async function approvalPanelData(submission: Pick<db.Submission, "species
 export function allowedMoves(
   viewer: MulmRequest["viewer"],
   submission: db.Submission,
-  state: lifecycle.SubmissionState,
-  classificationAgrees?: boolean
+  state: lifecycle.SubmissionState
 ): Partial<Record<lifecycle.MoveId, boolean>> {
   if (!viewer) {
     return {};
@@ -376,7 +467,6 @@ export function allowedMoves(
     actorId: viewer.id,
     isOwner,
     bound: submission.species_id != null,
-    classificationAgrees,
   };
 
   return Object.fromEntries(

@@ -71,6 +71,7 @@ export type Submission = {
   notes: string | null;
   images: string | null;
   video_url: string | null;
+  article_link: string | null;
 
   submitted_on: string | null;
   approved_on: string | null;

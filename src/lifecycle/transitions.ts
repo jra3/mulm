@@ -16,7 +16,16 @@ import type { ApprovalFormValues } from "@/forms/approval";
 import type { Program } from "@/levelManager";
 import { isProgramType } from "@/programs";
 import { programOfSpeciesType } from "@/points";
-import { addName, canonicalName, checkFormAgreement, findSpeciesById, type NameKind } from "@/species";
+import {
+  addName,
+  canonicalName,
+  checkFormAgreement,
+  ensurePointClass,
+  findSpeciesById,
+  isPointClass,
+  type NameKind,
+  type Species,
+} from "@/species";
 import { logger } from "@/utils/logger";
 import { AuthorizationError, ValidationError, StateError } from "./errors";
 import { deriveState, hasChangesRequested, waitingPeriod } from "./state";
@@ -94,13 +103,6 @@ async function guard(
   const submission = await readForGuard(db, submissionId);
   const actor = actorFor(caller, submission);
 
-  // Asked of the catalogue only for a move that needs it. A bound Species
-  // the catalogue no longer has agrees with nothing.
-  const classificationAgrees =
-    move.requiresAgreeingClassification && submission.species_id != null
-      ? ((await checkFormAgreement(submission.species_id, submission))?.classificationAgrees ?? false)
-      : undefined;
-
   assertMoveIsLegal(move, {
     state: deriveState(submission),
     changesPending: hasChangesRequested(submission),
@@ -108,7 +110,6 @@ async function guard(
     actorId: caller.id,
     isOwner: submission.member_id === caller.id,
     bound: submission.species_id != null,
-    classificationAgrees,
   });
 
   return { submission, actor };
@@ -200,6 +201,11 @@ async function writeContent(
  * The approval queue entry goes too, because nothing is queued for approval
  * unwitnessed; the member queues it again once it has been re-witnessed.
  *
+ * The points the Witness set go with it (ADR-0003): they were set against the
+ * form the witness saw, and the next witness starts from the catalogue's
+ * prefill again. First-time is never set before approval, so there is nothing
+ * of it to clear.
+ *
  * Only member saves call this. Committee moves, including a Points correction
  * to an Approved Submission, never touch the Witness.
  */
@@ -210,7 +216,12 @@ async function voidWitness(db: Database, submissionId: number, move: MoveDefinit
        witness_verification_status = 'pending',
        witnessed_by = NULL,
        witnessed_on = NULL,
-       final_submission_on = NULL
+       final_submission_on = NULL,
+       points = NULL,
+       article_points = NULL,
+       cares_species = NULL,
+       flowered = NULL,
+       sexual_reproduction = NULL
      WHERE id = ? AND submitted_on IS NOT NULL AND approved_on IS NULL`,
     [submissionId],
     move
@@ -454,47 +465,161 @@ export async function resubmit(
 // ---------------------------------------------------------------------------
 
 /**
- * Confirm the Witness: a committee member has inspected the fry, and the
- * waiting period starts. The spellings the witness chose (`namesToAdd`) are
- * added to the bound Species as Names in the same transaction, so a refused
- * confirmation adds none.
+ * What the Witness sets about a Submission's points (ADR-0003): the Species,
+ * the base points, and every bonus but first-time, which approval computes.
+ * `species_id` left off means the Species the Submission is already bound to;
+ * `article_points` null means no article bonus.
+ */
+export type WitnessPoints = {
+  species_id?: number;
+  points: number;
+  article_points: number | null;
+  cares_species: boolean;
+  flowered: boolean;
+  sexual_reproduction: boolean;
+};
+
+/**
+ * Confirm the Witness: a committee member has inspected the fry, settled the
+ * Species, and set the points. The waiting period starts.
+ *
+ * One transaction, in order: rebind to the Species the witness chose, if it
+ * is not the one bound; give the Submission its Species' type, class and
+ * Program where they disagree; write the base points and bonuses; confirm
+ * the Witness; value the Species if the catalogue had not (the chosen base
+ * points become its Point class, with no opt-out); add the spellings the
+ * witness chose (`namesToAdd`) as Names. A refused confirmation does none of
+ * it. First-time is left NULL: approval counts it.
  *
  * Never the submitter, so the independence of the first gate is enforced
- * rather than trusted. Refused on a Submission bound to no Species, so nothing
- * enters the waiting period without one: the witness binds it first
- * (`bindSpecies`).
+ * rather than trusted. Refused on a Submission bound to no Species that the
+ * confirm names none for either, so nothing enters the waiting period
+ * without one.
  */
 export async function confirmWitness(
   caller: Caller,
   submissionId: number,
+  witness: WitnessPoints,
   namesToAdd: NamesToAdd = {}
 ): Promise<void> {
-  const { memberId, added } = await withTransaction(async (db) => {
-    const { submission } = await guard(db, moves.confirmWitness, caller, submissionId);
+  if (!isPointClass(witness.points)) {
+    throw new ValidationError("Choose the base points: 5, 10, 15 or 20", "points", witness.points);
+  }
+
+  const { memberId, added, species, speciesChanges, valued } = await withTransaction(async (db) => {
+    const submission = await readForGuard(db, submissionId);
+    const speciesId = witness.species_id ?? submission.species_id;
+    const species = speciesId == null ? undefined : await findSpeciesById(speciesId);
+    if (speciesId != null && !species) {
+      throw new ValidationError("Choose a Species that exists", "species_id", speciesId);
+    }
+
+    assertMoveIsLegal(moves.confirmWitness, {
+      state: deriveState(submission),
+      changesPending: hasChangesRequested(submission),
+      actor: actorFor(caller, submission),
+      actorId: caller.id,
+      isOwner: submission.member_id === caller.id,
+      bound: species != null,
+    });
+    // The guard refused an unbound Submission above, so there is a Species
+    const chosen = species!;
+
+    const speciesChanges = await settleSpecies(db, submission, chosen);
+
     await runUpdate(
       db,
       `UPDATE submissions SET
+         points = ?,
+         article_points = ?,
+         cares_species = ?,
+         flowered = ?,
+         sexual_reproduction = ?,
          witnessed_by = ?,
          witnessed_on = ?,
          witness_verification_status = 'confirmed'
        WHERE id = ? AND witness_verification_status != 'confirmed' AND approved_on IS NULL`,
-      [caller.id, new Date().toISOString(), submissionId],
+      [
+        witness.points,
+        witness.article_points,
+        witness.cares_species ? 1 : 0,
+        witness.flowered ? 1 : 0,
+        witness.sexual_reproduction ? 1 : 0,
+        caller.id,
+        new Date().toISOString(),
+        submissionId,
+      ],
       moves.confirmWitness
     );
-    const added = await addSpellingsAsNames(db, submissionId, submission.species_id!, namesToAdd);
-    return { memberId: submission.member_id, added };
+
+    const valued = chosen.base_points == null && (await ensurePointClass(db, chosen.group_id, witness.points));
+    const added = await addSpellingsAsNames(db, submissionId, chosen.group_id, namesToAdd);
+    return { memberId: submission.member_id, added, species: chosen, speciesChanges, valued };
   });
 
-  const [submission, member, witness] = await Promise.all([
+  if (speciesChanges.length > 0) {
+    await recordAdminEdit(submissionId, caller, speciesChanges, "Settled at the Witness");
+  }
+
+  const [submission, member, witnessMember] = await Promise.all([
     getSubmissionById(submissionId),
     getMember(memberId),
     getMember(caller.id),
   ]);
-  if (submission && member && witness) {
-    await notifier().witnessConfirmed(submission, member, witness);
+  if (submission && member && witnessMember) {
+    await notifier().witnessConfirmed(submission, member, witnessMember);
   }
 
-  logger.info("Witness confirmed", { submissionId, witnessedBy: caller.id, namesAdded: added });
+  logger.info("Witness confirmed", {
+    submissionId,
+    witnessedBy: caller.id,
+    speciesId: species.group_id,
+    points: witness.points,
+    pointClassSet: valued,
+    speciesChanges,
+    namesAdded: added,
+  });
+}
+
+/**
+ * Settle the Submission on `species` inside the Witness's transaction: rebind
+ * it if it is bound elsewhere, and give it the Species' type, class and
+ * Program where the Submission's disagree. The witness answered "is that
+ * right?" with the Species, so the Submission takes the Species' word on both.
+ * @returns what changed, for the changelog
+ */
+async function settleSpecies(db: Database, submission: Submission, species: Species): Promise<Change[]> {
+  const changes: Change[] = [];
+
+  if (submission.species_id !== species.group_id) {
+    await runUpdate(
+      db,
+      `UPDATE submissions SET species_id = ? WHERE id = ? AND approved_on IS NULL`,
+      [species.group_id, submission.id],
+      moves.confirmWitness
+    );
+    const previous = submission.species_id == null ? undefined : await findSpeciesById(submission.species_id);
+    changes.push({ field: "species", old: previous ? canonicalName(previous) : null, new: canonicalName(species) });
+  }
+
+  const adopted = {
+    species_type: species.species_type,
+    species_class: species.program_class,
+    program: programOfSpeciesType(species.species_type),
+  };
+  const diff = changesBetween(submission, adopted);
+  if (diff.length > 0) {
+    await runUpdate(
+      db,
+      `UPDATE submissions SET species_type = ?, species_class = ?, program = ?
+         WHERE id = ? AND approved_on IS NULL`,
+      [adopted.species_type, adopted.species_class, adopted.program, submission.id],
+      moves.confirmWitness
+    );
+    changes.push(...diff);
+  }
+
+  return changes;
 }
 
 /**

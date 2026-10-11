@@ -51,9 +51,24 @@ A Witness attests to the fry and to the form
 ([ADR-0001](../../docs/adr/0001-witness-attests-to-the-form.md)). Every member
 save of a submitted Submission - Save Changes, Resubmit, and Submit after
 Return to Draft - voids a confirmed Witness, clears the approval queue entry,
-and leaves the Submission in Pending Witness, back in the witness queue. There
-is no field list and no diff: saving is the edit. Committee moves, including a
+clears the points the Witness set
+([ADR-0003](../../docs/adr/0003-points-are-set-at-the-witness.md)), and leaves
+the Submission in Pending Witness, back in the witness queue. There is no
+field list and no diff: saving is the edit. Committee moves, including a
 Points correction to an Approved Submission, never touch the Witness.
+
+## The Witness sets the points
+
+`confirmWitness` takes the Species the witness settled on, the base points
+(one of the Point classes) and every bonus but first-time, which `approve`
+computes. In one transaction it rebinds the Submission to that Species if it
+is bound elsewhere, gives it the Species' type, class and Program where they
+disagree (both on the changelog, as "Settled at the Witness"), writes the
+points fields, confirms the Witness, values the Species if the catalogue had
+not (the chosen base points become its Point class, with no opt-out), and
+adds the chosen spellings as Names. A refused confirmation does none of it.
+The points count for nothing until approval: every total-reporting query
+filters on `approved_on`.
 
 ## Things that are deliberately not here
 
@@ -74,8 +89,9 @@ its Witness is fixed by hand. It never adds Names to the Species.
 Submission to a Species anywhere between submission and approval, never on
 its own Submission and not while changes are requested (the ball is with the
 member), and it goes on the changelog. It is not a member edit, so
-it leaves a confirmed Witness in place. `confirmWitness` refuses an unbound
-Submission with an `UnboundError`, so nothing enters the waiting period
+it leaves a confirmed Witness in place. `confirmWitness` binds too, to the
+Species it is handed; it refuses a Submission bound to no Species that it is
+handed none for with an `UnboundError`, so nothing enters the waiting period
 without a Species.
 
 A binding holds only while the form agrees with the Species (CONTEXT.md,
@@ -93,13 +109,13 @@ form agrees. Clearing the typeahead is not itself an unbind; a form that no
 longer agrees is. `formToRow` never writes `species_id`: the binding is the
 lifecycle's to decide (`bindingAfterSave`).
 
-`confirmWitness` is also refused, with a `MismatchError`, while the
-Submission's Species type or Program class disagrees with its Species'
-(a spelling that is not a Name does not block it). The witness answers with
-`adoptSpeciesClassification` - the Submission takes the Species' type, class
-and Program, on the changelog, Witness untouched; a queued Submission whose
-adopted classification asks a longer waiting period leaves the approval queue
-and waits again - or by rebinding, or by requesting changes.
+`confirmWitness` is never refused for a Species type or Program class that
+disagrees with the Species': the witness answered that this is the Species,
+so the confirm gives the Submission the Species' type, class and Program, on
+the changelog (a spelling that is not a Name changes nothing). After the
+Witness the same answer is `adoptSpeciesClassification` - Witness untouched;
+a queued Submission whose adopted classification asks a longer waiting period
+leaves the approval queue and waits again.
 
 `confirmWitness` also takes the witness's choice of the Submission's own
 spellings to add to the bound Species as Names (`NamesToAdd`; the panel

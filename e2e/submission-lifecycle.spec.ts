@@ -23,24 +23,33 @@ test.describe.configure({ mode: 'serial' });
  * member who is not the submitter. The reproduction date is past the waiting
  * period, so it goes straight to awaiting final submission.
  *
- * A Witness cannot be confirmed without a Species. A Submission the member
- * bound by picking a Name opens in the panel already bound; an unbound one is
- * bound here first, through the panel's typeahead.
+ * A Witness cannot be confirmed without a Species, and the witness sets the
+ * points (ADR-0003). A Submission the member bound by picking a Name opens in
+ * the panel as "the member says it's", to be answered Yes; an unbound one is
+ * chosen here first, through the panel's search. Then the base points (10)
+ * and Confirm.
  */
 async function rewitnessAndQueue(page: Page, submissionId: number): Promise<void> {
 	await page.goto(`/submissions/${submissionId}`);
 	await page.waitForSelector("#witness-species");
 
 	if ((await page.locator("#witness-bound-species").count()) === 0) {
-		await expect(page.locator("#witness-species")).toContainText("Not bound to a Species yet");
-		await expect(page.locator('button:has-text("Approve for Screening")')).toHaveCount(0);
+		await expect(page.locator("#witness-species")).toContainText("The member wrote");
+		await expect(page.locator("#witness-confirm")).toBeDisabled();
 		await fillTomSelectTypeahead(page, "group_id", "Poecilia reticulata", false, false);
-		await page.locator('#witness-species button[type="submit"]:has-text("Bind")').click();
-		// Binding reloads the page with the Species named in the panel
+		await page.locator("#witness-species-use").click();
+		// Choosing reloads the page with the Species named in the panel
 		await expect(page.locator("#witness-bound-species")).toBeVisible({ timeout: 10000 });
 	}
 
-	const witnessButton = page.locator('button:has-text("Approve for Screening")');
+	// The member's pick is settled with Yes; the witness's own choice already is
+	if ((await page.locator("#witness-species-yes").count()) > 0) {
+		await page.locator('label[for="witness-species-yes"], label:has(#witness-species-yes)').first().click();
+	}
+	await page.locator('label:has(#witness-points-10)').click();
+
+	const witnessButton = page.locator("#witness-confirm");
+	await expect(witnessButton).toBeEnabled({ timeout: 10000 });
 	await witnessButton.scrollIntoViewIfNeeded();
 	await witnessButton.click();
 	await page.waitForURL(/\/admin\/witness-queue\//, { timeout: 10000 });

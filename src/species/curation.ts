@@ -167,6 +167,28 @@ export async function setPointClass(speciesIds: number[], pointClass: number | n
   }
 }
 
+/**
+ * Give a Species a Point class if it has none: the base points the witness
+ * chose for the first Submission of a Species the catalogue had not valued
+ * (CONTEXT.md, Assigning points). A Point class already set is left alone.
+ *
+ * Runs on the caller's connection so the Witness's transaction carries it:
+ * a refused confirmation values nothing.
+ * @returns whether the Point class was set
+ */
+export async function ensurePointClass(db: Database, speciesId: number, pointClass: number): Promise<boolean> {
+  const value = admitPointClass(pointClass);
+  const result = await db.run(
+    "UPDATE species_name_group SET base_points = ? WHERE group_id = ? AND base_points IS NULL",
+    [value, speciesId]
+  );
+  const set = (result.changes ?? 0) > 0;
+  if (set) {
+    logger.info("Set Point class at the Witness", { speciesId, pointClass: value });
+  }
+  return set;
+}
+
 const scientific = nameTable.scientific;
 
 /** Add `text` as the Species' flagged scientific Name. */

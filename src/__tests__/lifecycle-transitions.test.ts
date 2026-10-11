@@ -8,7 +8,6 @@ import {
   bindSpecies,
   adoptSpeciesClassification,
   UnboundError,
-  MismatchError,
   type Change,
   confirmWitness,
   correctPoints,
@@ -30,7 +29,7 @@ import {
   type SubmissionState,
 } from "@/lifecycle";
 import { query } from "@/db/conn";
-import { addName, checkFormAgreement, createSpecies, listNames } from "@/species";
+import { addName, checkFormAgreement, createSpecies, findSpeciesById, listNames } from "@/species";
 import {
   mockApprovalData,
   ensureGuppySpecies,
@@ -38,11 +37,13 @@ import {
   teardownTestDatabase,
   type TestContext,
 } from "./helpers/testHelpers";
+import { getMemberWithPoints } from "@/db/members";
 import {
   readSubmission,
   recordNotifications,
   requestChangesFixture,
   submissionInState,
+  witnessPoints,
 } from "./helpers/lifecycleFixtures";
 import { assertSubmissionInvariantsHold } from "./helpers/assertInvariants";
 import type { FormValues } from "@/forms/submission";
@@ -157,7 +158,7 @@ void describe("Submission lifecycle - transitions", () => {
       {
         move: "confirmWitness",
         legal: ["pendingWitness"],
-        run: (id) => confirmWitness(committee, id),
+        run: (id) => confirmWitness(committee, id, witnessPoints()),
       },
       {
         move: "enterApprovalQueue",
@@ -270,7 +271,7 @@ void describe("Submission lifecycle - transitions", () => {
 
     void test("a member cannot perform a committee move", async () => {
       const id = await at("pendingWitness");
-      assert.strictEqual(await refusal(() => confirmWitness(otherMember, id)), "authorization");
+      assert.strictEqual(await refusal(() => confirmWitness(otherMember, id, witnessPoints())), "authorization");
       assert.strictEqual(
         await refusal(() => requestChanges(otherMember, id, "nope")),
         "authorization"
@@ -279,13 +280,13 @@ void describe("Submission lifecycle - transitions", () => {
 
     void test("a committee member cannot witness their own Submission", async () => {
       const id = await submissionInState(ctx.db, "pendingWitness", { memberId: ctx.admin.id });
-      assert.strictEqual(await refusal(() => confirmWitness(committee, id)), "authorization");
+      assert.strictEqual(await refusal(() => confirmWitness(committee, id, witnessPoints())), "authorization");
     });
 
     void test("refusing a committee member their own Submission says why", async () => {
       const id = await submissionInState(ctx.db, "pendingWitness", { memberId: ctx.admin.id });
       await assert.rejects(
-        () => confirmWitness(committee, id),
+        () => confirmWitness(committee, id, witnessPoints()),
         (err: Error) => {
           assert.ok(err instanceof AuthorizationError);
           // Not "only the committee may do this" - they are the committee.
@@ -339,7 +340,7 @@ void describe("Submission lifecycle - transitions", () => {
     void test("no committee move but Delete is legal while changes are outstanding", async () => {
       const pending = await at("pendingWitness");
       await requestChangesFixture(pending, ctx.admin.id);
-      assert.strictEqual(await refusal(() => confirmWitness(committee, pending)), "state");
+      assert.strictEqual(await refusal(() => confirmWitness(committee, pending, witnessPoints())), "state");
       assert.strictEqual(
         await refusal(() => requestChanges(committee, pending, "again")),
         "state"
@@ -458,7 +459,7 @@ void describe("Submission lifecycle - transitions", () => {
       const id = await at("waitingPeriod");
       await saveChanges(member, id, { ...(await formFor(id)), count: "40" });
 
-      await confirmWitness(committee, id);
+      await confirmWitness(committee, id, witnessPoints());
 
       const after = (await readSubmission(id))!;
       assert.strictEqual(after.witness_verification_status, "confirmed");
@@ -541,7 +542,7 @@ void describe("Submission lifecycle - transitions", () => {
       });
 
       await assert.rejects(
-        () => confirmWitness(committee, id),
+        () => confirmWitness(committee, id, witnessPoints()),
         (err: unknown) =>
           err instanceof UnboundError &&
           err.message === "Bind this Submission to a Species before you confirm its Witness" &&
@@ -556,7 +557,7 @@ void describe("Submission lifecycle - transitions", () => {
         reproductionDate: new Date().toISOString(),
       });
 
-      await confirmWitness(committee, id);
+      await confirmWitness(committee, id, witnessPoints());
 
       const after = (await readSubmission(id))!;
       assert.strictEqual(deriveState(after), "waitingPeriod");
@@ -569,8 +570,8 @@ void describe("Submission lifecycle - transitions", () => {
       const id = await at("pendingWitness");
 
       const results = await Promise.allSettled([
-        confirmWitness(committee, id),
-        confirmWitness({ id: ctx.otherAdmin!.id, isAdmin: true }, id),
+        confirmWitness(committee, id, witnessPoints()),
+        confirmWitness({ id: ctx.otherAdmin!.id, isAdmin: true }, id, witnessPoints()),
       ]);
 
       const fulfilled = results.filter((r) => r.status === "fulfilled");
@@ -588,7 +589,7 @@ void describe("Submission lifecycle - transitions", () => {
       const id = await at("pendingWitness");
 
       await Promise.allSettled([
-        confirmWitness(committee, id),
+        confirmWitness(committee, id, witnessPoints()),
         requestChanges({ id: ctx.otherAdmin!.id, isAdmin: true }, id, "More photos please"),
       ]);
 
@@ -610,7 +611,7 @@ void describe("Submission lifecycle - transitions", () => {
       assert.strictEqual((await readSubmission(id))!.witness_verification_status, "pending");
 
       await bindSpecies(committee, id, await ensureGuppySpecies(ctx.db));
-      await confirmWitness(committee, id);
+      await confirmWitness(committee, id, witnessPoints());
       await requestChanges(committee, id, "Add a photo of the fry");
       assert.strictEqual(
         (await readSubmission(id))!.witness_verification_status,
@@ -671,7 +672,7 @@ void describe("Submission lifecycle - transitions", () => {
         "binding to the Species it already has records nothing"
       );
 
-      await confirmWitness(committee, id);
+      await confirmWitness(committee, id, witnessPoints());
       assert.strictEqual((await readSubmission(id))!.witness_verification_status, "confirmed");
     });
 
@@ -723,16 +724,6 @@ void describe("Submission lifecycle - transitions", () => {
 
   void describe("Agreement with the Species", () => {
     const speciesIdOf = async (id: number) => (await readSubmission(id))!.species_id;
-    const inRefusal = async (call: () => Promise<unknown>) => {
-      try {
-        await call();
-        return "allowed";
-      } catch (err) {
-        if (err instanceof MismatchError) return "mismatch";
-        if (err instanceof UnboundError) return "unbound";
-        throw err;
-      }
-    };
 
     void test("saving a bound Submission with a changed Species type clears the binding", async () => {
       const id = await at("pendingWitness");
@@ -793,20 +784,6 @@ void describe("Submission lifecycle - transitions", () => {
       assert.strictEqual(await speciesIdOf(asked), null, "Resubmit");
     });
 
-    void test("confirming is refused on a Program class mismatch, with its own refusal", async () => {
-      const id = await submissionInState(ctx.db, "pendingWitness", {
-        memberId: ctx.member.id,
-        speciesClass: "Cichlids - New World",
-      });
-
-      assert.strictEqual(await inRefusal(() => confirmWitness(committee, id)), "mismatch");
-      await assert.rejects(
-        () => confirmWitness(committee, id),
-        (err: unknown) => err instanceof MismatchError && !(err instanceof StateError)
-      );
-      assert.strictEqual(await stateOf(id), "pendingWitness");
-    });
-
     void test("a spelling that is not a Name does not block confirming", async () => {
       const id = await submissionInState(ctx.db, "pendingWitness", {
         memberId: ctx.member.id,
@@ -814,17 +791,16 @@ void describe("Submission lifecycle - transitions", () => {
         commonName: "Millions fish",
       });
 
-      await confirmWitness(committee, id);
+      await confirmWitness(committee, id, witnessPoints());
       assert.strictEqual((await readSubmission(id))!.witness_verification_status, "confirmed");
     });
 
-    void test("adopting the Species' values sets the type, class and Program, clears the mismatch, and is on the changelog", async () => {
+    void test("adopting the Species' values sets the type, class and Program, and is on the changelog", async () => {
       const id = await submissionInState(ctx.db, "pendingWitness", {
         memberId: ctx.member.id,
         speciesType: "Invert",
         speciesClass: "Shrimp",
       });
-      assert.strictEqual(await inRefusal(() => confirmWitness(committee, id)), "mismatch");
 
       await adoptSpeciesClassification(committee, id);
 
@@ -853,7 +829,7 @@ void describe("Submission lifecycle - transitions", () => {
         "adopting values it already has records nothing"
       );
 
-      await confirmWitness(committee, id);
+      await confirmWitness(committee, id, witnessPoints());
       assert.strictEqual((await readSubmission(id))!.witness_verification_status, "confirmed");
     });
 
@@ -873,7 +849,7 @@ void describe("Submission lifecycle - transitions", () => {
         memberId: ctx.member.id,
         speciesId: null,
       });
-      assert.strictEqual(await inRefusal(() => adoptSpeciesClassification(committee, unbound)), "unbound");
+      await assert.rejects(() => adoptSpeciesClassification(committee, unbound), UnboundError);
     });
 
     void test("adopting a classification with a longer waiting period takes a queued Submission back out of the queue", async () => {
@@ -1007,7 +983,7 @@ void describe("Submission lifecycle - transitions", () => {
       // The committee names it after the member submitted
       await addName(speciesId, "common", "Late fish");
 
-      await confirmWitness(committee, id, { common: true, scientific: true });
+      await confirmWitness(committee, id, witnessPoints(), { common: true, scientific: true });
 
       assert.deepStrictEqual((await listNames(speciesId)).common.map((n) => n.name), ["Late fish"]);
     });
@@ -1088,7 +1064,7 @@ void describe("Submission lifecycle - transitions", () => {
       const agreement = (await checkFormAgreement(guppy, (await readSubmission(id))!))!;
       assert.deepStrictEqual([agreement.commonName, agreement.latinName, agreement.agrees], ["name", "name", true]);
 
-      await confirmWitness(committee, id, { common: true, scientific: true });
+      await confirmWitness(committee, id, witnessPoints(), { common: true, scientific: true });
       assert.strictEqual((await readSubmission(id))!.witness_verification_status, "confirmed");
       const names = await listNames(guppy);
       assert.deepStrictEqual(names.common.map((n) => n.name), ["Guppy"], "a picked Name is never added again");
@@ -1126,22 +1102,22 @@ void describe("Submission lifecycle - transitions", () => {
 
     void test("the common spelling checked adds a common Name; unchecked adds nothing", async () => {
       const checked = await pendingOn({ commonName: " Sunset Mint ", latinName: "Mintus oldus" });
-      await confirmWitness(committee, checked.id, { common: true });
+      await confirmWitness(committee, checked.id, witnessPoints(), { common: true });
       assert.deepStrictEqual(await namesOf(checked.speciesId), { common: ["Sunset Mint"], scientific: [] });
 
       const unchecked = await pendingOn({ commonName: "Dawn Mint", latinName: "Mintus olderus" });
-      await confirmWitness(committee, unchecked.id, {});
+      await confirmWitness(committee, unchecked.id, witnessPoints(), {});
       assert.deepStrictEqual(await namesOf(unchecked.speciesId), { common: [], scientific: [] });
 
       // No choice given: nothing added
       const unasked = await pendingOn({ commonName: "Noon Mint", latinName: "Mintus meridianus" });
-      await confirmWitness(committee, unasked.id);
+      await confirmWitness(committee, unasked.id, witnessPoints());
       assert.deepStrictEqual(await namesOf(unasked.speciesId), { common: [], scientific: [] });
     });
 
     void test("the Latin spelling checked adds an unflagged scientific Name", async () => {
       const { id, speciesId } = await pendingOn({ commonName: "Latin Mint", latinName: "Mintus antiquus" });
-      await confirmWitness(committee, id, { common: false, scientific: true });
+      await confirmWitness(committee, id, witnessPoints(), { common: false, scientific: true });
 
       assert.deepStrictEqual(await namesOf(speciesId), {
         common: [],
@@ -1155,7 +1131,7 @@ void describe("Submission lifecycle - transitions", () => {
       const canonical = (await listNames(speciesId)).scientific[0].name;
       await ctx.db.run("UPDATE submissions SET species_latin_name = ? WHERE id = ?", [canonical.toUpperCase(), id]);
 
-      await confirmWitness(committee, id, { common: true, scientific: true });
+      await confirmWitness(committee, id, witnessPoints(), { common: true, scientific: true });
 
       const names = await listNames(speciesId);
       assert.deepStrictEqual(names.common.map((n) => n.name), ["Twice Mint"]);
@@ -1164,9 +1140,12 @@ void describe("Submission lifecycle - transitions", () => {
 
     void test("a refused confirmation adds no Name", async () => {
       const { id, speciesId } = await pendingOn({ commonName: "Refused Mint", latinName: "Mintus negatus" });
-      await ctx.db.run("UPDATE submissions SET species_class = 'Killifish' WHERE id = ?", [id]);
+      await requestChanges(committee, id, "Which tank was this in?");
 
-      await assert.rejects(() => confirmWitness(committee, id, { common: true, scientific: true }), MismatchError);
+      await assert.rejects(
+        () => confirmWitness(committee, id, witnessPoints(), { common: true, scientific: true }),
+        StateError
+      );
       assert.deepStrictEqual(await namesOf(speciesId), { common: [], scientific: [] });
     });
 
@@ -1174,8 +1153,240 @@ void describe("Submission lifecycle - transitions", () => {
       const { id, speciesId } = await pendingOn({ commonName: "Agree Mint", latinName: "Mintus concordans" });
       assert.strictEqual((await checkFormAgreement(speciesId, (await readSubmission(id))!))?.latinName, "not-a-name");
 
-      await confirmWitness(committee, id, { scientific: true });
+      await confirmWitness(committee, id, witnessPoints(), { scientific: true });
       assert.strictEqual((await checkFormAgreement(speciesId, (await readSubmission(id))!))?.latinName, "name");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // The Witness sets the points (ADR-0003)
+  // -------------------------------------------------------------------------
+
+  void describe("The Witness sets the points", () => {
+    const changelog = async (id: number) =>
+      (
+        await query<{ note_text: string }>(
+          "SELECT note_text FROM submission_notes WHERE submission_id = ? ORDER BY id",
+          [id]
+        )
+      ).map((n) => JSON.parse(n.note_text) as { type: string; changes: Change[]; reason: string });
+    const pointsOf = async (id: number) => {
+      const row = (await readSubmission(id))!;
+      return {
+        points: row.points,
+        article_points: row.article_points,
+        cares_species: row.cares_species,
+        flowered: row.flowered,
+        sexual_reproduction: row.sexual_reproduction,
+        first_time_species: row.first_time_species,
+      };
+    };
+    const unvaluedSpecies = (epithet: string, extra: { pointClass?: number | null; speciesType?: string; programClass?: string } = {}) =>
+      createSpecies({
+        canonicalGenus: "Valuandus",
+        canonicalSpeciesName: epithet,
+        programClass: extra.programClass ?? "Livebearers",
+        speciesType: extra.speciesType ?? "Fish",
+        pointClass: extra.pointClass ?? null,
+      });
+
+    void test("confirming writes the base points and bonuses; first-time stays unset until approval", async () => {
+      const id = await submissionInState(ctx.db, "pendingWitness", {
+        memberId: ctx.member.id,
+        reproductionDate: new Date().toISOString(),
+      });
+
+      await confirmWitness(committee, id, witnessPoints({ points: 15, article_points: 5, cares_species: true }));
+
+      const after = (await readSubmission(id))!;
+      assert.strictEqual(deriveState(after), "waitingPeriod");
+      assert.deepStrictEqual(await pointsOf(id), {
+        points: 15,
+        article_points: 5,
+        cares_species: 1,
+        flowered: 0,
+        sexual_reproduction: 0,
+        first_time_species: null,
+      });
+      await assertSubmissionInvariantsHold(after);
+    });
+
+    void test("points set at the Witness count for nothing until approval", async () => {
+      const id = await at("pendingWitness");
+      const before = (await getMemberWithPoints(ctx.member.id)).fishTotalPoints;
+
+      await confirmWitness(committee, id, witnessPoints({ points: 20, cares_species: true }));
+
+      assert.strictEqual((await getMemberWithPoints(ctx.member.id)).fishTotalPoints, before);
+    });
+
+    void test("confirming requires base points of one of the Point classes, and a refusal writes nothing", async () => {
+      const id = await at("pendingWitness");
+
+      assert.strictEqual(await refusal(() => confirmWitness(committee, id, witnessPoints({ points: 12 }))), "validation");
+      assert.strictEqual(await refusal(() => confirmWitness(committee, id, witnessPoints({ points: 0 }))), "validation");
+
+      const after = (await readSubmission(id))!;
+      assert.strictEqual(after.witness_verification_status, "pending");
+      assert.strictEqual(after.points, null);
+    });
+
+    void test("a Species with no Point class takes the chosen base points as its Point class; a valued one is left alone", async () => {
+      const unvalued = await unvaluedSpecies("novus");
+      const valued = await unvaluedSpecies("pretiosus", { pointClass: 5 });
+      const onUnvalued = await submissionInState(ctx.db, "pendingWitness", { memberId: ctx.member.id, speciesId: unvalued });
+      const onValued = await submissionInState(ctx.db, "pendingWitness", { memberId: ctx.member.id, speciesId: valued });
+
+      await confirmWitness(committee, onUnvalued, witnessPoints({ points: 15 }));
+      await confirmWitness(committee, onValued, witnessPoints({ points: 20 }));
+
+      assert.strictEqual((await findSpeciesById(unvalued))!.base_points, 15, "the catalogue now values it");
+      assert.strictEqual((await findSpeciesById(valued))!.base_points, 5, "a Point class already set is not overwritten");
+      assert.strictEqual((await readSubmission(onValued))!.points, 20, "the Submission still carries what the witness chose");
+    });
+
+    void test("confirming with another Species rebinds the Submission, on the changelog", async () => {
+      const other = await unvaluedSpecies("alter", { pointClass: 10 });
+      const id = await at("pendingWitness");
+
+      await confirmWitness(committee, id, witnessPoints({ species_id: other }));
+
+      const after = (await readSubmission(id))!;
+      assert.strictEqual(after.species_id, other);
+      assert.strictEqual(after.witness_verification_status, "confirmed");
+      assert.deepStrictEqual(
+        (await changelog(id)).map((e) => [e.type, e.changes, e.reason]),
+        [["admin_edit", [{ field: "species", old: "Poecilia reticulata", new: "Valuandus alter" }], "Settled at the Witness"]]
+      );
+    });
+
+    void test("confirming with the bound Species records nothing on the changelog", async () => {
+      const id = await at("pendingWitness");
+      await confirmWitness(committee, id, witnessPoints({ species_id: await ensureGuppySpecies(ctx.db) }));
+      assert.deepStrictEqual(await changelog(id), []);
+    });
+
+    void test("an unbound Submission is bound by the Species the confirm names; without one it is still refused", async () => {
+      const species = await unvaluedSpecies("ligandus", { pointClass: 10 });
+      const unbound = await submissionInState(ctx.db, "pendingWitness", { memberId: ctx.member.id, speciesId: null });
+
+      await assert.rejects(() => confirmWitness(committee, unbound, witnessPoints()), UnboundError);
+      assert.strictEqual(await refusal(() => confirmWitness(committee, unbound, witnessPoints({ species_id: 987654 }))), "validation");
+
+      await confirmWitness(committee, unbound, witnessPoints({ species_id: species }));
+      const after = (await readSubmission(unbound))!;
+      assert.strictEqual(after.species_id, species);
+      assert.strictEqual(after.witness_verification_status, "confirmed");
+    });
+
+    void test("confirming gives the Submission its Species' type, class and Program where they disagree, on the changelog", async () => {
+      const id = await submissionInState(ctx.db, "pendingWitness", {
+        memberId: ctx.member.id,
+        speciesType: "Invert",
+        speciesClass: "Shrimp",
+      });
+
+      await confirmWitness(committee, id, witnessPoints());
+
+      const after = (await readSubmission(id))!;
+      assert.deepStrictEqual([after.species_type, after.species_class, after.program], ["Fish", "Livebearers", "fish"]);
+      assert.strictEqual(after.witness_verification_status, "confirmed");
+      assert.deepStrictEqual(
+        (await changelog(id)).map((e) => e.changes.map((c) => [c.field, c.old, c.new])),
+        [
+          [
+            ["species_type", "Invert", "Fish"],
+            ["species_class", "Shrimp", "Livebearers"],
+          ],
+        ]
+      );
+    });
+
+    void test("a refused confirmation sets no points, values no Species, and binds nothing", async () => {
+      const species = await unvaluedSpecies("negatus");
+      const id = await at("pendingWitness");
+      await requestChanges(committee, id, "Which tank was this in?");
+
+      assert.strictEqual(
+        await refusal(() => confirmWitness(committee, id, witnessPoints({ species_id: species, points: 15 }))),
+        "state"
+      );
+
+      const after = (await readSubmission(id))!;
+      assert.strictEqual(after.points, null);
+      assert.strictEqual(after.species_id, await ensureGuppySpecies(ctx.db));
+      assert.strictEqual((await findSpeciesById(species))!.base_points, null);
+      assert.deepStrictEqual(await changelog(id), []);
+    });
+
+    void test("every member save that voids the Witness clears the points it set", async () => {
+      const cleared = {
+        points: null,
+        article_points: null,
+        cares_species: null,
+        flowered: null,
+        sexual_reproduction: null,
+        first_time_species: null,
+      };
+      const set = witnessPoints({ points: 15, article_points: 10, cares_species: true });
+
+      const edited = await at("pendingWitness");
+      await confirmWitness(committee, edited, set);
+      assert.strictEqual((await readSubmission(edited))!.points, 15);
+      await saveChanges(member, edited, { ...(await formFor(edited)), count: "40" });
+      assert.deepStrictEqual(await pointsOf(edited), cleared, "Save Changes");
+      await assertSubmissionInvariantsHold((await readSubmission(edited))!);
+
+      const answered = await at("pendingWitness");
+      await confirmWitness(committee, answered, set);
+      await requestChanges(committee, answered, "Add a photo of the fry");
+      assert.strictEqual((await readSubmission(answered))!.points, 15, "the committee's request keeps them");
+      await resubmit(member, answered, { ...(await formFor(answered)), count: "40" });
+      assert.deepStrictEqual(await pointsOf(answered), cleared, "Resubmit");
+
+      const withdrawn = await at("pendingWitness");
+      await confirmWitness(committee, withdrawn, set);
+      await returnToDraft(member, withdrawn);
+      assert.strictEqual((await readSubmission(withdrawn))!.points, 15, "withdrawing is not an edit");
+      await submit(member, withdrawn, await formFor(withdrawn));
+      assert.deepStrictEqual(await pointsOf(withdrawn), cleared, "Submit after Return to Draft");
+    });
+
+    void test("a voided Submission witnessed again starts from the new witness's points", async () => {
+      const id = await at("pendingWitness");
+      await confirmWitness(committee, id, witnessPoints({ points: 15, cares_species: true }));
+      await saveChanges(member, id, { ...(await formFor(id)), count: "40" });
+
+      await confirmWitness({ id: ctx.otherAdmin!.id, isAdmin: true }, id, witnessPoints({ points: 10 }));
+
+      assert.deepStrictEqual(await pointsOf(id), {
+        points: 10,
+        article_points: null,
+        cares_species: 0,
+        flowered: 0,
+        sexual_reproduction: 0,
+        first_time_species: null,
+      });
+    });
+
+    void test("the approval that follows awards the points the Witness set", async () => {
+      const id = await at("pendingWitness");
+      await confirmWitness(committee, id, witnessPoints({ points: 15, cares_species: true }));
+      await ctx.db.run("UPDATE submissions SET final_submission_on = ? WHERE id = ?", [new Date().toISOString(), id]);
+      const witnessed = (await readSubmission(id))!;
+
+      await approve(committee, id, {
+        ...mockApprovalData,
+        points: witnessed.points!,
+        cares_species: Boolean(witnessed.cares_species),
+        first_time_species: true,
+      });
+
+      const after = (await readSubmission(id))!;
+      assert.strictEqual(after.points, 15);
+      assert.strictEqual(after.cares_species, 1);
+      assert.strictEqual(after.first_time_species, 1);
+      assert.strictEqual((await getMemberWithPoints(ctx.member.id)).fishTotalPoints, 25);
     });
   });
 
@@ -1305,7 +1516,7 @@ void describe("Submission lifecycle - transitions", () => {
   void describe("refusals name what was wrong", () => {
     void test("a Submission that does not exist is a validation refusal", async () => {
       assert.strictEqual(await refusal(() => saveChanges(member, 999999, form)), "validation");
-      assert.strictEqual(await refusal(() => confirmWitness(committee, 999999)), "validation");
+      assert.strictEqual(await refusal(() => confirmWitness(committee, 999999, witnessPoints())), "validation");
       assert.strictEqual(await refusal(() => deleteSubmission(committee, 999999)), "validation");
     });
 

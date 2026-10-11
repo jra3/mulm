@@ -4,16 +4,21 @@ include ../mixins/bindSpeciesControls.pug
 - const hasPointsError = errors && errors.has && errors.has("points");
 
 //- The approval panel: approval is about Points and bonuses only. The
-//- Species is the one the witness bound, shown read-only with its Point class,
-//- which prefills the Points. An unbound Submission is refused (see `approve`).
+//- Species is the one the witness bound, shown read-only with its Point class.
+//- The Points and bonuses are prefilled from what the Witness set (ADR-0003),
+//- falling back to the Species' Point class and CARES flag on a Submission
+//- witnessed before the Witness set them. An unbound Submission is refused
+//- (see `approve`).
 //-
 //- @param submission - id, points, program and the bonus columns
-//- @param approval - the bound Species (`approvalPanelData` in
+//- @param speciesFacts - the bound Species (`boundSpeciesFacts` in
 //-   src/routes/submission.ts), or null when unbound
 //- @param allowed - the viewer's legal moves; unbound, it offers the binding
 //- @param errors - validation errors by field
+- const approval = speciesFacts
 - const pointClass = approval ? approval.pointClass : null
-- const prefilledPoints = pointClass
+- const prefilledPoints = submission.points != null ? submission.points : pointClass
+- const prefilledCares = submission.cares_species != null ? submission.cares_species == 1 : (approval ? approval.isCaresSpecies : false)
 - const plural = approval ? (approval.priorBreedCount > 1 ? "s" : "") : ""
 
 if !approval
@@ -53,7 +58,7 @@ else
                         else
                             span.text-yellow-300 not set for this Species - choose the Points
 
-                // Points, prefilled from the Point class and still the committee's to change
+                // Points, prefilled from what the Witness set (or the Point class) and still the committee's to change
                 .flex.gap-4.items-center
                     label.text-white.whitespace-nowrap(for="base-points") Points:
                     .flex.flex-col
@@ -86,9 +91,11 @@ else
                                 type="checkbox"
                                 id="cares"
                                 name="cares_species"
-                                checked=approval.isCaresSpecies)
+                                checked=prefilledCares)
                             label.text-white(for="cares") CARES Species
-                            if approval.isCaresSpecies
+                            if submission.cares_species != null
+                                span.text-sm.text-green-400 (set at the Witness)
+                            else if approval.isCaresSpecies
                                 span.text-sm.text-green-400 (auto-detected)
 
                 +bonusErrors(bonusFields)
@@ -114,7 +121,7 @@ else
                             .flex.gap-4
                                 .select-wrapper.max-w-50
                                     select(name="article_points")
-                                        option(value="" disabled selected) Article Points
+                                        option(value="" disabled selected=submission.article_points == null) Article Points
                                         option(value=0 selected=submission.article_points == 0) No Article
                                         option(value=5 selected=submission.article_points == 5) 5
                                         option(value=10 selected=submission.article_points == 10) 10
