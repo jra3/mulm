@@ -1484,7 +1484,7 @@ void describe("Pug Template Rendering", () => {
       const waiting = render({ summary: notReady });
       assert.match(waiting, /id="witness-sum-hint">Is the species right\? Answer above first</);
       assert.match(waiting, /id="witness-confirm"[^>]*disabled/);
-      assert.match(waiting, /<button class="primary w-full h-12 text-base disabled:bg-gray-500[^"]*disabled:opacity-60[^"]*" id="witness-confirm"/, "visibly off, not the enabled blue");
+      assert.match(waiting, /<button class="primary w-full h-12 text-base" id="witness-confirm"[^>]*disabled/, "a primary button; button.primary:disabled in src/index.css greys it");
     });
 
     void test("only the form's own submit names the Confirm button in hx-disabled-elt: requests from inside the form do not inherit it", () => {
