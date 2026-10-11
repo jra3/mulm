@@ -91,6 +91,20 @@ export function waitingPeriod(
 }
 
 /**
+ * The day the waiting period ends (YYYY-MM-DD): the reproduction day plus
+ * the required days, counted in UTC like every day the Portal prints. The
+ * witness email names it and the re-witness letter names it, so it is
+ * computed once here beside the clock it belongs to.
+ */
+export function waitingPeriodEndsOn(
+  row: Pick<Submission, "species_type" | "species_class" | "reproduction_date">
+): string {
+  const endsOn = new Date(row.reproduction_date);
+  endsOn.setUTCDate(endsOn.getUTCDate() + requiredWaitingDays(row));
+  return endsOn.toISOString().slice(0, 10);
+}
+
+/**
  * The Changes requested overlay: a flag laid over whichever state it is in.
  *
  * A row that does not carry the column at all - a lean select that did not ask

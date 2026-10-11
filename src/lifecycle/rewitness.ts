@@ -5,7 +5,7 @@ import type { SubmissionNote } from "@/db/submission_notes";
 import type { Submission } from "@/db/submissions";
 import { logger } from "@/utils/logger";
 import { notifier } from "./consequences";
-import { requiredWaitingDays, waitingPeriod } from "./state";
+import { waitingPeriod, waitingPeriodEndsOn } from "./state";
 
 /**
  * The reset of in-flight Submissions (#524, ADR-0003), and what follows it.
@@ -118,8 +118,6 @@ export async function membersAwaitingRewitnessEmail(): Promise<RewitnessLetter[]
 }
 
 function pending(row: ResetRow): RewitnessPending {
-  const readyOn = new Date(row.reproduction_date);
-  readyOn.setUTCDate(readyOn.getUTCDate() + requiredWaitingDays(row));
   return {
     id: row.id,
     species_common_name: row.species_common_name,
@@ -128,7 +126,7 @@ function pending(row: ResetRow): RewitnessPending {
     species_class: row.species_class,
     reproduction_date: row.reproduction_date,
     originalWitness: originalWitnessFromNotes([{ note_text: row.note_text }]),
-    readyOn: readyOn.toISOString().slice(0, 10),
+    readyOn: waitingPeriodEndsOn(row),
     waitingPeriodOver: waitingPeriod(row).elapsed,
   };
 }

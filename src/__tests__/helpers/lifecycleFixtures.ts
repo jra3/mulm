@@ -1,6 +1,7 @@
 import { query, writeConn } from "../../db/conn";
 import type { Submission } from "../../db/submissions";
-import type { Notifier, SubmissionState, WitnessPoints } from "../../lifecycle";
+import type { MemberRecord } from "../../db/members";
+import type { Notifier, SubmissionState, WitnessedFacts, WitnessPoints } from "../../lifecycle";
 import { setNotifier } from "../../lifecycle";
 import { createTestSubmission, ensureGuppySpecies, type CreateSubmissionOptions } from "./testHelpers";
 import type { Database } from "sqlite";
@@ -129,8 +130,11 @@ export class RecordingNotifier implements Notifier {
     return this.sent.map((letter) => letter.kind);
   }
 
+  /** Forget everything recorded so far: the letters, the reasons and the Witness facts. */
   clear(): void {
     this.sent.length = 0;
+    this.reasons.length = 0;
+    this.witnessed.length = 0;
   }
 
   private record(kind: string, to: string | string[] | undefined, about?: number | string) {
@@ -145,8 +149,14 @@ export class RecordingNotifier implements Notifier {
     this.record("submissionReceived", member.contact_email, submission.id);
     return Promise.resolve();
   }
-  witnessConfirmed(submission: { id: number }, member: { contact_email: string }) {
+  witnessConfirmed(
+    submission: Submission,
+    member: { contact_email: string },
+    witness: MemberRecord,
+    facts: WitnessedFacts
+  ) {
     this.record("witnessConfirmed", member.contact_email, submission.id);
+    this.witnessed.push({ submission, witness, facts });
     return Promise.resolve();
   }
   waitingPeriodComplete(submission: { id: number }, member: { contact_email: string }) {
@@ -185,6 +195,9 @@ export class RecordingNotifier implements Notifier {
 
   /** The text the committee sent with a request for changes. */
   readonly reasons: string[] = [];
+
+  /** What each Witness letter was given: the row as written, who witnessed, and the Species facts. */
+  readonly witnessed: { submission: Submission; witness: MemberRecord; facts: WitnessedFacts }[] = [];
 }
 
 /** Install a recorder for the duration of a test. */

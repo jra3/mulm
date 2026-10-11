@@ -196,10 +196,11 @@ export interface NextLevelInfo {
  */
 export const programMetadata: Record<
   ProgramType,
-  { name: string; icon: string; badge: string; border: string; accent: string }
+  { name: string; abbreviation: string; icon: string; badge: string; border: string; accent: string }
 > = {
   fish: {
     name: "Breeders Awards Program",
+    abbreviation: "BAP",
     icon: "🐠",
     badge: "bg-blue-100 text-blue-800",
     border: "border-blue-400",
@@ -207,6 +208,7 @@ export const programMetadata: Record<
   },
   plant: {
     name: "Horticultural Awards Program",
+    abbreviation: "HAP",
     icon: "🌱",
     badge: "bg-green-100 text-green-800",
     border: "border-green-400",
@@ -214,6 +216,7 @@ export const programMetadata: Record<
   },
   coral: {
     name: "Coral Awards Program",
+    abbreviation: "CAP",
     icon: "🪸",
     badge: "bg-purple-100 text-purple-800",
     border: "border-purple-400",

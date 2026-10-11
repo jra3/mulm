@@ -4,6 +4,7 @@ import {
   anyProgramSpeciesTypeSql,
   bonusBreakdown,
   bonusesOutsideProgram,
+  bonusesStillPossible,
   isArticleBonus,
   isInProgram,
   pointsBreakdown,
@@ -658,5 +659,49 @@ void describe("Points - SQL fragment agrees with the TypeScript function", () =>
       `SELECT SUM(${totalPointsSql("submissions")}) as total FROM submissions`
     );
     assert.strictEqual((everything?.total ?? 0) - perProgram, 900);
+  });
+});
+
+/**
+ * Which bonuses a member can still earn after approval, so the witness email
+ * names only those: an article they have not yet written, and on HAP a plant
+ * that has not yet flowered or reproduced sexually. CARES is a fact about the
+ * Species and first-time is approval's, so neither is ever "still possible".
+ */
+void describe("Points - bonuses still possible after approval", () => {
+  void test("a BAP row with no article can still earn the article bonus, and nothing else", () => {
+    assert.deepStrictEqual(bonusesStillPossible("fish", { points: 10, cares_species: true }), ["article_points"]);
+  });
+
+  void test("an article already counted is not still possible", () => {
+    assert.deepStrictEqual(bonusesStillPossible("fish", { points: 10, article_points: 5 }), []);
+    assert.deepStrictEqual(bonusesStillPossible("coral", { points: 10, article_points: 10 }), []);
+  });
+
+  void test("a HAP row names flowering and sexual reproduction while they are unset, in the formula's order", () => {
+    assert.deepStrictEqual(bonusesStillPossible("plant", { points: 10 }), [
+      "article_points",
+      "flowered",
+      "sexual_reproduction",
+    ]);
+    assert.deepStrictEqual(bonusesStillPossible("plant", { points: 10, flowered: 1, article_points: 5 }), [
+      "sexual_reproduction",
+    ]);
+    assert.deepStrictEqual(
+      bonusesStillPossible("plant", { points: 10, flowered: true, sexual_reproduction: true, article_points: 10 }),
+      []
+    );
+  });
+
+  void test("CARES and first-time are never still possible", () => {
+    for (const program of ["fish", "plant", "coral"] as ProgramType[]) {
+      const possible = bonusesStillPossible(program, { points: 10 });
+      assert.ok(!possible.includes("cares_species"));
+      assert.ok(!possible.includes("first_time_species"));
+    }
+  });
+
+  void test("a Program the rule does not know carries only the article bonus", () => {
+    assert.deepStrictEqual(bonusesStillPossible("hamster", { points: 10 }), ["article_points"]);
   });
 });

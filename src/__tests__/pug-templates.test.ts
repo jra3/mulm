@@ -55,6 +55,33 @@ void describe("Pug Template Rendering", () => {
     award_name: faker.helpers.arrayElement(["Level 1 Breeder Award", "Level 2 Breeder Award"]),
   });
 
+  // The witness email's facts, as `witnessLetter` (src/notifications.ts) works them out
+  const sampleWitnessLetter = {
+    submissionId: 321,
+    subject: "Witnessed: Guppy, 20 points pending approval",
+    heading: "Your spawn has been witnessed",
+    programAbbreviation: "BAP",
+    programName: "Breeders Awards Program",
+    witnessName: "Marcus Lee",
+    witnessedOn: "October 9, 2026",
+    speciesCommonName: "Guppy",
+    speciesLatinName: "Poecilia reticulata",
+    speciesClass: "Livebearers",
+    reproductionLabel: "Reproduced",
+    reproducedOn: "September 20, 2026",
+    lines: [
+      { label: "Base points", amount: 10 },
+      { label: "Article Bonus", amount: 5 },
+      { label: "CARES Species Bonus", amount: 5 },
+    ],
+    total: 20,
+    laterBonuses: null,
+    firstTime: true,
+    readyOn: "November 19, 2026",
+    keepFry: true,
+    offspring: "fry",
+  };
+
   const baseMockData: Record<string, unknown> = {
     // Common variables used across templates
     isLoggedIn: true,
@@ -629,6 +656,8 @@ void describe("Pug Template Rendering", () => {
 
           case "email/committeeDigest.pug":
           case "demo/emails.pug":
+            templateData.witnessLetters = [sampleWitnessLetter];
+            templateData.offspring = "fry";
             templateData.awardName = "Anabantoid Specialist Award";
             templateData.reason = "Please add a photo of the fry.";
             templateData.program = "fish";
@@ -734,21 +763,14 @@ void describe("Pug Template Rendering", () => {
             ];
             break;
 
-          case "email/onScreeningApproved.pug": {
-            templateData.witness = {
-              display_name: faker.person.fullName(),
-            };
-            templateData.domain = "https://example.com";
-            // Update submission to have witness data
-            const witnessSubmission = {
-              ...(templateData.submission as Record<string, unknown>),
-              reproduction_date: new Date().toISOString(),
-              witnessed_on: new Date().toISOString(),
-              species_class: "Cichlid",
-            };
-            templateData.submission = witnessSubmission;
+          case "email/onWitnessConfirmed.pug":
+            templateData.domain = "example.com";
+            templateData.letter = sampleWitnessLetter;
             break;
-          }
+
+          case "email/onWaitingPeriodComplete.pug":
+            templateData.offspring = "fry";
+            break;
 
           case "admin/mergeSpeciesDialog.pug":
             templateData.defunctSpecies = {

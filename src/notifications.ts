@@ -6,9 +6,19 @@ import * as pug from "pug";
 import { logger } from "@/utils/logger";
 import { type Env, isStaging } from "@/utils/environment";
 import { sendEmailWithRetry } from "./services/emailService";
-import { bonusBreakdown } from "./points";
+import {
+  bonusBreakdown,
+  bonusesStillPossible,
+  pointsBreakdown,
+  programOfSpeciesType,
+  type BonusField,
+  type BonusLine,
+} from "./points";
+import { programMetadata } from "./programs";
 import { formatLongDate } from "./utils/dateFormat";
 import type { RewitnessPending } from "./lifecycle/rewitness";
+import type { WitnessedFacts } from "./lifecycle/consequences";
+import { waitingPeriodEndsOn } from "./lifecycle/state";
 
 const DEBUG_EMAIL = process.env.DEBUG_EMAIL;
 const fromEmail = `BASNY Breeder Awards ${config.email.fromEmail}`;
@@ -41,7 +51,6 @@ const transporter = nodemailer.createTransport({
 });
 
 const renderOnSubmission = pug.compileFile("src/views/email/onSubmission.pug");
-const renderOnScreeningApproved = pug.compileFile("src/views/email/onScreeningApproved.pug");
 export async function onSubmissionSend(sub: Submission, member: MemberRecord) {
   if (EMAILS_DISABLED) {
     logger.info("Email disabled - would have sent submission confirmation", { submissionId: sub.id });
@@ -354,31 +363,160 @@ export async function onLevelUpgrade(
   );
 }
 
-export async function onScreeningApproved(
+/** The columns the Witness letter reads off a Submission as the Witness left it. */
+export type WitnessedSubmission = Pick<
+  Submission,
+  | "id"
+  | "species_type"
+  | "species_class"
+  | "species_common_name"
+  | "species_latin_name"
+  | "reproduction_date"
+  | "witnessed_on"
+  | "points"
+  | "article_points"
+  | "cares_species"
+  | "flowered"
+  | "sexual_reproduction"
+>;
+
+/**
+ * The Witness letter's facts, worked out once so the subject line, the
+ * template and the demo page cannot disagree. Days arrive formatted, in UTC
+ * like every day the Portal prints.
+ */
+export type WitnessLetter = {
+  submissionId: number;
+  /** `Witnessed: <common name>, <total> points pending approval` */
+  subject: string;
+  /** "Your spawn has been witnessed" for fish and inverts; "propagation" for plants and corals */
+  heading: string;
+  /** BAP, HAP or CAP */
+  programAbbreviation: string;
+  /** The Program's full name, for the sign-off */
+  programName: string;
+  witnessName: string;
+  witnessedOn: string;
+  speciesCommonName: string;
+  speciesLatinName: string;
+  speciesClass: string;
+  /** "Reproduced" for fish and inverts, "Propagated" for plants and corals */
+  reproductionLabel: string;
+  reproducedOn: string;
+  /** Base points first, then each bonus that is set; they add up to `total` */
+  lines: BonusLine[];
+  total: number;
+  /** The one line naming the bonuses still possible after approval, or null when none are */
+  laterBonuses: string | null;
+  /** No approved Submission of the Species existed at the Witness; never added to the total */
+  firstTime: boolean;
+  /** The day the waiting period ends */
+  readyOn: string;
+  /** Fish keep at least 6 healthy fry until then */
+  keepFry: boolean;
+  /** What the member brings to the meeting: fry, plants or corals */
+  offspring: string;
+};
+
+/** How the letter names what the member can still see happen after approval. */
+const seenLater: Partial<Record<BonusField, string>> = {
+  flowered: "flowering",
+  sexual_reproduction: "sexual reproduction",
+};
+
+/**
+ * The sentence naming the bonuses still possible after approval, e.g. "Write
+ * an article, or see flowering or sexual reproduction, after approval? Tell
+ * the committee and they'll add the bonus." Null when none are.
+ */
+function laterBonusesLine(program: string, row: WitnessedSubmission): string | null {
+  const possible = bonusesStillPossible(program, row);
+  if (possible.length === 0) return null;
+  const clauses: string[] = [];
+  if (possible.includes("article_points")) clauses.push("write an article");
+  const seen = possible.flatMap((bonus) => seenLater[bonus] ?? []);
+  if (seen.length > 0) clauses.push(`see ${seen.join(" or ")}`);
+  const question = clauses.length === 1 ? `${clauses[0]} after approval?` : `${clauses[0]}, or ${clauses[1]}, after approval?`;
+  return `${question.charAt(0).toUpperCase()}${question.slice(1)} Tell the committee and they'll add the bonus.`;
+}
+
+/** Whether a Species type is a spawn (fish and inverts) rather than a propagation (plants and corals). */
+function isSpawn(speciesType: string): boolean {
+  return speciesType !== "Plant" && speciesType !== "Coral";
+}
+
+/**
+ * The Witness letter's facts from the row the Witness left and what the
+ * lifecycle knows about the Species. The points come off the row through the
+ * one Points rule (`pointsBreakdown`), so the lines add up to the total the
+ * subject prints; first-time is never among them.
+ */
+export function witnessLetter(
+  submission: WitnessedSubmission,
+  witness: Pick<MemberRecord, "display_name">,
+  facts: WitnessedFacts
+): WitnessLetter {
+  const program = programOfSpeciesType(submission.species_type);
+  const { lines, total } = pointsBreakdown(submission);
+  const spawn = isSpawn(submission.species_type);
+  return {
+    submissionId: submission.id,
+    subject: `Witnessed: ${submission.species_common_name}, ${total} points pending approval`,
+    heading: spawn ? "Your spawn has been witnessed" : "Your propagation has been witnessed",
+    programAbbreviation: programMetadata[program].abbreviation,
+    programName: programMetadata[program].name,
+    witnessName: witness.display_name,
+    witnessedOn: formatLongDate(submission.witnessed_on),
+    speciesCommonName: submission.species_common_name,
+    speciesLatinName: submission.species_latin_name,
+    speciesClass: submission.species_class,
+    reproductionLabel: spawn ? "Reproduced" : "Propagated",
+    reproducedOn: formatLongDate(submission.reproduction_date),
+    lines,
+    total,
+    laterBonuses: laterBonusesLine(program, submission),
+    firstTime: facts.firstTime,
+    readyOn: formatLongDate(waitingPeriodEndsOn(submission)),
+    keepFry: submission.species_type === "Fish",
+    offspring: offspringOf(submission),
+  };
+}
+
+const renderOnWitnessConfirmed = pug.compileFile("src/views/email/onWitnessConfirmed.pug");
+/**
+ * The one email a member gets when the Witness is confirmed (#526): who
+ * witnessed it, the full points breakdown as pending approval, what is still
+ * possible, and what happens next. A reply goes to the committee, since a
+ * dispute is a reply for now. It replaced the "Screening Approved" and
+ * "Witness Confirmed" letters.
+ */
+export async function onWitnessConfirmed(
   submission: Submission,
   member: MemberRecord,
-  witness: MemberRecord
+  witness: MemberRecord,
+  facts: WitnessedFacts
 ) {
   if (EMAILS_DISABLED) {
-    logger.info("Email disabled - would have sent screening approved", { submissionId: submission.id });
+    logger.info("Email disabled - would have sent witness confirmed", { submissionId: submission.id });
     return;
   }
 
+  const letter = witnessLetter(submission, witness, facts);
   await sendEmailWithRetry(
     () =>
       transporter.sendMail({
         from: fromEmail,
         to: member.contact_email,
         bcc: DEBUG_EMAIL,
-        subject: `Screening Approved - ${submission.species_common_name}`,
-        html: renderOnScreeningApproved({
+        replyTo: config.email.adminsEmail,
+        subject: letter.subject,
+        html: renderOnWitnessConfirmed({
           domain: config.server.domain,
-          submission,
           member,
-          witness,
+          letter,
         }),
       }),
-    { type: "screening_approved", context: { submissionId: submission.id, recipient: member.contact_email } }
+    { type: "witness_confirmed", context: { submissionId: submission.id, recipient: member.contact_email } }
   );
 }
 

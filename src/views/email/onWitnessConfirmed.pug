@@ -1,10 +1,20 @@
-include ../mixins/date.pug
+//- The one email a member gets when the Witness is confirmed (#526): who
+//- witnessed it and when, the full points breakdown as pending approval, what
+//- is still possible after approval, and what happens next. A reply goes to
+//- the committee (Reply-To), since a dispute is a reply for now.
+//-
+//- @param member - display_name
+//- @param letter - WitnessLetter (`witnessLetter`, src/notifications.ts):
+//-   every fact worked out and every day already formatted, so this template
+//-   only prints. `lines` add up to `total`; `firstTime` and `laterBonuses`
+//-   decide the two optional lines.
+//- @param domain - the Portal's host
 
 doctype html
 html
 	head
 		meta(charset="utf-8")
-		title Witness Confirmed
+		title= letter.heading
 		style.
 			body {
 				font-family: Arial, sans-serif;
@@ -21,25 +31,77 @@ html
 				text-align: center;
 				border-radius: 8px 8px 0 0;
 			}
+			.header h1 {
+				margin: 0;
+				font-size: 1.45rem;
+			}
 			.content {
 				background-color: #f8fafc;
 				padding: 20px;
 				border: 1px solid #e2e8f0;
 			}
-			.submission-details {
+			.box {
 				background-color: white;
-				padding: 15px;
+				padding: 14px 16px;
+				border-radius: 6px;
+				border: 1px solid #e2e8f0;
+				margin: 15px 0;
+			}
+			.box h3 {
+				margin: 0 0 8px;
+				font-size: 1rem;
+				color: #1e293b;
+			}
+			.box p {
+				margin: 0;
+			}
+			.box p + p {
+				margin-top: 6px;
+			}
+			table {
+				width: 100%;
+				border-collapse: collapse;
+			}
+			td {
+				padding: 5px 0;
+				border-bottom: 1px solid #eef2f6;
+			}
+			td.n {
+				text-align: right;
+				white-space: nowrap;
+			}
+			tr.total td {
+				border-bottom: 0;
+				border-top: 2px solid #1e293b;
+				font-weight: bold;
+				padding-top: 8px;
+			}
+			.pending {
+				font-weight: normal;
+				color: #64748b;
+				font-size: .85rem;
+			}
+			.later {
+				margin: 8px 0 0;
+				font-size: .9rem;
+				color: #475569;
+			}
+			.first {
+				background-color: #ecfdf5;
+				border: 1px solid #a7f3d0;
+				padding: 10px 12px;
 				border-radius: 6px;
 				margin: 15px 0;
-				border-left: 4px solid #10b981;
 			}
-			.footer {
-				background-color: #64748b;
-				color: white;
-				padding: 15px;
-				text-align: center;
-				border-radius: 0 0 8px 8px;
-				font-size: 12px;
+			.steps {
+				margin: 0;
+				padding-left: 1.2em;
+			}
+			.steps li {
+				padding: 2px 0;
+			}
+			.fix {
+				border-left: 4px solid #f59e0b;
 			}
 			.button {
 				display: inline-block;
@@ -50,41 +112,83 @@ html
 				border-radius: 5px;
 				margin: 10px 0;
 			}
+			.footer {
+				background-color: #64748b;
+				color: white;
+				padding: 15px;
+				text-align: center;
+				border-radius: 0 0 8px 8px;
+				font-size: 12px;
+			}
 	body
 		.header
-			h1 Witness Confirmed!
-		
+			h1= letter.heading
+
 		.content
 			p Hello #{member.display_name},
-			
-			p Great news! Your BAP submission has been witnessed and confirmed by #{witness.display_name}.
-			
-			.submission-details
-				h3 Submission Details:
-				p <strong>Species:</strong> #{submission.species_common_name} (#{submission.species_latin_name})
-				p <strong>Species Class:</strong> #{submission.species_class}
+
+			p #{letter.witnessName} witnessed your #{letter.programAbbreviation} submission on #{letter.witnessedOn} and set its points. The points count once the committee approves the submission at a meeting.
+
+			.box#witness-submission
+				h3 Submission
 				p
-					strong Reproduction Date:
-					+longDate(submission.reproduction_date)
-				p <strong>Witnessed By:</strong> #{witness.display_name}
+					strong Species:
+					|  #{letter.speciesCommonName} (
+					em= letter.speciesLatinName
+					| )
 				p
-					strong Witnessed On:
-					+longDate(submission.witnessed_on)
-			
-			p Your submission is now in the waiting period. Based on your species:
-			
-			if submission.species_type === 'Fish' && submission.species_class === 'Marine'
-				p <strong>Waiting Period:</strong> 30 days from reproduction date
-			else
-				p <strong>Waiting Period:</strong> 60 days from reproduction date
-			
-			p Once the waiting period is complete, your submission will be eligible for final admin approval and point assignment.
-			
-			p You can view your submission status at any time:
-			a.button(href=`${domain}/submissions/${submission.id}` style="color: white; text-decoration: none;") View Submission
-			
-			p Thank you for participating in the Breeder Awards Program!
-		
+					strong Class:
+					|  #{letter.speciesClass}
+				p
+					strong #{letter.reproductionLabel}:
+					|  #{letter.reproducedOn}
+				p
+					strong Witnessed by:
+					|  #{letter.witnessName}, #{letter.witnessedOn}
+
+			.box#witness-points
+				h3 Points
+				table
+					//- The lines come from the Points module (pointsBreakdown), so they
+					//- add up to the total printed beneath them
+					each line, index in letter.lines
+						tr
+							td= line.label
+							td.n= index === 0 ? line.amount : `+${line.amount}`
+					tr.total
+						td#witness-total Total #[span.pending pending approval]
+						td.n= letter.total
+				if letter.laterBonuses
+					p.later#witness-later-bonuses= letter.laterBonuses
+
+			if letter.firstTime
+				p.first#witness-first-time If you're the first member to bring this species in, you'll earn a 5-point first-time bonus at the meeting.
+
+			.box#witness-next-steps
+				h3 Next steps
+				ol.steps
+					li
+						if letter.keepFry
+							| Keep at least 6 healthy fry until your waiting period ends on #[b= letter.readyOn]. We'll send a reminder that day.
+						else
+							| Your waiting period ends on #[b= letter.readyOn]. We'll send a reminder that day.
+					li Bring the #{letter.offspring} to a monthly meeting.
+					li A committee member approves it there and the points are awarded.
+
+			.box.fix#witness-something-wrong
+				h3 Something wrong?
+				p
+					strong Points look wrong?
+					|  Reply to this email. Your reply goes to the committee.
+				p
+					strong Details wrong, or an article or video to add?
+					|  Edit your submission. Any edit sends it back to be witnessed again, and you'll get a new email with the new points.
+
+			p
+				a.button(href=`https://${domain}/submissions/${letter.submissionId}` style="color: white; text-decoration: none;") View Submission
+
+			p Thank you for participating in the #{letter.programName}!
+
 		.footer
 			p
 				strong Brooklyn Aquarium Society

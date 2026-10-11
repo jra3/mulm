@@ -1,7 +1,7 @@
 import { Response } from "express";
 import { MulmRequest } from "../sessions";
 import { bonusBreakdown, totalPoints } from "../points";
-import { rewitnessLetterRows } from "../notifications";
+import { rewitnessLetterRows, witnessLetter, type WitnessedSubmission } from "../notifications";
 
 /**
  * Demo route to preview all email templates
@@ -37,6 +37,77 @@ export const emailDemoPage = (req: MulmRequest, res: Response) => {
     witness_verification_status: "confirmed" as const,
   };
 
+  // The witness email (#526), one per Species type: a first-time CARES fish
+  // with an article, an invert with nothing but base points, a plant that has
+  // flowered and been brought in before, and a coral with the article in
+  const witnessedOn = "2026-10-09T19:00:00.000Z";
+  const witnessedBase = {
+    witnessed_on: witnessedOn,
+    article_points: null,
+    cares_species: false,
+    flowered: false,
+    sexual_reproduction: false,
+  };
+  const witnessedSubmissions: { submission: WitnessedSubmission; firstTime: boolean }[] = [
+    {
+      submission: {
+        ...witnessedBase,
+        id: 131,
+        species_type: "Fish",
+        species_class: "Livebearers",
+        species_common_name: "Butterfly Goodeid",
+        species_latin_name: "Ameca splendens",
+        reproduction_date: "2026-09-20T00:00:00.000Z",
+        points: 10,
+        article_points: 5,
+        cares_species: true,
+      },
+      firstTime: true,
+    },
+    {
+      submission: {
+        ...witnessedBase,
+        id: 132,
+        species_type: "Invert",
+        species_class: "Shrimp",
+        species_common_name: "Cherry Shrimp",
+        species_latin_name: "Neocaridina davidi",
+        reproduction_date: "2026-09-01T00:00:00.000Z",
+        points: 5,
+      },
+      firstTime: false,
+    },
+    {
+      submission: {
+        ...witnessedBase,
+        id: 133,
+        species_type: "Plant",
+        species_class: "Cryptocoryne",
+        species_common_name: "Wendt's Water Trumpet",
+        species_latin_name: "Cryptocoryne wendtii",
+        reproduction_date: "2026-08-30T00:00:00.000Z",
+        points: 10,
+        flowered: true,
+      },
+      firstTime: false,
+    },
+    {
+      submission: {
+        ...witnessedBase,
+        id: 134,
+        species_type: "Coral",
+        species_class: "SPS",
+        species_common_name: "Green Birdsnest",
+        species_latin_name: "Seriatopora hystrix",
+        reproduction_date: "2026-07-01T00:00:00.000Z",
+        points: 15,
+        article_points: 10,
+      },
+      firstTime: true,
+    },
+  ];
+  const witnessName = { display_name: "Marcus Lee" };
+
   // Sample data for all email types
   const sampleData = {
     // Common data
@@ -63,6 +134,14 @@ export const emailDemoPage = (req: MulmRequest, res: Response) => {
     // Submission data, with the total taken from the Points rule so the preview
     // cannot disagree with the breakdown beneath it
     submission: { ...sampleSubmission, total_points: totalPoints(sampleSubmission) },
+
+    // What the waiting-period reminder says the member brings
+    offspring: "fry",
+
+    // The witness emails, their facts worked out the way the real letter's are
+    witnessLetters: witnessedSubmissions.map(({ submission, firstTime }) =>
+      witnessLetter(submission, witnessName, { firstTime })
+    ),
 
     // The re-witness letter (#524): the member's Submissions migration 066
     // sent back for a Witness, one in its waiting period and one past it
