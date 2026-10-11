@@ -56,7 +56,7 @@ test.describe("Witness Error Scenarios", () => {
     await expect(warningMessage).toBeVisible({ timeout: 5000 });
 
     // Verify action buttons are NOT present
-    const approveButton = page.locator('button:has-text("Approve for Screening")');
+    const approveButton = page.locator("#witness-confirm");
     await expect(approveButton).not.toBeVisible();
 
     const requestChangesButton = page.locator('button:has-text("Request Changes")');
@@ -118,8 +118,8 @@ test.describe("Witness Error Scenarios", () => {
     await page.waitForSelector("body");
 
     // Step 4: Verify UI doesn't show witness action buttons for already-witnessed submission
-    // The screening panel should not be visible
-    const approveButton = page.locator('button:has-text("Approve for Screening")');
+    // The witness panel should not be visible
+    const approveButton = page.locator("#witness-confirm");
     await expect(approveButton).not.toBeVisible();
 
     // Step 5: Verify submission state unchanged
@@ -188,9 +188,13 @@ test.describe("Witness Error Scenarios", () => {
     await page.goto(`/submissions/${submissionId}`);
     await page.waitForSelector("body");
 
-    // The screening panel is offered again, so a committee member can move it.
-    const approveButton = page.locator('button:has-text("Approve for Screening")');
+    // The witness panel is offered again, so a committee member can move it:
+    // Yes to the member's Species, the base points, then Confirm.
+    const approveButton = page.locator("#witness-confirm");
     await expect(approveButton).toBeVisible({ timeout: 5000 });
+    await page.locator("label:has(#witness-species-yes)").click();
+    await page.locator("label:has(#witness-points-10)").click();
+    await expect(approveButton).toBeEnabled({ timeout: 10000 });
 
     await approveButton.click();
     await page.waitForURL(/\/admin\/witness-queue\//, { timeout: 10000 });

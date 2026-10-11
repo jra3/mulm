@@ -1,0 +1,16 @@
+//- The witness panel's sticky bar: the itemised sum and the Confirm button.
+//- Rendered into the panel first, then swapped in again on every change to
+//- the panel's form, so the sum is the server's (`witnessSummary` in
+//- src/routes/submission.ts, over the one Points rule) and never a copy of
+//- the rule in the browser.
+//-
+//- @param summary - { ready, lines: [{ label, amount }], total, hint }
+
+if summary.ready
+	.text-white.text-sm.mb-2.flex.justify-between.gap-3.items-baseline
+		span#witness-sum-lines= summary.lines.map((line) => `${line.label} ${line.amount}`).join(" + ")
+		b.whitespace-nowrap.text-base#witness-sum-total= `${summary.total} pts`
+	button.primary.w-full.h-12.text-base#witness-confirm(type="submit")= `Confirm witness · ${summary.total} pts`
+else
+	.text-gray-200.text-sm.mb-2#witness-sum-hint= summary.hint
+	button.primary.w-full.h-12.text-base#witness-confirm(type="submit" disabled) Confirm witness

@@ -1,124 +1,235 @@
-//- The witness panel: the committee screens a Submission awaiting a Witness.
+//- The witness panel: a committee member witnesses a Submission and sets its
+//- points (ADR-0003). Phone first, one scroll, a sticky total at the bottom.
 //-
-//- The witness binds the Submission to its Species here first - by searching
-//- the catalogue, or by creating the Species when none matches - and the
-//- Witness cannot be confirmed until it is bound.
+//- The witness settles the Species, which sets the base points, then the
+//- bonuses; the sticky bar sums them on the server and confirms. The panel
+//- never says "bind": the member says what it is, and the witness answers
+//- whether that is right.
 //-
-//- @param submission   - the Submission (id, species_type)
-//- @param boundSpecies - the Species it is bound to, or null
-//- @param boundSpeciesName - its Canonical name, when bound
+//- @param submission - the Submission (id, program, species_type,
+//-   species_class, species_common_name, species_latin_name, member_name,
+//-   reproduction_date formatted, article_link)
+//- @param speciesFacts - the bound Species (`boundSpeciesFacts` in
+//-   src/routes/submission.ts), or null when unbound: speciesId, speciesName,
+//-   commonName, speciesType, programClass, pointClass, isFirstTime,
+//-   priorBreedCount, isCaresSpecies
+//- @param speciesChosenByWitness - whether the committee, not the member,
+//-   chose the bound Species, so there is no "is that right?" left to ask
 //- @param classificationMismatch - whether the Submission's Species type or
-//-   Program class disagrees with the bound Species'. The Witness cannot be
-//-   confirmed until the witness adopts the Species' values, rebinds, or the
-//-   member corrects it.
-//- @param classificationAgreement - { speciesType, programClass }: which of
-//-   the two agree, when bound
-//- @param spellingAgreement - { commonName, latinName }: "empty", "name" or
-//-   "not-a-name" for each of the member's spellings, when bound, and
-//-   "scientific-name" for a common spelling that is one of the Species'
-//-   scientific Names (#421). Confirming adds the ticked spellings to the
-//-   Species as Names: the common one is offered ticked, the Latin one
-//-   unticked, one that is already a Name (or a scientific Name in the common
-//-   field) is shown as such with no box, and a blank one not at all.
-//- @param allowed      - the moves this viewer may make
-include ../mixins/bindSpeciesControls.pug
+//-   Program class disagrees with the Species'. Confirming records the
+//-   Species' values on the Submission, so it is said here, not refused.
+//- @param spellingAgreement - { commonName, latinName }: "empty", "name",
+//-   "scientific-name" or "not-a-name" for each of the member's spellings,
+//-   when bound. Only a spelling that is not a Name is offered as one to add;
+//-   the common one is offered ticked, the Latin one unticked.
+//- @param summary - the sticky bar's initial state (`witnessSummary`)
+//- @param allowed - the moves this viewer may make
+//- @param changesRequested - whether the committee has changes outstanding:
+//-   the ball is with the member, so the panel offers nothing
+
+- const programShort = { fish: "BAP", plant: "HAP", coral: "CAP" }[submission.program] || submission.program
+- const isBap = submission.program === "fish"
+- const isHap = submission.program === "plant"
+- const bound = Boolean(speciesFacts)
+- const settled = bound ? Boolean(speciesChosenByWitness) : false
+- const prefilledPoints = bound ? speciesFacts.pointClass : null
+- const prefilledArticle = submission.article_link ? 5 : 0
+- const offerCommon = spellingAgreement ? spellingAgreement.commonName === "not-a-name" : false
+- const offerLatin = spellingAgreement ? spellingAgreement.latinName === "not-a-name" : false
+- const eyebrow = "text-xs font-semibold uppercase tracking-wide text-gray-500"
+- const segment = "block text-center py-3 rounded-lg border border-gray-300 bg-white font-semibold text-lg text-gray-900 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 peer-focus-visible:ring-2 peer-focus-visible:ring-amber-400"
+- const chip = "block text-center px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-900 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 peer-focus-visible:ring-2 peer-focus-visible:ring-amber-400"
+- const track = "relative inline-block w-12 h-7 rounded-full bg-gray-300 transition-colors flex-none after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-6 after:h-6 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:bg-green-600 peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-amber-400"
+//- The Points card is gated until the Species is settled: by the witness
+//- having chosen it, or by Yes below (CSS reads the radio; the server reads
+//- the posted species_settled and species_id either way).
+- const gate = settled ? "" : bound ? "opacity-40 pointer-events-none group-has-[#witness-species-yes:checked]:opacity-100 group-has-[#witness-species-yes:checked]:pointer-events-auto" : "opacity-40 pointer-events-none"
+
+//- A bonus switch: a checkbox styled as a toggle, the label on the left.
+mixin witnessSwitch(name, label, amount, note, checked)
+	label.flex.items-center.gap-3.min-h-12.cursor-pointer.py-1
+		span.flex-1.min-w-0
+			span= label
+			|
+			span.text-gray-500= amount
+			if note
+				span.block.text-xs.text-gray-500= note
+		input.peer.sr-only(type="checkbox" name=name value="on" checked=checked)
+		span(class=track aria-hidden="true")
 
 .status-panel.status-panel-admin#witnessPanel
-    .container.mx-auto.max-w-4xl
-        h3.text-white.text-lg.font-semibold.mb-4 Admin Screening Required
-        p.text-white.mb-4 Review the submission details above, including any photos/videos (when available), for completeness and credibility.
+	.mx-auto.max-w-lg.flex.flex-col.gap-3
+		h3.text-white.text-lg.font-semibold.px-1 Witness this submission
 
-        //- Which Species this is
-        .bg-white.rounded.p-4.mb-4#witness-species
-            if boundSpecies
-                p.text-gray-900
-                    span.font-semibold Species:
-                    |
-                    span.italic#witness-bound-species= boundSpeciesName
-                    span.text-sm.text-gray-600= ` (${boundSpecies.species_type}, ${boundSpecies.program_class})`
+		//- Header: who, what Program, when; the form, photos and video are above
+		.bg-white.rounded-lg.px-4.py-3#witness-header
+			.text-xs.text-gray-500= `${programShort} submission · reproduced ${submission.reproduction_date}`
+			.font-semibold.text-gray-900= submission.member_name
+			a.text-sm.text-blue-700.underline(href="#species-details") See the full form, photos and video
 
-                if classificationMismatch
-                    .bg-red-50.border.border-red-300.rounded.p-3.mt-2#witness-mismatch(role="alert")
-                        p.text-red-800.font-semibold The Submission's Species type or Program class disagrees with this Species
-                        table.text-sm.text-red-800.mt-1
-                            tr
-                                th.text-left.pr-4
-                                th.text-left.pr-4 Submission
-                                th.text-left Species
-                            tr(class=classificationAgreement.speciesType ? "" : "font-semibold")
-                                td.pr-4 Species type
-                                td.pr-4= submission.species_type
-                                td= boundSpecies.species_type
-                            tr(class=classificationAgreement.programClass ? "" : "font-semibold")
-                                td.pr-4 Program class
-                                td.pr-4= submission.species_class
-                                td= boundSpecies.program_class
-                        if allowed.adoptSpeciesClassification
-                            form.mt-2(
-                                hx-post=`/admin/submissions/${submission.id}/adopt-species-classification`
-                                hx-disabled-elt="find button"
-                            )
-                                button.primary.text-sm(type="submit") Use the Species' type and class
-                        p.text-sm.text-red-700.mt-1 Or rebind to the right Species, or request changes if the Submission itself is wrong.
-            else
-                p.text-gray-900.font-semibold Not bound to a Species yet
-                p.text-sm.text-gray-600.mb-2 Find it in the catalogue, or create it if it is not there. The witness cannot be confirmed until the Submission is bound.
+		if changesRequested
+			.bg-white.rounded-lg.p-4.text-gray-900#witness-waiting-on-member
+				p.font-semibold Waiting on the member
+				p.text-sm.text-gray-600 Changes were requested. The Witness can be confirmed once the member resubmits.
+		else
+			form.group.flex.flex-col.gap-3#witness-form(
+				hx-post=`/admin/submissions/${submission.id}/confirm-witness`
+				hx-disabled-elt="#witness-confirm"
+			)
+				if bound
+					input(type="hidden" name="species_id" value=speciesFacts.speciesId)
+				if settled
+					input(type="hidden" name="species_settled" value="1")
 
-            if allowed.bindSpecies
-                +bindSpeciesControls(submission, Boolean(boundSpecies))
+				//- Species: sets the base points
+				.bg-white.rounded-lg.p-4.text-gray-900#witness-species
+					p.mb-1(class=eyebrow) Species · sets the base points
+					if bound
+						if settled
+							p.text-sm.text-gray-600 You chose
+						else
+							p.text-sm.text-gray-600 The member says it's
+						p.font-semibold.text-lg.leading-tight#witness-bound-common= speciesFacts.commonName || speciesFacts.speciesName
+						p.italic#witness-bound-species= speciesFacts.speciesName
+						p.text-sm.text-gray-600#witness-bound-class
+							| #{speciesFacts.speciesType} · #{speciesFacts.programClass}
+							if speciesFacts.pointClass
+								|  · Point class #{speciesFacts.pointClass}
+							else
+								|  · no Point class yet
+						if settled
+							p.text-xs.text-gray-500.mt-1 Member wrote: #{submission.species_common_name} · #{submission.species_latin_name}
+							//- Not posted: it only reveals the search below
+							input.peer.sr-only(type="checkbox" id="witness-species-no")
+						if classificationMismatch
+							.bg-amber-50.border.border-amber-300.rounded.p-2.mt-2.text-sm#witness-mismatch(role="note")
+								| The submission says #{submission.species_type} · #{submission.species_class}. Confirming records it as #{speciesFacts.speciesType} · #{speciesFacts.programClass}.
+						if !settled
+							p.font-semibold.mt-3.mb-2 Is that right?
+							.grid.grid-cols-2.gap-2
+								label.cursor-pointer
+									input.peer.sr-only(type="radio" name="species_settled" value="1" id="witness-species-yes")
+									span(class=chip) Yes
+								label.cursor-pointer
+									input.peer.sr-only(type="radio" name="species_settled" value="0" id="witness-species-no")
+									span(class=chip) No
+					else
+						p.text-sm.text-gray-600 The member wrote
+						p.font-semibold.text-lg.leading-tight= submission.species_common_name
+						p.italic= submission.species_latin_name
+						p.text-sm.text-gray-600= `${submission.species_type} · ${submission.species_class}`
 
-            .text-sm.text-red-700.mt-2#committee-error(role="alert")
+					//- Choosing another Species: shown when unbound, or on No.
+					//- Picking one binds it and reloads the page, so the panel
+					//- then shows it as the witness's choice.
+					if allowed.bindSpecies
+						.mt-3(
+							id="witness-species-other"
+							class=bound ? "hidden group-has-[#witness-species-no:checked]:block" : ""
+						)
+							if settled
+								p.text-sm.font-semibold.mb-1 Wrong species? Choose another
+							else if bound
+								p.text-sm.font-semibold.mb-1 Which species is it?
+							p.text-sm.text-gray-600.mb-1 Search the catalogue
+							label.sr-only(for="witness-species-pick") Species
+							//- Unfiltered by Species type: a Submission filed under the
+							//- wrong type is put right by choosing the right Species.
+							select#witness-species-pick.tom-select-typeahead(
+								name="group_id"
+								data-api-url="/api/species/search"
+								data-value-field="group_id"
+								data-label-field="text"
+								data-search-fields="text,common_name,scientific_name"
+								data-min-query-length="2"
+								data-max-items="1"
+								data-placeholder="Common or scientific name"
+							)
+							button.outline.w-full.mt-2#witness-species-use(
+								type="button"
+								hx-post=`/admin/submissions/${submission.id}/bind-species`
+								hx-include="#witness-species-pick"
+								hx-disabled-elt="this"
+							) Use this species
+							p.text-sm.text-gray-600.mt-3 Not in the catalogue?
+							button.outline.w-full.mt-1#witness-species-new(
+								type="button"
+								hx-get=`/admin/dialog/species/new?submission_id=${submission.id}`
+								hx-target="body"
+								hx-swap="beforeend"
+							) Record new species
+					if settled && allowed.bindSpecies
+						label.block.mt-3.text-sm.text-blue-700.underline.cursor-pointer(for="witness-species-no" class="group-has-[#witness-species-no:checked]:hidden") Wrong species? Choose another
 
-        div.flex.justify-center.max-w-4xl.mx-auto.text-center.gap-4
-            //- The table refuses the Witness while unbound, so the button is not offered
-            if allowed.confirmWitness
-                form.flex.flex-col.items-center.gap-2(hx-post=`/admin/submissions/${submission.id}/confirm-witness`)
-                    if spellingAgreement ? spellingAgreement.commonName !== "empty" || spellingAgreement.latinName !== "empty" : false
-                        .bg-white.rounded.p-3.text-left.text-sm.text-gray-900#witness-names
-                            p.font-semibold.mb-1 Names of this Species
-                            if spellingAgreement.commonName === "name"
-                                p#witness-common-is-name
-                                    | Common name
-                                    |  
-                                    span.font-medium= submission.species_common_name
-                                    |  is already a Name
-                            else if spellingAgreement.commonName === "scientific-name"
-                                p#witness-common-is-scientific-name
-                                    | Common name
-                                    |  
-                                    span.italic= submission.species_common_name
-                                    |  is one of this Species' scientific Names, so it is not added as a common name
-                            else if spellingAgreement.commonName === "not-a-name"
-                                label.flex.gap-2.items-center
-                                    input(type="checkbox" name="add_common_name" value="on" checked)
-                                    span
-                                        | Add common name
-                                        |  
-                                        span.font-medium= submission.species_common_name
-                                        |  as a Name
-                            if spellingAgreement.latinName === "name"
-                                p#witness-latin-is-name
-                                    | Latin name
-                                    |  
-                                    span.italic= submission.species_latin_name
-                                    |  is already a Name
-                            else if spellingAgreement.latinName === "not-a-name"
-                                label.flex.gap-2.items-center
-                                    input(type="checkbox" name="add_scientific_name" value="on")
-                                    span
-                                        | Add Latin name
-                                        |  
-                                        span.italic= submission.species_latin_name
-                                        |  as a scientific Name
-                    button.primary(type="submit") Approve for Screening
-            else if !boundSpecies
-                p.text-white.text-sm.self-center Bind a Species to approve for screening
-            else if classificationMismatch
-                p.text-white.text-sm.self-center Resolve the mismatch to approve for screening
+				//- Points: the base points and every bonus but first-time
+				.bg-white.rounded-lg.p-4.text-gray-900#witness-points(class=gate)
+					p.mb-2(class=eyebrow) Base points
+					.grid.grid-cols-4.gap-2
+						each pc in [5, 10, 15, 20]
+							label.cursor-pointer
+								input.peer.sr-only(type="radio" name="points" value=pc id=`witness-points-${pc}` checked=pc === prefilledPoints)
+								span(class=segment)= pc
+					if bound
+						if speciesFacts.pointClass
+							p.text-xs.text-gray-500.mt-1#witness-point-class= `From the Species' Point class (${speciesFacts.pointClass}).`
+						else
+							.bg-amber-50.border.border-amber-300.rounded.p-2.mt-2.text-sm#witness-no-point-class The catalogue has no Point class for this Species. The base points you choose become its Point class.
 
-            if allowed.requestChanges
-                button.destructive(
-                    type="button"
-                    hx-get=`/admin/dialog/submissions/${submission.id}/request-changes`
-                    hx-target="closest body"
-                    hx-swap="beforeend") Request Changes
+					p.mt-4.mb-1(class=eyebrow) Bonuses
+					.divide-y.divide-gray-100
+						if isBap
+							+witnessSwitch("cares_species", "CARES species", "+5", bound ? (speciesFacts.isCaresSpecies ? "Listed in the catalogue" : "Not listed in the catalogue") : "", bound ? speciesFacts.isCaresSpecies : false)
+						.flex.items-center.gap-3.min-h-12.py-1
+							span.flex-1.min-w-0
+								span Article
+								span.block.text-xs.text-gray-500= submission.article_link ? "The member linked one" : "Only if it is already written"
+							.flex.gap-1
+								each option in [[0, "None"], [5, "+5"], [10, "+10"]]
+									label.cursor-pointer
+										input.peer.sr-only(type="radio" name="article_points" value=option[0] id=`witness-article-${option[0]}` checked=option[0] === prefilledArticle)
+										span(class=chip)= option[1]
+						if isHap
+							+witnessSwitch("flowered", "Flowered", "+ base points", "", false)
+							+witnessSwitch("sexual_reproduction", "Sexual reproduction", "+ base points", "", false)
+					if bound
+						if speciesFacts.isFirstTime
+							p.text-xs.text-green-700.mt-2#witness-first-time No one has had this species approved yet. A first-time +5 is added at the meeting if this one is approved first.
+						else
+							p.text-xs.text-gray-500.mt-2#witness-first-time= `Approved ${speciesFacts.priorBreedCount} time${speciesFacts.priorBreedCount === 1 ? "" : "s"} before, so no first-time bonus.`
+
+				//- The member's spelling as a Name, only where it is not one already
+				if bound && (offerCommon || offerLatin)
+					.bg-white.rounded-lg.p-4.text-gray-900.text-sm#witness-names
+						p.font-semibold.mb-1 Save the member's spelling
+						if offerCommon
+							label.flex.gap-2.items-start.py-1
+								input.mt-1(type="checkbox" name="add_common_name" value="on" checked)
+								span
+									| "
+									span.font-medium= submission.species_common_name
+									| " as a common name of this species
+						if offerLatin
+							label.flex.gap-2.items-start.py-1
+								input.mt-1(type="checkbox" name="add_scientific_name" value="on")
+								span
+									| "
+									span.italic= submission.species_latin_name
+									| " as a scientific name of this species
+
+				.text-sm#committee-error(role="alert")
+
+				if allowed.requestChanges
+					button.destructive.w-full.h-12.text-base(
+						type="button"
+						hx-get=`/admin/dialog/submissions/${submission.id}/request-changes`
+						hx-target="closest body"
+						hx-swap="beforeend") Request changes
+
+				//- The sticky bar: the sum is the server's, refreshed on every change
+				.sticky.bottom-0.bg-gray-700.rounded-lg.p-3#witness-footer(
+					hx-post=`/admin/submissions/${submission.id}/witness-summary`
+					hx-trigger="change from:#witness-form"
+					hx-include="#witness-form"
+					hx-swap="innerHTML"
+				)
+					include witnessSummary.pug

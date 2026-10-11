@@ -46,6 +46,7 @@ export {
   createSpecies,
   updateSpecies,
   setPointClass,
+  ensurePointClass,
   renameCanonical,
   mergeSpecies,
   previewMerge,

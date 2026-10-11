@@ -46,14 +46,14 @@ The point-class value a submission earns before bonuses — the `points` column 
 _Avoid_: raw points, species points
 
 **Bonus points**:
-Committee-entered extras added on top of base points at approval time (`src/forms/approval.ts`, `src/forms/approvedEdit.ts`), stored on the submission. The one rule for turning a submission's flags into a total lives in `src/points.ts`, which exports it both as a SQL fragment (composed into every query that reports a total) and as a TypeScript function (used for the itemised breakdown and tests):
+Extras added on top of base points, stored on the submission. The witness sets every one of them except first-time when confirming the Witness (`src/forms/confirmWitness.ts`; [ADR-0003](docs/adr/0003-points-are-set-at-the-witness.md)); first-time is approval's to compute. The one rule for turning a submission's flags into a total lives in `src/points.ts`, which exports it both as a SQL fragment (composed into every query that reports a total) and as a TypeScript function (used for the itemised breakdown, the witness panel's running sum, and tests):
 `total_points = points + article_points + first_time_species×5 + cares_species×5 + flowered×points + sexual_reproduction×points`
-So: first-time species = flat +5; `article_points` = a committee-entered number (0–50, typically 5); CARES-listed species = +5; and flowering / sexual reproduction each add the plant's own point value. (The manual's "+10 for a first-time spawn with an article" is realized here as first-time +5 plus article_points.)
-Which bonuses a Program may carry (ruled 2026-09-17; enforced in the approval and approved-edit Zod schemas, which take the Program):
+So: first-time species = flat +5; `article_points` = None, 5 or 10 at the Witness (starts at 5 when the member linked an article); CARES-listed species = +5, prefilled from the catalogue; and flowering / sexual reproduction each add the plant's own point value. (The manual's "+10 for a first-time spawn with an article" is realized here as first-time +5 plus article_points.)
+Which bonuses a Program may carry (ruled 2026-09-17; enforced in the witness, approval and approved-edit Zod schemas, which take the Program):
 - first-time species, article: **all Programs**
 - CARES: **BAP only**
 - flowered, sexual reproduction: **HAP only**
-The formula itself is uniform across Programs; the restriction is an invariant on write, not a condition in the sum.
+The formula itself is uniform across Programs; the restriction is an invariant on write, not a condition in the sum. Points set at the Witness count toward nothing until approval: every total-reporting query filters on `approved_on`, never on `points` being set.
 _Avoid_: extra credit, adjustments
 
 **Points**:
@@ -84,7 +84,7 @@ The minimum age (from `reproduction_date`) a submission must reach before it may
 _Avoid_: holding period, cooldown
 
 **Witness (Gate 1 — physical verification)**:
-A committee member's attestation that the fry (or cutting) exist and that the Submission describes them and the breeding situation correctly, including which Species it is bound to. Carried on the submission as `witnessed_by` / `witnessed_on` and `witness_verification_status: pending | confirmed`. A member cannot witness their own submission, and no Witness may be confirmed while requested changes are outstanding, while the Submission is unbound, or while its Species type or Program class disagree with its Species. Because the Witness attests to the form, **any change the member makes after confirmation voids it** and the Submission awaits a Witness again; the form says so before saving.
+A committee member's attestation that the fry (or cutting) exist and that the Submission describes them and the breeding situation correctly, including which Species it is, **and the setting of its points**: the witness settles the Species (which sets the base points from its Point class), may change the base points, and sets every bonus but first-time ([ADR-0003](docs/adr/0003-points-are-set-at-the-witness.md)). Carried on the submission as `witnessed_by` / `witnessed_on`, `witness_verification_status: pending | confirmed`, and the points columns. A member cannot witness their own submission, and no Witness may be confirmed while requested changes are outstanding or without a Species; a Species type or Program class that disagrees with the Species' is not a refusal, since confirming records the Species' values on the Submission. Because the Witness attests to the form, **any change the member makes after confirmation voids it and clears the points it set**; the Submission awaits a Witness again, and the next witness starts from the catalogue's prefill. The form says so before saving.
 The `declined` value is **dead**: declining a Witness stranded the submission where nothing could move it out, and is deleted. A committee member who wants more **requests changes** instead. Rows still carrying `'declined'` derive as awaiting a Witness, which makes them actionable again.
 _Avoid_: verify, screen (informal), confirm (that's one outcome), decline
 
@@ -126,7 +126,7 @@ The member-side act of submitting and following through on a spawn/propagation s
 _Avoid_: requesting points, filing
 
 **Assigning points**:
-The committee-side act of setting a point value for a species not on the list, by majority vote.
+The committee-side act of setting a Point class for a Species the catalogue has not valued. In the Portal the witness does it on the spot: confirming the Witness on a Submission whose Species has no Point class saves the chosen base points as that Species' Point class, with no opt-out (`ensurePointClass`, `src/species/curation.ts`). The manual's majority vote is not modelled.
 _Avoid_: rating, scoring
 
 **Challenging points**:
@@ -152,7 +152,7 @@ The scientific Name the Portal treats as correct today (genus + epithet), shown 
 _Avoid_: current name, valid name, accepted name, display name
 
 **Bound**:
-A Submission is bound when it has a Species. The member binds it by picking a Name at submit; the Breeders Award Committee binds or rebinds it at the witness step. A binding holds only while the Submission's spellings, Species type and Program class agree with the Species: saving a form that no longer agrees clears it. Only a bound Submission can be witnessed or approved, and Points come from the bound Species' Point class. The member's spellings stay on the Submission as "as submitted".
+A Submission is bound when it has a Species. The member binds it by picking a Name at submit; the Breeders Award Committee binds or rebinds it at the witness step, where the witness panel asks "is that right?" of the member's pick and confirming binds to whichever Species the witness settled on. A binding holds only while the Submission's spellings, Species type and Program class agree with the Species: saving a form that no longer agrees clears it. Only a bound Submission can be witnessed or approved, and base points are prefilled from the bound Species' Point class. The member's spellings stay on the Submission as "as submitted".
 _Avoid_: linked, matched, resolved, assigned, proposed
 
 **Program class**:

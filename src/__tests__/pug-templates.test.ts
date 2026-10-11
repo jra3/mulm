@@ -639,8 +639,10 @@ void describe("Pug Template Rendering", () => {
             break;
 
           case "admin/approvalPanel.pug":
-            templateData.approval = {
+            templateData.speciesFacts = {
+              speciesId: 3,
               speciesName: "Apistogramma cacatuoides",
+              commonName: "Cockatoo Dwarf Cichlid",
               speciesType: "Fish",
               programClass: "Cichlids - New World",
               pointClass: 10,
@@ -650,13 +652,19 @@ void describe("Pug Template Rendering", () => {
             };
             break;
 
+          case "admin/witnessSummary.pug":
+            templateData.summary = { ready: false, lines: [], total: 0, hint: "Choose the species first" };
+            break;
+
           case "admin/witnessErrors.pug":
             templateData.messages = ["Choose a Species from the catalogue"];
             break;
 
           case "admin/witnessPanel.pug":
             templateData.spellingAgreement = null;
-            templateData.boundSpecies = null;
+            templateData.speciesFacts = null;
+            templateData.speciesChosenByWitness = false;
+            templateData.summary = { ready: false, lines: [], total: 0, hint: "Choose the species first" };
             templateData.allowed = { confirmWitness: false, bindSpecies: true, requestChanges: true };
             break;
 
@@ -907,146 +915,254 @@ void describe("Pug Template Rendering", () => {
    * `name`, by kind - and a refused delete has somewhere to say "merge".
    */
   /**
-   * The witness panel binds: bound, it names the Species and offers a rebind;
-   * unbound, it offers the catalogue typeahead and the create-Species dialog,
-   * and no confirmation until it is bound.
+   * The witness panel sets the points (ADR-0003): the Species the member says
+   * it is, Yes or No, then the base points and bonuses, summed by the server
+   * into the sticky bar. It never says "bind".
    */
   void describe("Witness panel", () => {
+    const facts = {
+      speciesId: 7,
+      speciesName: "Poecilia reticulata",
+      commonName: "Guppy",
+      speciesType: "Fish",
+      programClass: "Livebearers",
+      pointClass: 10,
+      isFirstTime: false,
+      priorBreedCount: 3,
+      isCaresSpecies: true,
+    };
+    const ready = { ready: true, lines: [{ label: "Base points", amount: 10 }, { label: "CARES Species Bonus", amount: 5 }], total: 15, hint: null };
+    const notReady = { ready: false, lines: [], total: 0, hint: "Is the species right? Answer above first" };
     const render = (data: Record<string, unknown>) =>
       pug.compileFile(path.join(viewsPath, "admin/witnessPanel.pug"), { basedir: viewsPath, pretty: false })({
         ...baseMockData,
         isAdmin: true,
-        submission: { id: 42, species_type: "Fish" },
+        submission: {
+          id: 42,
+          program: "fish",
+          species_type: "Fish",
+          species_class: "Livebearers",
+          species_common_name: "Guppy",
+          species_latin_name: "Poecilia reticulata",
+          member_name: "Jane Ortiz",
+          reproduction_date: "Sep 20, 2026",
+          article_link: null,
+        },
+        speciesFacts: facts,
+        speciesChosenByWitness: false,
+        classificationMismatch: false,
+        spellingAgreement: { commonName: "name", latinName: "name" },
+        summary: notReady,
         allowed: { confirmWitness: true, bindSpecies: true, requestChanges: true },
         ...data,
       });
-    const bound = {
-      group_id: 7,
-      canonical_genus: "Poecilia",
-      canonical_species_name: "reticulata",
-      species_type: "Fish",
-      program_class: "Livebearers",
-    };
 
-    void test("bound: shows the Canonical name, a rebind, and the confirmation", () => {
-      const html = render({ boundSpecies: bound, boundSpeciesName: "Poecilia reticulata" });
+    void test("header: member, Program, reproduction date, and a link to the form", () => {
+      const html = render({});
+      assert.match(html, /BAP submission · reproduced Sep 20, 2026/);
+      assert.match(html, /Jane Ortiz/);
+      assert.match(html, /href="#species-details"[^>]*>See the full form, photos and video</);
+      assert.match(html, /Witness this submission/);
+      assert.doesNotMatch(html.replace(/<[^>]+>/g, " "), /\bbind/i, "the panel never says bind");
+    });
 
+    void test("the member picked the Species: says so, asks Yes or No, and posts that Species", () => {
+      const html = render({});
+
+      assert.match(html, /The member says it&#39;s|The member says it's/);
+      assert.match(html, /id="witness-bound-common"[^>]*>Guppy</);
       assert.match(html, /id="witness-bound-species"[^>]*>Poecilia reticulata</);
-      assert.match(html, /Livebearers/);
-      assert.match(html, /Change Species/);
+      assert.match(html, /Fish · Livebearers · Point class 10/);
+      assert.match(html, /Is that right\?/);
+      assert.match(html, /<input class="peer sr-only" type="radio" name="species_settled" value="1" id="witness-species-yes"\/>/);
+      assert.match(html, /<input class="peer sr-only" type="radio" name="species_settled" value="0" id="witness-species-no"\/>/);
+      assert.match(html, /<input type="hidden" name="species_id" value="7"\/>/);
+      assert.match(html, /id="witness-form"[^>]*hx-post="\/admin\/submissions\/42\/confirm-witness"/);
+      // The search is there for No, hidden until then
+      assert.match(html, /class="mt-3 hidden group-has-\[#witness-species-no:checked\]:block" id="witness-species-other"/);
       assert.match(html, /hx-post="\/admin\/submissions\/42\/bind-species"/);
-      assert.match(html, />Rebind</);
-      assert.match(html, /hx-post="\/admin\/submissions\/42\/confirm-witness"/);
-      assert.match(html, /Approve for Screening/);
-      assert.doesNotMatch(html, /Not bound to a Species/);
-    });
-
-    void test("unbound: offers the catalogue typeahead and create-Species dialog, and no confirmation", () => {
-      // The table refuses the Witness while unbound, so the move is not allowed
-      const html = render({
-        boundSpecies: null,
-        allowed: { confirmWitness: false, bindSpecies: true, requestChanges: true },
-      });
-
-      assert.match(html, /Not bound to a Species yet/);
-      assert.match(html, /<select[^>]*name="group_id"[^>]*data-api-url="\/api\/species\/search"/);
-      assert.match(html, /hx-post="\/admin\/submissions\/42\/bind-species"/);
-      assert.match(html, />Bind</);
+      assert.match(html, /Record new species/);
       assert.match(html, /hx-get="\/admin\/dialog\/species\/new\?submission_id=42"/);
-      assert.doesNotMatch(html, /Approve for Screening/);
-      assert.doesNotMatch(html, /confirm-witness/);
-      assert.match(html, /Bind a Species to approve for screening/);
     });
 
-    void test("mismatch: highlights the disagreeing type or class, offers to adopt the Species' values, and no confirmation", () => {
+    void test("the Points card is gated until Yes, and the base points are prefilled from the Point class", () => {
+      const html = render({});
+
+      assert.match(html, /class="[^"]*opacity-40 pointer-events-none group-has-\[#witness-species-yes:checked\]:opacity-100[^"]*" id="witness-points"/);
+      assert.match(html, /<input class="peer sr-only" type="radio" name="points" value="10" id="witness-points-10" checked="checked"\/>/);
+      for (const pc of [5, 15, 20]) {
+        assert.match(html, new RegExp(`<input class="peer sr-only" type="radio" name="points" value="${pc}" id="witness-points-${pc}"\\/>`));
+      }
+      assert.match(html, /From the Species&#39; Point class \(10\)|From the Species' Point class \(10\)/);
+    });
+
+    void test("bonuses per Program: CARES on BAP prefilled from the catalogue, article None/+5/+10, flowered and sexual reproduction on HAP only", () => {
+      const bap = render({});
+      assert.match(bap, /<input class="peer sr-only" type="checkbox" name="cares_species" value="on" checked="checked"\/>/);
+      assert.match(bap, /Listed in the catalogue/);
+      assert.match(bap, /name="article_points" value="0" id="witness-article-0" checked="checked"/);
+      assert.match(bap, /name="article_points" value="5" id="witness-article-5"\/>/);
+      assert.match(bap, /name="article_points" value="10" id="witness-article-10"\/>/);
+      assert.match(bap, /Only if it is already written/);
+      assert.doesNotMatch(bap, /name="flowered"|name="sexual_reproduction"/);
+      assert.doesNotMatch(bap, /name="first_time_species"/, "first-time is approval's to compute");
+
+      const hap = render({
+        submission: {
+          id: 42,
+          program: "plant",
+          species_type: "Plant",
+          species_class: "Cryptocoryne",
+          species_common_name: "Wendt's water trumpet",
+          species_latin_name: "Cryptocoryne wendtii",
+          member_name: "Priya Shah",
+          reproduction_date: "Sep 12, 2026",
+          article_link: "https://example.com/article",
+        },
+        speciesFacts: { ...facts, speciesType: "Plant", programClass: "Cryptocoryne", isCaresSpecies: false },
+      });
+      assert.doesNotMatch(hap, /name="cares_species"/);
+      assert.match(hap, /<input class="peer sr-only" type="checkbox" name="flowered" value="on"\/>/);
+      assert.match(hap, /<input class="peer sr-only" type="checkbox" name="sexual_reproduction" value="on"\/>/);
+      assert.match(hap, /name="article_points" value="5" id="witness-article-5" checked="checked"/, "+5 when the member linked an article");
+      assert.match(hap, /The member linked one/);
+      assert.match(hap, /HAP submission/);
+    });
+
+    void test("the first-time line is informational: never a control", () => {
+      assert.match(render({}), /id="witness-first-time"[^>]*>Approved 3 times before, so no first-time bonus\.</);
+      assert.match(
+        render({ speciesFacts: { ...facts, isFirstTime: true, priorBreedCount: 0 } }),
+        /No one has had this species approved yet/
+      );
+      assert.match(render({ speciesFacts: { ...facts, priorBreedCount: 1 } }), /Approved 1 time before/);
+    });
+
+    void test("a Species with no Point class: nothing prefilled, and the chosen base points become its Point class", () => {
+      const html = render({ speciesFacts: { ...facts, pointClass: null } });
+      assert.doesNotMatch(html, /name="points"[^>]*checked/);
+      assert.match(html, /no Point class yet/);
+      assert.match(html, /id="witness-no-point-class"[^>]*>The catalogue has no Point class for this Species\. The base points you choose become its Point class\./);
+    });
+
+    void test("the witness chose the Species: settled already, no Yes or No, the member's spelling shown, and a way to choose another", () => {
       const html = render({
-        submission: { id: 42, species_type: "Fish", species_class: "Cichlids - New World" },
-        boundSpecies: bound,
-        boundSpeciesName: "Poecilia reticulata",
+        speciesChosenByWitness: true,
+        submission: {
+          id: 42,
+          program: "fish",
+          species_type: "Fish",
+          species_class: "Livebearers",
+          species_common_name: "Millions fish",
+          species_latin_name: "Poecilia reticulatta",
+          member_name: "Jane Ortiz",
+          reproduction_date: "Sep 20, 2026",
+        },
+        summary: ready,
+      });
+
+      assert.match(html, /You chose/);
+      assert.doesNotMatch(html, /Is that right/);
+      assert.match(html, /<input type="hidden" name="species_settled" value="1"\/>/);
+      assert.match(html, /Member wrote: Millions fish · Poecilia reticulatta/);
+      assert.match(html, /Wrong species\? Choose another/);
+      assert.match(html, /<input class="peer sr-only" type="checkbox" id="witness-species-no"\/>/);
+      assert.match(html, /class="bg-white rounded-lg p-4 text-gray-900" id="witness-points"/, "the Points card is open");
+    });
+
+    void test("unbound: shows what the member wrote, the search and Record new species, and the Points card closed", () => {
+      const html = render({
+        speciesFacts: null,
+        spellingAgreement: null,
+        summary: { ready: false, lines: [], total: 0, hint: "Choose the species first" },
+      });
+
+      assert.match(html, /The member wrote/);
+      assert.match(html, /Poecilia reticulata/);
+      assert.doesNotMatch(html, /name="species_id"|Is that right/);
+      assert.match(html, /class="mt-3" id="witness-species-other"/, "the search is open");
+      assert.match(html, /<select[^>]*name="group_id"[^>]*data-api-url="\/api\/species\/search"/);
+      assert.match(html, /Use this species/);
+      assert.match(html, /Record new species/);
+      assert.match(html, /class="bg-white rounded-lg p-4 text-gray-900 opacity-40 pointer-events-none" id="witness-points"/);
+      assert.match(html, /Choose the species first/);
+      assert.match(html, /id="witness-confirm"[^>]*disabled/);
+    });
+
+    void test("a classification mismatch is said, not refused: confirming records the Species' values", () => {
+      const html = render({
+        submission: {
+          id: 42,
+          program: "fish",
+          species_type: "Invert",
+          species_class: "Shrimp",
+          species_common_name: "Guppy",
+          species_latin_name: "Poecilia reticulata",
+          member_name: "Jane Ortiz",
+          reproduction_date: "Sep 20, 2026",
+        },
         classificationMismatch: true,
-        classificationAgreement: { speciesType: true, programClass: false },
-        allowed: { confirmWitness: false, bindSpecies: true, adoptSpeciesClassification: true, requestChanges: true },
       });
-
-      assert.match(html, /id="witness-mismatch"/);
-      assert.match(html, /<tr class="font-semibold"><td class="pr-4">Program class<\/td><td class="pr-4">Cichlids - New World<\/td><td>Livebearers<\/td>/);
-      assert.match(html, /<tr><td class="pr-4">Species type<\/td>/, "the agreeing row is not highlighted");
-      assert.match(html, /hx-post="\/admin\/submissions\/42\/adopt-species-classification"/);
-      assert.match(html, /Use the Species&#39; type and class|Use the Species' type and class/);
-      assert.doesNotMatch(html, /Approve for Screening/);
-      assert.match(html, /Resolve the mismatch to approve for screening/);
-      assert.match(html, /Request Changes/);
-    });
-
-    void test("no mismatch: nothing is highlighted and nothing offered to adopt", () => {
-      const html = render({
-        submission: { id: 42, species_type: "Fish", species_class: "Livebearers" },
-        boundSpecies: bound,
-        boundSpeciesName: "Poecilia reticulata",
-        classificationMismatch: false,
-        allowed: { confirmWitness: true, bindSpecies: true, adoptSpeciesClassification: true, requestChanges: true },
-      });
-      assert.doesNotMatch(html, /witness-mismatch/);
+      assert.match(html, /id="witness-mismatch"[^>]*>The submission says Invert · Shrimp\. Confirming records it as Fish · Livebearers\./);
+      assert.match(html, /Is that right/);
       assert.doesNotMatch(html, /adopt-species-classification/);
-      assert.match(html, /Approve for Screening/);
     });
 
-    void test("Names to add: common offered ticked, Latin unticked, a Name (or a scientific Name in the common field) shown without a box, a blank not at all", () => {
-      const renderNames = (
-        spellingAgreement: Record<string, string>,
-        submission: Record<string, string> = {}
-      ) =>
-        render({
-          submission: {
-            id: 42,
-            species_type: "Fish",
-            species_common_name: "Fancy Guppy",
-            species_latin_name: "Poecilia reticulatta",
-            ...submission,
-          },
-          boundSpecies: bound,
-          boundSpeciesName: "Poecilia reticulata",
-          spellingAgreement,
-        });
-
-      // Neither is a Name yet: both offered, the common one ticked
-      let html = renderNames({ commonName: "not-a-name", latinName: "not-a-name" });
-      assert.match(html, /<input type="checkbox" name="add_common_name" value="on" checked="checked"\/>/);
-      assert.match(html, /<input type="checkbox" name="add_scientific_name" value="on"\/>/);
+    void test("Names to add: offered only where the spelling is not a Name, common ticked and Latin unticked", () => {
+      const spelt = {
+        id: 42,
+        program: "fish",
+        species_type: "Fish",
+        species_class: "Livebearers",
+        species_common_name: "Fancy Guppy",
+        species_latin_name: "Poecilia reticulatta",
+        member_name: "Jane Ortiz",
+        reproduction_date: "Sep 20, 2026",
+      };
+      let html = render({ submission: spelt, spellingAgreement: { commonName: "not-a-name", latinName: "not-a-name" } });
+      assert.match(html, /id="witness-names"/);
+      assert.match(html, /<input class="mt-1" type="checkbox" name="add_common_name" value="on" checked="checked"\/>/);
+      assert.match(html, /<input class="mt-1" type="checkbox" name="add_scientific_name" value="on"\/>/);
       assert.match(html, /Fancy Guppy/);
       assert.match(html, /Poecilia reticulatta/);
 
-      // Already Names: shown as such, with no box
-      html = renderNames({ commonName: "name", latinName: "name" });
-      assert.doesNotMatch(html, /add_common_name|add_scientific_name/);
-      assert.match(html, /id="witness-common-is-name"/);
-      assert.match(html, /id="witness-latin-is-name"/);
-      assert.match(html, /is already a Name/);
+      html = render({ submission: spelt, spellingAgreement: { commonName: "name", latinName: "name" } });
+      assert.doesNotMatch(html, /witness-names|add_common_name|add_scientific_name/);
 
-      // A scientific Name in the common field (#421): shown as such, with no box
-      html = renderNames(
-        { commonName: "scientific-name", latinName: "name" },
-        { species_common_name: "Poecilia reticulata", species_latin_name: "Poecilia reticulata" }
-      );
-      assert.doesNotMatch(html, /add_common_name|witness-common-is-name/);
-      assert.match(html, /id="witness-common-is-scientific-name"/);
-      assert.match(html, /is one of this Species' scientific Names, so it is not added as a common name/);
-      assert.match(html, /id="witness-latin-is-name"/);
-
-      // Blank: nothing offered and nothing shown for it
-      html = renderNames({ commonName: "empty", latinName: "not-a-name" }, { species_common_name: "" });
-      assert.doesNotMatch(html, /add_common_name|witness-common-is-name|Add common name/);
+      html = render({ submission: spelt, spellingAgreement: { commonName: "scientific-name", latinName: "not-a-name" } });
+      assert.doesNotMatch(html, /add_common_name/);
       assert.match(html, /add_scientific_name/);
+
+      html = render({ submission: { ...spelt, species_common_name: "" }, spellingAgreement: { commonName: "empty", latinName: "not-a-name" } });
+      assert.doesNotMatch(html, /add_common_name/);
     });
 
-    void test("without the bind move, no bind controls are offered", () => {
-      const html = render({
-        boundSpecies: bound,
-        boundSpeciesName: "Poecilia reticulata",
-        allowed: { confirmWitness: true },
-      });
-      assert.doesNotMatch(html, /bind-species/);
-      assert.doesNotMatch(html, /dialog\/species\/new/);
+    void test("the sticky bar: the server's sum and the Confirm button, refreshed on every change", () => {
+      const html = render({ summary: ready });
+      assert.match(html, /id="witness-footer"[^>]*hx-post="\/admin\/submissions\/42\/witness-summary"/);
+      assert.match(html, /hx-trigger="change from:#witness-form"/);
+      assert.match(html, /hx-include="#witness-form"/);
+      assert.match(html, /id="witness-sum-lines">Base points 10 \+ CARES Species Bonus 5</);
+      assert.match(html, /id="witness-sum-total">15 pts</);
+      assert.match(html, /id="witness-confirm"[^>]*type="submit">Confirm witness · 15 pts</);
+      assert.doesNotMatch(html, /id="witness-confirm"[^>]*disabled/);
+
+      const waiting = render({ summary: notReady });
+      assert.match(waiting, /id="witness-sum-hint">Is the species right\? Answer above first</);
+      assert.match(waiting, /id="witness-confirm"[^>]*disabled/);
+    });
+
+    void test("while changes are outstanding the panel offers nothing: the ball is with the member", () => {
+      const html = render({ changesRequested: true, allowed: { confirmWitness: false, bindSpecies: false, requestChanges: false } });
+      assert.match(html, /id="witness-waiting-on-member"/);
+      assert.match(html, /Changes were requested/);
+      assert.doesNotMatch(html, /witness-form|confirm-witness|name="points"/);
+    });
+
+    void test("Request changes is offered; without the moves, no search and no Request changes", () => {
+      assert.match(render({}), /hx-get="\/admin\/dialog\/submissions\/42\/request-changes"[^>]*>Request changes</);
+      const html = render({ allowed: { confirmWitness: true } });
+      assert.doesNotMatch(html, /bind-species|dialog\/species\/new|request-changes/);
     });
 
     void test("the create-Species dialog creates and binds in one request", () => {
@@ -1069,7 +1185,8 @@ void describe("Pug Template Rendering", () => {
 
   /**
    * Approval is about Points: the bound Species read-only with its Point
-   * class, Points prefilled from it, and no species step at all.
+   * class, the Points and bonuses prefilled from what the Witness set (or the
+   * Point class, before it did), and no species step at all.
    */
   void describe("Approval panel", () => {
     const render = (data: Record<string, unknown>) =>
@@ -1091,7 +1208,7 @@ void describe("Pug Template Rendering", () => {
     };
 
     void test("bound, with a Point class: the Species read-only and the Points prefilled from it", () => {
-      const html = render({ approval });
+      const html = render({ speciesFacts: approval });
 
       assert.match(html, /id="approval-species-name"[^>]*>Poecilia reticulata</);
       assert.match(html, /Livebearers/);
@@ -1104,8 +1221,31 @@ void describe("Pug Template Rendering", () => {
       assert.doesNotMatch(html, /tom-select|species-search|name="group_id"|dialog\/species\/new|approval-bonuses/);
     });
 
+    void test("witnessed with points: the Points and bonuses prefilled from what the Witness set", () => {
+      const html = render({
+        speciesFacts: approval,
+        submission: {
+          id: 42,
+          species_type: "Fish",
+          program: "fish",
+          points: 15,
+          cares_species: 0,
+          article_points: 5,
+          flowered: null,
+          sexual_reproduction: null,
+        },
+      });
+
+      assert.match(html, /<option value="15" selected="selected">15<\/option>/, "the Witness's 15, not the Point class's 10");
+      assert.doesNotMatch(html, /<option value="10" selected/);
+      assert.match(html, /<input type="checkbox" id="cares" name="cares_species"\/>/, "the witness turned CARES off");
+      assert.match(html, /set at the Witness/);
+      assert.match(html, /<option value="5" selected="selected">5<\/option>/);
+      assert.match(html, /<input type="checkbox" id="first" name="first_time_species"\/>/, "first-time is still approval's");
+    });
+
     void test("bound, with no Point class: nothing prefilled, and it says so", () => {
-      const html = render({ approval: { ...approval, pointClass: null } });
+      const html = render({ speciesFacts: { ...approval, pointClass: null } });
 
       assert.match(html, /not set for this Species/);
       assert.match(html, /<option value="" disabled="disabled" selected="selected">Base Points<\/option>/);
@@ -1114,7 +1254,7 @@ void describe("Pug Template Rendering", () => {
     });
 
     void test("unbound: says it must be bound first, offers the binding, and no Approve", () => {
-      const html = render({ approval: null, allowed: { bindSpecies: true } });
+      const html = render({ speciesFacts: null, allowed: { bindSpecies: true } });
 
       assert.match(html, /id="approval-unbound"/);
       assert.match(html, /Not bound to a Species/);
@@ -1127,7 +1267,7 @@ void describe("Pug Template Rendering", () => {
     });
 
     void test("unbound, when the viewer may not bind: no binding offered", () => {
-      const html = render({ approval: null, allowed: { bindSpecies: false } });
+      const html = render({ speciesFacts: null, allowed: { bindSpecies: false } });
 
       assert.match(html, /Not bound to a Species/);
       assert.doesNotMatch(html, /tom-select|name="group_id"|dialog\/species\/new/);

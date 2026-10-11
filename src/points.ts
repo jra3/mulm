@@ -4,8 +4,9 @@ import { isProgramType, programMetadata, ProgramType } from "./programs";
 /**
  * The Points rule, in one place.
  *
- * A submission's total is its base points plus the bonuses the committee
- * entered at approval time:
+ * A submission's total is its base points plus its bonuses. The witness sets
+ * the base points and every bonus but first-time when confirming the Witness
+ * (ADR-0003); approval sets first-time and awards the total:
  *
  *   total = points
  *         + article_points
@@ -16,7 +17,9 @@ import { isProgramType, programMetadata, ProgramType } from "./programs";
  *
  * The formula is uniform across programs. Which bonuses a program may carry
  * (CARES on BAP only; flowered and sexual reproduction on HAP only) is an
- * invariant enforced on write, not a condition in the sum.
+ * invariant enforced on write, not a condition in the sum. Only an approved
+ * Submission's total counts toward anything: every total-reporting query
+ * filters on `approved_on`, never on `points` being set.
  *
  * The rule is written here twice on purpose - once as a SQL fragment that
  * every total-reporting query composes, once as a TypeScript function for
@@ -99,8 +102,8 @@ export type BonusLine = {
  *
  * Base points are not a bonus, so they are not a line here; the caller shows
  * them separately. These amounts plus the row's base points equal
- * `totalPoints(row)`, which is what makes the approval email's list add up to
- * the total it prints.
+ * `totalPoints(row)`, which is what makes the approval email's list and the
+ * witness panel's running sum add up to the total they print.
  */
 export function bonusBreakdown(row: PointsRow): BonusLine[] {
   const base = row.points ?? 0;
@@ -174,9 +177,9 @@ const everyProgram: readonly BonusField[] = ["article_points", "first_time_speci
 /**
  * Which bonuses each program may carry: the article and first-time species
  * bonuses everywhere, CARES on BAP (fish) only, flowered and sexual
- * reproduction on HAP (plant) only. The same rule the approval panel hides
- * checkboxes by, as data, so a schema or a template can read it instead of
- * restating it.
+ * reproduction on HAP (plant) only. The same rule the witness and approval
+ * panels hide controls by, as data, so a schema or a template can read it
+ * instead of restating it.
  */
 export const programBonuses: Record<ProgramType, readonly BonusField[]> = {
   fish: [...everyProgram, "cares_species"],
@@ -212,13 +215,14 @@ export type BonusFields = Partial<Record<BonusField, boolean | number | null>>;
  * one issue per offending field, on that field's own path, so the error map
  * lands the message at the control that set it.
  *
- * Rejection, not correction - nothing is zeroed silently. Through the approval
- * panel an inapplicable flag cannot be sent, so its arrival means a stale form,
- * a bug, or a hand-crafted request, all of which should be visible.
+ * Rejection, not correction - nothing is zeroed silently. Through the witness
+ * and approval panels an inapplicable flag cannot be sent, so its arrival
+ * means a stale form, a bug, or a hand-crafted request, all of which should
+ * be visible.
  *
  * Attach it to the object schema the program's form parses:
  *
- *   approvalFields.superRefine(refineProgramBonuses(program))
+ *   confirmWitnessFields.superRefine(refineProgramBonuses(program))
  *
  * Note that an object-level refinement does not run when the base parse fails,
  * so a body that is also missing a required field reports only that.

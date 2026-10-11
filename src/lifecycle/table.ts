@@ -1,5 +1,5 @@
 import { MIDDLE_STATES, SubmissionState } from "./state";
-import { AuthorizationError, MismatchError, StateError, UnboundError } from "./errors";
+import { AuthorizationError, StateError, UnboundError } from "./errors";
 
 /**
  * The transition table: which moves are legal from which states, and for whom.
@@ -15,8 +15,10 @@ import { AuthorizationError, MismatchError, StateError, UnboundError } from "./e
  * |                         |                                         | pendingWitness if   |                    |
  * |                         |                                         | it was witnessed    |                    |
  * | returnToDraft           | pendingWitness .. awaitingFinalSubmission| draft              | member             |
- * | confirmWitness          | pendingWitness, bound, type and class   | waitingPeriod       | committee, not the submitter |
- * |                         | agreeing with the Species               |                     |                    |
+ * | confirmWitness          | pendingWitness, bound                   | waitingPeriod,      | committee, not the submitter |
+ * |                         | (takes the Species, base points and     | points set          |                    |
+ * |                         | bonuses; rebinds and adopts the         |                     |                    |
+ * |                         | Species' classification as needed)      |                     |                    |
  * | bindSpecies             | the four middle states, no changes      | same, bound         | committee, not the submitter |
  * |                         | requested                               |                     |                    |
  * | adoptSpeciesClassification | the four middle states, bound, no    | same, agreeing (or  | committee, not the submitter |
@@ -31,9 +33,10 @@ import { AuthorizationError, MismatchError, StateError, UnboundError } from "./e
  * | deleteSubmission        | draft (member); draft .. inApprovalQueue (committee) | gone   | member or committee|
  *
  * Every member save of a submitted Submission (submit, saveChanges, resubmit)
- * voids a confirmed Witness (ADR-0001; `voidWitness` in transitions.ts).
- * saveDraft does not, and committee moves never do: binding a Species is the
- * committee's, not an edit of the member's form.
+ * voids a confirmed Witness (ADR-0001; `voidWitness` in transitions.ts) and
+ * clears the points it set (ADR-0003). saveDraft does not, and committee
+ * moves never do: binding a Species is the committee's, not an edit of the
+ * member's form.
  *
  * A member save also clears a binding the saved form no longer agrees with
  * (CONTEXT.md, Bound; `bindingAfterSave` in transitions.ts).
@@ -81,11 +84,6 @@ export type MoveDefinition = {
   readonly neverSubmitter?: boolean;
   /** Legal only on a Submission bound to a Species. */
   readonly requiresBound?: boolean;
-  /**
-   * Legal only while the Submission's Species type and Program class agree
-   * with the bound Species'.
-   */
-  readonly requiresAgreeingClassification?: boolean;
 };
 
 const MEMBER_ONLY: readonly Actor[] = ["member"];
@@ -140,7 +138,14 @@ export const moves = {
     ownerOnly: true,
   },
 
-  /** Nothing enters the waiting period without a Species: the witness binds it first. */
+  /**
+   * The Witness sets the Species and the points (ADR-0003): the base points
+   * and every bonus but first-time, which approval computes. Nothing enters
+   * the waiting period without a Species, so the Submission must be bound,
+   * by the member's pick, by `bindSpecies`, or by the Species the confirm
+   * itself carries. The confirm also gives the Submission its Species' type
+   * and class where they disagree, so there is no mismatch left to refuse.
+   */
   confirmWitness: {
     id: "confirmWitness",
     from: ["pendingWitness"],
@@ -148,7 +153,6 @@ export const moves = {
     requiresNoChangesPending: true,
     neverSubmitter: true,
     requiresBound: true,
-    requiresAgreeingClassification: true,
   },
 
   /**
@@ -259,12 +263,6 @@ export type MoveContext = {
   readonly isOwner: boolean;
   /** Whether the Submission is bound to a Species. */
   readonly bound: boolean;
-  /**
-   * Whether the Submission's Species type and Program class agree with the
-   * bound Species'. Undefined when unbound or not looked up; only a move that
-   * `requiresAgreeingClassification` needs it.
-   */
-  readonly classificationAgrees?: boolean;
 };
 
 /** The states `move` is legal from for this actor. */
@@ -295,7 +293,7 @@ export function canMove(move: MoveDefinition, context: MoveContext): boolean {
  * wrong and confusing, because they are on the committee.
  */
 export function assertMoveIsLegal(move: MoveDefinition, context: MoveContext): void {
-  const { state, changesPending, actor, actorId, isOwner, bound, classificationAgrees } = context;
+  const { state, changesPending, actor, actorId, isOwner, bound } = context;
 
   if (move.neverSubmitter && isOwner) {
     throw new AuthorizationError(
@@ -348,14 +346,6 @@ export function assertMoveIsLegal(move: MoveDefinition, context: MoveContext): v
 
   if (move.requiresBound && !bound) {
     throw new UnboundError(`Bind this Submission to a Species before you ${describeOnBound(move.id)}`, move.id);
-  }
-
-  if (move.requiresAgreeingClassification && classificationAgrees === false) {
-    throw new MismatchError(
-      "This Submission's Species type or Program class disagrees with its Species. " +
-        `Adopt the Species' values, rebind it, or request changes before you ${describeOnBound(move.id)}`,
-      move.id
-    );
   }
 }
 

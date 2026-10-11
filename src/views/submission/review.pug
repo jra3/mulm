@@ -46,7 +46,7 @@ html
                 div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
                     +reviewTextInput("Member Name", "member_name")
 
-            div.max-w-4xl.mx-auto.text-left.pt-4.px-4
+            div.max-w-4xl.mx-auto.text-left.pt-4.px-4#species-details
                 .flex.items-center.gap-2.mb-4
                     h2(class="text-l font-bold") Species Details
                     if submission.cares_species == 1
@@ -224,7 +224,7 @@ html
                                 p.text-yellow-700.mb-2= `Your ${speciesText} needs to be screened by a different program admin for completeness.`
                                 p.text-yellow-600.text-sm You cannot screen your own submissions. Please contact another admin to review this submission.
                     else if isAdmin
-                        // The witness binds the Species, then confirms
+                        // The witness settles the Species and sets the points, then confirms
                         include ../admin/witnessPanel.pug
 
                 // Waiting period: the clock has not run out yet

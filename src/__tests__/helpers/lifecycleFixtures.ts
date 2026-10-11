@@ -1,6 +1,6 @@
 import { query, writeConn } from "../../db/conn";
 import type { Submission } from "../../db/submissions";
-import type { Notifier, SubmissionState } from "../../lifecycle";
+import type { Notifier, SubmissionState, WitnessPoints } from "../../lifecycle";
 import { setNotifier } from "../../lifecycle";
 import { createTestSubmission, ensureGuppySpecies, type CreateSubmissionOptions } from "./testHelpers";
 import type { Database } from "sqlite";
@@ -70,6 +70,22 @@ export async function submissionInState(
       return id;
     }
   }
+}
+
+/**
+ * What a witness sets when confirming: base points of 10 and no bonuses,
+ * against the Species the Submission is already bound to. Override what a
+ * test is about.
+ */
+export function witnessPoints(overrides: Partial<WitnessPoints> = {}): WitnessPoints {
+  return {
+    points: 10,
+    article_points: null,
+    cares_species: false,
+    flowered: false,
+    sexual_reproduction: false,
+    ...overrides,
+  };
 }
 
 /** Lay the Changes requested overlay over whatever state a Submission is in. */

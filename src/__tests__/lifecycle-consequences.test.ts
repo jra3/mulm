@@ -33,6 +33,7 @@ import {
   recordNotifications,
   requestChangesFixture,
   submissionInState,
+  witnessPoints,
   type RecordingNotifier,
 } from "./helpers/lifecycleFixtures";
 import type { FormValues } from "@/forms/submission";
@@ -142,7 +143,7 @@ void describe("Submission lifecycle - consequences", () => {
     const id = await at("pendingWitness");
     sent.clear();
 
-    await confirmWitness(committee, id);
+    await confirmWitness(committee, id, witnessPoints());
 
     assert.deepStrictEqual(sent.kinds, ["witnessConfirmed"]);
     assert.deepStrictEqual(sent.of("witnessConfirmed")[0].to, [ctx.member.contact_email]);

@@ -16,7 +16,7 @@ import {
 import { approvalSchema } from "@/forms/approval";
 import { approvedEditSchema } from "@/forms/approvedEdit";
 import { bindSpeciesForm } from "@/forms/bindSpecies";
-import { confirmWitnessForm } from "@/forms/confirmWitness";
+import { confirmWitnessSchema, witnessSummaryForm } from "@/forms/confirmWitness";
 import { inviteSchema } from "@/forms/member";
 import { sendInviteEmail } from "@/notifications";
 import { getNextLevel, programMetadata, programs } from "@/programs";
@@ -25,7 +25,7 @@ import { Response, NextFunction } from "express";
 import { createAuthCode } from "@/db/auth";
 import { AuthCode, generateRandomCode } from "@/auth";
 import { validateFormResult } from "@/forms/utils";
-import { allowedMoves, approvalPanelData, validateSubmission } from "./submission";
+import { allowedMoves, boundSpeciesFacts, validateSubmission, witnessSummary } from "./submission";
 import {
   isLivestock,
   foodTypes,
@@ -367,29 +367,60 @@ function sendWitnessPanelRefusal(res: Response, messages: string[]): void {
   res.render("admin/witnessErrors", { messages });
 }
 
+/**
+ * POST /admin/submissions/:id/confirm-witness
+ * The witness panel's confirm: the Species the witness settled on, the base
+ * points and bonuses, and which spellings become Names, validated per
+ * Program and written in the Witness's one transaction.
+ */
 export const confirmWitnessAction = async (req: MulmRequest, res: Response) => {
   const submission = await validateSubmission(req, res);
   if (!submission) {
     return;
   }
 
-  const parsed = confirmWitnessForm.safeParse(req.body ?? {});
+  const parsed = confirmWitnessSchema(submission.program).safeParse(req.body ?? {});
   if (!parsed.success) {
     sendWitnessPanelRefusal(res, parsed.error.issues.map((issue) => issue.message));
     return;
   }
 
-  // The spellings the witness ticked become Names of the bound Species
+  const { species_id, points, article_points, cares_species, flowered, sexual_reproduction } = parsed.data;
   const ran = await witnessPanelMove(req, res, submission.id, () =>
-    lifecycle.confirmWitness(callerFor(req.viewer!), submission.id, {
-      common: parsed.data.add_common_name,
-      scientific: parsed.data.add_scientific_name,
-    })
+    lifecycle.confirmWitness(
+      callerFor(req.viewer!),
+      submission.id,
+      { species_id, points, article_points, cares_species, flowered, sexual_reproduction },
+      { common: parsed.data.add_common_name, scientific: parsed.data.add_scientific_name }
+    )
   );
   if (!ran) return;
 
   // Redirect to witness queue for the submission's program
   res.set("HX-Redirect", `/admin/witness-queue/${submission.program}`).send();
+};
+
+/**
+ * POST /admin/submissions/:id/witness-summary
+ * The witness panel's sticky bar, re-summed on the server from the form as it
+ * stands: the one Points rule, not a copy of it in the browser.
+ */
+export const witnessSummaryAction = async (req: MulmRequest, res: Response) => {
+  const submission = await validateSubmission(req, res);
+  if (!submission) {
+    return;
+  }
+
+  const parsed = witnessSummaryForm.safeParse(req.body ?? {});
+  if (!parsed.success) {
+    res.status(400).send(parsed.error.issues.map((issue) => issue.message).join("; "));
+    return;
+  }
+
+  const { species_id, ...values } = parsed.data;
+  res.render("admin/witnessSummary", {
+    summary: witnessSummary({ ...values, bound: (species_id ?? submission.species_id) != null }),
+  });
 };
 
 /**
@@ -549,10 +580,14 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
       submission: {
         id: submission.id,
         points: submission.points,
+        article_points: submission.article_points,
+        cares_species: submission.cares_species,
+        flowered: submission.flowered,
+        sexual_reproduction: submission.sexual_reproduction,
         species_class: submission.species_class,
         program: submission.program,
       },
-      approval: await approvalPanelData(submission),
+      speciesFacts: await boundSpeciesFacts(submission),
       allowed: allowedMoves(viewer, submission, lifecycle.deriveState(submission)),
       errors,
     });
