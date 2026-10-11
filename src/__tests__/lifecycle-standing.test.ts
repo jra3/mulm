@@ -17,6 +17,7 @@ import {
 import {
   approveAsShown,
   recordNotifications,
+  correctionOf,
   submissionInState,
   type RecordingNotifier,
 } from "./helpers/lifecycleFixtures";
@@ -109,8 +110,8 @@ void describe("Submission lifecycle - standing", () => {
       const { ids } = await approveAnabantoids(3, 10);
       const before = (await feed()).filter((e) => e.activity_type === "level_up").length;
 
-      await correctPoints(committee, ids[0], { points: 5 }, "Wrong point class");
-      await correctPoints(committee, ids[0], { points: 10 }, "No, it was right");
+      await correctPoints(committee, ids[0], await correctionOf(ids[0], { points: 5 }), "Wrong point class");
+      await correctPoints(committee, ids[0], await correctionOf(ids[0], { points: 10 }), "No, it was right");
 
       const after = (await feed()).filter((e) => e.activity_type === "level_up");
       assert.strictEqual(after.length, before);
@@ -148,7 +149,7 @@ void describe("Submission lifecycle - standing", () => {
 
       // Down to 15 points, below Hobbyist's threshold of 25.
       for (const id of ids) {
-        await correctPoints(committee, id, { points: 5 }, "Wrong point class");
+        await correctPoints(committee, id, await correctionOf(id, { points: 5 }), "Wrong point class");
       }
 
       assert.strictEqual((await getMember(ctx.member.id))!.fish_level, "Participant");
@@ -191,7 +192,7 @@ void describe("Submission lifecycle - standing", () => {
       await correctPoints(
         committee,
         ids[5],
-        { species_id: await speciesOf("Catfish & Loaches") },
+        await correctionOf(ids[5], { species_id: await speciesOf("Catfish & Loaches") }),
         "Misidentified species"
       );
 
@@ -217,7 +218,7 @@ void describe("Submission lifecycle - standing", () => {
       await correctPoints(
         committee,
         ids[0],
-        { species_id: await speciesOf("Characins") },
+        await correctionOf(ids[0], { species_id: await speciesOf("Characins") }),
         "Misidentified species"
       );
 
@@ -287,8 +288,8 @@ void describe("Submission lifecycle - standing", () => {
       ids: [id],
     } = await approveAnabantoids(1);
 
-    await correctPoints(committee, id, { points: 20 }, "Wrong point class");
-    await correctPoints(committee, id, { points: 15 }, "Wrong again");
+    await correctPoints(committee, id, await correctionOf(id, { points: 20 }), "Wrong point class");
+    await correctPoints(committee, id, await correctionOf(id, { points: 15 }), "Wrong again");
 
     const approvals = (await feed()).filter((e) => e.activity_type === "submission_approved");
     assert.strictEqual(approvals.length, 1);

@@ -1,7 +1,7 @@
 import { query, writeConn } from "../../db/conn";
 import type { Submission } from "../../db/submissions";
 import type { MemberRecord } from "../../db/members";
-import type { Caller, Notifier, SubmissionState, WitnessedFacts, WitnessPoints } from "../../lifecycle";
+import type { Caller, Notifier, PointsCorrection, SubmissionState, WitnessedFacts, WitnessPoints } from "../../lifecycle";
 import { approve, previewApproval, setNotifier } from "../../lifecycle";
 import { countSubmissionsOfSpecies } from "../../species";
 import { createTestSubmission, ensureGuppySpecies, type CreateSubmissionOptions } from "./testHelpers";
@@ -73,6 +73,28 @@ export function witnessPoints(overrides: Partial<WitnessPoints> = {}): WitnessPo
     cares_species: false,
     flowered: false,
     sexual_reproduction: false,
+    ...overrides,
+  };
+}
+
+/**
+ * A correction that keeps everything the row carries (#528): the base points
+ * and bonuses as they stand, against the bound Species, with first-time as
+ * approval decided it on an Approved row. Override what a test is about, so a
+ * test that changes the base points does not also silently drop a bonus.
+ */
+export async function correctionOf(
+  submissionId: number,
+  overrides: Partial<PointsCorrection> = {}
+): Promise<PointsCorrection> {
+  const row = (await readSubmission(submissionId))!;
+  return {
+    points: row.points ?? 10,
+    article_points: row.article_points || null,
+    cares_species: Boolean(row.cares_species),
+    flowered: Boolean(row.flowered),
+    sexual_reproduction: Boolean(row.sexual_reproduction),
+    ...(row.approved_on != null ? { first_time_species: Boolean(row.first_time_species) } : {}),
     ...overrides,
   };
 }

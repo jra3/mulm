@@ -20,17 +20,20 @@ import { AuthorizationError, StateError, UnboundError } from "./errors";
  * |                         | to create, base points and bonuses;     | the clock has run), |                    |
  * |                         | rebinds and adopts the Species'         | points set; the     |                    |
  * |                         | classification as needed)               | member emailed them |                    |
- * | bindSpecies             | the three middle states, no changes     | same, bound         | committee, not the submitter |
+ * | bindSpecies             | pendingWitness, no changes requested    | same, bound         | committee, not the submitter |
+ * | adoptSpeciesClassification | pendingWitness, bound, no changes    | same, agreeing      | committee, not the submitter |
  * |                         | requested                               |                     |                    |
- * | adoptSpeciesClassification | the three middle states, bound, no   | same, agreeing (or  | committee, not the submitter |
- * |                         | changes requested                       | waitingPeriod, if the new clock has not run) | |
  * | requestChanges          | the three middle states                 | same, flag set      | committee          |
  * | resubmit                | the three middle states                 | as saveChanges,     | member             |
  * |                         |                                         | flag cleared        |                    |
  * | approve                 | inApprovalQueue, bound, with points     | approved: first-    | committee, not the submitter |
  * |                         | (takes the total the approver saw, and  | time computed, the  |                    |
  * |                         | refuses if the row awards another)      | points awarded      |                    |
- * | correctPoints           | approved                                | approved            | committee          |
+ * | correctPoints           | waitingPeriod, inApprovalQueue or       | same (or the        | committee, not the submitter |
+ * |                         | approved, bound or naming a Species     | waiting period, if  |                    |
+ * |                         | (takes the Species or a new one to      | the new Species'    |                    |
+ * |                         | create, base points and bonuses, first- | clock has not run); |                    |
+ * |                         | time on Approved only, and a reason)    | Witness untouched   |                    |
  * | deleteSubmission        | draft (member); draft .. inApprovalQueue (committee) | gone   | member or committee|
  *
  * Every member save of a submitted Submission (submit, saveChanges, resubmit)
@@ -100,8 +103,8 @@ export const moves = {
   /**
    * A Submission's contents are the member's own. The committee changes a
    * Submission by asking for changes, not by typing into it - the one
-   * exception being a correction to an Approved Submission, which carries a
-   * stated reason and goes on the record.
+   * exception being a correction to the Species and points it set itself,
+   * which carries a stated reason and goes on the record.
    *
    * Filing a new Submission on a member's behalf is a different matter and
    * still allowed: creation is not a move from a state, so it is guarded in
@@ -165,12 +168,14 @@ export const moves = {
   /**
    * Bind (or rebind) the Submission to a Species from the catalogue - the
    * witness's job, recorded in the changelog. Never the submitter, as with the
-   * Witness it prepares. Not on an Approved Submission: that is a Points
-   * correction, with a stated reason.
+   * Witness it prepares. Only while a Witness is awaited: once it is
+   * confirmed the Species and the points were set together, so the Species
+   * changes only together with the points, through `correctPoints`, with a
+   * stated reason (#528).
    */
   bindSpecies: {
     id: "bindSpecies",
-    from: MIDDLE_STATES,
+    from: ["pendingWitness"],
     actors: COMMITTEE_ONLY,
     requiresNoChangesPending: true,
     neverSubmitter: true,
@@ -179,11 +184,13 @@ export const moves = {
   /**
    * The witness's one-click answer to a mismatch: the Submission takes the
    * bound Species' Species type and Program class. A committee move on the
-   * changelog, like binding, so it leaves a confirmed Witness in place.
+   * changelog, like binding, and like binding legal only while a Witness is
+   * awaited; the confirm adopts the classification itself, and after it a
+   * correction does (#528).
    */
   adoptSpeciesClassification: {
     id: "adoptSpeciesClassification",
-    from: MIDDLE_STATES,
+    from: ["pendingWitness"],
     actors: COMMITTEE_ONLY,
     requiresNoChangesPending: true,
     neverSubmitter: true,
@@ -228,12 +235,23 @@ export const moves = {
     requiresBound: true,
   },
 
-  /** The only movement out of Approved. Approved is otherwise terminal. */
+  /**
+   * The committee puts the Species and the points right, from the Witness on
+   * (#528): in the waiting period, in the approval queue and on an Approved
+   * Submission, which is how it acts on a member's dispute and on a bonus
+   * earned after approval. It carries the Species and the points together,
+   * needs a stated reason, goes on the changelog, and leaves the Witness in
+   * place. Never the submitter, as with the Witness and approval. Bound as
+   * the confirm is: the Submission's Species, or the one the correction
+   * names, so a correction never leaves a Submission with points and no
+   * Species. The only movement out of Approved, which is otherwise terminal.
+   */
   correctPoints: {
     id: "correctPoints",
-    from: ["approved"],
+    from: ["waitingPeriod", "inApprovalQueue", "approved"],
     actors: COMMITTEE_ONLY,
     neverSubmitter: true,
+    requiresBound: true,
   },
 
   /**
@@ -393,6 +411,8 @@ function describeOnBound(id: MoveId): string {
       return "confirm its Witness";
     case "approve":
       return "approve it";
+    case "correctPoints":
+      return "correct its points";
     default:
       return describe(id, "it");
   }

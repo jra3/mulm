@@ -9,7 +9,8 @@ import * as admin from "@/routes/admin";
 import * as member from "@/routes/member";
 import * as submission from "@/routes/submission";
 import { createMember } from "@/db/members";
-import { resolveSpecies } from "@/species";
+import { getSubmissionById } from "@/db/submissions";
+import { createSpecies, resolveSpecies } from "@/species";
 import { confirmWitness, resetNotifier, WITNESS_RESET_NOTE } from "@/lifecycle";
 import { addNote } from "@/db/submission_notes";
 import { bonusFields } from "@/points";
@@ -488,5 +489,223 @@ void describe("Approval queue and the one button", () => {
     assert.match(res.text, /id="approval-preview">Base points 10 \+ First Time Species Bonus 5 \+ CARES Species Bonus 5 = <b>20 pts<\/b></);
     assert.match(res.text, new RegExp(`id="approval-queue-link" href="/admin/queue#queue-row-${readyId}"`));
     assert.doesNotMatch(res.text, /\/approve"|name="points"/);
+  });
+});
+
+/**
+ * The correction form (#528): reached as a page, asked for again with another
+ * Species chosen, and saved with a reason. Rendered through the real handlers
+ * so the locals the panel reads are the ones the routes pass.
+ */
+void describe("The committee corrects Species and points", () => {
+  let testDb: TestDatabase;
+  let committee: MulmRequest["viewer"];
+  let committeeId: number;
+  let ownerId: number;
+  let witnessedId: number;
+
+  beforeEach(async () => {
+    testDb = await setupTestDatabase();
+    recordNotifications();
+    ownerId = await createMember("breeder@example.com", "Dan Wu");
+    committeeId = await createMember("witness@example.com", "Jane Ortiz");
+    committee = { id: committeeId, display_name: "Jane Ortiz", contact_email: "witness@example.com", is_admin: true };
+    witnessedId = await submissionInState(testDb.db, "waitingPeriod", {
+      memberId: ownerId,
+      witnessedBy: committeeId,
+      points: 10,
+      caresSpecies: true,
+    });
+  });
+  afterEach(async () => {
+    resetNotifier();
+    await testDb.cleanup();
+  });
+
+  const app = (viewer: MulmRequest["viewer"] = committee) =>
+    appWith((a) => {
+      a.use(express.urlencoded({ extended: true }));
+      a.use((_req, res, next) => {
+        res.locals.bonusFields = bonusFields;
+        next();
+      });
+      a.get("/submissions/:id", submission.view);
+      a.get("/admin/submissions/:id/correct-points", admin.correctPointsFormAction);
+      a.post("/admin/submissions/:id/correct-points", admin.correctPointsAction);
+      a.get("/admin/submissions/:id/record-species", admin.recordSpeciesFormAction);
+      a.post("/admin/submissions/:id/record-species", admin.recordSpeciesAction);
+      a.post("/admin/submissions/:id/witness-summary", admin.witnessSummaryAction);
+    }, viewer);
+
+  void test("the page shows the current Species and points, prefilled, with Save correction", async () => {
+    const res = await request(app()).get(`/admin/submissions/${witnessedId}/correct-points`);
+
+    assert.strictEqual(res.status, 200);
+    assert.match(res.text, /<title>Correct species and points - BAS BAP<\/title>/);
+    assert.match(res.text, /id="witnessPanel"/);
+    assert.match(res.text, /Dan Wu/);
+    assert.match(res.text, /Currently/);
+    assert.match(res.text, /id="witness-bound-species"[^>]*>Poecilia reticulata</);
+    // A page carries a doctype, so Pug writes boolean attributes bare
+    assert.match(res.text, /name="points" value="10" id="witness-points-10" checked>/);
+    assert.match(res.text, /name="cares_species" value="on" checked>/);
+    assert.match(res.text, /id="correction-save" type="submit">Save correction · 15 pts</);
+    assert.doesNotMatch(res.text, /name="first_time_species"/, "not approved: first-time is approval's");
+    assert.match(res.text, new RegExp(`id="correction-cancel" href="/submissions/${witnessedId}"`));
+  });
+
+  void test("the Submission page links the committee to the form from the Witness on, and the approval queue row already does", async () => {
+    const res = await request(app()).get(`/submissions/${witnessedId}`);
+
+    assert.strictEqual(res.status, 200);
+    assert.match(res.text, new RegExp(`id="correct-points-link" href="/admin/submissions/${witnessedId}/correct-points"`));
+
+    const approvedId = await submissionInState(testDb.db, "approved", { memberId: ownerId, witnessedBy: committeeId });
+    const approved = await request(app()).get(`/submissions/${approvedId}`);
+    assert.match(approved.text, new RegExp(`id="correct-points-link" href="/admin/submissions/${approvedId}/correct-points"`));
+  });
+
+  void test("asked for again with another Species, the panel alone comes back with that Species settled and its Point class as the base points", async () => {
+    const other = await createSpecies({
+      canonicalGenus: "Ameca",
+      canonicalSpeciesName: "splendens",
+      programClass: "Livebearers",
+      speciesType: "Fish",
+      pointClass: 15,
+    });
+
+    const res = await request(app())
+      .get(`/admin/submissions/${witnessedId}/correct-points`)
+      .query({ species_id: other })
+      .set("HX-Request", "true");
+
+    assert.strictEqual(res.status, 200);
+    assert.doesNotMatch(res.text, /<title>/, "the panel, not the page");
+    assert.match(res.text, /id="witnessPanel"/);
+    assert.match(res.text, /You chose/);
+    assert.match(res.text, /id="witness-bound-species"[^>]*>Ameca splendens</);
+    assert.match(res.text, new RegExp(`<input type="hidden" name="species_id" value="${other}"/>`));
+    assert.match(res.text, /name="points" value="15" id="witness-points-15" checked="checked"/);
+    assert.match(res.text, /id="witness-point-class"[^>]*>From the Species' Point class \(15\)\.</);
+    assert.doesNotMatch(res.text, /name="cares_species" value="on" checked/, "CARES follows the new Species");
+    assert.match(res.text, /id="correction-save" type="submit">Save correction · 15 pts</);
+    const row = await getSubmissionById(witnessedId);
+    assert.strictEqual(row!.species_id, await ensureGuppySpecies(testDb.db), "nothing written: Save does");
+
+    // The picker names it group_id; the same answer
+    const picked = await request(app())
+      .get(`/admin/submissions/${witnessedId}/correct-points`)
+      .query({ group_id: other })
+      .set("HX-Request", "true");
+    assert.match(picked.text, /id="witness-bound-species"[^>]*>Ameca splendens</);
+
+    const missing = await request(app())
+      .get(`/admin/submissions/${witnessedId}/correct-points`)
+      .query({ species_id: 987654 })
+      .set("HX-Request", "true");
+    assert.strictEqual(missing.headers["hx-retarget"], "#committee-error");
+    assert.match(missing.text, /Choose a Species that exists/);
+  });
+
+  void test("saving writes the correction with its reason and returns to the Submission; the member is emailed the new breakdown", async () => {
+    const res = await request(app())
+      .post(`/admin/submissions/${witnessedId}/correct-points`)
+      .type("form")
+      .send({
+        correction: "1",
+        species_id: String(await ensureGuppySpecies(testDb.db)),
+        species_settled: "1",
+        points: "15",
+        article_points: "5",
+        reason: "The member disputed the point class; it is a 15",
+      });
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.headers["hx-redirect"], `/submissions/${witnessedId}`);
+    const row = (await getSubmissionById(witnessedId))!;
+    assert.strictEqual(row.points, 15);
+    assert.strictEqual(row.article_points, 5);
+    assert.strictEqual(row.cares_species, 0, "the switch was off on the form");
+    assert.strictEqual(row.witness_verification_status, "confirmed");
+    assert.strictEqual(row.approved_on, null);
+  });
+
+  void test("a refusal lands in the panel's alert: no reason, first-time before approval, a bonus outside the Program", async () => {
+    const guppy = String(await ensureGuppySpecies(testDb.db));
+    const post = (body: Record<string, string>) =>
+      request(app()).post(`/admin/submissions/${witnessedId}/correct-points`).type("form").send({ species_id: guppy, points: "15", ...body });
+
+    const noReason = await post({});
+    assert.strictEqual(noReason.headers["hx-retarget"], "#committee-error");
+    assert.match(noReason.text, /Say why the points are being corrected/);
+
+    const early = await post({ reason: "First of its kind", first_time_species: "on" });
+    assert.match(early.text, /First-time is decided at approval/);
+
+    const plant = await post({ reason: "A plant", flowered: "on" });
+    assert.match(plant.text, /flowered/i);
+
+    assert.strictEqual((await getSubmissionById(witnessedId))!.points, 10, "nothing written");
+  });
+
+  void test("on an Approved Submission the form offers first-time, and saving it is accepted", async () => {
+    const approvedId = await submissionInState(testDb.db, "approved", { memberId: ownerId, witnessedBy: committeeId, points: 10 });
+
+    const page = await request(app()).get(`/admin/submissions/${approvedId}/correct-points`);
+    assert.match(page.text, /name="first_time_species" value="on"/);
+    assert.match(page.text, /id="correction-standing"[^>]*>Approved: the points are awarded/);
+
+    const res = await request(app())
+      .post(`/admin/submissions/${approvedId}/correct-points`)
+      .type("form")
+      .send({
+        species_id: String(await ensureGuppySpecies(testDb.db)),
+        points: "10",
+        first_time_species: "on",
+        reason: "It was the first of its Species after all",
+      });
+    assert.strictEqual(res.headers["hx-redirect"], `/submissions/${approvedId}`);
+    assert.strictEqual((await getSubmissionById(approvedId))!.first_time_species, 1);
+  });
+
+  void test("the committee's own Submission, and one still awaiting a Witness, get no form", async () => {
+    const own = await submissionInState(testDb.db, "waitingPeriod", { memberId: committeeId, witnessedBy: ownerId });
+    const ownRes = await request(app()).get(`/admin/submissions/${own}/correct-points`);
+    assert.strictEqual(ownRes.status, 403);
+
+    const pending = await submissionInState(testDb.db, "pendingWitness", { memberId: ownerId });
+    const pendingRes = await request(app()).get(`/admin/submissions/${pending}/correct-points`);
+    assert.strictEqual(pendingRes.status, 403);
+    assert.match(pendingRes.text, /needs a Witness first/);
+  });
+
+  void test("the Record new species step on the form comes back as the form, the new Species settled", async () => {
+    const step = await request(app()).get(`/admin/submissions/${witnessedId}/record-species`).query({ correction: "1" });
+    assert.match(step.text, /<input type="hidden" name="correction" value="1"\/>/);
+    assert.match(step.text, new RegExp(`hx-get="/admin/submissions/${witnessedId}/correct-points"[^>]*hx-select="#witnessPanel"[^>]*>Back<`));
+
+    const res = await request(app())
+      .post(`/admin/submissions/${witnessedId}/record-species`)
+      .type("form")
+      .send({ correction: "1", new_scientific_name: "Correctus novissimus", new_common_name: "Corrected Novelty", new_point_class: "15" });
+
+    assert.strictEqual(res.headers["hx-retarget"], "#witnessPanel");
+    assert.match(res.text, /Correct species and points/);
+    assert.match(res.text, /id="witness-recording"/);
+    assert.match(res.text, /id="witness-form"[^>]*hx-post="\/admin\/submissions\/\d+\/correct-points"/);
+    assert.match(res.text, /name="points" value="15" id="witness-points-15" checked="checked"/);
+    assert.match(res.text, /id="correction-save" type="submit">Save correction · 15 pts</);
+    assert.strictEqual(await resolveSpecies({ latinName: "Correctus novissimus" }), null, "created only by Save");
+  });
+
+  void test("the sticky bar sums first-time on the correction form and names its button", async () => {
+    const bar = await request(app())
+      .post(`/admin/submissions/${witnessedId}/witness-summary`)
+      .type("form")
+      .send({ correction: "1", species_id: "7", species_settled: "1", points: "10", first_time_species: "on" });
+
+    assert.match(bar.text, /id="witness-sum-lines">Base points 10 \+ First Time Species Bonus 5</);
+    assert.match(bar.text, /id="correction-save" type="submit">Save correction · 15 pts</);
+    assert.doesNotMatch(bar.text, /witness-confirm/);
   });
 });

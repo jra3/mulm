@@ -19,11 +19,6 @@ import { getClassOptions, speciesTypesAndClasses } from "@/forms/submission";
 import { speciesEditForm } from "@/forms/speciesEdit";
 import { pointClassField } from "@/forms/pointClass";
 import { mergeSpeciesSchema } from "@/forms/speciesMerge";
-import { speciesCreateForm } from "@/forms/speciesCreate";
-import { getSubmissionById, type Submission } from "@/db/submissions";
-import * as lifecycle from "@/lifecycle";
-import { callerFor } from "../lifecycleErrors";
-import { allowedMoves, validateSubmission } from "../submission";
 import { logger } from "@/utils/logger";
 import * as z from "zod";
 
@@ -35,11 +30,6 @@ const refusalStatus: Record<RefusalCode, number> = {
   referenced: 409,
   canonical: 409,
 };
-
-/** The form field a refusal belongs to: a taken Canonical name is the genus field's. */
-function refusalField(err: CatalogueRefusal): string {
-  return err.code === "duplicate" ? "canonical_genus" : "_general";
-}
 
 /**
  * Send a catalogue refusal as a 4xx carrying its message. Matches on the
@@ -465,139 +455,6 @@ export const mergeSpeciesAction = async (req: MulmRequest, res: Response) => {
     logger.error("Failed to merge species", err);
     res.status(500).send("Failed to merge species");
   }
-};
-
-type CreateSpeciesDialogValues = {
-  canonical_genus: string;
-  canonical_species_name: string;
-  program_class: string;
-};
-
-/** The create-Species dialog, for an unbound or rebinding Submission. */
-function renderCreateSpeciesDialog(
-  res: Response,
-  submission: Submission,
-  prefilled: CreateSpeciesDialogValues,
-  errors: Map<string, string>
-) {
-  res.render("admin/createSpeciesDialog", {
-    submission,
-    prefilled,
-    classOptions: getClassOptions(submission.species_type || "Fish"),
-    errors,
-  });
-}
-
-/**
- * GET /admin/dialog/species/new?submission_id=123
- * The committee's create-Species dialog, pre-filled from the Submission.
- */
-export const createSpeciesDialog = async (req: MulmRequest, res: Response) => {
-  const submissionId = parseInt(getQueryString(req, "submission_id", ""));
-  if (!submissionId) {
-    res.status(400).send("Invalid submission ID");
-    return;
-  }
-
-  const submission = await getSubmissionById(submissionId);
-  if (!submission) {
-    res.status(404).send("Submission not found");
-    return;
-  }
-
-  // Genus, then the rest as the epithet, from the member's Latin spelling
-  const [canonical_genus = "", ...rest] = (submission.species_latin_name || "").trim().split(/\s+/);
-
-  renderCreateSpeciesDialog(
-    res,
-    submission,
-    {
-      canonical_genus,
-      canonical_species_name: rest.join(" "),
-      program_class: submission.species_class || "",
-    },
-    new Map()
-  );
-};
-
-/**
- * POST /admin/submissions/:id/species
- * Create a Species from a committee panel and bind the Submission to it, in
- * one flow: the dialog's success is the binding. A refusal re-renders the
- * dialog with its errors; success reloads the page to show the Submission
- * bound.
- */
-export const createSpeciesAndBind = async (req: MulmRequest, res: Response) => {
-  const submission = await validateSubmission(req, res);
-  if (!submission) {
-    return;
-  }
-
-  const text = (key: string) => getBodyString(req, key);
-  const showErrors = (errors: Map<string, string>) => {
-    res.set("HX-Retarget", "#dialog").set("HX-Reswap", "outerHTML");
-    renderCreateSpeciesDialog(
-      res,
-      submission,
-      {
-        canonical_genus: text("canonical_genus"),
-        canonical_species_name: text("canonical_species_name"),
-        program_class: text("program_class"),
-      },
-      errors
-    );
-  };
-
-  const parsed = speciesCreateForm.safeParse(req.body);
-  if (!parsed.success) {
-    showErrors(new Map(parsed.error.issues.map((issue) => [String(issue.path[0]), issue.message])));
-    return;
-  }
-
-  // Ask the table before creating anything, so a refused bind leaves no
-  // Species behind. bindSpecies guards again below.
-  if (!allowedMoves(req.viewer, submission, lifecycle.deriveState(submission)).bindSpecies) {
-    showErrors(new Map([["_general", "This Submission cannot be bound to a Species by you now."]]));
-    return;
-  }
-
-  const { canonical_genus, canonical_species_name, program_class, species_type, base_points, is_cares_species } =
-    parsed.data;
-
-  let speciesId: number;
-  try {
-    speciesId = await catalogue.createSpecies({
-      canonicalGenus: canonical_genus,
-      canonicalSpeciesName: canonical_species_name,
-      programClass: program_class,
-      speciesType: species_type,
-      pointClass: base_points,
-      isCaresSpecies: is_cares_species,
-    });
-  } catch (err) {
-    if (err instanceof CatalogueRefusal) {
-      showErrors(new Map([[refusalField(err), err.message]]));
-      return;
-    }
-    throw err;
-  }
-
-  try {
-    await lifecycle.bindSpecies(callerFor(req.viewer!), submission.id, speciesId);
-  } catch (err) {
-    if (lifecycle.isLifecycleError(err)) {
-      logger.warn(`Created Species ${speciesId} but could not bind it: ${err.message}`, {
-        submissionId: submission.id,
-      });
-      showErrors(
-        new Map([["_general", `The Species was created, but the Submission was not bound to it: ${err.message}`]])
-      );
-      return;
-    }
-    throw err;
-  }
-
-  res.set("HX-Refresh", "true").send();
 };
 
 // Schema for bulk IUCN sync

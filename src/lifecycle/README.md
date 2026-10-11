@@ -25,7 +25,7 @@ from `src/points.ts`. One definition, many queries.
 | `index.ts` | The interface. Start here. |
 | `state.ts` | The five stored states, derived in one place, and the waiting-period clock. |
 | `table.ts` | The transition table: which moves are legal from which states, and for whom. |
-| `transitions.ts` | One exported function per move. |
+| `transitions.ts` | One exported function per move (plus `correctApprovedSubmission`, the Edit Approved dialog's write on the correction row until #529). |
 | `queues.ts` | Queue membership, one definition per queue, as SQL and as a predicate. |
 | `consequences.ts` | Who gets told what. The module's own seam; tests swap it for a recorder. |
 | `standing.ts` | Level and Specialty Award recompute, symmetric in both directions. |
@@ -56,8 +56,7 @@ Return to Draft - voids a confirmed Witness, clears the points the Witness set
 the Submission in Pending Witness, back in the witness queue. Its place in
 the approval queue goes with the Witness, since the queue is derived from it.
 There is no field list and no diff: saving is the edit. Committee moves,
-including a Points correction to an Approved Submission, never touch the
-Witness.
+including a Points correction, never touch the Witness.
 
 ## The member does nothing to enter the approval queue
 
@@ -145,6 +144,44 @@ consequences follow as before: the approval email, the feed entry, the
 standing recompute. The table's other refusals still apply: the approval
 queue only, bound only, no changes outstanding, never the submitter.
 
+## The committee corrects Species and points from the Witness on
+
+`correctPoints` (#528) is legal in the waiting period, the approval queue and
+Approved: committee-only, never the submitter, and bound as the confirm is,
+by the Submission's Species or the one the correction names. It takes a
+`PointsCorrection`, which is `WitnessPoints` (the Species, or a new one to
+record, the base points and the bonuses) plus `first_time_species`, accepted
+on an Approved Submission only (before approval it is NULL and a value is a
+`ValidationError`), and a required reason. The transaction is the Witness's
+own shape: record the new Species if there is one, settle the Submission on
+the chosen Species (`settleSpecies`: rebind, adopt its type, class and
+Program), write the points fields and first-time, value the Species if the
+catalogue had not. The Species and the points change in one write with one
+`admin_edit` changelog entry, carrying the reason. A correction that changes
+nothing is refused. The Witness is left in place. This is how the committee
+acts on a member's dispute of the witness email and on a bonus earned after
+approval; there is no separate add-on action.
+
+What follows depends on which side of approval the Submission is. Before it,
+nothing is recomputed (the points count for nothing yet) and the witness
+email goes again with the new breakdown and "Points corrected: <reason>"
+(`WitnessedFacts.correctionReason`; the witness named is the one on the
+row). After it, the feed entry is updated in place rather than announced
+again, the member's standing is recomputed, in the Program the Submission
+left too when the Species moved it, and the approval email goes again.
+
+Once the Witness is confirmed a plain `bindSpecies` or
+`adoptSpeciesClassification` is refused as the wrong moment: both are legal
+in pendingWitness only. The Species then changes only together with the
+points, through the correction. The old create-Species dialog that bound
+from the review page went with them; the correction form records a new
+Species the way the witness panel does.
+
+The Edit Approved Submission dialog still writes the rest of the row through
+`correctApprovedSubmission`, which runs against the same table row (Approved
+only, held to by its SQL) and sends nothing; #529 gives it a details-only
+move and takes the Species and points sections out of the dialog.
+
 ## In-flight Submissions went back for a Witness
 
 Points are set at the Witness now, and a Submission witnessed before that
@@ -186,13 +223,14 @@ binding at approval; after migration 066 neither case arises through the
 lifecycle. It never adds Names to the Species.
 
 `bindSpecies` is the witness's move: the committee binds or rebinds a
-Submission to a Species anywhere between submission and approval, never on
-its own Submission and not while changes are requested (the ball is with the
-member), and it goes on the changelog. It is not a member edit, so
-it leaves a confirmed Witness in place. `confirmWitness` binds too, to the
-Species it is handed; it refuses a Submission bound to no Species that it is
-handed none for with an `UnboundError`, so nothing enters the waiting period
-without a Species.
+Submission to a Species while a Witness is awaited, never on its own
+Submission and not while changes are requested (the ball is with the
+member), and it goes on the changelog. It is not a member edit, so it does
+not touch the member's form. `confirmWitness` binds too, to the Species it
+is handed; it refuses a Submission bound to no Species that it is handed
+none for with an `UnboundError`, so nothing enters the waiting period
+without a Species. After the Witness the Species changes only through
+`correctPoints`, with the points (#528).
 
 A binding holds only while the form agrees with the Species (CONTEXT.md,
 Bound): every member save (Save Draft, Submit, Save Changes, Resubmit) asks
@@ -212,11 +250,12 @@ lifecycle's to decide (`bindingAfterSave`).
 `confirmWitness` is never refused for a Species type or Program class that
 disagrees with the Species': the witness answered that this is the Species,
 so the confirm gives the Submission the Species' type, class and Program, on
-the changelog (a spelling that is not a Name changes nothing). After the
-Witness the same answer is `adoptSpeciesClassification` - Witness untouched;
-a queued Submission whose adopted classification asks a longer waiting period
-is simply in its waiting period again, with nothing else written, and the
-clock returns it.
+the changelog (a spelling that is not a Name changes nothing). Before the
+Witness the same answer is `adoptSpeciesClassification`; after it, a
+correction adopts the classification of the Species it settles on. A queued
+Submission whose new classification asks a longer waiting period is simply
+in its waiting period again, with nothing else written, and the clock
+returns it.
 
 `confirmWitness` also takes the witness's choice of the Submission's own
 spellings to add to the bound Species as Names (`NamesToAdd`; the panel

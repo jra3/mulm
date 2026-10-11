@@ -29,6 +29,18 @@ void describe("The witness panel's summary", () => {
     assert.strictEqual(witnessSummary({ ...filled, points: null }).hint, "Choose the base points");
   });
 
+  void test("first-time counts only when the correction form says so; the Witness never passes it", () => {
+    const corrected = witnessSummary({ ...filled, first_time_species: true });
+    assert.deepStrictEqual(corrected.lines.map((line) => line.label), [
+      "Base points",
+      "Article Bonus",
+      "First Time Species Bonus",
+      "CARES Species Bonus",
+    ]);
+    assert.strictEqual(corrected.total, totalPoints({ points: 10, article_points: 5, cares_species: true, first_time_species: true }));
+    assert.strictEqual(witnessSummary(filled).total, 20, "left off, it is not counted");
+  });
+
   void test("ready: base points first, then each bonus that is set, adding up to the rule's total", () => {
     const summary = witnessSummary(filled);
     assert.strictEqual(summary.ready, true);

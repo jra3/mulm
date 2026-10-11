@@ -4,7 +4,6 @@ include ../mixins/submissionVideo.pug
 include ../mixins/caresBadge.pug
 include ../mixins/iucnBadge.pug
 include ../mixins/emptyState.pug
-include ../mixins/bindSpeciesControls.pug
 
 mixin reviewTextInput(labelText, name, type="text")
     .grid.gap-2
@@ -303,13 +302,15 @@ html
                                             p.text-sm.text-green-300#approval-new-species New species recorded by the witness
                                     p.text-sm.text-gray-300= `Approve it on the approval queue at the meeting, once ${submission.member_name} has brought the ${offspringText}.`
                                     a.link.light.text-sm#approval-queue-link(href=`/admin/queue#queue-row-${submission.id}`) Open the approval queue
-                            if allowed.bindSpecies && !submission.species_id
-                                .text-white.mb-4
+                            //- After the Witness the Species changes only with the
+                            //- points, through the correction form (#528)
+                            if !submission.species_id
+                                .text-white.mb-4#approval-unbound
                                     p.font-semibold Not bound to a Species
-                                    p.text-sm.text-gray-300 It cannot be approved until it is. Find it in the catalogue, or create it if it is not there.
-                                    +bindSpeciesControls(submission, false, true)
-                                    .text-sm.text-red-300.mt-2#committee-error(role="alert")
+                                    p.text-sm.text-gray-300 It cannot be approved until it is. Choose the Species on the correction form, with its points.
                             .flex.justify-center.gap-4
+                                if allowed.correctPoints || !submission.species_id
+                                    a.primary(class="px-4 py-2 text-sm" id="correct-points-link" href=`/admin/submissions/${submission.id}/correct-points`) Correct species and points
                                 if allowed.requestChanges
                                     button.destructive(
                                         type="button"
@@ -331,9 +332,11 @@ html
                         h2.text-xl.font-bold.mb-2.text-white Admin Section
                         p.text-sm.text-gray-300.mb-4 Private notes and actions visible only to program admins
 
-                        // Edit Approved Submission button (for approved submissions only)
+                        //- Species and points are corrected on the correction form (#528);
+                        //- the dialog edits the rest, for now (#529)
                         if isApproved && !isSelf
-                            div.mb-6
+                            div.mb-6.flex.flex-wrap.gap-3
+                                a.primary(class="px-4 py-2 text-sm" id="correct-points-link" href=`/admin/submissions/${submission.id}/correct-points`) Correct species and points
                                 button.primary(
                                     type="button"
                                     onclick="document.getElementById('edit-approved-dialog').showModal()"

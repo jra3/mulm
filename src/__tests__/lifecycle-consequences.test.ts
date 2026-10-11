@@ -27,6 +27,7 @@ import {
 } from "./helpers/testHelpers";
 import {
   approveAsShown,
+  correctionOf,
   readSubmission,
   recordNotifications,
   requestChangesFixture,
@@ -262,35 +263,48 @@ void describe("Submission lifecycle - consequences", () => {
     assert.strictEqual(approvals[0].related_id, String(id));
   });
 
-  void test("correcting an approval updates its entry rather than announcing it again", async () => {
+  void test("correcting an approval updates its feed entry rather than announcing it again, and sends the approval email again", async () => {
     const id = await at("inApprovalQueue");
     await approveAsShown(committee, id);
     sent.clear();
 
-    await correctPoints(committee, id, { points: 20 }, "Wrong point class");
+    await correctPoints(committee, id, await correctionOf(id, { points: 20 }), "Wrong point class");
 
     const approvals = (await feed()).filter((e) => e.activity_type === "submission_approved");
     assert.strictEqual(approvals.length, 1, "one entry per approval, not one per edit");
     assert.match(approvals[0].activity_data, /"points":20/);
 
-    assert.ok(
-      !sent.kinds.includes("approved"),
-      "fixing a mistake must not re-announce the approval to the member"
-    );
-  });
-
-  void test("correcting an approval emails the member nothing at all", async () => {
-    const id = await at("inApprovalQueue");
-    await approveAsShown(committee, id);
-    sent.clear();
-
-    await correctPoints(committee, id, { points: 5 }, "Wrong point class");
-
     assert.deepStrictEqual(
       sent.kinds.filter((kind) => kind !== "levelUp" && kind !== "specialtyAward"),
-      [],
-      "their standing page already shows the truth"
+      ["approved"],
+      "the member hears the corrected award, and nothing about a Witness"
     );
+    assert.deepStrictEqual(sent.of("approved")[0].to, [ctx.member.contact_email]);
+  });
+
+  void test("correcting before approval sends the witness email again, with the reason, and awards nothing", async () => {
+    const id = await at("waitingPeriod");
+    sent.clear();
+
+    await correctPoints(committee, id, await correctionOf(id, { points: 15 }), "The member disputed the point class");
+
+    assert.deepStrictEqual(sent.kinds, ["witnessConfirmed"], "no approval letter, no level or award: nothing was awarded");
+    assert.deepStrictEqual(sent.of("witnessConfirmed")[0].to, [ctx.member.contact_email]);
+    const letter = sent.witnessed[0];
+    assert.strictEqual(letter.submission.points, 15, "the row as corrected");
+    assert.strictEqual(letter.witness.id, ctx.admin.id, "signed by the witness, not the corrector");
+    assert.strictEqual(letter.facts.correctionReason, "The member disputed the point class");
+    assert.strictEqual(typeof letter.facts.firstTime, "boolean");
+    assert.strictEqual((await feed()).filter((e) => e.activity_type === "submission_approved").length, 0);
+  });
+
+  void test("the Witness letter at the confirm carries no correction reason", async () => {
+    const id = await at("pendingWitness");
+    sent.clear();
+
+    await confirmWitness(committee, id, witnessPoints());
+
+    assert.strictEqual(sent.witnessed[0].facts.correctionReason, undefined);
   });
 
   void test("approving is the only way Points are ever awarded", async () => {

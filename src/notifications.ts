@@ -416,6 +416,8 @@ export type WitnessLetter = {
   keepFry: boolean;
   /** What the member brings to the meeting: fry, plants or corals */
   offspring: string;
+  /** The committee corrected the points before approval (#528): why, in its words. Null at the Witness itself. */
+  correctionReason: string | null;
 };
 
 /** How the letter names what the member can still see happen after approval. */
@@ -479,6 +481,7 @@ export function witnessLetter(
     readyOn: formatLongDate(waitingPeriodEndsOn(submission)),
     keepFry: submission.species_type === "Fish",
     offspring: offspringOf(submission),
+    correctionReason: facts.correctionReason ?? null,
   };
 }
 
@@ -488,7 +491,9 @@ const renderOnWitnessConfirmed = pug.compileFile("src/views/email/onWitnessConfi
  * witnessed it, the full points breakdown as pending approval, what is still
  * possible, and what happens next. A reply goes to the committee, since a
  * dispute is a reply for now. It replaced the "Screening Approved" and
- * "Witness Confirmed" letters.
+ * "Witness Confirmed" letters. The same letter goes again, with "Points
+ * corrected: <reason>", when the committee corrects the points before
+ * approval (#528).
  */
 export async function onWitnessConfirmed(
   submission: Submission,
