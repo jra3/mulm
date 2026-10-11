@@ -86,46 +86,66 @@ function recordsNewSpecies(body: { new_scientific_name?: string }): boolean {
   return body.new_scientific_name !== undefined;
 }
 
+/**
+ * What the Witness sets, as the panel posts it (#521, #522): the Species, as
+ * `species_id` or as the record step's fields, the base points and every
+ * bonus but first-time. The correction form (#528) posts the same fields,
+ * so both schemas are built from these.
+ */
+export const witnessPointsFields = {
+  species_id: speciesId.optional(),
+  new_scientific_name: z.string().optional(),
+  new_common_name: z.string().optional(),
+  new_point_class: z.string().optional(),
+  new_cares_species: z.string().optional(),
+  /** The base points, one of the Point classes. */
+  points: z.coerce
+    .number({ error: "Choose the base points" })
+    .refine((val) => isPointClass(val), { message: `Base points must be ${pointClassList}` }),
+  article_points: articlePoints,
+  cares_species: formCheckbox(),
+  flowered: formCheckbox(),
+  sexual_reproduction: formCheckbox(),
+};
+
+type WitnessPointsInput = z.infer<z.ZodObject<typeof witnessPointsFields>>;
+
+/**
+ * Settle the Species the fields name: exactly one of `species_id` and the
+ * record step's fields, the latter parsed into a `NewSpeciesAtWitness`. The
+ * transform both the confirm and the correction run; `rest` carries the
+ * form's other fields through untouched.
+ */
+export function settleSpeciesFields<T extends WitnessPointsInput>(val: T, ctx: z.RefinementCtx) {
+  const { species_id, new_scientific_name, new_common_name, new_point_class, new_cares_species, ...rest } = val;
+  if (recordsNewSpecies(val)) {
+    if (species_id !== undefined) {
+      ctx.addIssue({ code: "custom", path: ["species_id"], message: "Choose a Species or record a new one, not both" });
+      return z.NEVER;
+    }
+    const recorded = recordSpeciesForm.safeParse({ new_scientific_name, new_common_name, new_point_class, new_cares_species });
+    if (!recorded.success) {
+      for (const issue of recorded.error.issues) {
+        ctx.addIssue({ code: "custom", path: [...issue.path], message: issue.message });
+      }
+      return z.NEVER;
+    }
+    return { ...rest, species_id: undefined, new_species: recorded.data };
+  }
+  if (species_id === undefined) {
+    ctx.addIssue({ code: "custom", path: ["species_id"], message: "Choose the Species first" });
+    return z.NEVER;
+  }
+  return { ...rest, species_id, new_species: undefined };
+}
+
 const confirmWitnessFields = z
   .object({
-    species_id: speciesId.optional(),
-    new_scientific_name: z.string().optional(),
-    new_common_name: z.string().optional(),
-    new_point_class: z.string().optional(),
-    new_cares_species: z.string().optional(),
-    /** The base points, one of the Point classes. */
-    points: z.coerce
-      .number({ error: "Choose the base points" })
-      .refine((val) => isPointClass(val), { message: `Base points must be ${pointClassList}` }),
-    article_points: articlePoints,
-    cares_species: formCheckbox(),
-    flowered: formCheckbox(),
-    sexual_reproduction: formCheckbox(),
+    ...witnessPointsFields,
     add_common_name: namesCheckbox,
     add_scientific_name: namesCheckbox,
   })
-  .transform((val, ctx) => {
-    const { species_id, new_scientific_name, new_common_name, new_point_class, new_cares_species, ...rest } = val;
-    if (recordsNewSpecies(val)) {
-      if (species_id !== undefined) {
-        ctx.addIssue({ code: "custom", path: ["species_id"], message: "Choose a Species or record a new one, not both" });
-        return z.NEVER;
-      }
-      const recorded = recordSpeciesForm.safeParse({ new_scientific_name, new_common_name, new_point_class, new_cares_species });
-      if (!recorded.success) {
-        for (const issue of recorded.error.issues) {
-          ctx.addIssue({ code: "custom", path: [...issue.path], message: issue.message });
-        }
-        return z.NEVER;
-      }
-      return { ...rest, species_id: undefined, new_species: recorded.data };
-    }
-    if (species_id === undefined) {
-      ctx.addIssue({ code: "custom", path: ["species_id"], message: "Choose the Species first" });
-      return z.NEVER;
-    }
-    return { ...rest, species_id, new_species: undefined };
-  });
+  .transform(settleSpeciesFields);
 
 /**
  * The witness panel's confirm form: the Species, the base points and every
@@ -180,6 +200,13 @@ export const witnessSummaryForm = z.object({
   cares_species: formCheckbox(),
   flowered: formCheckbox(),
   sexual_reproduction: formCheckbox(),
+  /** The correction form's first-time switch (#528), offered on Approved Submissions only. */
+  first_time_species: formCheckbox(),
+  /** Whether the bar belongs to the correction form, whose button saves rather than confirms. */
+  correction: z
+    .string()
+    .optional()
+    .transform((val) => val === "1"),
 });
 
 export type WitnessSummaryFormValues = z.infer<typeof witnessSummaryForm>;

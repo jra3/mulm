@@ -8,6 +8,13 @@
 //- wrote, the witness records the Species on the panel (#522); it is created
 //- by the confirm, in the Witness's transaction, so leaving creates nothing.
 //-
+//- The same cards are the correction form (#528) when `correction` is set:
+//- the Species and Points cards over the Submission's current values, a
+//- required reason, and Save correction in place of Confirm witness. There
+//- choosing another Species writes nothing: the form asks for itself again
+//- with that Species settled (`correct-points?species_id=`), and Save writes
+//- the Species and the points together.
+//-
 //- @param submission - the Submission (id, program, species_type,
 //-   species_class, species_common_name, species_latin_name, member_name,
 //-   reproduction_date formatted, article_link)
@@ -16,7 +23,8 @@
 //-   commonName, speciesType, programClass, program, pointClass, isFirstTime,
 //-   priorBreedCount, isCaresSpecies. Confirming gives the Submission the
 //-   Species' Program, so the bonuses offered are that Program's, not the
-//-   one the member filed under.
+//-   one the member filed under. On the correction form, the Species the
+//-   form is settled on, bound or chosen.
 //- @param speciesChosenByWitness - whether the committee, not the member,
 //-   chose the bound Species, so there is no "is that right?" left to ask
 //- @param originalWitness - { name, date formatted } when migration 066 reset
@@ -38,12 +46,20 @@
 //-   when bound. Only a spelling that is not a Name is offered as one to add;
 //-   the common one is offered ticked, the Latin one unticked.
 //- @param summary - the sticky bar's initial state (`witnessSummary`)
+//- @param summaryButton - the sticky bar's button, { id, label }, or unset
+//-   for Confirm witness (the correction form passes Save correction)
 //- @param allowed - the moves this viewer may make
 //- @param changesRequested - whether the committee has changes outstanding:
 //-   the ball is with the member, so the panel offers nothing
+//- @param correction - `CorrectionFacts` (src/routes/submission.ts) on the
+//-   correction form, else unset: approved, speciesChanged (the Species
+//-   settled here is not the bound one), current (the row's points,
+//-   article_points, cares_species, flowered, sexual_reproduction,
+//-   first_time_species)
 
 - const shortNames = { fish: "BAP", plant: "HAP", coral: "CAP" }
 - const programShort = shortNames[submission.program] || submission.program
+- const correcting = typeof correction === "object" && correction !== null
 - const recording = Boolean(newSpecies)
 - const bound = Boolean(speciesFacts)
 //- The Program the Submission will have once confirmed: the settled Species'
@@ -51,13 +67,22 @@
 - const isBap = settledProgram === "fish"
 - const isHap = settledProgram === "plant"
 - const programMoves = bound && !recording ? speciesFacts.program !== submission.program : false
-- const settled = recording || (bound ? Boolean(speciesChosenByWitness) : false)
-- const prefilledPoints = recording ? newSpecies.pointClass : bound ? speciesFacts.pointClass : null
-- const prefilledCares = recording ? newSpecies.isCaresSpecies : bound ? speciesFacts.isCaresSpecies : false
+- const settled = recording || (bound ? correcting || Boolean(speciesChosenByWitness) : false)
+//- A correction keeps the row's values unless the Species changed, when the new Species' Point class and CARES flag take over
+- const keepCurrent = correcting ? !correction.speciesChanged : false
+- const prefilledPoints = keepCurrent ? correction.current.points : recording ? newSpecies.pointClass : bound ? speciesFacts.pointClass : null
+- const prefilledCares = keepCurrent ? correction.current.cares_species : recording ? newSpecies.isCaresSpecies : bound ? speciesFacts.isCaresSpecies : false
 - const caresNote = recording ? "Not yet in the catalogue" : bound ? (speciesFacts.isCaresSpecies ? "Listed in the catalogue" : "Not listed in the catalogue") : ""
-- const prefilledArticle = submission.article_link ? 5 : 0
+- const prefilledArticle = correcting ? (correction.current.article_points || 0) : submission.article_link ? 5 : 0
+- const prefilledFlowered = correcting ? correction.current.flowered : false
+- const prefilledSexual = correcting ? correction.current.sexual_reproduction : false
 - const offerCommon = spellingAgreement ? spellingAgreement.commonName === "not-a-name" : false
 - const offerLatin = spellingAgreement ? spellingAgreement.latinName === "not-a-name" : false
+//- Who may choose another Species here: the witness while binding is legal, the corrector always (Save carries it)
+- const canChoose = correcting ? true : Boolean(allowed.bindSpecies)
+- const blocked = changesRequested ? !correcting : false
+- const formAction = correcting ? `/admin/submissions/${submission.id}/correct-points` : `/admin/submissions/${submission.id}/confirm-witness`
+- const recordUrl = `/admin/submissions/${submission.id}/record-species${correcting ? "?correction=1" : ""}`
 - const eyebrow = "text-xs font-semibold uppercase tracking-wide text-gray-500"
 - const segment = "block text-center py-3 rounded-lg border border-gray-300 bg-white font-semibold text-lg text-gray-900 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 peer-focus-visible:ring-2 peer-focus-visible:ring-amber-400"
 - const chip = "block text-center px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-900 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 peer-focus-visible:ring-2 peer-focus-visible:ring-amber-400"
@@ -79,6 +104,32 @@ mixin witnessSwitch(name, label, amount, note, checked)
 		input.peer.sr-only(type="checkbox" name=name value="on" checked=checked)
 		span(class=track aria-hidden="true")
 
+//- Choosing a Species: the witness panel binds it and reloads; the correction
+//- form asks for itself again with that Species settled, written only by Save.
+mixin chooseSpeciesButton(classes, speciesId, includeSelector)
+	if correcting
+		button(
+			class=classes
+			type="button"
+			hx-get=`/admin/submissions/${submission.id}/correct-points`
+			hx-vals=speciesId ? JSON.stringify({ species_id: speciesId }) : undefined
+			hx-include=includeSelector
+			hx-target="#witnessPanel"
+			hx-swap="outerHTML"
+			hx-disabled-elt="this"
+		)&attributes(attributes)
+			block
+	else
+		button(
+			class=classes
+			type="button"
+			hx-post=`/admin/submissions/${submission.id}/bind-species`
+			hx-vals=speciesId ? JSON.stringify({ group_id: speciesId }) : undefined
+			hx-include=includeSelector
+			hx-disabled-elt="this"
+		)&attributes(attributes)
+			block
+
 //- The catalogue's closest Species to what the member wrote, each one a tap away
 mixin witnessSuggestions()
 	if suggestions && suggestions.length
@@ -95,16 +146,11 @@ mixin witnessSuggestions()
 							|  · Point class #{sp.pointClass}
 						else
 							|  · no Point class yet
-				button.outline.text-sm.flex-none(
-					type="button"
-					hx-post=`/admin/submissions/${submission.id}/bind-species`
-					hx-vals=JSON.stringify({ group_id: sp.speciesId })
-					hx-disabled-elt="this"
-				) This one
+				+chooseSpeciesButton("outline text-sm flex-none", sp.speciesId, undefined) This one
 
 .status-panel.status-panel-admin#witnessPanel
 	.mx-auto.max-w-lg.flex.flex-col.gap-3
-		h3.text-white.text-lg.font-semibold.px-1 Witness this submission
+		h3.text-white.text-lg.font-semibold.px-1= correcting ? "Correct species and points" : "Witness this submission"
 
 		//- Header: who, what Program, when; the form, photos and video are above
 		.bg-white.rounded-lg.px-4.py-3#witness-header
@@ -114,17 +160,28 @@ mixin witnessSuggestions()
 				//- Reset by migration 066: the fry were seen; only the Species and points are wanted
 				p.text-sm.text-gray-700.mt-1#witness-original-witness
 					| Originally witnessed by #{originalWitness.name} on #{originalWitness.date}. No fresh sighting is needed: confirm the species and set the points.
-			a.text-sm.text-blue-700.underline(href="#species-details") See the full form, photos and video
+			if correcting
+				//- Which side of approval, so the corrector knows what follows a save
+				p.text-sm.text-gray-700.mt-1#correction-standing
+					if correction.approved
+						| Approved: the points are awarded. Saving updates the standing and emails the member the corrected approval.
+					else
+						| Witnessed, points pending approval. Saving emails the member the new breakdown with your reason.
+				a.text-sm.text-blue-700.underline#correction-cancel(href=`/submissions/${submission.id}`) Back to the submission
+			else
+				a.text-sm.text-blue-700.underline(href="#species-details") See the full form, photos and video
 
-		if changesRequested
+		if blocked
 			.bg-white.rounded-lg.p-4.text-gray-900#witness-waiting-on-member
 				p.font-semibold Waiting on the member
 				p.text-sm.text-gray-600 Changes were requested. The Witness can be confirmed once the member resubmits.
 		else
 			form.group.flex.flex-col.gap-3#witness-form(
-				hx-post=`/admin/submissions/${submission.id}/confirm-witness`
-				hx-disabled-elt="#witness-confirm"
+				hx-post=formAction
+				hx-disabled-elt=correcting ? "#correction-save" : "#witness-confirm"
 			)
+				if correcting
+					input(type="hidden" name="correction" value="1")
 				if bound && !recording
 					input(type="hidden" name="species_id" value=speciesFacts.speciesId)
 				if settled && !recording
@@ -156,7 +213,9 @@ mixin witnessSuggestions()
 							//- Not posted: it only reveals the search below
 							input.peer.sr-only(type="checkbox" id="witness-species-no")
 					else if bound
-						if settled
+						if correcting
+							p.text-sm.text-gray-600= correction.speciesChanged ? "You chose" : "Currently"
+						else if settled
 							p.text-sm.text-gray-600 You chose
 						else
 							p.text-sm.text-gray-600 The member says it's
@@ -174,7 +233,7 @@ mixin witnessSuggestions()
 							input.peer.sr-only(type="checkbox" id="witness-species-no")
 						if classificationMismatch
 							.bg-amber-50.border.border-amber-300.rounded.p-2.mt-2.text-sm#witness-mismatch(role="note")
-								| The submission says #{submission.species_type} · #{submission.species_class}. Confirming records it as #{speciesFacts.speciesType} · #{speciesFacts.programClass}
+								| The submission says #{submission.species_type} · #{submission.species_class}. #{correcting ? "Saving" : "Confirming"} records it as #{speciesFacts.speciesType} · #{speciesFacts.programClass}
 								if programMoves
 									|  and moves it to #{shortNames[speciesFacts.program] || speciesFacts.program}
 								| .
@@ -196,9 +255,10 @@ mixin witnessSuggestions()
 					//- Choosing another Species: shown when unbound, or on No, or
 					//- on "Wrong species?". The closest catalogue matches first,
 					//- then the search; picking one binds it and reloads the page,
-					//- so the panel then shows it as the witness's choice. Last,
+					//- so the panel then shows it as the witness's choice (on the
+					//- correction form it is carried, and Save writes it). Last,
 					//- recording a Species the catalogue lacks.
-					if allowed.bindSpecies
+					if canChoose
 						.mt-3(
 							id="witness-species-other"
 							class=settled || bound ? "hidden group-has-[#witness-species-no:checked]:block" : ""
@@ -222,21 +282,16 @@ mixin witnessSuggestions()
 								data-max-items="1"
 								data-placeholder="Common or scientific name"
 							)
-							button.outline.w-full.mt-2#witness-species-use(
-								type="button"
-								hx-post=`/admin/submissions/${submission.id}/bind-species`
-								hx-include="#witness-species-pick"
-								hx-disabled-elt="this"
-							) Use this species
+							+chooseSpeciesButton("outline w-full mt-2", undefined, "#witness-species-pick")&attributes({ id: "witness-species-use" }) Use this species
 							p.text-sm.text-gray-600.mt-3 Not in the catalogue?
 							//- A grey secondary button for now; the colour is a point to iterate on (#522)
 							button.outline.w-full.mt-1#witness-species-new(
 								type="button"
-								hx-get=`/admin/submissions/${submission.id}/record-species`
+								hx-get=recordUrl
 								hx-target="#witness-species"
 								hx-swap="innerHTML"
 							) Record new species
-					if settled && allowed.bindSpecies
+					if settled && canChoose
 						label.block.mt-3.text-sm.text-blue-700.underline.cursor-pointer(for="witness-species-no" class="group-has-[#witness-species-no:checked]:hidden") Wrong species? Choose another
 
 				//- Points: the base points and every bonus but first-time
@@ -247,7 +302,9 @@ mixin witnessSuggestions()
 							label.cursor-pointer
 								input.peer.sr-only(type="radio" name="points" value=pc id=`witness-points-${pc}` checked=pc === prefilledPoints)
 								span(class=segment)= pc
-					if recording
+					if keepCurrent
+						p.text-xs.text-gray-500.mt-1#witness-point-class= correction.approved ? "As awarded." : "As set at the Witness."
+					else if recording
 						p.text-xs.text-gray-500.mt-1#witness-point-class= `From the Point class you chose (${newSpecies.pointClass}).`
 					else if bound
 						if speciesFacts.pointClass
@@ -269,15 +326,19 @@ mixin witnessSuggestions()
 										input.peer.sr-only(type="radio" name="article_points" value=option[0] id=`witness-article-${option[0]}` checked=option[0] === prefilledArticle)
 										span(class=chip)= option[1]
 						if isHap
-							+witnessSwitch("flowered", "Flowered", "+ base points", "", false)
-							+witnessSwitch("sexual_reproduction", "Sexual reproduction", "+ base points", "", false)
-					if recording || (bound && speciesFacts.isFirstTime)
-						p.text-xs.text-green-700.mt-2#witness-first-time No one has had this species approved yet. A first-time +5 is added at the meeting if this one is approved first.
-					else if bound
-						p.text-xs.text-gray-500.mt-2#witness-first-time= `Approved ${speciesFacts.priorBreedCount} time${speciesFacts.priorBreedCount === 1 ? "" : "s"} before, so no first-time bonus.`
+							+witnessSwitch("flowered", "Flowered", "+ base points", "", prefilledFlowered)
+							+witnessSwitch("sexual_reproduction", "Sexual reproduction", "+ base points", "", prefilledSexual)
+						//- First-time is approval's to decide; only a correction to an Approved Submission changes the answer
+						if correcting && correction.approved
+							+witnessSwitch("first_time_species", "First-time species", "+5", "Approval decided this. Change it only if it was wrong.", correction.current.first_time_species)
+					if !(correcting && correction.approved)
+						if recording || (bound && speciesFacts.isFirstTime)
+							p.text-xs.text-green-700.mt-2#witness-first-time No one has had this species approved yet. A first-time +5 is added at the meeting if this one is approved first.
+						else if bound
+							p.text-xs.text-gray-500.mt-2#witness-first-time= `Approved ${speciesFacts.priorBreedCount} time${speciesFacts.priorBreedCount === 1 ? "" : "s"} before, so no first-time bonus.`
 
 				//- The member's spelling as a Name, only where it is not one already
-				if bound && !recording && (offerCommon || offerLatin)
+				if bound && !recording && !correcting && (offerCommon || offerLatin)
 					.bg-white.rounded-lg.p-4.text-gray-900.text-sm#witness-names
 						p.font-semibold.mb-1 Save the member's spelling
 						if offerCommon
@@ -295,9 +356,22 @@ mixin witnessSuggestions()
 									span.italic= submission.species_latin_name
 									| " as a scientific name of this species
 
+				//- The correction's reason: on the changelog, and in the member's email before approval
+				if correcting
+					.bg-white.rounded-lg.p-4.text-gray-900#witness-reason
+						label.block.mb-1(class=eyebrow for="correction-reason") Reason
+						textarea.text-input.w-full#correction-reason(
+							name="reason"
+							rows="3"
+							required
+							maxlength="2000"
+							placeholder="Why the species or points change, in a sentence"
+						)
+						p.text-xs.text-gray-500.mt-1= correction.approved ? "Goes on the changelog." : "Goes on the changelog, and the member reads it in the email."
+
 				.text-sm#committee-error(role="alert")
 
-				if allowed.requestChanges
+				if allowed.requestChanges && !correcting
 					button.destructive.w-full.h-12.text-base(
 						type="button"
 						hx-get=`/admin/dialog/submissions/${submission.id}/request-changes`

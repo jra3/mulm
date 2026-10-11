@@ -20,10 +20,13 @@ import type { RewitnessPending } from "./rewitness";
  * What the Witness letter says beyond the row itself: whether the Species
  * had no approved Submission at the Witness, so the member may be the first
  * to bring it in and earn the first-time bonus at the meeting. Approval
- * computes first-time; the letter only says it is possible.
+ * computes first-time; the letter only says it is possible. When the letter
+ * goes again because the committee corrected the points before approval
+ * (#528), `correctionReason` is the reason it gave, and the letter says so.
  */
 export type WitnessedFacts = {
   firstTime: boolean;
+  correctionReason?: string;
 };
 
 /**
@@ -42,7 +45,8 @@ export interface Notifier {
   /**
    * A committee member inspected the spawn and set the points (#526): the one
    * letter the member gets at the Witness, carrying the full breakdown off the
-   * row as written, while there is still time to dispute it.
+   * row as written, while there is still time to dispute it. Sent again, with
+   * the reason, when the committee corrects the points before approval.
    */
   witnessConfirmed(
     submission: Submission,

@@ -19,11 +19,19 @@ include ../mixins/errorMessage.pug
 //-   member's spelling to start from: new_scientific_name, new_common_name,
 //-   new_point_class (number or null), new_cares_species
 //- @param errors - refusals by field
+//- @param correction - whether the step belongs to the correction form (#528),
+//-   which carries the flag so the server answers with that form again
+//- @param backUrl - the page Back fetches the panel from: the Submission page,
+//-   or the correction form
 
 - const eyebrow = "text-xs font-semibold uppercase tracking-wide text-gray-500"
 - const chip = "block text-center py-2 rounded-lg border border-gray-300 bg-white font-semibold text-gray-900 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 peer-focus-visible:ring-2 peer-focus-visible:ring-amber-400"
 
+- const back = typeof backUrl === "string" ? backUrl : `/submissions/${submission.id}`
+
 #witness-record(hx-on:keydown="if (event.key === 'Enter') event.preventDefault()")
+	if correction
+		input(type="hidden" name="correction" value="1")
 	p.mb-1(class=eyebrow) Record new species
 	p.text-sm.text-gray-600.mb-3 Only when you're sure it isn't in the catalogue under another name.
 
@@ -75,7 +83,7 @@ include ../mixins/errorMessage.pug
 	) Record species and continue
 	button.outline.w-full.mt-2(
 		type="button"
-		hx-get=`/submissions/${submission.id}`
+		hx-get=back
 		hx-select="#witnessPanel"
 		hx-target="#witnessPanel"
 		hx-swap="outerHTML"

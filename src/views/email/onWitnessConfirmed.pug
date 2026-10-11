@@ -6,8 +6,8 @@
 //- @param member - display_name
 //- @param letter - WitnessLetter (`witnessLetter`, src/notifications.ts):
 //-   every fact worked out and every day already formatted, so this template
-//-   only prints. `lines` add up to `total`; `firstTime` and `laterBonuses`
-//-   decide the two optional lines.
+//-   only prints. `lines` add up to `total`; `firstTime`, `laterBonuses` and
+//-   `correctionReason` decide the optional lines.
 //- @param domain - the Portal's host
 
 doctype html
@@ -103,6 +103,13 @@ html
 			.fix {
 				border-left: 4px solid #f59e0b;
 			}
+			.corrected {
+				background-color: #fffbeb;
+				border: 1px solid #fcd34d;
+				padding: 10px 12px;
+				border-radius: 6px;
+				margin: 15px 0;
+			}
 			.button {
 				display: inline-block;
 				background-color: #2563eb;
@@ -128,6 +135,13 @@ html
 			p Hello #{member.display_name},
 
 			p #{letter.witnessName} witnessed your #{letter.programAbbreviation} submission on #{letter.witnessedOn} and set its points. The points count once the committee approves the submission at a meeting.
+
+			//- The committee corrected the points since the Witness (#528): the
+			//- letter goes again, and says why, in the committee's words
+			if letter.correctionReason
+				p.corrected#witness-correction
+					strong Points corrected:
+					|  #{letter.correctionReason}
 
 			.box#witness-submission
 				h3 Submission

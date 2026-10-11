@@ -26,6 +26,8 @@ import {
   recordSpeciesForm,
   witnessSummaryForm,
 } from "@/forms/confirmWitness";
+import { correctPointsSchema } from "@/forms/correctPoints";
+import { z } from "zod";
 import { inviteSchema } from "@/forms/member";
 import { sendInviteEmail } from "@/notifications";
 import { getNextLevel, programMetadata, programs } from "@/programs";
@@ -35,6 +37,8 @@ import { createAuthCode } from "@/db/auth";
 import { AuthCode, generateRandomCode } from "@/auth";
 import { validateFormResult } from "@/forms/utils";
 import {
+  CORRECTION_BUTTON,
+  correctionPanelLocals,
   programOfSubmission,
   validateSubmission,
   witnessPanelLocals,
@@ -532,18 +536,31 @@ export const confirmWitnessAction = async (req: MulmRequest, res: Response) => {
   res.set("HX-Redirect", `/admin/witness-queue/${submission.program}`).send();
 };
 
-/** The Record new species step, into the panel's Species card. */
+/** Whether a witness-panel request belongs to the correction form (#528): it says so in a `correction` field. */
+function isCorrection(source: unknown): boolean {
+  const parsed = z.object({ correction: z.string().optional() }).safeParse(source);
+  return parsed.success && parsed.data.correction === "1";
+}
+
+/**
+ * The Record new species step, into the panel's Species card. On the
+ * correction form the step carries its flag and goes back to the form, not
+ * the Submission page.
+ */
 function renderRecordSpeciesForm(
   res: Response,
   submission: Submission,
   values: Record<string, unknown>,
-  errors: Map<string, string>
+  errors: Map<string, string>,
+  correction: boolean
 ): void {
   res.render("admin/recordSpeciesForm", {
     submission,
     program: programOfSubmission(submission),
     values,
     errors,
+    correction,
+    backUrl: correction ? `/admin/submissions/${submission.id}/correct-points` : `/submissions/${submission.id}`,
   });
 }
 
@@ -568,7 +585,8 @@ export const recordSpeciesFormAction = async (req: MulmRequest, res: Response) =
       new_point_class: null,
       new_cares_species: false,
     },
-    new Map()
+    new Map(),
+    isCorrection(req.query)
   );
 };
 
@@ -587,6 +605,7 @@ export const recordSpeciesAction = async (req: MulmRequest, res: Response) => {
   }
 
   const body: unknown = req.body ?? {};
+  const correction = isCorrection(body);
   const parsed = recordSpeciesForm.safeParse(body);
   if (!parsed.success) {
     const typed = recordSpeciesDraftForm.parse(body);
@@ -594,12 +613,15 @@ export const recordSpeciesAction = async (req: MulmRequest, res: Response) => {
       res,
       submission,
       typed,
-      new Map(parsed.error.issues.map((issue) => [String(issue.path[0]), issue.message]))
+      new Map(parsed.error.issues.map((issue) => [String(issue.path[0]), issue.message])),
+      correction
     );
     return;
   }
 
-  const panel = await witnessPanelLocals(submission, req.viewer!, { newSpecies: parsed.data });
+  const panel = correction
+    ? await correctionPanelLocals(submission, req.viewer!, { newSpecies: parsed.data })
+    : await witnessPanelLocals(submission, req.viewer!, { newSpecies: parsed.data });
   res.set("HX-Retarget", "#witnessPanel").set("HX-Reswap", "outerHTML");
   res.render("admin/witnessPanel", {
     submission: { ...submission, reproduction_date: formatShortDate(submission.reproduction_date) },
@@ -624,11 +646,107 @@ export const witnessSummaryAction = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const { species_id, new_scientific_name: recording, ...values } = parsed.data;
+  const { species_id, new_scientific_name: recording, correction, ...values } = parsed.data;
   res.render("admin/witnessSummary", {
     // A Species being recorded counts as chosen, as does one bound or picked
     summary: witnessSummary({ ...values, bound: recording || (species_id ?? submission.species_id) != null }),
+    summaryButton: correction ? CORRECTION_BUTTON : null,
   });
+};
+
+/** The correction form's query: a Species chosen on the form, as the picker (`group_id`) or a suggestion (`species_id`) names it. */
+const chosenOnCorrectionForm = z
+  .object({
+    species_id: z.coerce.number().int().positive().optional(),
+    group_id: z.coerce.number().int().positive().optional(),
+  })
+  .transform((val) => val.species_id ?? val.group_id);
+
+/**
+ * Whether this viewer may correct this Submission at all (#528): the table's
+ * answer with the Species taken as settled, since the form itself lets the
+ * corrector choose one for a Submission bound to none.
+ */
+function mayCorrect(viewer: NonNullable<MulmRequest["viewer"]>, submission: Submission): boolean {
+  const isOwner = submission.member_id === viewer.id;
+  return lifecycle.canMove(lifecycle.moves.correctPoints, {
+    state: lifecycle.deriveState(submission),
+    changesPending: lifecycle.hasChangesRequested(submission),
+    actor: isOwner ? "member" : "committee",
+    actorId: viewer.id,
+    isOwner,
+    bound: true,
+  });
+}
+
+/**
+ * GET /admin/submissions/:id/correct-points{?species_id|group_id}
+ * The correction form (#528): the witness panel's Species and Points cards
+ * over the Submission's current values, a required reason and Save
+ * correction. As a page from the Submission page or the approval queue; as
+ * the panel alone when the form itself asks for it again with another
+ * Species chosen, so the base points prefill from that Species' Point class.
+ * Nothing is written until Save.
+ */
+export const correctPointsFormAction = async (req: MulmRequest, res: Response) => {
+  const submission = await validateSubmission(req, res);
+  if (!submission) {
+    return;
+  }
+  if (!mayCorrect(req.viewer!, submission)) {
+    res.status(403).send("This Submission's points cannot be corrected by you now: it needs a Witness first, or it is your own.");
+    return;
+  }
+
+  const chosen = chosenOnCorrectionForm.safeParse(req.query);
+  const speciesId = chosen.success ? chosen.data : undefined;
+  if (speciesId !== undefined && !(await findSpeciesById(speciesId))) {
+    sendWitnessPanelRefusal(res, ["Choose a Species that exists"]);
+    return;
+  }
+
+  const panel = await correctionPanelLocals(submission, req.viewer!, { speciesId });
+  const locals = {
+    title: "Correct species and points",
+    submission: { ...submission, reproduction_date: formatShortDate(submission.reproduction_date) },
+    ...panel,
+  };
+  if (req.get("HX-Request") === "true") {
+    res.render("admin/witnessPanel", locals);
+    return;
+  }
+  res.render("admin/correctPoints", locals);
+};
+
+/**
+ * POST /admin/submissions/:id/correct-points
+ * Save correction: the Species, the points, first-time on an Approved
+ * Submission, and the reason, validated against the Program the chosen
+ * Species belongs to and written in one transaction with one changelog
+ * entry. A refusal lands in the panel's alert; success returns to the
+ * Submission page.
+ */
+export const correctPointsAction = async (req: MulmRequest, res: Response) => {
+  const submission = await validateSubmission(req, res);
+  if (!submission) {
+    return;
+  }
+
+  const body: unknown = req.body ?? {};
+  const approved = submission.approved_on != null;
+  const parsed = correctPointsSchema(await programAfterConfirm(body, submission), { approved }).safeParse(body);
+  if (!parsed.success) {
+    sendWitnessPanelRefusal(res, parsed.error.issues.map((issue) => issue.message));
+    return;
+  }
+
+  const { reason, ...correction } = parsed.data;
+  const ran = await witnessPanelMove(req, res, submission.id, async () => {
+    await lifecycle.correctPoints(callerFor(req.viewer!), submission.id, correction, reason);
+  });
+  if (!ran) return;
+
+  res.set("HX-Redirect", `/submissions/${submission.id}`).send();
 };
 
 /**
@@ -1234,10 +1352,10 @@ export const saveApprovedSubmissionEdits = async (req: MulmRequest, res: Respons
   }
 
   try {
-    // Correcting an Approved Submission is the only movement out of Approved.
-    // The changelog, the feed entry updated in place rather than appended, and
-    // the symmetric Level and Specialty Award recompute all hang off the move.
-    const changes = await lifecycle.correctPoints(
+    // The dialog's write, kept until #529 splits it into a details-only move:
+    // the changelog, the feed entry updated in place rather than appended, and
+    // the symmetric Level and Specialty Award recompute all hang off it.
+    const changes = await lifecycle.correctApprovedSubmission(
       { id: viewer!.id, isAdmin: true },
       submission.id,
       updatesForDb,

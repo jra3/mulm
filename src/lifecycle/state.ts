@@ -24,7 +24,10 @@ import type { Submission } from "@/db/submissions";
  *
  * A confirmed row always carries points now (ADR-0003): migration 066 sent
  * the ones witnessed before that back to pendingWitness, with their original
- * witness on the changelog (`rewitness.ts`, #524).
+ * witness on the changelog (`rewitness.ts`, #524). From waitingPeriod on the
+ * committee corrects the Species and points in place (`correctPoints`, #528)
+ * without moving the Submission, except that a Species whose clock is longer
+ * can put a queued one back in waitingPeriod, as the clock decides.
  */
 export type SubmissionState =
   | "draft"

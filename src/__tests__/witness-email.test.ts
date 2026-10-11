@@ -246,6 +246,22 @@ void describe("The witness email renders", () => {
     assert.ok(!again.includes("first-time bonus"));
   });
 
+  void test("a correction before approval says so, with the committee's reason; the Witness itself does not", () => {
+    const corrected = renderWitnessed({
+      domain: "bap.basny.org",
+      member,
+      letter: witnessLetter(fish, witness, { firstTime: false, correctionReason: "The member disputed the point class; it is a 10" }),
+    });
+    assert.match(corrected, /id="witness-correction"[^>]*><strong>Points corrected:<\/strong> The member disputed the point class; it is a 10</);
+    assert.strictEqual(
+      witnessLetter(fish, witness, { firstTime: false, correctionReason: "Miscounted" }).correctionReason,
+      "Miscounted"
+    );
+
+    assert.ok(!render(fish).includes('id="witness-correction"'));
+    assert.strictEqual(witnessLetter(fish, witness, { firstTime: false }).correctionReason, null);
+  });
+
   void test("the bonuses-still-possible line appears only when some bonus is", () => {
     assert.ok(!render(fish).includes('id="witness-later-bonuses"'));
     const plantHtml = render(plant);

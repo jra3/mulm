@@ -1,0 +1,39 @@
+include ../header.pug
+
+//- The correction form as a page (#528): the witness panel's Species and
+//- Points cards over the Submission's current values, a required reason and
+//- Save correction (admin/witnessPanel.pug with `correction` set). Reached
+//- from the Submission page and from the approval queue row. Phone first,
+//- one scroll, the sticky bar at the bottom, as the witness panel is.
+//-
+//- @param submission - the Submission, reproduction_date formatted
+//- @param speciesFacts, suggestions, newSpecies, correction, summary,
+//-   summaryButton, allowed, ... - `correctionPanelLocals` (src/routes/submission.ts)
+
+doctype html
+html
+	+headTag(`${title} - BAS BAP`)
+
+	body.bg-gray-700.text-gray-900
+		+pageHeader(true, title, `${submission.species_common_name} · ${submission.member_name}`)
+
+		main.py-4
+			include witnessPanel.pug
+
+		//- The Species search is a Tom Select typeahead; the panel is swapped
+		//- whole when another Species is chosen, so the search is set up again
+		//- on every swap, not only on load
+		script.
+			function initializeTypeaheads() {
+				document.querySelectorAll('select.tom-select-typeahead:not(.tomselected)').forEach(function (element) {
+					const config = getTypeaheadConfig(element);
+					const tomSelect = new TomSelect(element, buildTomSelectOptions(element, config));
+					element.tomSelectInstance = tomSelect;
+					if (config.maxItems === 1) {
+						tomSelect.control.classList.add('single-value');
+					}
+					element.classList.add('tomselected');
+				});
+			}
+			document.addEventListener('DOMContentLoaded', initializeTypeaheads);
+			document.addEventListener('htmx:load', initializeTypeaheads);

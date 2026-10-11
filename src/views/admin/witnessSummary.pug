@@ -2,15 +2,19 @@
 //- Rendered into the panel first, then swapped in again on every change to
 //- the panel's form, so the sum is the server's (`witnessSummary` in
 //- src/routes/submission.ts, over the one Points rule) and never a copy of
-//- the rule in the browser.
+//- the rule in the browser. The correction form (#528) shares it, with Save
+//- correction for its button.
 //-
 //- @param summary - { ready, lines: [{ label, amount }], total, hint }
+//- @param summaryButton - { id, label } for the button, or unset for Confirm witness
+
+- const button = typeof summaryButton === "object" && summaryButton !== null ? summaryButton : { id: "witness-confirm", label: "Confirm witness" }
 
 if summary.ready
 	.text-white.text-sm.mb-2.flex.justify-between.gap-3.items-baseline
 		span#witness-sum-lines= summary.lines.map((line) => `${line.label} ${line.amount}`).join(" + ")
 		b.whitespace-nowrap.text-base#witness-sum-total= `${summary.total} pts`
-	button.primary.w-full.h-12.text-base#witness-confirm(type="submit")= `Confirm witness · ${summary.total} pts`
+	button.primary.w-full.h-12.text-base(id=button.id type="submit")= `${button.label} · ${summary.total} pts`
 else
 	.text-gray-200.text-sm.mb-2#witness-sum-hint= summary.hint
-	button.primary.w-full.h-12.text-base#witness-confirm(type="submit" disabled) Confirm witness
+	button.primary.w-full.h-12.text-base(id=button.id type="submit" disabled)= button.label

@@ -40,6 +40,7 @@ import {
 import { getMemberWithPoints } from "@/db/members";
 import {
   approveAsShown,
+  correctionOf,
   readSubmission,
   recordNotifications,
   requestChangesFixture,
@@ -174,8 +175,23 @@ void describe("Submission lifecycle - transitions", () => {
       },
       {
         move: "correctPoints",
-        legal: ["approved"],
-        run: (id) => correctPoints(committee, id, { points: 15 }, "Miscounted"),
+        legal: ["waitingPeriod", "inApprovalQueue", "approved"],
+        run: async (id) => correctPoints(committee, id, await correctionOf(id, { points: 15 }), "Miscounted"),
+      },
+      {
+        move: "bindSpecies",
+        legal: ["pendingWitness"],
+        run: async (id) => bindSpecies(committee, id, await createSpecies({
+          canonicalGenus: "Legalis",
+          canonicalSpeciesName: `bindus${id}`,
+          programClass: "Livebearers",
+          speciesType: "Fish",
+        })),
+      },
+      {
+        move: "adoptSpeciesClassification",
+        legal: ["pendingWitness"],
+        run: (id) => adoptSpeciesClassification(committee, id),
       },
     ];
 
@@ -660,13 +676,22 @@ void describe("Submission lifecycle - transitions", () => {
       assert.strictEqual((await readSubmission(id))!.witness_verification_status, "confirmed");
     });
 
-    void test("rebinding a witnessed Submission is the committee's move and keeps the Witness", async () => {
-      const id = await at("waitingPeriod");
-      await bindSpecies(committee, id, await newSpecies("tertius"));
+    void test("once the Witness is confirmed a plain bind is refused: the Species changes with the points, through a correction", async () => {
+      const tertius = await newSpecies("tertius");
+      for (const state of ["waitingPeriod", "inApprovalQueue"] as const) {
+        const id = await at(state);
+        const before = (await readSubmission(id))!;
 
-      const after = (await readSubmission(id))!;
-      assert.strictEqual(after.witness_verification_status, "confirmed");
-      assert.strictEqual(deriveState(after), "waitingPeriod");
+        assert.strictEqual(await refusal(() => bindSpecies(committee, id, tertius)), "state");
+
+        const after = (await readSubmission(id))!;
+        assert.strictEqual(after.species_id, before.species_id, "nothing rebound");
+        assert.strictEqual(after.witness_verification_status, "confirmed");
+        assert.deepStrictEqual(await changelog(id), [], "a refusal records nothing");
+
+        await correctPoints(committee, id, await correctionOf(id, { species_id: tertius }), "Misidentified");
+        assert.strictEqual((await readSubmission(id))!.species_id, tertius);
+      }
     });
 
     void test("only the committee binds, never on its own Submission, and not once Approved or a Draft", async () => {
@@ -817,16 +842,17 @@ void describe("Submission lifecycle - transitions", () => {
       assert.strictEqual((await readSubmission(id))!.witness_verification_status, "confirmed");
     });
 
-    void test("adopting keeps a confirmed Witness, and is the committee's move on someone else's bound Submission", async () => {
+    void test("adopting is the committee's move on someone else's bound Submission, and only while a Witness is awaited", async () => {
       const witnessed = await submissionInState(ctx.db, "waitingPeriod", {
         memberId: ctx.member.id,
         witnessedBy: ctx.admin.id,
         speciesClass: "Killifish",
       });
-      await adoptSpeciesClassification(committee, witnessed);
-      assert.strictEqual((await readSubmission(witnessed))!.witness_verification_status, "confirmed");
+      assert.strictEqual(await refusal(() => adoptSpeciesClassification(committee, witnessed)), "state");
+      assert.strictEqual((await readSubmission(witnessed))!.species_class, "Killifish", "the confirm settles the classification; after it a correction does");
 
-      assert.strictEqual(await refusal(() => adoptSpeciesClassification(member, witnessed)), "authorization");
+      const pending = await submissionInState(ctx.db, "pendingWitness", { memberId: ctx.member.id, speciesClass: "Killifish" });
+      assert.strictEqual(await refusal(() => adoptSpeciesClassification(member, pending)), "authorization");
       const own = await submissionInState(ctx.db, "pendingWitness", { memberId: ctx.admin.id });
       assert.strictEqual(await refusal(() => adoptSpeciesClassification(committee, own)), "authorization");
       const unbound = await submissionInState(ctx.db, "pendingWitness", {
@@ -836,20 +862,21 @@ void describe("Submission lifecycle - transitions", () => {
       await assert.rejects(() => adoptSpeciesClassification(committee, unbound), UnboundError);
     });
 
-    void test("adopting a classification with a longer waiting period takes a queued Submission back to the waiting period", async () => {
+    void test("a correction whose Species carries a longer waiting period takes a queued Submission back to the waiting period", async () => {
       // Queued as Fish/Marine (30 days) at 40 days old; Guppy is Fish/Livebearers (60 days).
       // The clock is the whole mechanism: the classification changes and the
       // state follows, with nothing else written.
       const fortyDaysAgo = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString();
       const id = await submissionInState(ctx.db, "inApprovalQueue", {
         memberId: ctx.member.id,
+        witnessedBy: ctx.admin.id,
         speciesType: "Fish",
         speciesClass: "Marine",
         reproductionDate: fortyDaysAgo,
       });
       assert.strictEqual(await stateOf(id), "inApprovalQueue");
 
-      await adoptSpeciesClassification(committee, id);
+      await correctPoints(committee, id, await correctionOf(id), "It is the guppy the member picked, a Livebearer");
 
       const after = (await readSubmission(id))!;
       assert.strictEqual(after.species_class, "Livebearers");
@@ -868,10 +895,11 @@ void describe("Submission lifecycle - transitions", () => {
       // A queued Submission whose new clock has already run stays queued
       const served = await submissionInState(ctx.db, "inApprovalQueue", {
         memberId: ctx.member.id,
+        witnessedBy: ctx.admin.id,
         speciesType: "Fish",
         speciesClass: "Marine",
       });
-      await adoptSpeciesClassification(committee, served);
+      await correctPoints(committee, served, await correctionOf(served), "A Livebearer");
       assert.strictEqual(deriveState((await readSubmission(served))!), "inApprovalQueue");
     });
   });
@@ -1714,13 +1742,12 @@ void describe("Submission lifecycle - transitions", () => {
     void test("a correction needs a stated reason and an actual change", async () => {
       const id = await at("approved");
       assert.strictEqual(
-        await refusal(() => correctPoints(committee, id, { points: 20 }, "  ")),
+        await refusal(async () => correctPoints(committee, id, await correctionOf(id, { points: 20 }), "  ")),
         "validation"
       );
 
-      const current = (await readSubmission(id))!.points;
       assert.strictEqual(
-        await refusal(() => correctPoints(committee, id, { points: current }, "no-op")),
+        await refusal(async () => correctPoints(committee, id, await correctionOf(id), "no-op")),
         "validation"
       );
     });
@@ -1731,13 +1758,13 @@ void describe("Submission lifecycle - transitions", () => {
       const changes = await correctPoints(
         committee,
         id,
-        { points: 20, species_latin_name: "Poecilia wingei" },
-        "Misidentified species"
+        await correctionOf(id, { points: 20, article_points: 5 }),
+        "Miscounted, and the article was missed"
       );
 
       assert.deepStrictEqual(
         changes.map((c) => c.field).sort(),
-        ["points", "species_latin_name"]
+        ["article_points", "points"]
       );
 
       const notes = await query<{ note_text: string }>(
@@ -1745,15 +1772,16 @@ void describe("Submission lifecycle - transitions", () => {
         [id]
       );
       assert.strictEqual(notes.length, 1);
-      assert.match(notes[0].note_text, /Misidentified species/);
+      assert.match(notes[0].note_text, /Miscounted, and the article was missed/);
       assert.strictEqual((await readSubmission(id))!.points, 20);
+      assert.strictEqual((await readSubmission(id))!.article_points, 5);
     });
 
     void test("a Points correction leaves the Witness untouched", async () => {
       const id = await at("approved");
       const before = (await readSubmission(id))!;
 
-      await correctPoints(committee, id, { points: 20 }, "Miscounted");
+      await correctPoints(committee, id, await correctionOf(id, { points: 20 }), "Miscounted");
 
       const after = (await readSubmission(id))!;
       assert.strictEqual(deriveState(after), "approved");
@@ -1761,6 +1789,261 @@ void describe("Submission lifecycle - transitions", () => {
       assert.strictEqual(after.witnessed_by, before.witnessed_by);
       assert.strictEqual(after.witnessed_on, before.witnessed_on);
       await assertSubmissionInvariantsHold(after);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // The committee corrects Species and points from the Witness on (#528)
+  // -------------------------------------------------------------------------
+
+  /**
+   * A correction carries the Species and the points together, with a reason,
+   * from the waiting period through Approved. Before approval it recomputes
+   * nothing; after it the standing follows. The Witness stays.
+   */
+  void describe("The committee corrects Species and points from the Witness on", () => {
+    const changelog = async (id: number) =>
+      (
+        await query<{ note_text: string }>(
+          "SELECT note_text FROM submission_notes WHERE submission_id = ? ORDER BY id",
+          [id]
+        )
+      ).map((n) => JSON.parse(n.note_text) as { type: string; changes: Change[]; reason: string });
+    const pointsOf = async (id: number) => {
+      const row = (await readSubmission(id))!;
+      return {
+        points: row.points,
+        article_points: row.article_points,
+        cares_species: row.cares_species,
+        flowered: row.flowered,
+        sexual_reproduction: row.sexual_reproduction,
+        first_time_species: row.first_time_species,
+      };
+    };
+    const freshSpecies = (epithet: string, extra: { pointClass?: number | null; speciesType?: string; programClass?: string } = {}) =>
+      createSpecies({
+        canonicalGenus: "Correctus",
+        canonicalSpeciesName: epithet,
+        programClass: extra.programClass ?? "Livebearers",
+        speciesType: extra.speciesType ?? "Fish",
+        pointClass: extra.pointClass ?? null,
+      });
+
+    void test("before approval a correction changes the points, on the changelog with its reason, and leaves the Witness and first-time alone", async () => {
+      const id = await at("waitingPeriod");
+      const before = (await readSubmission(id))!;
+
+      const changes = await correctPoints(
+        committee,
+        id,
+        await correctionOf(id, { points: 15, cares_species: true }),
+        "The member disputed the point class; it is a 15"
+      );
+
+      assert.deepStrictEqual(changes.map((c) => c.field).sort(), ["cares_species", "points"]);
+      const after = (await readSubmission(id))!;
+      assert.deepStrictEqual(await pointsOf(id), {
+        points: 15,
+        article_points: null,
+        cares_species: 1,
+        flowered: 0,
+        sexual_reproduction: 0,
+        first_time_species: null,
+      });
+      assert.strictEqual(after.witness_verification_status, "confirmed");
+      assert.strictEqual(after.witnessed_by, before.witnessed_by);
+      assert.strictEqual(after.witnessed_on, before.witnessed_on);
+      assert.strictEqual(deriveState(after), "waitingPeriod");
+      assert.strictEqual(after.approved_on, null, "nothing awarded");
+      assert.deepStrictEqual(
+        (await changelog(id)).map((e) => [e.type, e.reason, e.changes.map((c) => c.field).sort()]),
+        [["admin_edit", "The member disputed the point class; it is a 15", ["cares_species", "points"]]],
+        "one entry, with the reason"
+      );
+      await assertSubmissionInvariantsHold(after);
+    });
+
+    void test("first-time can be set only on an Approved Submission", async () => {
+      const queued = await at("inApprovalQueue");
+      await assert.rejects(
+        () => correctionOf(queued, { points: 15, first_time_species: true }).then((c) => correctPoints(committee, queued, c, "First")),
+        (err: unknown) => err instanceof ValidationError && err.context?.field === "first_time_species"
+      );
+      assert.deepStrictEqual(await changelog(queued), [], "a refusal records nothing");
+      assert.strictEqual((await readSubmission(queued))!.points, 10, "and writes nothing");
+      // A false is as much an answer as a true
+      assert.strictEqual(
+        await refusal(async () => correctPoints(committee, queued, await correctionOf(queued, { points: 15, first_time_species: false }), "First")),
+        "validation"
+      );
+
+      const approved = await at("approved");
+      assert.strictEqual((await readSubmission(approved))!.first_time_species, 0);
+      await correctPoints(committee, approved, await correctionOf(approved, { first_time_species: true }), "It was the first of its Species");
+      const after = (await readSubmission(approved))!;
+      assert.strictEqual(after.first_time_species, 1);
+      assert.deepStrictEqual((await changelog(approved))[0].changes, [{ field: "first_time_species", old: false, new: true }]);
+      await assertSubmissionInvariantsHold(after);
+      // Left off, first-time stands as approval decided it
+      await correctPoints(committee, approved, await correctionOf(approved, { points: 20, first_time_species: undefined }), "Point class");
+      assert.strictEqual((await readSubmission(approved))!.first_time_species, 1);
+    });
+
+    void test("the Species and the points change in one write, with one changelog entry; the Submission takes the Species' classification", async () => {
+      const id = await at("inApprovalQueue");
+      const marine = await freshSpecies("marinus", { pointClass: 20, programClass: "Marine" });
+
+      const changes = await correctPoints(
+        committee,
+        id,
+        await correctionOf(id, { species_id: marine, points: 20 }),
+        "Misidentified: it is the marine one"
+      );
+
+      const after = (await readSubmission(id))!;
+      assert.strictEqual(after.species_id, marine);
+      assert.strictEqual(after.species_class, "Marine");
+      assert.strictEqual(after.points, 20);
+      assert.deepStrictEqual(
+        changes.map((c) => [c.field, c.old, c.new]),
+        [
+          ["species", "Poecilia reticulata", "Correctus marinus"],
+          ["species_class", "Livebearers", "Marine"],
+          ["points", 10, 20],
+        ]
+      );
+      const entries = await changelog(id);
+      assert.strictEqual(entries.length, 1, "one entry for the Species and the points together");
+      assert.strictEqual(entries[0].reason, "Misidentified: it is the marine one");
+      await assertSubmissionInvariantsHold(after);
+    });
+
+    void test("a Species with no Point class takes the corrected base points as its Point class", async () => {
+      const id = await at("waitingPeriod");
+      const unvalued = await freshSpecies("sinepretio");
+
+      await correctPoints(committee, id, await correctionOf(id, { species_id: unvalued, points: 15 }), "Misidentified");
+
+      assert.strictEqual((await findSpeciesById(unvalued))!.base_points, 15);
+      assert.strictEqual((await readSubmission(id))!.points, 15);
+    });
+
+    void test("a correction may record a new Species, created in its own transaction and on the changelog", async () => {
+      const id = await at("waitingPeriod");
+      const draft = {
+        canonicalGenus: "Correctus",
+        canonicalSpeciesName: "novus",
+        commonName: "Corrected Novelty",
+        pointClass: 15,
+        isCaresSpecies: false,
+      };
+
+      const changes = await correctPoints(
+        committee,
+        id,
+        await correctionOf(id, { new_species: draft, points: 15 }),
+        "Not in the catalogue after all"
+      );
+
+      const created = (await resolveSpecies({ latinName: "Correctus novus" }))?.species;
+      assert.ok(created, "the Species exists");
+      const after = (await readSubmission(id))!;
+      assert.strictEqual(after.species_id, created.group_id);
+      assert.strictEqual(created.base_points, 15);
+      assert.deepStrictEqual(changes.map((c) => c.field), ["new_species", "species", "points"]);
+
+      // Both a Species and a new one is refused, as at the Witness
+      assert.strictEqual(
+        await refusal(async () =>
+          correctPoints(committee, id, await correctionOf(id, { species_id: created.group_id, new_species: draft }), "Both")
+        ),
+        "validation"
+      );
+    });
+
+    void test("a bonus outside the corrected Species' Program is refused, and nothing is written", async () => {
+      const id = await at("waitingPeriod");
+      const plant = await freshSpecies("viridis", { speciesType: "Plant", programClass: "Cryptocoryne", pointClass: 10 });
+      const before = (await readSubmission(id))!;
+
+      await assert.rejects(
+        async () => correctPoints(committee, id, await correctionOf(id, { species_id: plant, cares_species: true }), "A plant"),
+        (err: unknown) => err instanceof ValidationError && err.context?.field === "cares_species"
+      );
+
+      const after = (await readSubmission(id))!;
+      assert.strictEqual(after.species_id, before.species_id, "not rebound");
+      assert.strictEqual(after.program, "fish");
+      assert.deepStrictEqual(await changelog(id), []);
+
+      // The right bonus for the new Program goes through, and the Submission moves Program
+      await correctPoints(committee, id, await correctionOf(id, { species_id: plant, flowered: true }), "A plant that flowered");
+      const moved = (await readSubmission(id))!;
+      assert.strictEqual(moved.program, "plant");
+      assert.strictEqual(moved.flowered, 1);
+    });
+
+    void test("a correction is refused with base points outside the Point classes, a Species that does not exist, or an article bonus outside none, 5 or 10", async () => {
+      const id = await at("approved");
+      assert.strictEqual(await refusal(async () => correctPoints(committee, id, await correctionOf(id, { points: 12 }), "Odd")), "validation");
+      assert.strictEqual(await refusal(async () => correctPoints(committee, id, await correctionOf(id, { species_id: 987654 }), "Gone")), "validation");
+      assert.strictEqual(await refusal(async () => correctPoints(committee, id, await correctionOf(id, { article_points: 7 }), "Odd")), "validation");
+      assert.deepStrictEqual(await changelog(id), []);
+    });
+
+    void test("after approval a correction recomputes the standing; before it nothing is recomputed", async () => {
+      // Another member already has the guppy approved, so no first-time lands here
+      await submissionInState(ctx.db, "approved", { memberId: ctx.otherAdmin!.id, witnessedBy: ctx.admin.id });
+      const id = await at("inApprovalQueue");
+      const totalOf = async () => (await getMemberWithPoints(ctx.member.id)).fishTotalPoints;
+
+      await correctPoints(committee, id, await correctionOf(id, { points: 20 }), "Point class");
+      assert.strictEqual(await totalOf(), 0, "pending points count for nothing");
+
+      await approveAsShown(committee, id);
+      assert.strictEqual(await totalOf(), 20);
+
+      await correctPoints(committee, id, await correctionOf(id, { points: 5 }), "No, a 5");
+      assert.strictEqual(await totalOf(), 5, "awarded points follow the correction");
+      assert.deepStrictEqual(await pointsOf(id), {
+        points: 5,
+        article_points: null,
+        cares_species: 0,
+        flowered: 0,
+        sexual_reproduction: 0,
+        first_time_species: 0,
+      });
+    });
+
+    void test("a correction is the committee's, never the submitter's, and refused before the Witness or on a Draft", async () => {
+      const pending = await at("pendingWitness");
+      assert.strictEqual(await refusal(async () => correctPoints(committee, pending, await correctionOf(pending, { points: 15 }), "Early")), "state");
+      const draft = await at("draft");
+      assert.strictEqual(await refusal(async () => correctPoints(committee, draft, await correctionOf(draft, { points: 15 }), "Early")), "state");
+
+      const waiting = await at("waitingPeriod");
+      assert.strictEqual(await refusal(async () => correctPoints(member, waiting, await correctionOf(waiting, { points: 15 }), "Mine")), "authorization");
+      const own = await submissionInState(ctx.db, "approved", { memberId: ctx.admin.id, witnessedBy: ctx.otherAdmin!.id });
+      assert.strictEqual(await refusal(async () => correctPoints(committee, own, await correctionOf(own, { points: 15 }), "Mine")), "authorization");
+      assert.strictEqual((await readSubmission(waiting))!.points, 10);
+    });
+
+    void test("an Approved Submission bound to no Species is corrected by naming one; without one it is refused as unbound", async () => {
+      const id = await submissionInState(ctx.db, "approved", {
+        memberId: ctx.member.id,
+        witnessedBy: ctx.admin.id,
+        speciesId: null,
+      });
+
+      await assert.rejects(
+        async () => correctPoints(committee, id, await correctionOf(id, { points: 15 }), "Point class"),
+        (err: unknown) => err instanceof UnboundError && err.message === "Bind this Submission to a Species before you correct its points"
+      );
+
+      const guppy = await ensureGuppySpecies(ctx.db);
+      const changes = await correctPoints(committee, id, await correctionOf(id, { species_id: guppy, points: 15 }), "Bound late");
+      assert.strictEqual((await readSubmission(id))!.species_id, guppy);
+      assert.deepStrictEqual(changes.map((c) => c.field), ["species", "points"]);
     });
   });
 

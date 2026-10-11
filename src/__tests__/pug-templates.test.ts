@@ -137,6 +137,7 @@ void describe("Pug Template Rendering", () => {
     readyOn: "November 19, 2026",
     keepFry: true,
     offspring: "fry",
+    correctionReason: null,
   };
 
   const baseMockData: Record<string, unknown> = {
@@ -564,7 +565,6 @@ void describe("Pug Template Rendering", () => {
       /^mixins\/caresBadge\.pug$/, // Mixin-only template
       /^mixins\/iucnBadge\.pug$/, // Mixin-only template
       /^mixins\/formCheckbox\.pug$/, // Mixin-only template
-      /^mixins\/bindSpeciesControls\.pug$/, // Mixin-only template
       /^mixins\/changesRequestedBanner\.pug$/, // Mixin-only template (tested via submit.pug)
       /^mixins\/emptyState\.pug$/, // Mixin-only template
       /^mixins\/loadingSpinner\.pug$/, // Mixin-only template
@@ -772,6 +772,23 @@ void describe("Pug Template Rendering", () => {
             templateData.allowed = { confirmWitness: false, bindSpecies: true, requestChanges: true };
             break;
 
+          case "admin/correctPoints.pug":
+            templateData.title = "Correct species and points";
+            templateData.spellingAgreement = null;
+            templateData.speciesFacts = null;
+            templateData.speciesChosenByWitness = true;
+            templateData.suggestions = [];
+            templateData.newSpecies = null;
+            templateData.summary = { ready: false, lines: [], total: 0, hint: "Choose the species first" };
+            templateData.summaryButton = { id: "correction-save", label: "Save correction" };
+            templateData.allowed = { correctPoints: true };
+            templateData.correction = {
+              approved: false,
+              speciesChanged: false,
+              current: { points: 10, article_points: null, cares_species: false, flowered: false, sexual_reproduction: false, first_time_species: false },
+            };
+            break;
+
           case "admin/recordSpeciesForm.pug":
             templateData.program = "fish";
             templateData.values = { new_scientific_name: "", new_common_name: "", new_point_class: null, new_cares_species: false };
@@ -883,13 +900,6 @@ void describe("Pug Template Rendering", () => {
                 speciesList: ["Corydoras paleatus", "Ancistrus sp."],
               },
             ];
-            break;
-
-          case "admin/createSpeciesDialog.pug":
-            templateData.prefilled = {
-              canonical_genus: "Puntius",
-              canonical_species_name: "conchonius",
-            };
             break;
 
           case "cares.pug":
@@ -1453,6 +1463,126 @@ void describe("Pug Template Rendering", () => {
      * Submission, the Point class and CARES to choose. Nothing is created
      * until the Witness is confirmed.
      */
+    /**
+     * The correction form (#528): the same cards over the Submission's
+     * current values, a reason, Save correction, and choosing another
+     * Species asks the form for itself again rather than binding.
+     */
+    void describe("as the correction form", () => {
+      const current = { points: 10, article_points: 5, cares_species: true, flowered: false, sexual_reproduction: false, first_time_species: false };
+      const correctingPanel = (data: Record<string, unknown> = {}) =>
+        render({
+          speciesChosenByWitness: true,
+          spellingAgreement: null,
+          summary: { ready: true, lines: [{ label: "Base points", amount: 10 }, { label: "Article Bonus", amount: 5 }, { label: "CARES Species Bonus", amount: 5 }], total: 20, hint: null },
+          summaryButton: { id: "correction-save", label: "Save correction" },
+          allowed: { correctPoints: true, requestChanges: true, bindSpecies: false },
+          correction: { approved: false, speciesChanged: false, current },
+          ...data,
+        });
+
+      void test("posts to correct-points with the current Species and points prefilled, a reason, and Save correction", () => {
+        const html = correctingPanel();
+        assert.match(html, /Correct species and points/);
+        assert.doesNotMatch(html, /Witness this submission/);
+        assert.match(html, /id="witness-form"[^>]*hx-post="\/admin\/submissions\/42\/correct-points"[^>]*hx-disabled-elt="#correction-save"/);
+        assert.match(html, /<input type="hidden" name="correction" value="1"\/>/);
+        assert.match(html, /<input type="hidden" name="species_id" value="7"\/>/);
+        assert.match(html, /<input type="hidden" name="species_settled" value="1"\/>/);
+        assert.match(html, /Currently/);
+        assert.doesNotMatch(html, /Is that right|The member says it's/);
+        assert.match(html, /id="correction-standing"[^>]*>Witnessed, points pending approval\. Saving emails the member the new breakdown with your reason\./);
+        assert.match(html, /id="correction-cancel" href="\/submissions\/42"/);
+        // The Points card is open and holds the row's values, not the catalogue's
+        assert.match(html, /class="bg-white rounded-lg p-4 text-gray-900" id="witness-points"/);
+        assert.match(html, /name="points" value="10" id="witness-points-10" checked="checked"/);
+        assert.match(html, /id="witness-point-class"[^>]*>As set at the Witness\.</);
+        assert.match(html, /name="article_points" value="5" id="witness-article-5" checked="checked"/);
+        assert.match(html, /name="cares_species" value="on" checked="checked"/);
+        // The reason, and the bar's button
+        assert.match(html, /id="witness-reason"/);
+        assert.match(html, /<textarea class="text-input w-full" id="correction-reason" name="reason" rows="3" required="required" maxlength="2000"/);
+        assert.match(html, /the member reads it in the email/);
+        assert.match(html, /id="correction-save" type="submit">Save correction · 20 pts</);
+        assert.doesNotMatch(html, /witness-confirm|Confirm witness/);
+        // No Names to add, no Request changes: those are the Witness's
+        assert.doesNotMatch(html, /witness-names|add_common_name|Request changes|request-changes/);
+        assert.doesNotMatch(html.replace(/<[^>]+>/g, " "), /\bbind/i, "the form never says bind");
+      });
+
+      void test("first-time is a switch on an Approved Submission only", () => {
+        const approved = correctingPanel({ correction: { approved: true, speciesChanged: false, current: { ...current, first_time_species: true } } });
+        assert.match(approved, /name="first_time_species" value="on" checked="checked"/);
+        assert.match(approved, /Approval decided this\. Change it only if it was wrong\./);
+        assert.doesNotMatch(approved, /id="witness-first-time"/, "no informational first-time line beside the switch");
+        assert.match(approved, /id="correction-standing"[^>]*>Approved: the points are awarded\. Saving updates the standing and emails the member the corrected approval\./);
+        assert.match(approved, /id="witness-point-class"[^>]*>As awarded\.</);
+        assert.match(approved, /Goes on the changelog\.</);
+
+        const pending = correctingPanel();
+        assert.doesNotMatch(pending, /name="first_time_species"/);
+        assert.match(pending, /id="witness-first-time"[^>]*>Approved 3 times before, so no first-time bonus\.</);
+      });
+
+      void test("choosing another Species asks the form for itself again with that Species, and writes nothing", () => {
+        const html = correctingPanel({ suggestions: neighbours });
+        assert.match(html, /Wrong species\? Choose another/);
+        assert.match(html, /id="witness-species-other"/);
+        assert.match(
+          html,
+          /hx-get="\/admin\/submissions\/42\/correct-points"[^>]*hx-vals="\{&quot;species_id&quot;:9\}"[^>]*hx-target="#witnessPanel"[^>]*hx-swap="outerHTML"[^>]*>This one</
+        );
+        assert.match(
+          html,
+          /hx-get="\/admin\/submissions\/42\/correct-points"[^>]*hx-include="#witness-species-pick"[^>]*hx-target="#witnessPanel"[^>]*id="witness-species-use"[^>]*>Use this species</
+        );
+        assert.match(html, /id="witness-species-new"[^>]*hx-get="\/admin\/submissions\/42\/record-species\?correction=1"/);
+        assert.doesNotMatch(html, /bind-species/);
+      });
+
+      void test("with another Species chosen, the base points come from its Point class and the member's bonuses stay", () => {
+        const html = correctingPanel({
+          speciesFacts: { ...facts, speciesId: 8, speciesName: "Ameca splendens", commonName: "Butterfly Goodeid", pointClass: 15, isCaresSpecies: false },
+          correction: { approved: false, speciesChanged: true, current },
+        });
+        assert.match(html, /You chose/);
+        assert.match(html, /<input type="hidden" name="species_id" value="8"\/>/);
+        assert.match(html, /name="points" value="15" id="witness-points-15" checked="checked"/);
+        assert.match(html, /id="witness-point-class"[^>]*>From the Species' Point class \(15\)\.</);
+        assert.match(html, /name="article_points" value="5" id="witness-article-5" checked="checked"/, "the article is the member's");
+        assert.doesNotMatch(html, /name="cares_species" value="on" checked/, "CARES follows the new Species");
+      });
+
+      void test("a correction is offered while changes are requested: the ball is with the member, but the points are the committee's", () => {
+        const html = correctingPanel({ changesRequested: true });
+        assert.doesNotMatch(html, /witness-waiting-on-member/);
+        assert.match(html, /id="witness-form"/);
+      });
+
+      void test("the page wraps the panel and sets the search up again on every swap", () => {
+        const html = pug.compileFile(path.join(viewsPath, "admin/correctPoints.pug"), { basedir: viewsPath, pretty: false })({
+          ...baseMockData,
+          title: "Correct species and points",
+          submission: { id: 42, program: "fish", species_type: "Fish", species_class: "Livebearers", species_common_name: "Guppy", species_latin_name: "Poecilia reticulata", member_name: "Jane Ortiz", reproduction_date: "Sep 20, 2026", article_link: null },
+          speciesFacts: facts,
+          speciesChosenByWitness: true,
+          classificationMismatch: false,
+          spellingAgreement: null,
+          suggestions: [],
+          newSpecies: null,
+          originalWitness: null,
+          summary: ready,
+          summaryButton: { id: "correction-save", label: "Save correction" },
+          allowed: { correctPoints: true },
+          correction: { approved: false, speciesChanged: false, current },
+        });
+        assert.match(html, /<title>Correct species and points - BAS BAP<\/title>/);
+        assert.match(html, /Guppy · Jane Ortiz/);
+        assert.match(html, /id="witnessPanel"/);
+        assert.match(html, /htmx:load/);
+      });
+    });
+
     void describe("Record new species form", () => {
       const renderForm = (data: Record<string, unknown>) =>
         pug.compileFile(path.join(viewsPath, "admin/recordSpeciesForm.pug"), { basedir: viewsPath, pretty: false })({
@@ -1503,22 +1633,6 @@ void describe("Pug Template Rendering", () => {
       });
     });
 
-    void test("the create-Species dialog creates and binds in one request", () => {
-      const html = pug.compileFile(path.join(viewsPath, "admin/createSpeciesDialog.pug"), {
-        basedir: viewsPath,
-        pretty: false,
-      })({
-        ...baseMockData,
-        submission: { id: 42, species_type: "Fish", species_latin_name: "Newgenus novus" },
-        prefilled: { canonical_genus: "Newgenus", canonical_species_name: "novus", program_class: "" },
-        classOptions: [{ value: "Livebearers", text: "Livebearers" }],
-        errors: new Map([["_general", "The Species was created, but not bound"]]),
-      });
-      assert.match(html, /hx-post="\/admin\/submissions\/42\/species"/);
-      assert.match(html, /Create Species and Bind/);
-      assert.match(html, /value="Newgenus"/);
-      assert.match(html, /The Species was created, but not bound/);
-    });
   });
 
   /**
@@ -1729,20 +1843,28 @@ void describe("Pug Template Rendering", () => {
         submission: { ...(baseMockData.submission as Record<string, unknown>), id: 77, ...submission },
       });
 
-    void test("unbound: offers the bind and New Species", () => {
-      const html = render({ species_id: null }, { bindSpecies: true });
+    void test("unbound: points the committee at the correction form, where the Species is chosen with its points", () => {
+      const html = render({ species_id: null }, { bindSpecies: false, correctPoints: false });
 
+      assert.match(html, /id="approval-unbound"/);
       assert.match(html, /Not bound to a Species/);
-      assert.match(html, /hx-post="\/admin\/submissions\/77\/bind-species"/);
-      assert.match(html, /hx-get="\/admin\/dialog\/species\/new\?submission_id=77"/);
-      assert.match(html, /id="committee-error"/);
+      assert.match(html, /Choose the Species on the correction form, with its points/);
+      assert.match(html, /id="correct-points-link" href="\/admin\/submissions\/77\/correct-points"[^>]*>Correct species and points</);
+      assert.doesNotMatch(html, /bind-species|dialog\/species\/new|committee-error/, "no plain bind after the Witness");
     });
 
-    void test("bound: no species step", () => {
-      const html = render({ species_id: 5 }, { bindSpecies: true });
+    void test("bound: no species step, and the correction form is a link away", () => {
+      const html = render({ species_id: 5 }, { bindSpecies: false, correctPoints: true });
 
-      assert.doesNotMatch(html, /bind-species"|dialog\/species\/new/);
+      assert.doesNotMatch(html, /bind-species"|dialog\/species\/new|approval-unbound/);
+      assert.match(html, /id="correct-points-link" href="\/admin\/submissions\/77\/correct-points"/);
       assert.match(html, /Request Changes/);
+    });
+
+    void test("the committee's own Submission offers no correction", () => {
+      const html = render({ species_id: 5 }, { bindSpecies: false, correctPoints: false, requestChanges: false, deleteSubmission: false });
+
+      assert.doesNotMatch(html, /correct-points-link/);
     });
   });
 
