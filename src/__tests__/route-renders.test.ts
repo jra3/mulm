@@ -912,13 +912,17 @@ void describe("The witness confirms from the panel", () => {
     assert.match(chosen.text, /You chose/);
     assert.doesNotMatch(chosen.text, /Is that right\?/);
 
-    await addNote(pendingId, ownerId, JSON.stringify({ type: "member_save", member_id: ownerId, timestamp: new Date().toISOString() }));
+    await addNote(pendingId, ownerId, JSON.stringify({ type: "member_save", voided: "choice", member_id: ownerId, timestamp: new Date().toISOString() }));
     const saved = await request(app()).get(`/submissions/${pendingId}`);
     assert.strictEqual(saved.status, 200);
     assert.match(saved.text, /Is that right\?/);
     assert.doesNotMatch(saved.text, /You chose/);
-    // The save is one line on the changelog, not raw JSON
-    assert.match(saved.text, /Dan Wu<\/span> saved the form/);
-    assert.doesNotMatch(saved.text, /member_save/);
+    // The save is one line on the changelog saying what it voided, not raw JSON
+    assert.match(saved.text, /Dan Wu<\/span> saved the form<span[^>]*>[^<]*<\/span>\. The committee's choice of Species is asked again\./);
+    assert.doesNotMatch(saved.text, /member_save|Witness confirmed before this/);
+
+    await addNote(pendingId, ownerId, JSON.stringify({ type: "member_save", voided: "witness", member_id: ownerId, timestamp: new Date().toISOString() }));
+    const witnessed = await request(app()).get(`/submissions/${pendingId}`);
+    assert.match(witnessed.text, /saved the form<span[^>]*>[^<]*<\/span>\. A Witness confirmed before this is void\./);
   });
 });

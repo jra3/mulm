@@ -3,27 +3,32 @@
 //- Check if this is a structured edit log, a member's save, or a regular note
 -
 	let editLog = null;
-	let memberSave = false;
+	let memberSave = null;
 	try {
 		const parsed = JSON.parse(note.note_text);
 		if (parsed.type === 'admin_edit') {
 			editLog = parsed;
 		} else if (parsed.type === 'member_save') {
-			memberSave = true;
+			memberSave = parsed;
 		}
 	} catch (e) {
 		// Not JSON, treat as regular note
 	}
 
 if memberSave
-	//- A member's save of a submitted Submission (`voidWitness`, src/lifecycle/transitions.ts):
-	//- one line, not deletable, since the witness panel reads it to know which
-	//- committee choices came before the member's last edit
+	//- A member's save of a submitted Submission that voided something
+	//- (`voidWitness`, src/lifecycle/transitions.ts): one line, not deletable,
+	//- since the witness panel reads it to know which committee choices came
+	//- before the member's last edit. `voided` says what: the confirmed
+	//- Witness, or only the committee's choice of Species.
 	div.rounded.border.border-gray-200.bg-gray-50.px-3.py-2.text-xs.text-gray-600(id=`note-${note.id}`)
 		span.font-semibold.text-gray-700= note.admin_name || 'The member'
 		|  saved the form
 		span.text-gray-500= ' · ' + new Date(note.created_at).toLocaleString()
-		| . A Witness confirmed before this is void.
+		if memberSave.voided === 'choice'
+			| . The committee's choice of Species is asked again.
+		else
+			| . A Witness confirmed before this is void.
 
 else if editLog
 	//- Render as formatted edit log

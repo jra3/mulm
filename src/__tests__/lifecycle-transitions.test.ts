@@ -32,8 +32,7 @@ import {
 } from "@/lifecycle";
 import { query } from "@/db/conn";
 import { addName, checkFormAgreement, createSpecies, findSpeciesById, listNames, resolveSpecies } from "@/species";
-import { addNote, findSubmissionsWithRecordedSpecies, getNotesForSubmission } from "@/db/submission_notes";
-import { speciesChosenByCommittee } from "@/routes/submission";
+import { addNote, findSubmissionsWithRecordedSpecies, getNotesForSubmission, speciesChosenByCommittee } from "@/db/submission_notes";
 import {
   ensureGuppySpecies,
   setupTestDatabase,
@@ -417,6 +416,13 @@ void describe("Submission lifecycle - transitions", () => {
   // -------------------------------------------------------------------------
 
   void describe("Save Changes voids a confirmed Witness", () => {
+    /** The `member_save` changelog entries on a Submission, in order, as what they voided and by whom. */
+    const memberSaves = async (id: number) =>
+      (await getNotesForSubmission(id))
+        .map((note) => JSON.parse(note.note_text) as { type: string; voided: string; member_id: number })
+        .filter((entry) => entry.type === "member_save")
+        .map(({ voided, member_id }) => ({ voided, member_id }));
+
     void test("editing a Submission awaiting a Witness keeps its state and date", async () => {
       const id = await submissionInState(ctx.db, "pendingWitness", { memberId: ctx.member.id });
       const before = (await readSubmission(id))!;
@@ -475,9 +481,7 @@ void describe("Submission lifecycle - transitions", () => {
       const notes = await getNotesForSubmission(id);
       assert.strictEqual(speciesChosenByCommittee(notes), false, "the bind came before the member's save");
       assert.strictEqual((await readSubmission(id))!.species_id, guppy, "the binding itself holds: the form still agrees");
-      const last = JSON.parse(notes[notes.length - 1].note_text) as { type: string; member_id: number };
-      assert.strictEqual(last.type, "member_save");
-      assert.strictEqual(last.member_id, ctx.member.id);
+      assert.deepStrictEqual(await memberSaves(id), [{ voided: "witness", member_id: ctx.member.id }]);
       assert.strictEqual(notes[notes.length - 1].admin_name, ctx.member.display_name, "attributed to the member");
 
       // Chosen again after the save, it is the committee's choice once more
@@ -488,6 +492,31 @@ void describe("Submission lifecycle - transitions", () => {
         speciesType: "Fish",
       }));
       assert.strictEqual(speciesChosenByCommittee(await getNotesForSubmission(id)), true);
+    });
+
+    void test("the changelog entry says what the save voided, and a save that voids nothing writes none", async () => {
+      // A fresh Submission's first submit: no Witness, no committee choice
+      const fresh = await createSubmission(member, ctx.member.id, form, { submit: false });
+      await submit(member, fresh, form);
+      assert.deepStrictEqual(await memberSaves(fresh), [], "nothing to void");
+      await saveChanges(member, fresh, { ...form, count: "40" });
+      assert.deepStrictEqual(await memberSaves(fresh), [], "still nothing");
+
+      // Only a committee choice of Species stands: the question is asked again
+      const chosen = await submissionInState(ctx.db, "pendingWitness", { memberId: ctx.member.id, speciesId: null });
+      await bindSpecies(committee, chosen, await ensureGuppySpecies(ctx.db));
+      await saveChanges(member, chosen, { ...(await formFor(chosen)), count: "40" });
+      assert.deepStrictEqual(await memberSaves(chosen), [{ voided: "choice", member_id: ctx.member.id }]);
+      await saveChanges(member, chosen, { ...(await formFor(chosen)), count: "41" });
+      assert.deepStrictEqual((await memberSaves(chosen)).length, 1, "asked again already; a second save has nothing more to reset");
+
+      // A Witness kept through Return to Draft is voided by the submit that follows
+      const kept = await at("waitingPeriod");
+      await returnToDraft(member, kept);
+      assert.deepStrictEqual(await memberSaves(kept), [], "withdrawing is not a save");
+      await submit(member, kept, await formFor(kept));
+      assert.deepStrictEqual(await memberSaves(kept), [{ voided: "witness", member_id: ctx.member.id }]);
+      assert.strictEqual(await stateOf(kept), "pendingWitness");
     });
 
     void test("a voided Submission can be witnessed again", async () => {

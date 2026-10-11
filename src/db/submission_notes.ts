@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { query, writeConn } from "./conn";
 
 export type SubmissionNote = {
@@ -33,12 +34,84 @@ export async function getNotesForSubmission(submissionId: number): Promise<Submi
   return notes;
 }
 
+/** The shape of a changelog note, as `recordAdminEdit` writes it. */
+const adminEditNote = z.object({
+  type: z.literal("admin_edit"),
+  changes: z.array(z.object({ field: z.string() })),
+});
+
+/**
+ * What a member's save of a submitted Submission invalidated (ADR-0001), as
+ * `voidWitness` (src/lifecycle/transitions.ts) records it: a confirmed
+ * Witness, or only a Species the committee had chosen, which the next witness
+ * is asked about again.
+ */
+export type MemberSaveVoided = "witness" | "choice";
+
+/** The shape of the changelog note `voidWitness` writes on a member's save. */
+const memberSaveNote = z.object({ type: z.literal("member_save") });
+
+/** The note parsed as JSON, or undefined for prose. */
+function parsedNote(note: Pick<SubmissionNote, "note_text">): unknown {
+  try {
+    return JSON.parse(note.note_text);
+  } catch {
+    return undefined;
+  }
+}
+
+/** Whether this changelog entry changed `field`. A note that is not JSON, or not an edit, changed nothing. */
+function noteChanged(note: Pick<SubmissionNote, "note_text">, field: string): boolean {
+  const entry = adminEditNote.safeParse(parsedNote(note));
+  return entry.success && entry.data.changes.some((change) => change.field === field);
+}
+
+/** Whether any changelog entry changed `field`. */
+function changelogChanged(notes: Pick<SubmissionNote, "note_text">[], field: string): boolean {
+  return notes.some((note) => noteChanged(note, field));
+}
+
+/** The index of the last note that satisfies `test`, or -1. */
+function lastIndexWhere<T>(items: T[], test: (item: T) => boolean): number {
+  for (let i = items.length - 1; i >= 0; i--) {
+    if (test(items[i])) return i;
+  }
+  return -1;
+}
+
+/**
+ * Whether the committee bound or rebound the Submission since the member last
+ * saved it: a changelog entry that changed its `species`, with no `member_save`
+ * entry after it. The member's own pick leaves no such entry, and a member's
+ * save voids the Witness (ADR-0001), so a Species the committee chose before
+ * it is one the next witness must be asked about again. `notes` are read in
+ * changelog order, oldest first, as `getNotesForSubmission` returns them.
+ * The witness panel reads it for its "You chose"; `voidWitness` reads it to
+ * know whether a save has such a choice to reset.
+ */
+export function speciesChosenByCommittee(notes: Pick<SubmissionNote, "note_text">[]): boolean {
+  const lastChoice = lastIndexWhere(notes, (note) => noteChanged(note, "species"));
+  const lastSave = lastIndexWhere(notes, (note) => memberSaveNote.safeParse(parsedNote(note)).success);
+  return lastChoice > lastSave;
+}
+
+/**
+ * Whether the witness recorded the Species because the catalogue lacked it
+ * (#522): the "Settled at the Witness" entry then carries a `new_species`
+ * change. The approval queue reads it as "New species recorded by the
+ * witness"; `findSubmissionsWithRecordedSpecies` below answers the same for a
+ * whole page of rows.
+ */
+export function speciesRecordedByWitness(notes: Pick<SubmissionNote, "note_text">[]): boolean {
+  return changelogChanged(notes, "new_species");
+}
+
 /**
  * Which of these Submissions had their Species recorded by the witness: the
  * "Settled at the Witness" changelog entry carries a `new_species` change
  * (`confirmWitness`, src/lifecycle/transitions.ts). One query for a whole
- * queue page, where `speciesRecordedByWitness` (src/routes/submission.ts)
- * reads one Submission's notes.
+ * queue page, where `speciesRecordedByWitness` above reads one Submission's
+ * notes.
  *
  * Plain-text notes (committee notes, the Witness reset note) share the table
  * with the changelog, and `json_extract` or `json_each` on one of them is an
