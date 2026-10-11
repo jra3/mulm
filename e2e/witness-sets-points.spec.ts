@@ -248,6 +248,29 @@ test.describe("Points are set at the Witness", () => {
 		await expect(page.locator(`#queue-total-${submissionId}`)).toHaveText("20");
 	});
 
+	test("after Back from Record new species, the catalogue search still works", async ({ page }) => {
+		const { memberId } = await memberIds();
+		const submissionId = await createTestSubmission({
+			memberId,
+			submitted: true,
+			witnessed: false,
+			speciesLatinName: `Xenotoca ${uniqueEpithet()}`,
+			speciesCommonName: "Back Button Goodeid",
+		});
+
+		await login(page, TEST_ADMIN);
+		await page.goto(`/submissions/${submissionId}`);
+		await page.locator("#witness-species-new").click();
+		await expect(page.locator("#witness-record")).toBeVisible();
+		await page.locator('#witness-record button:has-text("Back")').click();
+		await expect(page.locator("#witness-record")).toHaveCount(0);
+
+		// Back swaps the panel in afresh; its search must be a typeahead again
+		await fillTomSelectTypeahead(page, "group_id", "Xiphophorus hellerii", false, false);
+		await page.locator("#witness-species-use").click();
+		await expect(page.locator("#witness-bound-species")).toHaveText("Xiphophorus hellerii", { timeout: 10000 });
+	});
+
 	test("answering No to the member's Species lets the witness choose another", async ({ page }) => {
 		const { memberId } = await memberIds();
 		const submissionId = await createTestSubmission({
