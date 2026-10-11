@@ -1,3 +1,4 @@
+import type { Database } from "sqlite";
 import { Submission } from "../../db/submissions";
 import { deriveState, hasChangesRequested } from "../../lifecycle";
 
@@ -80,4 +81,25 @@ export async function assertSubmissionInvariantsHold(submission: Submission | nu
 
   // And the row must resolve to a state the table names.
   deriveState(submission);
+}
+
+/**
+ * The whole-table invariant ADR-0003 adds once migration 066 has run: no
+ * witnessed, unapproved row lacks points, because the Witness sets them and
+ * a void clears them together. A row can only break it by being written
+ * around the lifecycle, which is what the old flow's rows were; the
+ * migration test asserts it over the rows it reset, and a suite that writes
+ * confirmed rows by hand can ask it of the whole database.
+ */
+export async function assertNoWitnessedRowLacksPoints(db: Database): Promise<void> {
+  const rows = await db.all<Array<{ id: number }>>(
+    `SELECT id FROM submissions
+      WHERE witness_verification_status = 'confirmed' AND approved_on IS NULL AND points IS NULL
+      ORDER BY id`
+  );
+  if (rows.length > 0) {
+    throw new Error(
+      `INVARIANT VIOLATION: witnessed, unapproved Submissions without points: ${rows.map((r) => r.id).join(", ")}`
+    );
+  }
 }

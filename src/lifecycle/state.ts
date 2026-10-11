@@ -20,6 +20,10 @@ import type { Submission } from "@/db/submissions";
  * meeting and a committee member approves it there. (`final_submission_on`,
  * which once recorded the member saying they had brought it, is a dead
  * column: see the `Submission` type.)
+ *
+ * A confirmed row always carries points now (ADR-0003): migration 066 sent
+ * the ones witnessed before that back to pendingWitness, with their original
+ * witness on the changelog (`rewitness.ts`, #524).
  */
 export type SubmissionState =
   | "draft"

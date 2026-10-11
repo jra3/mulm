@@ -412,7 +412,8 @@ export type NewSpeciesFacts = {
  * Species settled (#522). `newSpecies` is that Species as the step validated
  * it, carried in the panel's hidden fields until the confirm creates it;
  * `notes` are the Submission's changelog, passed in when the caller already
- * has them.
+ * has them. The notes also say who witnessed a Submission before the reset
+ * migration sent it back (#524), which the header shows as `originalWitness`.
  */
 export async function witnessPanelLocals(
   submission: db.Submission,
@@ -430,6 +431,9 @@ export async function witnessPanelLocals(
     ),
   ]);
   const speciesChosenByWitness = speciesChosenByCommittee(notes);
+  // Who saw the fry before migration 066 reset the Witness (#524), so the
+  // re-witnesser knows no fresh sighting is needed
+  const original = lifecycle.originalWitnessFromNotes(notes);
   const draft = options.newSpecies ?? null;
   const newSpecies: NewSpeciesFacts | null = draft
     ? {
@@ -449,6 +453,7 @@ export async function witnessPanelLocals(
     // Whether the committee, not the member, chose the bound Species: the
     // panel then shows it as the witness's choice, not the member's
     speciesChosenByWitness,
+    originalWitness: original ? { name: original.name, date: formatShortDate(original.date) } : null,
     classificationMismatch: agreement ? !agreement.classificationAgrees : false,
     // Which spellings are already Names of the Species, for the Names to add
     spellingAgreement: agreement ? { commonName: agreement.commonName, latinName: agreement.latinName } : null,

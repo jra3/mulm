@@ -10,7 +10,8 @@ import * as member from "@/routes/member";
 import * as submission from "@/routes/submission";
 import { createMember } from "@/db/members";
 import { resolveSpecies } from "@/species";
-import { confirmWitness, resetNotifier } from "@/lifecycle";
+import { confirmWitness, resetNotifier, WITNESS_RESET_NOTE } from "@/lifecycle";
+import { addNote } from "@/db/submission_notes";
 import { bonusFields } from "@/points";
 import { setupTestDatabase, type TestDatabase } from "./testDbHelper.helper";
 import { createTestSubmission as createUnboundSubmission, ensureGuppySpecies } from "./helpers/testHelpers";
@@ -204,6 +205,58 @@ void describe("Record new species step", () => {
  * awarded points alone. Rendered through the real routes, so the locals the
  * views read are the ones the handlers pass.
  */
+/**
+ * A Submission migration 066 sent back for a Witness (#524) tells the
+ * re-witnesser who saw the fry, read off the note the migration left.
+ */
+void describe("A reset Submission names its original witness on the panel", () => {
+  let testDb: TestDatabase;
+  let committee: MulmRequest["viewer"];
+  let committeeId: number;
+  let ownerId: number;
+
+  beforeEach(async () => {
+    testDb = await setupTestDatabase();
+    ownerId = await createMember("breeder@example.com", "Dan Wu");
+    committeeId = await createMember("witness@example.com", "Jane Ortiz");
+    committee = { id: committeeId, display_name: "Jane Ortiz", contact_email: "witness@example.com", is_admin: true };
+  });
+  afterEach(async () => {
+    await testDb.cleanup();
+  });
+
+  const app = () =>
+    appWith((a) => {
+      a.use((_req, res, next) => {
+        res.locals.bonusFields = bonusFields;
+        next();
+      });
+      a.get("/submissions/:id", submission.view);
+    }, committee);
+
+  void test("the header says who witnessed it before and when", async () => {
+    const id = await submissionInState(testDb.db, "pendingWitness", { memberId: ownerId });
+    await addNote(id, committeeId, WITNESS_RESET_NOTE("Pat", "2026-01-02"));
+
+    const res = await request(app()).get(`/submissions/${id}`);
+
+    assert.strictEqual(res.status, 200);
+    assert.match(res.text, /id="witness-original-witness"/);
+    assert.match(res.text, /Originally witnessed by Pat on 01\/02\/2026\./);
+  });
+
+  void test("a Submission never reset says nothing about it", async () => {
+    const id = await submissionInState(testDb.db, "pendingWitness", { memberId: ownerId });
+    await addNote(id, committeeId, "Asked for a clearer photo of the fry");
+
+    const res = await request(app()).get(`/submissions/${id}`);
+
+    assert.strictEqual(res.status, 200);
+    assert.match(res.text, /id="witnessPanel"/);
+    assert.doesNotMatch(res.text, /witness-original-witness/);
+  });
+});
+
 void describe("Pending points are the owner's alone", () => {
   let testDb: TestDatabase;
   let ownerId: number;

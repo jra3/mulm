@@ -110,9 +110,15 @@ html
 				div
 					include ../email/committeeDigest.pug
 
-			//- Email 10: Member Invitation (skip for now - complex)
+			//- Email 10: Re-witness letter (#524)
 			.email-container.mb-8
-				.email-label 10. Member Invitation Email (Complex - See invite.pug)
+				.email-label 10. Re-witness Letter
+				div
+					include ../email/onRewitnessPending.pug
+
+			//- Email 11: Member Invitation (skip for now - complex)
+			.email-container.mb-8
+				.email-label 11. Member Invitation Email (Complex - See invite.pug)
 				div(style="padding: 20px; font-family: Arial, sans-serif;")
 					p Member invitation with full submission tables
 					p See src/views/email/invite.pug for current implementation

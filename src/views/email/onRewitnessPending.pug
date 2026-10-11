@@ -1,0 +1,113 @@
+//- One-off letter after the reset of in-flight Submissions (#524): the
+//- member's witnessed Submissions carried no points, so they await a Witness
+//- again. Nothing is wrong, the waiting period has not restarted, a committee
+//- member will confirm them again, and the points email follows.
+//-
+//- @param member - display_name
+//- @param submissions - RewitnessLetterRow[] (`rewitnessLetterRows`,
+//-   src/notifications.ts): id, species_common_name, species_latin_name,
+//-   species_type, reproducedOn, witnessedBy (or null), witnessedOn (or
+//-   null), readyOn, waitingPeriodOver. The days arrive formatted: the date
+//-   mixins print in the server's zone, and a day is a day.
+//- @param domain - the Portal's host
+//- @param programContactEmail - where a reply goes
+
+- const plural = submissions.length !== 1
+- const offspringOf = (s) => s.species_type === "Plant" ? "plants" : s.species_type === "Coral" ? "corals" : "fry"
+
+doctype html
+html
+	head
+		meta(charset="utf-8")
+		title Your submission will be witnessed again
+		style.
+			body {
+				font-family: Arial, sans-serif;
+				line-height: 1.6;
+				color: #333;
+				max-width: 600px;
+				margin: 0 auto;
+				padding: 20px;
+			}
+			.header {
+				background-color: #2563eb;
+				color: white;
+				padding: 20px;
+				text-align: center;
+				border-radius: 8px 8px 0 0;
+			}
+			.content {
+				background-color: #f8fafc;
+				padding: 20px;
+				border: 1px solid #e2e8f0;
+			}
+			.submission-details {
+				background-color: white;
+				padding: 15px;
+				border-radius: 6px;
+				margin: 15px 0;
+				border-left: 4px solid #10b981;
+			}
+			.submission-details p {
+				margin: 4px 0;
+			}
+			.footer {
+				background-color: #64748b;
+				color: white;
+				padding: 15px;
+				text-align: center;
+				border-radius: 0 0 8px 8px;
+				font-size: 12px;
+			}
+	body
+		.header
+			h1= plural ? "Your submissions will be witnessed again" : "Your submission will be witnessed again"
+
+		.content
+			p Hello #{member.display_name},
+
+			p
+				| Nothing is wrong with your #{plural ? "submissions" : "submission"}. The Breeder Awards Program
+				| now sets a submission's points when it is witnessed, and #{plural ? "these were" : "this one was"}
+				| witnessed before that change, so a committee member will confirm #{plural ? "them" : "it"} again
+				| on the new form and set the points. You don't need to do anything, and nobody needs to see the
+				| #{plural ? "fry, plants or corals" : offspringOf(submissions[0])} again.
+
+			each submission in submissions
+				.submission-details(id=`rewitness-${submission.id}`)
+					p
+						strong= submission.species_common_name
+						|  (
+						em= submission.species_latin_name
+						| )
+					p Reproduced #{submission.reproducedOn}
+					if submission.witnessedBy
+						p Witnessed by #{submission.witnessedBy} on #{submission.witnessedOn}
+					if submission.waitingPeriodOver
+						p Your waiting period is already over.
+					else
+						p Your waiting period ends #{submission.readyOn}, as before.
+					p
+						a(href=`https://${domain}/submissions/${submission.id}`) View this submission
+
+			p
+				strong Your waiting period has not restarted.
+				|  It counts from the reproduction date, the same as before.
+
+			p
+				| Once a committee member confirms #{plural ? "each submission" : "the submission"} again, you'll get
+				| an email with its points. They count once the committee approves it at a monthly meeting, where you
+				| bring the #{plural ? "fry, plants or corals" : offspringOf(submissions[0])} as usual.
+
+			p
+				| Questions? Reply to this email; your reply goes to the committee at
+				|
+				a(href=`mailto:${programContactEmail}`)= programContactEmail
+				| .
+
+		.footer
+			p
+				strong Brooklyn Aquarium Society
+			p Educating Aquarists since 1911
+			p
+				a(href="https://basny.org" style="color: white;") basny.org
