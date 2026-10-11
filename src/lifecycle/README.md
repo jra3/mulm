@@ -124,8 +124,10 @@ so the re-witnesser knows the fry were seen: no fresh sighting, just the
 Species and the points, by any committee member but the submitter. The clock
 counts from the reproduction date, so nothing restarts; a reset row whose
 waiting period had run is in the approval queue the moment it is
-re-witnessed. The one-off script `scripts/email-rewitness.ts` runs
-`sendRewitnessEmails` once after the deploy: one letter per affected member,
+re-witnessed. The one-off script `src/scripts/email-rewitness.ts` (under
+src/ so the build compiles it into the image; its header has the `fly ssh
+console` command) runs `sendRewitnessEmails` once after the deploy: one
+letter per affected member,
 listing their reset Submissions still awaiting a Witness, recorded per
 member in `settings` (`rewitness_emailed:<id>`) only once delivered, so it
 is safe to run twice. After the migration no witnessed, unapproved row lacks
