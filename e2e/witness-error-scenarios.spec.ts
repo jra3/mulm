@@ -52,7 +52,7 @@ test.describe("Witness Error Scenarios", () => {
 
     // Step 4: Verify UI prevents self-witnessing
     // The UI should show a warning message instead of action buttons
-    const warningMessage = page.locator("text=/cannot screen your own submissions/i");
+    const warningMessage = page.locator("text=/cannot witness your own submissions/i");
     await expect(warningMessage).toBeVisible({ timeout: 5000 });
 
     // Verify action buttons are NOT present

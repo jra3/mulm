@@ -289,6 +289,8 @@ test.describe("Submission Complete Lifecycle", () => {
 			expect(submission.witnessed_by).toBeNull();
 			expect(submission.witnessed_on).toBeNull();
 			expect(submission.witness_verification_status).toBe("pending");
+			// The void clears the points the witness set (ADR-0003)
+			expect(submission.points).toBeNull();
 		} finally {
 			await db3.close();
 		}
