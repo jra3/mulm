@@ -17,7 +17,13 @@ import {
 import { approvalSchema } from "@/forms/approval";
 import { approvedEditSchema } from "@/forms/approvedEdit";
 import { bindSpeciesForm } from "@/forms/bindSpecies";
-import { chosenSpeciesForm, confirmWitnessSchema, witnessSummaryForm } from "@/forms/confirmWitness";
+import {
+  chosenSpeciesForm,
+  confirmWitnessSchema,
+  recordSpeciesDraftForm,
+  recordSpeciesForm,
+  witnessSummaryForm,
+} from "@/forms/confirmWitness";
 import { inviteSchema } from "@/forms/member";
 import { sendInviteEmail } from "@/notifications";
 import { getNextLevel, programMetadata, programs } from "@/programs";
@@ -26,7 +32,14 @@ import { Response, NextFunction } from "express";
 import { createAuthCode } from "@/db/auth";
 import { AuthCode, generateRandomCode } from "@/auth";
 import { validateFormResult } from "@/forms/utils";
-import { allowedMoves, boundSpeciesFacts, validateSubmission, witnessSummary } from "./submission";
+import {
+  allowedMoves,
+  boundSpeciesFacts,
+  programOfSubmission,
+  validateSubmission,
+  witnessPanelLocals,
+  witnessSummary,
+} from "./submission";
 import {
   isLivestock,
   foodTypes,
@@ -38,6 +51,7 @@ import {
 } from "@/forms/submission";
 import { findSpeciesById } from "@/species";
 import { programOfSpeciesType } from "@/points";
+import { formatShortDate } from "@/utils/dateFormat";
 import { getBodyString } from "@/utils/request";
 import { checkAllMemberLevels } from "@/levelManager";
 import { checkAllSpecialtyAwards } from "@/specialtyAwardManager";
@@ -370,14 +384,16 @@ function sendWitnessPanelRefusal(res: Response, messages: string[]): void {
 
 /**
  * The Program a Submission has once the Witness is confirmed: its chosen
- * Species' Program, since the confirm adopts it. The Submission's own Program
- * stands in while the form names no Species that exists; the schema then
- * refuses the Species anyway.
+ * Species' Program, since the confirm adopts it. When the form names no
+ * Species that exists, the witness is recording one, which takes the
+ * Submission's type, so the Submission's own Program stands; the schema
+ * refuses a species_id that is wrong anyway.
  */
-async function programAfterConfirm(body: unknown, submission: Pick<Submission, "program">): Promise<string> {
+async function programAfterConfirm(body: unknown, submission: Pick<Submission, "program" | "species_type">): Promise<string> {
   const chosen = chosenSpeciesForm.safeParse(body);
-  const species = chosen.success ? await findSpeciesById(chosen.data.species_id) : undefined;
-  return species ? programOfSpeciesType(species.species_type) : submission.program;
+  const species =
+    chosen.success && chosen.data.species_id !== undefined ? await findSpeciesById(chosen.data.species_id) : undefined;
+  return species ? programOfSpeciesType(species.species_type) : programOfSubmission(submission);
 }
 
 /**
@@ -400,12 +416,12 @@ export const confirmWitnessAction = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const { species_id, points, article_points, cares_species, flowered, sexual_reproduction } = parsed.data;
+  const { species_id, new_species, points, article_points, cares_species, flowered, sexual_reproduction } = parsed.data;
   const ran = await witnessPanelMove(req, res, submission.id, () =>
     lifecycle.confirmWitness(
       callerFor(req.viewer!),
       submission.id,
-      { species_id, points, article_points, cares_species, flowered, sexual_reproduction },
+      { species_id, new_species, points, article_points, cares_species, flowered, sexual_reproduction },
       { common: parsed.data.add_common_name, scientific: parsed.data.add_scientific_name }
     )
   );
@@ -413,6 +429,81 @@ export const confirmWitnessAction = async (req: MulmRequest, res: Response) => {
 
   // Redirect to witness queue for the submission's program
   res.set("HX-Redirect", `/admin/witness-queue/${submission.program}`).send();
+};
+
+/** The Record new species step, into the panel's Species card. */
+function renderRecordSpeciesForm(
+  res: Response,
+  submission: Submission,
+  values: Record<string, unknown>,
+  errors: Map<string, string>
+): void {
+  res.render("admin/recordSpeciesForm", {
+    submission,
+    program: programOfSubmission(submission),
+    values,
+    errors,
+  });
+}
+
+/**
+ * GET /admin/submissions/:id/record-species
+ * The witness panel's Record new species step (#522): the names prefilled
+ * from the member's spelling, the Submission's type and class, and the Point
+ * class and CARES flag to choose. Nothing is created here.
+ */
+export const recordSpeciesFormAction = async (req: MulmRequest, res: Response) => {
+  const submission = await validateSubmission(req, res);
+  if (!submission) {
+    return;
+  }
+
+  renderRecordSpeciesForm(
+    res,
+    submission,
+    {
+      new_scientific_name: submission.species_latin_name,
+      new_common_name: submission.species_common_name,
+      new_point_class: null,
+      new_cares_species: false,
+    },
+    new Map()
+  );
+};
+
+/**
+ * POST /admin/submissions/:id/record-species
+ * Record species and continue: the step's values checked, then the whole
+ * panel again with the new Species settled and the Points card prefilled from
+ * its Point class and CARES flag. The Species itself is created only by the
+ * confirm, in the Witness's transaction, so leaving the page creates nothing.
+ * A refusal re-renders the step with its errors beside the fields.
+ */
+export const recordSpeciesAction = async (req: MulmRequest, res: Response) => {
+  const submission = await validateSubmission(req, res);
+  if (!submission) {
+    return;
+  }
+
+  const body: unknown = req.body ?? {};
+  const parsed = recordSpeciesForm.safeParse(body);
+  if (!parsed.success) {
+    const typed = recordSpeciesDraftForm.parse(body);
+    renderRecordSpeciesForm(
+      res,
+      submission,
+      typed,
+      new Map(parsed.error.issues.map((issue) => [String(issue.path[0]), issue.message]))
+    );
+    return;
+  }
+
+  const panel = await witnessPanelLocals(submission, req.viewer!, { newSpecies: parsed.data });
+  res.set("HX-Retarget", "#witnessPanel").set("HX-Reswap", "outerHTML");
+  res.render("admin/witnessPanel", {
+    submission: { ...submission, reproduction_date: formatShortDate(submission.reproduction_date) },
+    ...panel,
+  });
 };
 
 /**
@@ -432,9 +523,10 @@ export const witnessSummaryAction = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const { species_id, ...values } = parsed.data;
+  const { species_id, new_scientific_name: recording, ...values } = parsed.data;
   res.render("admin/witnessSummary", {
-    summary: witnessSummary({ ...values, bound: (species_id ?? submission.species_id) != null }),
+    // A Species being recorded counts as chosen, as does one bound or picked
+    summary: witnessSummary({ ...values, bound: recording || (species_id ?? submission.species_id) != null }),
   });
 };
 

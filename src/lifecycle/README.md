@@ -89,6 +89,22 @@ the witness settles on a Fish Species cannot carry a flowered bonus. The
 points count for nothing until approval: every total-reporting query filters
 on `approved_on`.
 
+When the catalogue has no Species for what the member bred, the witness
+records one on the panel (#522): `WitnessPoints.new_species` carries its
+names, Point class and CARES flag in place of a `species_id`, and
+`confirmWitness` creates it (`createSpeciesOn`, on the transaction's
+connection), with the Submission's type and class, before settling on it.
+It is the same transaction, so a refusal anywhere, a bonus outside the
+Program, changes outstanding, the witness's own Submission, a Canonical name
+another Species holds, rolls the Species back with everything else; the
+panel's Record species and continue step writes nothing on its own. The
+"Settled at the Witness" entry then carries a `new_species` change, which is
+how the approval queue knows to say "New species recorded by the witness"
+(`speciesRecordedByWitness` in src/routes/submission.ts for one Submission,
+`findSubmissionsWithRecordedSpecies` in src/db/submission_notes.ts for a
+page of them). A recorded Species gets no spellings added as Names: its
+names are the ones the witness gave it.
+
 ## Things that are deliberately not here
 
 The machine keeps no prose state diagram: an ASCII diagram in a markdown file

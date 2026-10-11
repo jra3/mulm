@@ -1,0 +1,82 @@
+include ../mixins/errorMessage.pug
+
+//- The witness panel's Record new species step (#522), swapped into the
+//- panel's Species card (#witness-species) in place of what was there. Not a
+//- form of its own: it sits inside the panel's form, so Record species and
+//- continue posts just this block, and the server answers with the whole
+//- panel again, the new Species settled and the Points card prefilled from
+//- its Point class and CARES flag. Nothing is created until the Witness is
+//- confirmed; Back fetches the page and keeps only the panel.
+//-
+//- The panel's form has a submit button, so Enter in a text field here would
+//- submit the confirm; the keydown guard is the one line of script the step
+//- needs.
+//-
+//- @param submission - the Submission (id, species_type, species_class)
+//- @param program - the Submission's Program (`programOfSubmission`), which
+//-   the new Species takes: CARES is offered on BAP only
+//- @param values - the fields as typed (`recordSpeciesDraftForm`), or the
+//-   member's spelling to start from: new_scientific_name, new_common_name,
+//-   new_point_class (number or null), new_cares_species
+//- @param errors - refusals by field
+
+- const eyebrow = "text-xs font-semibold uppercase tracking-wide text-gray-500"
+- const chip = "block text-center py-2 rounded-lg border border-gray-300 bg-white font-semibold text-gray-900 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 peer-focus-visible:ring-2 peer-focus-visible:ring-amber-400"
+
+#witness-record(hx-on:keydown="if (event.key === 'Enter') event.preventDefault()")
+	p.mb-1(class=eyebrow) Record new species
+	p.text-sm.text-gray-600.mb-3 Only when you're sure it isn't in the catalogue under another name.
+
+	label.block.text-sm.font-semibold(for="witness-new-scientific-name") Scientific name
+	input.text-input.w-full.mb-1#witness-new-scientific-name(
+		type="text"
+		name="new_scientific_name"
+		value=values.new_scientific_name || ""
+		maxlength="200"
+		placeholder="Genus species"
+		autocomplete="off"
+		required
+	)
+	+errorMessage('new_scientific_name', 'block mb-2')
+
+	label.block.text-sm.font-semibold.mt-2(for="witness-new-common-name") Common name
+	input.text-input.w-full.mb-1#witness-new-common-name(
+		type="text"
+		name="new_common_name"
+		value=values.new_common_name || ""
+		maxlength="200"
+		placeholder="Optional"
+		autocomplete="off"
+	)
+	+errorMessage('new_common_name', 'block mb-2')
+
+	p.text-sm.text-gray-600.mt-2.mb-3= `${submission.species_type} · ${submission.species_class}`
+
+	p.text-sm.font-semibold.mb-1 Point class
+	.grid.grid-cols-4.gap-2
+		each option in [5, 10, 15, 20]
+			label.cursor-pointer
+				input.peer.sr-only(type="radio" name="new_point_class" value=option id=`witness-new-point-class-${option}` checked=option === values.new_point_class)
+				span(class=chip)= option
+	+errorMessage('new_point_class', 'block mt-1')
+	p.text-xs.text-gray-500.mt-1.mb-3 This submission's base points, and every later one's.
+
+	if program === "fish"
+		label.flex.items-center.gap-2.mb-3.text-sm.cursor-pointer
+			input(type="checkbox" name="new_cares_species" value="on" checked=values.new_cares_species)
+			span CARES species
+
+	button.primary.w-full.h-12.text-base#witness-record-continue(
+		type="button"
+		hx-post=`/admin/submissions/${submission.id}/record-species`
+		hx-include="#witness-record"
+		hx-target="#witness-species"
+		hx-swap="innerHTML"
+	) Record species and continue
+	button.outline.w-full.mt-2(
+		type="button"
+		hx-get=`/submissions/${submission.id}`
+		hx-select="#witnessPanel"
+		hx-target="#witnessPanel"
+		hx-swap="outerHTML"
+	) Back

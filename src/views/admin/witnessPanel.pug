@@ -4,7 +4,9 @@
 //- The witness settles the Species, which sets the base points, then the
 //- bonuses; the sticky bar sums them on the server and confirms. The panel
 //- never says "bind": the member says what it is, and the witness answers
-//- whether that is right.
+//- whether that is right. When the catalogue has nothing for what the member
+//- wrote, the witness records the Species on the panel (#522); it is created
+//- by the confirm, in the Witness's transaction, so leaving creates nothing.
 //-
 //- @param submission - the Submission (id, program, species_type,
 //-   species_class, species_common_name, species_latin_name, member_name,
@@ -17,6 +19,14 @@
 //-   one the member filed under.
 //- @param speciesChosenByWitness - whether the committee, not the member,
 //-   chose the bound Species, so there is no "is that right?" left to ask
+//- @param suggestions - the catalogue's closest Species to what the member
+//-   wrote (`SpeciesSuggestionFacts[]`): speciesId, commonName, speciesName,
+//-   speciesType, programClass, pointClass. Offered under "Did they mean one
+//-   of these?" wherever the search is.
+//- @param newSpecies - the Species the witness is recording
+//-   (`NewSpeciesFacts`), or null: scientificName, commonName, speciesType,
+//-   programClass, program, pointClass, isCaresSpecies. Shown settled and
+//-   carried to the confirm in hidden fields; the Points card prefills from it.
 //- @param classificationMismatch - whether the Submission's Species type or
 //-   Program class disagrees with the Species'. Confirming records the
 //-   Species' values on the Submission, so it is said here, not refused.
@@ -31,14 +41,17 @@
 
 - const shortNames = { fish: "BAP", plant: "HAP", coral: "CAP" }
 - const programShort = shortNames[submission.program] || submission.program
+- const recording = Boolean(newSpecies)
 - const bound = Boolean(speciesFacts)
-//- The Program the Submission will have once confirmed: the bound Species'
-- const settledProgram = bound ? speciesFacts.program : submission.program
+//- The Program the Submission will have once confirmed: the settled Species'
+- const settledProgram = recording ? newSpecies.program : bound ? speciesFacts.program : submission.program
 - const isBap = settledProgram === "fish"
 - const isHap = settledProgram === "plant"
-- const programMoves = bound ? speciesFacts.program !== submission.program : false
-- const settled = bound ? Boolean(speciesChosenByWitness) : false
-- const prefilledPoints = bound ? speciesFacts.pointClass : null
+- const programMoves = bound && !recording ? speciesFacts.program !== submission.program : false
+- const settled = recording || (bound ? Boolean(speciesChosenByWitness) : false)
+- const prefilledPoints = recording ? newSpecies.pointClass : bound ? speciesFacts.pointClass : null
+- const prefilledCares = recording ? newSpecies.isCaresSpecies : bound ? speciesFacts.isCaresSpecies : false
+- const caresNote = recording ? "Not yet in the catalogue" : bound ? (speciesFacts.isCaresSpecies ? "Listed in the catalogue" : "Not listed in the catalogue") : ""
 - const prefilledArticle = submission.article_link ? 5 : 0
 - const offerCommon = spellingAgreement ? spellingAgreement.commonName === "not-a-name" : false
 - const offerLatin = spellingAgreement ? spellingAgreement.latinName === "not-a-name" : false
@@ -47,8 +60,8 @@
 - const chip = "block text-center px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-900 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 peer-focus-visible:ring-2 peer-focus-visible:ring-amber-400"
 - const track = "relative inline-block w-12 h-7 rounded-full bg-gray-300 transition-colors flex-none after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-6 after:h-6 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:bg-green-600 peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-amber-400"
 //- The Points card is gated until the Species is settled: by the witness
-//- having chosen it, or by Yes below (CSS reads the radio; the server reads
-//- the posted species_settled and species_id either way).
+//- having chosen or recorded it, or by Yes below (CSS reads the radio; the
+//- server reads the posted species_settled and species_id either way).
 - const gate = settled ? "" : bound ? "opacity-40 pointer-events-none group-has-[#witness-species-yes:checked]:opacity-100 group-has-[#witness-species-yes:checked]:pointer-events-auto" : "opacity-40 pointer-events-none"
 
 //- A bonus switch: a checkbox styled as a toggle, the label on the left.
@@ -62,6 +75,29 @@ mixin witnessSwitch(name, label, amount, note, checked)
 				span.block.text-xs.text-gray-500= note
 		input.peer.sr-only(type="checkbox" name=name value="on" checked=checked)
 		span(class=track aria-hidden="true")
+
+//- The catalogue's closest Species to what the member wrote, each one a tap away
+mixin witnessSuggestions()
+	if suggestions && suggestions.length
+		p.text-sm.font-semibold.mt-3.mb-2 Did they mean one of these?
+		each sp in suggestions
+			.flex.items-center.gap-2.border.border-gray-300.rounded-lg.px-3.py-2.mb-2(id=`witness-suggestion-${sp.speciesId}`)
+				span.flex-1.min-w-0
+					span.block.font-semibold.leading-tight= sp.commonName || sp.speciesName
+					if sp.commonName
+						span.block.italic.text-sm= sp.speciesName
+					span.block.text-xs.text-gray-500
+						| #{sp.speciesType} · #{sp.programClass}
+						if sp.pointClass
+							|  · Point class #{sp.pointClass}
+						else
+							|  · no Point class yet
+				button.outline.text-sm.flex-none(
+					type="button"
+					hx-post=`/admin/submissions/${submission.id}/bind-species`
+					hx-vals=JSON.stringify({ group_id: sp.speciesId })
+					hx-disabled-elt="this"
+				) This one
 
 .status-panel.status-panel-admin#witnessPanel
 	.mx-auto.max-w-lg.flex.flex-col.gap-3
@@ -82,15 +118,37 @@ mixin witnessSwitch(name, label, amount, note, checked)
 				hx-post=`/admin/submissions/${submission.id}/confirm-witness`
 				hx-disabled-elt="#witness-confirm"
 			)
-				if bound
+				if bound && !recording
 					input(type="hidden" name="species_id" value=speciesFacts.speciesId)
-				if settled
+				if settled && !recording
 					input(type="hidden" name="species_settled" value="1")
 
 				//- Species: sets the base points
 				.bg-white.rounded-lg.p-4.text-gray-900#witness-species
 					p.mb-1(class=eyebrow) Species · sets the base points
-					if bound
+					if recording
+						//- Settled on a Species the confirm will create. Its details
+						//- ride here, in the card, so recording another or choosing
+						//- one from the catalogue drops them with the card.
+						#witness-recording
+							p.text-sm.text-gray-600 You're recording a new species
+							p.font-semibold.text-lg.leading-tight#witness-bound-common= newSpecies.commonName || newSpecies.scientificName
+							p.italic#witness-bound-species= newSpecies.scientificName
+							p.text-sm.text-gray-600#witness-bound-class
+								| #{newSpecies.speciesType} · #{newSpecies.programClass} · Point class #{newSpecies.pointClass}
+								if newSpecies.isCaresSpecies
+									|  · CARES
+							p.text-xs.text-gray-500.mt-1 Member wrote: #{submission.species_common_name} · #{submission.species_latin_name}
+							input(type="hidden" name="new_scientific_name" value=newSpecies.scientificName)
+							if newSpecies.commonName
+								input(type="hidden" name="new_common_name" value=newSpecies.commonName)
+							input(type="hidden" name="new_point_class" value=newSpecies.pointClass)
+							if newSpecies.isCaresSpecies
+								input(type="hidden" name="new_cares_species" value="on")
+							input(type="hidden" name="species_settled" value="1")
+							//- Not posted: it only reveals the search below
+							input.peer.sr-only(type="checkbox" id="witness-species-no")
+					else if bound
 						if settled
 							p.text-sm.text-gray-600 You chose
 						else
@@ -128,19 +186,22 @@ mixin witnessSwitch(name, label, amount, note, checked)
 						p.italic= submission.species_latin_name
 						p.text-sm.text-gray-600= `${submission.species_type} · ${submission.species_class}`
 
-					//- Choosing another Species: shown when unbound, or on No.
-					//- Picking one binds it and reloads the page, so the panel
-					//- then shows it as the witness's choice.
+					//- Choosing another Species: shown when unbound, or on No, or
+					//- on "Wrong species?". The closest catalogue matches first,
+					//- then the search; picking one binds it and reloads the page,
+					//- so the panel then shows it as the witness's choice. Last,
+					//- recording a Species the catalogue lacks.
 					if allowed.bindSpecies
 						.mt-3(
 							id="witness-species-other"
-							class=bound ? "hidden group-has-[#witness-species-no:checked]:block" : ""
+							class=settled || bound ? "hidden group-has-[#witness-species-no:checked]:block" : ""
 						)
 							if settled
 								p.text-sm.font-semibold.mb-1 Wrong species? Choose another
 							else if bound
 								p.text-sm.font-semibold.mb-1 Which species is it?
-							p.text-sm.text-gray-600.mb-1 Search the catalogue
+							+witnessSuggestions()
+							p.text-sm.text-gray-600.mb-1= suggestions && suggestions.length ? "Or search the catalogue" : "Search the catalogue"
 							label.sr-only(for="witness-species-pick") Species
 							//- Unfiltered by Species type: a Submission filed under the
 							//- wrong type is put right by choosing the right Species.
@@ -161,11 +222,12 @@ mixin witnessSwitch(name, label, amount, note, checked)
 								hx-disabled-elt="this"
 							) Use this species
 							p.text-sm.text-gray-600.mt-3 Not in the catalogue?
+							//- A grey secondary button for now; the colour is a point to iterate on (#522)
 							button.outline.w-full.mt-1#witness-species-new(
 								type="button"
-								hx-get=`/admin/dialog/species/new?submission_id=${submission.id}`
-								hx-target="body"
-								hx-swap="beforeend"
+								hx-get=`/admin/submissions/${submission.id}/record-species`
+								hx-target="#witness-species"
+								hx-swap="innerHTML"
 							) Record new species
 					if settled && allowed.bindSpecies
 						label.block.mt-3.text-sm.text-blue-700.underline.cursor-pointer(for="witness-species-no" class="group-has-[#witness-species-no:checked]:hidden") Wrong species? Choose another
@@ -178,7 +240,9 @@ mixin witnessSwitch(name, label, amount, note, checked)
 							label.cursor-pointer
 								input.peer.sr-only(type="radio" name="points" value=pc id=`witness-points-${pc}` checked=pc === prefilledPoints)
 								span(class=segment)= pc
-					if bound
+					if recording
+						p.text-xs.text-gray-500.mt-1#witness-point-class= `From the Point class you chose (${newSpecies.pointClass}).`
+					else if bound
 						if speciesFacts.pointClass
 							p.text-xs.text-gray-500.mt-1#witness-point-class= `From the Species' Point class (${speciesFacts.pointClass}).`
 						else
@@ -187,7 +251,7 @@ mixin witnessSwitch(name, label, amount, note, checked)
 					p.mt-4.mb-1(class=eyebrow) Bonuses
 					.divide-y.divide-gray-100
 						if isBap
-							+witnessSwitch("cares_species", "CARES species", "+5", bound ? (speciesFacts.isCaresSpecies ? "Listed in the catalogue" : "Not listed in the catalogue") : "", bound ? speciesFacts.isCaresSpecies : false)
+							+witnessSwitch("cares_species", "CARES species", "+5", caresNote, prefilledCares)
 						.flex.items-center.gap-3.min-h-12.py-1
 							span.flex-1.min-w-0
 								span Article
@@ -200,14 +264,13 @@ mixin witnessSwitch(name, label, amount, note, checked)
 						if isHap
 							+witnessSwitch("flowered", "Flowered", "+ base points", "", false)
 							+witnessSwitch("sexual_reproduction", "Sexual reproduction", "+ base points", "", false)
-					if bound
-						if speciesFacts.isFirstTime
-							p.text-xs.text-green-700.mt-2#witness-first-time No one has had this species approved yet. A first-time +5 is added at the meeting if this one is approved first.
-						else
-							p.text-xs.text-gray-500.mt-2#witness-first-time= `Approved ${speciesFacts.priorBreedCount} time${speciesFacts.priorBreedCount === 1 ? "" : "s"} before, so no first-time bonus.`
+					if recording || (bound && speciesFacts.isFirstTime)
+						p.text-xs.text-green-700.mt-2#witness-first-time No one has had this species approved yet. A first-time +5 is added at the meeting if this one is approved first.
+					else if bound
+						p.text-xs.text-gray-500.mt-2#witness-first-time= `Approved ${speciesFacts.priorBreedCount} time${speciesFacts.priorBreedCount === 1 ? "" : "s"} before, so no first-time bonus.`
 
 				//- The member's spelling as a Name, only where it is not one already
-				if bound && (offerCommon || offerLatin)
+				if bound && !recording && (offerCommon || offerLatin)
 					.bg-white.rounded-lg.p-4.text-gray-900.text-sm#witness-names
 						p.font-semibold.mb-1 Save the member's spelling
 						if offerCommon

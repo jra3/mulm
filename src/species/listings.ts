@@ -9,7 +9,7 @@ import { containsPattern, containsSql } from "@/db/likePattern";
 import { getSpeciesExternalReferences, getSpeciesImages, type SpeciesImage } from "@/db/speciesEnrichment";
 import type { SpeciesType } from "@/points";
 import { speciesIdOfSubmissionSql } from "./submissions";
-import { listNames } from "./names";
+import { listNames, nameTable } from "./names";
 import type { NameKind, Species, SpeciesNames } from "./types";
 
 export type SpeciesFilters = {
@@ -224,6 +224,69 @@ export async function searchSpeciesTypeahead(
   const queryParams = [...params, searchPattern, ...params, searchPattern, limit];
 
   return query(sql, queryParams);
+}
+
+/** One of the catalogue's closest Species to a member's spellings, with its first common Name. */
+export type SpeciesSuggestion = Species & { common_name: string | null };
+
+/**
+ * The words of a pair of spellings that are worth matching on: letters only,
+ * lower-cased, three letters or more. Each whole word weighs 2; the first
+ * four letters of a word of five or more weigh 1, so a misspelt ending
+ * ("goodied", "splendans") still reaches the Species it was aiming at.
+ */
+function suggestionTokens(spellings: { commonName?: string | null; latinName?: string | null }): Array<[string, number]> {
+  const weights = new Map<string, number>();
+  const words = `${spellings.commonName ?? ""} ${spellings.latinName ?? ""}`
+    .toLowerCase()
+    .split(/[^\p{L}]+/u)
+    .filter((word) => word.length >= 3);
+  for (const word of words) {
+    weights.set(word, Math.max(weights.get(word) ?? 0, 2));
+    if (word.length >= 5) {
+      const stem = word.slice(0, 4);
+      weights.set(stem, Math.max(weights.get(stem) ?? 0, 1));
+    }
+  }
+  return [...weights];
+}
+
+/**
+ * The closest Species to a member's spellings, best first: the witness
+ * panel's "Did they mean one of these?" when the spellings match no Name
+ * exactly (#522). A heuristic over the Names, scored by the words of the
+ * spellings a Name contains (see `suggestionTokens`), not a search engine.
+ * Spellings with no word worth matching suggest nothing.
+ */
+export async function suggestSpecies(
+  spellings: { commonName?: string | null; latinName?: string | null },
+  options: { exclude?: number | null; limit?: number } = {}
+): Promise<SpeciesSuggestion[]> {
+  const tokens = suggestionTokens(spellings);
+  if (tokens.length === 0) return [];
+  const limit = options.limit ?? 3;
+  const common = nameTable.common;
+  const scientific = nameTable.scientific;
+
+  const sql = `
+    WITH tokens(t, w) AS (VALUES ${tokens.map(() => "(?, ?)").join(", ")})
+    SELECT * FROM (
+      SELECT sng.*,
+        (SELECT ${common.text} FROM ${common.table} WHERE group_id = sng.group_id ORDER BY ${common.text} LIMIT 1) AS common_name,
+        (SELECT COALESCE(SUM(w), 0) FROM tokens
+          WHERE EXISTS (SELECT 1 FROM ${common.table} cn
+                        WHERE cn.group_id = sng.group_id AND instr(LOWER(cn.${common.text}), t) > 0)
+             OR EXISTS (SELECT 1 FROM ${scientific.table} sn
+                        WHERE sn.group_id = sng.group_id AND instr(LOWER(sn.${scientific.text}), t) > 0)
+        ) AS score
+      FROM species_name_group sng
+      WHERE sng.group_id IS NOT ?
+    )
+    WHERE score > 0
+    ORDER BY score DESC, canonical_genus, canonical_species_name
+    LIMIT ?
+  `;
+  return query<SpeciesSuggestion>(sql, [...tokens.flat(), options.exclude ?? null, limit]);
 }
 
 export async function getSpeciesForExplorer(

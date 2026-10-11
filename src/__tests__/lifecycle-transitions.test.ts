@@ -27,7 +27,8 @@ import {
   type SubmissionState,
 } from "@/lifecycle";
 import { query } from "@/db/conn";
-import { addName, checkFormAgreement, createSpecies, findSpeciesById, listNames } from "@/species";
+import { addName, checkFormAgreement, createSpecies, findSpeciesById, listNames, resolveSpecies } from "@/species";
+import { findSubmissionsWithRecordedSpecies } from "@/db/submission_notes";
 import {
   mockApprovalData,
   ensureGuppySpecies,
@@ -1417,6 +1418,214 @@ void describe("Submission lifecycle - transitions", () => {
       assert.strictEqual(after.cares_species, 1);
       assert.strictEqual(after.first_time_species, 1);
       assert.strictEqual((await getMemberWithPoints(ctx.member.id)).fishTotalPoints, 25);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // The witness records an unlisted Species (#522)
+  // -------------------------------------------------------------------------
+
+  /**
+   * A member who typed a name the catalogue does not hold still gets witnessed
+   * on the panel: the witness records the Species, with its Point class and
+   * CARES flag, in the one transaction that confirms the Witness. A refusal
+   * anywhere in that transaction leaves no Species behind.
+   */
+  void describe("The witness records an unlisted Species", () => {
+    const changelog = async (id: number) =>
+      (
+        await query<{ note_text: string }>(
+          "SELECT note_text FROM submission_notes WHERE submission_id = ? ORDER BY id",
+          [id]
+        )
+      ).map((n) => JSON.parse(n.note_text) as { type: string; changes: Change[]; reason: string });
+
+    const apisto = {
+      canonicalGenus: "Apistogramma",
+      canonicalSpeciesName: "sp. 'Rio Mamuru'",
+      commonName: "Apisto Rio Mamuru",
+      pointClass: 15,
+      isCaresSpecies: true,
+    };
+    const recorded = () => resolveSpecies({ latinName: "Apistogramma sp. 'Rio Mamuru'" });
+
+    /** A Submission whose spellings match nothing in the catalogue. */
+    const unlisted = () =>
+      submissionInState(ctx.db, "pendingWitness", {
+        memberId: ctx.member.id,
+        speciesId: null,
+        commonName: "Apisto Rio Mamuru",
+        latinName: "Apistogramma sp. 'Rio Mamuru'",
+        speciesClass: "Cichlids - New World",
+      });
+
+    void test("recording creates the Species, with its Point class, CARES flag and Names, and settles the Submission on it, all on the changelog", async () => {
+      const id = await unlisted();
+
+      await confirmWitness(committee, id, witnessPoints({ points: 15, cares_species: true, new_species: apisto }));
+
+      const found = await recorded();
+      assert.ok(found, "the catalogue now holds it");
+      const species = found.species;
+      assert.deepStrictEqual(
+        [species.species_type, species.program_class, species.base_points, species.is_cares_species],
+        ["Fish", "Cichlids - New World", 15, 1],
+        "type and class from the Submission, Point class and CARES from the witness"
+      );
+      const names = await listNames(species.group_id);
+      assert.deepStrictEqual(names.common.map((n) => n.name), ["Apisto Rio Mamuru"]);
+      assert.deepStrictEqual(
+        names.scientific.map((n) => [n.name, n.canonical]),
+        [["Apistogramma sp. 'Rio Mamuru'", true]]
+      );
+
+      const after = (await readSubmission(id))!;
+      assert.strictEqual(after.species_id, species.group_id);
+      assert.strictEqual(after.witness_verification_status, "confirmed");
+      assert.strictEqual(after.points, 15);
+      assert.strictEqual(after.cares_species, 1);
+      assert.deepStrictEqual([after.species_type, after.species_class, after.program], ["Fish", "Cichlids - New World", "fish"]);
+      await assertSubmissionInvariantsHold(after);
+
+      assert.deepStrictEqual(
+        (await changelog(id)).map((e) => [e.type, e.changes, e.reason]),
+        [
+          [
+            "admin_edit",
+            [
+              { field: "new_species", old: null, new: "Apistogramma sp. 'Rio Mamuru'" },
+              { field: "species", old: null, new: "Apistogramma sp. 'Rio Mamuru'" },
+            ],
+            "Settled at the Witness",
+          ],
+        ]
+      );
+      assert.deepStrictEqual(await findSubmissionsWithRecordedSpecies([id, await at("pendingWitness")]), new Set([id]));
+    });
+
+    void test("a new Species with no common name has only its Canonical name; the spellings are not re-added", async () => {
+      const id = await unlisted();
+
+      await confirmWitness(
+        committee,
+        id,
+        witnessPoints({ points: 10, new_species: { ...apisto, commonName: null, isCaresSpecies: false } }),
+        { common: true, scientific: true }
+      );
+
+      const names = await listNames((await recorded())!.species.group_id);
+      assert.deepStrictEqual(names.common, []);
+      assert.strictEqual(names.scientific.length, 1);
+      assert.strictEqual((await recorded())!.species.is_cares_species, 0);
+    });
+
+    void test("recording over the member's own pick rebinds to the new Species", async () => {
+      const id = await at("pendingWitness");
+
+      await confirmWitness(committee, id, witnessPoints({ points: 15, new_species: apisto }));
+
+      const species = (await recorded())!.species;
+      assert.strictEqual((await readSubmission(id))!.species_id, species.group_id);
+      assert.deepStrictEqual(
+        (await changelog(id))[0].changes.map((c) => [c.field, c.old, c.new]),
+        [
+          ["new_species", null, "Apistogramma sp. 'Rio Mamuru'"],
+          ["species", "Poecilia reticulata", "Apistogramma sp. 'Rio Mamuru'"],
+        ]
+      );
+    });
+
+    void test("a refused confirmation records no Species: a bonus outside the Program, changes outstanding, or the witness's own Submission", async () => {
+      const flagged = await unlisted();
+      assert.strictEqual(
+        await refusal(() => confirmWitness(committee, flagged, witnessPoints({ points: 15, flowered: true, new_species: apisto }))),
+        "validation",
+        "flowered is HAP's, and this is a Fish"
+      );
+      assert.strictEqual(await recorded(), null, "the transaction rolled the Species back");
+
+      const asked = await unlisted();
+      await requestChanges(committee, asked, "Which tank was this in?");
+      assert.strictEqual(
+        await refusal(() => confirmWitness(committee, asked, witnessPoints({ points: 15, new_species: apisto }))),
+        "state"
+      );
+      assert.strictEqual(await recorded(), null);
+
+      const own = await submissionInState(ctx.db, "pendingWitness", {
+        memberId: ctx.admin.id,
+        speciesId: null,
+        latinName: "Apistogramma sp. 'Rio Mamuru'",
+      });
+      assert.strictEqual(
+        await refusal(() => confirmWitness(committee, own, witnessPoints({ points: 15, new_species: apisto }))),
+        "authorization"
+      );
+      assert.strictEqual(await recorded(), null);
+
+      for (const id of [flagged, asked, own]) {
+        const row = (await readSubmission(id))!;
+        assert.strictEqual(row.witness_verification_status, "pending");
+        assert.strictEqual(row.species_id, null);
+        assert.strictEqual(row.points, null);
+        assert.deepStrictEqual(await changelog(id), []);
+      }
+    });
+
+    void test("a Species the catalogue already holds is not recorded twice", async () => {
+      await ensureGuppySpecies(ctx.db);
+      const id = await unlisted();
+
+      await assert.rejects(
+        () =>
+          confirmWitness(
+            committee,
+            id,
+            witnessPoints({ new_species: { ...apisto, canonicalGenus: "Poecilia", canonicalSpeciesName: "reticulata" } })
+          ),
+        (err: unknown) => err instanceof ValidationError && /already exists/.test(err.message)
+      );
+
+      const row = (await readSubmission(id))!;
+      assert.strictEqual(row.witness_verification_status, "pending");
+      assert.strictEqual(row.species_id, null);
+      assert.strictEqual(await recorded(), null);
+    });
+
+    void test("the new Species' Point class is one of the Point classes, and it is not named alongside an existing Species", async () => {
+      const id = await unlisted();
+
+      assert.strictEqual(
+        await refusal(() => confirmWitness(committee, id, witnessPoints({ new_species: { ...apisto, pointClass: 12 } }))),
+        "validation"
+      );
+      const guppy = await ensureGuppySpecies(ctx.db);
+      assert.strictEqual(
+        await refusal(() => confirmWitness(committee, id, witnessPoints({ species_id: guppy, new_species: apisto }))),
+        "validation"
+      );
+      assert.strictEqual(await recorded(), null);
+      assert.strictEqual((await readSubmission(id))!.witness_verification_status, "pending");
+    });
+
+    void test("a voided Witness leaves the recorded Species in the catalogue, bound, for the next witness", async () => {
+      const id = await unlisted();
+      await confirmWitness(committee, id, witnessPoints({ points: 15, new_species: apisto }));
+      const species = (await recorded())!.species;
+
+      await saveChanges(member, id, {
+        ...(await formFor(id)),
+        species_class: "Cichlids - New World",
+        species_common_name: "Apisto Rio Mamuru",
+        species_latin_name: "Apistogramma sp. 'Rio Mamuru'",
+        count: "40",
+      });
+
+      const after = (await readSubmission(id))!;
+      assert.strictEqual(after.witness_verification_status, "pending");
+      assert.strictEqual(after.points, null);
+      assert.strictEqual(after.species_id, species.group_id, "the binding holds: the form still agrees with the Species");
+      assert.strictEqual((await findSpeciesById(species.group_id))!.base_points, 15);
     });
   });
 

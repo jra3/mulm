@@ -82,6 +82,8 @@ adminRouter.post(
 );
 adminRouter.post("/submissions/:id/confirm-witness", admin.confirmWitnessAction);
 adminRouter.post("/submissions/:id/witness-summary", admin.witnessSummaryAction);
+adminRouter.get("/submissions/:id/record-species", admin.recordSpeciesFormAction);
+adminRouter.post("/submissions/:id/record-species", admin.recordSpeciesAction);
 adminRouter.post("/submissions/:id/request-changes", admin.sendRequestChanges);
 adminRouter.post("/submissions/:id/notes", admin.addSubmissionNote);
 adminRouter.get("/submissions/:submissionId/notes/:noteId/edit", admin.editSubmissionNoteForm);

@@ -32,6 +32,27 @@ export async function getNotesForSubmission(submissionId: number): Promise<Submi
 }
 
 /**
+ * Which of these Submissions had their Species recorded by the witness: the
+ * "Settled at the Witness" changelog entry carries a `new_species` change
+ * (`confirmWitness`, src/lifecycle/transitions.ts). One query for a whole
+ * queue page, where `speciesRecordedByWitness` (src/routes/submission.ts)
+ * reads one Submission's notes.
+ */
+export async function findSubmissionsWithRecordedSpecies(submissionIds: number[]): Promise<Set<number>> {
+  if (submissionIds.length === 0) return new Set();
+  const rows = await query<{ submission_id: number }>(
+    `SELECT DISTINCT sn.submission_id
+     FROM submission_notes sn,
+          json_each(CASE WHEN json_valid(sn.note_text) THEN sn.note_text ELSE '{}' END, '$.changes') change
+     WHERE sn.submission_id IN (${submissionIds.map(() => "?").join(", ")})
+       AND json_extract(sn.note_text, '$.type') = 'admin_edit'
+       AND json_extract(change.value, '$.field') = 'new_species'`,
+    submissionIds
+  );
+  return new Set(rows.map((row) => row.submission_id));
+}
+
+/**
  * Add a new note to a submission
  */
 export async function addNote(

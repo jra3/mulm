@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert";
-import { speciesChosenByCommittee, witnessSummary } from "../routes/submission";
+import { speciesChosenByCommittee, speciesRecordedByWitness, witnessSummary } from "../routes/submission";
 import { totalPoints } from "../points";
 
 /**
@@ -86,5 +86,28 @@ void describe("Whether the committee chose the Species", () => {
       false
     );
     assert.strictEqual(speciesChosenByCommittee([note({ type: "other", changes: [{ field: "species" }] })]), false);
+  });
+});
+
+/**
+ * Whether the witness recorded the Species (#522): the "Settled at the
+ * Witness" entry carries a `new_species` change, which the approval queue
+ * reads as "New species recorded by the witness".
+ */
+void describe("Whether the witness recorded the Species", () => {
+  const note = (text: unknown) => ({ note_text: typeof text === "string" ? text : JSON.stringify(text) });
+  const settled = (changes: { field: string }[]) =>
+    note({ type: "admin_edit", changes, reason: "Settled at the Witness" });
+
+  void test("a changelog entry with a new_species change says yes", () => {
+    const notes = [settled([{ field: "new_species" }, { field: "species" }])];
+    assert.strictEqual(speciesRecordedByWitness(notes), true);
+    assert.strictEqual(speciesChosenByCommittee(notes), true, "a recorded Species is also one the committee chose");
+  });
+
+  void test("a rebind to an existing Species, plain notes and malformed notes say no", () => {
+    assert.strictEqual(speciesRecordedByWitness([]), false);
+    assert.strictEqual(speciesRecordedByWitness([settled([{ field: "species" }])]), false);
+    assert.strictEqual(speciesRecordedByWitness([note("Looks healthy"), note("{not json")]), false);
   });
 });
