@@ -116,6 +116,9 @@ export type SentLetter = {
 export class RecordingNotifier implements Notifier {
   readonly sent: SentLetter[] = [];
 
+  /** What the letters that report delivery answer. Set false to play a dead mail server. */
+  deliver = true;
+
   /** Every letter of one kind. */
   of(kind: string): SentLetter[] {
     return this.sent.filter((letter) => letter.kind === kind);
@@ -148,7 +151,7 @@ export class RecordingNotifier implements Notifier {
   }
   waitingPeriodComplete(submission: { id: number }, member: { contact_email: string }) {
     this.record("waitingPeriodComplete", member.contact_email, submission.id);
-    return Promise.resolve(true);
+    return Promise.resolve(this.deliver);
   }
   changesRequested(submission: { id: number }, member: { contact_email: string }, reason: string) {
     this.record("changesRequested", member.contact_email, submission.id);
@@ -174,6 +177,10 @@ export class RecordingNotifier implements Notifier {
   committeeDigest(recipients: string[], digest: { total: number }) {
     this.record("committeeDigest", recipients, digest.total);
     return Promise.resolve();
+  }
+  rewitnessPending(member: { contact_email: string }, submissions: { id: number }[]) {
+    this.record("rewitnessPending", member.contact_email, submissions.map((s) => s.id).join(","));
+    return Promise.resolve(this.deliver);
   }
 
   /** The text the committee sent with a request for changes. */

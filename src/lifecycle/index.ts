@@ -91,6 +91,18 @@ export {
 } from "./reminders";
 export { buildCommitteeDigest, sendCommitteeDigest } from "./digest";
 
+// The reset of in-flight Submissions (#524): who witnessed them before, and
+// the one-off letter telling their members that nothing is wrong.
+export {
+  originalWitnessFromNotes,
+  membersAwaitingRewitnessEmail,
+  sendRewitnessEmails,
+  WITNESS_RESET_NOTE,
+  type OriginalWitness,
+  type RewitnessPending,
+  type RewitnessLetter,
+} from "./rewitness";
+
 // A member's standing, recomputed from their approved Submissions.
 export { recomputeStanding } from "./standing";
 

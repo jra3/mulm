@@ -11,8 +11,10 @@ import {
   onSubmissionSend,
   onWaitingPeriodComplete,
   onCommitteeDigest,
+  onRewitnessPending,
   type CommitteeDigest,
 } from "@/notifications";
+import type { RewitnessPending } from "./rewitness";
 
 /**
  * Who gets told what, as one interface.
@@ -59,6 +61,11 @@ export interface Notifier {
   specialtyAward(member: MemberRecord, awardName: string): Promise<void>;
   /** The committee's daily digest of what is still waiting on them. */
   committeeDigest(recipients: string[], digest: CommitteeDigest): Promise<void>;
+  /**
+   * The member's Submissions were reset for a second Witness (#524): nothing
+   * is wrong, nothing restarts. Returns whether the letter was delivered.
+   */
+  rewitnessPending(member: MemberRecord, submissions: RewitnessPending[]): Promise<boolean>;
 }
 
 /** The real notifier: the Portal's email templates, unchanged. */
@@ -72,6 +79,7 @@ const emailNotifier: Notifier = {
   levelUp: onLevelUpgrade,
   specialtyAward: onSpecialtyAward,
   committeeDigest: onCommitteeDigest,
+  rewitnessPending: onRewitnessPending,
 };
 
 let current: Notifier = emailNotifier;

@@ -19,6 +19,9 @@
 //-   one the member filed under.
 //- @param speciesChosenByWitness - whether the committee, not the member,
 //-   chose the bound Species, so there is no "is that right?" left to ask
+//- @param originalWitness - { name, date formatted } when migration 066 reset
+//-   the Witness (#524): who saw the fry under the old flow, read off the
+//-   reset note, so the re-witnesser asks for no fresh sighting. Null otherwise.
 //- @param suggestions - the catalogue's closest Species to what the member
 //-   wrote (`SpeciesSuggestionFacts[]`): speciesId, commonName, speciesName,
 //-   speciesType, programClass, pointClass. Offered under "Did they mean one
@@ -107,6 +110,10 @@ mixin witnessSuggestions()
 		.bg-white.rounded-lg.px-4.py-3#witness-header
 			.text-xs.text-gray-500= `${programShort} submission · reproduced ${submission.reproduction_date}`
 			.font-semibold.text-gray-900= submission.member_name
+			if originalWitness
+				//- Reset by migration 066: the fry were seen; only the Species and points are wanted
+				p.text-sm.text-gray-700.mt-1#witness-original-witness
+					| Originally witnessed by #{originalWitness.name} on #{originalWitness.date}. No fresh sighting is needed: confirm the species and set the points.
 			a.text-sm.text-blue-700.underline(href="#species-details") See the full form, photos and video
 
 		if changesRequested

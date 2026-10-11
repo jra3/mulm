@@ -45,6 +45,11 @@ import { AuthorizationError, StateError, UnboundError } from "./errors";
  * performing anything. It is computed in `state.ts` rather than listed here.
  * The member does nothing to enter the queue; they bring the fry, plants or
  * coral to a meeting, and a committee member approves it there.
+ *
+ * One write happened outside the table, once: migration 066 (#524) sent
+ * every Submission witnessed before points moved to the Witness back to
+ * pendingWitness, as a void would, with a note naming the original witness
+ * (`rewitness.ts`). From there the rows above apply as to any other.
  */
 
 /** Who is asking. A committee member is a member with `is_admin`. */

@@ -88,6 +88,26 @@ void describe("Pug Template Rendering", () => {
     fishTotalPoints: 150,
     plantTotalPoints: 75,
     coralTotalPoints: 25,
+    // Rows for the templates that take a `submissions` local: the waiting
+    // period queue (a queue row plus waitingStatus) and the re-witness letter
+    // (RewitnessLetterRow, src/notifications.ts)
+    submissions: [
+      {
+        ...createMockSubmission(),
+        id: 41,
+        species_common_name: "Guppy",
+        species_latin_name: "Poecilia reticulata",
+        species_type: "Fish",
+        species_class: "Livebearers",
+        reproduction_date: "2026-01-15",
+        waitingStatus: { daysRemaining: 0 },
+        reproducedOn: "January 15, 2026",
+        witnessedBy: "Pat",
+        witnessedOn: "February 1, 2026",
+        readyOn: "March 16, 2026",
+        waitingPeriodOver: true,
+      },
+    ],
 
     // Activity data with proper structure
     recentActivity: Array.from({ length: 5 }, () => ({
@@ -961,6 +981,7 @@ void describe("Pug Template Rendering", () => {
         spellingAgreement: { commonName: "name", latinName: "name" },
         suggestions: [],
         newSpecies: null,
+        originalWitness: null,
         summary: notReady,
         allowed: { confirmWitness: true, bindSpecies: true, requestChanges: true },
         ...data,
@@ -978,6 +999,16 @@ void describe("Pug Template Rendering", () => {
       assert.match(html, /href="#species-details"[^>]*>See the full form, photos and video</);
       assert.match(html, /Witness this submission/);
       assert.doesNotMatch(html.replace(/<[^>]+>/g, " "), /\bbind/i, "the panel never says bind");
+    });
+
+    void test("a reset Submission's header names the original witness, so no fresh sighting is asked for", () => {
+      const html = render({ originalWitness: { name: "Pat", date: "01/02/2026" } });
+      const header = html.slice(html.indexOf('id="witness-header"'), html.indexOf('id="witness-form"'));
+
+      assert.match(header, /id="witness-original-witness"/);
+      assert.match(header, /Originally witnessed by Pat on 01\/02\/2026\./);
+      assert.match(header, /No fresh sighting is needed/);
+      assert.doesNotMatch(render({}), /witness-original-witness/, "a Submission never reset says nothing about it");
     });
 
     void test("the member picked the Species: says so, asks Yes or No, and posts that Species", () => {

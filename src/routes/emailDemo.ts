@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { MulmRequest } from "../sessions";
 import { bonusBreakdown, totalPoints } from "../points";
+import { rewitnessLetterRows } from "../notifications";
 
 /**
  * Demo route to preview all email templates
@@ -62,6 +63,33 @@ export const emailDemoPage = (req: MulmRequest, res: Response) => {
     // Submission data, with the total taken from the Points rule so the preview
     // cannot disagree with the breakdown beneath it
     submission: { ...sampleSubmission, total_points: totalPoints(sampleSubmission) },
+
+    // The re-witness letter (#524): the member's Submissions migration 066
+    // sent back for a Witness, one in its waiting period and one past it
+    submissions: rewitnessLetterRows([
+      {
+        id: 124,
+        species_common_name: "Cherry Barb",
+        species_latin_name: "Puntius titteya",
+        species_type: "Fish",
+        species_class: "Cyprinids",
+        reproduction_date: "2026-08-20T00:00:00.000Z",
+        originalWitness: { name: "Pat Rivera", date: "2026-08-28" },
+        readyOn: "2026-10-19",
+        waitingPeriodOver: false,
+      },
+      {
+        id: 125,
+        species_common_name: "Java Fern",
+        species_latin_name: "Microsorum pteropus",
+        species_type: "Plant",
+        species_class: "Ferns",
+        reproduction_date: "2026-06-01T00:00:00.000Z",
+        originalWitness: { name: "Pat Rivera", date: "2026-06-10" },
+        readyOn: "2026-07-31",
+        waitingPeriodOver: true,
+      },
+    ]),
 
     // Auth code for password reset
     code: "demo_reset_code_12345678",

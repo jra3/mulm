@@ -31,6 +31,7 @@ from `src/points.ts`. One definition, many queries.
 | `standing.ts` | Level and Specialty Award recompute, symmetric in both directions. |
 | `reminders.ts` | The clock's consequence: who is due a nudge, and what they are told. |
 | `digest.ts` | What is still waiting on the committee, per Program. |
+| `rewitness.ts` | The reset of in-flight Submissions (#524): the original witness read off the reset note, and the one-off letter to their members. |
 | `errors.ts` | The refusal taxonomy: the wrong person, or the wrong moment. |
 
 ## Adding a move
@@ -107,6 +108,28 @@ how the approval queue knows to say "New species recorded by the witness"
 `findSubmissionsWithRecordedSpecies` in src/db/submission_notes.ts for a
 page of them). A recorded Species gets no spellings added as Names: its
 names are the ones the witness gave it.
+
+## In-flight Submissions went back for a Witness
+
+Points are set at the Witness now, and a Submission witnessed before that
+carried none, so migration 066 (db/migrations/066-reset-pointless-witnesses.sql)
+sent every witnessed, unapproved, pointless row back to awaiting a Witness
+(#524): status pending, the witness fields and the dead `final_submission_on`
+cleared, as `voidWitness` clears them. Nobody performed that move, so it is
+not in the table; what follows it is in `rewitness.ts`. Each reset row
+carries a plain-text changelog note attributed to its original witness,
+"Witness reset when points moved to the Witness; originally witnessed by X
+on D", and the witness panel's header reads it (`originalWitnessFromNotes`)
+so the re-witnesser knows the fry were seen: no fresh sighting, just the
+Species and the points, by any committee member but the submitter. The clock
+counts from the reproduction date, so nothing restarts; a reset row whose
+waiting period had run is in the approval queue the moment it is
+re-witnessed. The one-off script `scripts/email-rewitness.ts` runs
+`sendRewitnessEmails` once after the deploy: one letter per affected member,
+listing their reset Submissions still awaiting a Witness, recorded per
+member in `settings` (`rewitness_emailed:<id>`) only once delivered, so it
+is safe to run twice. After the migration no witnessed, unapproved row lacks
+points (`assertNoWitnessedRowLacksPoints` in the test helpers).
 
 ## Things that are deliberately not here
 

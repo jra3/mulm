@@ -7,6 +7,8 @@ import { logger } from "@/utils/logger";
 import { type Env, isStaging } from "@/utils/environment";
 import { sendEmailWithRetry } from "./services/emailService";
 import { bonusBreakdown } from "./points";
+import { formatLongDate } from "./utils/dateFormat";
+import type { RewitnessPending } from "./lifecycle/rewitness";
 
 const DEBUG_EMAIL = process.env.DEBUG_EMAIL;
 const fromEmail = `BASNY Breeder Awards ${config.email.fromEmail}`;
@@ -185,6 +187,73 @@ export async function onWaitingPeriodComplete(
     {
       type: "waiting_period_complete",
       context: { submissionId: sub.id, recipient: member.contact_email },
+    }
+  );
+}
+
+/** One reset Submission as the letter prints it: its days already formatted, in UTC like every date the Portal prints. */
+export type RewitnessLetterRow = Pick<RewitnessPending, "id" | "species_common_name" | "species_latin_name" | "species_type"> & {
+  reproducedOn: string;
+  witnessedBy: string | null;
+  witnessedOn: string | null;
+  readyOn: string;
+  waitingPeriodOver: boolean;
+};
+
+/** The letter's rows from the lifecycle's facts; the demo page builds its preview with it too. */
+export function rewitnessLetterRows(submissions: RewitnessPending[]): RewitnessLetterRow[] {
+  return submissions.map((s) => ({
+    id: s.id,
+    species_common_name: s.species_common_name,
+    species_latin_name: s.species_latin_name,
+    species_type: s.species_type,
+    reproducedOn: formatLongDate(s.reproduction_date),
+    witnessedBy: s.originalWitness?.name ?? null,
+    witnessedOn: s.originalWitness ? formatLongDate(s.originalWitness.date) : null,
+    readyOn: formatLongDate(s.readyOn),
+    waitingPeriodOver: s.waitingPeriodOver,
+  }));
+}
+
+const renderRewitnessPending = pug.compileFile("src/views/email/onRewitnessPending.pug");
+/**
+ * One-off letter after the reset of in-flight Submissions (#524): the
+ * member's witnessed Submissions carried no points, so they await a Witness
+ * again. Nothing is wrong, the waiting period has not restarted, a committee
+ * member will confirm them again, and the points email follows. Returns
+ * whether it was delivered, so the script records only the letters that got
+ * through.
+ */
+export async function onRewitnessPending(member: MemberRecord, submissions: RewitnessPending[]): Promise<boolean> {
+  if (EMAILS_DISABLED) {
+    logger.info("Email disabled - would have sent re-witness letter", {
+      memberId: member.id,
+      submissionIds: submissions.map((s) => s.id),
+    });
+    return true;
+  }
+
+  const plural = submissions.length !== 1;
+  return sendEmailWithRetry(
+    () =>
+      transporter.sendMail({
+        from: fromEmail,
+        to: member.contact_email,
+        bcc: DEBUG_EMAIL,
+        replyTo: config.email.adminsEmail,
+        subject: plural
+          ? `Your ${submissions.length} submissions will be witnessed again`
+          : `Your ${submissions[0].species_common_name} submission will be witnessed again`,
+        html: renderRewitnessPending({
+          domain: config.server.domain,
+          member,
+          submissions: rewitnessLetterRows(submissions),
+          programContactEmail: config.email.adminsEmail,
+        }),
+      }),
+    {
+      type: "rewitness_pending",
+      context: { memberId: member.id, submissions: submissions.length, recipient: member.contact_email },
     }
   );
 }
