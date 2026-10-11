@@ -12,12 +12,11 @@ import {
   getQueue,
   getQueueCounts,
   getSubmissionsByMember,
-  getSubmissionSupplements,
   type QueueSubmission,
   type Submission,
 } from "@/db/submissions";
 import { approveForm } from "@/forms/approve";
-import { approvedEditSchema } from "@/forms/approvedEdit";
+import { editApprovedDetailsForm } from "@/forms/editApprovedDetails";
 import { bindSpeciesForm } from "@/forms/bindSpecies";
 import {
   chosenSpeciesForm,
@@ -1195,20 +1194,38 @@ export async function cancelEditSubmissionNote(req: MulmRequest, res: Response) 
 }
 
 /**
+ * Whether this viewer may edit this Submission's details (#529): the table's
+ * answer for `editApprovedDetails`, which is Approved only, committee only
+ * and never the submitter.
+ */
+function mayEditDetails(viewer: NonNullable<MulmRequest["viewer"]>, submission: Submission): boolean {
+  const isOwner = submission.member_id === viewer.id;
+  return lifecycle.canMove(lifecycle.moves.editApprovedDetails, {
+    state: lifecycle.deriveState(submission),
+    changesPending: lifecycle.hasChangesRequested(submission),
+    actor: isOwner ? "member" : "committee",
+    actorId: viewer.id,
+    isOwner,
+    bound: submission.species_id != null,
+  });
+}
+
+/**
  * GET /admin/submissions/:id/edit-approved
- * Renders edit modal for approved submissions
+ * The Edit Approved Submission dialog: the member's details on an Approved
+ * Submission, with a reason. The Species and points are not on it; it links
+ * to the correction form for those (#529).
  */
 export const editApprovedSubmissionForm = async (req: MulmRequest, res: Response) => {
   const submission = await validateSubmission(req, res);
-  if (!submission || !submission.approved_on) {
-    res.status(400).send("Submission not found or not approved");
+  if (!submission) {
     return;
   }
-
-  const { viewer } = req;
-
-  // Prevent editing own submissions (prevents point manipulation)
-  if (submission.member_id === viewer!.id) {
+  if (!submission.approved_on) {
+    res.status(400).send("Only an Approved Submission's details are edited here");
+    return;
+  }
+  if (!mayEditDetails(req.viewer!, submission)) {
     res.status(403).send("Cannot edit your own approved submissions");
     return;
   }
@@ -1232,14 +1249,6 @@ export const editApprovedSubmissionForm = async (req: MulmRequest, res: Response
     return [];
   };
 
-  // The Species the Submission is bound to, for the species typeahead
-  const currentGroupId = submission.species_id;
-
-  // Fetch supplements from normalized table
-  const supplements = await getSubmissionSupplements(submission.id);
-  const supplement_type = supplements.map((s) => s.supplement_type).join(", ");
-  const supplement_regimen = supplements.map((s) => s.supplement_regimen).join(", ");
-
   res.render("admin/editApprovedSubmission", {
     submission: {
       ...submission,
@@ -1250,11 +1259,8 @@ export const editApprovedSubmissionForm = async (req: MulmRequest, res: Response
       spawn_locations: parseStringArray(submission.spawn_locations),
     },
     member,
-    currentGroupId,
     foodTypes,
     spawnLocations,
-    supplement_type,
-    supplement_regimen,
     // Conditional field visibility based on species type
     isLivestock: isLivestock(submission.species_type),
     hasFoods: hasFoods(submission.species_type),
@@ -1266,106 +1272,65 @@ export const editApprovedSubmissionForm = async (req: MulmRequest, res: Response
 
 /**
  * POST /admin/submissions/:id/edit-approved
- * Processes approved submission edits with full audit trail
+ * Save the dialog: the member's details, with a reason, through
+ * `editApprovedDetails`, which puts them on the changelog and tells nobody.
+ * A refusal lands in the dialog's error banner.
  */
 export const saveApprovedSubmissionEdits = async (req: MulmRequest, res: Response) => {
-  logger.info("=== SAVE APPROVED EDITS CALLED ===", { submissionId: req.params.id });
-
   const { viewer } = req;
   const submission = await validateSubmission(req, res);
-
-  if (!submission || !submission.approved_on) {
-    logger.error("Submission not found or not approved", { submission });
-    res.status(400).send("Submission not found or not approved");
+  if (!submission) {
     return;
   }
-
-  // Prevent editing own submissions
-  if (submission.member_id === viewer!.id) {
+  if (!submission.approved_on) {
+    res.status(400).send("Only an Approved Submission's details are edited here");
+    return;
+  }
+  if (!mayEditDetails(viewer!, submission)) {
     res.status(403).send("Cannot edit your own approved submissions");
     return;
   }
 
-  // Validate form
-  const parsed = approvedEditSchema(submission.program).safeParse(req.body);
+  const parsed = editApprovedDetailsForm.safeParse(req.body);
   if (!parsed.success) {
-    logger.error("Validation failed", { errors: parsed.error.issues });
     const errors = new Map<string, string>();
     parsed.error.issues.forEach((issue) => {
       errors.set(String(issue.path[0]), issue.message);
     });
-
-    // HTMX does not swap the body of a 4xx response, so a 400 here reached
-    // nobody: the dialog sat there as if nothing had happened. Retarget the
-    // dialog's error banner and list every message, so a rejected bonus names
-    // itself to the committee member instead of failing silently.
-    res.set("HX-Retarget", "#edit-approved-errors").set("HX-Reswap", "innerHTML");
-    res.render("admin/editApprovedErrors", { messages: [...errors.values()] });
+    sendEditApprovedRefusal(res, [...errors.values()]);
     return;
   }
 
-  logger.info("Validation passed", { data: parsed.data });
+  const { reason, foods, spawn_locations, reproduction_date, ...rest } = parsed.data;
+  const details: lifecycle.ApprovedDetails = { ...rest };
 
-  const updates = parsed.data;
-  const reason = updates.reason;
-
-  // Remove reason and group_id from updates (reason goes in audit log, group_id becomes species_id)
-  delete (updates as Partial<typeof updates>).reason;
-  const groupId = updates.group_id;
-  delete (updates as Partial<typeof updates>).group_id;
-
-  // Preserve time component of reproduction_date if date changed
-  if (updates.reproduction_date && submission.reproduction_date) {
+  // Preserve the time component of reproduction_date if the date changed:
+  // the form posts a day, the column holds an instant.
+  if (reproduction_date && submission.reproduction_date) {
     const oldDate = new Date(submission.reproduction_date);
-    const newDateOnly = updates.reproduction_date; // YYYY-MM-DD format from form
-
-    // Extract time component from old date
-    const hours = oldDate.getUTCHours();
-    const minutes = oldDate.getUTCMinutes();
-    const seconds = oldDate.getUTCSeconds();
-
-    // Combine new date with old time
-    const [year, month, day] = newDateOnly.split("-").map(Number);
-    const newDateTime = new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds));
-
-    // Use ISO string for database storage
-    updates.reproduction_date = newDateTime.toISOString();
+    const [year, month, day] = reproduction_date.split("-").map(Number);
+    details.reproduction_date = new Date(
+      Date.UTC(year, month - 1, day, oldDate.getUTCHours(), oldDate.getUTCMinutes(), oldDate.getUTCSeconds())
+    ).toISOString();
+  } else if (reproduction_date) {
+    details.reproduction_date = reproduction_date;
   }
 
-  // Convert arrays from multi-select to JSON strings for database storage
-  const updatesForDb = { ...updates } as Record<string, unknown>;
-  if (updates.foods !== undefined) {
-    updatesForDb.foods = JSON.stringify(updates.foods || []);
+  // The multi-selects are stored as JSON arrays
+  if (foods !== undefined) {
+    details.foods = JSON.stringify(foods);
   }
-  if (updates.spawn_locations !== undefined) {
-    updatesForDb.spawn_locations = JSON.stringify(updates.spawn_locations || []);
-  }
-
-  // Rebind to another Species if the committee picked one
-  if (groupId && groupId !== submission.species_id) {
-    if (!(await findSpeciesById(groupId))) {
-      res.set("HX-Retarget", "#edit-approved-errors").set("HX-Reswap", "innerHTML");
-      res.render("admin/editApprovedErrors", { messages: ["Choose a Species that exists"] });
-      return;
-    }
-    updatesForDb.species_id = groupId;
+  if (spawn_locations !== undefined) {
+    details.spawn_locations = JSON.stringify(spawn_locations);
   }
 
   try {
-    // The dialog's write, kept until #529 splits it into a details-only move:
-    // the changelog, the feed entry updated in place rather than appended, and
-    // the symmetric Level and Specialty Award recompute all hang off it.
-    const changes = await lifecycle.correctApprovedSubmission(
-      { id: viewer!.id, isAdmin: true },
-      submission.id,
-      updatesForDb,
-      reason
-    );
-    logger.info(`Approved submission ${submission.id} corrected by admin ${viewer!.id}`, {
-      changes,
-    });
+    const changes = await lifecycle.editApprovedDetails(callerFor(viewer!), submission.id, details, reason);
+    logger.info(`Approved submission ${submission.id} details edited by admin ${viewer!.id}`, { changes });
   } catch (err) {
-    if (sendLifecycleError(res, err, { submissionId: submission.id, adminId: viewer?.id })) {
+    if (lifecycle.isLifecycleError(err)) {
+      logger.warn(`Lifecycle refusal: ${err.message}`, { submissionId: submission.id, adminId: viewer?.id, errorCode: err.code });
+      sendEditApprovedRefusal(res, [err.message]);
       return;
     }
     logger.error("Error saving approved submission edits", err);
@@ -1376,6 +1341,16 @@ export const saveApprovedSubmissionEdits = async (req: MulmRequest, res: Respons
   // Redirect back to submission page
   res.set("HX-Redirect", `/submissions/${submission.id}`).send();
 };
+
+/**
+ * HTMX does not swap the body of a 4xx response, so a refusal is a 200 aimed
+ * at the dialog's error banner, listing every message, so a rejected field
+ * names itself to the committee member instead of failing silently.
+ */
+function sendEditApprovedRefusal(res: Response, messages: string[]): void {
+  res.set("HX-Retarget", "#edit-approved-errors").set("HX-Reswap", "innerHTML");
+  res.render("admin/editApprovedErrors", { messages });
+}
 
 /**
  * Show live display settings page (admin only)

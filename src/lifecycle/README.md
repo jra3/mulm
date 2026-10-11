@@ -25,7 +25,7 @@ from `src/points.ts`. One definition, many queries.
 | `index.ts` | The interface. Start here. |
 | `state.ts` | The five stored states, derived in one place, and the waiting-period clock. |
 | `table.ts` | The transition table: which moves are legal from which states, and for whom. |
-| `transitions.ts` | One exported function per move (plus `correctApprovedSubmission`, the Edit Approved dialog's write on the correction row until #529). |
+| `transitions.ts` | One exported function per move. |
 | `queues.ts` | Queue membership, one definition per queue, as SQL and as a predicate. |
 | `consequences.ts` | Who gets told what. The module's own seam; tests swap it for a recorder. |
 | `standing.ts` | Level and Specialty Award recompute, symmetric in both directions. |
@@ -177,10 +177,24 @@ points, through the correction. The old create-Species dialog that bound
 from the review page went with them; the correction form records a new
 Species the way the witness panel does.
 
-The Edit Approved Submission dialog still writes the rest of the row through
-`correctApprovedSubmission`, which runs against the same table row (Approved
-only, held to by its SQL) and sends nothing; #529 gives it a details-only
-move and takes the Species and points sections out of the dialog.
+## The Edit Approved dialog edits details only
+
+The member's own details on an Approved Submission (the tank, the foods,
+the dates, the links and notes) are changed by the committee through the
+Edit Approved Submission dialog, and the dialog's write is its own move,
+`editApprovedDetails` (#529): legal on an Approved Submission only, since
+before that the member edits their own form; committee-only and never the
+submitter. It takes an `ApprovedDetails` (any of the detail columns listed
+in transitions.ts as `DETAIL_FIELDS`) and a required reason, diffs them
+against the row, refuses an edit that changes nothing, writes the columns
+and leaves one `admin_edit` changelog entry carrying the reason. Nothing
+else follows: no email, no feed entry, no standings recompute, because a
+detail counts toward nothing. The Witness, the Species and the points are
+untouched; a Species or points field in the details refuses the whole
+edit, since those changes carry consequences and go through
+`correctPoints`. The dialog (`admin/editApprovedSubmission.pug`,
+`src/forms/editApprovedDetails.ts`) has no fields for them and links to
+the correction form instead.
 
 ## In-flight Submissions went back for a Witness
 

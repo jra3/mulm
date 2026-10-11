@@ -27,7 +27,9 @@ import type { Submission } from "@/db/submissions";
  * witness on the changelog (`rewitness.ts`, #524). From waitingPeriod on the
  * committee corrects the Species and points in place (`correctPoints`, #528)
  * without moving the Submission, except that a Species whose clock is longer
- * can put a queued one back in waitingPeriod, as the clock decides.
+ * can put a queued one back in waitingPeriod, as the clock decides. On an
+ * Approved one it also edits the member's details (`editApprovedDetails`,
+ * #529), which moves nothing and changes no points.
  */
 export type SubmissionState =
   | "draft"

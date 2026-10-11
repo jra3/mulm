@@ -1193,41 +1193,81 @@ export async function correctPoints(
 }
 
 /**
- * The Edit Approved Submission dialog's write: any of the row's columns, as
- * the dialog posts them, with a stated reason. Kept until #529 gives the
- * dialog a details-only move of its own; the dialog's Species and points
- * sections then go, since those changes are `correctPoints`'s. Until then it
- * runs against the same table row as a correction (Approved only, which the
- * SQL holds it to), goes on the changelog, updates the feed entry in place
- * and recomputes the standing; it sends nothing.
- *
- * Returns the fields that actually changed, which is also what the changelog
- * records.
+ * The columns a details edit may touch: what the member filled in about the
+ * breeding, the tank and the record of it. Not the Species columns, not the
+ * points columns, not the lifecycle's own: those are `correctPoints`'s or
+ * nobody's.
  */
-export async function correctApprovedSubmission(
+const DETAIL_FIELDS = [
+  "reproduction_date",
+  "count",
+  "foods",
+  "spawn_locations",
+  "propagation_method",
+  "tank_size",
+  "filter_type",
+  "water_change_volume",
+  "water_change_frequency",
+  "temperature",
+  "ph",
+  "gh",
+  "specific_gravity",
+  "substrate_type",
+  "substrate_depth",
+  "substrate_color",
+  "light_type",
+  "light_strength",
+  "light_hours",
+  "co2",
+  "co2_description",
+  "video_url",
+  "article_link",
+  "notes",
+] as const satisfies readonly (keyof Submission)[];
+
+/** The member's details on an Approved Submission, as a details edit writes them. */
+export type ApprovedDetails = Partial<Pick<Submission, (typeof DETAIL_FIELDS)[number]>>;
+
+/**
+ * Edit the member's details on an Approved Submission, with a stated reason
+ * (#529): the tank, the foods, the dates and the like, which the member can
+ * no longer edit themselves since Approved is terminal. The Edit Approved
+ * Submission dialog's write.
+ *
+ * Never the Species or the points: a field of theirs in `details` refuses
+ * the whole edit, since those changes carry consequences (the member's
+ * letter, the feed entry, the standing) that go through `correctPoints`.
+ * A details edit has none of them: it goes on the changelog, as every
+ * committee change to a member's record does, and tells nobody and
+ * recomputes nothing, because nothing it changes counts toward a standing.
+ * The Witness is left alone (see `voidWitness`): the committee is amending
+ * the record, not the member re-filing.
+ *
+ * Returns the fields that changed, which is also what the changelog records.
+ */
+export async function editApprovedDetails(
   caller: Caller,
   submissionId: number,
-  updates: Record<string, unknown>,
+  details: ApprovedDetails,
   reason: string
 ): Promise<Change[]> {
   const trimmed = reason.trim();
   if (!trimmed) {
-    throw new ValidationError("A correction needs a stated reason", "reason", reason);
+    throw new ValidationError("An edit needs a stated reason", "reason", reason);
+  }
+  const allowed: ReadonlySet<string> = new Set(DETAIL_FIELDS);
+  for (const [field, value] of Object.entries(details)) {
+    if (!allowed.has(field)) {
+      throw new ValidationError(
+        `${field} is not a detail: the Species and points are changed on the correction form`,
+        field,
+        value
+      );
+    }
   }
 
-  const { memberId, changes } = await withTransaction(async (db) => {
-    const submission = await readForGuard(db, submissionId);
-    assertMoveIsLegal(moves.correctPoints, {
-      state: deriveState(submission),
-      changesPending: hasChangesRequested(submission),
-      actor: actorFor(caller, submission),
-      actorId: caller.id,
-      isOwner: submission.member_id === caller.id,
-      bound: updates.species_id != null || submission.species_id != null,
-    });
-    if (submission.approved_on == null) {
-      throw new StateError("Only an Approved Submission is edited this way", "approved", deriveState(submission));
-    }
+  const changes = await withTransaction(async (db) => {
+    await guard(db, moves.editApprovedDetails, caller, submissionId);
 
     // The full row, not just the guard's columns: the changelog diffs against
     // what is actually stored.
@@ -1236,32 +1276,26 @@ export async function correctApprovedSubmission(
     await stmt.finalize();
     const before = rows[0];
 
-    const diff = changesBetween(before, updates);
+    const diff = changesBetween(before, details);
     if (diff.length === 0) {
-      throw new ValidationError("No changes detected", "updates", updates);
+      throw new ValidationError("No changes detected", "details", details);
     }
 
-    const entries = Object.entries(updates).filter(([, value]) => value !== undefined);
+    const entries = Object.entries(details).filter(([, value]) => value !== undefined);
     const setClause = entries.map(([field]) => `${field} = ?`).join(", ");
     await runUpdate(
       db,
       `UPDATE submissions SET ${setClause} WHERE id = ? AND approved_on IS NOT NULL`,
       [...entries.map(([, value]) => value), submissionId],
-      moves.correctPoints
+      moves.editApprovedDetails
     );
 
-    return { memberId: before.member_id, changes: diff };
+    return diff;
   });
 
   await recordAdminEdit(submissionId, caller, changes, trimmed);
 
-  const [submission, member] = await Promise.all([getSubmissionById(submissionId), getMember(memberId)]);
-  if (submission && member) {
-    await announceApproval(submission, member);
-    await recomputeStanding(member.id, programOf(submission));
-  }
-
-  logger.info("Approved submission edited", { submissionId, by: caller.id, changes });
+  logger.info("Approved submission details edited", { submissionId, by: caller.id, changes });
   return changes;
 }
 

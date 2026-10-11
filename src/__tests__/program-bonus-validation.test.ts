@@ -1,6 +1,5 @@
 import { describe, test } from "node:test";
 import assert from "node:assert";
-import { approvedEditSchema } from "../forms/approvedEdit";
 import { confirmWitnessSchema, recordSpeciesForm } from "../forms/confirmWitness";
 import { programBonuses } from "../points";
 import type { ProgramType } from "../programs";
@@ -9,10 +8,12 @@ import type { ProgramType } from "../programs";
  * Per-program bonus enforcement at the points-setting schemas.
  *
  * Which bonuses a program may carry is data in src/points.ts, and the witness
- * and approved-edit schemas are factories that take the submission's program
- * and refuse a bonus that does not apply to it. Approval has no schema of its
- * own any more: it takes no bonuses (#527). These tests parse bodies
- * through those factories: no database, no routes.
+ * schema is a factory that takes the submission's program and refuses a bonus
+ * that does not apply to it (the correction form's schema shares its fields;
+ * correct-points-form.test.ts covers it). Approval has no schema of its own
+ * any more: it takes no bonuses (#527), and the Edit Approved dialog has no
+ * bonus fields at all (#529). These tests parse bodies through the factory:
+ * no database, no routes.
  *
  * Every body below carries the fields the base object requires, because an
  * object-level refinement does not run when the base parse fails - a body
@@ -101,19 +102,10 @@ const forms = [
       confirmWitnessSchema(program).safeParse({
         species_id: "42",
         points: "10",
-        // The witness panel's switches post "on"; the approved-edit form's post "1"
+        // The witness panel's switches post "on"
         ...Object.fromEntries(
           Object.entries(bonuses).map(([field, value]) => [field, field === "article_points" ? value : "on"])
         ),
-      }),
-  },
-  {
-    name: "approved edit",
-    parse: (program: string, bonuses: Record<string, string>) =>
-      approvedEditSchema(program).safeParse({
-        points: "10",
-        reason: "Correcting the bonuses on this record",
-        ...bonuses,
       }),
   },
 ];

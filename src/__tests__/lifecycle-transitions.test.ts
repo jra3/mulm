@@ -15,6 +15,7 @@ import {
   createSubmission,
   deleteSubmission,
   deriveState,
+  editApprovedDetails,
   hasChangesRequested,
   previewApproval,
   queueFor,
@@ -25,6 +26,7 @@ import {
   saveChanges,
   saveDraft,
   submit,
+  type ApprovedDetails,
   type Caller,
   type SubmissionState,
 } from "@/lifecycle";
@@ -179,6 +181,11 @@ void describe("Submission lifecycle - transitions", () => {
         run: async (id) => correctPoints(committee, id, await correctionOf(id, { points: 15 }), "Miscounted"),
       },
       {
+        move: "editApprovedDetails",
+        legal: ["approved"],
+        run: (id) => editApprovedDetails(committee, id, { tank_size: "20 gallon" }, "Typo in the tank size"),
+      },
+      {
         move: "bindSpecies",
         legal: ["pendingWitness"],
         run: async (id) => bindSpecies(committee, id, await createSpecies({
@@ -262,8 +269,9 @@ void describe("Submission lifecycle - transitions", () => {
 
     void test("a committee member does not type into another member's Submission", async () => {
       // The committee changes a Submission by asking for changes, not by
-      // editing it. The one exception is a correction to an Approved one,
-      // which carries a stated reason and goes on the record.
+      // editing it. The exceptions are a correction to the Species and
+      // points, and a details edit on an Approved one, which carry a stated
+      // reason and go on the record.
       const draft = await at("draft");
       assert.strictEqual(await refusal(() => saveDraft(committee, draft, form)), "authorization");
       assert.strictEqual(await refusal(() => submit(committee, draft, form)), "authorization");
@@ -2057,6 +2065,132 @@ void describe("Submission lifecycle - transitions", () => {
    * first-time, counted inside its transaction, and it refuses when the
    * total it would award is not the one the approver was shown.
    */
+  // -------------------------------------------------------------------------
+  // The Edit Approved dialog edits details only (#529)
+  // -------------------------------------------------------------------------
+
+  /**
+   * A details edit is the committee putting the member's own facts right on
+   * an Approved Submission: the tank, the foods, the dates. It needs a reason
+   * and goes on the changelog like a correction, but it never touches the
+   * Species or the points, which are the correction's.
+   */
+  void describe("The Edit Approved dialog edits details only", () => {
+    const changelog = async (id: number) =>
+      query<{ note_text: string }>("SELECT note_text FROM submission_notes WHERE submission_id = ? ORDER BY id", [id]);
+
+    void test("writes the details with one changelog entry carrying the reason, and leaves the award alone", async () => {
+      const id = await at("approved");
+      const before = (await readSubmission(id))!;
+
+      const changes = await editApprovedDetails(
+        committee,
+        id,
+        { tank_size: "20 gallon", temperature: "78", foods: JSON.stringify(["Flakes", "Baby brine shrimp"]) },
+        "The member wrote 20 gallon on the paper form"
+      );
+
+      assert.deepStrictEqual(
+        changes.map((c) => c.field).sort(),
+        ["foods", "tank_size", "temperature"]
+      );
+      const after = (await readSubmission(id))!;
+      assert.strictEqual(after.tank_size, "20 gallon");
+      assert.strictEqual(after.temperature, "78");
+      assert.strictEqual(after.foods, JSON.stringify(["Flakes", "Baby brine shrimp"]));
+
+      const notes = await changelog(id);
+      assert.strictEqual(notes.length, 1, "one entry for the whole edit");
+      const note = JSON.parse(notes[0].note_text) as { type: string; reason: string; changes: Change[]; admin_id: number };
+      assert.strictEqual(note.type, "admin_edit");
+      assert.strictEqual(note.reason, "The member wrote 20 gallon on the paper form");
+      assert.strictEqual(note.admin_id, ctx.admin.id);
+      assert.deepStrictEqual(note.changes.map((c) => c.field).sort(), ["foods", "tank_size", "temperature"]);
+
+      // The award, the Witness and the Species are exactly as they were
+      assert.strictEqual(deriveState(after), "approved");
+      assert.strictEqual(after.points, before.points);
+      assert.strictEqual(after.first_time_species, before.first_time_species);
+      assert.strictEqual(after.species_id, before.species_id);
+      assert.strictEqual(after.approved_on, before.approved_on);
+      assert.strictEqual(after.approved_by, before.approved_by);
+      assert.strictEqual(after.witnessed_by, before.witnessed_by);
+      assert.strictEqual(after.witnessed_on, before.witnessed_on);
+      assert.strictEqual(after.witness_verification_status, "confirmed");
+      await assertSubmissionInvariantsHold(after);
+    });
+
+    void test("needs a stated reason and an actual change", async () => {
+      const id = await at("approved");
+      const before = (await readSubmission(id))!;
+
+      assert.strictEqual(
+        await refusal(() => editApprovedDetails(committee, id, { tank_size: "20 gallon" }, "   ")),
+        "validation"
+      );
+      assert.strictEqual(
+        await refusal(() => editApprovedDetails(committee, id, { tank_size: before.tank_size }, "Same as before")),
+        "validation"
+      );
+      assert.strictEqual(
+        await refusal(() => editApprovedDetails(committee, id, {}, "Nothing at all")),
+        "validation"
+      );
+      assert.deepStrictEqual(await changelog(id), [], "a refused edit is not on the record");
+      assert.strictEqual((await readSubmission(id))!.tank_size, before.tank_size);
+    });
+
+    void test("the Species and the points are not details: a field of theirs is refused, writing nothing", async () => {
+      const id = await at("approved");
+      const before = (await readSubmission(id))!;
+      const smuggled: ApprovedDetails & Record<string, unknown> = { tank_size: "20 gallon", points: 20 };
+      const rebound: ApprovedDetails & Record<string, unknown> = { species_id: 987654 };
+      const firstTime: ApprovedDetails & Record<string, unknown> = { first_time_species: 1 };
+
+      for (const details of [smuggled, rebound, firstTime]) {
+        await assert.rejects(
+          () => editApprovedDetails(committee, id, details, "Trying it on"),
+          (err: unknown) => err instanceof ValidationError && /correction form/.test(err.message)
+        );
+      }
+
+      const after = (await readSubmission(id))!;
+      assert.strictEqual(after.tank_size, before.tank_size, "the whole edit is refused, not just the stray field");
+      assert.strictEqual(after.points, before.points);
+      assert.strictEqual(after.species_id, before.species_id);
+      assert.deepStrictEqual(await changelog(id), []);
+    });
+
+    void test("is the committee's alone, and never the submitter's", async () => {
+      const theirs = await at("approved");
+      assert.strictEqual(
+        await refusal(() => editApprovedDetails(member, theirs, { tank_size: "20 gallon" }, "Mine")),
+        "authorization"
+      );
+      assert.strictEqual(
+        await refusal(() => editApprovedDetails(otherMember, theirs, { tank_size: "20 gallon" }, "Theirs")),
+        "authorization"
+      );
+
+      const own = await submissionInState(ctx.db, "approved", { memberId: ctx.admin.id, witnessedBy: ctx.otherAdmin!.id });
+      assert.strictEqual(
+        await refusal(() => editApprovedDetails(committee, own, { tank_size: "20 gallon" }, "My own")),
+        "authorization"
+      );
+      assert.deepStrictEqual(await changelog(theirs), []);
+    });
+
+    void test("a reproduction date edit changes nothing but the date on an Approved Submission", async () => {
+      const id = await at("approved");
+
+      await editApprovedDetails(committee, id, { reproduction_date: "2024-03-01T00:00:00.000Z" }, "Off by a month");
+
+      const after = (await readSubmission(id))!;
+      assert.strictEqual(after.reproduction_date, "2024-03-01T00:00:00.000Z");
+      assert.strictEqual(deriveState(after), "approved", "the clock has no say once approved");
+    });
+  });
+
   void describe("Approval is one button", () => {
     /** A second Species, so first-time can be exercised without the Guppy's history. */
     const freshSpecies = (epithet: string) =>

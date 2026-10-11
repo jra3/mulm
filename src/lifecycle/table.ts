@@ -34,6 +34,10 @@ import { AuthorizationError, StateError, UnboundError } from "./errors";
  * |                         | (takes the Species or a new one to      | the new Species'    |                    |
  * |                         | create, base points and bonuses, first- | clock has not run); |                    |
  * |                         | time on Approved only, and a reason)    | Witness untouched   |                    |
+ * | editApprovedDetails     | approved (takes the member's details:   | approved, details   | committee, not the submitter |
+ * |                         | tank, foods, dates and the like, never  | changed; Species,   |                    |
+ * |                         | the Species or points, and a reason)    | points and Witness  |                    |
+ * |                         |                                         | untouched           |                    |
  * | deleteSubmission        | draft (member); draft .. inApprovalQueue (committee) | gone   | member or committee|
  *
  * Every member save of a submitted Submission (submit, saveChanges, resubmit)
@@ -72,6 +76,7 @@ export type MoveId =
   | "resubmit"
   | "approve"
   | "correctPoints"
+  | "editApprovedDetails"
   | "deleteSubmission";
 
 export type MoveDefinition = {
@@ -102,9 +107,10 @@ const EITHER: readonly Actor[] = ["member", "committee"];
 export const moves = {
   /**
    * A Submission's contents are the member's own. The committee changes a
-   * Submission by asking for changes, not by typing into it - the one
-   * exception being a correction to the Species and points it set itself,
-   * which carries a stated reason and goes on the record.
+   * Submission by asking for changes, not by typing into it - the exceptions
+   * being a correction to the Species and points it set itself, and a details
+   * edit on an Approved Submission, which the member can no longer edit; both
+   * carry a stated reason and go on the record.
    *
    * Filing a new Submission on a member's behalf is a different matter and
    * still allowed: creation is not a move from a state, so it is guarded in
@@ -255,6 +261,23 @@ export const moves = {
   },
 
   /**
+   * The committee puts the member's own details right on an Approved
+   * Submission (#529): the tank, the foods, the dates and the like, which the
+   * member can no longer edit since Approved is terminal. Never the Species
+   * or the points, which are `correctPoints`'s and carry consequences this
+   * move does not: a details edit needs a stated reason and goes on the
+   * changelog, but tells nobody and recomputes nothing, since nothing it
+   * changes counts toward a standing. Never the submitter, as with every
+   * committee move on a member's record.
+   */
+  editApprovedDetails: {
+    id: "editApprovedDetails",
+    from: ["approved"],
+    actors: COMMITTEE_ONLY,
+    neverSubmitter: true,
+  },
+
+  /**
    * Members delete only their own Drafts, so one confirmation dialog cannot
    * destroy an inspection a committee member has already performed. The
    * committee deletes duplicates and junk anywhere short of Approved.
@@ -395,6 +418,8 @@ function describe(id: MoveId, object: string): string {
       return `approve ${object}`;
     case "correctPoints":
       return `correct the points on ${object}`;
+    case "editApprovedDetails":
+      return `edit the details of ${object}`;
     case "deleteSubmission":
       return `delete ${object}`;
   }

@@ -73,7 +73,7 @@ export {
   approve,
   previewApproval,
   correctPoints,
-  correctApprovedSubmission,
+  editApprovedDetails,
   bindSpecies,
   adoptSpeciesClassification,
   deleteSubmission,
@@ -84,6 +84,7 @@ export {
   type NamesToAdd,
   type WitnessPoints,
   type PointsCorrection,
+  type ApprovedDetails,
   type NewSpeciesAtWitness,
   type ApprovalPreview,
 } from "./transitions";

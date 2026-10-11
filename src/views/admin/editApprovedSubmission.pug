@@ -1,6 +1,3 @@
-include ../mixins/formCheckbox.pug
-include ../bapForm/inputs.pug
-
 form.bg-white.rounded-lg(
 	hx-post=`/admin/submissions/${submission.id}/edit-approved`
 	style="width: 100%; max-height: 90vh; overflow-y: auto;"
@@ -24,15 +21,21 @@ form.bg-white.rounded-lg(
 			p.text-sm.text-blue-600
 				| Member: #{member.display_name}
 
+		//- The Species and the points are not details: they change together,
+		//- with their consequences, on the correction form (#528, #529).
+		p#edit-approved-species-note.text-sm.text-gray-600.mb-6
+			| This dialog edits the member's details only.
+			= ' '
+			a.underline(
+				id="edit-approved-correct-link"
+				href=`/admin/submissions/${submission.id}/correct-points`
+			) Correct the species or points
+			|  on the correction form instead.
+
 		// Tabs
 		.border-b.border-gray-200.mb-6
 			.flex.gap-4(role="tablist")
 				button.tab-button.active(
-					type="button"
-					data-tab="species"
-					onclick="switchTab(event, 'species')"
-				) Species & Points
-				button.tab-button(
 					type="button"
 					data-tab="details"
 					onclick="switchTab(event, 'details')"
@@ -43,63 +46,8 @@ form.bg-white.rounded-lg(
 					onclick="switchTab(event, 'tank')"
 				) Tank Info
 
-		// Tab 1: Species & Points
-		.tab-content.active(data-tab-content="species")
-			.grid.gap-4(class="md:grid-cols-2")
-				.form-group
-					label.input-label(for="species-search") Species Group
-					select.tom-select-typeahead(
-						id="species-search"
-						name="group_id"
-						data-api-url="/api/species/search"
-						data-value-field="group_id"
-						data-label-field="text"
-						data-search-field="text"
-						data-max-items="1"
-					)
-						if submission.species_id
-							option(
-								value=currentGroupId
-								selected
-							)= `${submission.species_common_name} (${submission.species_latin_name})`
-
-				.form-group
-					label.input-label(for="points") Base Points
-					.select-wrapper
-						select.text-input(
-							id="points"
-							name="points"
-						)
-							option(value=5 selected=submission.points == 5) 5
-							option(value=10 selected=submission.points == 10) 10
-							option(value=15 selected=submission.points == 15) 15
-							option(value=20 selected=submission.points == 20) 20
-
-				.form-group
-					label.input-label(for="article_points") Article Points
-					.select-wrapper
-						select.text-input(
-							id="article_points"
-							name="article_points"
-						)
-							option(value=0 selected=!submission.article_points) No Article
-							option(value=5 selected=submission.article_points == 5) 5
-							option(value=10 selected=submission.article_points == 10) 10
-
-			.mt-4.space-y-2
-				+formCheckbox('first_time_species', 'First Time Species (+5 points)', submission.first_time_species)
-
-				if submission.program === 'fish'
-					+formCheckbox('cares_species', 'CARES Species (+5 points)', submission.cares_species)
-
-				//- Keyed on program, like the CARES checkbox above and like the
-				//- per-Program rule the save route enforces (src/points.ts).
-				if submission.program === 'plant'
-					+formCheckbox('flowered', 'Flowered (double points)', submission.flowered)
-					+formCheckbox('sexual_reproduction', 'Sexual Reproduction (double points)', submission.sexual_reproduction)
-
-		// Tab 2: Details
-		.tab-content.hidden(data-tab-content="details")
+		// Tab 1: Details
+		.tab-content.active(data-tab-content="details")
 			.grid.gap-4(class="md:grid-cols-2")
 				.form-group
 					label.input-label(for="reproduction_date") Reproduction Date
@@ -184,7 +132,7 @@ form.bg-white.rounded-lg(
 						placeholder="Collection data, lineage info, breeding notes..."
 					)= submission.notes || ""
 
-		// Tab 3: Tank Info
+		// Tab 2: Tank Info
 		.tab-content.hidden(data-tab-content="tank")
 			.grid.gap-4(class="md:grid-cols-2")
 				.form-group
@@ -343,7 +291,7 @@ form.bg-white.rounded-lg(
 					style="height: 120px;"
 					required
 					maxlength="2000"
-					placeholder="Explain why these changes are being made (e.g., 'Corrected species identification based on photo review' or 'Fixed point calculation error')"
+					placeholder="Say why the details are being changed (e.g., 'The paper form says a 20 gallon tank' or 'Member asked for the video link to be fixed')"
 				)
 				p.text-sm.text-gray-600.mt-1
 					| This will be recorded in the submission's edit history and may be visible to the member.

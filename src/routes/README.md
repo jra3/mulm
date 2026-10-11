@@ -149,6 +149,8 @@ GET    /admin/submissions/:id/record-species   - The witness panel's Record new 
 POST   /admin/submissions/:id/record-species   - Record species and continue: the panel again, the new Species settled
 GET    /admin/submissions/:id/correct-points   - The correction form (#528): the panel's cards over the current values, a reason, Save correction; with ?species_id= or ?group_id= and HX-Request, the panel alone with that Species settled
 POST   /admin/submissions/:id/correct-points   - Save correction: Species and points in one write with a reason, from the Witness on
+GET    /admin/submissions/:id/edit-approved    - The Edit Approved Submission dialog (#529): the member's details only, with a reason; links to the correction form for Species and points
+POST   /admin/submissions/:id/edit-approved    - Save the details through editApprovedDetails: changelog entry, no email, no standings recompute
 POST   /admin/submissions/:id/decline-witness  - Decline witness
 POST   /admin/submissions/:id/request-changes  - Request changes from submitter
 ```

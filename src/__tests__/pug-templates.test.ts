@@ -1868,6 +1868,90 @@ void describe("Pug Template Rendering", () => {
     });
   });
 
+  /**
+   * The Edit Approved Submission dialog edits the member's details only
+   * (#529): the Species and the points go through the correction form.
+   */
+  void describe("The Edit Approved dialog edits details only", () => {
+    const render = (overrides: Record<string, unknown> = {}) =>
+      pug.compileFile(path.join(viewsPath, "admin/editApprovedSubmission.pug"), { basedir: viewsPath, pretty: false })({
+        ...baseMockData,
+        isAdmin: true,
+        submission: {
+          ...(baseMockData.submission as Record<string, unknown>),
+          id: 77,
+          species_type: "Fish",
+          program: "fish",
+          approved_on: "2026-10-01T00:00:00.000Z",
+          points: 10,
+          first_time_species: 1,
+          cares_species: 1,
+          reproduction_date: "2026-08-01",
+          foods: ["Flakes"],
+          spawn_locations: [],
+          tank_size: "10 gallon",
+          temperature: "76",
+          ...overrides,
+        },
+        member: { display_name: "Dan Wu" },
+        foodTypes: ["Flakes", "Live food"],
+        spawnLocations: ["Plants", "Cave"],
+        isLivestock: true,
+        hasFoods: true,
+        hasSpawnLocations: true,
+        hasLighting: false,
+        hasSupplements: false,
+      });
+
+    void test("has the member's details and a required reason, and nothing of the Species or points", () => {
+      const html = render();
+
+      assert.match(html, /name="tank_size"[^>]*value="10 gallon"/);
+      assert.match(html, /name="temperature"[^>]*value="76"/);
+      assert.match(html, /name="reproduction_date"[^>]*value="2026-08-01"/);
+      assert.match(html, /name="foods"/);
+      assert.match(html, /<option value="Flakes" selected/);
+      assert.match(html, /name="reason"[^>]*required/);
+      assert.match(html, /hx-post="\/admin\/submissions\/77\/edit-approved"/);
+
+      for (const field of ["points", "article_points", "first_time_species", "cares_species", "flowered", "sexual_reproduction", "group_id", "species_id"]) {
+        assert.doesNotMatch(html, new RegExp(`name="${field}"`), `${field} is the correction form's`);
+      }
+      assert.doesNotMatch(html, /Species &amp; Points|Species & Points|tom-select-typeahead/);
+    });
+
+    void test("points the committee at the correction form for the Species and points", () => {
+      const html = render();
+
+      assert.match(html, /id="edit-approved-species-note"/);
+      assert.match(html, /This dialog edits the member's details only\./);
+      assert.match(html, /id="edit-approved-correct-link" href="\/admin\/submissions\/77\/correct-points"[^>]*>Correct the species or points</);
+    });
+
+    void test("a plant's dialog has no livestock fields and no bonus switches either", () => {
+      const html = render({ species_type: "Plant", program: "plant" }).replace(/\n/g, "");
+      // The route decides which detail fields apply; the template follows
+      const plant = pug.compileFile(path.join(viewsPath, "admin/editApprovedSubmission.pug"), { basedir: viewsPath, pretty: false })({
+        ...baseMockData,
+        submission: { ...(baseMockData.submission as Record<string, unknown>), id: 78, species_type: "Plant", program: "plant", foods: [], spawn_locations: [] },
+        member: { display_name: "Dan Wu" },
+        foodTypes: [],
+        spawnLocations: [],
+        isLivestock: false,
+        hasFoods: false,
+        hasSpawnLocations: false,
+        hasLighting: true,
+        hasSupplements: true,
+      });
+      assert.doesNotMatch(plant, /name="count"|name="foods"|name="spawn_locations"/);
+      assert.match(plant, /name="propagation_method"/);
+      assert.match(plant, /name="light_type"/);
+      assert.match(plant, /name="co2"/);
+      assert.doesNotMatch(plant, /name="flowered"|name="sexual_reproduction"/);
+      assert.ok(html.length > 0);
+    });
+  });
+
   void describe("Review page tells the member what to bring", () => {
     const render = (state: string, species_type: string) =>
       pug.compileFile(path.join(viewsPath, "submission/review.pug"), { basedir: viewsPath, pretty: false })({
