@@ -166,7 +166,7 @@ app.use(csrfValidation);
 app.use((req: MulmRequest, res, next) => {
   res.locals.bugReportEmail = config.email.bugReportEmail;
   res.locals.domain = config.server.domain;
-  // The bonus fields the approval panel's error mixin loops over. Set here
+  // The bonus fields the approved-edit dialog's error mixin loops over. Set here
   // rather than per-route so a new render site cannot forget it and quietly
   // drop the per-Program bonus errors.
   res.locals.bonusFields = bonusFields;

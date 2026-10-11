@@ -1,7 +1,6 @@
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
 import {
-  approve,
   correctPoints,
   recomputeStanding,
   resetNotifier,
@@ -11,12 +10,12 @@ import { query } from "@/db/conn";
 import { getMember } from "@/db/members";
 import { createSpecies, updateSpecies } from "@/species";
 import {
-  mockApprovalData,
   setupTestDatabase,
   teardownTestDatabase,
   type TestContext,
 } from "./helpers/testHelpers";
 import {
+  approveAsShown,
   recordNotifications,
   submissionInState,
   type RecordingNotifier,
@@ -68,13 +67,23 @@ void describe("Submission lifecycle - standing", () => {
 
   /**
    * Approve `count` Anabantoid Submissions, each bound to its own Anabantoid
-   * Species.
+   * Species. Each Species already has another member's approved Submission,
+   * so no first-time bonus lands and every total is exactly `points`: these
+   * tests are about the recompute, not about first-time.
    */
   async function approveAnabantoids(count: number, points = 10): Promise<{ ids: number[]; species: number[] }> {
     const ids: number[] = [];
     const species: number[] = [];
     for (let i = 0; i < count; i++) {
       const speciesId = await speciesOf("Anabantoids");
+      await submissionInState(ctx.db, "approved", {
+        memberId: ctx.otherAdmin!.id,
+        witnessedBy: ctx.admin.id,
+        speciesClass: "Anabantoids",
+        latinName: `Betta species${i}`,
+        commonName: `Betta ${i}`,
+        speciesId,
+      });
       const id = await submissionInState(ctx.db, "inApprovalQueue", {
         memberId: ctx.member.id,
         witnessedBy: ctx.admin.id,
@@ -82,8 +91,9 @@ void describe("Submission lifecycle - standing", () => {
         latinName: `Betta species${i}`,
         commonName: `Betta ${i}`,
         speciesId,
+        points,
       });
-      await approve(committee, id, { ...mockApprovalData, points });
+      await approveAsShown(committee, id);
       ids.push(id);
       species.push(speciesId);
     }

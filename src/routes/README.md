@@ -132,14 +132,14 @@ All admin routes are under `/admin/` prefix with admin auth middleware.
 
 **Approval Queues**
 ```
-GET    /admin/queue{/:program}          - Approval queue
+GET    /admin/queue{/:program}          - Approval queue, phone first: every Program's ready rows, or one Program's; approved tonight; still waiting
 GET    /admin/witness-queue{/:program}  - Witness confirmation queue
 GET    /admin/waiting-period{/:program} - Waiting period queue
 ```
 
 **Submission Management**
 ```
-POST   /admin/submissions/:id/approve          - Approve submission
+POST   /admin/submissions/:id/approve          - The one button: posts expected_total only; a stale total comes back as a sheet with the current one
 GET    /admin/submissions/:id/edit             - Edit submission (admin view)
 POST   /admin/submissions/:id/bind-species     - Bind (or rebind) to a Species (witness panel)
 POST   /admin/submissions/:id/species          - Create a Species and bind to it (witness panel)

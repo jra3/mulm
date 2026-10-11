@@ -221,7 +221,7 @@ assertSubmissionState(submission, {
 
 #### `mockApprovalData`
 
-Pre-configured approval data for testing.
+The points an approved fixture carries by default (`AwardedPoints`): what the Witness would have set, plus first-time. Only `approveSubmissionFixture` takes it; `approve` itself takes the total the approver saw (see `approveAsShown` in `lifecycleFixtures.ts`).
 
 ```typescript
 const mockApprovalData = {

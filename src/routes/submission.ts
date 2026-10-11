@@ -164,8 +164,9 @@ export const view = async (req: MulmRequest, res: Response) => {
   // Fetch admin notes if viewer is an admin
   const adminNotes = aspect.isAdmin ? await getNotesForSubmission(submission.id) : [];
 
-  // The witness panel's locals while a Witness is awaited; the approval panel
-  // reads the bound Species once the Submission is in the queue
+  // The witness panel's locals while a Witness is awaited; in the approval
+  // queue the committee's panel reads the bound Species for what approval
+  // would award (`previewApproval`), the same preview the queue page shows
   const witnessPanel =
     viewer && aspect.isAdmin && state === "pendingWitness"
       ? await witnessPanelLocals(submission, viewer, { notes: adminNotes })
@@ -174,6 +175,10 @@ export const view = async (req: MulmRequest, res: Response) => {
     ? witnessPanel.speciesFacts
     : aspect.isAdmin && state === "inApprovalQueue"
       ? await boundSpeciesFacts(submission)
+      : null;
+  const approvalPreview =
+    !witnessPanel && speciesFacts && submission.points != null
+      ? lifecycle.previewApproval(submission, speciesFacts.priorBreedCount)
       : null;
 
   // What the witness set, shown to the owner alone until it is awarded
@@ -227,7 +232,8 @@ export const view = async (req: MulmRequest, res: Response) => {
     boundSpecies: boundSpecies ?? null,
     boundSpeciesName: boundSpecies ? canonicalNameOf(boundSpecies) : null,
     speciesFacts,
-    // The approval panel says so when the witness recorded the Species
+    approvalPreview,
+    // The committee's panel says so when the witness recorded the Species
     speciesRecordedByWitness: speciesRecordedByWitness(adminNotes),
     ...witnessPanel,
     pendingPoints: pending,
@@ -341,7 +347,7 @@ export const renderEdit = async (req: MulmRequest, res: Response) => {
 };
 
 /**
- * What the witness panel and the approval panel show about the Species a
+ * What the witness panel and the committee's queue panel show about the Species a
  * Submission is bound to: its Canonical name, a common Name, its
  * classification and the Program it belongs to (which decides the bonuses the
  * witness panel offers, since confirming adopts it), its Point class (which

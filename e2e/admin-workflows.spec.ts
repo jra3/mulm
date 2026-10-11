@@ -69,7 +69,7 @@ test.describe("Admin - Changes Requested Workflow", () => {
 		await page.goto(`/submissions/${submissionId}`);
 		await page.waitForLoadState("networkidle");
 
-		// Scroll down to approval panel at the bottom where Request Changes button is
+		// Scroll down to the committee's Admin Actions panel at the bottom, where Request Changes is
 		const requestChangesButton = page.locator('button:has-text("Request Changes")').first();
 		await requestChangesButton.scrollIntoViewIfNeeded();
 		await requestChangesButton.click();

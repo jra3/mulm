@@ -12,10 +12,17 @@ import { getMember, MemberRecord } from "@/db/members";
 import { addNote } from "@/db/submission_notes";
 import { recordActivity } from "@/db/activity";
 import type { FormValues } from "@/forms/submission";
-import type { ApprovalFormValues } from "@/forms/approval";
 import type { Program } from "@/levelManager";
 import { isProgramType, type ProgramType } from "@/programs";
-import { bonusesOutsideProgram, isArticleBonus, programOfSpeciesType, type BonusFields } from "@/points";
+import {
+  bonusesOutsideProgram,
+  isArticleBonus,
+  pointsBreakdown,
+  programOfSpeciesType,
+  type BonusFields,
+  type PointsBreakdown,
+  type PointsRow,
+} from "@/points";
 import {
   addName,
   canonicalName,
@@ -30,7 +37,7 @@ import {
   type Species,
 } from "@/species";
 import { logger } from "@/utils/logger";
-import { AuthorizationError, ValidationError, StateError } from "./errors";
+import { AuthorizationError, StalePointsError, ValidationError, StateError } from "./errors";
 import { deriveState, hasChangesRequested } from "./state";
 import { assertMoveIsLegal, Actor, MoveDefinition, moves } from "./table";
 import { notifier } from "./consequences";
@@ -882,54 +889,83 @@ export async function requestChanges(
 }
 
 /**
- * Approve a bound Submission and award its Points.
- *
- * The only way Points are ever awarded, so there is one place to look when a
- * total is questioned - and the only transition that touches a member's
- * standing upward. The Species is the one the Submission is already bound to
- * (the witness bound it); approval is about Points and bonuses only, and is
- * refused on an unbound Submission.
+ * What approving would award a Submission as the row and the catalogue stand:
+ * the points the Witness set, plus first-time if no approved Submission of
+ * its Species exists yet, itemised over the one Points rule. The approval
+ * queue shows it, the approve button posts its total, and `approve` works
+ * it out again inside its transaction and refuses if the two differ.
  */
-export async function approve(
-  caller: Caller,
-  submissionId: number,
-  approval: ApprovalFormValues
-): Promise<void> {
+export type ApprovalPreview = PointsBreakdown & {
+  /** Whether this approval would be the Species' first, earning the +5. */
+  firstTime: boolean;
+};
+
+/**
+ * The preview for one row, given how many approved Submissions its Species
+ * has (`countSubmissionsOfSpecies` for one, `countApprovedBySpecies` for a
+ * page of them; both in src/species). The row's own `first_time_species` is
+ * ignored: it is NULL before approval, and approval decides it here.
+ */
+export function previewApproval(row: PointsRow, approvedBefore: number): ApprovalPreview {
+  const firstTime = approvedBefore === 0;
+  return { ...pointsBreakdown({ ...row, first_time_species: firstTime }), firstTime };
+}
+
+/**
+ * Approve a Submission: record that the member brought the fry, plants or
+ * coral to a meeting, and award the points the Witness set (ADR-0003).
+ *
+ * It takes no form. The only thing approval decides is first-time: whether
+ * the Species has an approved Submission yet, counted inside the transaction
+ * so that of two members bringing the same Species the first click wins. It
+ * is the only way Points are ever awarded, so there is one place to look
+ * when a total is questioned, and the only transition that touches a
+ * member's standing upward.
+ *
+ * `expectedTotal` is the total the approver was shown. The transition works
+ * out the total it would award and refuses with `StalePointsError`, writing
+ * nothing, when they differ: a correction landed, or another approval of the
+ * same Species took the first-time bonus since the page was loaded. The
+ * caller shows the current total and asks again. A Submission with no
+ * points (one written around the lifecycle) is refused too: it needs a
+ * Witness, not an approval.
+ */
+export async function approve(caller: Caller, submissionId: number, expectedTotal: number): Promise<void> {
   const memberId = await withTransaction(async (db) => {
     const { submission } = await guard(db, moves.approve, caller, submissionId);
 
-    const {
-      points,
-      article_points,
-      first_time_species,
-      flowered,
-      sexual_reproduction,
-      cares_species,
-    } = approval;
+    // The whole row, not the guard's columns: the total is read off it
+    const stmt = await db.prepare("SELECT * FROM submissions WHERE id = ?");
+    const rows: Submission[] = await stmt.all(submissionId);
+    await stmt.finalize();
+    const row = rows[0];
+
+    if (row.points == null) {
+      throw new ValidationError(
+        "This submission has no points: it needs a Witness before it can be approved",
+        "points",
+        null
+      );
+    }
+
+    // The guard refused an unbound Submission, so species_id is set
+    const preview = previewApproval(row, await approvedOfSpecies(db, row.species_id!));
+    if (preview.total !== expectedTotal) {
+      throw new StalePointsError(
+        `The points changed: now ${preview.total} pts, not ${expectedTotal}`,
+        expectedTotal,
+        preview.total
+      );
+    }
 
     await runUpdate(
       db,
       `UPDATE submissions SET
-         points = ?,
-         article_points = ?,
          first_time_species = ?,
-         cares_species = ?,
-         flowered = ?,
-         sexual_reproduction = ?,
          approved_by = ?,
          approved_on = ?
        WHERE id = ? AND approved_on IS NULL`,
-      [
-        points,
-        article_points,
-        first_time_species ? 1 : 0,
-        cares_species ? 1 : 0,
-        flowered ? 1 : 0,
-        sexual_reproduction ? 1 : 0,
-        caller.id,
-        new Date().toISOString(),
-        submissionId,
-      ],
+      [preview.firstTime ? 1 : 0, caller.id, new Date().toISOString(), submissionId],
       moves.approve
     );
 
@@ -946,7 +982,25 @@ export async function approve(
   await announceApproval(submission, member);
   await recomputeStanding(member.id, programOf(submission));
 
-  logger.info("Submission approved", { submissionId, by: caller.id, points: submission.points });
+  logger.info("Submission approved", {
+    submissionId,
+    by: caller.id,
+    points: submission.points,
+    firstTime: Boolean(submission.first_time_species),
+    total: expectedTotal,
+  });
+}
+
+/**
+ * How many approved Submissions a Species has, read on the transaction's
+ * connection so the count and the write it decides are one unit.
+ */
+async function approvedOfSpecies(db: Database, speciesId: number): Promise<number> {
+  const row = await db.get<{ n: number }>(
+    "SELECT COUNT(*) AS n FROM submissions WHERE species_id = ? AND approved_on IS NOT NULL",
+    speciesId
+  );
+  return row?.n ?? 0;
 }
 
 /**

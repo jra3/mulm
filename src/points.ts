@@ -241,7 +241,7 @@ export type BonusIssue = {
  * each with its message. Empty when every set bonus applies.
  *
  * Rejection, not correction - nothing is zeroed silently. Through the witness
- * and approval panels an inapplicable flag cannot be sent, so its arrival
+ * panel and the approved-edit dialog an inapplicable flag cannot be sent, so its arrival
  * means a stale form, a bug, or a hand-crafted request, all of which should
  * be visible. The Zod refinement below and `confirmWitness` both read this,
  * so the form and the transition refuse the same thing in the same words.

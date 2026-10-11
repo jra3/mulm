@@ -8,6 +8,7 @@
  *   AuthorizationError - the wrong person
  *   StateError         - the wrong moment
  *   UnboundError       - a move that needs a Species, on a Submission bound to none
+ *   StalePointsError   - an approval of a total other than the one the row awards now
  *
  * Every transition throws one of these and nothing else, so a route matches on
  * the class rather than on a message string.
@@ -64,6 +65,19 @@ export class UnboundError extends LifecycleError {
   constructor(message: string, action: string) {
     super(message, "UNBOUND", { action });
     this.name = "UnboundError";
+  }
+}
+
+/**
+ * Thrown by `approve` when the total the approver saw is not the total the
+ * row would award now: the points changed under them (a correction, or
+ * another member's approval of the same Species took the first-time bonus).
+ * Nothing is written; the caller shows the current total and asks again.
+ */
+export class StalePointsError extends LifecycleError {
+  constructor(message: string, expectedTotal: number, currentTotal: number) {
+    super(message, "STALE_POINTS", { expectedTotal, currentTotal });
+    this.name = "StalePointsError";
   }
 }
 

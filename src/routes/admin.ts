@@ -8,13 +8,15 @@ import {
   hasLoginCredential,
 } from "@/db/members";
 import {
+  getApprovedSince,
   getQueue,
   getQueueCounts,
   getSubmissionsByMember,
   getSubmissionSupplements,
+  type QueueSubmission,
   type Submission,
 } from "@/db/submissions";
-import { approvalSchema } from "@/forms/approval";
+import { approveForm } from "@/forms/approve";
 import { approvedEditSchema } from "@/forms/approvedEdit";
 import { bindSpeciesForm } from "@/forms/bindSpecies";
 import {
@@ -33,8 +35,6 @@ import { createAuthCode } from "@/db/auth";
 import { AuthCode, generateRandomCode } from "@/auth";
 import { validateFormResult } from "@/forms/utils";
 import {
-  allowedMoves,
-  boundSpeciesFacts,
   programOfSubmission,
   validateSubmission,
   witnessPanelLocals,
@@ -49,7 +49,8 @@ import {
   hasFoods,
   hasSpawnLocations,
 } from "@/forms/submission";
-import { findSpeciesById } from "@/species";
+import { countApprovedBySpecies, countSubmissionsOfSpecies, findSpeciesById } from "@/species";
+import { findSubmissionsWithRecordedSpecies } from "@/db/submission_notes";
 import { programOfSpeciesType } from "@/points";
 import { formatShortDate } from "@/utils/dateFormat";
 import { getBodyString } from "@/utils/request";
@@ -165,45 +166,145 @@ export const updateMemberFields = async (req: MulmRequest, res: Response) => {
   });
 };
 
+/** How long after an approval it still counts as tonight's, on the queue page. */
+const TONIGHT_HOURS = 12;
+
+/** A row of the approval queue's "Ready to approve", as queue.pug shows it. */
+export type ReadyRow = {
+  id: number;
+  member_id: number;
+  member_name: string;
+  /** The member's first name, for "Tap again: Jane brought it". */
+  firstName: string;
+  program: string;
+  programShort: string;
+  species_common_name: string;
+  species_latin_name: string;
+  /** The witness recorded the Species because the catalogue lacked it (#522). */
+  newSpecies: boolean;
+  /** What approving would award now, first-time included. */
+  preview: lifecycle.ApprovalPreview;
+  witnessedOn: string;
+  /** The viewer's own: another committee member approves it. */
+  mine: boolean;
+};
+
+/** A row of "Approved tonight". */
+export type ApprovedRow = {
+  id: number;
+  member_name: string;
+  species_common_name: string;
+  programShort: string;
+  total: number;
+  approvedBy: string | null;
+};
+
+/** A row of "Still waiting". */
+export type WaitingRow = {
+  id: number;
+  member_name: string;
+  species_common_name: string;
+  programShort: string;
+  readyOn: string;
+};
+
+const PROGRAM_SHORT: Record<string, string> = { fish: "BAP", plant: "HAP", coral: "CAP" };
+
+/** The path this queue page lives at, which the approve button's redirect and the sheet's "Not now" return to. */
+function queuePath(program: string | null): string {
+  return program ? `/admin/queue/${program}` : "/admin/queue";
+}
+
+/**
+ * The approval queue's locals (#527): every Program's rows in one list, or
+ * one Program's when `program` is given. Ready rows carry the preview the
+ * approve button posts the total of; the rows of every Program are read in
+ * one query each, and first-time is counted for the page in one more.
+ */
+export async function approvalQueueLocals(viewer: NonNullable<MulmRequest["viewer"]>, program: string | null) {
+  const listed = program ? [program] : [...programs];
+  const since = new Date(Date.now() - TONIGHT_HOURS * 60 * 60 * 1000).toISOString();
+  const [readyByProgram, waitingByProgram, approvedRows, readyCounts] = await Promise.all([
+    Promise.all(listed.map((p) => getQueue("approval", p))),
+    Promise.all(listed.map((p) => getQueue("waitingPeriod", p))),
+    getApprovedSince(since, program ?? undefined),
+    getQueueCounts("approval"),
+  ]);
+  const readyRows = readyByProgram.flat();
+  const [approvedBefore, recorded] = await Promise.all([
+    countApprovedBySpecies(readyRows.map((row) => row.species_id).filter((id): id is number => id != null)),
+    findSubmissionsWithRecordedSpecies(readyRows.map((row) => row.id)),
+  ]);
+
+  const short = (row: Pick<QueueSubmission, "program">) => PROGRAM_SHORT[row.program] ?? row.program;
+  const ready: ReadyRow[] = readyRows.map((row) => ({
+    id: row.id,
+    member_id: row.member_id,
+    member_name: row.member_name,
+    firstName: row.member_name.trim().split(/\s+/)[0] || row.member_name,
+    program: row.program,
+    programShort: short(row),
+    species_common_name: row.species_common_name,
+    species_latin_name: row.species_latin_name,
+    newSpecies: recorded.has(row.id),
+    preview: lifecycle.previewApproval(row, row.species_id == null ? 0 : (approvedBefore.get(row.species_id) ?? 0)),
+    witnessedOn: formatShortDate(row.witnessed_on),
+    mine: row.member_id === viewer.id,
+  }));
+  const approvedTonight: ApprovedRow[] = approvedRows.map((row) => ({
+    id: row.id,
+    member_name: row.member_name,
+    species_common_name: row.species_common_name,
+    programShort: short(row),
+    total: row.total_points ?? 0,
+    approvedBy: row.approved_by_name ?? null,
+  }));
+  // Soonest ready first
+  const waitingRows = waitingByProgram
+    .flat()
+    .map((row) => ({ row, endsOn: lifecycle.waitingPeriodEndsOn(row) }))
+    .sort((a, b) => a.endsOn.localeCompare(b.endsOn));
+  const waiting: WaitingRow[] = waitingRows.map(({ row, endsOn }) => ({
+    id: row.id,
+    member_name: row.member_name,
+    species_common_name: row.species_common_name,
+    programShort: short(row),
+    readyOn: formatShortDate(endsOn),
+  }));
+
+  const counts = {
+    all: Object.values(readyCounts).reduce((sum, n) => sum + n, 0),
+    fish: readyCounts.fish ?? 0,
+    plant: readyCounts.plant ?? 0,
+    coral: readyCounts.coral ?? 0,
+  };
+
+  return {
+    title: "Approval queue",
+    subtitle: program ? programMetadata[program as keyof typeof programMetadata]?.name : "Every Program",
+    program,
+    queuePath: queuePath(program),
+    ready,
+    approvedTonight,
+    waiting,
+    counts,
+  };
+}
+
+/**
+ * GET /admin/queue{/:program}
+ * The approval queue at a meeting, phone first: ready to approve, approved
+ * tonight, still waiting. With no Program every Program's rows are listed,
+ * since a meeting has fish, plants and corals on the table together.
+ */
 export const showQueue = async (req: MulmRequest, res: Response) => {
-  const { program = "fish" } = req.params;
-  if (programs.indexOf(program) === -1) {
+  const program = req.params.program ?? null;
+  if (program && programs.indexOf(program) === -1) {
     res.status(404).send("Invalid program");
     return;
   }
 
-  const [submissions, programCounts, witnessCounts] = await Promise.all([
-    getQueue("approval", program),
-    getQueueCounts("approval"),
-    getQueueCounts("witness"),
-  ]);
-
-  // Add status info to each submission
-  const submissionsWithStatus = submissions.map((sub) => ({
-    ...sub,
-    statusInfo: getStatusPresentation(sub),
-  }));
-
-  const subtitle = (() => {
-    switch (program) {
-      default:
-      case "fish":
-        return `Breeder Awards Program`;
-      case "plant":
-        return `Horticultural Awards Program`;
-      case "coral":
-        return `Coral Awards Program`;
-    }
-  })();
-
-  res.render("admin/queue", {
-    title: "Points Award Queue",
-    subtitle,
-    submissions: submissionsWithStatus,
-    program,
-    programCounts,
-    witnessCounts,
-  });
+  res.render("admin/queue", await approvalQueueLocals(req.viewer!, program));
 };
 
 export const showWitnessQueue = async (req: MulmRequest, res: Response) => {
@@ -673,6 +774,44 @@ export const sendWelcomeEmail = async (req: MulmRequest, res: Response) => {
   }
 };
 
+/**
+ * The sheet the approve button's refusals come back as, swapped over the
+ * queue page's `#approve-sheet` placeholder: the fresh total when the points
+ * changed, or what was refused and why.
+ */
+function renderApproveSheet(
+  res: Response,
+  submission: Submission,
+  sheet: { preview: lifecycle.ApprovalPreview; expectedTotal: number } | { message: string }
+): void {
+  res.set("HX-Retarget", "#approve-sheet").set("HX-Reswap", "outerHTML");
+  res.render("admin/approveSheet", {
+    submission,
+    queuePath: queuePathFrom(res.req),
+    ...("preview" in sheet ? { preview: sheet.preview, expectedTotal: sheet.expectedTotal, message: null } : { preview: null, expectedTotal: null, message: sheet.message }),
+  });
+}
+
+/** The queue page the request came from, so the approver lands back where they were. */
+function queuePathFrom(req: MulmRequest): string {
+  const current = req.get("HX-Current-URL");
+  if (current) {
+    try {
+      const { pathname } = new URL(current);
+      if (pathname === "/admin/queue" || pathname.startsWith("/admin/queue/")) return pathname;
+    } catch {
+      // Not a URL: fall through to the whole queue
+    }
+  }
+  return "/admin/queue";
+}
+
+/**
+ * POST /admin/submissions/:id/approve
+ * The one button (#527): the body carries only the total the button showed.
+ * The lifecycle computes first-time and awards the points the Witness set,
+ * or refuses; a stale total comes back as a sheet with the current one.
+ */
 export const approveSubmission = async (req: MulmRequest, res: Response) => {
   const { viewer } = req;
 
@@ -680,43 +819,36 @@ export const approveSubmission = async (req: MulmRequest, res: Response) => {
   if (!submission) return;
   const id = submission.id;
 
-  const errors = new Map<string, string>();
-  const parsed = approvalSchema(submission.program).safeParse(req.body);
-  if (!validateFormResult(parsed, errors)) {
-    res.render("admin/approvalPanel", {
-      submission: {
-        id: submission.id,
-        points: submission.points,
-        article_points: submission.article_points,
-        cares_species: submission.cares_species,
-        flowered: submission.flowered,
-        sexual_reproduction: submission.sexual_reproduction,
-        species_class: submission.species_class,
-        program: submission.program,
-      },
-      speciesFacts: await boundSpeciesFacts(submission),
-      allowed: allowedMoves(viewer, submission, lifecycle.deriveState(submission)),
-      errors,
-    });
+  const parsed = approveForm.safeParse(req.body);
+  if (!parsed.success) {
+    renderApproveSheet(res, submission, { message: "The page did not say what total it showed. Reload the queue and try again." });
     return;
   }
-
-  const updates = parsed.data;
 
   // Approving is the only way Points are ever awarded. Everything that follows
   // from it - the member's email, the feed entry, the Level and Specialty
   // Award recompute - hangs off the transition, not off this handler.
   try {
-    await lifecycle.approve(callerFor(viewer!), id, updates);
+    await lifecycle.approve(callerFor(viewer!), id, parsed.data.expected_total);
   } catch (err) {
-    if (sendLifecycleError(res, err, { submissionId: id, adminId: viewer?.id })) {
+    if (err instanceof lifecycle.StalePointsError) {
+      logger.warn("Approval refused: the points changed", { submissionId: id, adminId: viewer?.id, ...err.context });
+      const approvedBefore = submission.species_id == null ? 0 : (await countSubmissionsOfSpecies(submission.species_id)).approved;
+      renderApproveSheet(res, submission, {
+        preview: lifecycle.previewApproval(submission, approvedBefore),
+        expectedTotal: parsed.data.expected_total,
+      });
+      return;
+    }
+    if (lifecycle.isLifecycleError(err)) {
+      logger.warn(`Approval refused: ${err.message}`, { submissionId: id, adminId: viewer?.id });
+      renderApproveSheet(res, submission, { message: err.message });
       return;
     }
     throw err;
   }
 
-  // Redirect to approval queue for the submission's program
-  res.set("HX-Redirect", `/admin/queue/${submission.program}`).send();
+  res.set("HX-Redirect", queuePathFrom(req)).send();
 };
 
 export const checkMemberLevels = async (req: MulmRequest, res: Response) => {

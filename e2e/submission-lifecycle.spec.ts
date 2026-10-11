@@ -28,6 +28,26 @@ test.describe.configure({ mode: 'serial' });
  * chosen here first, through the panel's search. Then the base points (10)
  * and Confirm.
  */
+/**
+ * Approve from the queue page, the way a committee member does at a meeting
+ * (#527): open the row, tap Approve to arm it, tap again to confirm. The
+ * button posts the total the row shows; the lifecycle computes first-time.
+ */
+async function approveFromQueue(page: Page, submissionId: number): Promise<void> {
+	await page.goto("/admin/queue");
+	await page.waitForSelector(`#queue-row-${submissionId}`);
+	await page.locator(`#queue-row-${submissionId} summary`).click();
+	const arm = page.locator(`#queue-approve-${submissionId}`);
+	await arm.scrollIntoViewIfNeeded();
+	await arm.click();
+	const confirm = page.locator(`#queue-confirm-${submissionId}`);
+	await expect(confirm).toBeVisible();
+	await confirm.click();
+	await page.waitForURL(/\/admin\/queue/, { timeout: 10000 });
+	await page.waitForLoadState("networkidle");
+	await expect(page.locator(`#queue-approved-${submissionId}`)).toBeVisible();
+}
+
 async function rewitness(page: Page, submissionId: number): Promise<void> {
 	await page.goto(`/submissions/${submissionId}`);
 	await page.waitForSelector("#witness-species");
@@ -129,31 +149,10 @@ test.describe("Submission Complete Lifecycle", () => {
 
 		await logout(page);
 
-		// Step 3: Login as admin and approve the submission
+		// Step 3: Login as admin and approve the submission at the meeting:
+		// one button on the queue page, no form
 		await login(page, TEST_ADMIN);
-
-		await page.goto(`/submissions/${submissionId}`);
-		await page.waitForSelector("body");
-
-		// Wait for approval panel to load
-		const approveButton = page.locator('button:has-text("Approve")').first();
-		await approveButton.scrollIntoViewIfNeeded();
-
-		// Wait for the approval form to fully load
-		await page.waitForLoadState("networkidle");
-
-		// The approval panel shows the bound Species; there is no species step
-		await expect(page.locator("#approval-species-name")).toHaveText("Poecilia reticulata");
-
-		// Select base points from dropdown
-		await page.selectOption('select[name="points"]', "10");
-
-		// Click approve
-		await approveButton.click();
-
-		// Wait for redirect to approval queue
-		await page.waitForURL(/\/admin\/(witness-queue|queue)\//, { timeout: 10000 });
-		await page.waitForLoadState("networkidle");
+		await approveFromQueue(page, submissionId);
 
 		// Step 6: Verify final approved state and side effects
 		const db4 = await getTestDatabase();
@@ -299,28 +298,7 @@ test.describe("Submission Complete Lifecycle", () => {
 		await login(page, TEST_ADMIN);
 
 		await rewitness(page, submissionId);
-
-		await page.goto(`/submissions/${submissionId}`);
-		await page.waitForSelector("body");
-
-		// Wait for approval panel to load
-		const approveButton = page.locator('button:has-text("Approve")').first();
-		await approveButton.scrollIntoViewIfNeeded();
-
-		// Wait for the approval form to fully load
-		await page.waitForLoadState("networkidle");
-
-		// The approval panel shows the bound Species; there is no species step
-		await expect(page.locator("#approval-species-name")).toHaveText("Poecilia reticulata");
-
-		// Select base points from dropdown
-		await page.selectOption('select[name="points"]', "10");
-
-		// Click approve
-		await approveButton.click();
-
-		await page.waitForURL(/\/admin\/queue\//, { timeout: 10000 });
-		await page.waitForLoadState("networkidle");
+		await approveFromQueue(page, submissionId);
 
 		// Step 6: Verify final approved state
 		const db4 = await getTestDatabase();
@@ -543,28 +521,7 @@ test.describe("Submission Complete Lifecycle", () => {
 		await login(page, TEST_ADMIN);
 
 		await rewitness(page, submissionId);
-
-		await page.goto(`/submissions/${submissionId}`);
-		await page.waitForSelector("body");
-
-		// Wait for approval panel to load
-		const approveButton = page.locator('button:has-text("Approve")').first();
-		await approveButton.scrollIntoViewIfNeeded();
-
-		// Wait for the approval form to fully load
-		await page.waitForLoadState("networkidle");
-
-		// The approval panel shows the bound Species; there is no species step
-		await expect(page.locator("#approval-species-name")).toHaveText("Poecilia reticulata");
-
-		// Select base points from dropdown
-		await page.selectOption('select[name="points"]', "10");
-
-		// Click approve
-		await approveButton.click();
-
-		await page.waitForURL(/\/admin\/queue\//, { timeout: 10000 });
-		await page.waitForLoadState("networkidle");
+		await approveFromQueue(page, submissionId);
 
 		// Step 7: Verify final state - witnessed again after the change cycles
 		const db3 = await getTestDatabase();

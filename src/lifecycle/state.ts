@@ -17,7 +17,8 @@ import type { Submission } from "@/db/submissions";
  *
  * The approval queue needs no member action: a witnessed Submission is in it
  * the day its clock runs out. The member brings the fry, plants or coral to a
- * meeting and a committee member approves it there. (`final_submission_on`,
+ * meeting and a committee member approves it there with one tap, which
+ * awards the points the Witness set (`approve`). (`final_submission_on`,
  * which once recorded the member saying they had brought it, is a dead
  * column: see the `Submission` type.)
  *

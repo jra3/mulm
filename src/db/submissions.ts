@@ -128,6 +128,7 @@ export type Submission = {
 /** A Submission as a queue listing shows it, with the joins those pages read. */
 export type QueueSubmission = Submission & {
   witnessed_by_name?: string | null;
+  approved_by_name?: string | null;
 };
 
 /**
@@ -319,6 +320,29 @@ export async function getQueue(queue: QueueName, program: string) {
   );
 
   return filterQueue(queue, rows);
+}
+
+/**
+ * What was approved since `since` (an ISO timestamp), newest first: the
+ * approval queue's "Approved tonight", with each row's awarded total and
+ * who approved it.
+ */
+export async function getApprovedSince(since: string, program?: string): Promise<QueueSubmission[]> {
+  return query<QueueSubmission>(
+    `
+		SELECT
+			submissions.*,
+			${totalPointsSql("submissions")} as total_points,
+			members.display_name as member_name,
+			approvers.display_name as approved_by_name
+		FROM submissions
+		JOIN members ON submissions.member_id == members.id
+		LEFT JOIN members as approvers ON submissions.approved_by == approvers.id
+		WHERE submissions.approved_on >= ?
+		${program ? "AND submissions.program = ?" : ""}
+		ORDER BY submissions.approved_on DESC`,
+    program ? [since, program] : [since]
+  );
 }
 
 /** How many Submissions each Program has in `queue`. */

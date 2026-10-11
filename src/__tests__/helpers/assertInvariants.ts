@@ -51,15 +51,23 @@ export async function assertSubmissionInvariantsHold(submission: Submission | nu
   }
 
   // The Witness sets the points (ADR-0003), and a member's save voids both
-  // together: an unapproved row carrying points is always witnessed. First-time
-  // is approval's to compute, so it is never set before then.
+  // together: an unapproved row carries points exactly when it is witnessed
+  // (migration 066 made that true of every row). First-time is approval's
+  // to compute, so it is never set before then.
   if (!submission.approved_on) {
     if (submission.points != null && submission.witness_verification_status !== "confirmed") {
       violation("carries points but no confirmed Witness");
     }
+    if (submission.points == null && submission.witness_verification_status === "confirmed") {
+      violation("has a confirmed Witness but no points");
+    }
     if (submission.first_time_species != null) {
       violation("is not approved but already carries first-time");
     }
+  }
+  // Approval decides first-time, so an approved row always carries an answer.
+  if (submission.approved_on && submission.first_time_species == null) {
+    violation("is approved but first-time was never decided");
   }
 
   // The gates happen in order. `submitted_on` may still *follow*

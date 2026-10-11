@@ -7,6 +7,63 @@ import { faker } from "@faker-js/faker";
 import { getNextLevel, programMetadata } from "../programs";
 import { bonusBreakdown, bonusFields } from "../points";
 
+/**
+ * The approval queue page's locals (#527), as `approvalQueueLocals` in
+ * src/routes/admin.ts builds them: one row ready with first-time, one that is
+ * the viewer's own, one approved tonight and one still waiting.
+ */
+const sampleQueue = {
+  title: "Approval queue",
+  subtitle: "Every Program",
+  program: null,
+  queuePath: "/admin/queue",
+  counts: { all: 2, fish: 1, plant: 1, coral: 0 },
+  ready: [
+    {
+      id: 101,
+      member_id: 7,
+      member_name: "Jane Ortiz",
+      firstName: "Jane",
+      program: "fish",
+      programShort: "BAP",
+      species_common_name: "Butterfly Goodeid",
+      species_latin_name: "Ameca splendens",
+      newSpecies: true,
+      preview: {
+        lines: [
+          { label: "Base points", amount: 10 },
+          { label: "First Time Species Bonus", amount: 5 },
+          { label: "CARES Species Bonus", amount: 5 },
+        ],
+        total: 20,
+        firstTime: true,
+      },
+      witnessedOn: "08/02/2026",
+      mine: false,
+    },
+    {
+      id: 105,
+      member_id: 1,
+      member_name: "Alex Kim",
+      firstName: "Alex",
+      program: "plant",
+      programShort: "HAP",
+      species_common_name: "Wendt's Water Trumpet",
+      species_latin_name: "Cryptocoryne wendtii",
+      newSpecies: false,
+      preview: { lines: [{ label: "Base points", amount: 10 }], total: 10, firstTime: false },
+      witnessedOn: "08/05/2026",
+      mine: true,
+    },
+  ],
+  approvedTonight: [
+    { id: 99, member_name: "Dan Wu", species_common_name: "Apisto Rio Mamuru", programShort: "BAP", total: 20, approvedBy: "Alex Kim" },
+  ],
+  waiting: [
+    { id: 106, member_name: "Ken Ito", species_common_name: "Red-tailed Goodeid", programShort: "BAP", readyOn: "11/29/2026" },
+  ],
+};
+
 void describe("Pug Template Rendering", () => {
   const viewsPath = path.join(__dirname, "../views");
 
@@ -685,18 +742,16 @@ void describe("Pug Template Rendering", () => {
             };
             break;
 
-          case "admin/approvalPanel.pug":
-            templateData.speciesFacts = {
-              speciesId: 3,
-              speciesName: "Apistogramma cacatuoides",
-              commonName: "Cockatoo Dwarf Cichlid",
-              speciesType: "Fish",
-              programClass: "Cichlids - New World",
-              pointClass: 10,
-              isFirstTime: true,
-              priorBreedCount: 0,
-              isCaresSpecies: false,
-            };
+          case "admin/queue.pug":
+            Object.assign(templateData, sampleQueue);
+            break;
+
+          case "admin/approveSheet.pug":
+            templateData.submission = { id: 42, member_name: "Sam Lee", species_common_name: "Butterfly Goodeid" };
+            templateData.preview = { lines: [{ label: "Base points", amount: 10 }], total: 10, firstTime: false };
+            templateData.expectedTotal = 15;
+            templateData.message = null;
+            templateData.queuePath = "/admin/queue";
             break;
 
           case "admin/witnessSummary.pug":
@@ -1471,95 +1526,188 @@ void describe("Pug Template Rendering", () => {
    * class, the Points and bonuses prefilled from what the Witness set (or the
    * Point class, before it did), and no species step at all.
    */
-  void describe("Approval panel", () => {
-    const render = (data: Record<string, unknown>) =>
-      pug.compileFile(path.join(viewsPath, "admin/approvalPanel.pug"), { basedir: viewsPath, pretty: false })({
+  /**
+   * The approval queue page (#527): one list, tap twice. Each ready row
+   * shows the member, Program, Species and total; opening it shows the
+   * itemised points, first-time, the witness date and the links; Approve is
+   * a label that arms a checkbox, "Tap again" the submit, Cancel the same
+   * label. The viewer's own rows get no button.
+   */
+  void describe("Approval queue page", () => {
+    const render = (data: Record<string, unknown> = {}) =>
+      pug.compileFile(path.join(viewsPath, "admin/queue.pug"), { basedir: viewsPath, pretty: false })({
         ...baseMockData,
         isAdmin: true,
-        submission: { id: 42, species_type: "Fish", program: "fish", points: null },
-        errors: new Map(),
+        ...sampleQueue,
         ...data,
       });
-    const approval = {
-      speciesName: "Poecilia reticulata",
-      speciesType: "Fish",
-      programClass: "Livebearers",
-      pointClass: 10,
-      isFirstTime: false,
-      priorBreedCount: 3,
-      isCaresSpecies: true,
-    };
 
-    void test("bound, with a Point class: the Species read-only and the Points prefilled from it", () => {
-      const html = render({ speciesFacts: approval });
+    void test("a ready row: member, Program, Species, the new-species note and the total", () => {
+      const html = render();
 
-      assert.match(html, /id="approval-species-name"[^>]*>Poecilia reticulata</);
-      assert.match(html, /Livebearers/);
-      assert.match(html, /id="approval-point-class"><span class="font-semibold">Point class:<\/span> <span>10<\/span>/);
-      assert.match(html, /<option value="10" selected="selected">10<\/option>/);
-      assert.match(html, /Previously bred 3 times/);
-      assert.match(html, /<input type="checkbox" id="cares" name="cares_species" checked="checked"\/>/);
-      assert.match(html, /hx-post="\/admin\/submissions\/42\/approve"/);
-      // No species step
-      assert.doesNotMatch(html, /tom-select|species-search|name="group_id"|dialog\/species\/new|approval-bonuses/);
-      assert.doesNotMatch(html, /recorded by the witness/);
+      assert.match(html, /<details[^>]*id="queue-row-101"/);
+      assert.match(html, /Jane Ortiz/);
+      assert.match(html, /<span[^>]*>BAP<\/span>/);
+      assert.match(html, /Butterfly Goodeid/);
+      assert.match(html, /Butterfly Goodeid <i class="text-gray-500">Ameca splendens<\/i>/);
+      assert.match(html, /id="queue-new-species-101"[^>]*>New species recorded by the witness</);
+      assert.match(html, /id="queue-total-101"[^>]*>20</);
+      assert.doesNotMatch(html, /queue-new-species-105/);
     });
 
-    void test("a Species the witness recorded is said so", () => {
-      const html = render({ speciesFacts: approval, speciesRecordedByWitness: true });
-      assert.match(html, /id="approval-new-species"[^>]*>New species recorded by the witness</);
+    void test("opened, a row itemises the points with first-time, names the witness date and links to the Submission and the correction", () => {
+      const html = render();
+
+      assert.match(html, /id="queue-lines-101"[^>]*>Base points 10 \+ First Time Species Bonus 5 \+ CARES Species Bonus 5</);
+      assert.match(html, /id="queue-first-time-101"[^>]*>First approval of this species · \+5 goes to whoever is approved first</);
+      assert.doesNotMatch(html, /queue-first-time-105/);
+      assert.match(html, /Witnessed 08\/02\/2026/);
+      assert.match(html, /href="\/submissions\/101"[^>]*>full Submission</);
+      assert.match(html, /href="\/admin\/submissions\/101\/correct-points"[^>]*>correct points</);
     });
 
-    void test("witnessed with points: the Points and bonuses prefilled from what the Witness set", () => {
-      const html = render({
-        speciesFacts: approval,
-        submission: {
-          id: 42,
-          species_type: "Fish",
-          program: "fish",
-          points: 15,
-          cares_species: 0,
-          article_points: 5,
-          flowered: null,
-          sexual_reproduction: null,
-        },
+    void test("Approve posts the total it shows, armed by a first tap and confirmed by a second; Cancel disarms", () => {
+      const html = render();
+
+      assert.match(html, /<form hx-post="\/admin\/submissions\/101\/approve"/);
+      assert.match(html, /<input type="hidden" name="expected_total" value="20">/);
+      assert.match(html, /<input class="peer sr-only" type="checkbox" id="queue-arm-101"/);
+      assert.match(html, /<label class="[^"]*peer-checked:hidden[^"]*" for="queue-arm-101" id="queue-approve-101">Approve · 15 pts \+ 5 first-time</);
+      assert.match(html, /<button[^>]*type="submit" id="queue-confirm-101"[^>]*>Tap again: Jane brought it · 20 pts</);
+      assert.match(html, /<label[^>]*for="queue-arm-101"[^>]*id="queue-cancel-101"[^>]*>Cancel</);
+      const list = html.slice(html.indexOf('id="queue-ready"'), html.indexOf('id="queue-waiting"'));
+      assert.doesNotMatch(list, /<script|onclick|hx-on/, "arming is a checkbox the buttons read, not a script");
+    });
+
+    void test("without first-time the button says the plain total", () => {
+      const html = render({ ready: [{ ...sampleQueue.ready[0], mine: false, preview: { lines: [{ label: "Base points", amount: 10 }], total: 10, firstTime: false } }] });
+      assert.match(html, /id="queue-approve-101"[^>]*>Approve · 10 pts</);
+    });
+
+    void test("the viewer's own row has no button: another committee member approves it", () => {
+      const html = render();
+
+      assert.match(html, /id="queue-own-105"[^>]*>Your own Submission\. Another committee member approves it\.</);
+      assert.doesNotMatch(html, /submissions\/105\/approve|queue-arm-105|queue-approve-105/);
+    });
+
+    void test("approved tonight and still waiting are listed, the latter greyed with a ready date and no button", () => {
+      const html = render();
+
+      assert.match(html, /id="queue-approved-99"[^>]*>[\s\S]*?✓ Dan Wu · Apisto Rio Mamuru[\s\S]*?by Alex Kim[\s\S]*?<b[^>]*>20 pts</);
+      assert.match(html, /opacity-75" id="queue-waiting-106">[\s\S]*?Ken Ito · Red-tailed Goodeid[\s\S]*?ready 11\/29\/2026/);
+      assert.doesNotMatch(html, /submissions\/106\/approve|submissions\/99\/approve/);
+    });
+
+    void test("the empty queue says so, and the sheet placeholder is there for a refusal to land in", () => {
+      const html = render({ ready: [], approvedTonight: [], waiting: [] });
+
+      assert.match(html, /id="queue-ready-empty"[^>]*>Nothing left to approve\.</);
+      assert.doesNotMatch(html, /queue-approved"|Approved tonight/);
+      assert.match(html, /id="queue-waiting-empty"/);
+      assert.match(html, /<div id="approve-sheet"><\/div>/);
+    });
+
+    void test("the Program chips carry the counts and mark the one listed", () => {
+      const html = render({ program: "plant" });
+
+      assert.match(html, /href="\/admin\/queue">All · 2</);
+      assert.match(html, /bg-white text-gray-900[^>]*href="\/admin\/queue\/plant">HAP · 1</);
+      assert.match(html, /text-gray-200[^>]*href="\/admin\/queue\/fish">BAP · 1</);
+    });
+  });
+
+  /**
+   * The sheet a refused approval comes back as (#527): the fresh total and a
+   * fresh Approve when the points changed, or the refusal itself.
+   */
+  void describe("Approve sheet", () => {
+    const render = (data: Record<string, unknown>) =>
+      pug.compileFile(path.join(viewsPath, "admin/approveSheet.pug"), { basedir: viewsPath, pretty: false })({
+        submission: { id: 102, member_name: "Sam Lee", species_common_name: "Butterfly Goodeid" },
+        queuePath: "/admin/queue/fish",
+        preview: null,
+        expectedTotal: null,
+        message: null,
+        ...data,
       });
 
-      assert.match(html, /<option value="15" selected="selected">15<\/option>/, "the Witness's 15, not the Point class's 10");
-      assert.doesNotMatch(html, /<option value="10" selected/);
-      assert.match(html, /<input type="checkbox" id="cares" name="cares_species"\/>/, "the witness turned CARES off");
-      assert.match(html, /set at the Witness/);
-      assert.match(html, /<option value="5" selected="selected">5<\/option>/);
-      assert.match(html, /<input type="checkbox" id="first" name="first_time_species"\/>/, "first-time is still approval's");
+    void test("the points changed: says the new total, why, and offers it", () => {
+      const html = render({
+        preview: { lines: [{ label: "Base points", amount: 10 }, { label: "CARES Species Bonus", amount: 5 }], total: 15, firstTime: false },
+        expectedTotal: 20,
+      });
+
+      assert.match(html, /<div class="[^"]*" id="approve-sheet" role="dialog"/);
+      assert.match(html, /id="approve-sheet-title">The points changed</);
+      assert.match(html, /id="approve-sheet-why">Someone approved another Butterfly Goodeid first, so the first-time \+5 has gone\. Sam Lee now gets <b>15 pts<\/b>, not 20\.</);
+      assert.match(html, /id="approve-sheet-lines">Base points 10 \+ CARES Species Bonus 5</);
+      assert.match(html, /<form hx-post="\/admin\/submissions\/102\/approve"/);
+      assert.match(html, /<input type="hidden" name="expected_total" value="15"\/>/);
+      assert.match(html, /id="approve-sheet-approve"[^>]*>Approve · 15 pts</);
+      assert.match(html, /id="approve-sheet-close" href="\/admin\/queue\/fish">Not now</);
     });
 
-    void test("bound, with no Point class: nothing prefilled, and it says so", () => {
-      const html = render({ speciesFacts: { ...approval, pointClass: null } });
-
-      assert.match(html, /not set for this Species/);
-      assert.match(html, /<option value="" disabled="disabled" selected="selected">Base Points<\/option>/);
-      assert.doesNotMatch(html, /<option value="\d+" selected/);
-      assert.match(html, /Approve/);
+    void test("a change that is not the first-time bonus is not blamed on it", () => {
+      const html = render({
+        preview: { lines: [{ label: "Base points", amount: 20 }], total: 20, firstTime: false },
+        expectedTotal: 10,
+      });
+      assert.doesNotMatch(html, /Someone approved another/);
+      assert.match(html, /Sam Lee now gets <b>20 pts<\/b>, not 10\./);
     });
 
-    void test("unbound: says it must be bound first, offers the binding, and no Approve", () => {
-      const html = render({ speciesFacts: null, allowed: { bindSpecies: true } });
+    void test("any other refusal says what was refused", () => {
+      const html = render({ message: "Cannot approve a submission that is approved" });
 
-      assert.match(html, /id="approval-unbound"/);
-      assert.match(html, /Not bound to a Species/);
-      assert.doesNotMatch(html, /\/approve"|>Approve</);
-      assert.match(html, /hx-post="\/admin\/submissions\/42\/bind-species"/);
-      assert.match(html, /hx-get="\/admin\/dialog\/species\/new\?submission_id=42"/);
-      assert.match(html, /id="committee-error"/);
+      assert.match(html, /id="approve-sheet-title">Not approved</);
+      assert.match(html, /id="approve-sheet-message">Cannot approve a submission that is approved</);
+      assert.doesNotMatch(html, /\/approve"|expected_total/);
+      assert.match(html, /Not now/);
+    });
+  });
+
+  /**
+   * The committee's view of a Submission in the approval queue (#527): no
+   * form, just what approving would award and the way to the queue page.
+   */
+  void describe("Review page points the committee at the approval queue", () => {
+    const render = (data: Record<string, unknown>) =>
+      pug.compileFile(path.join(viewsPath, "submission/review.pug"), { basedir: viewsPath, pretty: false })({
+        ...baseMockData,
+        isAdmin: true,
+        isSelf: false,
+        photos: [],
+        state: "inApprovalQueue",
+        changesRequested: false,
+        allowed: { requestChanges: true, deleteSubmission: true, bindSpecies: true },
+        waitingPeriodStatus: { requiredDays: 60, elapsedDays: 70, daysRemaining: 0, elapsed: true },
+        submission: { ...(baseMockData.submission as Record<string, unknown>), id: 77, species_id: 5, species_type: "Fish", points: 10, member_name: "Dan Wu" },
+        approvalPreview: { lines: [{ label: "Base points", amount: 10 }, { label: "First Time Species Bonus", amount: 5 }], total: 15, firstTime: true },
+        speciesRecordedByWitness: false,
+        ...data,
+      });
+
+    void test("says what approval would award and links to the queue; no form", () => {
+      const html = render({});
+
+      assert.match(html, /id="approval-ready"/);
+      assert.match(html, /id="approval-preview">Base points 10 \+ First Time Species Bonus 5 = <b>15 pts<\/b></);
+      assert.match(html, /id="approval-first-time"/);
+      assert.match(html, /once Dan Wu has brought the fry\./);
+      assert.match(html, /id="approval-queue-link" href="\/admin\/queue#queue-row-77"/);
+      assert.doesNotMatch(html, /\/approve"|name="points"|first_time_species|Approve</);
       assert.match(html, /Request Changes/);
-      assert.match(html, /hx-delete="\/submissions\/42"/);
+      assert.match(html, /hx-delete="\/submissions\/77"/);
     });
 
-    void test("unbound, when the viewer may not bind: no binding offered", () => {
-      const html = render({ speciesFacts: null, allowed: { bindSpecies: false } });
-
-      assert.match(html, /Not bound to a Species/);
-      assert.doesNotMatch(html, /tom-select|name="group_id"|dialog\/species\/new/);
+    void test("a Species the witness recorded is said so; no first-time line when it is not a first", () => {
+      const html = render({
+        speciesRecordedByWitness: true,
+        approvalPreview: { lines: [{ label: "Base points", amount: 10 }], total: 10, firstTime: false },
+      });
+      assert.match(html, /id="approval-new-species"[^>]*>New species recorded by the witness</);
+      assert.doesNotMatch(html, /approval-first-time/);
     });
   });
 

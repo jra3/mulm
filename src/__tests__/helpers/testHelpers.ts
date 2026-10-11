@@ -29,7 +29,6 @@ import { overrideConnection } from "../../db/conn";
 import { createMember, getMember } from "../../db/members";
 import { createSubmissionRow, formToRow, updateSubmission } from "../../db/submissions";
 import type { FormValues } from "../../forms/submission";
-import type { ApprovalFormValues } from "../../forms/approval";
 import { addName, createSpecies } from "../../species";
 
 /**
@@ -331,6 +330,7 @@ export async function createTestSubmission(
 
   // Draft submissions should have null witness status, submitted ones default to "pending"
   const witnessStatus = providedWitnessStatus ?? (submitted ? "pending" : null);
+  const witnessed = approved || witnessStatus === "confirmed";
 
   const result = await db.run(
     `INSERT INTO submissions (
@@ -362,10 +362,12 @@ export async function createTestSubmission(
       witnessStatus === "confirmed" || witnessStatus === "declined" ? now : null,
       approved ? now : null,
       approvedBy || (approved ? approvedBy : null),
-      approved ? points || 10 : null,
-      approved ? articlePoints : null,
+      // The Witness sets the points (ADR-0003): a confirmed row always
+      // carries them, approved or not. First-time is approval's alone.
+      witnessed ? points || 10 : null,
+      witnessed ? articlePoints : null,
       approved ? (firstTimeSpecies ? 1 : 0) : null,
-      approved ? (caresSpecies ? 1 : 0) : null,
+      witnessed ? (caresSpecies ? 1 : 0) : null,
       denied ? now : null,
       deniedBy || (denied ? deniedBy : null),
       denied ? "Test denial reason" : null,
@@ -423,9 +425,9 @@ export async function createTestMember(
 }
 
 /**
- * Mock approval data for testing
+ * The points an approved fixture carries by default: base 10, no bonuses.
  */
-export const mockApprovalData = {
+export const mockApprovalData: AwardedPoints & { id: number; group_id: number } = {
   id: 0,
   group_id: 1,
   points: 10,
@@ -685,18 +687,28 @@ export async function createSubmissionFixture(
   });
 }
 
-/** Stamp a Submission approved, with the Points a committee member would enter. */
+/** The points an approved fixture carries: what the Witness set, and first-time. */
+export type AwardedPoints = {
+  points: number;
+  article_points?: number | null;
+  first_time_species?: boolean;
+  cares_species?: boolean;
+  flowered?: boolean;
+  sexual_reproduction?: boolean;
+};
+
+/** Stamp a Submission approved, with its points as the Witness would have set them. */
 export async function approveSubmissionFixture(
   approvedBy: number,
   submissionId: number,
   speciesId: number,
-  approval: ApprovalFormValues
+  approval: AwardedPoints
 ): Promise<void> {
   const now = new Date().toISOString();
   await updateSubmission(submissionId, {
     species_id: speciesId,
     points: approval.points,
-    article_points: approval.article_points,
+    article_points: approval.article_points ?? null,
     first_time_species: approval.first_time_species ? 1 : 0,
     cares_species: approval.cares_species ? 1 : 0,
     flowered: approval.flowered ? 1 : 0,
