@@ -6,7 +6,7 @@
  */
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
-import { setupTestDatabase, type TestDatabase } from "./testDbHelper.helper";
+import { createTestDatabase, type TestDatabase } from "./helpers/database";
 import {
   createAppleAccount,
   createGoogleAccount,
@@ -22,7 +22,7 @@ import { resolveAppleMember } from "@/auth/apple";
 void describe("merge_members and login methods", () => {
   let testDb: TestDatabase;
   beforeEach(async () => {
-    testDb = await setupTestDatabase();
+    testDb = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
   });
   afterEach(async () => {
     await testDb.cleanup();

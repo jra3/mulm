@@ -1,3 +1,4 @@
+import { createTestDatabase } from "./helpers/database";
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
 import {
@@ -11,10 +12,9 @@ import { query } from "@/db/conn";
 import { getMember, updateMember } from "@/db/members";
 import { createSpecies, updateSpecies } from "@/species";
 import {
-  setupTestDatabase,
-  teardownTestDatabase,
+  createTestActors,
   type TestContext,
-} from "./helpers/testHelpers";
+} from "./helpers/fixtures";
 import {
   approveAsShown,
   recordNotifications,
@@ -37,14 +37,15 @@ void describe("Submission lifecycle - standing", () => {
   let committee: Caller;
 
   beforeEach(async () => {
-    ctx = await setupTestDatabase({ adminCount: 2 });
+    const database = await createTestDatabase({ foreignKeys: "off", migrations: "latest" });
+    ctx = { ...database, ...(await createTestActors(database.db, { adminCount: 2 })) };
     sent = recordNotifications();
     committee = { id: ctx.admin.id, isAdmin: true };
   });
 
   afterEach(async () => {
     resetNotifier();
-    await teardownTestDatabase(ctx);
+    await ctx.cleanup();
   });
 
   const feed = () =>

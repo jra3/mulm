@@ -1,6 +1,6 @@
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
-import { setupTestDatabase, type TestDatabase } from "./testDbHelper.helper";
+import { createTestDatabase, type TestDatabase } from "./helpers/database";
 import { checkPassword } from "../auth";
 import { createMember, getMemberByEmail, getMemberPassword } from "../db/members";
 import { recordFailedAttempt } from "../services/accountLockout";
@@ -33,7 +33,7 @@ void describe("seedStagingUsers", () => {
   let testDb: TestDatabase;
 
   beforeEach(async () => {
-    testDb = await setupTestDatabase();
+    testDb = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
   });
 
   afterEach(async () => {

@@ -1,8 +1,7 @@
+import { createTestDatabase, type TestDatabase } from "./helpers/database";
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
-import { Database, open } from "sqlite";
-import sqlite3 from "sqlite3";
-import { overrideConnection } from "../db/conn";
+import { Database } from "sqlite";
 
 // activity.ts
 import { recordActivity, getRecentActivity } from "../db/activity";
@@ -36,17 +35,13 @@ import {
 } from "../db/tank";
 
 let db: Database;
+let database: TestDatabase;
 let memberId1: number;
 let memberId2: number;
 
 async function setup() {
-  db = await open({
-    filename: ":memory:",
-    driver: sqlite3.Database,
-  });
-  await db.exec("PRAGMA foreign_keys = ON;");
-  await db.migrate({ migrationsPath: "./db/migrations" });
-  overrideConnection(db);
+  database = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
+  db = database.db;
 
   const m1 = await db.run(
     "INSERT INTO members (display_name, contact_email) VALUES (?, ?)",
@@ -62,11 +57,7 @@ async function setup() {
 }
 
 async function teardown() {
-  try {
-    await db.close();
-  } catch {
-    // ignore
-  }
+  await database.cleanup();
 }
 
 // ─── Activity Feed ───────────────────────────────────────────────────────────

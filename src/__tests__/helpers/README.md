@@ -1,446 +1,95 @@
-# Test Helper Utilities
+# Test databases and fixtures
 
-Centralized testing utilities for Mulm BAP to reduce boilerplate and establish consistent testing patterns across the codebase.
-
-## Features
-
-- 🗄️ **Database Setup/Teardown** - Automatic in-memory database with migrations
-- 🏭 **Fixture Factories** - Easy creation of test members, submissions, and species
-- ✅ **Assertion Helpers** - Specialized assertions for submission states
-- 🎯 **Mock Data** - Pre-configured mock approval data and species IDs
-- 📝 **Type-Safe** - Full TypeScript support with interfaces
-
-## Quick Start
+Use `createTestDatabase` from `./helpers/database` for disposable SQLite databases.
+It returns the same `{ db, cleanup, migrate }` context for every suite. Both
+`foreignKeys` and `migrations` are required; creating a database never creates
+Member fixtures. Migrations may seed catalogue/schema data as they do in production.
 
 ```typescript
-import { describe, test, beforeEach, afterEach } from "node:test";
-import {
-  setupTestDatabase,
-  teardownTestDatabase,
-  createTestSubmission,
-  type TestContext,
-} from "./helpers/testHelpers";
-
-void describe("My Test Suite", () => {
-  let ctx: TestContext;
-
-  beforeEach(async () => {
-    ctx = await setupTestDatabase();
-  });
-
-  afterEach(async () => {
-    await teardownTestDatabase(ctx);
-  });
-
-  void test("my test", async () => {
-    const submissionId = await createTestSubmission(ctx.db, {
-      memberId: ctx.member.id,
-      submitted: true,
-    });
-    // ... test logic
-  });
-});
-```
-
-## API Reference
-
-### Database Management
-
-#### `setupTestDatabase(options?)`
-
-Sets up an in-memory test database with migrations and test users.
-
-**Parameters:**
-- `options.adminCount` - Number of admin users (1-3, default: 1)
-- `options.memberCount` - Number of regular members (default: 1)
-- `options.enableForeignKeys` - Enable FK constraints (default: false)
-
-**Returns:** `TestContext`
-
-**Example:**
-```typescript
-// Single admin and member (default)
-const ctx = await setupTestDatabase();
-
-// Two admins, one member
-const ctx = await setupTestDatabase({ adminCount: 2 });
-
-// With foreign key enforcement
-const ctx = await setupTestDatabase({ enableForeignKeys: true });
-```
-
-#### `teardownTestDatabase(ctx)`
-
-Closes the database connection and cleans up resources.
-
-**Example:**
-```typescript
-await teardownTestDatabase(ctx);
-```
-
-### Fixture Factories
-
-#### `createTestSubmission(db, options)`
-
-Creates a test submission in any state of the workflow.
-
-**Parameters:**
-```typescript
-interface CreateSubmissionOptions {
-  // Required
-  memberId: number;
-
-  // State flags
-  submitted?: boolean;
-  witnessStatus?: "pending" | "confirmed" | "declined";
-  approved?: boolean;
-  denied?: boolean;
-  changesRequested?: boolean;
-
-  // Related user IDs
-  witnessedBy?: number;
-  approvedBy?: number;
-  deniedBy?: number;
-  changesRequestedBy?: number;
-
-  // Points and bonuses
-  points?: number;
-  articlePoints?: number;
-  firstTimeSpecies?: boolean;
-  caresSpecies?: boolean;
-
-  // Species details
-  speciesType?: "Fish" | "Plant" | "Invert" | "Coral";
-  speciesClass?: string;
-  commonName?: string;
-  latinName?: string;
-  program?: "fish" | "plant" | "coral";
-
-  // Submission details
-  reproductionDate?: string;
-  foods?: string; // JSON array
-  spawnLocations?: string; // JSON array
-}
-```
-
-**Examples:**
-
-```typescript
-// Draft submission
-const draftId = await createTestSubmission(ctx.db, {
-  memberId: ctx.member.id,
-});
-
-// Submitted, not witnessed
-const submittedId = await createTestSubmission(ctx.db, {
-  memberId: ctx.member.id,
-  submitted: true,
-});
-
-// Witnessed and ready for approval
-const witnessedId = await createTestSubmission(ctx.db, {
-  memberId: ctx.member.id,
-  submitted: true,
-  witnessStatus: "confirmed",
-  witnessedBy: ctx.admin.id,
-});
-
-// Fully approved
-const approvedId = await createTestSubmission(ctx.db, {
-  memberId: ctx.member.id,
-  submitted: true,
-  witnessStatus: "confirmed",
-  witnessedBy: ctx.admin.id,
-  approved: true,
-  approvedBy: ctx.admin.id,
-  points: 15,
-  articlePoints: 5,
-  firstTimeSpecies: true,
-});
-
-// Plant submission
-const plantId = await createTestSubmission(ctx.db, {
-  memberId: ctx.member.id,
-  speciesType: "Plant",
-  speciesClass: "Aquatic Plants",
-  commonName: "Amazon Sword",
-  latinName: "Echinodorus amazonicus",
-  program: "plant",
-});
-```
-
-#### `createTestMember(options?)`
-
-Creates an additional test member.
-
-**Parameters:**
-```typescript
-interface CreateMemberOptions {
-  displayName?: string;
-  email?: string;
-  isAdmin?: boolean;
-}
-```
-
-**Example:**
-```typescript
-const newMember = await createTestMember({
-  displayName: "Jane Doe",
-  email: "jane@test.com",
-});
-```
-
-### Assertion Helpers
-
-#### `assertSubmissionState(submission, expected)`
-
-Asserts that a submission is in the expected state.
-
-**Parameters:**
-```typescript
-interface ExpectedState {
-  submitted?: boolean;
-  witnessed?: boolean;
-  approved?: boolean;
-  denied?: boolean;
-}
-```
-
-**Example:**
-```typescript
-const submission = await getSubmissionById(submissionId);
-
-assertSubmissionState(submission, {
-  submitted: true,
-  witnessed: true,
-  approved: false,
-});
-```
-
-### Mock Data
-
-#### `mockApprovalData`
-
-The points an approved fixture carries by default (`AwardedPoints`): what the Witness would have set, plus first-time. Only `approveSubmissionFixture` takes it; `approve` itself takes the total the approver saw (see `approveAsShown` in `lifecycleFixtures.ts`).
-
-```typescript
-const mockApprovalData = {
-  id: 0,
-  group_id: 1,
-  points: 10,
-  article_points: 0,
-  first_time_species: false,
-  cares_species: false,
-  flowered: false,
-  sexual_reproduction: false,
-};
-```
-
-**Usage:**
-```typescript
-await approveSubmission(adminId, submissionId, mockSpeciesId, {
-  ...mockApprovalData,
-  points: 20,
-  first_time_species: true,
-});
-```
-
-#### `mockSpeciesId`
-
-The id of a Species the migrations seed, to bind approved test Submissions to.
-
-```typescript
-const mockSpeciesId = 1;
-```
-
-### Utility Functions
-
-#### `generateTestEmail(prefix?)`
-
-Generates a unique timestamp-based email.
-
-**Example:**
-```typescript
-const email = generateTestEmail("member");
-// Returns: "member-1234567890@test.com"
-```
-
-## Type Definitions
-
-### `TestContext`
-
-The main context object returned by `setupTestDatabase()`.
-
-```typescript
-interface TestContext {
-  db: Database;           // SQLite database instance
-  member: TestMember;     // Regular test member
-  admin: TestMember;      // Admin user
-  otherAdmin?: TestMember; // Second admin (if adminCount >= 2)
-}
-```
-
-### `TestMember`
-
-Represents a test user.
-
-```typescript
-interface TestMember {
-  id: number;
-  display_name: string;
-  contact_email: string;
-}
-```
-
-## Best Practices
-
-### 1. Always Use Setup/Teardown
-
-```typescript
-let ctx: TestContext;
-
+import { beforeEach, afterEach, test } from "node:test";
+import { createTestDatabase, type TestDatabase } from "./helpers/database";
+import { createTestMember } from "./helpers/fixtures";
+
+let database: TestDatabase;
 beforeEach(async () => {
-  ctx = await setupTestDatabase();
+  database = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
 });
-
 afterEach(async () => {
-  await teardownTestDatabase(ctx);
+  await database.cleanup();
+});
+test("a member", async () => {
+  const member = await createTestMember({ displayName: "Jane" });
+  // Exercise the application with member.id.
 });
 ```
 
-### 2. Use Descriptive Submission States
+## Constraint modes and lifecycle
+
+Use `foreignKeys: "on"` when enforcing referential integrity is part of the test.
+Use `"off"` explicitly for production-like constraint behavior or intentional
+impossible-state regressions. Existing suites retain their previous modes.
+Builders never change PRAGMAs. Do not make constraint changes incidentally by
+choosing a different fixture helper.
+
+The factory installs the global database connection after successful migration.
+Database suites must run **serially within a process**: separate contexts do not
+make the global override safe for concurrent tests. `npm test` keeps the existing
+runner settings. `installConnection: false` creates a standalone historical/raw
+database without changing the application's current connection.
+
+Always call `cleanup()` in teardown or `finally`. It is idempotent after a
+successful close, closes connections after failed setup, and reports unexpected
+close errors (for example, outstanding prepared statements). It does not silently
+hide resource leaks. Importing the factory or fixtures does not open or migrate
+the configured on-disk database; database initialization is explicitly lazy.
+
+## Named fixture builders
+
+`fixtures.ts` holds Member, committee and Species builders, separate from database
+ownership:
+
+- `createTestMember(options?)` creates one regular Member with a unique email.
+- `createTestMembers(count?)` creates the requested number of Members.
+- `createTestCommitteeMember(db, options?)` creates one Member with `is_admin = 1`.
+- `createTestActors(db, { adminCount?: 1 | 2, memberCount? })` explicitly creates a
+  regular Member and committee member, optionally extra actors. Combine its result
+  with a database context when a suite wants `TestContext`.
+- `createTestSpeciesName(db, ...)` and `ensureGuppySpecies(db)` create only Species
+  and Names, never Members.
+
+For valid Submission states use `submissionInState` from `lifecycleFixtures.ts`,
+with the existing `assertSubmissionInvariantsHold` from `assertInvariants.ts`.
+Lifecycle tests still exercise real transitions. `createRawSubmissionFixture`
+explicitly writes raw rows for reporting fixtures, historical states and
+impossible-state regressions; it deliberately does not enforce lifecycle rules.
+The form-based `createSubmissionFixture` and `approveSubmissionFixture` remain
+available for existing fixture flows. Keep intentional raw SQL visible in tests
+when the real schema or lifecycle cannot represent the scenario.
 
 ```typescript
-// ❌ Bad - unclear state
-const id = await createTestSubmission(ctx.db, {
-  memberId: ctx.member.id,
-  submitted: true,
-  witnessStatus: "confirmed",
-  approved: true,
-  approvedBy: ctx.admin.id,
-});
-
-// ✅ Good - clear intent
-const approvedSubmissionId = await createTestSubmission(ctx.db, {
-  memberId: ctx.member.id,
-  submitted: true,
-  witnessStatus: "confirmed",
-  witnessedBy: ctx.admin.id,
-  approved: true,
-  approvedBy: ctx.admin.id,
-  points: 10,
-});
+const database = await createTestDatabase({ foreignKeys: "off", migrations: "latest" });
+const ctx = { ...database, ...await createTestActors(database.db, { adminCount: 2 }) };
+// ctx.db, ctx.member, ctx.admin, ctx.otherAdmin, ctx.cleanup()
 ```
 
-### 3. Use Assertion Helpers
+## Historical migrations and raw schemas
+
+The factory owns migration execution and temporary cutoff directories, including
+cleanup when a migration fails. Cutoffs are inclusive; moving backwards runs the
+same migrator's down steps.
 
 ```typescript
-// ❌ Bad - verbose assertions
-assert.ok(submission.submitted_on !== null);
-assert.ok(submission.witnessed_on !== null);
-assert.strictEqual(submission.approved_on, null);
-
-// ✅ Good - concise and clear
-assertSubmissionState(submission, {
-  submitted: true,
-  witnessed: true,
-  approved: false,
-});
+const historical = await createTestDatabase({ foreignKeys: "on", migrations: 56 });
+try {
+  // Intentional historical SQL goes here, before the canonical-name migration.
+  await historical.migrate(57);
+  await historical.migrate(); // latest
+  await historical.migrate(56); // roll back to the old shape
+} finally {
+  await historical.cleanup();
+}
 ```
 
-### 4. Leverage Mock Data
-
-```typescript
-// ❌ Bad - repeated boilerplate
-await approveSubmission(adminId, submissionId,
-  1,
-  {
-    id: 0,
-    group_id: 1,
-    points: 20,
-    article_points: 0,
-    first_time_species: false,
-    cares_species: false,
-    flowered: false,
-    sexual_reproduction: false,
-  }
-);
-
-// ✅ Good - reuse mock data
-await approveSubmission(adminId, submissionId, mockSpeciesId, {
-  ...mockApprovalData,
-  points: 20,
-});
-```
-
-## Migration Guide
-
-### Converting Existing Tests
-
-**Before:**
-```typescript
-void describe("My Test", () => {
-  let db: Database;
-  let member: TestMember;
-  let admin: TestMember;
-
-  beforeEach(async () => {
-    db = await open({ filename: ":memory:", driver: sqlite3.Database });
-    await db.exec("PRAGMA foreign_keys = OFF;");
-    await db.migrate({ migrationsPath: "./db/migrations" });
-    overrideConnection(db);
-
-    const memberEmail = `member-${Date.now()}@test.com`;
-    const adminEmail = `admin-${Date.now()}@test.com`;
-    const memberId = await createMember(memberEmail, "Test Member");
-    const adminId = await createMember(adminEmail, "Test Admin");
-    member = (await getMember(memberId)) as TestMember;
-    admin = (await getMember(adminId)) as TestMember;
-  });
-
-  afterEach(async () => {
-    try { await db.close(); } catch {}
-  });
-
-  // ... tests
-});
-```
-
-**After:**
-```typescript
-import { setupTestDatabase, teardownTestDatabase, type TestContext } from './helpers/testHelpers';
-
-void describe("My Test", () => {
-  let ctx: TestContext;
-
-  beforeEach(async () => {
-    ctx = await setupTestDatabase();
-  });
-
-  afterEach(async () => {
-    await teardownTestDatabase(ctx);
-  });
-
-  // ... tests (use ctx.db, ctx.member, ctx.admin)
-});
-```
-
-## Examples
-
-See `example.test.ts` for a complete working example demonstrating all helper functions.
-
-## Contributing
-
-When adding new helper functions:
-
-1. Add full JSDoc documentation
-2. Include usage examples
-3. Add types and interfaces
-4. Update this README
-5. Add tests to `example.test.ts`
-
-## Related
-
-- See existing test files for usage examples in production
-- Refer to `src/__tests__/witness-operations.test.ts` for complex workflow testing patterns
-- Check `src/__tests__/approval-validation.test.ts` for state machine testing examples
+Use `migrations: false` only when a test intentionally builds a minimal/raw schema,
+such as transaction primitives or invalid legacy data that current migrations
+forbid. Ordinary database creation and teardown belong in the factory.

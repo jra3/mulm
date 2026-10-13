@@ -1,3 +1,4 @@
+import { createTestDatabase } from "./helpers/database";
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
 import {
@@ -14,13 +15,12 @@ import { getSetting } from "@/db/settings";
 import { updateMember } from "@/db/members";
 import {
   createTestMember,
-  createTestSubmission,
+  createRawSubmissionFixture,
   ensureGuppySpecies,
-  setupTestDatabase,
-  teardownTestDatabase,
+  createTestActors,
   type TestContext,
   type TestMember,
-} from "./helpers/testHelpers";
+} from "./helpers/fixtures";
 import { recordNotifications, witnessPoints, type RecordingNotifier } from "./helpers/lifecycleFixtures";
 
 /**
@@ -86,7 +86,7 @@ void describe("Affected members are told once that nothing is wrong", () => {
   let committee: Caller;
 
   const resetRow = async (member: TestMember, options: { reproductionDate?: string; approved?: boolean } = {}) => {
-    const id = await createTestSubmission(ctx.db, {
+    const id = await createRawSubmissionFixture(ctx.db, {
       memberId: member.id,
       submitted: true,
       witnessStatus: options.approved ? "confirmed" : "pending",
@@ -101,14 +101,15 @@ void describe("Affected members are told once that nothing is wrong", () => {
   };
 
   beforeEach(async () => {
-    ctx = await setupTestDatabase({ adminCount: 1 });
+    const database = await createTestDatabase({ foreignKeys: "off", migrations: "latest" });
+    ctx = { ...database, ...(await createTestActors(database.db, { adminCount: 1 })) };
     sent = recordNotifications();
     committee = { id: ctx.admin.id, isAdmin: true };
   });
 
   afterEach(async () => {
     resetNotifier();
-    await teardownTestDatabase(ctx);
+    await ctx.cleanup();
   });
 
   void test("one email per member, covering every reset Submission still awaiting a Witness", async () => {
@@ -126,7 +127,7 @@ void describe("Affected members are told once that nothing is wrong", () => {
     await resetRow(done, { approved: true });
     // Awaiting a Witness for the first time, never reset
     const fresh = await createTestMember({ displayName: "Fresh", email: "fresh@test.com" });
-    await createTestSubmission(ctx.db, { memberId: fresh.id, submitted: true, witnessStatus: "pending" });
+    await createRawSubmissionFixture(ctx.db, { memberId: fresh.id, submitted: true, witnessStatus: "pending" });
 
     const due = await membersAwaitingRewitnessEmail();
     assert.deepStrictEqual(

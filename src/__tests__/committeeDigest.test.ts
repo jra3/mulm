@@ -1,8 +1,9 @@
+import { createTestDatabase } from "./helpers/database";
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
 import { runCommitteeDigest, currentDigestSlot } from "@/scheduled/committeeDigest";
 import { getSetting } from "../db/settings";
-import { setupTestDatabase, teardownTestDatabase, type TestContext } from "./helpers/testHelpers";
+import { createTestActors, type TestContext } from "./helpers/fixtures";
 
 /**
  * The digest job runs on every boot, and prod scales to zero, so it must run
@@ -16,11 +17,12 @@ void describe("Committee digest job", () => {
   let ctx: TestContext;
 
   beforeEach(async () => {
-    ctx = await setupTestDatabase({ adminCount: 1 });
+    const database = await createTestDatabase({ foreignKeys: "off", migrations: "latest" });
+    ctx = { ...database, ...(await createTestActors(database.db, { adminCount: 1 })) };
   });
 
   afterEach(async () => {
-    await teardownTestDatabase(ctx);
+    await ctx.cleanup();
   });
 
   void test("slot is today's 7:00 after 7, yesterday's before", () => {

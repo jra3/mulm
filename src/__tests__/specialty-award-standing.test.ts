@@ -1,3 +1,4 @@
+import { createTestDatabase } from "./helpers/database";
 import { afterEach, beforeEach, describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { correctPoints, resetNotifier, type Caller } from "@/lifecycle";
@@ -7,7 +8,7 @@ import {
   getSpecialtyAwardProgress as accountProgress,
   recomputeSpecialtyAwards,
 } from "@/specialtyAwardManager";
-import { setupTestDatabase, teardownTestDatabase, type TestContext } from "./helpers/testHelpers";
+import { createTestActors, type TestContext } from "./helpers/fixtures";
 import { correctionOf, recordNotifications, submissionInState } from "./helpers/lifecycleFixtures";
 
 void describe("Shared Specialty Award standing", () => {
@@ -15,13 +16,14 @@ void describe("Shared Specialty Award standing", () => {
   let committee: Caller;
   let sequence = 0;
   beforeEach(async () => {
-    ctx = await setupTestDatabase();
+    const database = await createTestDatabase({ foreignKeys: "off", migrations: "latest" });
+    ctx = { ...database, ...(await createTestActors(database.db)) };
     committee = { id: ctx.admin.id, isAdmin: true };
     recordNotifications();
   });
   afterEach(async () => {
     resetNotifier();
-    await teardownTestDatabase(ctx);
+    await ctx.cleanup();
   });
 
   async function evidence(speciesClass: string, count: number) {

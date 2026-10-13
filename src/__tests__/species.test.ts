@@ -1,20 +1,21 @@
+import { createTestDatabase } from "./helpers/database";
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
 import { getSpeciesForExplorer, getSpeciesDetail, type SpeciesFilters } from "@/species";
 // CARES coverage answers from the CARES data module.
 import { getCaresCoverageStats } from "../db/cares";
 import {
-  setupTestDatabase,
-  teardownTestDatabase,
+  createTestActors,
   createTestSpeciesName,
   type TestContext,
-} from "./helpers/testHelpers";
+} from "./helpers/fixtures";
 
 void describe("Species Explorer Search Functionality", () => {
   let ctx: TestContext;
 
   beforeEach(async () => {
-    ctx = await setupTestDatabase();
+    const database = await createTestDatabase({ foreignKeys: "off", migrations: "latest" });
+    ctx = { ...database, ...(await createTestActors(database.db)) };
 
     // Create test species using the split schema
     const species1 = await createTestSpeciesName(
@@ -114,7 +115,7 @@ void describe("Species Explorer Search Functionality", () => {
   });
 
   afterEach(async () => {
-    await teardownTestDatabase(ctx);
+    await ctx.cleanup();
   });
 
   void test("Returns all species with no filters", async () => {
@@ -243,7 +244,8 @@ void describe("Species Detail Functionality", () => {
   let species1GroupId: number;
 
   beforeEach(async () => {
-    ctx = await setupTestDatabase();
+    const database = await createTestDatabase({ foreignKeys: "off", migrations: "latest" });
+    ctx = { ...database, ...(await createTestActors(database.db)) };
 
     const species1 = await createTestSpeciesName(
       ctx.db,
@@ -257,7 +259,7 @@ void describe("Species Detail Functionality", () => {
   });
 
   afterEach(async () => {
-    await teardownTestDatabase(ctx);
+    await ctx.cleanup();
   });
 
   void test("Returns species detail correctly", async () => {
@@ -279,7 +281,8 @@ void describe("CARES Species Filter", () => {
   let ctx: TestContext;
 
   beforeEach(async () => {
-    ctx = await setupTestDatabase();
+    const database = await createTestDatabase({ foreignKeys: "off", migrations: "latest" });
+    ctx = { ...database, ...(await createTestActors(database.db)) };
 
     const species1 = await createTestSpeciesName(
       ctx.db,
@@ -318,7 +321,7 @@ void describe("CARES Species Filter", () => {
   });
 
   afterEach(async () => {
-    await teardownTestDatabase(ctx);
+    await ctx.cleanup();
   });
 
   void test("Filters to CARES species only", async () => {

@@ -1,3 +1,4 @@
+import { createTestDatabase } from "./helpers/database";
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
 import type { Database } from "sqlite";
@@ -8,7 +9,7 @@ import {
   setSpeciesExternalReferences,
 } from "@/db/speciesEnrichment";
 import { getAllSyncLog } from "@/db/external-data-sync";
-import { setupTestDatabase, teardownTestDatabase, type TestContext } from "./helpers/testHelpers";
+import { createTestActors, type TestContext } from "./helpers/fixtures";
 
 const insertSpecies = (db: Database, groupId: number, genus: string, species: string) =>
   db.run(
@@ -47,7 +48,8 @@ void describe("externalDataSync.runExternalDataSync", () => {
   let ctx: TestContext;
 
   beforeEach(async () => {
-    ctx = await setupTestDatabase({ adminCount: 1 });
+    const database = await createTestDatabase({ foreignKeys: "off", migrations: "latest" });
+    ctx = { ...database, ...(await createTestActors(database.db, { adminCount: 1 })) };
     // Migrations seed the species catalog; start from a clean slate so the sync
     // only sees our fixtures and the log counts are deterministic.
     await ctx.db.exec(
@@ -62,7 +64,7 @@ void describe("externalDataSync.runExternalDataSync", () => {
   });
 
   afterEach(async () => {
-    await teardownTestDatabase(ctx);
+    await ctx.cleanup();
   });
 
   void test("syncs references/images and records per-source log", async () => {

@@ -1,3 +1,4 @@
+import { createTestDatabase } from "./helpers/database";
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
 import {
@@ -35,10 +36,9 @@ import { addName, checkFormAgreement, createSpecies, findSpeciesById, listNames,
 import { addNote, findSubmissionsWithRecordedSpecies, getNotesForSubmission, speciesChosenByCommittee } from "@/db/submission_notes";
 import {
   ensureGuppySpecies,
-  setupTestDatabase,
-  teardownTestDatabase,
+  createTestActors,
   type TestContext,
-} from "./helpers/testHelpers";
+} from "./helpers/fixtures";
 import { getMemberWithPoints } from "@/db/members";
 import {
   approveAsShown,
@@ -93,7 +93,8 @@ void describe("Submission lifecycle - transitions", () => {
   let otherMember: Caller;
 
   beforeEach(async () => {
-    ctx = await setupTestDatabase({ adminCount: 2 });
+    const database = await createTestDatabase({ foreignKeys: "off", migrations: "latest" });
+    ctx = { ...database, ...(await createTestActors(database.db, { adminCount: 2 })) };
     recordNotifications();
     member = { id: ctx.member.id, isAdmin: false };
     committee = { id: ctx.admin.id, isAdmin: true };
@@ -102,7 +103,7 @@ void describe("Submission lifecycle - transitions", () => {
 
   afterEach(async () => {
     resetNotifier();
-    await teardownTestDatabase(ctx);
+    await ctx.cleanup();
   });
 
   /** Put one of the member's Submissions into `state`. */

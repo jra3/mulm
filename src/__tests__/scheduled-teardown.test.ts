@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { setImmediate } from "node:timers/promises";
-import { setupTestDatabase } from "./testDbHelper.helper";
+import { createTestDatabase } from "./helpers/database";
 import { logger } from "../utils/logger";
 import { startScheduledCleanup, stopScheduledCleanup } from "../scheduled/cleanup";
 import {
@@ -16,7 +16,7 @@ for (const [name, start, stop] of [
   ["digest", startCommitteeDigest, stopCommitteeDigest],
 ] as const) {
   void test(`${name} teardown awaits startup work and cancels the first timeout`, async (t) => {
-    const fixture = await setupTestDatabase();
+    const fixture = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
     const info = t.mock.method(logger, "info", () => {});
     const error = t.mock.method(logger, "error", () => {});
     t.mock.timers.enable({

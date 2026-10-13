@@ -11,7 +11,7 @@ import { initializeSpeciesServer } from "@/mcp/species-server-core";
 import { initializeMemberServer } from "@/mcp/member-server-core";
 import { initializeBackfillServer } from "@/mcp/backfill-server-core";
 import { createMember } from "@/db/members";
-import { setupTestDatabase, type TestDatabase } from "./testDbHelper.helper";
+import { createTestDatabase, type TestDatabase } from "./helpers/database";
 
 const initializers = {
   species: initializeSpeciesServer,
@@ -33,7 +33,7 @@ void describe("MCP contracts over real in-memory client/server transports", () =
   let database: TestDatabase;
   const sessions: Array<{ client: Client; server: Server }> = [];
   beforeEach(async () => {
-    database = await setupTestDatabase();
+    database = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
   });
   afterEach(async () => {
     for (const { client, server } of sessions.splice(0)) {

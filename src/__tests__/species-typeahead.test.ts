@@ -1,3 +1,4 @@
+import { createTestDatabase, type TestDatabase } from "./helpers/database";
 /**
  * Test suite for searchSpeciesTypeahead - Split schema migration
  *
@@ -7,9 +8,7 @@
 
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
-import { Database, open } from "sqlite";
-import sqlite3 from "sqlite3";
-import { overrideConnection } from "../db/conn";
+import { Database } from "sqlite";
 import {
   searchSpeciesTypeahead,
   suggestSpecies,
@@ -19,25 +18,16 @@ import {
 
 void describe("searchSpeciesTypeahead - Split Schema", () => {
   let db: Database;
+  let database: TestDatabase;
 
   beforeEach(async () => {
-    db = await open({
-      filename: ":memory:",
-      driver: sqlite3.Database,
-    });
-
-    await db.exec("PRAGMA foreign_keys = ON;");
-
-    await db.migrate({
-      migrationsPath: "./db/migrations",
-    });
-
-    overrideConnection(db);
+    database = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
+    db = database.db;
   });
 
   afterEach(async () => {
     if (db) {
-      await db.close();
+      await database.cleanup();
     }
   });
 

@@ -1,33 +1,23 @@
+import { createTestDatabase, type TestDatabase } from "./helpers/database";
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
-import { Database, open } from "sqlite";
-import sqlite3 from "sqlite3";
-import { overrideConnection } from "../db/conn";
+import { Database } from "sqlite";
 import { runDailyCleanup } from "@/scheduled/cleanup";
 import { createAuthCode } from "@/db/auth";
 import { query } from "@/db/conn";
 
 void describe("Scheduled Cleanup Tasks", () => {
   let db: Database;
+  let database: TestDatabase;
 
   beforeEach(async () => {
     // Create in-memory database
-    db = await open({
-      filename: ":memory:",
-      driver: sqlite3.Database,
-    });
-
-    // Run all migrations
-    await db.migrate({
-      migrationsPath: "./db/migrations",
-    });
-
-    // Override connection for testing
-    overrideConnection(db);
+    database = await createTestDatabase({ foreignKeys: "off", migrations: "latest" });
+    db = database.db;
   });
 
   afterEach(async () => {
-    await db.close();
+    await database.cleanup();
   });
 
   void test("should delete expired auth codes", async () => {

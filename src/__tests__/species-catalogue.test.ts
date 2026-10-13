@@ -1,3 +1,4 @@
+import { createTestDatabase, type TestDatabase } from "./helpers/database";
 /**
  * The Species catalogue, through its interface, over in-memory SQLite with the
  * real migrations. These rows cover what the catalogue promises that the old
@@ -7,9 +8,7 @@
  */
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
-import { Database, open } from "sqlite";
-import sqlite3 from "sqlite3";
-import { overrideConnection } from "../db/conn";
+import { Database } from "sqlite";
 import { createMember } from "../db/members";
 import {
   createSpecies,
@@ -37,6 +36,7 @@ import {
 } from "@/species";
 
 let db: Database;
+let database: TestDatabase;
 let memberId: number;
 
 async function speciesWith(opts: {
@@ -108,15 +108,14 @@ async function assertOneCanonicalName(speciesId: number) {
 
 void describe("Species catalogue", () => {
   beforeEach(async () => {
-    db = await open({ filename: ":memory:", driver: sqlite3.Database });
-    await db.exec("PRAGMA foreign_keys = ON;");
-    await db.migrate({ migrationsPath: "./db/migrations" });
-    overrideConnection(db);
+    database = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
+    db = database.db;
+
     memberId = await createMember("catalogue-member@test.com", "Catalogue Member");
   });
 
   afterEach(async () => {
-    await db.close();
+    await database.cleanup();
   });
 
   void describe("lookup", () => {

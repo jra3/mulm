@@ -1,3 +1,4 @@
+import { createTestDatabase } from "./helpers/database";
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
 import {
@@ -5,14 +6,13 @@ import {
   updateSubmission,
 } from "../db/submissions";
 import {
-  setupTestDatabase,
-  teardownTestDatabase,
-  createTestSubmission,
+  createTestActors,
+  createRawSubmissionFixture,
   mockApprovalData,
   mockSpeciesId,
   approveSubmissionFixture,
   type TestContext,
-} from "./helpers/testHelpers";
+} from "./helpers/fixtures";
 
 /**
  * Integration tests for editing approved submissions
@@ -33,7 +33,7 @@ void describe("Edit Approved Submission", () => {
     foods?: string;
     spawnLocations?: string;
   }): Promise<number> {
-    const submissionId = await createTestSubmission(ctx.db, {
+    const submissionId = await createRawSubmissionFixture(ctx.db, {
       memberId: options.memberId,
       submitted: true,
       witnessStatus: "confirmed",
@@ -56,11 +56,12 @@ void describe("Edit Approved Submission", () => {
   }
 
   beforeEach(async () => {
-    ctx = await setupTestDatabase();
+    const database = await createTestDatabase({ foreignKeys: "off", migrations: "latest" });
+    ctx = { ...database, ...(await createTestActors(database.db)) };
   });
 
   afterEach(async () => {
-    await teardownTestDatabase(ctx);
+    await ctx.cleanup();
   });
 
   void describe("Basic Field Updates", () => {
@@ -330,7 +331,7 @@ void describe("Edit Approved Submission", () => {
     });
 
     void test("should allow updating draft submissions", async () => {
-      const submissionId = await createTestSubmission(ctx.db, {
+      const submissionId = await createRawSubmissionFixture(ctx.db, {
         memberId: ctx.member.id,
         submitted: false,
       });
@@ -342,7 +343,7 @@ void describe("Edit Approved Submission", () => {
     });
 
     void test("should allow updating submitted but unapproved submissions", async () => {
-      const submissionId = await createTestSubmission(ctx.db, {
+      const submissionId = await createRawSubmissionFixture(ctx.db, {
         memberId: ctx.member.id,
         submitted: true,
         witnessStatus: "confirmed",

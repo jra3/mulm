@@ -1,6 +1,6 @@
 import { beforeEach, afterEach, describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { setupTestDatabase, type TestDatabase } from "./testDbHelper.helper";
+import { createTestDatabase, type TestDatabase } from "./helpers/database";
 import { createMember } from "@/db/members";
 import { createSpecies } from "@/species";
 import { importHistoricalRows, validateHistoricalRows } from "@/backfill/import";
@@ -11,7 +11,7 @@ void describe("historical backfill domain operations", () => {
   let adminId: number;
   let speciesId: number;
   beforeEach(async () => {
-    database = await setupTestDatabase();
+    database = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
     memberId = await createMember("member@example.com", "Historical Member");
     adminId = await createMember("admin@example.com", "Admin");
     await database.db.run("UPDATE members SET is_admin = 1 WHERE id = ?", adminId);

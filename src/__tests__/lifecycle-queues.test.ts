@@ -1,3 +1,4 @@
+import { createTestDatabase } from "./helpers/database";
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
 import {
@@ -12,7 +13,7 @@ import {
 } from "@/lifecycle";
 import { getQueue, getQueueCounts, type Submission } from "@/db/submissions";
 import { query } from "@/db/conn";
-import { setupTestDatabase, teardownTestDatabase, type TestContext } from "./helpers/testHelpers";
+import { createTestActors, type TestContext } from "./helpers/fixtures";
 import { recordNotifications, requestChangesFixture, submissionInState } from "./helpers/lifecycleFixtures";
 
 /**
@@ -44,13 +45,14 @@ void describe("Submission lifecycle - queues", () => {
   let ctx: TestContext;
 
   beforeEach(async () => {
-    ctx = await setupTestDatabase({ adminCount: 2 });
+    const database = await createTestDatabase({ foreignKeys: "off", migrations: "latest" });
+    ctx = { ...database, ...(await createTestActors(database.db, { adminCount: 2 })) };
     recordNotifications();
   });
 
   afterEach(async () => {
     resetNotifier();
-    await teardownTestDatabase(ctx);
+    await ctx.cleanup();
   });
 
   const at = (state: SubmissionState) =>

@@ -1,3 +1,4 @@
+import { createTestDatabase } from "./helpers/database";
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
 import {
@@ -10,25 +11,25 @@ import {
   getRosterWithPoints,
 } from "../db/members";
 import { getSubmissionsByMember } from "../db/submissions";
-import { approveSubmissionFixture, createSubmissionFixture } from "./helpers/testHelpers";
+import { approveSubmissionFixture, createSubmissionFixture } from "./helpers/fixtures";
 import { totalPoints } from "../points";
 import { getErrorMessage } from "../utils/error";
 import {
-  setupTestDatabase,
-  teardownTestDatabase,
+  createTestActors,
   createTestSpeciesName,
   type TestContext,
-} from "./helpers/testHelpers";
+} from "./helpers/fixtures";
 
 void describe("Member Management", () => {
   let ctx: TestContext;
 
   beforeEach(async () => {
-    ctx = await setupTestDatabase(); // Creates 1 admin + 1 regular member
+    const database = await createTestDatabase({ foreignKeys: "off", migrations: "latest" });
+    ctx = { ...database, ...(await createTestActors(database.db)) }; // Creates 1 admin + 1 regular member
   });
 
   afterEach(async () => {
-    await teardownTestDatabase(ctx);
+    await ctx.cleanup();
   });
 
   void test("Members list append", async () => {
@@ -88,11 +89,12 @@ void describe("getRosterWithPoints", () => {
   let ctx: TestContext;
 
   beforeEach(async () => {
-    ctx = await setupTestDatabase();
+    const database = await createTestDatabase({ foreignKeys: "off", migrations: "latest" });
+    ctx = { ...database, ...(await createTestActors(database.db)) };
   });
 
   afterEach(async () => {
-    await teardownTestDatabase(ctx);
+    await ctx.cleanup();
   });
 
   void test("returns empty roster when no members exist", async () => {
@@ -524,11 +526,12 @@ void describe("Points agreement across surfaces", () => {
   let ctx: TestContext;
 
   beforeEach(async () => {
-    ctx = await setupTestDatabase();
+    const database = await createTestDatabase({ foreignKeys: "off", migrations: "latest" });
+    ctx = { ...database, ...(await createTestActors(database.db)) };
   });
 
   afterEach(async () => {
-    await teardownTestDatabase(ctx);
+    await ctx.cleanup();
   });
 
   void test("roster, per-member query and submission list agree on a CARES bonus", async () => {

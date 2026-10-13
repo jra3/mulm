@@ -1,3 +1,4 @@
+import { createTestDatabase, type TestDatabase } from "./helpers/database";
 /**
  * Test suite for specialty awards progress calculation
  * Tests the getSpecialtyAwardProgress function that powers the member page progress UI
@@ -5,30 +6,22 @@
 
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
-import { Database, open } from "sqlite";
-import sqlite3 from "sqlite3";
-import { overrideConnection } from "../db/conn";
+import { Database } from "sqlite";
 import { getSpecialtyAwardProgress } from "../db/members";
 import { createSpecies, addName } from "@/species";
 
 void describe("Specialty Awards Progress Calculation", () => {
   let db: Database;
+  let database: TestDatabase;
   let memberId: number;
   let anabantoidSpeciesId: number;
   let catfishCorydorasId: number;
   let catfishNonCorydorasId: number;
 
   beforeEach(async () => {
-    db = await open({
-      filename: ":memory:",
-      driver: sqlite3.Database,
-    });
+    database = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
+    db = database.db;
 
-    await db.exec("PRAGMA foreign_keys = ON;");
-    await db.migrate({ migrationsPath: "./db/migrations" });
-    overrideConnection(db);
-
-    // Create test member
     const timestamp = Date.now();
     const memberResult = await db.run(`
       INSERT INTO members (display_name, contact_email, is_admin)
@@ -71,7 +64,7 @@ void describe("Specialty Awards Progress Calculation", () => {
 
   afterEach(async () => {
     if (db) {
-      await db.close();
+      await database.cleanup();
     }
   });
 

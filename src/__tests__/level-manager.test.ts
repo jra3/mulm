@@ -1,14 +1,14 @@
+import { createTestDatabase } from "./helpers/database";
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
 import {
-  setupTestDatabase,
-  teardownTestDatabase,
-  createTestSubmission,
+  createTestActors,
+  createRawSubmissionFixture,
   mockSpeciesId,
   mockApprovalData,
   type TestContext,
-} from "./helpers/testHelpers";
-import { approveSubmissionFixture } from "./helpers/testHelpers";
+} from "./helpers/fixtures";
+import { approveSubmissionFixture } from "./helpers/fixtures";
 import { checkAndUpdateMemberLevel, checkAllMemberLevels, type LevelCheckOptions } from "../levelManager";
 import { getMember, updateMember } from "../db/members";
 import { sweepMemberLevels } from "../scheduled/level-sweep";
@@ -36,11 +36,12 @@ void describe("Level Manager", () => {
   let ctx: TestContext;
 
   beforeEach(async () => {
-    ctx = await setupTestDatabase();
+    const database = await createTestDatabase({ foreignKeys: "off", migrations: "latest" });
+    ctx = { ...database, ...(await createTestActors(database.db)) };
   });
 
   afterEach(async () => {
-    await teardownTestDatabase(ctx);
+    await ctx.cleanup();
   });
 
   void describe("calculateLevel() - Point Calculations", () => {
@@ -323,7 +324,7 @@ void describe("Level Manager", () => {
     void test("should detect upgrade from Participant to Hobbyist", async () => {
       // Create submissions totaling 25 points (need 5 x 5-point submissions)
       for (let i = 0; i < 5; i++) {
-        const sub = await createTestSubmission(ctx.db, {
+        const sub = await createRawSubmissionFixture(ctx.db, {
           memberId: ctx.member.id,
           submitted: true,
           witnessStatus: "confirmed",
@@ -352,7 +353,7 @@ void describe("Level Manager", () => {
 
     void test("should not detect change if level is same", async () => {
       // First, set the member to Participant level
-      const firstSub = await createTestSubmission(ctx.db, {
+      const firstSub = await createRawSubmissionFixture(ctx.db, {
         memberId: ctx.member.id,
         submitted: true,
         witnessStatus: "confirmed",
@@ -370,7 +371,7 @@ void describe("Level Manager", () => {
       });
 
       // Now add more points but stay below Hobbyist threshold (25)
-      const secondSub = await createTestSubmission(ctx.db, {
+      const secondSub = await createRawSubmissionFixture(ctx.db, {
         memberId: ctx.member.id,
         submitted: true,
         witnessStatus: "confirmed",
@@ -396,7 +397,7 @@ void describe("Level Manager", () => {
       const submissions = [10, 10, 10, 10, 10]; // 50 points, all from 10-point category
 
       for (const points of submissions) {
-        const sub = await createTestSubmission(ctx.db, {
+        const sub = await createRawSubmissionFixture(ctx.db, {
           memberId: ctx.member.id,
           submitted: true,
           witnessStatus: "confirmed",
@@ -420,7 +421,7 @@ void describe("Level Manager", () => {
     void test("should work for plant program", async () => {
       // Create plant submissions totaling 25 points
       for (let i = 0; i < 5; i++) {
-        const sub = await createTestSubmission(ctx.db, {
+        const sub = await createRawSubmissionFixture(ctx.db, {
           memberId: ctx.member.id,
           submitted: true,
           witnessStatus: "confirmed",
@@ -449,7 +450,7 @@ void describe("Level Manager", () => {
     void test("should work for coral program", async () => {
       // Create 5 coral submissions of 5 points each = 25 total
       for (let i = 0; i < 5; i++) {
-        const sub = await createTestSubmission(ctx.db, {
+        const sub = await createRawSubmissionFixture(ctx.db, {
           memberId: ctx.member.id,
           submitted: true,
           witnessStatus: "confirmed",
@@ -484,13 +485,13 @@ void describe("Level Manager", () => {
 
     void test("should only count approved submissions", async () => {
       // Create draft submission (not approved)
-      await createTestSubmission(ctx.db, {
+      await createRawSubmissionFixture(ctx.db, {
         memberId: ctx.member.id,
         submitted: false, // Draft
       });
 
       // Create submitted but not approved
-      await createTestSubmission(ctx.db, {
+      await createRawSubmissionFixture(ctx.db, {
         memberId: ctx.member.id,
         submitted: true,
       });
@@ -510,7 +511,7 @@ void describe("Level Manager", () => {
     void test("should check all three programs", async () => {
       // Create 5 fish submissions (25 points)
       for (let i = 0; i < 5; i++) {
-        const fishSub = await createTestSubmission(ctx.db, {
+        const fishSub = await createRawSubmissionFixture(ctx.db, {
           memberId: ctx.member.id,
           submitted: true,
           witnessStatus: "confirmed",
@@ -526,7 +527,7 @@ void describe("Level Manager", () => {
 
       // Create 5 plant submissions (25 points)
       for (let i = 0; i < 5; i++) {
-        const plantSub = await createTestSubmission(ctx.db, {
+        const plantSub = await createRawSubmissionFixture(ctx.db, {
           memberId: ctx.member.id,
           submitted: true,
           witnessStatus: "confirmed",
@@ -586,7 +587,7 @@ void describe("Level Manager", () => {
     beforeEach(() => { letters = []; });
 
     async function earn25Points(program: ProgramType) {
-      await createTestSubmission(ctx.db, {
+      await createRawSubmissionFixture(ctx.db, {
         memberId: ctx.member.id,
         submitted: true,
         approved: true,
@@ -702,7 +703,7 @@ void describe("Level Manager", () => {
 
       // First upgrade: Hobbyist (25 points from 5x5)
       for (let i = 0; i < 5; i++) {
-        const sub = await createTestSubmission(ctx.db, {
+        const sub = await createRawSubmissionFixture(ctx.db, {
           memberId: ctx.member.id,
           submitted: true,
           witnessStatus: "confirmed",
@@ -723,7 +724,7 @@ void describe("Level Manager", () => {
 
       // Second upgrade: Breeder (add 25 more points from 10-point category for distribution)
       for (let i = 0; i < 3; i++) {
-        const sub = await createTestSubmission(ctx.db, {
+        const sub = await createRawSubmissionFixture(ctx.db, {
           memberId: ctx.member.id,
           submitted: true,
           witnessStatus: "confirmed",

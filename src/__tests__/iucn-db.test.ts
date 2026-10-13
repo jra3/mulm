@@ -1,11 +1,11 @@
+import { createTestDatabase } from "./helpers/database";
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
 import {
-  setupTestDatabase,
-  teardownTestDatabase,
+  createTestActors,
   createTestSpeciesName,
   type TestContext,
-} from "./helpers/testHelpers";
+} from "./helpers/fixtures";
 // Import functions we're testing
 import {
   recordIucnSync,
@@ -25,11 +25,12 @@ void describe("IUCN Database Operations", () => {
   let ctx: TestContext;
 
   beforeEach(async () => {
-    ctx = await setupTestDatabase();
+    const database = await createTestDatabase({ foreignKeys: "off", migrations: "latest" });
+    ctx = { ...database, ...(await createTestActors(database.db)) };
   });
 
   afterEach(async () => {
-    await teardownTestDatabase(ctx);
+    await ctx.cleanup();
   });
 
   void describe("updateIucnStatus", () => {

@@ -1,25 +1,26 @@
+import { createTestDatabase, type TestDatabase } from "./helpers/database";
 import { describe, test, beforeEach, afterEach, mock } from "node:test";
 import assert from "node:assert";
-import { Database, open } from "sqlite";
-import sqlite3 from "sqlite3";
-import { overrideConnection, withTransaction, TRANSACTION_SLOW_MS } from "../db/conn";
+import { Database } from "sqlite";
+import { withTransaction, TRANSACTION_SLOW_MS } from "../db/conn";
 import { createMember } from "../db/members";
 import { logger } from "@/utils/logger";
 
 let db: Database;
+let database: TestDatabase;
 
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 
 void describe("withTransaction", () => {
   beforeEach(async () => {
-    db = await open({ filename: ":memory:", driver: sqlite3.Database });
+    database = await createTestDatabase({ foreignKeys: "off", migrations: false });
+    db = database.db;
     await db.exec("CREATE TABLE counter (id INTEGER PRIMARY KEY, n INTEGER NOT NULL)");
     await db.run("INSERT INTO counter (id, n) VALUES (1, 0)");
-    overrideConnection(db);
   });
 
   afterEach(async () => {
-    await db.close();
+    await database.cleanup();
   });
 
   void test("overlapping transactions run one after the other, each seeing the last commit", async () => {
@@ -70,14 +71,14 @@ void describe("withTransaction", () => {
 
 void describe("a transaction holding the queue too long", () => {
   beforeEach(async () => {
-    db = await open({ filename: ":memory:", driver: sqlite3.Database });
-    overrideConnection(db);
+    database = await createTestDatabase({ foreignKeys: "off", migrations: false });
+    db = database.db;
   });
 
   afterEach(async () => {
     mock.reset();
     mock.timers.reset();
-    await db.close();
+    await database.cleanup();
   });
 
   void test("is logged while it holds it and again when it lets go", async () => {
@@ -115,14 +116,12 @@ void describe("a transaction holding the queue too long", () => {
 
 void describe("createMember", () => {
   beforeEach(async () => {
-    db = await open({ filename: ":memory:", driver: sqlite3.Database });
-    await db.exec("PRAGMA foreign_keys = ON;");
-    await db.migrate({ migrationsPath: "./db/migrations" });
-    overrideConnection(db);
+    database = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
+    db = database.db;
   });
 
   afterEach(async () => {
-    await db.close();
+    await database.cleanup();
   });
 
   void test("runs alongside another transaction without colliding", async () => {
