@@ -34,16 +34,16 @@ SQLite database with dual connection pattern for read/write separation.
 
 Database connections are managed in `src/db/conn.ts`:
 
-- **`readConn`** - Read-only connection for SELECT queries
+- **`readOnlyConn`** - Read-only connection for SELECT queries
 - **`writeConn`** - Write connection for INSERT/UPDATE/DELETE
-- **`query()`** - Helper function for SELECT queries (uses readConn)
+- **`query()`** - Helper function for SELECT queries (uses readOnlyConn)
 - **`withTransaction()`** - Transaction wrapper for atomic operations
 
 ## Query Helpers
 
 ### Read Operations
 
-Use `query()` helper for all SELECT operations:
+Use `query()` for reads outside a transaction. Inside `withTransaction()`, read through the callback's `db` so reads see that transaction's writes:
 
 ```typescript
 import { query } from '@/db/conn';
@@ -257,7 +257,7 @@ An exact match on an email address compares with `COLLATE NOCASE` (see `getMembe
 import { withTransaction } from '@/db/conn';
 
 await withTransaction(async (db) => {
-  // All statements within this function are part of the transaction
+  // Statements on this callback's db share the transaction
   // If any statement fails, all changes are rolled back
 
   const stmt1 = await db.prepare('INSERT INTO submissions ...');
@@ -308,39 +308,13 @@ The try/catch around ROLLBACK in `withTransaction()` is intentional - the sqlite
 
 ## Migration System
 
-Migrations run automatically on startup from `db/migrations/`.
+`ensureReady()` in its default read-write mode runs the `sqlite` package migrator over `db/migrations/`. Imports and read-only initialization do not run migrations.
 
 ### Migration File Naming
 
-Files are run in alphabetical order: `001_initial.sql`, `002_add_feature.sql`, etc.
+Files use numeric prefixes, for example `001-init.sql`. The migrator orders them by numeric id and records applied migrations in its `migrations` table. Each file contains `-- Up` and `-- Down` sections; use existing migrations as the format reference.
 
-### Migration Tracking
-
-Migrations are tracked in the `migrations` table:
-
-```sql
-CREATE TABLE migrations (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  filename TEXT NOT NULL UNIQUE,
-  applied_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-```
-
-### Creating Migrations
-
-1. Create new file in `db/migrations/` with sequential number prefix
-2. Write SQL statements (semicolon-separated)
-3. Migrations run automatically on next app start
-
-Example migration (`db/migrations/003_add_field.sql`):
-
-```sql
--- Add new field to submissions table
-ALTER TABLE submissions ADD COLUMN notes TEXT;
-
--- Create index on new field
-CREATE INDEX idx_submissions_notes ON submissions(notes);
-```
+To change the schema, add the next numbered migration with its forward and rollback SQL. The next read-write startup applies it. Historical migration tests use the shared [test database factory](../__tests__/helpers/README.md), which owns cutoff directories and migration cleanup.
 
 ## Database Modules
 
@@ -352,7 +326,7 @@ Database operations are organized by domain:
 - `src/species/` - The Species catalogue (import `@/species`), not in this directory: Species, Names, Canonical name, Point class
 - `src/db/speciesEnrichment.ts` - A Species' external references and images
 - `src/db/iucn.ts` - IUCN Red List conservation status operations
-- `src/db/tanks.ts` - Tank preset operations
+- `src/db/tank.ts` - Tank preset operations
 - `src/db/activity.ts` - Activity feed operations
 
 Each module exports functions for specific database operations, following the patterns above.

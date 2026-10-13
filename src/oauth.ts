@@ -9,10 +9,7 @@ import { createAuthCode, deleteAuthCode, getAuthCode } from "./db/auth";
  * Check if Google OAuth is configured
  */
 export function isGoogleOAuthEnabled(): boolean {
-  return Boolean(
-    config.oauth?.google?.clientId &&
-    config.oauth?.google?.clientSecret
-  );
+  return Boolean(config.oauth?.google?.clientId && config.oauth?.google?.clientSecret);
 }
 
 export const OAUTH_STATE_COOKIE = "oauth_state";
@@ -103,10 +100,19 @@ export function consumeOAuthState(req: MulmRequest, res: Response, state: string
   return true;
 }
 
+function googleConfig() {
+  const google = config.oauth?.google;
+  if (!google?.clientId || !google.clientSecret) {
+    throw new Error("Google OAuth is not configured");
+  }
+  return google;
+}
+
 export function getGoogleOAuthURL(state: string): string {
+  const google = googleConfig();
   const endpoint = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   endpoint.searchParams.append("access_type", "offline");
-  endpoint.searchParams.append("client_id", config.oauth.google.clientId);
+  endpoint.searchParams.append("client_id", google.clientId);
   endpoint.searchParams.append("redirect_uri", `https://${config.server.domain}/oauth/google`);
   endpoint.searchParams.append("scope", "email profile");
   endpoint.searchParams.append("response_type", "code");
@@ -118,10 +124,11 @@ export function getGoogleOAuthURL(state: string): string {
  * https://developers.google.com/youtube/reporting/guides/authorization/server-side-web-apps#exchange-authorization-code
  */
 export async function translateGoogleOAuthCode(code: string) {
+  const google = googleConfig();
   const endpoint = new URL("https://oauth2.googleapis.com/token");
   const body = new URLSearchParams({
-    client_id: config.oauth.google.clientId,
-    client_secret: config.oauth.google.clientSecret,
+    client_id: google.clientId,
+    client_secret: google.clientSecret,
     grant_type: "authorization_code",
     redirect_uri: `https://${config.server.domain}/oauth/google`,
     code,

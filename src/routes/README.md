@@ -1,6 +1,6 @@
 # Routing
 
-Routes follow RESTful conventions and are domain-organized in `src/routes/`. All routes are registered in `src/index.ts`.
+Routes follow RESTful conventions and are domain-organized in `src/routes/`. The application factory in `src/app.ts` registers handlers and mounts routers.
 
 ## RESTful Patterns
 
@@ -30,7 +30,7 @@ Route handlers are organized by domain:
 - `src/routes/typeahead.ts` - Search APIs
 - `src/routes/adminRouter.ts` - Admin-only routes (separate router with auth middleware)
 
-## Complete Route Reference
+## Selected Route Reference
 
 ### Public Routes
 
@@ -47,7 +47,9 @@ GET    /member/:memberId     - View member profile
 
 **Standings & Statistics**
 ```
-GET    /standings{/:program} - Program standings (optional BAP/CARES filter)
+GET    /lifetime{/:program} - Cumulative program standings
+GET    /annual              - Redirect to the current awards year
+GET    /annual/:stringYear{/:program} - Annual program standings
 ```
 
 **Species Explorer**
@@ -62,7 +64,7 @@ GET    /species/:groupId     - Species group detail
 ```
 POST   /auth/signup          - Create account
 POST   /auth/login           - Password login
-GET    /auth/logout          - Logout
+POST   /auth/logout          - Logout
 ```
 
 **Password Reset**
@@ -76,6 +78,7 @@ POST   /auth/reset-password  - Reset password with token
 **OAuth**
 ```
 GET    /oauth/google         - Google OAuth callback (URL registered with Google)
+POST   /oauth/apple          - Apple OAuth callback
 ```
 
 **Auth Dialogs** (HTMX modals)
@@ -140,7 +143,6 @@ GET    /admin/waiting-period{/:program} - Waiting period queue
 **Submission Management**
 ```
 POST   /admin/submissions/:id/approve          - The one button: posts expected_total only; a stale total comes back as a sheet with the current one
-GET    /admin/submissions/:id/edit             - Edit submission (admin view)
 POST   /admin/submissions/:id/bind-species     - Bind (or rebind) to a Species (witness panel; pendingWitness only)
 POST   /admin/submissions/:id/adopt-species-classification - Take the bound Species' type and class (witness panel; pendingWitness only)
 POST   /admin/submissions/:id/confirm-witness  - Confirm witness with the points, or with a new Species to record (refused while unbound)
@@ -151,13 +153,11 @@ GET    /admin/submissions/:id/correct-points   - The correction form (#528): the
 POST   /admin/submissions/:id/correct-points   - Save correction: Species and points in one write with a reason, from the Witness on
 GET    /admin/submissions/:id/edit-approved    - The Edit Approved Submission dialog (#529): the member's details only, with a reason; links to the correction form for Species and points
 POST   /admin/submissions/:id/edit-approved    - Save the details through editApprovedDetails: changelog entry, no email, no standings recompute
-POST   /admin/submissions/:id/decline-witness  - Decline witness
 POST   /admin/submissions/:id/request-changes  - Request changes from submitter
 ```
 
 **Admin Dialogs** (HTMX)
 ```
-GET    /admin/dialog/submissions/:id/decline-witness  - Decline witness form
 GET    /admin/dialog/submissions/:id/request-changes  - Request changes form
 ```
 
@@ -193,131 +193,20 @@ POST   /admin/members/invite                    - Invite new member
 - **Optional parameters**: Some routes support optional parameters with `{/:param}` syntax
 - **Backward compatibility**: Submission validation accepts both `:id` and `:subId`
 
-## Route Implementation Patterns
+## Handler and authentication conventions
 
-### Basic Route
+Import `MulmRequest` from `@/sessions`; its optional viewer has `id`, `display_name`, `contact_email` and optional admin/level fields. Member-only handlers check the viewer explicitly. See `viewAccountSettings` and `updateAccountSettings` in [`account.ts`](account.ts): both return 401 when the viewer is missing and use `viewer.id` for member queries.
 
-```typescript
-import { MulmRequest } from '@/types/request';
-import { requireLogin } from '@/middleware/auth';
+[`adminRouter.ts`](adminRouter.ts) installs `requireAdmin` from [`admin.ts`](admin.ts) with `adminRouter.use(requireAdmin)`. It returns 401 for an absent viewer and 403 for a non-admin. Handlers registered there do not repeat the admin-role check; resource ownership and lifecycle permissions still apply.
 
-router.get('/resource', requireLogin, async (req: MulmRequest, res) => {
-  const { viewer } = req; // Guaranteed by requireLogin
+Use real form schemas and helpers: `bapForm`/`bapDraftForm` in `forms/submission.ts`, `updateSchema` in `forms/login.ts`, and `validateFormResult` in `forms/utils.ts`. For request strings, use `getBodyString` / `getQueryString` from `utils/request.ts`. See [`submission.ts`](submission.ts) for form rendering and calls to the [Submission lifecycle](../lifecycle/README.md).
 
-  const data = await getDataForViewer(viewer.member_id);
+HTMX handlers render the relevant Pug fragment directly (for example `account/settings`); ordinary page handlers render the page template. Follow the existing template's contract rather than adding a generic `layout: false` flag. See [view conventions](../views/README.md).
 
-  res.render('resource-view', {
-    viewer,
-    data
-  });
-});
-```
+## Route registration and middleware
 
-### Form Submission
+[`createApp`](../app.ts) imports named handler modules such as `* as submission` and `* as account`, then binds them to paths. Modules that export an Express router, including `adminRouter`, `collection` and `routes/api/upload`, are mounted with `use`. [`bootstrap.ts`](../bootstrap.ts) initializes process resources before accepting traffic; constructing the app alone does not initialize the database.
 
-```typescript
-import { resourceFormSchema } from '@/forms/resource';
+The production stack in `app.ts` includes cookie/body parsing, `sessionMiddleware` from `sessions.ts`, origin validation, session-token CSRF validation and route-specific rate limiters. Apple’s cross-site `POST /oauth/apple` callback is registered before the origin/CSRF middleware and validates the OAuth state cookie in its authentication handler. Google uses `GET /oauth/google`. See `middleware/originValidation.ts`, `middleware/csrfValidation.ts` and `middleware/rateLimiter.ts`.
 
-router.post('/resource', requireLogin, async (req: MulmRequest, res) => {
-  const { viewer } = req;
-
-  // Validate form
-  const result = resourceFormSchema.safeParse(req.body);
-  if (!result.success) {
-    return res.render('resource-form', {
-      viewer,
-      errors: result.error.flatten().fieldErrors,
-      formData: req.body
-    });
-  }
-
-  // Process valid data
-  const data = result.data;
-  const id = await createResource(data);
-
-  res.redirect(`/resource/${id}`);
-});
-```
-
-### HTMX Partial
-
-```typescript
-router.get('/resource/partial', requireLogin, async (req: MulmRequest, res) => {
-  const { viewer } = req;
-
-  const data = await getData();
-
-  // Render partial template (no layout)
-  res.render('partials/resource-partial', {
-    viewer,
-    data,
-    layout: false // Important: no layout for HTMX partials
-  });
-});
-```
-
-### API Endpoint (JSON)
-
-```typescript
-router.get('/api/resource/search', requireLogin, async (req: MulmRequest, res) => {
-  const query = req.query.q as string;
-
-  const results = await searchResource(query);
-
-  res.json(results);
-});
-```
-
-### Admin Route
-
-```typescript
-import { requireAdmin } from '@/middleware/auth';
-
-router.get('/admin/resource', requireAdmin, async (req: MulmRequest, res) => {
-  const { viewer } = req; // Guaranteed to be admin
-
-  const data = await getAllData();
-
-  res.render('admin/resource', {
-    viewer,
-    data
-  });
-});
-```
-
-## Route Registration
-
-Routes are registered in `src/index.ts`:
-
-```typescript
-import submissionRouter from '@/routes/submission';
-import tankRouter from '@/routes/tank';
-import accountRouter from '@/routes/account';
-import authRouter from '@/routes/auth';
-import memberRouter from '@/routes/member';
-import speciesRouter from '@/routes/species';
-import standingsRouter from '@/routes/standings';
-import typeaheadRouter from '@/routes/typeahead';
-import adminRouter from '@/routes/adminRouter';
-
-// Register routes
-app.use('/', submissionRouter);
-app.use('/', tankRouter);
-app.use('/', accountRouter);
-app.use('/', authRouter);
-app.use('/', memberRouter);
-app.use('/', speciesRouter);
-app.use('/', standingsRouter);
-app.use('/api', typeaheadRouter);
-app.use('/admin', adminRouter);
-```
-
-## Middleware
-
-Common middleware used in routes:
-
-- **`requireLogin`** - Require authenticated user (redirects to signin if not)
-- **`requireAdmin`** - Require admin role (returns 403 if not admin)
-- **`upload.single('field')`** - Handle file upload (multer middleware)
-
-See `src/middleware/` for implementation details.
+Upload handling is configured in [`api/upload.ts`](api/upload.ts). Development/test routes are guarded in `app.ts`; they are not available in production.

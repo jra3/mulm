@@ -1,262 +1,63 @@
 # Backend Architecture
 
-This directory contains the Node.js/Express backend application code.
+The Portal is the BAS single-society awards application. Read [the domain glossary](../CONTEXT.md) for vocabulary and rule ownership; the focused READMEs below describe the implementation.
 
-## Directory Structure
+## Application composition and startup
 
+[`app.ts`](app.ts) exports `createApp({ env?, config? })`, which builds the Express middleware stack and registers routes without opening a database, listening, initializing R2, or starting background jobs. Its configuration override covers composition settings only; repositories and external providers still use the process-wide configuration.
+
+[`bootstrap.ts`](bootstrap.ts) owns startup and teardown: it awaits database readiness, initializes storage and MCP, listens, and starts scheduled jobs in live production. [`index.ts`](index.ts) installs the compiled module alias, calls bootstrap and handles shutdown signals. Tests exercising HTTP routes use `createApp` with a test-owned database; importing the entry point starts the process.
+
+Database users must `await ensureReady()` from `@/db/conn` before repository operations. Tests install their disposable connection first. See [connection lifecycle and transactions](db/README.md).
+
+## Module ownership
+
+- [`species/`](species/README.md) owns the Species catalogue; import its public interface from `@/species`.
+- [`lifecycle/`](lifecycle/README.md) owns Submission state transitions, permissions and consequences; import from `@/lifecycle`.
+- [`db/`](db/README.md) contains repositories and SQLite connection/query helpers.
+- [`routes/`](routes/README.md) contains HTTP handlers and routers; [`forms/`](forms/) contains Zod schemas and form helpers.
+- [`sessions.ts`](sessions.ts) owns session cookies, session loading and request viewer typing.
+- [`programs.ts`](programs.ts), [`levelManager.ts`](levelManager.ts), [`specialtyAwards.ts`](specialtyAwards.ts) and [`specialtyAwardManager.ts`](specialtyAwardManager.ts) own point-class ladders, levels and Specialty awards.
+- [`notifications.ts`](notifications.ts) coordinates notification emails; [`services/emailService.ts`](services/emailService.ts) handles delivery. [`services/media.ts`](services/media.ts) handles submission media.
+- [`integrations/`](integrations/README.md), [`scheduled/`](scheduled/README.md) and [`mcp/`](mcp/README.md) document external providers, jobs and MCP tools.
+- [`views/`](views/README.md) describes Pug templates and HTMX conventions.
+
+Use static ES imports. Validate form data with the actual Zod schema before passing it into a domain operation; do not assert a request body into a trusted type. For example, [`routes/submission.ts`](routes/submission.ts) uses `bapForm`/`bapDraftForm` from `forms/submission.ts` and calls the lifecycle interface. It does not implement an independent approval workflow.
+
+## Sessions and authentication
+
+Import `MulmRequest` from `@/sessions`. `sessionMiddleware` loads an unexpired SQLite session and populates the optional `req.viewer`, whose fields are `id`, `display_name`, `contact_email`, and optional `is_admin`, `fish_level`, `plant_level`, `coral_level`. The session's CSRF token is exposed as `req.csrfToken` and `res.locals.csrfToken`.
+
+Member-only handlers check `req.viewer` explicitly and use `viewer.id`; see `viewAccountSettings` in [`routes/account.ts`](routes/account.ts). [`routes/adminRouter.ts`](routes/adminRouter.ts) installs `requireAdmin` from `routes/admin.ts` once for its routes (401 without a viewer, 403 for a non-admin). Do not repeat that admin-role check inside its handlers. Domain operations still enforce ownership and legal transitions.
+
+Authentication implementations are:
+
+- Password hashing: `makePasswordEntry(password)` and `checkPassword(entry, password)` in [`auth.ts`](auth.ts), using scrypt.
+- Google OAuth: [`oauth.ts`](oauth.ts).
+- Sign in with Apple: [`auth/apple.ts`](auth/apple.ts).
+- HTTP authentication handlers: [`routes/auth.ts`](routes/auth.ts).
+
+The middleware order and OAuth callback exceptions live in `app.ts`. See [routing](routes/README.md) for CSRF and request conventions.
+
+## Tests
+
+Use `createTestDatabase({ foreignKeys: "on" | "off", migrations: "latest" | number | false })` from `src/__tests__/helpers/database.ts`. It owns a disposable in-memory SQLite connection, installs it for repositories by default, and returns `{ db, cleanup, migrate }`. Always call `cleanup()` in teardown. Choose the migration cutoff and foreign-key behavior explicitly; named fixture builders create Members, committee members and Species separately.
+
+Tests sharing the process-wide connection override run serially within a process. A database can be scoped to a test or suite; it is not automatically replaced for every test. See [test databases and fixtures](__tests__/helpers/README.md) for setup examples, historical schemas and lifecycle fixtures. See [E2E testing](../e2e/README.md) for Playwright setup.
+
+```bash
+npm test              # Node test runner, NODE_ENV=test
+npm run typecheck     # Application, tests, MCP and sample configuration
+npm run lint
+npm run test:e2e      # Playwright
 ```
-src/
-├── __tests__/        # Test files and helpers
-├── auth/             # Authentication logic (password hashing, tokens, OAuth)
-├── db/               # Database layer (See src/db/README.md)
-├── forms/            # Zod schemas for form validation
-├── lifecycle/        # The Submission lifecycle (See src/lifecycle/README.md)
-├── middleware/       # Express middleware (auth, session, error handling)
-├── routes/           # Route handlers (See src/routes/README.md)
-├── services/         # Business logic (email, submissions, levels, etc.)
-├── types/            # TypeScript type definitions
-├── utils/            # Utility functions (logger, date formatting, etc.)
-├── views/            # Pug templates (See src/views/README.md)
-├── config.json       # Local config (git-ignored)
-└── index.ts          # Application entry point
-```
-
-## Code Quality Standards
-
-**CRITICAL**: Follow these rules for maintainable, performant code:
-
-### Static Imports Only
-
-- ❌ **Never use dynamic imports** - Always use static imports at the top of files
-  ```typescript
-  // WRONG
-  const { someFunction } = await import('../module');
-
-  // CORRECT
-  import { someFunction } from '../module';
-  ```
-- ❌ **Never use `require()`** in TypeScript - Use ES6 imports
-- ✅ **Static imports only** - Enables tree shaking, type checking, and better performance
-
-## Session Management
-
-- Cookie-based sessions stored in SQLite (`sessions` table)
-- `MulmRequest` type extends Express Request with typed `viewer` property
-- Session middleware automatically populates viewer from database
-- Viewer object contains user info: `{ member_id, email, first_name, last_name, role }`
-
-### Request Handling Pattern
-
-```typescript
-import { MulmRequest } from '@/types/request';
-
-router.get('/path', async (req: MulmRequest, res) => {
-  const { viewer } = req; // Typed viewer or undefined
-  if (!viewer) return res.redirect('/signin');
-
-  // Use viewer safely
-  const memberId = viewer.member_id;
-  // ...
-});
-```
-
-## Form Validation
-
-All form inputs are validated using Zod schemas defined in `src/forms/`.
-
-### Pattern
-
-```typescript
-import { submissionFormSchema } from '@/forms/submission';
-
-router.post('/submissions', async (req: MulmRequest, res) => {
-  const result = submissionFormSchema.safeParse(req.body);
-
-  if (!result.success) {
-    // Return form with errors
-    return res.render('submission-form', {
-      errors: result.error.flatten().fieldErrors,
-      formData: req.body // Preserve user input
-    });
-  }
-
-  // Process valid data
-  const data = result.data;
-  // ...
-});
-```
-
-### Best Practices
-
-- ✅ Server-side validation for all forms
-- ✅ Field-level error messages
-- ✅ Form state preservation on validation errors
-- ✅ Type-safe data after validation (Zod infers TypeScript types)
-
-## Testing Strategy
-
-Each test gets an isolated in-memory SQLite database with full schema.
-
-### Test Setup Pattern
-
-```typescript
-import { createTestDatabase, type TestDatabase } from '@/__tests__/helpers/database';
-
-let database: TestDatabase;
-beforeEach(async () => {
-  database = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
-});
-afterEach(async () => {
-  await database.cleanup();
-});
-```
-
-Request named fixture builders separately from `src/__tests__/helpers/fixtures.ts`.
-Each suite chooses its constraint mode explicitly. Global connection overrides
-require serial database tests within a process. Historical migration cutoffs and
-raw schemas are supported by the same factory; see
-[`helpers/README.md`](__tests__/helpers/README.md).
-
-## Authentication
-
-Three authentication methods supported:
-
-- **Password**: `src/auth/` (scrypt hashing)
-- **Google OAuth**: `src/oauth.ts` (OAuth 2.0 flow)
-- **Sign in with Apple**: `src/auth/apple.ts` (OAuth web flow with `form_post`; the client secret is a JWT signed with the portal key)
-
-### Password Handling
-
-```typescript
-import { hashPassword, verifyPassword } from '@/auth/password';
-
-// Hash password for storage
-const hashedPassword = await hashPassword(plainPassword);
-
-// Verify password on login
-const isValid = await verifyPassword(plainPassword, hashedPassword);
-```
-
-## Services Layer
-
-Business logic is organized in `src/services/`:
-
-- **Email**: `emailService.ts` - Sending transactional emails
-- **Submissions**: `submissionService.ts` - Submission lifecycle, status transitions
-- **Levels**: `levelService.ts` - BAP level calculations, awards
-- **Images**: `imageService.ts` - R2 storage, image processing
-- **Activity**: `activityService.ts` - Activity feed generation
-
-### Service Pattern
-
-Services contain business logic and orchestrate database operations:
-
-```typescript
-// Service function
-export async function approveSubmission(
-  submissionId: number,
-  approverId: number
-): Promise<void> {
-  // 1. Validate preconditions
-  const submission = await getSubmissionById(submissionId);
-  if (!submission) throw new Error('Submission not found');
-  if (submission.status !== 'pending_review') {
-    throw new Error('Submission not pending review');
-  }
-
-  // 2. Perform database operations
-  await withTransaction(async (db) => {
-    await updateSubmissionStatus(db, submissionId, 'approved');
-    await recordActivity(db, submissionId, 'approved', approverId);
-    await updateMemberLevel(db, submission.member_id);
-  });
-
-  // 3. Send notifications
-  await sendApprovalEmail(submission.member_id);
-}
-```
-
-## Middleware
-
-Express middleware in `src/middleware/`:
-
-- **Auth**: `auth.ts` - Require login, require admin
-- **Session**: `session.ts` - Session loading, viewer population
-- **Error**: `error.ts` - Error handling, logging
-- **Upload**: `upload.ts` - File upload handling (multer)
-
-### Common Middleware
-
-```typescript
-import { requireLogin, requireAdmin } from '@/middleware/auth';
-
-// Require authenticated user
-router.get('/protected', requireLogin, async (req, res) => {
-  // req.viewer is guaranteed to exist
-});
-
-// Require admin role
-router.get('/admin', requireAdmin, async (req, res) => {
-  // req.viewer is guaranteed to be admin
-});
-```
-
-## Utilities
-
-Common utilities in `src/utils/`:
-
-- **Logger**: `logger.ts` - Structured logging (respects NODE_ENV)
-- **Date formatting**: `dateFormat.ts` - Consistent date display (See src/views/README.md)
-- **Config**: `config.ts` - Configuration loading
-
-### Logger Usage
-
-```typescript
-import { logger } from '@/utils/logger';
-
-try {
-  // Do something
-} catch (err) {
-  logger.error('Operation failed', err);
-  throw new Error('User-friendly message');
-}
-
-logger.info('User logged in', { memberId });
-logger.warn('Rate limit approaching', { ip: req.ip });
-```
-
-Logger is automatically silenced during tests (NODE_ENV=test).
 
 ## Configuration
 
-### Development
+[`config.json.d.ts`](config.json.d.ts) exports the authoritative nested `Config` interface and the default JSON value type. Both `@/config.json` and relative `./config.json` / `../config.json` imports resolve this declaration. The required groups are `database`, `server`, `email` and `storage`; OAuth providers, external-data integrations and MCP remain optional. Consumers retain their existing defaults.
 
-Config file: `src/config.json` (git-ignored)
+Use [`config.sample.json`](config.sample.json) as the starting point for a new local `src/config.json` (git-ignored). It contains placeholder credentials and disables email. Do not overwrite an existing local configuration or commit credentials. [`__tests__/config.typecheck.ts`](__tests__/config.typecheck.ts) checks the sample's inferred JSON shape and consistent import types during `npm run typecheck`; it does not load live configuration or add runtime validation. `tsconfig.json` explicitly includes the runtime JSON so compilation still copies it to `dist/src/config.json` alongside its consumers.
 
-```json
-{
-  "databaseFile": "./db/database.db",
-  "googleClientId": "...",
-  "googleClientSecret": "...",
-  "smtpHost": "...",
-  "smtpPort": 587,
-  "r2AccountId": "...",
-  "r2AccessKeyId": "...",
-  "r2SecretAccessKey": "..."
-}
-```
+Production receives `CONFIG_JSON` as a Fly secret; [`start.sh`](../start.sh) writes `/app/src/config.json` on boot. The deployed database path is `/mnt/app-data/database/database.db`. See [infrastructure documentation](../infrastructure/README.md) for deployment details.
 
-### Production
-
-Config is delivered as the Fly secret `CONFIG_JSON` and written to `/app/src/config.json` on boot by `start.sh`.
-
-Database path must be absolute: `"/mnt/app-data/database/database.db"`
-
-File permissions: Must be 600 (owner-only) and owned by UID 1001 (nodejs user)
-
-## Further Reading
-
-- **[src/db/README.md](db/README.md)** - Database patterns, queries, transactions
-- **[src/routes/README.md](routes/README.md)** - Routing conventions, API reference
-- **[src/views/README.md](views/README.md)** - Pug templates, design system
-- **[src/lifecycle/README.md](lifecycle/README.md)** - Submission states, transitions, consequences
+For logging, import `logger` from `@/utils/logger`; it suppresses output when `NODE_ENV=test`. Date display helpers live in `utils/dateFormat.ts`.
