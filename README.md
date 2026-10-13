@@ -41,6 +41,8 @@ A web application for managing aquarium society Breeder Awards Programs (BAP), t
 - **Database backups**: Litestream continuous replication to Cloudflare R2
 - **CI/CD**: GitHub Actions
 
+App construction, startup ownership, and test teardown are documented in [docs/app-startup.md](docs/app-startup.md).
+
 ## Getting Started
 
 ### Prerequisites

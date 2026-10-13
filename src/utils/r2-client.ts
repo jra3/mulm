@@ -70,6 +70,13 @@ export function initR2() {
   return true;
 }
 
+/** Release the process-owned HTTP client on shutdown or failed startup. */
+export function closeR2(): void {
+  client?.destroy();
+  client = null;
+  config = null;
+}
+
 /**
  * Used only in testing to inject a mock S3 client
  */

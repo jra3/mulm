@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import type { Env } from "../utils/environment";
 import config from "../config.json";
 import { logger } from "../utils/logger";
 
@@ -24,11 +25,13 @@ const STATE_CHANGING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
  * is what makes same-origin POSTs work without hardcoding the deploy domain —
  * so this list is mainly for dev convenience and explicit extra origins.
  */
-export function buildAllowedOrigins(): Set<string> {
+export function buildAllowedOrigins(
+  env: Env = process.env,
+  domain = config.server.domain
+): Set<string> {
   const origins = new Set<string>();
-  const domain = config.server.domain;
 
-  if (process.env.NODE_ENV === "production") {
+  if (env.NODE_ENV === "production") {
     origins.add(`https://${domain}`);
   } else {
     // Dev/test: the app is served over plain HTTP on localhost.
@@ -40,7 +43,7 @@ export function buildAllowedOrigins(): Set<string> {
 
   // Optional comma-separated override for staging / additional deploy origins,
   // e.g. ALLOWED_ORIGINS="https://staging.bap.basny.org,https://preview.example".
-  const extra = process.env.ALLOWED_ORIGINS;
+  const extra = env.ALLOWED_ORIGINS;
   if (extra) {
     for (const entry of extra.split(",")) {
       const trimmed = entry.trim();

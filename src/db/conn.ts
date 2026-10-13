@@ -86,6 +86,21 @@ export function overrideConnection(conn: typeof readOnlyConn) {
   readiness ??= Promise.resolve();
 }
 
+/** Terminal process teardown. Test overrides remain owned by their fixture. */
+export async function closeConnections(): Promise<void> {
+  if (connectionMode === "test") return;
+  const connections = new Set([readOnlyConn, writeConn].filter(Boolean));
+  const results = await Promise.allSettled(
+    [...connections].map((connection) => connection.close())
+  );
+  const failures = results.filter((result) => result.status === "rejected");
+  if (failures.length)
+    throw new AggregateError(
+      failures.map((result): unknown => result.reason),
+      "Database teardown failed"
+    );
+}
+
 type PartialRow = Record<string, string | number | boolean | null>;
 
 type TableName =
