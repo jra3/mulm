@@ -221,3 +221,40 @@ Both servers use the same database connection as the main application:
 - Changes made via MCP are immediately visible in the web app
 - Always test with `preview: true` for destructive operations
 - Backup the database before major changes
+
+## Tool argument contracts
+
+Each core defines its Zod request schemas beside its adapters. `tools.ts` derives
+MCP discovery JSON Schema from those definitions and parses arguments before
+calling a handler, for both stdio and HTTP. Omitted argument objects mean `{}`;
+required fields still fail. Values are not coerced, and unknown keys are ignored.
+Optional values retain the existing handler defaults. Zero limits retain their
+existing per-tool meaning (for example, zero `preview_limit` returns all CSV
+rows); no new upper limits are imposed.
+
+IDs must be positive integers; row indices, pagination and age thresholds must
+be nonnegative integers. ID lists must be nonempty and contain only valid IDs.
+`skip_rows` may be empty. Import override keys are zero-based row indices;
+Species overrides contain a positive `group_id` and explicit date overrides use
+valid ISO dates. Historical CSV date normalization remains permissive, and
+historical `default_points` remains numeric rather than being restricted to the
+catalogue's present Point classes.
+
+Mutually exclusive selectors are represented by Zod unions, including in the
+advertised JSON Schema: `bulk_remove_names` takes text or IDs; `set_base_points`
+takes a single ID, an ID list, or type/class filters (the filters may be combined);
+`sync_iucn_data` takes a single ID, an ID list, `sync_missing=true`, or `days_old`.
+`sync_missing=false` remains compatible with other selectors. Updates to a
+member or Canonical name require at least one editable field. Catalogue rules
+such as Canonical name protection and Species merge invariants remain in the
+catalogue, and member login preservation remains in the member merge operation.
+
+Validation failures return `isError: true` with the existing JSON text envelope
+and `error_code: "INVALID_ARGUMENTS"`. Handler failures use
+`"TOOL_EXECUTION_ERROR"`. Successful tool and resource payloads are unchanged.
+
+`members/merge.ts` and `backfill/import.ts` return domain results, which adapters
+serialize. Backfill accepts historical rows directly and retains its own
+already-approved import semantics, separate from ordinary Submission lifecycle
+transitions. `backfill/normalization.ts` parses CSV text and normalizes dates and
+lists without server, filesystem, database or configuration access.
