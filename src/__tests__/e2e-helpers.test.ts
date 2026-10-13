@@ -1,3 +1,4 @@
+import { createTestDatabase } from "./helpers/database";
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
 
@@ -9,13 +10,13 @@ import assert from "node:assert";
  * at unit test time (~1 second) instead of E2E test time (10+ minutes in CI).
  *
  * Strategy:
- * - Setup: Use setupTestDatabase() for in-memory db + test users
+ * - Setup: Use createTestDatabase() and explicitly request test actors
  * - Call: E2E helpers (e2e/helpers/submissions.ts)
  * - Verify: Database layer methods (src/db/submissions.ts)
  * - Same conventions as all other unit tests
  */
 
-import { setupTestDatabase, teardownTestDatabase, type TestContext } from "./helpers/testHelpers";
+import { createTestActors, type TestContext } from "./helpers/fixtures";
 import { createTestSubmission, deleteSubmissionsForMember } from "../../e2e/helpers/submissions";
 import { getSubmissionById } from "@/db/submissions";
 
@@ -23,11 +24,12 @@ void describe("E2E Test Helpers", () => {
   let ctx: TestContext;
 
   beforeEach(async () => {
-    ctx = await setupTestDatabase();
+    const database = await createTestDatabase({ foreignKeys: "off", migrations: "latest" });
+    ctx = { ...database, ...(await createTestActors(database.db)) };
   });
 
   afterEach(async () => {
-    await teardownTestDatabase(ctx);
+    await ctx.cleanup();
   });
 
   void describe("createTestSubmission() - Fish", () => {

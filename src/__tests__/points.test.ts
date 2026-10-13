@@ -1,3 +1,4 @@
+import { createTestDatabase } from "./helpers/database";
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
 import {
@@ -15,7 +16,7 @@ import {
   type PointsRow,
 } from "../points";
 import type { ProgramType } from "../programs";
-import { setupTestDatabase, teardownTestDatabase, type TestContext } from "./helpers/testHelpers";
+import { createTestActors, type TestContext } from "./helpers/fixtures";
 
 /**
  * The Points rule: base + article + (first-time × 5) + (CARES × 5) +
@@ -514,11 +515,12 @@ void describe("Points - SQL fragment agrees with the TypeScript function", () =>
   let ctx: TestContext;
 
   beforeEach(async () => {
-    ctx = await setupTestDatabase();
+    const database = await createTestDatabase({ foreignKeys: "off", migrations: "latest" });
+    ctx = { ...database, ...(await createTestActors(database.db)) };
   });
 
   afterEach(async () => {
-    await teardownTestDatabase(ctx);
+    await ctx.cleanup();
   });
 
   /** Inserts every table case, preserving order, and returns the row ids. */

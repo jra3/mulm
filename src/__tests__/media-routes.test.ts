@@ -7,7 +7,8 @@ import sharp from "sharp";
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { overrideR2Client } from "../utils/r2-client";
 import { logger } from "../utils/logger";
-import { setupTestDatabase, createTestSubmission, type TestDatabase } from "./testDbHelper.helper";
+import { createTestDatabase, type TestDatabase } from "./helpers/database";
+import { submissionInState } from "./helpers/lifecycleFixtures";
 import { createMember } from "../db/members";
 import { addToCollection } from "../db/collection";
 import type { MulmRequest } from "../sessions";
@@ -30,9 +31,9 @@ void describe("image routes with real database and fake external storage", () =>
   let onPut: (key: string) => Promise<void>;
 
   beforeEach(async () => {
-    testDb = await setupTestDatabase();
+    testDb = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
     memberId = await createMember("media@example.test", "Media member", {}, true);
-    submissionId = await createTestSubmission(testDb.db, memberId);
+    submissionId = await submissionInState(testDb.db, "pendingWitness", { memberId });
     const species = await testDb.db.get<{ species_id: number }>(
       "SELECT species_id FROM submissions WHERE id = ?",
       submissionId

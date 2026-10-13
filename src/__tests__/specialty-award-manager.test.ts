@@ -1,31 +1,24 @@
+import { createTestDatabase, type TestDatabase } from "./helpers/database";
 /**
  * specialtyAwardManager over Submissions bound to their Species by species_id.
  */
 
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
-import { Database, open } from "sqlite";
-import sqlite3 from "sqlite3";
-import { overrideConnection } from "../db/conn";
+import { Database } from "sqlite";
 import { createSpecies } from "@/species";
 import { checkAndGrantSpecialtyAwards } from "../specialtyAwardManager";
 
 void describe("SpecialtyAwardManager", () => {
   let db: Database;
+  let database: TestDatabase;
   let testGroupId: number;
   let memberId: number;
 
   beforeEach(async () => {
-    db = await open({
-      filename: ":memory:",
-      driver: sqlite3.Database,
-    });
+    database = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
+    db = database.db;
 
-    await db.exec("PRAGMA foreign_keys = ON;");
-    await db.migrate({ migrationsPath: "./db/migrations" });
-    overrideConnection(db);
-
-    // Create test species group
     testGroupId = await createSpecies({
       programClass: "Anabantoids",
       speciesType: "Fish",
@@ -44,13 +37,12 @@ void describe("SpecialtyAwardManager", () => {
 
   afterEach(async () => {
     if (db) {
-      await db.close();
+      await database.cleanup();
     }
   });
 
   void describe("getSubmissionsWithGenus", () => {
     void test("should read a bound Submission", async () => {
-
       await db.run(
         `
         INSERT INTO submissions (
@@ -71,7 +63,6 @@ void describe("SpecialtyAwardManager", () => {
 
   void describe("getSubmissionsWithGenus, another spelling", () => {
     void test("should read a bound Submission whatever the member typed", async () => {
-
       await db.run(
         `
         INSERT INTO submissions (
@@ -92,7 +83,6 @@ void describe("SpecialtyAwardManager", () => {
 
   void describe("Several Submissions", () => {
     void test("should handle several Submissions of one Species", async () => {
-
       await db.run(
         `
         INSERT INTO submissions (
@@ -124,7 +114,6 @@ void describe("SpecialtyAwardManager", () => {
 
   void describe("Filtering", () => {
     void test("should only include approved submissions", async () => {
-
       // Draft submission (not approved)
       await db.run(
         `
@@ -144,7 +133,6 @@ void describe("SpecialtyAwardManager", () => {
     });
 
     void test("should only include submissions that are submitted", async () => {
-
       // Unsubmitted submission
       await db.run(
         `

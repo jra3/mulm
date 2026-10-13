@@ -4,7 +4,7 @@ import type { MemberRecord } from "../../db/members";
 import type { Caller, Notifier, PointsCorrection, SubmissionState, WitnessedFacts, WitnessPoints } from "../../lifecycle";
 import { approve, previewApproval, setNotifier } from "../../lifecycle";
 import { countSubmissionsOfSpecies } from "../../species";
-import { createTestSubmission, ensureGuppySpecies, type CreateSubmissionOptions } from "./testHelpers";
+import { createRawSubmissionFixture, ensureGuppySpecies, type CreateSubmissionOptions } from "./fixtures";
 import type { Database } from "sqlite";
 
 /**
@@ -41,17 +41,17 @@ export async function submissionInState(
 
   switch (state) {
     case "draft":
-      return createTestSubmission(db, { ...base, submitted: false, witnessStatus: null });
+      return createRawSubmissionFixture(db, { ...base, submitted: false, witnessStatus: null });
 
     case "pendingWitness":
-      return createTestSubmission(db, { ...base, submitted: true, witnessStatus: "pending" });
+      return createRawSubmissionFixture(db, { ...base, submitted: true, witnessStatus: "pending" });
 
     case "waitingPeriod":
     case "inApprovalQueue":
-      return createTestSubmission(db, { ...base, submitted: true, witnessStatus: "confirmed" });
+      return createRawSubmissionFixture(db, { ...base, submitted: true, witnessStatus: "confirmed" });
 
     case "approved":
-      return createTestSubmission(db, {
+      return createRawSubmissionFixture(db, {
         ...base,
         submitted: true,
         witnessStatus: "confirmed",

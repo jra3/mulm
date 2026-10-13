@@ -1,14 +1,10 @@
+import { createTestDatabase, type TestDatabase } from "./helpers/database";
 /**
  * Name text edges (#423): search treats `%` and `_` as the characters they
  * are, and a Canonical name differing only in case is the same Canonical name.
  */
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
-import { Database, open } from "sqlite";
-import sqlite3 from "sqlite3";
-import fs from "fs";
-import { migrationsUpTo } from "./helpers/migrations";
-import { overrideConnection } from "../db/conn";
 import {
   createSpecies,
   addName,
@@ -20,7 +16,7 @@ import {
   CatalogueRefusal,
 } from "@/species";
 
-let db: Database;
+let database: TestDatabase;
 
 async function createTestSpecies(genus: string, epithet: string, common?: string): Promise<number> {
   const id = await createSpecies({
@@ -34,14 +30,12 @@ async function createTestSpecies(genus: string, epithet: string, common?: string
 }
 
 beforeEach(async () => {
-  db = await open({ filename: ":memory:", driver: sqlite3.Database });
-  await db.exec("PRAGMA foreign_keys = ON;");
-  await db.migrate({ migrationsPath: "./db/migrations" });
-  overrideConnection(db);
+  database = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
+
 });
 
 afterEach(async () => {
-  await db.close();
+  await database.cleanup();
 });
 
 void describe("search matches % and _ literally", () => {
@@ -112,10 +106,13 @@ void describe("a Canonical name is unique whatever its case", () => {
 
 void describe("migration 060", () => {
   void test("refuses to run while two Species share a Canonical name up to case", async () => {
-    const before060 = migrationsUpTo(59);
-    const raw = await open({ filename: ":memory:", driver: sqlite3.Database });
+    const rawDatabase = await createTestDatabase({
+      foreignKeys: "off",
+      migrations: 59,
+      installConnection: false,
+    });
+    const raw = rawDatabase.db;
     try {
-      await raw.migrate({ migrationsPath: before060 });
       for (const genus of ["Testilia", "testilia"]) {
         await raw.run(
           `INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name)
@@ -125,7 +122,7 @@ void describe("migration 060", () => {
       }
 
       await assert.rejects(
-        () => raw.migrate({ migrationsPath: "./db/migrations" }),
+        () => rawDatabase.migrate("latest"),
         /UNIQUE constraint failed/
       );
       const applied = await raw.get<{ id: number }>("SELECT MAX(id) AS id FROM migrations");
@@ -135,8 +132,7 @@ void describe("migration 060", () => {
       );
       assert.strictEqual(index, undefined);
     } finally {
-      await raw.close();
-      fs.rmSync(before060, { recursive: true, force: true });
+      await rawDatabase.cleanup();
     }
   });
 });

@@ -13,8 +13,8 @@ import { getSubmissionById } from "@/db/submissions";
 import { createSpecies, resolveSpecies } from "@/species";
 import { confirmWitness, resetNotifier, WITNESS_RESET_NOTE } from "@/lifecycle";
 import { addNote, getNotesForSubmission } from "@/db/submission_notes";
-import { setupTestDatabase, type TestDatabase } from "./testDbHelper.helper";
-import { createTestSubmission as createUnboundSubmission, ensureGuppySpecies } from "./helpers/testHelpers";
+import { createTestDatabase, type TestDatabase } from "./helpers/database";
+import { createRawSubmissionFixture as createUnboundSubmission, ensureGuppySpecies } from "./helpers/fixtures";
 import { recordNotifications, submissionInState, witnessPoints } from "./helpers/lifecycleFixtures";
 
 /**
@@ -36,7 +36,7 @@ function appWith(mount: (app: express.Express) => void, viewer?: MulmRequest["vi
 void describe("Species detail errors", () => {
   let testDb: TestDatabase;
   beforeEach(async () => {
-    testDb = await setupTestDatabase();
+    testDb = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
   });
   afterEach(async () => {
     await testDb.cleanup();
@@ -64,7 +64,7 @@ void describe("Species detail errors", () => {
 void describe("Send Welcome", () => {
   let testDb: TestDatabase;
   beforeEach(async () => {
-    testDb = await setupTestDatabase();
+    testDb = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
   });
   afterEach(async () => {
     await testDb.cleanup();
@@ -111,7 +111,7 @@ void describe("Record new species step", () => {
   let submissionId: number;
 
   beforeEach(async () => {
-    testDb = await setupTestDatabase();
+    testDb = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
     const memberId = await createMember("breeder@example.com", "Dan Wu");
     const witnessId = await createMember("witness@example.com", "Jane Ortiz");
     witness = { id: witnessId, display_name: "Jane Ortiz", contact_email: "witness@example.com", is_admin: true };
@@ -241,7 +241,7 @@ void describe("A reset Submission names its original witness on the panel", () =
   let ownerId: number;
 
   beforeEach(async () => {
-    testDb = await setupTestDatabase();
+    testDb = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
     ownerId = await createMember("breeder@example.com", "Dan Wu");
     committeeId = await createMember("witness@example.com", "Jane Ortiz");
     committee = { id: committeeId, display_name: "Jane Ortiz", contact_email: "witness@example.com", is_admin: true };
@@ -284,7 +284,7 @@ void describe("Pending points are the owner's alone", () => {
   let pendingId: number;
 
   beforeEach(async () => {
-    testDb = await setupTestDatabase();
+    testDb = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
     recordNotifications();
     ownerId = await createMember("breeder@example.com", "Dan Wu");
     const committeeId = await createMember("witness@example.com", "Jane Ortiz");
@@ -388,7 +388,7 @@ void describe("Approval queue and the one button", () => {
   let readyId: number;
 
   beforeEach(async () => {
-    testDb = await setupTestDatabase();
+    testDb = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
     recordNotifications();
     ownerId = await createMember("breeder@example.com", "Dan Wu");
     committeeId = await createMember("witness@example.com", "Jane Ortiz");
@@ -545,7 +545,7 @@ void describe("The committee corrects Species and points", () => {
   let witnessedId: number;
 
   beforeEach(async () => {
-    testDb = await setupTestDatabase();
+    testDb = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
     recordNotifications();
     ownerId = await createMember("breeder@example.com", "Dan Wu");
     committeeId = await createMember("witness@example.com", "Jane Ortiz");
@@ -755,7 +755,7 @@ void describe("The Edit Approved dialog edits details only", () => {
   let sent: ReturnType<typeof recordNotifications>;
 
   beforeEach(async () => {
-    testDb = await setupTestDatabase();
+    testDb = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
     sent = recordNotifications();
     ownerId = await createMember("breeder@example.com", "Dan Wu");
     committeeId = await createMember("witness@example.com", "Jane Ortiz");
@@ -911,7 +911,7 @@ void describe("The witness confirms from the panel", () => {
   let guppy: number;
 
   beforeEach(async () => {
-    testDb = await setupTestDatabase();
+    testDb = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
     recordNotifications();
     ownerId = await createMember("breeder@example.com", "Dan Wu");
     committeeId = await createMember("witness@example.com", "Jane Ortiz");

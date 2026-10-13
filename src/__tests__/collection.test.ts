@@ -1,8 +1,7 @@
+import { createTestDatabase, type TestDatabase } from "./helpers/database";
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
-import { Database, open } from "sqlite";
-import sqlite3 from "sqlite3";
-import { overrideConnection } from "../db/conn";
+import { Database } from "sqlite";
 import {
   getCollectionForMember,
   addToCollection,
@@ -19,6 +18,7 @@ import type { ImageMetadata } from "../utils/r2-client";
 
 void describe("Species Collection Database Module", () => {
   let db: Database;
+  let database: TestDatabase;
   let memberId1: number;
   let memberId2: number;
   let speciesId1: number;
@@ -27,16 +27,9 @@ void describe("Species Collection Database Module", () => {
 
   beforeEach(async () => {
     // Set up in-memory database
-    db = await open({
-      filename: ":memory:",
-      driver: sqlite3.Database,
-    });
+    database = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
+    db = database.db;
 
-    await db.exec("PRAGMA foreign_keys = ON;");
-    await db.migrate({ migrationsPath: "./db/migrations" });
-    overrideConnection(db);
-
-    // Create test members
     const member1 = await db.run(
       "INSERT INTO members (display_name, contact_email) VALUES (?, ?)",
       ["Test User 1", "test1@example.com"]
@@ -92,7 +85,7 @@ void describe("Species Collection Database Module", () => {
   });
 
   afterEach(async () => {
-    await db.close();
+    await database.cleanup();
   });
 
   void describe("addToCollection", () => {

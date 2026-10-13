@@ -1,3 +1,4 @@
+import { createTestDatabase, type TestDatabase } from "./helpers/database";
 /**
  * Migration 057 (ADR-0002): the Canonical name becomes a flagged scientific
  * Name. The database is migrated up to 056, seeded in that shape with raw SQL
@@ -7,16 +8,12 @@
  */
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
-import { Database, open } from "sqlite";
-import sqlite3 from "sqlite3";
-import fs from "fs";
-import { allMigrations, migrationsUpTo } from "./helpers/migrations";
+import { Database } from "sqlite";
 
 const FLAG_MIGRATION = 57;
 
 let db: Database;
-let before057: string;
-let upTo057: string;
+let database: TestDatabase;
 
 async function species(genus: string, epithet: string, scientific: string[] = []): Promise<number> {
   const { lastID } = await db.run(
@@ -43,16 +40,12 @@ async function scientificNames(groupId: number) {
 
 void describe("Migration 057: Canonical name as a flagged scientific Name", () => {
   beforeEach(async () => {
-    before057 = migrationsUpTo(FLAG_MIGRATION - 1);
-    upTo057 = migrationsUpTo(FLAG_MIGRATION);
-    db = await open({ filename: ":memory:", driver: sqlite3.Database });
-    await db.exec("PRAGMA foreign_keys = ON;");
-    await db.migrate({ migrationsPath: before057 });
+    database = await createTestDatabase({ foreignKeys: "on", migrations: FLAG_MIGRATION - 1 });
+    db = database.db;
   });
 
   afterEach(async () => {
-    await db.close();
-    for (const dir of [before057, upTo057]) fs.rmSync(dir, { recursive: true, force: true });
+    await database.cleanup();
   });
 
   void test("gives every Species exactly one flagged scientific Name equal to its cached columns", async () => {
@@ -79,7 +72,7 @@ void describe("Migration 057: Canonical name as a flagged scientific Name", () =
     const before = await db.get<{ n: number }>("SELECT COUNT(*) AS n FROM species_scientific_name");
 
     // Up to 057 only: 059 drops the Submission's Name keys this test reads.
-    await db.migrate({ migrationsPath: upTo057 });
+    await database.migrate(FLAG_MIGRATION);
 
     const flaggedPerSpecies = await db.all<Array<{ group_id: number; flagged: number; matches: number }>>(
       `SELECT g.group_id,
@@ -156,7 +149,7 @@ void describe("Migration 057: Canonical name as a flagged scientific Name", () =
 
   void test("the index refuses a second flagged Name for a Species", async () => {
     const id = await species("Indexus", "indexus");
-    await db.migrate({ migrationsPath: allMigrations });
+    await database.migrate("latest");
 
     await assert.rejects(
       () =>
@@ -173,8 +166,8 @@ void describe("Migration 057: Canonical name as a flagged scientific Name", () =
 
   void test("rolls back: the flag and index go, the Names stay", async () => {
     const id = await species("Rollus", "backus");
-    await db.migrate({ migrationsPath: allMigrations });
-    await db.migrate({ migrationsPath: before057 });
+    await database.migrate("latest");
+    await database.migrate(FLAG_MIGRATION - 1);
 
     const columns = await db.all<Array<{ name: string }>>("PRAGMA table_info(species_scientific_name)");
     assert.ok(!columns.some((c) => c.name === "is_canonical"));

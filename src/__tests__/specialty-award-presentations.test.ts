@@ -1,26 +1,26 @@
+import { createTestDatabase, type TestDatabase } from "./helpers/database";
 import { afterEach, beforeEach, describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { open, type Database } from "sqlite";
-import sqlite3 from "sqlite3";
-import { overrideConnection } from "@/db/conn";
+import { type Database } from "sqlite";
 import { getSpecialtyAwardProgress as publicProgress, grantAward } from "@/db/members";
 import { getSpecialtyAwardProgress as accountProgress } from "@/specialtyAwardManager";
 
 void describe("Specialty Award page presentation contracts", () => {
   let db: Database;
+  let database: TestDatabase;
   let memberId: number;
 
   beforeEach(async () => {
-    db = await open({ filename: ":memory:", driver: sqlite3.Database });
-    await db.migrate({ migrationsPath: "./db/migrations" });
-    overrideConnection(db);
+    database = await createTestDatabase({ foreignKeys: "off", migrations: "latest" });
+    db = database.db;
+
     const member = await db.run(
       "INSERT INTO members (display_name, contact_email) VALUES ('Progress', 'progress@example.com')"
     );
     memberId = member.lastID!;
   });
   afterEach(async () => {
-    await db.close();
+    await database.cleanup();
   });
 
   async function submissions(speciesClass: string, count: number) {

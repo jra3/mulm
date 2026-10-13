@@ -10,7 +10,7 @@ import * as species from "@/routes/species";
 import collectionRouter from "@/routes/collection";
 import { canSeeCaresRegistry } from "@/caresRegistry";
 import { createMember } from "@/db/members";
-import { setupTestDatabase, type TestDatabase } from "./testDbHelper.helper";
+import { createTestDatabase, type TestDatabase } from "./helpers/database";
 
 /**
  * The CARES registry is in development, so only admins see it. CARES species
@@ -42,7 +42,7 @@ void describe("CARES registry visibility", () => {
   let viewers: Record<"anonymous" | "member" | "admin", MulmRequest["viewer"]>;
 
   beforeEach(async () => {
-    testDb = await setupTestDatabase();
+    testDb = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
     const db = testDb.db;
     keeperId = await createMember("keeper@example.com", "Keeper");
     const adminId = await createMember("admin@example.com", "Admin", {}, true);

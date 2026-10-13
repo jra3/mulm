@@ -22,7 +22,7 @@ import {
 import { setOAuthStateCookie, clearOAuthStateCookie, beginOAuthFlow, takeOAuthLinkMember } from "@/oauth";
 import { createAppleOAuthHandler } from "@/routes/auth";
 import { query } from "@/db/conn";
-import { setupTestDatabase, type TestDatabase } from "./testDbHelper.helper";
+import { createTestDatabase, type TestDatabase } from "./helpers/database";
 import { createMember, getAppleAccountByMemberId, getMember, getMemberByEmail } from "@/db/members";
 
 let cfg: AppleConfig;
@@ -184,7 +184,7 @@ void describe("Apple member resolution", () => {
   let testDb: TestDatabase;
 
   beforeEach(async () => {
-    testDb = await setupTestDatabase();
+    testDb = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
   });
   afterEach(async () => {
     await testDb.cleanup();
@@ -250,7 +250,7 @@ void describe("Apple member resolution", () => {
 void describe("Apple callback without the session cookie", () => {
   let testDb: TestDatabase;
   beforeEach(async () => {
-    testDb = await setupTestDatabase();
+    testDb = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
   });
   afterEach(async () => {
     await testDb.cleanup();

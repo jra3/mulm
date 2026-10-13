@@ -1,3 +1,4 @@
+import { createTestDatabase } from "../database";
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { setTimeout } from "node:timers/promises";
@@ -6,15 +7,13 @@ import { open } from "sqlite";
 import config from "../../../config.json";
 import { db, ensureReady, overrideConnection, readOnlyConn, writeConn } from "../../../db/conn";
 import * as catalogue from "../../../species";
-import * as fixtures from "../testHelpers";
-import * as legacyFixtures from "../../testDbHelper.helper";
+import * as fixtures from "../fixtures";
 import { opened, closed, migrations } from "./preload";
 
 async function main() {
   // Referencing imported values prevents transpilers from discarding imports.
   assert.ok(catalogue.findSpeciesById);
-  assert.ok(fixtures.setupTestDatabase);
-  assert.ok(legacyFixtures.setupTestDatabase);
+  assert.ok(fixtures.createTestMember);
   await setTimeout(30);
   assert.equal(opened.length, 0, "imports must never open a database");
   assert.equal(existsSync(config.database.file), false);
@@ -23,7 +22,7 @@ async function main() {
   const scenario = process.env.DB_SCENARIO;
   if (scenario === "imports") return;
   if (scenario === "override") {
-    const fixture = await fixtures.setupTestDatabase();
+    const fixture = await createTestDatabase({ foreignKeys: "off", migrations: "latest" });
     overrideConnection(fixture.db);
     const opensBeforeReady = opened.length;
     await Promise.all([ensureReady(), ensureReady()]);
@@ -31,7 +30,7 @@ async function main() {
     assert.equal(db(true), fixture.db);
     assert.equal(opened.length, opensBeforeReady);
     assert.equal(existsSync(config.database.file), false);
-    await fixtures.teardownTestDatabase(fixture);
+    await fixture.cleanup();
     return;
   }
   if (scenario === "read-only" || scenario === "read-only-missing") {

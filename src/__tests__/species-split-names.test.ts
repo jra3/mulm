@@ -1,25 +1,18 @@
+import { createTestDatabase, type TestDatabase } from "./helpers/database";
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
-import { Database, open } from "sqlite";
-import sqlite3 from "sqlite3";
-import { overrideConnection } from "../db/conn";
+import { Database } from "sqlite";
 import { listNames, addName, removeName, updateName } from "@/species";
 
 void describe("Species Split Name Schema CRUD", () => {
   let db: Database;
+  let database: TestDatabase;
   let testGroupId: number;
 
   beforeEach(async () => {
-    db = await open({
-      filename: ":memory:",
-      driver: sqlite3.Database,
-    });
+    database = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
+    db = database.db;
 
-    await db.exec("PRAGMA foreign_keys = ON;");
-    await db.migrate({ migrationsPath: "./db/migrations" });
-    overrideConnection(db);
-
-    // Create test species group
     const result = await db.run(`
       INSERT INTO species_name_group (program_class, species_type, canonical_genus, canonical_species_name)
       VALUES ('Livebearers', 'Fish', 'Testicus', 'splitus')
@@ -46,7 +39,7 @@ void describe("Species Split Name Schema CRUD", () => {
 
   afterEach(async () => {
     if (db) {
-      await db.close();
+      await database.cleanup();
     }
   });
 

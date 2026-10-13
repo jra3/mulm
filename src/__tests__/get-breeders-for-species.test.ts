@@ -1,3 +1,4 @@
+import { createTestDatabase, type TestDatabase } from "./helpers/database";
 /**
  * getBreedersForSpecies: the members with approved Submissions bound to a
  * Species, through the Submission's species_id.
@@ -5,9 +6,7 @@
 
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
-import { Database, open } from "sqlite";
-import sqlite3 from "sqlite3";
-import { overrideConnection } from "../db/conn";
+import { Database } from "sqlite";
 import {
   getBreedersForSpecies,
   createSpecies,
@@ -15,21 +14,15 @@ import {
 
 void describe("getBreedersForSpecies", () => {
   let db: Database;
+  let database: TestDatabase;
   let testGroupId: number;
   let member1Id: number;
   let member2Id: number;
 
   beforeEach(async () => {
-    db = await open({
-      filename: ":memory:",
-      driver: sqlite3.Database,
-    });
+    database = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
+    db = database.db;
 
-    await db.exec("PRAGMA foreign_keys = ON;");
-    await db.migrate({ migrationsPath: "./db/migrations" });
-    overrideConnection(db);
-
-    // Create test species group
     testGroupId = await createSpecies({
       programClass: "Test Class",
       speciesType: "Fish",
@@ -54,13 +47,12 @@ void describe("getBreedersForSpecies", () => {
 
   afterEach(async () => {
     if (db) {
-      await db.close();
+      await database.cleanup();
     }
   });
 
   void describe("Bound Submissions", () => {
     void test("should find breeders of a bound Submission", async () => {
-
       await db.run(
         `
         INSERT INTO submissions (
@@ -82,7 +74,6 @@ void describe("getBreedersForSpecies", () => {
 
   void describe("A second bound Submission", () => {
     void test("should find breeders whatever spelling the member used", async () => {
-
       await db.run(
         `
         INSERT INTO submissions (
@@ -104,7 +95,6 @@ void describe("getBreedersForSpecies", () => {
 
   void describe("Several breeders", () => {
     void test("should find each breeder of the Species", async () => {
-
       // Member 1: common_name submission
       await db.run(
         `
@@ -144,7 +134,6 @@ void describe("getBreedersForSpecies", () => {
 
   void describe("Filtering and aggregation", () => {
     void test("should only count approved submissions", async () => {
-
       // Approved submission
       await db.run(
         `
@@ -182,7 +171,6 @@ void describe("getBreedersForSpecies", () => {
     });
 
     void test("should sort by breed_count DESC", async () => {
-
       // Member 1: 1 breed
       await db.run(
         `
@@ -224,7 +212,6 @@ void describe("getBreedersForSpecies", () => {
 
   void describe("Return value structure", () => {
     void test("should include all required fields", async () => {
-
       await db.run(
         `
         INSERT INTO submissions (
@@ -255,7 +242,6 @@ void describe("getBreedersForSpecies", () => {
     });
 
     void test("should parse submissions array correctly", async () => {
-
       const submissionResult = await db.run(
         `
         INSERT INTO submissions (
@@ -283,7 +269,6 @@ void describe("getBreedersForSpecies", () => {
 
   void describe("Date tracking", () => {
     void test("should track first and latest breed dates correctly", async () => {
-
       await db.run(
         `
         INSERT INTO submissions (

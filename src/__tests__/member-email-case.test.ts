@@ -1,3 +1,4 @@
+import { createTestDatabase, type TestDatabase } from "./helpers/database";
 /**
  * An email address is the same address whatever its case. Members are found by
  * email at login, password reset, signup and on a first Google login; a case
@@ -6,27 +7,22 @@
  */
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
-import { Database, open } from "sqlite";
-import sqlite3 from "sqlite3";
-import fs from "fs";
-import { overrideConnection } from "../db/conn";
+import { Database } from "sqlite";
 import { createMember, getMemberByEmail } from "../db/members";
-import { migrationsUpTo } from "./helpers/migrations";
 
 const EMAIL_NOCASE_MIGRATION = 61;
 
 void describe("member email", () => {
   let db: Database;
+  let database: TestDatabase;
 
   beforeEach(async () => {
-    db = await open({ filename: ":memory:", driver: sqlite3.Database });
-    await db.exec("PRAGMA foreign_keys = ON;");
-    await db.migrate({ migrationsPath: "./db/migrations" });
-    overrideConnection(db);
+    database = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
+    db = database.db;
   });
 
   afterEach(async () => {
-    await db.close();
+    await database.cleanup();
   });
 
   void test("finds the member whatever the case of the address", async () => {
@@ -57,22 +53,24 @@ void describe("member email", () => {
 
 void describe("migration 061", () => {
   void test("refuses to run while two members share an address up to case", async () => {
-    const before061 = migrationsUpTo(EMAIL_NOCASE_MIGRATION - 1);
-    const raw = await open({ filename: ":memory:", driver: sqlite3.Database });
+    const rawDatabase = await createTestDatabase({
+      foreignKeys: "off",
+      migrations: EMAIL_NOCASE_MIGRATION - 1,
+      installConnection: false,
+    });
+    const raw = rawDatabase.db;
     try {
-      await raw.migrate({ migrationsPath: before061 });
       await raw.run("INSERT INTO members (display_name, contact_email) VALUES ('A', 'Jane@example.com')");
       await raw.run("INSERT INTO members (display_name, contact_email) VALUES ('B', 'jane@example.com')");
 
       await assert.rejects(
-        () => raw.migrate({ migrationsPath: "./db/migrations" }),
+        () => rawDatabase.migrate("latest"),
         /UNIQUE constraint failed/
       );
       const applied = await raw.get<{ id: number }>("SELECT MAX(id) AS id FROM migrations");
       assert.strictEqual(applied!.id, EMAIL_NOCASE_MIGRATION - 1, "061 is not recorded as applied");
     } finally {
-      await raw.close();
-      fs.rmSync(before061, { recursive: true, force: true });
+      await rawDatabase.cleanup();
     }
   });
 });

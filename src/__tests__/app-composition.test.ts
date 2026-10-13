@@ -6,7 +6,7 @@ import request from "supertest";
 import { createApp } from "../app";
 import { getAppleConfig } from "../auth/apple";
 import { createMember } from "../db/members";
-import { setupTestDatabase, type TestDatabase } from "./testDbHelper.helper";
+import { createTestDatabase, type TestDatabase } from "./helpers/database";
 
 void test("factory and bootstrap imports and app construction need no initialized services and exit naturally", () => {
   const output = execFileSync(
@@ -33,7 +33,7 @@ void describe("production app composition with SQLite", () => {
   const email = "composition@example.test";
   const password = "Good test password 42!";
   beforeEach(async () => {
-    fixture = await setupTestDatabase();
+    fixture = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
     memberId = await createMember(email, "Composition Member", { password });
   });
   afterEach(async () => fixture.cleanup());

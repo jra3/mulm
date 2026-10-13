@@ -1,3 +1,4 @@
+import { createTestDatabase, type TestDatabase } from "./helpers/database";
 /**
  * Merge and delete account for everything else that points at a Species
  * (#420): a member's collection, CARES registrations, articles and fry shares, images,
@@ -10,9 +11,7 @@
  */
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
-import { Database, open } from "sqlite";
-import sqlite3 from "sqlite3";
-import { overrideConnection } from "../db/conn";
+import { Database } from "sqlite";
 import { createMember } from "../db/members";
 import { speciesReferenceTables } from "../species/references";
 import {
@@ -24,6 +23,7 @@ import {
 } from "@/species";
 
 let db: Database;
+let database: TestDatabase;
 let alice: number;
 let bob: number;
 
@@ -146,16 +146,15 @@ const none = {
 };
 
 beforeEach(async () => {
-  db = await open({ filename: ":memory:", driver: sqlite3.Database });
-  await db.exec("PRAGMA foreign_keys = ON;");
-  await db.migrate({ migrationsPath: "./db/migrations" });
-  overrideConnection(db);
+  database = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
+  db = database.db;
+
   alice = await createMember("alice@example.com", "Alice");
   bob = await createMember("bob@example.com", "Bob");
 });
 
 afterEach(async () => {
-  await db.close();
+  await database.cleanup();
 });
 
 void describe("merge", () => {

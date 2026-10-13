@@ -1,17 +1,17 @@
+import { createTestDatabase } from "./database";
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
 import {
-  setupTestDatabase,
-  teardownTestDatabase,
-  createTestSubmission,
+  createTestActors,
+  createRawSubmissionFixture,
   createTestMember,
   assertSubmissionState,
   mockApprovalData,
   mockSpeciesId,
   type TestContext,
-} from "./testHelpers";
+} from "./fixtures";
 import { getSubmissionById } from "../../db/submissions";
-import { approveSubmissionFixture } from "./testHelpers";
+import { approveSubmissionFixture } from "./fixtures";
 
 /**
  * Example test file demonstrating the usage of test helpers
@@ -28,11 +28,12 @@ void describe("Example Test Using Helpers", () => {
 
   beforeEach(async () => {
     // Set up database with 2 admins and 1 member
-    ctx = await setupTestDatabase({ adminCount: 2, memberCount: 1 });
+    const database = await createTestDatabase({ foreignKeys: "off", migrations: "latest" });
+    ctx = { ...database, ...(await createTestActors(database.db, { adminCount: 2, memberCount: 1 })) };
   });
 
   afterEach(async () => {
-    await teardownTestDatabase(ctx);
+    await ctx.cleanup();
   });
 
   void describe("Database Setup", () => {
@@ -48,7 +49,7 @@ void describe("Example Test Using Helpers", () => {
 
   void describe("Submission Fixtures", () => {
     void test("should create draft submission", async () => {
-      const submissionId = await createTestSubmission(ctx.db, {
+      const submissionId = await createRawSubmissionFixture(ctx.db, {
         memberId: ctx.member.id,
       });
 
@@ -63,7 +64,7 @@ void describe("Example Test Using Helpers", () => {
     });
 
     void test("should create submitted submission", async () => {
-      const submissionId = await createTestSubmission(ctx.db, {
+      const submissionId = await createRawSubmissionFixture(ctx.db, {
         memberId: ctx.member.id,
         submitted: true,
       });
@@ -77,7 +78,7 @@ void describe("Example Test Using Helpers", () => {
     });
 
     void test("should create witnessed submission", async () => {
-      const submissionId = await createTestSubmission(ctx.db, {
+      const submissionId = await createRawSubmissionFixture(ctx.db, {
         memberId: ctx.member.id,
         submitted: true,
         witnessStatus: "confirmed",
@@ -94,7 +95,7 @@ void describe("Example Test Using Helpers", () => {
     });
 
     void test("should create approved submission", async () => {
-      const submissionId = await createTestSubmission(ctx.db, {
+      const submissionId = await createRawSubmissionFixture(ctx.db, {
         memberId: ctx.member.id,
         submitted: true,
         witnessStatus: "confirmed",
@@ -116,7 +117,7 @@ void describe("Example Test Using Helpers", () => {
     });
 
     void test("should create submission with custom species", async () => {
-      const submissionId = await createTestSubmission(ctx.db, {
+      const submissionId = await createRawSubmissionFixture(ctx.db, {
         memberId: ctx.member.id,
         speciesType: "Plant",
         speciesClass: "Aquatic Plants",
@@ -148,7 +149,7 @@ void describe("Example Test Using Helpers", () => {
 
   void describe("Integration with Real Functions", () => {
     void test("should work with real approval function", async () => {
-      const submissionId = await createTestSubmission(ctx.db, {
+      const submissionId = await createRawSubmissionFixture(ctx.db, {
         memberId: ctx.member.id,
         submitted: true,
         witnessStatus: "confirmed",

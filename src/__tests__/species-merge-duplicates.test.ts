@@ -1,25 +1,22 @@
+import { createTestDatabase, type TestDatabase } from "./helpers/database";
 /**
  * Tests for species merge function with duplicate synonym handling
  */
 
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
-import { open, Database } from "sqlite";
-import sqlite3 from "sqlite3";
-import { overrideConnection } from "../db/conn";
+import { Database } from "sqlite";
 import { mergeSpecies } from "@/species";
 
 void describe("Species merge with duplicate synonyms", () => {
   let db: Database;
+  let database: TestDatabase;
 
   void beforeEach(async () => {
     // Fresh in-memory database per test for isolation
-    db = await open({
-      filename: ":memory:",
-      driver: sqlite3.Database,
-    });
+    database = await createTestDatabase({ foreignKeys: "off", migrations: false });
+    db = database.db;
 
-    // Create tables
     await db.exec(`
       CREATE TABLE species_name_group (
         group_id INTEGER PRIMARY KEY,
@@ -80,11 +77,10 @@ void describe("Species merge with duplicate synonyms", () => {
       CREATE TABLE iucn_canonical_recommendations (id INTEGER PRIMARY KEY, group_id INTEGER);
     `);
 
-    overrideConnection(db);
   });
 
   void afterEach(async () => {
-    await db.close();
+    await database.cleanup();
   });
 
   void it("should merge species with exact duplicate common names (case differences)", async () => {

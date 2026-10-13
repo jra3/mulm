@@ -1,8 +1,7 @@
+import { createTestDatabase, type TestDatabase } from "./helpers/database";
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
-import { Database, open } from "sqlite";
-import sqlite3 from "sqlite3";
-import { overrideConnection } from "../db/conn";
+import { Database } from "sqlite";
 import {
   getSubmissionImages,
   addSubmissionImage,
@@ -19,20 +18,14 @@ import {
 
 void describe("Normalized Tables CRUD Operations", () => {
   let db: Database;
+  let database: TestDatabase;
   let testSubmissionId: number;
   let testSpeciesGroupId: number;
 
   beforeEach(async () => {
-    db = await open({
-      filename: ":memory:",
-      driver: sqlite3.Database,
-    });
+    database = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
+    db = database.db;
 
-    await db.exec("PRAGMA foreign_keys = ON;");
-    await db.migrate({ migrationsPath: "./db/migrations" });
-    overrideConnection(db);
-
-    // Create test member
     const memberResult = await db.run(
       "INSERT INTO members (contact_email, display_name) VALUES (?, ?)",
       ["test@example.com", "Test User"]
@@ -78,7 +71,7 @@ void describe("Normalized Tables CRUD Operations", () => {
 
   afterEach(async () => {
     if (db) {
-      await db.close();
+      await database.cleanup();
     }
   });
 

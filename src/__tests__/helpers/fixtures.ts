@@ -1,162 +1,52 @@
-/**
- * Test Helper Utilities for Mulm BAP Testing
- *
- * Provides centralized helpers for:
- * - Database setup/teardown
- * - Test fixture factories (members, submissions, species)
- * - Common test assertions
- * - Mock data generation
- *
- * Usage:
- * ```typescript
- * import { setupTestDatabase, createTestMember, createTestSubmission } from './helpers/testHelpers';
- *
- * let ctx: TestContext;
- *
- * beforeEach(async () => {
- *   ctx = await setupTestDatabase();
- * });
- *
- * afterEach(async () => {
- *   await teardownTestDatabase(ctx);
- * });
- * ```
- */
-
-import { Database, open } from "sqlite";
-import sqlite3 from "sqlite3";
-import { overrideConnection } from "../../db/conn";
+/** Named fixture builders; these never open databases or change connection settings. */
+import { randomUUID } from "node:crypto";
+import { Database } from "sqlite";
 import { createMember, getMember } from "../../db/members";
 import { createSubmissionRow, formToRow, updateSubmission } from "../../db/submissions";
 import type { FormValues } from "../../forms/submission";
 import { addName, createSpecies } from "../../species";
+import type { TestDatabase } from "./database";
 
-/**
- * Test context containing database and common test fixtures
- */
-export interface TestContext {
-  db: Database;
+export interface TestMember {
+  id: number;
+  display_name: string;
+  contact_email: string;
+  is_admin?: number | boolean;
+}
+
+export interface TestContext extends TestDatabase {
   member: TestMember;
   admin: TestMember;
   otherAdmin?: TestMember;
 }
 
-/**
- * Test member interface
- */
-export interface TestMember {
-  id: number;
-  display_name: string;
-  contact_email: string;
+/** Explicitly request the member and committee actors a suite needs. */
+export async function createTestActors(
+  db: Database,
+  options: { adminCount?: 1 | 2; memberCount?: number } = {}
+): Promise<Pick<TestContext, "member" | "admin" | "otherAdmin">> {
+  const member = await createTestMember({ displayName: "Test Member" });
+  const admin = await createTestCommitteeMember(db, { displayName: "Test Admin" });
+  const otherAdmin = options.adminCount === 2
+    ? await createTestCommitteeMember(db, { displayName: "Other Admin" })
+    : undefined;
+  for (let i = 1; i < (options.memberCount ?? 1); i++) await createTestMember();
+  return { member, admin, otherAdmin };
 }
 
-/**
- * Options for database setup
- */
-export interface DatabaseSetupOptions {
-  /**
-   * Number of admin users to create (default: 1)
-   */
-  adminCount?: 1 | 2 | 3;
-
-  /**
-   * Number of regular members to create (default: 1)
-   */
-  memberCount?: number;
-
-  /**
-   * Whether to enable foreign key constraints (default: false for simpler testing)
-   */
-  enableForeignKeys?: boolean;
+export async function createTestCommitteeMember(
+  db: Database,
+  options: CreateMemberOptions = {}
+): Promise<TestMember> {
+  const member = await createTestMember(options);
+  await db.run("UPDATE members SET is_admin = 1 WHERE id = ?", member.id);
+  return { ...member, is_admin: 1 };
 }
 
-/**
- * Sets up an in-memory test database with migrations and test users
- *
- * @param options - Configuration options for database setup
- * @returns TestContext with database and test users
- *
- * @example
- * ```typescript
- * const ctx = await setupTestDatabase({ adminCount: 2, memberCount: 1 });
- * ```
- */
-export async function setupTestDatabase(
-  options: DatabaseSetupOptions = {}
-): Promise<TestContext> {
-  const { adminCount = 1, memberCount = 1, enableForeignKeys = false } = options;
-
-  // Create fresh in-memory database
-  const db = await open({
-    filename: ":memory:",
-    driver: sqlite3.Database,
-  });
-
-  // Configure foreign key constraints
-  if (enableForeignKeys) {
-    await db.exec("PRAGMA foreign_keys = ON;");
-  } else {
-    await db.exec("PRAGMA foreign_keys = OFF;");
-  }
-
-  // Run migrations
-  await db.migrate({
-    migrationsPath: "./db/migrations",
-  });
-
-  // Override the global connection
-  overrideConnection(db);
-
-  // Create test users
-  const timestamp = Date.now();
-  const memberEmail = `member-${timestamp}@test.com`;
-  const adminEmail = `admin-${timestamp}@test.com`;
-
-  const memberId = await createMember(memberEmail, "Test Member");
-  const adminId = await createMember(adminEmail, "Test Admin");
-
-  const member = (await getMember(memberId)) as TestMember;
-  const admin = (await getMember(adminId)) as TestMember;
-
-  const context: TestContext = {
-    db,
-    member,
-    admin,
-  };
-
-  // Create additional admin if requested
-  if (adminCount >= 2) {
-    const otherAdminEmail = `admin2-${timestamp}@test.com`;
-    const otherAdminId = await createMember(otherAdminEmail, "Other Admin");
-    context.otherAdmin = (await getMember(otherAdminId));
-  }
-
-  // Create additional members if requested
-  if (memberCount > 1) {
-    for (let i = 2; i <= memberCount; i++) {
-      await createMember(`member${i}-${timestamp}@test.com`, `Test Member ${i}`);
-    }
-  }
-
-  return context;
-}
-
-/**
- * Tears down the test database
- *
- * @param ctx - Test context to clean up
- *
- * @example
- * ```typescript
- * await teardownTestDatabase(ctx);
- * ```
- */
-export async function teardownTestDatabase(ctx: TestContext): Promise<void> {
-  try {
-    await ctx.db.close();
-  } catch {
-    // Ignore close errors in tests
-  }
+export async function createTestMembers(count = 1): Promise<TestMember[]> {
+  const members: TestMember[] = [];
+  for (let i = 0; i < count; i++) members.push(await createTestMember());
+  return members;
 }
 
 /**
@@ -280,7 +170,9 @@ export interface CreateSubmissionOptions {
 }
 
 /**
- * Creates a test submission in the database with specified state
+ * Writes a raw Submission row without lifecycle validation.
+ * Prefer submissionInState for valid states; use this for intentional legacy
+ * or impossible-state fixtures and for reporting tests that need raw facts.
  *
  * @param db - Database connection
  * @param options - Submission configuration
@@ -288,7 +180,7 @@ export interface CreateSubmissionOptions {
  *
  * @example
  * ```typescript
- * const submissionId = await createTestSubmission(ctx.db, {
+ * const submissionId = await createRawSubmissionFixture(ctx.db, {
  *   memberId: ctx.member.id,
  *   submitted: true,
  *   witnessStatus: "confirmed",
@@ -296,7 +188,7 @@ export interface CreateSubmissionOptions {
  * });
  * ```
  */
-export async function createTestSubmission(
+export async function createRawSubmissionFixture(
   db: Database,
   options: CreateSubmissionOptions
 ): Promise<number> {
@@ -396,11 +288,6 @@ export interface CreateMemberOptions {
    * Contact email (default: auto-generated)
    */
   email?: string;
-
-  /**
-   * Whether member is an admin (default: false)
-   */
-  isAdmin?: boolean;
 }
 
 /**
@@ -411,14 +298,13 @@ export interface CreateMemberOptions {
  *
  * @example
  * ```typescript
- * const newMember = await createTestMember({ displayName: "Jane Doe", isAdmin: true });
+ * const newMember = await createTestMember({ displayName: "Jane Doe" });
  * ```
  */
 export async function createTestMember(
   options: CreateMemberOptions = {}
 ): Promise<TestMember> {
-  const timestamp = Date.now();
-  const { displayName = `Test User ${timestamp}`, email = `user-${timestamp}@test.com` } = options;
+  const { displayName = "Test Member", email = generateTestEmail() } = options;
 
   const memberId = await createMember(email, displayName);
   return (await getMember(memberId)) as TestMember;
@@ -476,7 +362,7 @@ export async function ensureGuppySpecies(db: Database): Promise<number> {
  * ```
  */
 export function generateTestEmail(prefix = "test"): string {
-  return `${prefix}-${Date.now()}@test.com`;
+  return `${prefix}-${randomUUID()}@test.com`;
 }
 
 /**

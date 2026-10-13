@@ -1,3 +1,4 @@
+import { createTestDatabase } from "./helpers/database";
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
 import { runFinalSubmissionReminders } from "@/scheduled/finalSubmissionReminder";
@@ -5,12 +6,11 @@ import { getSubmissionById } from "../db/submissions";
 import { confirmWitness, resetNotifier, saveChanges } from "@/lifecycle";
 import type { FormValues } from "@/forms/submission";
 import {
-  setupTestDatabase,
-  teardownTestDatabase,
-  createTestSubmission,
+  createTestActors,
+  createRawSubmissionFixture,
   ensureGuppySpecies,
   type TestContext,
-} from "./helpers/testHelpers";
+} from "./helpers/fixtures";
 import { readSubmission, recordNotifications, requestChangesFixture, witnessPoints } from "./helpers/lifecycleFixtures";
 
 /**
@@ -32,17 +32,18 @@ void describe("Final-submission reminder job", () => {
   let ctx: TestContext;
 
   beforeEach(async () => {
-    ctx = await setupTestDatabase({ adminCount: 1 });
+    const database = await createTestDatabase({ foreignKeys: "off", migrations: "latest" });
+    ctx = { ...database, ...(await createTestActors(database.db, { adminCount: 1 })) };
     recordNotifications();
   });
 
   afterEach(async () => {
     resetNotifier();
-    await teardownTestDatabase(ctx);
+    await ctx.cleanup();
   });
 
   void test("reminds a submission in the approval queue once, with no member action", async () => {
-    const id = await createTestSubmission(ctx.db, {
+    const id = await createRawSubmissionFixture(ctx.db, {
       memberId: ctx.member.id,
       submitted: true,
       witnessStatus: "confirmed",
@@ -58,7 +59,7 @@ void describe("Final-submission reminder job", () => {
   });
 
   void test("does not remind a submission still in its waiting period", async () => {
-    const id = await createTestSubmission(ctx.db, {
+    const id = await createRawSubmissionFixture(ctx.db, {
       memberId: ctx.member.id,
       submitted: true,
       witnessStatus: "confirmed",
@@ -73,7 +74,7 @@ void describe("Final-submission reminder job", () => {
   });
 
   void test("does not remind an unconfirmed submission", async () => {
-    const id = await createTestSubmission(ctx.db, {
+    const id = await createRawSubmissionFixture(ctx.db, {
       memberId: ctx.member.id,
       submitted: true,
       witnessStatus: "pending",
@@ -89,7 +90,7 @@ void describe("Final-submission reminder job", () => {
     // It selects from the approval queue, which flagged work leaves; the
     // member's answer voids the Witness, and the clock puts it back once
     // re-witnessed.
-    const id = await createTestSubmission(ctx.db, {
+    const id = await createRawSubmissionFixture(ctx.db, {
       memberId: ctx.member.id,
       submitted: true,
       witnessStatus: "confirmed",
@@ -105,7 +106,7 @@ void describe("Final-submission reminder job", () => {
   });
 
   void test("fires once per Submission: a re-witness does not earn a second reminder", async () => {
-    const id = await createTestSubmission(ctx.db, {
+    const id = await createRawSubmissionFixture(ctx.db, {
       memberId: ctx.member.id,
       submitted: true,
       witnessStatus: "confirmed",
@@ -142,7 +143,7 @@ void describe("Final-submission reminder job", () => {
   });
 
   void test("is idempotent: a second run does not re-remind", async () => {
-    await createTestSubmission(ctx.db, {
+    await createRawSubmissionFixture(ctx.db, {
       memberId: ctx.member.id,
       submitted: true,
       witnessStatus: "confirmed",

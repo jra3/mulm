@@ -16,7 +16,7 @@ import {
   getCollectionForMember,
 } from "@/db/collection";
 import { createMember } from "@/db/members";
-import { setupTestDatabase, type TestDatabase } from "./testDbHelper.helper";
+import { createTestDatabase, type TestDatabase } from "./helpers/database";
 
 /**
  * A CARES registration belongs to the member and Species, not to the
@@ -40,7 +40,7 @@ void describe("CARES registration", () => {
   }
 
   beforeEach(async () => {
-    testDb = await setupTestDatabase();
+    testDb = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
     memberId = await createMember("keeper@example.com", "Keeper");
     caresSpecies = await insertSpecies("doadrioi", true);
     otherSpecies = await insertSpecies("eiseni", false);

@@ -1,3 +1,4 @@
+import { createTestDatabase, type TestDatabase } from "./helpers/database";
 /**
  * Migrations 058 and 059: a Submission binds to its Species by `species_id`,
  * backfilled from the two Name foreign keys (the common Name's Species first,
@@ -8,10 +9,7 @@
  */
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
-import fs from "fs";
-import { Database, open } from "sqlite";
-import sqlite3 from "sqlite3";
-import { allMigrations, migrationsUpTo } from "./helpers/migrations";
+import { Database } from "sqlite";
 
 const BINDING_MIGRATION = 58;
 const OLD_DERIVATION = `COALESCE(
@@ -20,8 +18,7 @@ const OLD_DERIVATION = `COALESCE(
 )`;
 
 let db: Database;
-let before058: string;
-let upTo058: string;
+let database: TestDatabase;
 
 async function species(genus: string): Promise<{ id: number; common: number; scientific: number }> {
   const { lastID } = await db.run(
@@ -57,16 +54,12 @@ const bindings = () =>
 
 void describe("Migrations 058-059: Submissions bind by species_id", () => {
   beforeEach(async () => {
-    before058 = migrationsUpTo(BINDING_MIGRATION - 1);
-    upTo058 = migrationsUpTo(BINDING_MIGRATION);
-    db = await open({ filename: ":memory:", driver: sqlite3.Database });
-    await db.exec("PRAGMA foreign_keys = ON;");
-    await db.migrate({ migrationsPath: before058 });
+    database = await createTestDatabase({ foreignKeys: "on", migrations: BINDING_MIGRATION - 1 });
+    db = database.db;
   });
 
   afterEach(async () => {
-    await db.close();
-    for (const dir of [before058, upTo058]) fs.rmSync(dir, { recursive: true, force: true });
+    await database.cleanup();
   });
 
   void test("species_id equals the old Name-key derivation for every Submission", async () => {
@@ -84,7 +77,7 @@ void describe("Migrations 058-059: Submissions bind by species_id", () => {
       `SELECT s.id, ${OLD_DERIVATION} AS species_id FROM submissions s ORDER BY s.id`
     );
 
-    await db.migrate({ migrationsPath: upTo058 });
+    await database.migrate(BINDING_MIGRATION);
 
     assert.deepStrictEqual(await bindings(), expected);
     const byId = new Map((await bindings()).map((r) => [r.id, r.species_id]));
@@ -96,7 +89,7 @@ void describe("Migrations 058-059: Submissions bind by species_id", () => {
     assert.strictEqual(byId.get(ids.draft), b.id);
 
     // 059 drops the keys and keeps the binding.
-    await db.migrate({ migrationsPath: allMigrations });
+    await database.migrate("latest");
     const columns = (await db.all<Array<{ name: string }>>("PRAGMA table_info(submissions)")).map((c) => c.name);
     assert.ok(columns.includes("species_id"));
     assert.ok(!columns.includes("common_name_id"));
@@ -110,10 +103,10 @@ void describe("Migrations 058-059: Submissions bind by species_id", () => {
     await submission({ common: a.common });
     await submission({ common: a.common, scientific: b.scientific });
     await submission({});
-    await db.migrate({ migrationsPath: allMigrations });
+    await database.migrate("latest");
     const bound = await bindings();
 
-    await db.migrate({ migrationsPath: before058 });
+    await database.migrate(BINDING_MIGRATION - 1);
 
     const columns = (await db.all<Array<{ name: string }>>("PRAGMA table_info(submissions)")).map((c) => c.name);
     assert.ok(!columns.includes("species_id"));
@@ -126,7 +119,7 @@ void describe("Migrations 058-059: Submissions bind by species_id", () => {
   void test("a Species cannot be deleted while a Submission is bound to it", async () => {
     const a = await species("Alphus");
     await submission({ common: a.common });
-    await db.migrate({ migrationsPath: allMigrations });
+    await database.migrate("latest");
 
     await assert.rejects(
       () => db.run("DELETE FROM species_name_group WHERE group_id = ?", [a.id]),

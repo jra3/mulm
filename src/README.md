@@ -100,32 +100,22 @@ Each test gets an isolated in-memory SQLite database with full schema.
 ### Test Setup Pattern
 
 ```typescript
-import { createTestDb, overrideConnection } from '@/__tests__/testDbHelper.helper';
+import { createTestDatabase, type TestDatabase } from '@/__tests__/helpers/database';
 
-describe('MyModule', () => {
-  let db: Database.Database;
-
-  beforeAll(async () => {
-    db = await createTestDb(); // Creates in-memory DB with migrations
-    overrideConnection(db);     // Injects test DB into app
-  });
-
-  afterAll(async () => {
-    await db.close();
-  });
-
-  it('should do something', async () => {
-    // Test code here
-  });
+let database: TestDatabase;
+beforeEach(async () => {
+  database = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
+});
+afterEach(async () => {
+  await database.cleanup();
 });
 ```
 
-### Key Points
-
-- Each test file gets its own database
-- Migrations run automatically for each test database
-- Tests are isolated from production and development databases
-- Helper utilities in `src/__tests__/testDbHelper.helper.ts`
+Request named fixture builders separately from `src/__tests__/helpers/fixtures.ts`.
+Each suite chooses its constraint mode explicitly. Global connection overrides
+require serial database tests within a process. Historical migration cutoffs and
+raw schemas are supported by the same factory; see
+[`helpers/README.md`](__tests__/helpers/README.md).
 
 ## Authentication
 

@@ -1,3 +1,4 @@
+import { createTestDatabase } from "./helpers/database";
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
 import {
@@ -22,10 +23,9 @@ import { getMember, getMemberWithPoints, updateMember } from "@/db/members";
 import { markFinalSubmissionReminderSent } from "@/db/submissions";
 import {
   createTestMember,
-  setupTestDatabase,
-  teardownTestDatabase,
+  createTestActors,
   type TestContext,
-} from "./helpers/testHelpers";
+} from "./helpers/fixtures";
 import {
   approveAsShown,
   correctionOf,
@@ -72,7 +72,8 @@ void describe("Submission lifecycle - consequences", () => {
   let committee: Caller;
 
   beforeEach(async () => {
-    ctx = await setupTestDatabase({ adminCount: 2 });
+    const database = await createTestDatabase({ foreignKeys: "off", migrations: "latest" });
+    ctx = { ...database, ...(await createTestActors(database.db, { adminCount: 2 })) };
     sent = recordNotifications();
     member = { id: ctx.member.id, isAdmin: false };
     committee = { id: ctx.admin.id, isAdmin: true };
@@ -80,7 +81,7 @@ void describe("Submission lifecycle - consequences", () => {
 
   afterEach(async () => {
     resetNotifier();
-    await teardownTestDatabase(ctx);
+    await ctx.cleanup();
   });
 
   const at = (state: Parameters<typeof submissionInState>[1]) =>
@@ -368,7 +369,10 @@ void describe("Submission lifecycle - consequences", () => {
 
       assert.strictEqual(await sendCommitteeDigest(), true);
       assert.deepStrictEqual(sent.kinds, ["committeeDigest"]);
-      assert.deepStrictEqual(sent.of("committeeDigest")[0].to, [ctx.admin.contact_email]);
+      assert.deepStrictEqual(
+        sent.of("committeeDigest")[0].to.sort(),
+        [ctx.admin.contact_email, ctx.otherAdmin!.contact_email].sort()
+      );
     });
 
     void test("it keeps arriving while a queue is non-empty", async () => {

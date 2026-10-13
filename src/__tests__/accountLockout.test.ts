@@ -1,8 +1,7 @@
+import { createTestDatabase, type TestDatabase } from "./helpers/database";
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
-import { Database, open } from "sqlite";
-import sqlite3 from "sqlite3";
-import { overrideConnection } from "../db/conn";
+import { Database } from "sqlite";
 import {
   recordFailedAttempt,
   isAccountLocked,
@@ -12,26 +11,14 @@ import {
 
 void describe("Account Lockout Service", () => {
   let db: Database;
+  let database: TestDatabase;
   let testMemberId: number;
 
   beforeEach(async () => {
     // Create fresh in-memory database for each test
-    db = await open({
-      filename: ":memory:",
-      driver: sqlite3.Database,
-    });
+    database = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
+    db = database.db;
 
-    await db.exec("PRAGMA foreign_keys = ON;");
-
-    // Run migrations
-    await db.migrate({
-      migrationsPath: "./db/migrations",
-    });
-
-    // Override the global connection
-    overrideConnection(db);
-
-    // Create test member
     const result = await db.run("INSERT INTO members (contact_email, display_name) VALUES (?, ?)", [
       "test@example.com",
       "Test User",
@@ -41,7 +28,7 @@ void describe("Account Lockout Service", () => {
 
   afterEach(async () => {
     if (db) {
-      await db.close();
+      await database.cleanup();
     }
   });
 

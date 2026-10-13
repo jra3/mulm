@@ -1,3 +1,4 @@
+import { createTestDatabase, type TestDatabase } from "./helpers/database";
 /**
  * Migration 066 (#524, ADR-0003): Submissions witnessed under the old flow
  * carry no points, and there is no legacy approval path, so they go back to
@@ -9,18 +10,15 @@
  */
 import { describe, test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
-import fs from "fs";
-import { Database, open } from "sqlite";
-import sqlite3 from "sqlite3";
+import { Database } from "sqlite";
 import { assertNoWitnessedRowLacksPoints } from "./helpers/assertInvariants";
-import { allMigrations, migrationsUpTo } from "./helpers/migrations";
 
 const RESET_MIGRATION = 66;
 const WITNESSED_ON = "2026-01-02T10:15:00.000Z";
 const FINAL_ON = "2026-03-05T19:00:00.000Z";
 
 let db: Database;
-let before066: string;
+let database: TestDatabase;
 
 type Row = {
   id: number;
@@ -110,17 +108,14 @@ const pointlessWitnesses = async (): Promise<number> =>
 
 void describe("Migration 066: in-flight Submissions go back for a Witness", () => {
   beforeEach(async () => {
-    before066 = migrationsUpTo(RESET_MIGRATION - 1);
     // Production runs with foreign keys off, so a witness who has since been
     // deleted is a dangling id, and the migration must cope with one.
-    db = await open({ filename: ":memory:", driver: sqlite3.Database });
-    await db.exec("PRAGMA foreign_keys = OFF;");
-    await db.migrate({ migrationsPath: before066 });
+    database = await createTestDatabase({ foreignKeys: "off", migrations: RESET_MIGRATION - 1 });
+    db = database.db;
   });
 
   afterEach(async () => {
-    await db.close();
-    fs.rmSync(before066, { recursive: true, force: true });
+    await database.cleanup();
   });
 
   /** One row of every case the predicate must tell apart. */
@@ -152,7 +147,7 @@ void describe("Migration 066: in-flight Submissions go back for a Witness", () =
     const before = Object.fromEntries(await Promise.all(untouched.map(async (k) => [k, await row(ids[k])])));
     assert.strictEqual(await pointlessWitnesses(), 2, "the fixture has the rows the migration is for");
 
-    await db.migrate({ migrationsPath: allMigrations });
+    await database.migrate("latest");
 
     for (const k of untouched) {
       assert.deepStrictEqual(await row(ids[k]), before[k], `${k} is untouched`);
@@ -174,7 +169,7 @@ void describe("Migration 066: in-flight Submissions go back for a Witness", () =
   void test("each reset row gets the changelog note attributed to its original witness", async () => {
     const ids = await seed();
 
-    await db.migrate({ migrationsPath: allMigrations });
+    await database.migrate("latest");
 
     assert.deepStrictEqual(await notes(ids.reset), [
       {
@@ -201,7 +196,7 @@ void describe("Migration 066: in-flight Submissions go back for a Witness", () =
     const undated = await submission(jane, { witnessedBy: pat, witnessedOn: null });
     await db.run("UPDATE submissions SET updated_on = ? WHERE id = ?", ["2026-03-04T05:06:07.000Z", undated]);
 
-    await db.migrate({ migrationsPath: allMigrations });
+    await database.migrate("latest");
 
     assert.strictEqual((await row(undated)).witness_verification_status, "pending");
     assert.deepStrictEqual(await notes(undated), [
@@ -216,7 +211,7 @@ void describe("Migration 066: in-flight Submissions go back for a Witness", () =
 
   void test("rolls back: the Witness returns from the note, to the day, where nobody has re-witnessed since", async () => {
     const ids = await seed();
-    await db.migrate({ migrationsPath: allMigrations });
+    await database.migrate("latest");
     // One reset row has been re-witnessed under the new flow meanwhile
     await db.run(
       `UPDATE submissions SET witness_verification_status = 'confirmed', witnessed_by = ?, witnessed_on = ?, points = 10
@@ -224,7 +219,7 @@ void describe("Migration 066: in-flight Submissions go back for a Witness", () =
       [ids.pat, "2026-10-12T00:00:00.000Z", ids.resetOrphan]
     );
 
-    await db.migrate({ migrationsPath: before066 });
+    await database.migrate(RESET_MIGRATION - 1);
 
     const restored = await row(ids.reset);
     assert.strictEqual(restored.witness_verification_status, "confirmed");
