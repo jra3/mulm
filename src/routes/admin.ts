@@ -218,6 +218,7 @@ export type WaitingRow = {
   species_common_name: string;
   programShort: string;
   readyOn: string;
+  changesRequested: boolean;
 };
 
 const PROGRAM_SHORT: Record<string, string> = { fish: "BAP", plant: "HAP", coral: "CAP" };
@@ -297,6 +298,7 @@ export async function approvalQueueLocals(viewer: NonNullable<MulmRequest["viewe
     species_common_name: speciesNamesOf(row).common,
     programShort: short(row),
     readyOn: formatShortDate(endsOn),
+    changesRequested: lifecycle.hasChangesRequested(row),
   }));
 
   const counts = {
@@ -372,6 +374,26 @@ export const showWitnessQueue = async (req: MulmRequest, res: Response) => {
   });
 };
 
+/**
+ * HTMX keeps the review page's URL through panel swaps and dialogs. Its
+ * screening filter identifies the queue to return to; never redirect to an
+ * arbitrary client-supplied URL. Direct visits keep the legacy fallback.
+ */
+function screeningPathFrom(req: MulmRequest, submissionId: number): string | undefined {
+  const current = req.get("HX-Current-URL");
+  if (!current) return undefined;
+  try {
+    const url = new URL(current);
+    if (url.pathname !== `/submissions/${submissionId}`) return undefined;
+    const filter = url.searchParams.get("screening");
+    if (filter === "all") return "/admin/witness-queue";
+    if (filter && isProgramType(filter)) return `/admin/witness-queue/${filter}`;
+  } catch {
+    // Malformed or absent context falls back to the submission's Program.
+  }
+  return undefined;
+}
+
 /** Preserve bookmarks: waiting is a secondary section of the approval queue. */
 export const showWaitingPeriod = (req: MulmRequest, res: Response) => {
   const program = req.params.program ?? null;
@@ -403,8 +425,8 @@ export const sendRequestChanges = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  // Redirect to approval queue for the submission's program
-  res.set("HX-Redirect", `/admin/queue/${submission.program}`).send();
+  // Keep screening work in its originating queue after sending it back.
+  res.set("HX-Redirect", screeningPathFrom(req, submission.id) ?? `/admin/queue/${submission.program}`).send();
 };
 
 export const requestChangesForm = async (req: MulmRequest, res: Response) => {
@@ -521,11 +543,10 @@ export const confirmWitnessAction = async (req: MulmRequest, res: Response) => {
   );
   if (!ran) return;
 
-  // The confirm gives the Submission its Species' Program, so the queue to
-  // return to is the settled one, read after the write, not the one it was
-  // filed under
+  // Preserve the originating filter. Direct visits fall back to the Species'
+  // settled Program, which can change when the Witness is confirmed.
   const settled = await getSubmissionById(submission.id);
-  res.set("HX-Redirect", `/admin/witness-queue/${settled?.program ?? submission.program}`).send();
+  res.set("HX-Redirect", screeningPathFrom(req, submission.id) ?? `/admin/witness-queue/${settled?.program ?? submission.program}`).send();
 };
 
 /** Whether a witness-panel request belongs to the correction form (#528): it says so in a `correction` field. */

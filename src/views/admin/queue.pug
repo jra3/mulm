@@ -18,7 +18,7 @@ include adminNav.pug
 //- @param approvedTonight - ApprovedRow[]: id, member_name,
 //-   species_common_name, programShort, total, approvedBy
 //- @param waiting - WaitingRow[]: id, member_name, species_common_name,
-//-   programShort, readyOn
+//-   programShort, readyOn, changesRequested
 //- @param program - the Program listed, or null for every Program
 //- @param counts - { all, fish, plant, coral }: how many are ready
 //- @param queuePath - this page's path, which the sheet's "Not now" returns to
@@ -106,7 +106,7 @@ html
 			//- Still waiting
 			section#queue-waiting.flex.flex-col.gap-2
 				h2(class=eyebrow) Waiting
-				p.text-sm.text-gray-300 Their waiting periods are still running. They move into ready to approve automatically when eligible.
+				p.text-sm.text-gray-300 Their waiting periods are still running. Submissions with no outstanding changes move into ready to approve when eligible. Those awaiting member changes stay out of approval until resubmitted.
 				if waiting.length === 0
 					p.text-sm.text-gray-300#queue-waiting-empty Nothing in its waiting period.
 				each row in waiting
@@ -115,7 +115,9 @@ html
 							| #{row.member_name} · #{row.species_common_name}
 							| #{' '}
 							+programChip(row.programShort)
-						span.whitespace-nowrap= `ready ${row.readyOn}`
+							if row.changesRequested
+								span.block.text-xs.font-medium.text-amber-800 Awaiting member changes
+						span.whitespace-nowrap= row.changesRequested ? `Waiting period ends ${row.readyOn}` : `ready ${row.readyOn}`
 
 			.h-6
 

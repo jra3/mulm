@@ -438,7 +438,7 @@ void describe("Approval queue and the one button", () => {
     assert.match(res.text, /BAP · 1<\/a>/);
     assert.match(res.text, /HAP · 1<\/a>/);
     assert.match(res.text, new RegExp(`id="screening-row-${fishId}"`));
-    assert.match(res.text, new RegExp(`href="/submissions/${plantId}"[^>]*>Review submission`));
+    assert.match(res.text, new RegExp(`href="/submissions/${plantId}\\?screening=all"[^>]*>Review submission`));
     assert.ok(
       res.text.indexOf(`id="screening-row-${plantId}"`) <
         res.text.indexOf(`id="screening-row-${fishId}"`)
@@ -448,6 +448,7 @@ void describe("Approval queue and the one button", () => {
     assert.match(filtered.text, new RegExp(`id="screening-row-${plantId}"`));
     assert.doesNotMatch(filtered.text, new RegExp(`id="screening-row-${fishId}"`));
     assert.match(filtered.text, /href="\/admin\/queue\/plant"/);
+    assert.match(filtered.text, new RegExp(`href="/submissions/${plantId}\\?screening=plant"`));
     assert.strictEqual((await request(app()).get("/admin/witness-queue/invalid")).status, 404);
   });
 
@@ -462,7 +463,7 @@ void describe("Approval queue and the one button", () => {
 
     assert.match(res.text, new RegExp(`id="screening-row-${ownId}"`));
     assert.match(res.text, /Your own submission. Another committee member screens it./);
-    assert.match(res.text, new RegExp(`href="/submissions/${ownId}"[^>]*>View submission`));
+    assert.match(res.text, new RegExp(`href="/submissions/${ownId}\\?screening=all"[^>]*>View submission`));
     assert.doesNotMatch(res.text, /Review submission/);
     assert.doesNotMatch(res.text, new RegExp(`screening-row-${returnedId}`));
   });
@@ -501,6 +502,18 @@ void describe("Approval queue and the one button", () => {
     assert.match(res.text, new RegExp(`id="queue-waiting-${waitingId}"`));
     assert.doesNotMatch(res.text, new RegExp(`submissions/${waitingId}/approve`));
     assert.match(res.text, /All · 1<\/a>/);
+  });
+
+  void test("waiting distinguishes outstanding member changes from clock-only work", async () => {
+    const waitingId = await submissionInState(testDb.db, "waitingPeriod", { memberId: ownerId, witnessedBy: committeeId });
+    await testDb.db.run("UPDATE submissions SET changes_requested_on = ? WHERE id = ?", [
+      new Date().toISOString(), waitingId,
+    ]);
+    const res = await request(app()).get("/admin/queue");
+    assert.strictEqual(res.status, 200);
+    assert.match(res.text, new RegExp(`id="queue-waiting-${waitingId}"[^>]*>[\\s\\S]*?Awaiting member changes[\\s\\S]*?Waiting period ends`));
+    assert.match(res.text, /stay out of approval until resubmitted/);
+    assert.doesNotMatch(res.text, new RegExp(`id="queue-row-${waitingId}"`));
   });
 
   void test("rows show the Species the witness settled, common and Latin, not the member's spelling", async () => {
@@ -1005,6 +1018,7 @@ void describe("The witness confirms from the panel", () => {
       a.use(express.urlencoded({ extended: true }));
       a.get("/submissions/:id", submission.view);
       a.post("/admin/submissions/:id/confirm-witness", admin.confirmWitnessAction);
+      a.post("/admin/submissions/:id/request-changes", admin.sendRequestChanges);
     }, viewer);
 
   const confirm = (id: number, body: Record<string, string>) =>
@@ -1022,6 +1036,36 @@ void describe("The witness confirms from the panel", () => {
     assert.strictEqual(row.article_points, 5);
     assert.strictEqual(row.cares_species, 1);
     assert.strictEqual(row.species_id, guppy);
+  });
+
+  for (const filter of ["all", "fish", "plant", "coral"]) {
+    void test(`confirmation returns to the originating ${filter} screening filter`, async () => {
+      const res = await request(app())
+        .post(`/admin/submissions/${pendingId}/confirm-witness`)
+        .set("HX-Current-URL", `https://example.test/submissions/${pendingId}?screening=${filter}`)
+        .type("form").send({ species_id: String(guppy), points: "10" });
+      assert.strictEqual(res.headers["hx-redirect"], `/admin/witness-queue${filter === "all" ? "" : `/${filter}`}`);
+      assert.strictEqual((await getSubmissionById(pendingId))!.witness_verification_status, "confirmed");
+    });
+  }
+
+  for (const current of ["not a URL", "https://example.test/submissions/999999?screening=all", "https://example.test/submissions/ID?screening=https://evil.test", "https://example.test/submissions/ID?screening=invalid"]) {
+    void test(`confirmation ignores invalid queue context: ${current}`, async () => {
+      const res = await request(app())
+        .post(`/admin/submissions/${pendingId}/confirm-witness`)
+        .set("HX-Current-URL", current.replace("/ID", `/${pendingId}`))
+        .type("form").send({ species_id: String(guppy), points: "10" });
+      assert.strictEqual(res.headers["hx-redirect"], "/admin/witness-queue/fish");
+    });
+  }
+
+  void test("requesting changes returns to the originating screening queue", async () => {
+    const res = await request(app())
+      .post(`/admin/submissions/${pendingId}/request-changes`)
+      .set("HX-Current-URL", `https://example.test/submissions/${pendingId}?screening=all`)
+      .type("form").send({ content: "Please add a photo of the fry" });
+    assert.strictEqual(res.headers["hx-redirect"], "/admin/witness-queue");
+    assert.ok((await getSubmissionById(pendingId))!.changes_requested_on);
   });
 
   void test("a refusal renders into the panel's alert and writes nothing: points outside the classes, a HAP bonus on a fish", async () => {

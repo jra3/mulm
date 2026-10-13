@@ -394,7 +394,7 @@ mixin witnessSuggestions()
 				.text-sm#committee-error(role="alert")
 
 				if allowed.requestChanges && !correcting
-					button.destructive.w-full.h-12.text-base(
+					button.destructive.w-full.min-h-12.text-base(
 						type="button"
 						hx-get=`/admin/dialog/submissions/${submission.id}/request-changes`
 						hx-target="closest body"

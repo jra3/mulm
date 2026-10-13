@@ -45,6 +45,6 @@ html
 								a.underline(href=`/member/${sub.member_id}`) Member profile
 							if sub.mine
 								p.text-sm.text-gray-600.bg-gray-100.rounded.p-3.mt-3 Your own submission. Another committee member screens it.
-								a.block.text-center.text-sm.text-blue-700.underline.py-3(href=`/submissions/${sub.id}`) View submission
+								a.block.text-center.text-sm.text-blue-700.underline.py-3(href=`/submissions/${sub.id}?screening=${program || "all"}`) View submission
 							else
-								a.block.w-full.text-center.py-3.mt-3.rounded-lg.bg-blue-600.text-white.font-semibold(href=`/submissions/${sub.id}` class="hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400") Review submission
+								a.block.w-full.text-center.py-3.mt-3.rounded-lg.bg-blue-600.text-white.font-semibold(href=`/submissions/${sub.id}?screening=${program || "all"}` class="hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400") Review submission
