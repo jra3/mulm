@@ -5,11 +5,12 @@
  * This module exports the server setup function that can be used by different transport layers.
  */
 
+import { z } from "zod";
+import { defineTool, registerTools, positiveId } from "./tools";
+
 import type { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import {
-  CallToolRequestSchema,
   ListResourcesRequestSchema,
-  ListToolsRequestSchema,
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { db } from "../db/conn";
@@ -41,144 +42,293 @@ import {
   rejectCanonicalRecommendation,
   type IUCNData,
   type SyncStatus,
-  type RecommendationStatus,
 } from "../db/iucn";
 import { getIUCNClient } from "../integrations/iucn";
 
-// Tool argument types
-type CreateSpeciesGroupArgs = {
-  program_class: string;
-  canonical_genus: string;
-  canonical_species_name: string;
-  species_type: string;
-  base_points?: number;
-  is_cares_species?: boolean;
-};
+const createSpeciesGroupSchema = z.object({
+  program_class: z.string().describe("BAP program class (e.g., Cichlids, Livebearers)"),
+  canonical_genus: z.string().describe("Official genus name"),
+  canonical_species_name: z.string().describe("Official species name"),
+  species_type: z.enum(catalogue.speciesTypes).describe("High-level category"),
+  base_points: z
+    .literal(catalogue.pointClasses)
+    .describe("Point class: 5, 10, 15 or 20 (optional; anything else is refused)")
+    .optional(),
+  is_cares_species: z
+    .boolean()
+    .describe("CARES conservation species (optional, default: false)")
+    .optional(),
+});
 
-type UpdateSpeciesGroupArgs = {
-  group_id: number;
-  program_class?: string;
-  base_points?: number;
-  is_cares_species?: boolean;
-  external_references?: string[];
-  image_links?: string[];
-};
+const updateSpeciesGroupSchema = z.object({
+  group_id: positiveId.describe("Species group ID"),
+  program_class: z
+    .string()
+    .describe("BAP program class (e.g., Cichlids, Livebearers, Killifish)")
+    .optional(),
+  base_points: z
+    .literal(catalogue.pointClasses)
+    .nullable()
+    .describe("Point class: 5, 10, 15, 20, or null to unset (anything else is refused)")
+    .optional(),
+  is_cares_species: z.boolean().describe("CARES conservation species").optional(),
+  external_references: z.array(z.string()).describe("Array of reference URLs").optional(),
+  image_links: z.array(z.string()).describe("Array of image URLs").optional(),
+});
 
-type DeleteSpeciesGroupArgs = {
-  group_id: number;
-};
+const deleteSpeciesGroupSchema = z.object({
+  group_id: positiveId.describe("Species ID"),
+});
 
-type AddSpeciesNameArgs = {
-  group_id: number;
-  kind: NameKind;
-  name: string;
-};
+const addSpeciesNameSchema = z.object({
+  group_id: positiveId.describe("Species ID"),
+  kind: z
+    .enum(["common", "scientific"])
+    .describe("Which kind of Name: a common name or a scientific name"),
+  name: z.string().describe("The Name's text"),
+});
 
-type UpdateSpeciesNameArgs = {
-  kind: NameKind;
-  name_id: number;
-  name: string;
-};
+const updateSpeciesNameSchema = z.object({
+  kind: z
+    .enum(["common", "scientific"])
+    .describe("Which kind of Name: a common name or a scientific name"),
+  name_id: positiveId.describe("The Name's id (unique within its kind)"),
+  name: z.string().describe("The corrected text"),
+});
 
-type RemoveSpeciesNameArgs = {
-  kind: NameKind;
-  name_id: number;
-};
+const removeSpeciesNameSchema = z.object({
+  kind: z
+    .enum(["common", "scientific"])
+    .describe("Which kind of Name: a common name or a scientific name"),
+  name_id: positiveId.describe("The Name's id (unique within its kind)"),
+});
 
-type MergeSpeciesGroupsArgs = {
-  canonical_group_id: number;
-  defunct_group_id: number;
-  preview?: boolean;
-};
+const findNamesByTextSchema = z.object({
+  text: z.string().describe("The Name's text"),
+  kind: z
+    .enum(["common", "scientific"])
+    .describe("Only this kind of Name (optional; default both)")
+    .optional(),
+  limit: z
+    .number()
+    .int()
+    .nonnegative()
+    .describe("Optional limit on results (default: no limit)")
+    .optional(),
+});
 
-type SearchSpeciesArgs = {
-  query?: string;
-  species_type?: string;
-  program_class?: string;
-  has_base_points?: boolean;
-  is_cares_species?: boolean;
-  sort_by?: string;
-  limit?: number;
-  offset?: number;
-  count_only?: boolean;
-};
+const bulkRemoveNamesSchema = z
+  .object({
+    kind: z
+      .enum(["common", "scientific"])
+      .describe("Which kind of Name: a common name or a scientific name"),
+    text: z
+      .string()
+      .describe("Remove every Name of this kind with this text, across all Species")
+      .optional(),
+    name_ids: z
+      .array(positiveId)
+      .min(1)
+      .describe("Name ids to remove (alternative to text)")
+      .optional(),
+    preview: z
+      .boolean()
+      .describe("If true, return what would be removed without removing it (default: false)")
+      .optional(),
+  })
+  .and(
+    z.union([
+      z.object({ text: z.string().min(1), name_ids: z.never().optional() }),
+      z.object({ text: z.never().optional(), name_ids: z.array(positiveId).min(1) }),
+    ])
+  )
+  .describe("Provide exactly one of text or name_ids");
 
-type GetSpeciesDetailArgs = {
-  group_id: number;
-};
+const mergeSpeciesGroupsSchema = z.object({
+  canonical_group_id: positiveId.describe("Species group to keep"),
+  defunct_group_id: positiveId.describe("Species group to merge and delete"),
+  preview: z.boolean().describe("Preview changes without executing (default: false)").optional(),
+});
 
-type SetBasePointsArgs = {
-  group_id?: number;
-  group_ids?: number[];
-  species_type?: string;
-  program_class?: string;
-  base_points: number;
-  preview?: boolean;
-};
+const searchSpeciesSchema = z.object({
+  query: z.string().describe("Search text (searches the Canonical name and every Name)").optional(),
+  species_type: z.enum(catalogue.speciesTypes).describe("Filter by species type").optional(),
+  program_class: z.string().describe("Filter by program class").optional(),
+  has_base_points: z.boolean().describe("Filter by presence of base points").optional(),
+  is_cares_species: z.boolean().describe("Filter CARES species").optional(),
+  sort_by: z.enum(["name", "points", "class"]).describe("Sort order (default: name)").optional(),
+  limit: z.number().int().nonnegative().describe("Max results (default: 100)").optional(),
+  offset: z.number().int().nonnegative().describe("Skip results (default: 0)").optional(),
+  count_only: z
+    .boolean()
+    .describe("Return only the total count, not the results (default: false)")
+    .optional(),
+});
 
-type ToggleCaresStatusArgs = {
-  group_id: number;
-  is_cares_species: boolean;
-};
+const getSpeciesDetailSchema = z.object({
+  group_id: positiveId.describe("Species group ID"),
+});
 
-type UpdateCanonicalNameArgs = {
-  group_id: number;
-  new_canonical_genus?: string;
-  new_canonical_species_name?: string;
-};
+const setBasePointsSchema = z
+  .object({
+    group_id: positiveId.describe("Single species group ID (optional)").optional(),
+    group_ids: z
+      .array(positiveId)
+      .min(1)
+      .describe("Multiple species group IDs (optional)")
+      .optional(),
+    species_type: z.string().describe("Filter by species type (optional)").optional(),
+    program_class: z.string().describe("Filter by program class (optional)").optional(),
+    base_points: z.literal(catalogue.pointClasses).describe("Point class to set: 5, 10, 15 or 20"),
+    preview: z.boolean().describe("Preview changes without executing (default: false)").optional(),
+  })
+  .and(
+    z.union([
+      z.object({
+        group_id: positiveId,
+        group_ids: z.never().optional(),
+        species_type: z.never().optional(),
+        program_class: z.never().optional(),
+      }),
+      z.object({
+        group_id: z.never().optional(),
+        group_ids: z.array(positiveId).min(1),
+        species_type: z.never().optional(),
+        program_class: z.never().optional(),
+      }),
+      z.object({
+        group_id: z.never().optional(),
+        group_ids: z.never().optional(),
+        species_type: z.string().min(1),
+        program_class: z.string().optional(),
+      }),
+      z.object({
+        group_id: z.never().optional(),
+        group_ids: z.never().optional(),
+        species_type: z.string().optional(),
+        program_class: z.string().min(1),
+      }),
+    ])
+  )
+  .describe(
+    "Choose group_id, group_ids, or species_type/program_class filters; filters may be combined"
+  );
 
-type SyncIucnDataArgs = {
-  group_id?: number;
-  group_ids?: number[];
-  sync_missing?: boolean;
-  days_old?: number;
-  limit?: number;
-  preview?: boolean;
-};
+const toggleCaresStatusSchema = z.object({
+  group_id: positiveId.describe("Species group ID"),
+  is_cares_species: z.boolean().describe("CARES status"),
+});
 
-type GetIucnSyncLogArgs = {
-  group_id?: number;
-  limit?: number;
-};
+const updateCanonicalNameSchema = z
+  .object({
+    group_id: positiveId.describe("Species group ID"),
+    new_canonical_genus: z.string().describe("New genus name (optional)").optional(),
+    new_canonical_species_name: z.string().describe("New species name (optional)").optional(),
+  })
+  .and(
+    z.union([
+      z.object({ new_canonical_genus: z.string().min(1) }),
+      z.object({ new_canonical_species_name: z.string().min(1) }),
+    ])
+  );
 
-type GetSpeciesNeedingResyncArgs = {
-  days_old?: number;
-};
+const syncIucnDataSchema = z
+  .object({
+    group_id: positiveId.describe("Single species group ID (optional)").optional(),
+    group_ids: z
+      .array(positiveId)
+      .min(1)
+      .describe("Multiple species group IDs (optional)")
+      .optional(),
+    sync_missing: z.boolean().describe("Sync all species missing IUCN data (optional)").optional(),
+    days_old: z
+      .number()
+      .int()
+      .nonnegative()
+      .describe("Sync species with data older than N days (optional)")
+      .optional(),
+    limit: z
+      .number()
+      .int()
+      .nonnegative()
+      .describe("Limit number of species to sync (default: 10)")
+      .optional(),
+    preview: z
+      .boolean()
+      .describe("Preview which species would be synced without executing (default: false)")
+      .optional(),
+  })
+  .and(
+    z.union([
+      z.object({
+        group_id: positiveId,
+        group_ids: z.never().optional(),
+        sync_missing: z.literal(false).optional(),
+        days_old: z.never().optional(),
+      }),
+      z.object({
+        group_id: z.never().optional(),
+        group_ids: z.array(positiveId).min(1),
+        sync_missing: z.literal(false).optional(),
+        days_old: z.never().optional(),
+      }),
+      z.object({
+        group_id: z.never().optional(),
+        group_ids: z.never().optional(),
+        sync_missing: z.literal(true),
+        days_old: z.never().optional(),
+      }),
+      z.object({
+        group_id: z.never().optional(),
+        group_ids: z.never().optional(),
+        sync_missing: z.literal(false).optional(),
+        days_old: z.number().int().nonnegative(),
+      }),
+    ])
+  )
+  .describe("Choose exactly one of group_id, group_ids, sync_missing=true or days_old");
 
-type GetCanonicalRecommendationsArgs = {
-  group_id?: number;
-  status?: RecommendationStatus;
-  limit?: number;
-};
+const getIucnSyncLogSchema = z.object({
+  group_id: positiveId.describe("Filter by species group ID (optional)").optional(),
+  limit: z.number().int().nonnegative().describe("Max entries to return (default: 100)").optional(),
+});
 
-type AcceptCanonicalRecommendationArgs = {
-  recommendation_id: number;
-  reviewed_by: number;
-};
+const getSpeciesMissingIucnSchema = z.object({});
 
-type RejectCanonicalRecommendationArgs = {
-  recommendation_id: number;
-  reviewed_by: number;
-};
+const getSpeciesNeedingResyncSchema = z.object({
+  days_old: z
+    .number()
+    .int()
+    .nonnegative()
+    .describe("Consider data stale after this many days (default: 365)")
+    .optional(),
+});
 
-type FindNamesByTextArgs = {
-  text: string;
-  kind?: NameKind;
-  limit?: number;
-};
+const getIucnSyncStatsSchema = z.object({});
 
-type BulkRemoveNamesArgs = {
-  kind: NameKind;
-  text?: string;
-  name_ids?: number[];
-  preview?: boolean;
-};
+const getCanonicalRecommendationsSchema = z.object({
+  group_id: positiveId.describe("Filter by species group ID (optional)").optional(),
+  status: z
+    .enum(["pending", "accepted", "rejected"])
+    .describe("Filter by status (optional, default shows all)")
+    .optional(),
+  limit: z
+    .number()
+    .int()
+    .nonnegative()
+    .describe("Max recommendations to return (default: no limit)")
+    .optional(),
+});
 
-const nameKindSchema = {
-  type: "string",
-  enum: ["common", "scientific"],
-  description: "Which kind of Name: a common name or a scientific name",
-};
+const acceptCanonicalRecommendationSchema = z.object({
+  recommendation_id: positiveId.describe("ID of the recommendation to accept"),
+  reviewed_by: positiveId.describe("Member ID of admin accepting the recommendation"),
+});
+
+const rejectCanonicalRecommendationSchema = z.object({
+  recommendation_id: positiveId.describe("ID of the recommendation to reject"),
+  reviewed_by: positiveId.describe("Member ID of admin rejecting the recommendation"),
+});
 
 /** More than the catalogue holds: a page size that means "every Species". */
 const ALL_SPECIES = 100000;
@@ -517,490 +667,140 @@ export function initializeSpeciesServer(server: Server): void {
     }
   });
 
-  /**
-   * LIST TOOLS HANDLER
-   */
-  server.setRequestHandler(ListToolsRequestSchema, async () => {
-    return {
-      tools: [
-        // Core CRUD Operations
-        {
-          name: "create_species_group",
-          description: "Creates a new species group with canonical taxonomic name",
-          inputSchema: {
-            type: "object",
-            properties: {
-              program_class: {
-                type: "string",
-                description: "BAP program class (e.g., Cichlids, Livebearers)",
-              },
-              canonical_genus: { type: "string", description: "Official genus name" },
-              canonical_species_name: { type: "string", description: "Official species name" },
-              species_type: {
-                type: "string",
-                enum: [...catalogue.speciesTypes],
-                description: "High-level category",
-              },
-              base_points: {
-                type: "number",
-                enum: [5, 10, 15, 20],
-                description: "Point class: 5, 10, 15 or 20 (optional; anything else is refused)",
-              },
-              is_cares_species: {
-                type: "boolean",
-                description: "CARES conservation species (optional, default: false)",
-              },
-            },
-            required: ["program_class", "canonical_genus", "canonical_species_name", "species_type"],
-          },
-        },
-        {
-          name: "update_species_group",
-          description:
-            "Updates a Species' Program class, Point class, CARES flag, external references and images. The Canonical name changes only through update_canonical_name.",
-          inputSchema: {
-            type: "object",
-            properties: {
-              group_id: { type: "number", description: "Species group ID" },
-              program_class: { type: "string", description: "BAP program class (e.g., Cichlids, Livebearers, Killifish)" },
-              base_points: {
-                type: ["number", "null"],
-                enum: [5, 10, 15, 20, null],
-                description: "Point class: 5, 10, 15, 20, or null to unset (anything else is refused)",
-              },
-              is_cares_species: { type: "boolean", description: "CARES conservation species" },
-              external_references: {
-                type: "array",
-                items: { type: "string" },
-                description: "Array of reference URLs",
-              },
-              image_links: {
-                type: "array",
-                items: { type: "string" },
-                description: "Array of image URLs",
-              },
-            },
-            required: ["group_id"],
-          },
-        },
-        {
-          name: "delete_species_group",
-          description:
-            "Deletes a Species, its Names, images, links and sync records (DESTRUCTIVE). Refused while any Submission, collection entry or CARES record references the Species; merge it into another Species instead.",
-          inputSchema: {
-            type: "object",
-            properties: {
-              group_id: { type: "number", description: "Species ID" },
-            },
-            required: ["group_id"],
-          },
-        },
-        {
-          name: "add_species_name",
-          description: "Adds one Name, common or scientific, to a Species",
-          inputSchema: {
-            type: "object",
-            properties: {
-              group_id: { type: "number", description: "Species ID" },
-              kind: nameKindSchema,
-              name: { type: "string", description: "The Name's text" },
-            },
-            required: ["group_id", "kind", "name"],
-          },
-        },
-        {
-          name: "update_species_name",
-          description:
-            "Corrects the text of one Name in place. The Name keeps its id, so Submissions referencing it still do. Refused on a Species' Canonical name (a Name with canonical: true): use update_canonical_name.",
-          inputSchema: {
-            type: "object",
-            properties: {
-              kind: nameKindSchema,
-              name_id: { type: "number", description: "The Name's id (unique within its kind)" },
-              name: { type: "string", description: "The corrected text" },
-            },
-            required: ["kind", "name_id", "name"],
-          },
-        },
-        {
-          name: "remove_species_name",
-          description:
-            "Removes one Name, common or scientific, from its Species. Refused on the Species' Canonical name (a Name with canonical: true).",
-          inputSchema: {
-            type: "object",
-            properties: {
-              kind: nameKindSchema,
-              name_id: { type: "number", description: "The Name's id (unique within its kind)" },
-            },
-            required: ["kind", "name_id"],
-          },
-        },
-        {
-          name: "find_names_by_text",
-          description:
-            "Finds every Name with this exact text (ignoring case) across all Species, with the Species each one names",
-          inputSchema: {
-            type: "object",
-            properties: {
-              text: { type: "string", description: "The Name's text" },
-              kind: { ...nameKindSchema, description: "Only this kind of Name (optional; default both)" },
-              limit: { type: "number", description: "Optional limit on results (default: no limit)" },
-            },
-            required: ["text"],
-          },
-        },
-        {
-          name: "bulk_remove_names",
-          description:
-            "Removes Names of one kind, either every Name with a given text or a list of Name ids, in one transaction. Refused, removing nothing, if any of them is a Species' Canonical name. Use preview to see what would be removed.",
-          inputSchema: {
-            type: "object",
-            properties: {
-              kind: nameKindSchema,
-              text: {
-                type: "string",
-                description: "Remove every Name of this kind with this text, across all Species",
-              },
-              name_ids: {
-                type: "array",
-                items: { type: "number" },
-                description: "Name ids to remove (alternative to text)",
-              },
-              preview: {
-                type: "boolean",
-                description: "If true, return what would be removed without removing it (default: false)",
-              },
-            },
-            required: ["kind"],
-          },
-        },
-        // Advanced Operations
-        {
-          name: "merge_species_groups",
-          description:
-            "Merges the defunct Species into the canonical one: every Name moves (deduplicated), the defunct Species' Canonical name is kept as a scientific Name, and its Submissions are rebound to the canonical Species. Approved Submissions and their Points are untouched. Collection entries, CARES records, images and links move too; the defunct Species' sync logs and IUCN recommendations are dropped. A member keeping both Species keeps the canonical one's collection entry (with the earlier CARES registration); the other is marked removed.",
-          inputSchema: {
-            type: "object",
-            properties: {
-              canonical_group_id: { type: "number", description: "Species group to keep" },
-              defunct_group_id: { type: "number", description: "Species group to merge and delete" },
-              preview: {
-                type: "boolean",
-                description: "Preview changes without executing (default: false)",
-              },
-            },
-            required: ["canonical_group_id", "defunct_group_id"],
-          },
-        },
-        {
-          name: "search_species",
-          description: "Search species with filters and sorting",
-          inputSchema: {
-            type: "object",
-            properties: {
-              query: { type: "string", description: "Search text (searches the Canonical name and every Name)" },
-              species_type: {
-                type: "string",
-                enum: [...catalogue.speciesTypes],
-                description: "Filter by species type",
-              },
-              program_class: { type: "string", description: "Filter by program class" },
-              has_base_points: { type: "boolean", description: "Filter by presence of base points" },
-              is_cares_species: { type: "boolean", description: "Filter CARES species" },
-              sort_by: {
-                type: "string",
-                enum: ["name", "points", "class"],
-                description: "Sort order (default: name)",
-              },
-              limit: { type: "number", description: "Max results (default: 100)" },
-              offset: { type: "number", description: "Skip results (default: 0)" },
-              count_only: {
-                type: "boolean",
-                description: "Return only the total count, not the results (default: false)",
-              },
-            },
-          },
-        },
-        {
-          name: "get_species_detail",
-          description: "Get comprehensive details for a single Species, including its Names",
-          inputSchema: {
-            type: "object",
-            properties: {
-              group_id: { type: "number", description: "Species group ID" },
-            },
-            required: ["group_id"],
-          },
-        },
-        {
-          name: "set_base_points",
-          description:
-            "Set the Point class of Species (individual or bulk). Only 5, 10, 15 or 20 is accepted; anything else is refused.",
-          inputSchema: {
-            type: "object",
-            properties: {
-              group_id: { type: "number", description: "Single species group ID (optional)" },
-              group_ids: {
-                type: "array",
-                items: { type: "number" },
-                description: "Multiple species group IDs (optional)",
-              },
-              species_type: { type: "string", description: "Filter by species type (optional)" },
-              program_class: { type: "string", description: "Filter by program class (optional)" },
-              base_points: {
-                type: "number",
-                enum: [5, 10, 15, 20],
-                description: "Point class to set: 5, 10, 15 or 20",
-              },
-              preview: {
-                type: "boolean",
-                description: "Preview changes without executing (default: false)",
-              },
-            },
-            required: ["base_points"],
-          },
-        },
-        {
-          name: "toggle_cares_status",
-          description: "Mark species as CARES conservation priority or remove CARES status",
-          inputSchema: {
-            type: "object",
-            properties: {
-              group_id: { type: "number", description: "Species group ID" },
-              is_cares_species: { type: "boolean", description: "CARES status" },
-            },
-            required: ["group_id", "is_cares_species"],
-          },
-        },
-        {
-          name: "update_canonical_name",
-          description:
-            "Rename a Species' Canonical name (for taxonomic revisions). The old Canonical name is always kept as a scientific Name, never a common Name - the same rename as the admin edit form.",
-          inputSchema: {
-            type: "object",
-            properties: {
-              group_id: { type: "number", description: "Species group ID" },
-              new_canonical_genus: { type: "string", description: "New genus name (optional)" },
-              new_canonical_species_name: {
-                type: "string",
-                description: "New species name (optional)",
-              },
-            },
-            required: ["group_id"],
-          },
-        },
-        // IUCN Integration Tools
-        {
-          name: "sync_iucn_data",
-          description: "Sync IUCN Red List conservation status data from the IUCN API",
-          inputSchema: {
-            type: "object",
-            properties: {
-              group_id: { type: "number", description: "Single species group ID (optional)" },
-              group_ids: {
-                type: "array",
-                items: { type: "number" },
-                description: "Multiple species group IDs (optional)",
-              },
-              sync_missing: {
-                type: "boolean",
-                description: "Sync all species missing IUCN data (optional)",
-              },
-              days_old: {
-                type: "number",
-                description: "Sync species with data older than N days (optional)",
-              },
-              limit: {
-                type: "number",
-                description: "Limit number of species to sync (default: 10)",
-              },
-              preview: {
-                type: "boolean",
-                description: "Preview which species would be synced without executing (default: false)",
-              },
-            },
-          },
-        },
-        {
-          name: "get_iucn_sync_log",
-          description: "Get log of IUCN sync operations",
-          inputSchema: {
-            type: "object",
-            properties: {
-              group_id: { type: "number", description: "Filter by species group ID (optional)" },
-              limit: { type: "number", description: "Max entries to return (default: 100)" },
-            },
-          },
-        },
-        {
-          name: "get_species_missing_iucn",
-          description: "List species that don't have IUCN conservation status data",
-          inputSchema: {
-            type: "object",
-            properties: {},
-          },
-        },
-        {
-          name: "get_species_needing_resync",
-          description: "List species with stale IUCN data that needs updating",
-          inputSchema: {
-            type: "object",
-            properties: {
-              days_old: {
-                type: "number",
-                description: "Consider data stale after this many days (default: 365)",
-              },
-            },
-          },
-        },
-        {
-          name: "get_iucn_sync_stats",
-          description: "Get statistics about IUCN sync operations",
-          inputSchema: {
-            type: "object",
-            properties: {},
-          },
-        },
-        // Canonical Name Recommendation Tools
-        {
-          name: "get_canonical_recommendations",
-          description:
-            "Get list of taxonomic name change recommendations from IUCN (when IUCN has species under a different name)",
-          inputSchema: {
-            type: "object",
-            properties: {
-              group_id: {
-                type: "number",
-                description: "Filter by species group ID (optional)",
-              },
-              status: {
-                type: "string",
-                enum: ["pending", "accepted", "rejected"],
-                description: 'Filter by status (optional, default shows all)',
-              },
-              limit: {
-                type: "number",
-                description: "Max recommendations to return (default: no limit)",
-              },
-            },
-          },
-        },
-        {
-          name: "accept_canonical_recommendation",
-          description:
-            "Accept a taxonomic name change recommendation (updates the Canonical name, keeps the old one as a scientific Name)",
-          inputSchema: {
-            type: "object",
-            properties: {
-              recommendation_id: {
-                type: "number",
-                description: "ID of the recommendation to accept",
-              },
-              reviewed_by: {
-                type: "number",
-                description: "Member ID of admin accepting the recommendation",
-              },
-            },
-            required: ["recommendation_id", "reviewed_by"],
-          },
-        },
-        {
-          name: "reject_canonical_recommendation",
-          description: "Reject a taxonomic name change recommendation (keeps current name unchanged)",
-          inputSchema: {
-            type: "object",
-            properties: {
-              recommendation_id: {
-                type: "number",
-                description: "ID of the recommendation to reject",
-              },
-              reviewed_by: {
-                type: "number",
-                description: "Member ID of admin rejecting the recommendation",
-              },
-            },
-            required: ["recommendation_id", "reviewed_by"],
-          },
-        },
-      ],
-    };
-  });
-
-  /**
-   * CALL TOOL HANDLER
-   */
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const { name, arguments: args } = request.params;
-
-    try {
-      switch (name) {
-        case "create_species_group":
-          return await handleCreateSpeciesGroup(args as CreateSpeciesGroupArgs);
-        case "update_species_group":
-          return await handleUpdateSpeciesGroup(args as UpdateSpeciesGroupArgs);
-        case "delete_species_group":
-          return await handleDeleteSpeciesGroup(args as DeleteSpeciesGroupArgs);
-        case "add_species_name":
-          return await handleAddSpeciesName(args as AddSpeciesNameArgs);
-        case "update_species_name":
-          return await handleUpdateSpeciesName(args as UpdateSpeciesNameArgs);
-        case "remove_species_name":
-          return await handleRemoveSpeciesName(args as RemoveSpeciesNameArgs);
-        case "find_names_by_text":
-          return await handleFindNamesByText(args as FindNamesByTextArgs);
-        case "bulk_remove_names":
-          return await handleBulkRemoveNames(args as BulkRemoveNamesArgs);
-        case "merge_species_groups":
-          return await handleMergeSpeciesGroups(args as MergeSpeciesGroupsArgs);
-        case "search_species":
-          return await handleSearchSpecies(args as SearchSpeciesArgs);
-        case "get_species_detail":
-          return await handleGetSpeciesDetail(args as GetSpeciesDetailArgs);
-        case "set_base_points":
-          return await handleSetBasePoints(args as SetBasePointsArgs);
-        case "toggle_cares_status":
-          return await handleToggleCaresStatus(args as ToggleCaresStatusArgs);
-        case "update_canonical_name":
-          return await handleUpdateCanonicalName(args as UpdateCanonicalNameArgs);
-        case "sync_iucn_data":
-          return await handleSyncIucnData(args as SyncIucnDataArgs);
-        case "get_iucn_sync_log":
-          return await handleGetIucnSyncLog(args as GetIucnSyncLogArgs);
-        case "get_species_missing_iucn":
-          return await handleGetSpeciesMissingIucn();
-        case "get_species_needing_resync":
-          return await handleGetSpeciesNeedingResync(args as GetSpeciesNeedingResyncArgs);
-        case "get_iucn_sync_stats":
-          return await handleGetIucnSyncStats();
-        case "get_canonical_recommendations":
-          return await handleGetCanonicalRecommendations(args as GetCanonicalRecommendationsArgs);
-        case "accept_canonical_recommendation":
-          return await handleAcceptCanonicalRecommendation(args as AcceptCanonicalRecommendationArgs);
-        case "reject_canonical_recommendation":
-          return await handleRejectCanonicalRecommendation(args as RejectCanonicalRecommendationArgs);
-        default:
-          throw new Error(`Unknown tool: ${name}`);
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify(
-              {
-                success: false,
-                error: message,
-                error_code: "TOOL_EXECUTION_ERROR",
-              },
-              null,
-              2
-            ),
-          },
-        ],
-      };
-    }
-  });
+  registerTools(server, [
+    defineTool(
+      "create_species_group",
+      "Creates a new species group with canonical taxonomic name",
+      createSpeciesGroupSchema,
+      handleCreateSpeciesGroup
+    ),
+    defineTool(
+      "update_species_group",
+      "Updates a Species' Program class, Point class, CARES flag, external references and images. The Canonical name changes only through update_canonical_name.",
+      updateSpeciesGroupSchema,
+      handleUpdateSpeciesGroup
+    ),
+    defineTool(
+      "delete_species_group",
+      "Deletes a Species, its Names, images, links and sync records (DESTRUCTIVE). Refused while any Submission, collection entry or CARES record references the Species; merge it into another Species instead.",
+      deleteSpeciesGroupSchema,
+      handleDeleteSpeciesGroup
+    ),
+    defineTool(
+      "add_species_name",
+      "Adds one Name, common or scientific, to a Species",
+      addSpeciesNameSchema,
+      handleAddSpeciesName
+    ),
+    defineTool(
+      "update_species_name",
+      "Corrects the text of one Name in place. The Name keeps its id, so Submissions referencing it still do. Refused on a Species' Canonical name (a Name with canonical: true): use update_canonical_name.",
+      updateSpeciesNameSchema,
+      handleUpdateSpeciesName
+    ),
+    defineTool(
+      "remove_species_name",
+      "Removes one Name, common or scientific, from its Species. Refused on the Species' Canonical name (a Name with canonical: true).",
+      removeSpeciesNameSchema,
+      handleRemoveSpeciesName
+    ),
+    defineTool(
+      "find_names_by_text",
+      "Finds every Name with this exact text (ignoring case) across all Species, with the Species each one names",
+      findNamesByTextSchema,
+      handleFindNamesByText
+    ),
+    defineTool(
+      "bulk_remove_names",
+      "Removes Names of one kind, either every Name with a given text or a list of Name ids, in one transaction. Refused, removing nothing, if any of them is a Species' Canonical name. Use preview to see what would be removed.",
+      bulkRemoveNamesSchema,
+      handleBulkRemoveNames
+    ),
+    defineTool(
+      "merge_species_groups",
+      "Merges the defunct Species into the canonical one: every Name moves (deduplicated), the defunct Species' Canonical name is kept as a scientific Name, and its Submissions are rebound to the canonical Species. Approved Submissions and their Points are untouched. Collection entries, CARES records, images and links move too; the defunct Species' sync logs and IUCN recommendations are dropped. A member keeping both Species keeps the canonical one's collection entry (with the earlier CARES registration); the other is marked removed.",
+      mergeSpeciesGroupsSchema,
+      handleMergeSpeciesGroups
+    ),
+    defineTool(
+      "search_species",
+      "Search species with filters and sorting",
+      searchSpeciesSchema,
+      handleSearchSpecies
+    ),
+    defineTool(
+      "get_species_detail",
+      "Get comprehensive details for a single Species, including its Names",
+      getSpeciesDetailSchema,
+      handleGetSpeciesDetail
+    ),
+    defineTool(
+      "set_base_points",
+      "Set the Point class of Species (individual or bulk). Only 5, 10, 15 or 20 is accepted; anything else is refused.",
+      setBasePointsSchema,
+      handleSetBasePoints
+    ),
+    defineTool(
+      "toggle_cares_status",
+      "Mark species as CARES conservation priority or remove CARES status",
+      toggleCaresStatusSchema,
+      handleToggleCaresStatus
+    ),
+    defineTool(
+      "update_canonical_name",
+      "Rename a Species' Canonical name (for taxonomic revisions). The old Canonical name is always kept as a scientific Name, never a common Name - the same rename as the admin edit form.",
+      updateCanonicalNameSchema,
+      handleUpdateCanonicalName
+    ),
+    defineTool(
+      "sync_iucn_data",
+      "Sync IUCN Red List conservation status data from the IUCN API",
+      syncIucnDataSchema,
+      handleSyncIucnData
+    ),
+    defineTool(
+      "get_iucn_sync_log",
+      "Get log of IUCN sync operations",
+      getIucnSyncLogSchema,
+      handleGetIucnSyncLog
+    ),
+    defineTool(
+      "get_species_missing_iucn",
+      "List species that don't have IUCN conservation status data",
+      getSpeciesMissingIucnSchema,
+      handleGetSpeciesMissingIucn
+    ),
+    defineTool(
+      "get_species_needing_resync",
+      "List species with stale IUCN data that needs updating",
+      getSpeciesNeedingResyncSchema,
+      handleGetSpeciesNeedingResync
+    ),
+    defineTool(
+      "get_iucn_sync_stats",
+      "Get statistics about IUCN sync operations",
+      getIucnSyncStatsSchema,
+      handleGetIucnSyncStats
+    ),
+    defineTool(
+      "get_canonical_recommendations",
+      "Get list of taxonomic name change recommendations from IUCN (when IUCN has species under a different name)",
+      getCanonicalRecommendationsSchema,
+      handleGetCanonicalRecommendations
+    ),
+    defineTool(
+      "accept_canonical_recommendation",
+      "Accept a taxonomic name change recommendation (updates the Canonical name, keeps the old one as a scientific Name)",
+      acceptCanonicalRecommendationSchema,
+      handleAcceptCanonicalRecommendation
+    ),
+    defineTool(
+      "reject_canonical_recommendation",
+      "Reject a taxonomic name change recommendation (keeps current name unchanged)",
+      rejectCanonicalRecommendationSchema,
+      handleRejectCanonicalRecommendation
+    ),
+  ]);
 }
 
 /**
@@ -1014,7 +814,7 @@ function ok(body: Record<string, unknown>) {
   };
 }
 
-async function handleCreateSpeciesGroup(args: CreateSpeciesGroupArgs) {
+async function handleCreateSpeciesGroup(args: z.infer<typeof createSpeciesGroupSchema>) {
   const group_id = await catalogue.createSpecies({
     programClass: args.program_class,
     speciesType: args.species_type,
@@ -1026,8 +826,15 @@ async function handleCreateSpeciesGroup(args: CreateSpeciesGroupArgs) {
   return ok({ group_id, message: "Species created successfully" });
 }
 
-async function handleUpdateSpeciesGroup(args: UpdateSpeciesGroupArgs) {
-  const { group_id, program_class, base_points, is_cares_species, external_references, image_links } = args;
+async function handleUpdateSpeciesGroup(args: z.infer<typeof updateSpeciesGroupSchema>) {
+  const {
+    group_id,
+    program_class,
+    base_points,
+    is_cares_species,
+    external_references,
+    image_links,
+  } = args;
 
   if (!(await catalogue.findSpeciesById(group_id))) {
     return ok({ group_id, changes: 0, message: "Species not found" });
@@ -1058,17 +865,22 @@ async function handleUpdateSpeciesGroup(args: UpdateSpeciesGroupArgs) {
   });
 }
 
-async function handleDeleteSpeciesGroup(args: DeleteSpeciesGroupArgs) {
+async function handleDeleteSpeciesGroup(args: z.infer<typeof deleteSpeciesGroupSchema>) {
   const changes = await catalogue.deleteSpecies(args.group_id);
   return ok({ group_id: args.group_id, changes, message: "Species deleted successfully" });
 }
 
-async function handleAddSpeciesName(args: AddSpeciesNameArgs) {
+async function handleAddSpeciesName(args: z.infer<typeof addSpeciesNameSchema>) {
   const name_id = await catalogue.addName(args.group_id, args.kind, args.name);
-  return ok({ kind: args.kind, name_id, group_id: args.group_id, message: "Name added successfully" });
+  return ok({
+    kind: args.kind,
+    name_id,
+    group_id: args.group_id,
+    message: "Name added successfully",
+  });
 }
 
-async function handleUpdateSpeciesName(args: UpdateSpeciesNameArgs) {
+async function handleUpdateSpeciesName(args: z.infer<typeof updateSpeciesNameSchema>) {
   const changes = await catalogue.updateName(args.kind, args.name_id, args.name);
   return ok({
     kind: args.kind,
@@ -1078,7 +890,7 @@ async function handleUpdateSpeciesName(args: UpdateSpeciesNameArgs) {
   });
 }
 
-async function handleRemoveSpeciesName(args: RemoveSpeciesNameArgs) {
+async function handleRemoveSpeciesName(args: z.infer<typeof removeSpeciesNameSchema>) {
   const changes = await catalogue.removeName(args.kind, args.name_id);
   return ok({
     kind: args.kind,
@@ -1088,13 +900,13 @@ async function handleRemoveSpeciesName(args: RemoveSpeciesNameArgs) {
   });
 }
 
-async function handleFindNamesByText(args: FindNamesByTextArgs) {
+async function handleFindNamesByText(args: z.infer<typeof findNamesByTextSchema>) {
   const found = await findNamesByText(args.text, args.kind);
   const results = args.limit ? found.slice(0, args.limit) : found;
   return ok({ text: args.text, count: results.length, results });
 }
 
-async function handleBulkRemoveNames(args: BulkRemoveNamesArgs) {
+async function handleBulkRemoveNames(args: z.infer<typeof bulkRemoveNamesSchema>) {
   const { kind, text, name_ids, preview = false } = args;
 
   if (!text && !name_ids) {
@@ -1122,7 +934,7 @@ async function handleBulkRemoveNames(args: BulkRemoveNamesArgs) {
   return ok({ preview: false, kind, count, message: `Removed ${count} ${kind} name(s)` });
 }
 
-async function handleMergeSpeciesGroups(args: MergeSpeciesGroupsArgs) {
+async function handleMergeSpeciesGroups(args: z.infer<typeof mergeSpeciesGroupsSchema>) {
   const { canonical_group_id, defunct_group_id, preview } = args;
 
   const plan = await catalogue.previewMerge(canonical_group_id, defunct_group_id);
@@ -1160,14 +972,18 @@ async function handleMergeSpeciesGroups(args: MergeSpeciesGroupsArgs) {
   };
 
   if (preview) {
-    return ok({ preview: true, ...summary, message: "Preview of merge operation (no changes made)" });
+    return ok({
+      preview: true,
+      ...summary,
+      message: "Preview of merge operation (no changes made)",
+    });
   }
 
   await catalogue.mergeSpecies(canonical_group_id, defunct_group_id);
   return ok({ ...summary, message: "Species merged successfully" });
 }
 
-async function handleSearchSpecies(args: SearchSpeciesArgs) {
+async function handleSearchSpecies(args: z.infer<typeof searchSpeciesSchema>) {
   const {
     query: searchQuery,
     species_type,
@@ -1188,12 +1004,7 @@ async function handleSearchSpecies(args: SearchSpeciesArgs) {
     search: searchQuery,
   };
 
-  const result = await catalogue.getSpeciesForAdmin(
-    filters,
-    sort_by as "name" | "points" | "class" | undefined,
-    limit,
-    offset
-  );
+  const result = await catalogue.getSpeciesForAdmin(filters, sort_by, limit, offset);
 
   // If count_only is true, return just the count
   if (count_only) {
@@ -1243,7 +1054,7 @@ async function handleSearchSpecies(args: SearchSpeciesArgs) {
   };
 }
 
-async function handleGetSpeciesDetail(args: GetSpeciesDetailArgs) {
+async function handleGetSpeciesDetail(args: z.infer<typeof getSpeciesDetailSchema>) {
   const { group_id } = args;
 
   const speciesDetail = await catalogue.getSpeciesDetail(group_id);
@@ -1269,7 +1080,7 @@ async function handleGetSpeciesDetail(args: GetSpeciesDetailArgs) {
   };
 }
 
-async function handleSetBasePoints(args: SetBasePointsArgs) {
+async function handleSetBasePoints(args: z.infer<typeof setBasePointsSchema>) {
   const { group_id, group_ids, species_type, program_class, base_points, preview } = args;
 
   // Refuse anything but a Point class before looking for targets, even in preview
@@ -1364,7 +1175,7 @@ async function handleSetBasePoints(args: SetBasePointsArgs) {
   };
 }
 
-async function handleToggleCaresStatus(args: ToggleCaresStatusArgs) {
+async function handleToggleCaresStatus(args: z.infer<typeof toggleCaresStatusSchema>) {
   const { group_id, is_cares_species } = args;
   const changes = await catalogue.updateSpecies(group_id, { isCaresSpecies: is_cares_species });
   return ok({
@@ -1379,7 +1190,7 @@ async function handleToggleCaresStatus(args: ToggleCaresStatusArgs) {
  * The same rename as the admin edit form: the catalogue's `renameCanonical`,
  * which keeps the old Canonical name as a scientific Name.
  */
-async function handleUpdateCanonicalName(args: UpdateCanonicalNameArgs) {
+async function handleUpdateCanonicalName(args: z.infer<typeof updateCanonicalNameSchema>) {
   const { group_id, new_canonical_genus, new_canonical_species_name } = args;
 
   if (!new_canonical_genus && !new_canonical_species_name) {
@@ -1411,11 +1222,15 @@ async function handleUpdateCanonicalName(args: UpdateCanonicalNameArgs) {
  * IUCN TOOL IMPLEMENTATIONS
  */
 
-async function handleSyncIucnData(args: SyncIucnDataArgs) {
+async function handleSyncIucnData(args: z.infer<typeof syncIucnDataSchema>) {
   const { group_id, group_ids, sync_missing, days_old, limit = 10, preview = false } = args;
 
   const database = db(true); // Write access for IUCN data updates
-  let targetSpecies: { group_id: number; canonical_genus: string; canonical_species_name: string }[];
+  let targetSpecies: {
+    group_id: number;
+    canonical_genus: string;
+    canonical_species_name: string;
+  }[];
 
   // Determine which species to sync
   if (group_id) {
@@ -1550,7 +1365,7 @@ async function handleSyncIucnData(args: SyncIucnDataArgs) {
   };
 }
 
-async function handleGetIucnSyncLog(args: GetIucnSyncLogArgs) {
+async function handleGetIucnSyncLog(args: z.infer<typeof getIucnSyncLogSchema>) {
   const { group_id, limit = 100 } = args;
 
   const database = db();
@@ -1596,7 +1411,7 @@ async function handleGetSpeciesMissingIucn() {
   };
 }
 
-async function handleGetSpeciesNeedingResync(args: GetSpeciesNeedingResyncArgs) {
+async function handleGetSpeciesNeedingResync(args: z.infer<typeof getSpeciesNeedingResyncSchema>) {
   const { days_old = 365 } = args;
 
   const database = db();
@@ -1646,7 +1461,9 @@ async function handleGetIucnSyncStats() {
  * CANONICAL NAME RECOMMENDATION TOOL IMPLEMENTATIONS
  */
 
-async function handleGetCanonicalRecommendations(args: GetCanonicalRecommendationsArgs) {
+async function handleGetCanonicalRecommendations(
+  args: z.infer<typeof getCanonicalRecommendationsSchema>
+) {
   const { group_id, status, limit } = args;
 
   const database = db();
@@ -1686,7 +1503,9 @@ async function handleGetCanonicalRecommendations(args: GetCanonicalRecommendatio
   };
 }
 
-async function handleAcceptCanonicalRecommendation(args: AcceptCanonicalRecommendationArgs) {
+async function handleAcceptCanonicalRecommendation(
+  args: z.infer<typeof acceptCanonicalRecommendationSchema>
+) {
   const { recommendation_id, reviewed_by } = args;
 
   const database = db(true); // Write access
@@ -1712,7 +1531,9 @@ async function handleAcceptCanonicalRecommendation(args: AcceptCanonicalRecommen
   };
 }
 
-async function handleRejectCanonicalRecommendation(args: RejectCanonicalRecommendationArgs) {
+async function handleRejectCanonicalRecommendation(
+  args: z.infer<typeof rejectCanonicalRecommendationSchema>
+) {
   const { recommendation_id, reviewed_by } = args;
 
   const database = db(true); // Write access
