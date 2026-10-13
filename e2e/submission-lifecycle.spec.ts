@@ -69,7 +69,7 @@ async function rewitness(page: Page, submissionId: number): Promise<void> {
 
 	const witnessButton = page.locator("#witness-confirm");
 	await expect(witnessButton).toBeEnabled({ timeout: 10000 });
-	await witnessButton.scrollIntoViewIfNeeded();
+	// click retries through summary swaps and scrolls the current button into view.
 	await witnessButton.click();
 	await page.waitForURL(/\/admin\/witness-queue\//, { timeout: 10000 });
 	await page.waitForLoadState("networkidle");
