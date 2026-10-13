@@ -6,8 +6,9 @@ import {
   resetNotifier,
   type Caller,
 } from "@/lifecycle";
+import { levelRules, type ProgramType } from "@/programs";
 import { query } from "@/db/conn";
-import { getMember } from "@/db/members";
+import { getMember, updateMember } from "@/db/members";
 import { createSpecies, updateSpecies } from "@/species";
 import {
   setupTestDatabase,
@@ -106,6 +107,46 @@ void describe("Submission lifecycle - standing", () => {
   // -------------------------------------------------------------------------
 
   void describe("Levels", () => {
+    const programs: ProgramType[] = ["fish", "plant", "coral"];
+    for (const program of programs) {
+      void test(`${program}: initial attainment, rise, unchanged, drop, and unknown repair preserve notification/feed policy`, async () => {
+        await recomputeStanding(ctx.member.id, program);
+        assert.deepStrictEqual(sent.of("levelUp").map((letter) => letter.about), [`${program}:Participant`]);
+        assert.strictEqual((await getMember(ctx.member.id))?.[`${program}_level`], "Participant");
+        sent.clear();
+
+        await submissionInState(ctx.db, "approved", {
+          memberId: ctx.member.id,
+          witnessedBy: ctx.admin.id,
+          program,
+          points: 20,
+          articlePoints: 5,
+          speciesId: null,
+        });
+        const attained = levelRules[program][1][0];
+        await recomputeStanding(ctx.member.id, program);
+        await recomputeStanding(ctx.member.id, program);
+        assert.deepStrictEqual(sent.of("levelUp").map((letter) => letter.about), [`${program}:${attained}`]);
+        assert.deepStrictEqual(sent.of("levelUp")[0].to, [ctx.member.contact_email]);
+        const announcements = (await feed()).filter((entry) => entry.activity_type === "level_up");
+        assert.deepStrictEqual(announcements.map((entry) => entry.related_id), [
+          `${program}:Participant`, `${program}:${attained}`,
+        ]);
+        assert.strictEqual(JSON.parse(announcements[1].activity_data).total_points, 25);
+        sent.clear();
+
+        const otherProgram = program === "fish" ? "plant" : "fish";
+        for (const stored of [levelRules[program][2][0], "Invalid stored Level", "", levelRules[otherProgram][1][0]]) {
+          await updateMember(ctx.member.id, { [`${program}_level`]: stored });
+          await recomputeStanding(ctx.member.id, program);
+          assert.strictEqual((await getMember(ctx.member.id))?.[`${program}_level`], attained);
+          assert.deepStrictEqual(sent.of("levelUp"), []);
+          assert.deepStrictEqual((await feed()).filter((entry) => entry.activity_type === "level_up"), announcements,
+            "silent repairs retain prior Level announcements without adding or refreshing them");
+        }
+      });
+    }
+
     void test("reaching the same Level again refreshes its entry rather than adding one", async () => {
       const { ids } = await approveAnabantoids(3, 10);
       const before = (await feed()).filter((e) => e.activity_type === "level_up").length;
@@ -156,7 +197,7 @@ void describe("Submission lifecycle - standing", () => {
       assert.deepStrictEqual(
         sent.of("levelUp"),
         [],
-        "a demotion describes a consequence whose cause the member was never told"
+        "a downward correction must not receive a congratulatory letter"
       );
     });
   });

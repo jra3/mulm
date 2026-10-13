@@ -9,9 +9,10 @@ import {
   type TestContext,
 } from "./helpers/testHelpers";
 import { approveSubmissionFixture } from "./helpers/testHelpers";
-import { checkAndUpdateMemberLevel, checkAllMemberLevels } from "../levelManager";
-import { getMember } from "../db/members";
-import { calculateLevel, levelRules } from "../programs";
+import { checkAndUpdateMemberLevel, checkAllMemberLevels, type LevelCheckOptions } from "../levelManager";
+import { getMember, updateMember } from "../db/members";
+import { sweepMemberLevels } from "../scheduled/level-sweep";
+import { calculateLevel, compareLevelChange, levelRules, type ProgramType } from "../programs";
 
 /**
  * Comprehensive tests for Level Manager
@@ -570,74 +571,128 @@ void describe("Level Manager", () => {
     });
   });
 
-  void describe("Level Downgrade Scenarios", () => {
-    void test("should not send email on downgrade", async () => {
-      // This is more of a documentation test - the function shouldn't downgrade
-      // but if it did, it wouldn't send email
+  void describe("Level change notification policy", () => {
+    const programs: ProgramType[] = ["fish", "plant", "coral"];
+    let letters: Array<{ memberId: number; program: ProgramType; level: string; points: number }>;
+    const notifyLevelUpgrade: NonNullable<LevelCheckOptions["notifyLevelUpgrade"]> = async (
+      member, program, level, points
+    ) => {
+      assert.strictEqual((await getMember(member.id))?.[`${program}_level`], level,
+        "persist the Level before delivering the letter");
+      assert.ok(typeof points === "number", "the letter carries the computed total Points");
+      letters.push({ memberId: member.id, program, level, points });
+    };
 
-      // For now, the system doesn't support downgrades
-      // (submissions can't be unapproved, so points only go up)
-      // This test documents the expected behavior if that changes
+    beforeEach(() => { letters = []; });
 
-      const result = await checkAndUpdateMemberLevel(ctx.member.id, "fish", {
-        disableEmails: false, // emails enabled
+    async function earn25Points(program: ProgramType) {
+      await createTestSubmission(ctx.db, {
+        memberId: ctx.member.id,
+        submitted: true,
+        approved: true,
+        witnessStatus: "confirmed",
+        witnessedBy: ctx.admin.id,
+        approvedBy: ctx.admin.id,
+        program,
+        points: 20,
+        articlePoints: 5,
+      });
+    }
+
+    for (const program of programs) {
+      const firstEarnedLevel = levelRules[program][1][0];
+      const higherLevel = levelRules[program][2][0];
+
+      void test(`${program}: comparison distinguishes initial, rise, unchanged, drop, and unknown`, () => {
+        assert.strictEqual(compareLevelChange(program, null, "Participant"), "initial");
+        assert.strictEqual(compareLevelChange(program, undefined, firstEarnedLevel), "initial");
+        assert.strictEqual(compareLevelChange(program, "Participant", firstEarnedLevel), "rise");
+        assert.strictEqual(compareLevelChange(program, firstEarnedLevel, firstEarnedLevel), "unchanged");
+        assert.strictEqual(compareLevelChange(program, higherLevel, firstEarnedLevel), "drop");
+        assert.strictEqual(compareLevelChange(program, "Invalid stored Level", firstEarnedLevel), "unknown");
+        assert.strictEqual(compareLevelChange(program, "", firstEarnedLevel), "unknown");
+        assert.strictEqual(compareLevelChange(program, "Participant", "Invalid calculated Level"), "unknown");
       });
 
-      // Even with no submissions, moving from undefined to "Participant" is a level change
-      assert.strictEqual(result.levelChanged, true);
-      assert.strictEqual(result.newLevel, "Participant");
-    });
-  });
+      void test(`${program}: initial Participant attainment sends once`, async () => {
+        await checkAndUpdateMemberLevel(ctx.member.id, program, { notifyLevelUpgrade });
+        await checkAndUpdateMemberLevel(ctx.member.id, program, { notifyLevelUpgrade });
+        assert.deepStrictEqual(letters, [{ memberId: ctx.member.id, program, level: "Participant", points: 0 }]);
+      });
 
-  void describe("Email Notification Behavior", () => {
-    void test("should not send email when disableEmails is true", async () => {
-      // Create 25 points worth of submissions
-      for (let i = 0; i < 5; i++) {
-        const sub = await createTestSubmission(ctx.db, {
-          memberId: ctx.member.id,
-          submitted: true,
-          witnessStatus: "confirmed",
-          witnessedBy: ctx.admin.id,
-        });
+      void test(`${program}: a rise sends once with total Points; unchanged sends nothing`, async () => {
+        await updateMember(ctx.member.id, { [`${program}_level`]: "Participant" });
+        await earn25Points(program);
+        await checkAndUpdateMemberLevel(ctx.member.id, program, { notifyLevelUpgrade });
+        const unchanged = await checkAndUpdateMemberLevel(ctx.member.id, program, { notifyLevelUpgrade });
+        assert.strictEqual(unchanged.levelChanged, false);
+        assert.deepStrictEqual(letters, [{ memberId: ctx.member.id, program, level: firstEarnedLevel, points: 25 }]);
+      });
 
-        await approveSubmissionFixture(ctx.admin.id, sub, mockSpeciesId, {
-          ...mockApprovalData,
-          points: 5,
+      void test(`${program}: committee check persists a downgrade without an upgrade letter`, async () => {
+        await updateMember(ctx.member.id, {
+          fish_level: "Participant", plant_level: "Participant", coral_level: "Participant",
+          [`${program}_level`]: higherLevel,
         });
+        await earn25Points(program);
+        const results = await checkAllMemberLevels(ctx.member.id, { notifyLevelUpgrade });
+        assert.strictEqual(results[program]?.oldLevel, higherLevel);
+        assert.strictEqual(results[program]?.newLevel, firstEarnedLevel);
+        assert.strictEqual((await getMember(ctx.member.id))?.[`${program}_level`], firstEarnedLevel);
+        assert.deepStrictEqual(letters, []);
+      });
+
+      void test(`${program}: unknown and other-Program stored Levels are repaired silently`, async () => {
+        await earn25Points(program);
+        const otherProgram = program === "fish" ? "plant" : "fish";
+        for (const stored of ["Invalid stored Level", "", levelRules[otherProgram][1][0]]) {
+          await updateMember(ctx.member.id, { [`${program}_level`]: stored });
+          const result = await checkAndUpdateMemberLevel(ctx.member.id, program, { notifyLevelUpgrade });
+          assert.strictEqual(result.newLevel, firstEarnedLevel);
+          assert.strictEqual((await getMember(ctx.member.id))?.[`${program}_level`], firstEarnedLevel);
+        }
+        assert.deepStrictEqual(letters, []);
+      });
+
+      void test(`${program}: suppression persists initial attainment, rises, drops, and unknown repairs silently`, async () => {
+        await earn25Points(program);
+        // First call starts with the database's null stored Level.
+        await checkAndUpdateMemberLevel(ctx.member.id, program, { disableEmails: true, notifyLevelUpgrade });
+        assert.strictEqual((await getMember(ctx.member.id))?.[`${program}_level`], firstEarnedLevel);
+        for (const stored of ["Participant", firstEarnedLevel, higherLevel, "Invalid stored Level"]) {
+          await updateMember(ctx.member.id, { [`${program}_level`]: stored });
+          await checkAllMemberLevels(ctx.member.id, { disableEmails: true, notifyLevelUpgrade });
+          assert.strictEqual((await getMember(ctx.member.id))?.[`${program}_level`], firstEarnedLevel);
+        }
+        assert.deepStrictEqual(letters, []);
+      });
+    }
+
+    void test("committee check sends one letter per rise without creating lifecycle activities", async () => {
+      for (const program of programs) {
+        await earn25Points(program);
+        await updateMember(ctx.member.id, { [`${program}_level`]: "Participant" });
       }
-
-      const result = await checkAndUpdateMemberLevel(ctx.member.id, "fish", {
-        disableEmails: true,
-      });
-
-      assert.strictEqual(result.levelChanged, true);
-      // Email would be sent if disableEmails was false
-      // We can't easily test email sending without mocking, but we verify the flag works
+      await checkAllMemberLevels(ctx.member.id, { notifyLevelUpgrade });
+      await checkAllMemberLevels(ctx.member.id, { notifyLevelUpgrade });
+      assert.deepStrictEqual(letters.map((letter) => letter.program), programs);
+      const activities = await ctx.db.all("SELECT * FROM activity_feed WHERE member_id = ?", ctx.member.id);
+      assert.deepStrictEqual(activities, []);
     });
 
-    void test("should respect disableEmails option", async () => {
-      // Create 25 points
-      for (let i = 0; i < 5; i++) {
-        const sub = await createTestSubmission(ctx.db, {
-          memberId: ctx.member.id,
-          submitted: true,
-          witnessStatus: "confirmed",
-          witnessedBy: ctx.admin.id,
-        });
-
-        await approveSubmissionFixture(ctx.admin.id, sub, mockSpeciesId, {
-          ...mockApprovalData,
-          points: 5,
-        });
-      }
-
-      // With emails disabled
-      const result = await checkAndUpdateMemberLevel(ctx.member.id, "fish", {
-        disableEmails: true,
-      });
-
-      assert.strictEqual(result.levelChanged, true);
-      assert.strictEqual(result.newLevel, "Hobbyist");
+    void test("scheduled sweep corrects initial, rising, and falling Levels without letters", async () => {
+      await earn25Points("fish");
+      await updateMember(ctx.member.id, { fish_level: "Participant", plant_level: levelRules.plant[2][0] });
+      const result = await sweepMemberLevels({ notifyLevelUpgrade });
+      assert.strictEqual(result.errors, 0);
+      assert.deepStrictEqual(result.changes.filter((change) => change.memberId === ctx.member.id).map((change) => [change.program, change.to]), [
+        ["fish", "Hobbyist"], ["plant", "Participant"], ["coral", "Participant"],
+      ]);
+      const member = await getMember(ctx.member.id);
+      assert.strictEqual(member?.fish_level, "Hobbyist");
+      assert.strictEqual(member?.plant_level, "Participant");
+      assert.strictEqual(member?.coral_level, "Participant");
+      assert.deepStrictEqual(letters, []);
     });
   });
 
