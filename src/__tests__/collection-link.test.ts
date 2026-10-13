@@ -20,7 +20,7 @@ import { S3Client } from "@aws-sdk/client-s3";
 import collectionRouter from "@/routes/collection";
 import caresRouter from "@/routes/cares";
 import type { MulmRequest } from "@/sessions";
-import { setupTestDatabase, type TestDatabase } from "./testDbHelper.helper";
+import { createTestDatabase, type TestDatabase } from "./helpers/database";
 
 void describe("collection linking and competing writers", () => {
   let fixture: TestDatabase;
@@ -30,7 +30,7 @@ void describe("collection linking and competing writers", () => {
   let entryId: number;
 
   beforeEach(async () => {
-    fixture = await setupTestDatabase();
+    fixture = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
     memberId = await createMember("linker@example.test", "Linker", {}, true);
     otherId = await createMember("other@example.test", "Other");
     const result = await fixture.db.run(`INSERT INTO species_name_group
