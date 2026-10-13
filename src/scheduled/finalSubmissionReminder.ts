@@ -49,7 +49,16 @@ export async function runFinalSubmissionReminders(): Promise<{ sent: number; fai
   return { sent, failed };
 }
 
+let reminderRunning: Promise<unknown> | undefined;
+let reminderTimeout: NodeJS.Timeout | null = null;
 let reminderInterval: NodeJS.Timeout | null = null;
+
+/** Keep a startup catch-up run owned until it finishes, even across the daily slot. */
+function launchScheduledRun(): void {
+  reminderRunning ??= runFinalSubmissionReminders().finally(() => {
+    reminderRunning = undefined;
+  });
+}
 
 /**
  * Start the daily final-submission reminder task.
@@ -57,8 +66,9 @@ let reminderInterval: NodeJS.Timeout | null = null;
  * stopped — Fly scales to zero) and then daily at 4:00 AM server time.
  */
 export function startFinalSubmissionReminders(): void {
+  if (reminderTimeout || reminderInterval) return;
   // Run on startup to catch up on anything missed while the machine was stopped.
-  void runFinalSubmissionReminders();
+  launchScheduledRun();
 
   const now = new Date();
   const next4AM = new Date();
@@ -70,11 +80,11 @@ export function startFinalSubmissionReminders(): void {
 
   logger.info(`Next final-submission reminder run scheduled for ${next4AM.toISOString()}`);
 
-  setTimeout(() => {
-    void runFinalSubmissionReminders();
+  reminderTimeout = setTimeout(() => {
+    launchScheduledRun();
     reminderInterval = setInterval(
       () => {
-        void runFinalSubmissionReminders();
+        launchScheduledRun();
       },
       24 * 60 * 60 * 1000
     );
@@ -82,10 +92,15 @@ export function startFinalSubmissionReminders(): void {
 }
 
 /** Stop the scheduled reminder task (graceful shutdown / tests). */
-export function stopFinalSubmissionReminders(): void {
+export async function stopFinalSubmissionReminders(): Promise<void> {
+  if (reminderTimeout) {
+    clearTimeout(reminderTimeout);
+    reminderTimeout = null;
+  }
   if (reminderInterval) {
     clearInterval(reminderInterval);
     reminderInterval = null;
     logger.info("Scheduled final-submission reminders stopped");
   }
+  await reminderRunning;
 }

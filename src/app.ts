@@ -1,0 +1,483 @@
+import defaultConfig from "@/config.json";
+import express from "express";
+import cookieParser from "cookie-parser";
+// import multer from "multer"; // Used in feature branch
+
+import * as account from "@/routes/account";
+import adminRouter from "@/routes/adminRouter";
+import * as auth from "@/routes/auth";
+import caresRouter from "@/routes/cares";
+import collectionRouter from "@/routes/collection";
+import displayRouter from "@/routes/display";
+import * as member from "@/routes/member";
+import * as submission from "@/routes/submission";
+import * as standings from "@/routes/standings";
+import * as tank from "@/routes/tank";
+import * as species from "@/routes/species";
+import * as typeahead from "@/routes/typeahead";
+import uploadRouter from "@/routes/api/upload";
+
+import { getQueueCounts } from "./db/submissions";
+import { getRecentActivity } from "./db/activity";
+import { getMemberByEmail, getMemberPassword } from "./db/members";
+import { checkPassword } from "./auth";
+import { writeConn } from "./db/conn";
+
+import {
+  MulmRequest,
+  sessionMiddleware,
+  generateSessionCookie,
+  generateCsrfToken,
+  sessionCookieName,
+  SESSION_MAX_AGE_MS,
+  sessionCookieOptions,
+} from "./sessions";
+import { createOriginValidation, buildAllowedOrigins } from "./middleware/originValidation";
+import { canSeeCaresRegistry } from "./caresRegistry";
+import { csrfValidation } from "./middleware/csrfValidation";
+import helmet from "helmet";
+import { getGoogleOAuthURL, beginOAuthFlow, isGoogleOAuthEnabled } from "./oauth";
+import { appleOAuthURL } from "./auth/apple";
+import { getQueryString, getBodyString } from "./utils/request";
+import {
+  loginRateLimiter,
+  signupRateLimiter,
+  forgotPasswordRateLimiter,
+  oauthRateLimiter,
+} from "./middleware/rateLimiter";
+import * as emailDemo from "./routes/emailDemo";
+import * as activityDemo from "./routes/activityDemo";
+import * as cardDemo from "./routes/cardDemo";
+import * as hoverCardDemo from "./routes/hoverCardDemo";
+import testRouter from "./routes/test";
+import { logger } from "./utils/logger";
+import { type Env } from "./utils/environment";
+import { setAppEnvironment } from "./appEnvironment";
+import path from "node:path";
+
+export interface AppDependencies {
+  env?: Env;
+  /** Composition configuration only; provider/repository configuration remains process-wide. */
+  config?: { server: { domain: string }; email: { bugReportEmail: string } };
+}
+
+/** Build the production middleware stack without initializing storage or starting services. */
+export function createApp(dependencies: AppDependencies = {}) {
+  const env = { ...(dependencies.env ?? process.env) };
+  const config = dependencies.config ?? defaultConfig;
+  const app = express();
+  app.set("env", env.NODE_ENV ?? "development");
+  setAppEnvironment(app, env);
+
+  // Security: Hide Express version from X-Powered-By header
+  app.disable("x-powered-by");
+
+  // Behind Fly's proxy in production, trust the single proxy hop so req.protocol,
+  // req.hostname and req.ip reflect the client-facing X-Forwarded-* values. We
+  // trust exactly one hop (not `true`) so clients can't spoof X-Forwarded-For
+  // past Fly's edge (matters for IP-keyed rate limiting and Origin validation).
+  // https://fly.io/docs/networking/request-headers/
+  if (env.NODE_ENV === "production") {
+    app.set("trust proxy", 1);
+  }
+
+  // Security headers (non-CSP subset only — CSP is deferred to issue #19 Phase 3,
+  // blocked by existing inline JS). HSTS only in production (HTTPS); clickjacking
+  // + MIME-sniffing protections everywhere.
+  if (env.NODE_ENV === "production") {
+    app.use(helmet.hsts({ maxAge: 15552000 })); // 180 days
+  }
+  app.use(helmet.frameguard({ action: "deny" }));
+  app.use(helmet.noSniff());
+
+  // Content-Security-Policy in Report-Only mode (issue #19 Phase 3, first step).
+  // Report-Only surfaces violations of the *target* policy without blocking, so
+  // the inline scripts/handlers that currently power the UI can be found and
+  // refactored before CSP is enforced. Enforcing today would break the app.
+  //
+  // The report collector is registered before the Origin/CSRF middleware (below)
+  // so browser-sent reports — which carry no Origin or CSRF token — aren't rejected.
+  app.post(
+    "/csp-report",
+    express.json({
+      type: ["application/csp-report", "application/reports+json", "application/json"],
+      limit: "64kb",
+    }),
+    (req, res) => {
+      logger.warn("CSP violation report", { report: req.body as unknown });
+      res.status(204).end();
+    }
+  );
+
+  app.use(
+    helmet.contentSecurityPolicy({
+      useDefaults: false,
+      reportOnly: true,
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        // R2-hosted submission images + Open Graph images over https; data: for inline svg.
+        imgSrc: ["'self'", "data:", "https:"],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'", "data:"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+        frameAncestors: ["'none'"],
+        reportUri: ["/csp-report"],
+      },
+    })
+  );
+
+  app.set("views", path.join(__dirname, "views"));
+  app.set("view engine", "pug");
+
+  app.use(express.static(path.join(__dirname, "../public")));
+
+  // Multer configuration for file uploads (used in feature branch)
+  // const upload = multer({
+  // 	storage: multer.memoryStorage(),
+  // 	limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+  // });
+
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+
+  app.use(cookieParser());
+  app.use(sessionMiddleware);
+
+  // Sign in with Apple returns by cross-site POST from appleid.apple.com, which
+  // the two CSRF middlewares below would reject. It goes ahead of them; the
+  // handler validates the oauth_state cookie against the posted state instead.
+  app.post("/oauth/apple", oauthRateLimiter, auth.appleOAuth);
+
+  // CSRF backstop: reject state-changing requests (POST/PUT/PATCH/DELETE) whose
+  // Origin/Referer isn't an allowlisted, same-site origin. This is the primary
+  // gap closed by issue #19 — it makes our `SameSite=Lax` cookie sufficient even
+  // against the sibling-subdomain SameSite carve-out.
+  app.use(
+    createOriginValidation({ allowedOrigins: buildAllowedOrigins(env, config.server.domain) })
+  );
+
+  // Defense-in-depth (issue #19 Phase 2): synchronizer-token CSRF check on
+  // authenticated state-changing requests. Runs after sessionMiddleware so
+  // req.viewer / req.csrfToken are populated.
+  app.use(csrfValidation);
+
+  // Make config available to all templates via res.locals
+  app.use((req: MulmRequest, res, next) => {
+    res.locals.bugReportEmail = config.email.bugReportEmail;
+    res.locals.domain = config.server.domain;
+    res.locals.showCaresRegistry = canSeeCaresRegistry(req.viewer);
+    next();
+  });
+
+  const router = express.Router();
+
+  router.get("/annual", (req, res) => {
+    const year = getQueryString(req, "year");
+    res.set("HX-Redirect", `/annual/${year}`).send();
+  });
+  router.get("/annual/:stringYear{/:program}", standings.annual);
+  router.get("/lifetime{/:program}", standings.lifetime);
+
+  router.get("/", async (req: MulmRequest, res) => {
+    const { viewer } = req;
+    const isLoggedIn = Boolean(viewer);
+    const isAdmin = viewer?.is_admin;
+
+    const oauthState = await beginOAuthFlow(res, viewer?.id);
+
+    const args = {
+      title: "BAS BAP/HAP Portal",
+      message: "Welcome to BAS!",
+      googleURL: isGoogleOAuthEnabled() ? getGoogleOAuthURL(oauthState) : null,
+      appleURL: appleOAuthURL(oauthState),
+      isLoggedIn,
+      isAdmin,
+    };
+
+    let approvalsProgram = "fish"; // Default to fish
+    let approvalsCount = 0;
+    let witnessProgram = "fish"; // Default to fish
+    let witnessCount = 0;
+    if (isAdmin) {
+      const [counts, witnessCounts] = await Promise.all([
+        getQueueCounts("approval"),
+        getQueueCounts("witness"),
+      ]);
+      ["coral", "plant", "fish"].forEach((program) => {
+        const count = counts[program];
+        if (count > 0) {
+          approvalsProgram = program;
+          approvalsCount += count;
+        }
+        const witnessCountForProgram = witnessCounts[program];
+        if (witnessCountForProgram > 0) {
+          witnessProgram = program;
+          witnessCount += witnessCountForProgram;
+        }
+      });
+    }
+
+    // Get recent activity for the feed
+    const recentActivity = await getRecentActivity(8);
+
+    res.render("index", {
+      ...args,
+      approvalsProgram,
+      approvalsCount,
+      witnessProgram,
+      witnessCount,
+      recentActivity,
+      currentYear: new Date().getFullYear(),
+      minStandingsYear: 2020,
+    });
+  });
+
+  // Submission routes (BAP/HAP/CAP)
+  router.get("/submissions/new", submission.renderSubmissionForm);
+  router.get("/submissions/new/addSupplement", (req, res) => {
+    res.render("bapForm/supplementSingleLine");
+  });
+  router.get("/submissions/:id", submission.view);
+  router.get("/submissions/:id/edit", submission.renderEdit);
+  router.post("/submissions", submission.create);
+  router.patch("/submissions/:id", submission.update);
+  router.delete("/submissions/:id", submission.remove);
+  router.post("/submissions/:id/return-to-draft", submission.returnToDraft);
+  router.get("/submissions/:id/edit-media", submission.renderEditMedia);
+  router.patch("/submissions/:id/media", submission.updateMedia);
+
+  // Tank form component (used in BAP submissions)
+  router.get("/tank", tank.view);
+
+  // Tank preset management (RESTful CRUD)
+  router.get("/tanks", tank.loadTankList);
+  router.get("/tanks/new", tank.saveTankForm);
+  router.post("/tanks", tank.create);
+  router.patch("/tanks/:name", tank.update);
+  router.delete("/tanks/:name", tank.remove);
+
+  router.get("/member/:memberId", member.view);
+  router.get("/member/:memberId/collection", member.viewCollection);
+  router.get("/me", (req: MulmRequest, res) => {
+    const { viewer } = req;
+    if (!viewer) {
+      res.redirect("/");
+      return;
+    } else {
+      res.redirect(`/member/${viewer.id}`);
+      return;
+    }
+  });
+
+  router.get("/species", species.explorer);
+
+  router.get("/activity", async (req: MulmRequest, res) => {
+    const { viewer } = req;
+    const activities = await getRecentActivity(50);
+    res.render("activity", {
+      title: "Recent Activity",
+      isLoggedIn: Boolean(viewer),
+      activities,
+    });
+  });
+
+  // Middleware to restrict demo routes to development only
+  const devOnly = (_req: MulmRequest, res: express.Response, next: express.NextFunction) => {
+    if (env.NODE_ENV === "production") {
+      res.status(404).send("Not found");
+      return;
+    }
+    next();
+  };
+
+  // Demo routes (development only)
+  router.get("/demo/emails", devOnly, emailDemo.emailDemoPage);
+  router.get("/demo/activity", devOnly, activityDemo.view);
+  router.get("/demo/cards", devOnly, cardDemo.view);
+  router.get("/demo/hovercard", devOnly, hoverCardDemo.view);
+
+  // Test routes (development/test only)
+  router.use("/test", devOnly, testRouter);
+
+  router.get("/species/:groupId", species.detail);
+
+  router.get("/account", account.viewAccountSettings);
+  router.patch("/account", account.updateAccountSettings);
+  router.delete("/account/google", account.unlinkGoogleAccount);
+  router.delete("/account/apple", account.unlinkAppleAccount);
+
+  // Account tank preset management (RESTful routes)
+  router.post("/account/tanks", account.saveTankPresetRoute);
+  router.get("/account/tanks/:name/edit", account.editTankPresetForm);
+  router.get("/account/tanks/:name", account.viewTankPresetCard);
+  router.delete("/account/tanks/:name", account.deleteTankPresetRoute);
+
+  // Specialty awards progress
+  router.get("/account/awards", account.viewSpecialtyAwards);
+
+  router.use("/admin", adminRouter);
+
+  // Collection routes (member species inventory)
+  router.use("/", collectionRouter);
+
+  // CARES registration routes
+  router.use("/", caresRouter);
+
+  // Display screen for club meetings (public, no auth required)
+  router.use("/", displayRouter);
+
+  // Auth routes ///////////////////////////////////////////
+
+  router.post("/auth/signup", signupRateLimiter, auth.signup);
+  router.post("/auth/login", loginRateLimiter, auth.passwordLogin);
+  router.post("/auth/logout", auth.logout);
+  router.get("/auth/forgot-password", auth.validateForgotPassword);
+  router.get("/auth/set-password", auth.validateForgotPassword);
+  router.post("/auth/forgot-password", forgotPasswordRateLimiter, auth.sendForgotPassword);
+  router.post("/auth/reset-password", auth.resetPassword);
+
+  // OAuth (external dependency - redirect_uri registered with providers)
+  router.get("/oauth/google", oauthRateLimiter, auth.googleOAuth);
+
+  router.get("/dialog/auth/signin", async (req: MulmRequest, res) => {
+    const oauthState = await beginOAuthFlow(res, req.viewer?.id);
+
+    res.render("account/signin", {
+      viewer: {},
+      errors: new Map(),
+      googleURL: isGoogleOAuthEnabled() ? getGoogleOAuthURL(oauthState) : null,
+      appleURL: appleOAuthURL(oauthState),
+    });
+  });
+
+  router.get("/dialog/auth/signup", (req, res) => {
+    res.render("account/signup", {
+      viewer: {},
+      errors: new Map(),
+    });
+  });
+
+  router.get("/dialog/auth/forgot-password", (req, res) => {
+    res.render("account/forgotPassword", {
+      errors: new Map(),
+    });
+  });
+
+  // Test-only login page (simpler, no HTMX, for e2e tests)
+  // Available in dev/test environments for reliable automated testing
+  router.get("/test-login", devOnly, (req, res) => {
+    res.render("test-login", { error: null });
+  });
+
+  router.post("/test-login", devOnly, async (req, res) => {
+    // Simplified test login - no lockout check, no timing attack mitigation
+    const email = getBodyString(req, "email");
+    const password = getBodyString(req, "password");
+    const cookies = req.cookies as Record<string, string> | undefined;
+    const oldSessionId = cookies?.[sessionCookieName(env)] || "";
+
+    const member = await getMemberByEmail(email);
+
+    if (!member) {
+      res.render("test-login", { error: "Invalid email or password" });
+      return;
+    }
+
+    const pass = await getMemberPassword(member.id);
+
+    if (!pass) {
+      res.render("test-login", { error: "Invalid email or password" });
+      return;
+    }
+
+    const isValid = await checkPassword(pass, password);
+
+    if (isValid) {
+      // Create session manually without nested transactions
+      const sessionId = generateSessionCookie();
+      const expiry = new Date(Date.now() + SESSION_MAX_AGE_MS).toISOString();
+
+      // Delete old session if exists
+      if (oldSessionId && oldSessionId !== "undefined") {
+        const deleteStmt = await writeConn.prepare("DELETE FROM sessions WHERE session_id = ?");
+        try {
+          await deleteStmt.run(oldSessionId);
+        } finally {
+          await deleteStmt.finalize();
+        }
+      }
+
+      // Create new session
+      const csrfToken = generateCsrfToken();
+      const insertStmt = await writeConn.prepare(
+        "INSERT INTO sessions (session_id, member_id, expires_on, csrf_token) VALUES (?, ?, ?, ?)"
+      );
+      try {
+        await insertStmt.run(sessionId, member.id, expiry, csrfToken);
+      } finally {
+        await insertStmt.finalize();
+      }
+
+      // Set cookie
+      res.cookie(sessionCookieName(env), sessionId, sessionCookieOptions(undefined, env));
+
+      res.redirect("/");
+      return;
+    }
+
+    res.render("test-login", { error: "Invalid email or password" });
+  });
+
+  router.get("/test-logout", devOnly, async (req, res) => {
+    // Simple GET logout for e2e tests - destroys session and redirects.
+    // Guarded by devOnly: a state-changing GET must not exist in production.
+
+    // Clear session cookie (matching attributes so the browser drops it)
+    res.clearCookie(sessionCookieName(env), sessionCookieOptions(0, env));
+
+    // Delete session from database
+    const cookies = req.cookies as Record<string, string> | undefined;
+    const sessionId = cookies?.[sessionCookieName(env)] || "";
+    if (sessionId && sessionId !== "undefined") {
+      try {
+        const deleteStmt = await writeConn.prepare("DELETE FROM sessions WHERE session_id = ?");
+        try {
+          await deleteStmt.run(sessionId);
+        } finally {
+          await deleteStmt.finalize();
+        }
+      } catch {
+        // Log but don't fail - session might not exist
+      }
+    }
+
+    res.redirect("/");
+  });
+
+  // API ///////////////////////////////////////////////////
+
+  router.get("/api/members/search", typeahead.searchMembers);
+  router.get("/api/species/search", typeahead.searchSpecies);
+  router.get("/api/video/preview", submission.videoPreview);
+
+  // Image Upload API
+  router.use("/api/upload", uploadRouter);
+
+  ////////////////////////////////////////////////////////////
+
+  // Health check endpoint for Docker and monitoring
+  app.get("/health", (_req, res) => {
+    res.status(200).json({
+      status: "healthy",
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  app.use(router);
+
+  return app;
+}

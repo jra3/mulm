@@ -199,29 +199,17 @@ export async function startMcpHttpServer(): Promise<void> {
   });
 
   // Species MCP Server - POST for main communication
-  const speciesHandler = createMcpHandler(
-    "Species",
-    speciesTransports,
-    createSpeciesServer
-  );
+  const speciesHandler = createMcpHandler("Species", speciesTransports, createSpeciesServer);
   app.post("/mcp/species", speciesHandler);
   app.get("/mcp/species", speciesHandler); // Also support GET for SSE
 
   // Member Management MCP Server - POST for main communication
-  const memberHandler = createMcpHandler(
-    "Members",
-    memberTransports,
-    createMemberServer
-  );
+  const memberHandler = createMcpHandler("Members", memberTransports, createMemberServer);
   app.post("/mcp/members", memberHandler);
   app.get("/mcp/members", memberHandler); // Also support GET for SSE
 
   // Backfill MCP Server - POST for main communication
-  const backfillHandler = createMcpHandler(
-    "Backfill",
-    backfillTransports,
-    createBackfillServer
-  );
+  const backfillHandler = createMcpHandler("Backfill", backfillTransports, createBackfillServer);
   app.post("/mcp/backfill", backfillHandler);
   app.get("/mcp/backfill", backfillHandler); // Also support GET for SSE
 
@@ -290,8 +278,11 @@ export async function stopMcpHttpServer(): Promise<void> {
 
   // Close HTTP server
   if (serverInstance) {
+    const server = serverInstance;
+    serverInstance = null;
+    if (!server.listening) return;
     return new Promise((resolve, reject) => {
-      serverInstance?.close((err) => {
+      server.close((err) => {
         if (err) {
           logger.error("Error stopping MCP HTTP server:", err);
           reject(err);

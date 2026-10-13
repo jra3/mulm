@@ -1,3 +1,4 @@
+import { requestEnvironment } from "../appEnvironment";
 import { Request } from "express";
 import rateLimit from "express-rate-limit";
 import { MulmRequest } from "../sessions";
@@ -44,9 +45,9 @@ export const uploadRateLimiter = rateLimit({
       retryAfter: res.getHeader("Retry-After"),
     });
   },
-  skip: () => {
+  skip: (req) => {
     // Skip rate limiting in test environment
-    return process.env.NODE_ENV === "test";
+    return requestEnvironment(req).NODE_ENV === "test";
   },
 });
 
@@ -75,8 +76,8 @@ export const deleteRateLimiter = rateLimit({
       retryAfter: res.getHeader("Retry-After"),
     });
   },
-  skip: () => {
-    return process.env.NODE_ENV === "test";
+  skip: (req) => {
+    return requestEnvironment(req).NODE_ENV === "test";
   },
 });
 
@@ -105,8 +106,8 @@ export const progressRateLimiter = rateLimit({
     // For SSE, just close the connection
     res.status(429).end();
   },
-  skip: () => {
-    return process.env.NODE_ENV === "test";
+  skip: (req) => {
+    return requestEnvironment(req).NODE_ENV === "test";
   },
 });
 
@@ -132,7 +133,7 @@ export const strictUploadLimiter = rateLimit({
   },
   skip: (req: MulmRequest) => {
     // Skip for authenticated users or in test environment
-    return !!req.viewer || process.env.NODE_ENV === "test";
+    return !!req.viewer || requestEnvironment(req).NODE_ENV === "test";
   },
 });
 
@@ -162,7 +163,7 @@ export const dailyUploadLimiter = rateLimit({
   },
   skip: (req: MulmRequest) => {
     // Only apply to authenticated users, skip in test
-    return !req.viewer || process.env.NODE_ENV === "test";
+    return !req.viewer || requestEnvironment(req).NODE_ENV === "test";
   },
 });
 
@@ -204,7 +205,9 @@ export const loginRateLimiter = rateLimit({
   },
   skip: (req) => {
     // Skip in test environment or for localhost
-    return process.env.NODE_ENV === "test" || req.ip === "::1" || req.ip === "127.0.0.1";
+    return (
+      requestEnvironment(req).NODE_ENV === "test" || req.ip === "::1" || req.ip === "127.0.0.1"
+    );
   },
 });
 
@@ -224,7 +227,7 @@ export const signupRateLimiter = rateLimit({
     });
     res.status(429).send("Too many signup attempts. Please wait an hour before trying again.");
   },
-  skip: () => process.env.NODE_ENV === "test",
+  skip: (req) => requestEnvironment(req).NODE_ENV === "test",
 });
 
 /**
@@ -245,7 +248,7 @@ export const forgotPasswordRateLimiter = rateLimit({
       .status(429)
       .send("Too many password reset requests. Please wait an hour before trying again.");
   },
-  skip: () => process.env.NODE_ENV === "test",
+  skip: (req) => requestEnvironment(req).NODE_ENV === "test",
 });
 
 /**
@@ -264,5 +267,5 @@ export const oauthRateLimiter = rateLimit({
     });
     res.status(429).send("Too many OAuth attempts. Please wait a few minutes before trying again.");
   },
-  skip: () => process.env.NODE_ENV === "test",
+  skip: (req) => requestEnvironment(req).NODE_ENV === "test",
 });

@@ -35,15 +35,25 @@ export async function runDailyCleanup(): Promise<void> {
   }
 }
 
+let cleanupRunning: Promise<unknown> | undefined;
+let cleanupTimeout: NodeJS.Timeout | null = null;
 let cleanupInterval: NodeJS.Timeout | null = null;
+
+/** Keep a startup catch-up run owned until it finishes, even across the daily slot. */
+function launchScheduledRun(): void {
+  cleanupRunning ??= runDailyCleanup().finally(() => {
+    cleanupRunning = undefined;
+  });
+}
 
 /**
  * Start the scheduled cleanup task
  * Runs daily at 3:00 AM server time
  */
 export function startScheduledCleanup(): void {
+  if (cleanupTimeout || cleanupInterval) return;
   // Run cleanup immediately on startup (to catch any missed cleanups)
-  void runDailyCleanup();
+  launchScheduledRun();
 
   // Calculate milliseconds until next 3 AM
   const now = new Date();
@@ -60,13 +70,16 @@ export function startScheduledCleanup(): void {
   logger.info(`Next cleanup scheduled for ${next3AM.toISOString()}`);
 
   // Schedule first cleanup at 3 AM
-  setTimeout(() => {
-    void runDailyCleanup();
+  cleanupTimeout = setTimeout(() => {
+    launchScheduledRun();
 
     // Then run every 24 hours
-    cleanupInterval = setInterval(() => {
-      void runDailyCleanup();
-    }, 24 * 60 * 60 * 1000); // 24 hours
+    cleanupInterval = setInterval(
+      () => {
+        launchScheduledRun();
+      },
+      24 * 60 * 60 * 1000
+    ); // 24 hours
   }, msUntilNext3AM);
 }
 
@@ -74,10 +87,15 @@ export function startScheduledCleanup(): void {
  * Stop the scheduled cleanup task
  * Useful for graceful shutdown or testing
  */
-export function stopScheduledCleanup(): void {
+export async function stopScheduledCleanup(): Promise<void> {
+  if (cleanupTimeout) {
+    clearTimeout(cleanupTimeout);
+    cleanupTimeout = null;
+  }
   if (cleanupInterval) {
     clearInterval(cleanupInterval);
     cleanupInterval = null;
     logger.info("Scheduled cleanup stopped");
   }
+  await cleanupRunning;
 }

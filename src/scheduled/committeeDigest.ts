@@ -51,7 +51,16 @@ export async function runCommitteeDigest(now: Date = new Date()): Promise<boolea
   }
 }
 
+let digestRunning: Promise<unknown> | undefined;
+let digestTimeout: NodeJS.Timeout | null = null;
 let digestInterval: NodeJS.Timeout | null = null;
+
+/** Keep a startup catch-up run owned until it finishes, even across the daily slot. */
+function launchScheduledRun(): void {
+  digestRunning ??= runCommitteeDigest().finally(() => {
+    digestRunning = undefined;
+  });
+}
 
 /**
  * Start the daily committee digest. Runs on startup to catch up on a slot
@@ -60,7 +69,8 @@ let digestInterval: NodeJS.Timeout | null = null;
  * this morning who queues their Submission is already in today's digest.
  */
 export function startCommitteeDigest(): void {
-  void runCommitteeDigest();
+  if (digestTimeout || digestInterval) return;
+  launchScheduledRun();
 
   const now = new Date();
   const next = new Date();
@@ -71,25 +81,27 @@ export function startCommitteeDigest(): void {
 
   logger.info(`Next committee digest scheduled for ${next.toISOString()}`);
 
-  setTimeout(
-    () => {
-      void runCommitteeDigest();
-      digestInterval = setInterval(
-        () => {
-          void runCommitteeDigest();
-        },
-        24 * 60 * 60 * 1000
-      );
-    },
-    next.getTime() - now.getTime()
-  );
+  digestTimeout = setTimeout(() => {
+    launchScheduledRun();
+    digestInterval = setInterval(
+      () => {
+        launchScheduledRun();
+      },
+      24 * 60 * 60 * 1000
+    );
+  }, next.getTime() - now.getTime());
 }
 
 /** Stop the scheduled digest (graceful shutdown / tests). */
-export function stopCommitteeDigest(): void {
+export async function stopCommitteeDigest(): Promise<void> {
+  if (digestTimeout) {
+    clearTimeout(digestTimeout);
+    digestTimeout = null;
+  }
   if (digestInterval) {
     clearInterval(digestInterval);
     digestInterval = null;
     logger.info("Scheduled committee digest stopped");
   }
+  await digestRunning;
 }

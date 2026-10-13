@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from "express";
 import { writeConn, query } from "./db/conn";
 import { generateRandomCode } from "./auth";
 import { regenerateSessionInDB } from "./db/sessions";
+import { requestEnvironment } from "./appEnvironment";
+import type { Env } from "./utils/environment";
 import { logger } from "./utils/logger";
 
 export const generateSessionCookie = () => generateRandomCode(64);
@@ -28,8 +30,10 @@ export const SESSION_MAX_AGE_MS = 180 * 86400 * 1000;
  * The prefix *requires* `Secure`, so we cannot use it in dev/test where the app
  * is served over plain HTTP on localhost — there we fall back to the bare name.
  */
-export const SESSION_COOKIE_NAME =
-  process.env.NODE_ENV === "production" ? "__Host-session_id" : "session_id";
+export function sessionCookieName(env: Env = process.env): string {
+  return env.NODE_ENV === "production" ? "__Host-session_id" : "session_id";
+}
+export const SESSION_COOKIE_NAME = sessionCookieName();
 
 /**
  * Cookie options for the session cookie. Centralized so the set/clear sites
@@ -37,10 +41,13 @@ export const SESSION_COOKIE_NAME =
  * and the production-only `secure` flag are also what the `__Host-` prefix
  * requires.
  */
-export function sessionCookieOptions(maxAgeMs: number = SESSION_MAX_AGE_MS) {
+export function sessionCookieOptions(
+  maxAgeMs: number = SESSION_MAX_AGE_MS,
+  env: Env = process.env
+) {
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: env.NODE_ENV === "production",
     sameSite: "lax" as const,
     path: "/",
     maxAge: maxAgeMs,
@@ -78,7 +85,7 @@ export async function sessionMiddleware(req: MulmRequest, res: Response, next: N
 /** Read the raw session token from the request cookies, or "" if absent. */
 function getSessionToken(req: Request): string {
   const cookies = req.cookies as Record<string, string> | undefined;
-  return cookies?.[SESSION_COOKIE_NAME] ?? "";
+  return cookies?.[sessionCookieName(requestEnvironment(req))] ?? "";
 }
 
 async function getLoggedInUser(token: string) {
@@ -124,18 +131,17 @@ export async function regenerateSession(
   await regenerateSessionInDB(oldSessionId, newSessionId, memberId, expiry, csrfToken);
 
   // Set new cookie
-  res.cookie(SESSION_COOKIE_NAME, newSessionId, sessionCookieOptions());
+  const env = requestEnvironment(req);
+  res.cookie(sessionCookieName(env), newSessionId, sessionCookieOptions(undefined, env));
 }
 
 export async function destroyUserSession(req: MulmRequest, res: Response) {
   const token = getSessionToken(req);
   // Clear with matching attributes (path/secure) so the browser actually drops it.
-  res.clearCookie(SESSION_COOKIE_NAME, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-  });
+  res.clearCookie(
+    sessionCookieName(requestEnvironment(req)),
+    sessionCookieOptions(0, requestEnvironment(req))
+  );
   if (token) {
     try {
       const conn = writeConn;
