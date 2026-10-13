@@ -1,3 +1,31 @@
+## Connection lifecycle
+
+Importing `conn.ts`, the Species catalogue, or a fixture performs no database
+I/O. Executables must parse arguments, handle help, and select their mode before
+calling `await ensureReady()` and before serving requests or using repository
+functions. The Portal awaits readiness before listening; scheduled jobs and
+standalone MCP servers also await it.
+
+`ensureReady()` creates the configured database if needed, migrates it, then
+opens read and write connections. Concurrent callers share one promise; neither
+connection is published until both are usable. Successful and failed promises
+are memoized. A failure closes partial connections and rejects every caller:
+fix the cause and restart the process, rather than retrying a partly migrated
+database in the same process.
+
+Reporting and dry-run scripts use `ensureReady({ readOnly: true })`. This opens
+only an existing database with SQLite's read-only mode, with no migrations or
+creation. Both exported connections point to that read-only handle, so even an
+accidental write is refused. A missing or out-of-date database must be prepared
+separately; a process cannot change initialization mode. The IUCN scripts use
+this mode for `--dry-run`, and `check-r2-usage.ts` always uses it.
+
+Tests install their own connection with `overrideConnection(db)` **before**
+calling `ensureReady()`. Readiness then resolves using the test connection and
+never touches the configured file. Fixtures may replace test connections and
+own their cleanup. Installing an override after configured initialization has
+started throws, preventing two competing owners.
+
 # Database Layer
 
 SQLite database with dual connection pattern for read/write separation.

@@ -25,7 +25,7 @@
  */
 
 import type { Database } from "sqlite";
-import { ready, db as appDb } from "@/db/conn";
+import { ensureReady, db as appDb } from "@/db/conn";
 import { findSpeciesById, speciesFromSql, updateIucnStatus, type Species } from "@/species";
 import { getIUCNClient, IUCNAPIError } from "@/integrations/iucn";
 import {
@@ -308,8 +308,9 @@ async function syncIUCNData() {
   // Connect to database
   console.log("Connecting to database...");
   // The app's connection: IUCN status is written through the Species
-  // catalogue, which uses it.
-  await ready;
+  // catalogue, which uses it. Dry runs use an existing read-only database
+  // without migrations.
+  await ensureReady({ readOnly: options.dryRun });
   const db = appDb(true);
 
   // Get IUCN client

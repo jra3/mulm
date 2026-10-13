@@ -7,6 +7,7 @@
  * submission data via stdio transport (for local CLI use).
  */
 
+import { ensureReady } from "../db/conn";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { initializeBackfillServer } from "./backfill-server-core";
@@ -33,6 +34,7 @@ initializeBackfillServer(server);
  * START SERVER
  */
 async function main() {
+  await ensureReady();
   const transport = new StdioServerTransport();
   await server.connect(transport);
   logger.info("Backfill MCP Server running on stdio");

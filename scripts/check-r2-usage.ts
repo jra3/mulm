@@ -7,9 +7,15 @@
  */
 
 import { initR2, listAllObjects, type ImageMetadata } from "../src/utils/r2-client";
-import { query } from "../src/db/conn";
+import { ensureReady, query } from "../src/db/conn";
 
 async function checkR2Usage() {
+  if (process.argv.includes("--help") || process.argv.includes("-h")) {
+    console.log("Report R2 usage against the existing database (read-only; no migrations).");
+    process.exit(0);
+  }
+  await ensureReady({ readOnly: true });
+
   console.log("=".repeat(60));
   console.log("R2 STORAGE USAGE ANALYSIS");
   console.log("=".repeat(60));

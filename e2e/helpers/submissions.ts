@@ -1,4 +1,4 @@
-import { db } from "@/db/conn";
+import { db, ensureReady } from "@/db/conn";
 
 /**
  * Submission helper functions for e2e tests
@@ -63,6 +63,7 @@ export interface TestSubmissionOptions {
  * @returns The created submission ID
  */
 export async function createTestSubmission(options: TestSubmissionOptions): Promise<number> {
+	await ensureReady();
 	const dbConn = db(true); // Uses overridden connection in tests, else global writeConn
 
 	const now = new Date().toISOString();
@@ -201,6 +202,7 @@ export async function createTestSubmission(options: TestSubmissionOptions): Prom
  * Delete all submissions for a member (cleanup)
  */
 export async function deleteSubmissionsForMember(memberId: number): Promise<void> {
+	await ensureReady();
 	const dbConn = db(true); // Uses global writeConn
 	await dbConn.run("DELETE FROM submissions WHERE member_id = ?", memberId);
 }

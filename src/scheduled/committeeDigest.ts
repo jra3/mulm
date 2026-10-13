@@ -1,4 +1,4 @@
-import { ready } from "@/db/conn";
+import { ensureReady } from "@/db/conn";
 import { getSetting, updateSetting } from "@/db/settings";
 import { sendCommitteeDigest } from "@/lifecycle";
 import { logger } from "@/utils/logger";
@@ -34,7 +34,7 @@ export function currentDigestSlot(now: Date): Date {
  */
 export async function runCommitteeDigest(now: Date = new Date()): Promise<boolean> {
   try {
-    await ready;
+    await ensureReady();
 
     const lastRun = await getSetting(LAST_RUN_KEY);
     if (lastRun && new Date(lastRun) >= currentDigestSlot(now)) {

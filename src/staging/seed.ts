@@ -8,11 +8,11 @@ import { addAlias } from "module-alias";
 import path from "path";
 addAlias("@", path.join(__dirname, ".."));
 
-import { ready, readOnlyConn, writeConn } from "../db/conn";
+import { ensureReady, readOnlyConn, writeConn } from "../db/conn";
 import { seedStagingUsers } from "./seedUsers";
 
 async function main() {
-  await ready;
+  await ensureReady();
   const credentials = await seedStagingUsers(process.env);
   console.log(JSON.stringify(credentials));
   await readOnlyConn.close();
