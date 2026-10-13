@@ -409,8 +409,84 @@ void describe("Approval queue and the one button", () => {
     appWith((a) => {
       a.use(express.urlencoded({ extended: true }));
       a.get("/admin/queue{/:program}", admin.showQueue);
+      a.get("/admin/witness-queue{/:program}", admin.showWitnessQueue);
+      a.get("/admin/waiting-period{/:program}", admin.showWaitingPeriod);
       a.post("/admin/submissions/:id/approve", admin.approveSubmission);
     }, viewer);
+
+  void test("screening combines programs, oldest first, with working filters and counts", async () => {
+    const fishId = await submissionInState(testDb.db, "pendingWitness", {
+      memberId: ownerId,
+      program: "fish",
+    });
+    const plantId = await submissionInState(testDb.db, "pendingWitness", {
+      memberId: ownerId,
+      program: "plant",
+    });
+    await testDb.db.run("UPDATE submissions SET submitted_on = ? WHERE id = ?", [
+      "2026-01-02",
+      fishId,
+    ]);
+    await testDb.db.run("UPDATE submissions SET submitted_on = ? WHERE id = ?", [
+      "2026-01-01",
+      plantId,
+    ]);
+    const res = await request(app()).get("/admin/witness-queue");
+
+    assert.strictEqual(res.status, 200);
+    assert.match(res.text, /All · 2<\/a>/);
+    assert.match(res.text, /BAP · 1<\/a>/);
+    assert.match(res.text, /HAP · 1<\/a>/);
+    assert.match(res.text, new RegExp(`id="screening-row-${fishId}"`));
+    assert.match(res.text, new RegExp(`href="/submissions/${plantId}"[^>]*>Review submission`));
+    assert.ok(
+      res.text.indexOf(`id="screening-row-${plantId}"`) <
+        res.text.indexOf(`id="screening-row-${fishId}"`)
+    );
+    assert.doesNotMatch(res.text, /<table|tablesort|waiting-period/);
+    const filtered = await request(app()).get("/admin/witness-queue/plant");
+    assert.match(filtered.text, new RegExp(`id="screening-row-${plantId}"`));
+    assert.doesNotMatch(filtered.text, new RegExp(`id="screening-row-${fishId}"`));
+    assert.match(filtered.text, /href="\/admin\/queue\/plant"/);
+    assert.strictEqual((await request(app()).get("/admin/witness-queue/invalid")).status, 404);
+  });
+
+  void test("screening explains own submissions and excludes work sent back to the member", async () => {
+    const ownId = await submissionInState(testDb.db, "pendingWitness", { memberId: committeeId });
+    const returnedId = await submissionInState(testDb.db, "pendingWitness", { memberId: ownerId });
+    await testDb.db.run("UPDATE submissions SET changes_requested_on = ? WHERE id = ?", [
+      new Date().toISOString(),
+      returnedId,
+    ]);
+    const res = await request(app()).get("/admin/witness-queue");
+
+    assert.match(res.text, new RegExp(`id="screening-row-${ownId}"`));
+    assert.match(res.text, /Your own submission. Another committee member screens it./);
+    assert.match(res.text, new RegExp(`href="/submissions/${ownId}"[^>]*>View submission`));
+    assert.doesNotMatch(res.text, /Review submission/);
+    assert.doesNotMatch(res.text, new RegExp(`screening-row-${returnedId}`));
+  });
+
+  void test("empty screening keeps the queue and program navigation available", async () => {
+    const res = await request(app()).get("/admin/witness-queue/coral");
+    assert.strictEqual(res.status, 200);
+    assert.match(res.text, /id="queue-screening-empty"/);
+    assert.match(res.text, /href="\/admin\/queue\/coral"/);
+    assert.match(res.text, /href="\/admin\/witness-queue"/);
+    assert.match(res.text, /CAP · 0/);
+  });
+
+  void test("waiting bookmarks redirect to the approval section, preserving the program", async () => {
+    for (const program of ["", "/fish", "/plant", "/coral"]) {
+      const res = await request(app()).get(`/admin/waiting-period${program}`);
+      assert.strictEqual(res.status, 302);
+      assert.strictEqual(res.headers.location, `/admin/queue${program}#queue-waiting`);
+    }
+    assert.strictEqual((await request(app()).get("/admin/waiting-period/invalid")).status, 404);
+    const approval = await request(app()).get("/admin/queue/plant");
+    assert.match(approval.text, /href="\/admin\/witness-queue\/plant"/);
+    assert.doesNotMatch(approval.text, /href="[^"]*waiting-period/);
+  });
 
   void test("the page lists the ready row with the total it will post, first-time included", async () => {
     const waitingId = await submissionInState(testDb.db, "waitingPeriod", { memberId: ownerId, witnessedBy: committeeId });

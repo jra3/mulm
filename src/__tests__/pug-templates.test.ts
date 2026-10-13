@@ -173,8 +173,8 @@ void describe("Pug Template Rendering", () => {
     fishTotalPoints: 150,
     plantTotalPoints: 75,
     coralTotalPoints: 25,
-    // Rows for the templates that take a `submissions` local: the waiting
-    // period queue (a queue row plus waitingStatus) and the re-witness letter
+    // Rows for the templates that take a `submissions` local: screening
+    // and the re-witness letter
     // (RewitnessLetterRow, src/notifications.ts)
     submissions: [
       {
@@ -741,6 +741,11 @@ void describe("Pug Template Rendering", () => {
 
           case "admin/queue.pug":
             Object.assign(templateData, sampleQueue);
+            break;
+
+          case "admin/witnessQueue.pug":
+            templateData.program = null;
+            templateData.counts = { all: 1, fish: 1, plant: 0, coral: 0 };
             break;
 
           case "admin/approveSheet.pug":
@@ -1795,11 +1800,11 @@ void describe("Pug Template Rendering", () => {
       assert.doesNotMatch(html, /submissions\/105\/approve|queue-arm-105|queue-approve-105/);
     });
 
-    void test("approved tonight and still waiting are listed, the latter greyed with a ready date and no button", () => {
+    void test("approved tonight and waiting are listed, with a ready date and a link to inspect waiting submissions", () => {
       const html = render();
 
       assert.match(html, /id="queue-approved-99"[^>]*>[\s\S]*?✓ Dan Wu · Apisto Rio Mamuru[\s\S]*?by Alex Kim[\s\S]*?<b[^>]*>20 pts</);
-      assert.match(html, /opacity-75" id="queue-waiting-106">[\s\S]*?Ken Ito · Red-tailed Goodeid[\s\S]*?ready 11\/29\/2026/);
+      assert.match(html, /id="queue-waiting-106" href="\/submissions\/106">[\s\S]*?Ken Ito · Red-tailed Goodeid[\s\S]*?ready 11\/29\/2026/);
       assert.doesNotMatch(html, /submissions\/106\/approve|submissions\/99\/approve/);
     });
 
@@ -1816,7 +1821,7 @@ void describe("Pug Template Rendering", () => {
       const html = render({ program: "plant" });
 
       assert.match(html, /href="\/admin\/queue">All · 2</);
-      assert.match(html, /bg-white text-gray-900[^>]*href="\/admin\/queue\/plant">HAP · 1</);
+      assert.match(html, /bg-white text-gray-900[^>]*href="\/admin\/queue\/plant" aria-current="page">HAP · 1</);
       assert.match(html, /text-gray-200[^>]*href="\/admin\/queue\/fish">BAP · 1</);
     });
   });

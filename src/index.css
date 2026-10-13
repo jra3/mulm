@@ -25,11 +25,13 @@
 	@apply text-white hover:text-gray-200;
 }
 
-button {
+button,
+a.primary {
 	@apply rounded-2xl text-sm font-medium h-9 px-4 py-2 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2;
 }
 
-button.primary {
+button.primary,
+a.primary {
 	@apply bg-blue-500 text-white hover:bg-blue-700 focus:ring-blue-500;
 }
 

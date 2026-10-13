@@ -1,5 +1,5 @@
 include ../header.pug
-include ../mixins/emptyState.pug
+include adminNav.pug
 
 //- The approval queue at a meeting, phone first (#527; prototype
 //- approval-queue-phone.html, variant 1 "one list, tap twice"). One scroll:
@@ -24,13 +24,8 @@ include ../mixins/emptyState.pug
 //- @param queuePath - this page's path, which the sheet's "Not now" returns to
 
 - const eyebrow = "text-xs font-semibold uppercase tracking-wide text-gray-300"
-- const chipClass = (short) => short === "HAP" ? "bg-green-100 text-green-800" : short === "CAP" ? "bg-purple-100 text-purple-800" : "bg-blue-100 text-blue-800"
-- const filterClass = (active) => active ? "bg-white text-gray-900 border-white" : "text-gray-200 border-gray-500 hover:bg-gray-600"
 - const sumOf = (lines) => lines.map((line) => `${line.label} ${line.amount}`).join(" + ")
 - const approveLabel = (preview) => preview.firstTime ? `Approve · ${preview.total - 5} pts + 5 first-time` : `Approve · ${preview.total} pts`
-
-mixin programChip(short)
-	span.inline-block.text-xs.font-semibold.px-2.rounded-full.align-middle(class=chipClass(short))= short
 
 doctype html
 html
@@ -40,13 +35,7 @@ html
 		+pageHeader(true, title, subtitle)
 
 		main.mx-auto.max-w-lg.px-3.py-4.flex.flex-col.gap-3(class="md:max-w-2xl")
-			//- Which Programs, and the committee's other queues
-			nav.flex.flex-wrap.items-center.gap-2.text-sm#queue-programs(aria-label="Programs")
-				a.px-3.py-1.rounded-full.border(href="/admin/queue" class=filterClass(!program))= `All · ${counts.all}`
-				a.px-3.py-1.rounded-full.border(href="/admin/queue/fish" class=filterClass(program === "fish"))= `BAP · ${counts.fish}`
-				a.px-3.py-1.rounded-full.border(href="/admin/queue/plant" class=filterClass(program === "plant"))= `HAP · ${counts.plant}`
-				a.px-3.py-1.rounded-full.border(href="/admin/queue/coral" class=filterClass(program === "coral"))= `CAP · ${counts.coral}`
-			p.text-xs.text-gray-300#queue-other-queues #[a.underline(href="/admin/witness-queue/fish") Witness queue] · #[a.underline(href="/admin/waiting-period/fish") Waiting period]
+			+adminNav("approval", program, counts)
 
 			//- Ready to approve
 			section#queue-ready.flex.flex-col.gap-2
@@ -116,11 +105,12 @@ html
 
 			//- Still waiting
 			section#queue-waiting.flex.flex-col.gap-2
-				h2(class=eyebrow) Still waiting
+				h2(class=eyebrow) Waiting
+				p.text-sm.text-gray-300 Their waiting periods are still running. They move into ready to approve automatically when eligible.
 				if waiting.length === 0
 					p.text-sm.text-gray-300#queue-waiting-empty Nothing in its waiting period.
 				each row in waiting
-					.bg-white.rounded-lg.px-4.py-2.flex.justify-between.items-center.gap-3.text-sm.text-gray-500.opacity-75(id=`queue-waiting-${row.id}`)
+					a.bg-white.rounded-lg.px-4.py-3.flex.flex-wrap.justify-between.items-center.gap-2.text-sm.text-gray-600(id=`queue-waiting-${row.id}` href=`/submissions/${row.id}` class="hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400")
 						span.min-w-0
 							| #{row.member_name} · #{row.species_common_name}
 							| #{' '}

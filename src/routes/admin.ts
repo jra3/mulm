@@ -68,7 +68,6 @@ import { getBodyString } from "@/utils/request";
 import { checkAllMemberLevels } from "@/levelManager";
 import { checkAllSpecialtyAwards } from "@/specialtyAwardManager";
 import { logger } from "@/utils/logger";
-import { getStatusPresentation } from "@/utils/statusBadge";
 import * as lifecycle from "@/lifecycle";
 import { callerFor, sendLifecycleError } from "./lifecycleErrors";
 import {
@@ -335,86 +334,52 @@ export const showQueue = async (req: MulmRequest, res: Response) => {
   res.render("admin/queue", await approvalQueueLocals(req.viewer!, program));
 };
 
+/** Screening uses the same all-program view and filters as approval. */
 export const showWitnessQueue = async (req: MulmRequest, res: Response) => {
-  const { program = "fish" } = req.params;
-  if (programs.indexOf(program) === -1) {
+  const program = req.params.program ?? null;
+  if (program && !isProgramType(program)) {
     res.status(404).send("Invalid program");
     return;
   }
 
-  const [submissions, programCounts] = await Promise.all([
-    getQueue("witness", program),
+  const listed = program ? [program] : [...programs];
+  const [byProgram, programCounts] = await Promise.all([
+    Promise.all(listed.map((p) => getQueue("witness", p))),
     getQueueCounts("witness"),
   ]);
-
-  // Add status info to each submission
-  const submissionsWithStatus = submissions.map((sub) => ({
-    ...sub,
-    statusInfo: getStatusPresentation(sub),
-  }));
-
-  const subtitle = (() => {
-    switch (program) {
-      default:
-      case "fish":
-        return `Breeder Awards Program`;
-      case "plant":
-        return `Horticultural Awards Program`;
-      case "coral":
-        return `Coral Awards Program`;
-    }
-  })();
+  const submissions = byProgram
+    .flat()
+    .sort((a, b) => (a.submitted_on ?? "").localeCompare(b.submitted_on ?? "") || a.id - b.id)
+    .map((sub) => ({
+      ...sub,
+      species_common_name: speciesNamesOf(sub).common,
+      species_latin_name: speciesNamesOf(sub).latin,
+      programShort: PROGRAM_SHORT[sub.program] ?? sub.program,
+      mine: sub.member_id === req.viewer!.id,
+    }));
 
   res.render("admin/witnessQueue", {
-    title: "Screening Queue",
-    subtitle,
-    submissions: submissionsWithStatus,
+    title: "Screening queue",
+    subtitle: program && isProgramType(program) ? programMetadata[program].name : "Every Program",
+    submissions,
     program,
-    programCounts,
+    counts: {
+      all: Object.values(programCounts).reduce((sum, count) => sum + count, 0),
+      fish: programCounts.fish ?? 0,
+      plant: programCounts.plant ?? 0,
+      coral: programCounts.coral ?? 0,
+    },
   });
 };
 
-export const showWaitingPeriod = async (req: MulmRequest, res: Response) => {
-  const { program = "fish" } = req.params;
-  if (programs.indexOf(program) === -1) {
+/** Preserve bookmarks: waiting is a secondary section of the approval queue. */
+export const showWaitingPeriod = (req: MulmRequest, res: Response) => {
+  const program = req.params.program ?? null;
+  if (program && !isProgramType(program)) {
     res.status(404).send("Invalid program");
     return;
   }
-
-  // Everything screened whose clock has not run. The approval queue is a
-  // different page, and the clock alone decides which of the two a witnessed
-  // Submission is on.
-  const [waiting, programCounts, witnessCounts] = await Promise.all([
-    getQueue("waitingPeriod", program),
-    getQueueCounts("approval"),
-    getQueueCounts("witness"),
-  ]);
-
-  const submissionsWithStatus = waiting.map((sub) => ({
-    ...sub,
-    waitingStatus: lifecycle.waitingPeriod(sub),
-  }));
-
-  const subtitle = (() => {
-    switch (program) {
-      default:
-      case "fish":
-        return `Breeder Awards Program`;
-      case "plant":
-        return `Horticultural Awards Program`;
-      case "coral":
-        return `Coral Awards Program`;
-    }
-  })();
-
-  res.render("admin/waitingPeriod", {
-    title: "Auction Eligibility Monitor",
-    subtitle,
-    submissions: submissionsWithStatus,
-    program,
-    programCounts,
-    witnessCounts,
-  });
+  res.redirect(`${queuePath(program)}#queue-waiting`);
 };
 
 export const sendRequestChanges = async (req: MulmRequest, res: Response) => {

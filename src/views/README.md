@@ -120,6 +120,7 @@ Use these component classes from `src/index.css` instead of long Tailwind chains
 ### Buttons
 ```css
 button.primary     /* Blue primary action buttons */
+a.primary          /* Navigation links styled as primary action buttons */
 button.destructive /* Red destructive action buttons */
 button.outline     /* Gray outline buttons */
 ```
@@ -188,6 +189,15 @@ When adding new features:
 5. **Neutral info** - Use gray scale (`bg-gray-100`, `text-gray-600`)
 
 **Avoid**: Using colors outside this palette. Don't introduce new semantic colors (teal, pink, indigo) unless they serve a distinct, necessary purpose.
+
+## Committee queues
+
+Screening and approval share `admin/adminNav.pug`, program filters (All, BAP,
+HAP, CAP), and compact cards. Screening starts with every program and lists
+oldest submissions first; opening a card leads to the existing review page.
+Waiting submissions are a secondary section of approval, ordered by eligibility
+date, with links to their full submissions. The old `/admin/waiting-period`
+URLs redirect there and preserve the program filter.
 
 ## Date Formatting
 
