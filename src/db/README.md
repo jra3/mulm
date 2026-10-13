@@ -285,6 +285,23 @@ All transactions share the one write connection, and SQLite refuses a second `BE
 - A transaction that holds the connection longer than `TRANSACTION_SLOW_MS` (5s) is logged with `logger.warn`, and again when it lets go. There is no timeout: its `BEGIN` is still open, so failing the writes queued behind it would not free the connection.
 - Only `withTransaction()` queues. A plain write on `writeConn` (`insertOne`, `updateOne`, a direct `run`) issued while another request's transaction is open joins that transaction and is rolled back with it.
 
+### Collection and CARES writes
+
+Collection add, link, update (including reactivation), and removal share the
+transaction queue. Link checks ownership, existing binding, catalogue existence
+and current duplicates through the callback connection. Add and reactivation
+check current duplicates there too, so competing requests cannot create another
+current entry for the same member and Species. The existing UNIQUE constraint
+includes nullable `removed_date`; SQLite permits multiple NULL values, so it is
+not this invariant's enforcement. No migration or cleanup of existing duplicates
+is performed. Any future writer of current collection entries must use the same
+queue and guard.
+
+CARES registration, photo replacement and fry sharing also make their decisions
+on the queued transaction connection. `CollectionRefusal` and `CaresRefusal` have
+separate stable codes; route adapters distinguish these from unexpected failures
+and render messages through the escaped Pug partial.
+
 ### Transaction Error Handling
 
 The try/catch around ROLLBACK in `withTransaction()` is intentional - the sqlite3 package doesn't expose transaction state, so ROLLBACK might fail if transaction already rolled back. The rollback error is swallowed and the original error rethrown.

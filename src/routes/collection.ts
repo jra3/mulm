@@ -3,7 +3,6 @@ import { media, type UploadedMedia } from "@/services/media";
 import { MulmRequest } from "@/sessions";
 import { Response, Router } from "express";
 import { z, ZodError } from "zod";
-import { query, writeConn } from "@/db/conn";
 import {
   getCollectionForMember,
   addToCollection,
@@ -11,8 +10,9 @@ import {
   removeFromCollection,
   getCollectionEntry,
   getCollectionStats,
+  linkCollectionEntry,
+  CollectionRefusal,
 } from "@/db/collection";
-import { findSpeciesById } from "@/species";
 import { canSeeCaresRegistry } from "@/caresRegistry";
 import {
   addToCollectionSchema,
@@ -89,51 +89,36 @@ router.post("/api/collection", async (req: MulmRequest, res: Response) => {
     await addToCollection(viewer.id, data);
 
     // Return HTML for HTMX to swap
-    res.send(`
-      <div class="alert alert-success" role="alert">
-        <i class="fas fa-check-circle me-2"></i>
-        Species added to your collection!
-      </div>
-      <script>
-        // Close dialog after success
-        setTimeout(() => {
-          document.getElementById('dialog')?.remove();
-          // Refresh collection display
-          window.location.reload();
-        }, 1000);
-      </script>
-    `);
+    res.render("partials/message", {
+      message: "Species added to your collection!",
+      type: "success",
+      reloadDelay: 1000,
+    });
   } catch (error) {
     // Zod validation errors
     if (error instanceof ZodError) {
       const errorMessages = error.issues.map((issue) => issue.message).join(", ");
       logger.error("Validation error adding to collection", error);
-      res.status(400).send(`
-        <div class="alert alert-warning" role="alert">
-          <i class="fas fa-exclamation-triangle me-2"></i>
-          ${errorMessages}
-        </div>
-      `);
+      res.status(400).render("partials/message", { message: errorMessages, type: "warning" });
       return;
     }
 
-    if (error instanceof Error && error.message.includes("already in collection")) {
-      res.status(400).send(`
-        <div class="alert alert-warning" role="alert">
-          <i class="fas fa-exclamation-triangle me-2"></i>
-          This species is already in your collection.
-        </div>
-      `);
+    if (error instanceof CollectionRefusal) {
+      res.status(400).render("partials/message", {
+        message:
+          error.code === "duplicate"
+            ? "This species is already in your collection."
+            : error.message,
+        type: "warning",
+      });
       return;
     }
 
     logger.error("Failed to add to collection", error);
-    res.status(500).send(`
-      <div class="alert alert-danger" role="alert">
-        <i class="fas fa-times-circle me-2"></i>
-        Failed to add species to collection. Please try again.
-      </div>
-    `);
+    res.status(500).render("partials/message", {
+      message: "Failed to add species to collection. Please try again.",
+      type: "error",
+    });
   }
 });
 
@@ -155,12 +140,10 @@ router.patch("/api/collection/:id", async (req: MulmRequest, res: Response) => {
     // Verify ownership
     const entry = await getCollectionEntry(entryId, viewer.id);
     if (!entry || entry.member_id !== viewer.id) {
-      res.status(403).send(`
-        <div class="alert alert-danger" role="alert">
-          <i class="fas fa-times-circle me-2"></i>
-          Access denied. You can only edit your own collection entries.
-        </div>
-      `);
+      res.status(403).render("partials/message", {
+        message: "Access denied. You can only edit your own collection entries.",
+        type: "error",
+      });
       return;
     }
 
@@ -169,39 +152,32 @@ router.patch("/api/collection/:id", async (req: MulmRequest, res: Response) => {
     await updateCollectionEntry(entryId, viewer.id, updates);
 
     // Return success message for HTMX
-    res.send(`
-      <div class="alert alert-success" role="alert">
-        <i class="fas fa-check-circle me-2"></i>
-        Collection entry updated!
-      </div>
-      <script>
-        setTimeout(() => {
-          document.getElementById('dialog')?.remove();
-          window.location.reload();
-        }, 1000);
-      </script>
-    `);
+    res.render("partials/message", {
+      message: "Collection entry updated!",
+      type: "success",
+      reloadDelay: 1000,
+    });
   } catch (error) {
     // Zod validation errors
     if (error instanceof ZodError) {
       const errorMessages = error.issues.map((issue) => issue.message).join(", ");
       logger.error("Validation error updating collection", error);
-      res.status(400).send(`
-        <div class="alert alert-warning" role="alert">
-          <i class="fas fa-exclamation-triangle me-2"></i>
-          ${errorMessages}
-        </div>
-      `);
+      res.status(400).render("partials/message", { message: errorMessages, type: "warning" });
+      return;
+    }
+
+    if (error instanceof CollectionRefusal) {
+      res
+        .status(error.code === "missing" || error.code === "forbidden" ? 403 : 400)
+        .render("partials/message", { message: error.message, type: "warning" });
       return;
     }
 
     logger.error("Failed to update collection entry", error);
-    res.status(500).send(`
-      <div class="alert alert-danger" role="alert">
-        <i class="fas fa-times-circle me-2"></i>
-        Failed to update entry. Please try again.
-      </div>
-    `);
+    res.status(500).render("partials/message", {
+      message: "Failed to update entry. Please try again.",
+      type: "error",
+    });
   }
 });
 
@@ -223,34 +199,33 @@ router.delete("/api/collection/:id", async (req: MulmRequest, res: Response) => 
     // Verify ownership
     const entry = await getCollectionEntry(entryId, viewer.id);
     if (!entry || entry.member_id !== viewer.id) {
-      res.status(403).send(`
-        <div class="alert alert-danger" role="alert">
-          <i class="fas fa-times-circle me-2"></i>
-          Access denied. You can only remove your own collection entries.
-        </div>
-      `);
+      res.status(403).render("partials/message", {
+        message: "Access denied. You can only remove your own collection entries.",
+        type: "error",
+      });
       return;
     }
 
     await removeFromCollection(entryId, viewer.id);
 
     // Return success and trigger refresh
-    res.send(`
-      <div class="alert alert-info" role="alert">
-        <i class="fas fa-info-circle me-2"></i>
-        Species removed from your collection.
-      </div>
-      <script>
-        setTimeout(() => {
-          window.location.reload();
-        }, 500);
-      </script>
-    `);
+    res.render("partials/message", {
+      message: "Species removed from your collection.",
+      type: "success",
+      reloadDelay: 500,
+    });
   } catch (error) {
     // Zod validation errors
     if (error instanceof ZodError) {
       const errorMessages = error.issues.map((issue) => issue.message).join(", ");
       res.status(400).json({ error: errorMessages });
+      return;
+    }
+
+    if (error instanceof CollectionRefusal) {
+      res
+        .status(error.code === "missing" || error.code === "forbidden" ? 403 : 400)
+        .render("partials/message", { message: error.message, type: "warning" });
       return;
     }
 
@@ -366,66 +341,12 @@ router.post("/api/collection/:id/link", async (req: MulmRequest, res: Response) 
     // Validate URL params
     const { id: entryId } = entryIdParamSchema.parse(req.params);
 
-    // Verify ownership
-    const entry = await getCollectionEntry(entryId, viewer.id);
-    if (!entry || entry.member_id !== viewer.id) {
-      res.status(403).render("partials/message", {
-        message: "Access denied. You can only link your own collection entries.",
-        type: "error",
-      });
-      return;
-    }
-
-    // Make sure it's not already linked
-    if (entry.group_id) {
-      res.status(400).render("partials/message", {
-        message: "This entry is already linked to a database species.",
-        type: "warning",
-      });
-      return;
-    }
-
-    // Validate the new group_id
-    const { group_id } = z.object({
-      group_id: z.coerce.number().int().positive("Please select a species from the database"),
-    }).parse(req.body);
-
-    // Verify the species actually exists in the database
-    const species = await findSpeciesById(group_id);
-    if (!species) {
-      res.status(400).render("partials/message", {
-        message: "The selected species does not exist in the database.",
-        type: "error",
-      });
-      return;
-    }
-
-    // Check if user already has this species in their collection (avoid duplicates)
-    const duplicate = await query<{ id: number }>(
-      `SELECT id FROM species_collection
-       WHERE member_id = ? AND group_id = ? AND removed_date IS NULL AND id != ?`,
-      [viewer.id, group_id, entryId]
-    );
-
-    if (duplicate.length > 0) {
-      res.status(400).render("partials/message", {
-        message: "You already have this species in your collection. Please update the existing entry instead.",
-        type: "warning",
-      });
-      return;
-    }
-
-    // Update the entry to link it to the database species
-    // Clear custom names and set group_id (linking to database)
-    const stmt = await writeConn.prepare(
-      "UPDATE species_collection SET group_id = ?, common_name = NULL, scientific_name = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
-    );
-
-    try {
-      await stmt.run(group_id, entryId);
-    } finally {
-      await stmt.finalize();
-    }
+    const { group_id } = z
+      .object({
+        group_id: z.coerce.number().int().positive("Please select a species from the database"),
+      })
+      .parse(req.body);
+    await linkCollectionEntry(entryId, viewer.id, group_id);
 
     // Return success - reload the page
     res.setHeader("HX-Refresh", "true");
@@ -441,6 +362,19 @@ router.post("/api/collection/:id/link", async (req: MulmRequest, res: Response) 
       res.status(400).render("partials/message", {
         message: errorMessages,
         type: "error",
+      });
+      return;
+    }
+
+    if (error instanceof CollectionRefusal) {
+      const denied = error.code === "missing" || error.code === "forbidden";
+      res.status(denied ? 403 : 400).render("partials/message", {
+        message: denied
+          ? "Access denied. You can only link your own collection entries."
+          : error.code === "duplicate"
+            ? "You already have this species in your collection. Please update the existing entry instead."
+            : error.message,
+        type: denied || error.code === "missing-species" ? "error" : "warning",
       });
       return;
     }

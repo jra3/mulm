@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, test, mock } from "node:test";
 import assert from "node:assert/strict";
 import express from "express";
+import path from "node:path";
 import request from "supertest";
 import sharp from "sharp";
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
@@ -77,6 +78,8 @@ void describe("image routes with real database and fake external storage", () =>
       publicUrl: "https://images.test",
     });
     app = express();
+    app.set("views", path.join(__dirname, "../views"));
+    app.set("view engine", "pug");
     app.use((req: MulmRequest, _res, next) => {
       req.viewer = {
         id: memberId,

@@ -5,6 +5,7 @@ import { Response, Router } from "express";
 import { ZodError } from "zod";
 import {
   registerForCares,
+  CaresRefusal,
   updateCaresPhoto,
   getCaresRegistrations,
   getCaresEligibility,
@@ -91,32 +92,33 @@ router.post(
   async (req: MulmRequest, res: Response) => {
     const { viewer } = req;
     if (!viewer) {
-      res.status(401).send(`
-        <div class="alert alert-danger" role="alert">
-          <i class="fas fa-times-circle me-2"></i>
-          Not authenticated. Please log in.
-        </div>
-      `);
+      res
+        .status(401)
+        .render("partials/message", {
+          message: "Not authenticated. Please log in.",
+          type: "error",
+        });
       return;
     }
 
     if (!isR2Enabled()) {
-      res.status(503).send(`
-        <div class="alert alert-danger" role="alert">
-          <i class="fas fa-times-circle me-2"></i>
-          Image upload service is not configured.
-        </div>
-      `);
+      res
+        .status(503)
+        .render("partials/message", {
+          message: "Image upload service is not configured.",
+          type: "error",
+        });
       return;
     }
 
     if (!req.file) {
-      res.status(400).send(`
-        <div class="alert alert-warning" role="alert">
-          <i class="fas fa-exclamation-triangle me-2"></i>
-          A photo is required for CARES registration. Please upload a side-view photo of your fish.
-        </div>
-      `);
+      res
+        .status(400)
+        .render("partials/message", {
+          message:
+            "A photo is required for CARES registration. Please upload a side-view photo of your fish.",
+          type: "warning",
+        });
       return;
     }
 
@@ -125,10 +127,15 @@ router.post(
       const { collection_entry_id } = caresRegistrationSchema.parse(req.body);
 
       const eligibility = await getCaresEligibility(collection_entry_id, viewer.id);
-      if (!eligibility) throw new Error("Collection entry not found or access denied");
+      if (!eligibility)
+        throw new CaresRefusal("missing-entry", "Collection entry not found or access denied");
       if (!eligibility.eligible)
-        throw new Error("This species is not part of the CARES priority list");
-      if (eligibility.registered) throw new Error("This species is already registered for CARES");
+        throw new CaresRefusal("ineligible", "This species is not part of the CARES priority list");
+      if (eligibility.registered)
+        throw new CaresRefusal(
+          "already-registered",
+          "This species is already registered for CARES"
+        );
       uploaded = await media.upload(req.file.buffer, {
         scope: "cares",
         memberId: viewer.id,
@@ -146,67 +153,36 @@ router.post(
       });
 
       // Return success with redirect
-      res.send(`
-        <div class="alert alert-success" role="alert">
-          <i class="fas fa-check-circle me-2"></i>
-          Gold seal earned! Species registered for CARES.
-        </div>
-        <script>
-          setTimeout(function() {
-            var dialog = document.getElementById('dialog');
-            if (dialog) dialog.remove();
-            window.location.reload();
-          }, 1500);
-        </script>
-      `);
+      res.render("partials/message", {
+        message: "Gold seal earned! Species registered for CARES.",
+        type: "success",
+        reloadDelay: 1500,
+      });
     } catch (error) {
       await uploaded?.cleanup();
       if (error instanceof ZodError) {
         const errorMessages = error.issues.map((issue) => issue.message).join(", ");
-        res.status(400).send(`
-          <div class="alert alert-warning" role="alert">
-            <i class="fas fa-exclamation-triangle me-2"></i>
-            ${errorMessages}
-          </div>
-        `);
+        res.status(400).render("partials/message", { message: errorMessages, type: "warning" });
         return;
       }
 
       if (error instanceof ImageValidationError) {
-        res.status(400).send(`
-          <div class="alert alert-warning" role="alert">
-            <i class="fas fa-exclamation-triangle me-2"></i>
-            ${error.message}
-          </div>
-        `);
+        res.status(400).render("partials/message", { message: error.message, type: "warning" });
         return;
       }
 
-      if (error instanceof Error) {
-        // Known business logic errors
-        if (
-          error.message.includes("not part of the CARES") ||
-          error.message.includes("already registered") ||
-          error.message.includes("not found") ||
-          error.message.includes("Only species linked")
-        ) {
-          res.status(400).send(`
-            <div class="alert alert-warning" role="alert">
-              <i class="fas fa-exclamation-triangle me-2"></i>
-              ${error.message}
-            </div>
-          `);
-          return;
-        }
+      if (error instanceof CaresRefusal) {
+        res.status(400).render("partials/message", { message: error.message, type: "warning" });
+        return;
       }
 
       logger.error("CARES registration failed", error);
-      res.status(500).send(`
-        <div class="alert alert-danger" role="alert">
-          <i class="fas fa-times-circle me-2"></i>
-          Registration failed. Please try again.
-        </div>
-      `);
+      res
+        .status(500)
+        .render("partials/message", {
+          message: "Registration failed. Please try again.",
+          type: "error",
+        });
     }
   }
 );
@@ -221,32 +197,24 @@ router.post(
   async (req: MulmRequest, res: Response) => {
     const { viewer } = req;
     if (!viewer) {
-      res.status(401).send(`
-        <div class="alert alert-danger" role="alert">
-          <i class="fas fa-times-circle me-2"></i>
-          Not authenticated.
-        </div>
-      `);
+      res.status(401).render("partials/message", { message: "Not authenticated.", type: "error" });
       return;
     }
 
     if (!isR2Enabled()) {
-      res.status(503).send(`
-        <div class="alert alert-danger" role="alert">
-          <i class="fas fa-times-circle me-2"></i>
-          Image upload service is not configured.
-        </div>
-      `);
+      res
+        .status(503)
+        .render("partials/message", {
+          message: "Image upload service is not configured.",
+          type: "error",
+        });
       return;
     }
 
     if (!req.file) {
-      res.status(400).send(`
-        <div class="alert alert-warning" role="alert">
-          <i class="fas fa-exclamation-triangle me-2"></i>
-          Please upload a photo.
-        </div>
-      `);
+      res
+        .status(400)
+        .render("partials/message", { message: "Please upload a photo.", type: "warning" });
       return;
     }
 
@@ -254,18 +222,17 @@ router.post(
     try {
       const entryId = parseInt(req.params.id);
       if (isNaN(entryId)) {
-        res.status(400).send(`
-          <div class="alert alert-warning" role="alert">
-            <i class="fas fa-exclamation-triangle me-2"></i>
-            Invalid entry ID.
-          </div>
-        `);
+        res
+          .status(400)
+          .render("partials/message", { message: "Invalid entry ID.", type: "warning" });
         return;
       }
 
       const eligibility = await getCaresEligibility(entryId, viewer.id);
-      if (!eligibility) throw new Error("Collection entry not found or access denied");
-      if (!eligibility.registered) throw new Error("This species is not registered for CARES");
+      if (!eligibility)
+        throw new CaresRefusal("missing-entry", "Collection entry not found or access denied");
+      if (!eligibility.registered)
+        throw new CaresRefusal("not-registered", "This species is not registered for CARES");
       uploaded = await media.upload(req.file.buffer, {
         scope: "cares",
         memberId: viewer.id,
@@ -283,50 +250,30 @@ router.post(
         photoKey: originalKey,
       });
 
-      res.send(`
-        <div class="alert alert-success" role="alert">
-          <i class="fas fa-check-circle me-2"></i>
-          CARES photo updated!
-        </div>
-        <script>
-          setTimeout(function() {
-            var dialog = document.getElementById('dialog');
-            if (dialog) dialog.remove();
-            window.location.reload();
-          }, 1000);
-        </script>
-      `);
+      res.render("partials/message", {
+        message: "CARES photo updated!",
+        type: "success",
+        reloadDelay: 1000,
+      });
     } catch (error) {
       await uploaded?.cleanup();
       if (error instanceof ImageValidationError) {
-        res.status(400).send(`
-          <div class="alert alert-warning" role="alert">
-            <i class="fas fa-exclamation-triangle me-2"></i>
-            ${error.message}
-          </div>
-        `);
+        res.status(400).render("partials/message", { message: error.message, type: "warning" });
         return;
       }
 
-      if (error instanceof Error) {
-        if (error.message.includes("not found") || error.message.includes("not registered")) {
-          res.status(400).send(`
-            <div class="alert alert-warning" role="alert">
-              <i class="fas fa-exclamation-triangle me-2"></i>
-              ${error.message}
-            </div>
-          `);
-          return;
-        }
+      if (error instanceof CaresRefusal) {
+        res.status(400).render("partials/message", { message: error.message, type: "warning" });
+        return;
       }
 
       logger.error("CARES photo update failed", error);
-      res.status(500).send(`
-        <div class="alert alert-danger" role="alert">
-          <i class="fas fa-times-circle me-2"></i>
-          Failed to update photo. Please try again.
-        </div>
-      `);
+      res
+        .status(500)
+        .render("partials/message", {
+          message: "Failed to update photo. Please try again.",
+          type: "error",
+        });
     }
   }
 );
@@ -365,12 +312,12 @@ router.get("/dialog/cares/fry-share", async (req: MulmRequest, res: Response) =>
   try {
     const registrations = await getCaresRegistrations(viewer.id);
     if (registrations.length === 0) {
-      res.status(400).send(`
-        <div class="alert alert-warning" role="alert">
-          <i class="fas fa-exclamation-triangle me-2"></i>
-          You need to register at least one CARES species before recording a fry share.
-        </div>
-      `);
+      res
+        .status(400)
+        .render("partials/message", {
+          message: "You need to register at least one CARES species before recording a fry share.",
+          type: "warning",
+        });
       return;
     }
 
@@ -391,12 +338,9 @@ router.get("/dialog/cares/fry-share", async (req: MulmRequest, res: Response) =>
 router.post("/api/cares/fry-share", async (req: MulmRequest, res: Response) => {
   const { viewer } = req;
   if (!viewer) {
-    res.status(401).send(`
-      <div class="alert alert-danger" role="alert">
-        <i class="fas fa-times-circle me-2"></i>
-        Not authenticated. Please log in.
-      </div>
-    `);
+    res
+      .status(401)
+      .render("partials/message", { message: "Not authenticated. Please log in.", type: "error" });
     return;
   }
 
@@ -434,53 +378,30 @@ router.post("/api/cares/fry-share", async (req: MulmRequest, res: Response) => {
       sealType,
     });
 
-    res.send(`
-      <div class="alert alert-success" role="alert">
-        <i class="fas fa-check-circle me-2"></i>
-        Fry share recorded! ${sealType} seal earned.
-      </div>
-      <script>
-        setTimeout(function() {
-          var dialog = document.getElementById('dialog');
-          if (dialog) dialog.remove();
-          window.location.reload();
-        }, 1500);
-      </script>
-    `);
+    res.render("partials/message", {
+      message: `Fry share recorded! ${sealType} seal earned.`,
+      type: "success",
+      reloadDelay: 1500,
+    });
   } catch (error) {
     if (error instanceof ZodError) {
       const errorMessages = error.issues.map((issue) => issue.message).join(", ");
-      res.status(400).send(`
-        <div class="alert alert-warning" role="alert">
-          <i class="fas fa-exclamation-triangle me-2"></i>
-          ${errorMessages}
-        </div>
-      `);
+      res.status(400).render("partials/message", { message: errorMessages, type: "warning" });
       return;
     }
 
-    if (error instanceof Error) {
-      if (
-        error.message.includes("must have this species") ||
-        error.message.includes("not registered")
-      ) {
-        res.status(400).send(`
-          <div class="alert alert-warning" role="alert">
-            <i class="fas fa-exclamation-triangle me-2"></i>
-            ${error.message}
-          </div>
-        `);
-        return;
-      }
+    if (error instanceof CaresRefusal) {
+      res.status(400).render("partials/message", { message: error.message, type: "warning" });
+      return;
     }
 
     logger.error("Fry share recording failed", error);
-    res.status(500).send(`
-      <div class="alert alert-danger" role="alert">
-        <i class="fas fa-times-circle me-2"></i>
-        Failed to record fry share. Please try again.
-      </div>
-    `);
+    res
+      .status(500)
+      .render("partials/message", {
+        message: "Failed to record fry share. Please try again.",
+        type: "error",
+      });
   }
 });
 

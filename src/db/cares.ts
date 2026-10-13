@@ -1,4 +1,4 @@
-import { query, writeConn, withTransaction } from './conn';
+import { query, withTransaction } from './conn';
 import type { Database } from "sqlite";
 import { anyNameSql, speciesFromSql, speciesJoinSql } from "@/species";
 
@@ -72,6 +72,15 @@ interface ArticleRow {
   species_group_id: number;
 }
 
+export type CaresRefusalCode = "missing-entry" | "unlinked" | "ineligible" | "already-registered" | "not-registered";
+
+export class CaresRefusal extends Error {
+  constructor(public readonly code: CaresRefusalCode, message: string) {
+    super(message);
+    this.name = "CaresRefusal";
+  }
+}
+
 interface FryShareRow {
   id: number;
   recipient_name: string;
@@ -119,34 +128,36 @@ export async function registerForCares(
   photoKey: string,
   photoUrl: string
 ): Promise<void> {
-  const entry = await entryRegistration(collectionEntryId, memberId);
+  return withTransaction(async (db) => {
+    const entry = await entryRegistration(collectionEntryId, memberId, db);
 
-  if (!entry) {
-    throw new Error('Collection entry not found or access denied');
-  }
+    if (!entry) {
+      throw new CaresRefusal("missing-entry", 'Collection entry not found or access denied');
+    }
 
-  if (!entry.group_id) {
-    throw new Error('Only species linked to the database can be registered for CARES');
-  }
+    if (!entry.group_id) {
+      throw new CaresRefusal("unlinked", 'Only species linked to the database can be registered for CARES');
+    }
 
-  if (!entry.is_cares_species) {
-    throw new Error('This species is not part of the CARES priority list');
-  }
+    if (!entry.is_cares_species) {
+      throw new CaresRefusal("ineligible", 'This species is not part of the CARES priority list');
+    }
 
-  if (entry.registered_at) {
-    throw new Error('This species is already registered for CARES');
-  }
+    if (entry.registered_at) {
+      throw new CaresRefusal("already-registered", 'This species is already registered for CARES');
+    }
 
-  const stmt = await writeConn.prepare(`
-    INSERT INTO cares_registration (member_id, species_group_id, photo_key, photo_url)
-    VALUES (?, ?, ?, ?)
-  `);
+    const stmt = await db.prepare(`
+      INSERT INTO cares_registration (member_id, species_group_id, photo_key, photo_url)
+      VALUES (?, ?, ?, ?)
+    `);
 
-  try {
-    await stmt.run(memberId, entry.group_id, photoKey, photoUrl);
-  } finally {
-    await stmt.finalize();
-  }
+    try {
+      await stmt.run(memberId, entry.group_id, photoKey, photoUrl);
+    } finally {
+      await stmt.finalize();
+    }
+  });
 }
 
 /**
@@ -162,11 +173,11 @@ export async function updateCaresPhoto(
     const entry = await entryRegistration(collectionEntryId, memberId, db);
 
     if (!entry) {
-      throw new Error('Collection entry not found or access denied');
+      throw new CaresRefusal("missing-entry", 'Collection entry not found or access denied');
     }
 
     if (!entry.registered_at) {
-      throw new Error('This species is not registered for CARES');
+      throw new CaresRefusal("not-registered", 'This species is not registered for CARES');
     }
 
     const stmt = await db.prepare(`
@@ -177,7 +188,7 @@ export async function updateCaresPhoto(
 
     try {
       const result = await stmt.run(photoKey, photoUrl, memberId, entry.group_id);
-      if (result.changes !== 1) throw new Error("This species is not registered for CARES");
+      if (result.changes !== 1) throw new CaresRefusal("not-registered", "This species is not registered for CARES");
     } finally {
       await stmt.finalize();
     }
@@ -374,31 +385,33 @@ export async function createFryShare(
   shareDate: string,
   notes: string | null
 ): Promise<number> {
-  // Verify member has this species registered for CARES
-  const registered = await query<{ cnt: number }>(
-    `SELECT COUNT(*) AS cnt FROM cares_registration
-     WHERE member_id = ? AND species_group_id = ?`,
-    [memberId, speciesGroupId]
-  );
-
-  if ((registered[0]?.cnt ?? 0) === 0) {
-    throw new Error('You must have this species registered for CARES to record a fry share');
-  }
-
-  const stmt = await writeConn.prepare(`
-    INSERT INTO cares_fry_share (member_id, species_group_id, recipient_name, recipient_member_id, recipient_club, share_date, notes)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `);
-
-  try {
-    const result = await stmt.run(
-      memberId, speciesGroupId, recipientName,
-      recipientMemberId, recipientClub, shareDate, notes
+  return withTransaction(async (db) => {
+    // Verify member has this species registered for CARES
+    const registered = await db.all<{ cnt: number }[]>(
+      `SELECT COUNT(*) AS cnt FROM cares_registration
+       WHERE member_id = ? AND species_group_id = ?`,
+      [memberId, speciesGroupId]
     );
-    return result.lastID as number;
-  } finally {
-    await stmt.finalize();
-  }
+
+    if ((registered[0]?.cnt ?? 0) === 0) {
+      throw new CaresRefusal("not-registered", 'You must have this species registered for CARES to record a fry share');
+    }
+
+    const stmt = await db.prepare(`
+      INSERT INTO cares_fry_share (member_id, species_group_id, recipient_name, recipient_member_id, recipient_club, share_date, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    try {
+      const result = await stmt.run(
+        memberId, speciesGroupId, recipientName,
+        recipientMemberId, recipientClub, shareDate, notes
+      );
+      return result.lastID as number;
+    } finally {
+      await stmt.finalize();
+    }
+  });
 }
 
 export interface CaresStats {

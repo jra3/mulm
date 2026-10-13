@@ -5,4 +5,12 @@
 - const color = colors[type] || 'red'
 
 div(class=`bg-${color}-50 border-l-4 border-${color}-400 p-3 mb-4`)
-	p(class=`text-${color}-700 text-sm`)= message
+  p(class=`text-${color}-700 text-sm`)= message
+
+//- Optional delayed refresh after a successful dialog action.
+if typeof reloadDelay === 'number'
+  script.
+    setTimeout(function() {
+      document.getElementById('dialog')?.remove();
+      window.location.reload();
+    }, #{reloadDelay});

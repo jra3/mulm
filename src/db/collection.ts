@@ -1,6 +1,52 @@
-import { query, writeConn } from './conn';
+import { query, withTransaction } from './conn';
+import type { Database } from 'sqlite';
 import type { ImageMetadata } from '../utils/r2-client';
-import { anyNameSql, speciesJoinSql } from "@/species";
+import { anyNameSql, speciesJoinSql, findSpeciesById } from "@/species";
+
+
+export type CollectionRefusalCode =
+  | "missing" | "forbidden" | "already-linked" | "duplicate" | "missing-species"
+  | "invalid" | "already-removed";
+
+export class CollectionRefusal extends Error {
+  constructor(public readonly code: CollectionRefusalCode, message: string) {
+    super(message);
+    this.name = "CollectionRefusal";
+  }
+}
+
+async function ownedEntry(db: Database, id: number, memberId: number, message = "Collection entry not found or access denied") {
+  const entry = await db.get<CollectionRow>("SELECT * FROM species_collection WHERE id = ?", [id]);
+  if (!entry) throw new CollectionRefusal("missing", message);
+  if (entry.member_id !== memberId)
+    throw new CollectionRefusal("forbidden", message);
+  return entry;
+}
+
+async function refuseCurrentDuplicate(db: Database, memberId: number, speciesId: number, exceptId = 0) {
+  const duplicate = await db.get<{ id: number }>(
+    `SELECT id FROM species_collection
+     WHERE member_id = ? AND group_id = ? AND removed_date IS NULL AND id != ?`,
+    [memberId, speciesId, exceptId]
+  );
+  if (duplicate) throw new CollectionRefusal("duplicate", "Species already in collection. Please update the existing entry.");
+}
+
+/** Link a custom entry atomically, preserving its notes, photos and registration. */
+export async function linkCollectionEntry(id: number, memberId: number, speciesId: number): Promise<void> {
+  return withTransaction(async (db) => {
+    const entry = await ownedEntry(db, id, memberId);
+    if (entry.group_id)
+      throw new CollectionRefusal("already-linked", "This entry is already linked to a database species.");
+    if (!await findSpeciesById(speciesId, db))
+      throw new CollectionRefusal("missing-species", "The selected species does not exist in the database.");
+    await refuseCurrentDuplicate(db, memberId, speciesId, id);
+    await db.run(
+      `UPDATE species_collection SET group_id = ?, common_name = NULL, scientific_name = NULL,
+       updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [speciesId, id]
+    );
+  });
+}
 
 /** A current entry shows its member's CARES registration for the Species. */
 const caresRegistrationJoinSql = `LEFT JOIN cares_registration r
@@ -202,58 +248,54 @@ export async function addToCollection(
   memberId: number,
   data: AddCollectionData
 ): Promise<number> {
-  // Validate that we have either group_id OR common_name
-  if (!data.group_id && !data.common_name) {
-    throw new Error('Must provide either group_id (canonical species) or common_name');
-  }
-
-  // Check for duplicate - different logic for canonical vs non-canonical
-  if (data.group_id) {
-    // Canonical species - check by group_id
-    const existing = await query<{ id: number }>(
-      `SELECT id FROM species_collection
-       WHERE member_id = ? AND group_id = ? AND removed_date IS NULL`,
-      [memberId, data.group_id]
-    );
-    if (existing.length > 0) {
-      throw new Error('Species already in collection. Please update the existing entry.');
+  return withTransaction(async (db) => {
+    // Validate that we have either group_id OR common_name
+    if (!data.group_id && !data.common_name) {
+      throw new CollectionRefusal('invalid', 'Must provide either group_id (canonical species) or common_name');
     }
-  } else {
-    // Non-canonical species - check by common_name and scientific_name
-    const existing = await query<{ id: number }>(
-      `SELECT id FROM species_collection
-       WHERE member_id = ?
-         AND common_name = ?
-         AND (scientific_name = ? OR (scientific_name IS NULL AND ? IS NULL))
-         AND removed_date IS NULL`,
-      [memberId, data.common_name, data.scientific_name || null, data.scientific_name || null]
-    );
-    if (existing.length > 0) {
-      throw new Error('Species already in collection. Please update the existing entry.');
+
+    // Check for duplicate - different logic for canonical vs non-canonical
+    if (data.group_id) {
+      if (!await findSpeciesById(data.group_id, db))
+        throw new CollectionRefusal("missing-species", "The selected species does not exist in the database.");
+      await refuseCurrentDuplicate(db, memberId, data.group_id);
+    } else {
+      // Non-canonical species - check by common_name and scientific_name
+      const existing = await db.all<{ id: number }[]>(
+        `SELECT id FROM species_collection
+         WHERE member_id = ?
+           AND common_name = ?
+           AND (scientific_name = ? OR (scientific_name IS NULL AND ? IS NULL))
+           AND removed_date IS NULL`,
+        [memberId, data.common_name, data.scientific_name || null, data.scientific_name || null]
+      );
+      if (existing.length > 0) {
+        throw new CollectionRefusal('duplicate', 'Species already in collection. Please update the existing entry.');
+      }
     }
-  }
 
-  const stmt = await writeConn.prepare(`
-    INSERT INTO species_collection (
-      member_id, group_id, common_name, scientific_name, acquired_date, notes, visibility
-    ) VALUES (?, ?, ?, ?, ?, ?, ?)
-  `);
+    const stmt = await db.prepare(`
+      INSERT INTO species_collection (
+        member_id, group_id, common_name, scientific_name, acquired_date, notes, visibility
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
 
-  try {
-    const info = await stmt.run(
-      memberId,
-      data.group_id || null,
-      data.common_name || null,
-      data.scientific_name || null,
-      data.acquired_date || null,
-      data.notes || null,
-      data.visibility || 'public'
-    );
+    try {
+      const info = await stmt.run(
+        memberId,
+        data.group_id || null,
+        data.common_name || null,
+        data.scientific_name || null,
+        data.acquired_date || null,
+        data.notes || null,
+        data.visibility || 'public'
+      );
 
-    return Number(info.lastID);
-  } finally {
-    await stmt.finalize();
-  }
+      return Number(info.lastID);
+    } finally {
+      await stmt.finalize();
+    }
+  });
 }
 
 /**
@@ -264,77 +306,82 @@ export async function updateCollectionEntry(
   memberId: number,
   updates: UpdateCollectionData
 ): Promise<void> {
-  // Build dynamic update query
-  const updateFields: string[] = ['updated_at = CURRENT_TIMESTAMP'];
-  const params: (string | number | null)[] = [];
+  return withTransaction(async (db) => {
+    const owned = await ownedEntry(db, id, memberId);
+    // Build dynamic update query
+    const updateFields: string[] = ['updated_at = CURRENT_TIMESTAMP'];
+    const params: (string | number | null)[] = [];
 
-  // Changing a name converts the entry to a custom one (group_id = NULL).
-  // The edit dialog always posts both names, so compare against what it showed.
-  // Empty and null count as equal, and surrounding whitespace is ignored.
-  const namesPosted = updates.common_name !== undefined || updates.scientific_name !== undefined;
-  const current = namesPosted ? await getCollectionEntry(id, memberId) : null;
-  const nameChanged = (posted: string | null | undefined, shown: string | null | undefined) =>
-    posted !== undefined && (posted?.trim() || null) !== (shown?.trim() || null);
+    // Changing a name converts the entry to a custom one (group_id = NULL).
+    // The edit dialog always posts both names, so compare against what it showed.
+    // Empty and null count as equal, and surrounding whitespace is ignored.
+    const namesPosted = updates.common_name !== undefined || updates.scientific_name !== undefined;
+    const current = namesPosted ? await getCollectionEntry(id, memberId, db) : null;
+    const nameChanged = (posted: string | null | undefined, shown: string | null | undefined) =>
+      posted !== undefined && (posted?.trim() || null) !== (shown?.trim() || null);
 
-  if (
-    nameChanged(updates.common_name, current?.common_name) ||
-    nameChanged(updates.scientific_name, current?.scientific_name)
-  ) {
-    updateFields.push('group_id = ?');
-    params.push(null);
+    const changesName = nameChanged(updates.common_name, current?.common_name) ||
+      nameChanged(updates.scientific_name, current?.scientific_name);
+    if (updates.removed_date === null && owned.group_id && !changesName)
+      await refuseCurrentDuplicate(db, memberId, owned.group_id, id);
 
-    if (updates.common_name !== undefined) {
-      updateFields.push('common_name = ?');
-      params.push(updates.common_name || null);
+    if (changesName) {
+      updateFields.push('group_id = ?');
+      params.push(null);
+
+      if (updates.common_name !== undefined) {
+        updateFields.push('common_name = ?');
+        params.push(updates.common_name || null);
+      }
+
+      if (updates.scientific_name !== undefined) {
+        updateFields.push('scientific_name = ?');
+        params.push(updates.scientific_name || null);
+      }
     }
 
-    if (updates.scientific_name !== undefined) {
-      updateFields.push('scientific_name = ?');
-      params.push(updates.scientific_name || null);
+    if (updates.acquired_date !== undefined) {
+      updateFields.push('acquired_date = ?');
+      params.push(updates.acquired_date || null);
     }
-  }
 
-  if (updates.acquired_date !== undefined) {
-    updateFields.push('acquired_date = ?');
-    params.push(updates.acquired_date || null);
-  }
-
-  if (updates.notes !== undefined) {
-    updateFields.push('notes = ?');
-    params.push(updates.notes);
-  }
-
-  if (updates.visibility !== undefined) {
-    updateFields.push('visibility = ?');
-    params.push(updates.visibility);
-  }
-
-  if (updates.removed_date !== undefined) {
-    updateFields.push('removed_date = ?');
-    params.push(updates.removed_date);
-  }
-
-  if (updates.images !== undefined) {
-    updateFields.push('images = ?');
-    params.push(JSON.stringify(updates.images));
-  }
-
-  params.push(id, memberId); // For WHERE clause
-
-  const stmt = await writeConn.prepare(`
-    UPDATE species_collection
-    SET ${updateFields.join(', ')}
-    WHERE id = ? AND member_id = ?
-  `);
-
-  try {
-    const info = await stmt.run(...params);
-    if (info.changes === 0) {
-      throw new Error('Collection entry not found or access denied');
+    if (updates.notes !== undefined) {
+      updateFields.push('notes = ?');
+      params.push(updates.notes);
     }
-  } finally {
-    await stmt.finalize();
-  }
+
+    if (updates.visibility !== undefined) {
+      updateFields.push('visibility = ?');
+      params.push(updates.visibility);
+    }
+
+    if (updates.removed_date !== undefined) {
+      updateFields.push('removed_date = ?');
+      params.push(updates.removed_date);
+    }
+
+    if (updates.images !== undefined) {
+      updateFields.push('images = ?');
+      params.push(JSON.stringify(updates.images));
+    }
+
+    params.push(id, memberId); // For WHERE clause
+
+    const stmt = await db.prepare(`
+      UPDATE species_collection
+      SET ${updateFields.join(', ')}
+      WHERE id = ? AND member_id = ?
+    `);
+
+    try {
+      const info = await stmt.run(...params);
+      if (info.changes === 0) {
+        throw new CollectionRefusal('missing', 'Collection entry not found or access denied');
+      }
+    } finally {
+      await stmt.finalize();
+    }
+  });
 }
 
 /**
@@ -344,20 +391,25 @@ export async function removeFromCollection(
   id: number,
   memberId: number
 ): Promise<void> {
-  const stmt = await writeConn.prepare(`
-    UPDATE species_collection
-    SET removed_date = CURRENT_DATE, updated_at = CURRENT_TIMESTAMP
-    WHERE id = ? AND member_id = ? AND removed_date IS NULL
-  `);
+  return withTransaction(async (db) => {
+    const entry = await ownedEntry(db, id, memberId, "Collection entry not found, already removed, or access denied");
+    if (entry.removed_date)
+      throw new CollectionRefusal("already-removed", "Collection entry not found, already removed, or access denied");
+    const stmt = await db.prepare(`
+      UPDATE species_collection
+      SET removed_date = CURRENT_DATE, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ? AND member_id = ? AND removed_date IS NULL
+    `);
 
-  try {
-    const info = await stmt.run(id, memberId);
-    if (info.changes === 0) {
-      throw new Error('Collection entry not found, already removed, or access denied');
+    try {
+      const info = await stmt.run(id, memberId);
+      if (info.changes === 0) {
+        throw new CollectionRefusal('missing', 'Collection entry not found, already removed, or access denied');
+      }
+    } finally {
+      await stmt.finalize();
     }
-  } finally {
-    await stmt.finalize();
-  }
+  });
 }
 
 /**
@@ -365,7 +417,8 @@ export async function removeFromCollection(
  */
 export async function getCollectionEntry(
   id: number,
-  memberId?: number
+  memberId?: number,
+  db?: Database
 ): Promise<CollectionEntry | null> {
   let sql = `
     SELECT
@@ -395,7 +448,7 @@ export async function getCollectionEntry(
     params.push('public');
   }
 
-  const rows = await query<CollectionRow>(sql, params);
+  const rows = db ? await db.all<CollectionRow[]>(sql, params) : await query<CollectionRow>(sql, params);
 
   if (rows.length === 0) return null;
 
@@ -555,7 +608,7 @@ export async function updateCollectionImages(
 ): Promise<void> {
   // Validate max 5 images
   if (images.length > 5) {
-    throw new Error('Maximum 5 images allowed per collection entry');
+    throw new CollectionRefusal('invalid', 'Maximum 5 images allowed per collection entry');
   }
 
   await updateCollectionEntry(id, memberId, { images });
