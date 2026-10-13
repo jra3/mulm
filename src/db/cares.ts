@@ -1,4 +1,5 @@
-import { query, writeConn } from './conn';
+import { query, writeConn, withTransaction } from './conn';
+import type { Database } from "sqlite";
 import { anyNameSql, speciesFromSql, speciesJoinSql } from "@/species";
 
 export interface CaresRegistration {
@@ -88,8 +89,9 @@ interface FryShareRow {
  * registration for it if any. Registrations belong to the member and Species,
  * not to the entry: the entry is how a member reaches them from a card.
  */
-async function entryRegistration(collectionEntryId: number, memberId: number) {
-  const rows = await query<{
+async function entryRegistration(collectionEntryId: number, memberId: number, db?: Database) {
+  const read = db ? <T>(sql: string, params: number[]) => db.all<T[]>(sql, params) : query;
+  const rows = await read<{
     group_id: number | null;
     is_cares_species: number | null;
     registered_at: string | null;
@@ -156,29 +158,32 @@ export async function updateCaresPhoto(
   photoKey: string,
   photoUrl: string
 ): Promise<{ oldPhotoKey: string | null }> {
-  const entry = await entryRegistration(collectionEntryId, memberId);
+  return withTransaction(async (db) => {
+    const entry = await entryRegistration(collectionEntryId, memberId, db);
 
-  if (!entry) {
-    throw new Error('Collection entry not found or access denied');
-  }
+    if (!entry) {
+      throw new Error('Collection entry not found or access denied');
+    }
 
-  if (!entry.registered_at) {
-    throw new Error('This species is not registered for CARES');
-  }
+    if (!entry.registered_at) {
+      throw new Error('This species is not registered for CARES');
+    }
 
-  const stmt = await writeConn.prepare(`
-    UPDATE cares_registration
-    SET photo_key = ?, photo_url = ?
-    WHERE member_id = ? AND species_group_id = ?
-  `);
+    const stmt = await db.prepare(`
+      UPDATE cares_registration
+      SET photo_key = ?, photo_url = ?
+      WHERE member_id = ? AND species_group_id = ?
+    `);
 
-  try {
-    await stmt.run(photoKey, photoUrl, memberId, entry.group_id);
-  } finally {
-    await stmt.finalize();
-  }
+    try {
+      const result = await stmt.run(photoKey, photoUrl, memberId, entry.group_id);
+      if (result.changes !== 1) throw new Error("This species is not registered for CARES");
+    } finally {
+      await stmt.finalize();
+    }
 
-  return { oldPhotoKey: entry.photo_key };
+    return { oldPhotoKey: entry.photo_key };
+  });
 }
 
 /**

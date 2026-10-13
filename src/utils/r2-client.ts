@@ -8,6 +8,10 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import crypto from "crypto";
+import {
+  MAX_IMAGE_FILE_SIZE as MAX_FILE_SIZE,
+  IMAGE_MIME_TYPES as ALLOWED_MIME_TYPES,
+} from "./image-upload-policy";
 import { logger } from "./logger";
 import configFile from "../config.json";
 
@@ -27,8 +31,6 @@ export interface ImageMetadata {
   contentType?: string;
 }
 
-const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
-const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const PRESIGNED_URL_EXPIRY = 300; // 5 minutes
 
 let client: S3Client | null = null;
