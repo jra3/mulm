@@ -1,6 +1,7 @@
 export interface SpecialtyAward {
   name: string;
   requiredSpecies: number;
+  countsTowardMeta: boolean;
   eligibilityFilter: (submission: SubmissionForAward) => boolean;
   limitations?: {
     description: string;
@@ -20,16 +21,19 @@ export interface SubmissionForAward {
 export const specialtyAwards: SpecialtyAward[] = [
   {
     name: "Anabantoids Specialist",
+    countsTowardMeta: true,
     requiredSpecies: 6,
     eligibilityFilter: (sub) => sub.species_class === "Anabantoids",
   },
   {
     name: "Brackish Water Specialist",
+    countsTowardMeta: true,
     requiredSpecies: 3,
     eligibilityFilter: (sub) => sub.water_type === "Brackish",
   },
   {
     name: "Catfish Specialist",
+    countsTowardMeta: true,
     requiredSpecies: 5,
     eligibilityFilter: (sub) => sub.species_class === "Catfish & Loaches",
     limitations: {
@@ -45,16 +49,19 @@ export const specialtyAwards: SpecialtyAward[] = [
   },
   {
     name: "Characins Specialist",
+    countsTowardMeta: true,
     requiredSpecies: 6,
     eligibilityFilter: (sub) => sub.species_class === "Characins",
   },
   {
     name: "New World Cichlids Specialist",
+    countsTowardMeta: true,
     requiredSpecies: 12,
     eligibilityFilter: (sub) => sub.species_class === "Cichlids - New World",
   },
   {
     name: "Old World Cichlids Specialist",
+    countsTowardMeta: true,
     requiredSpecies: 12,
     eligibilityFilter: (sub) => sub.species_class === "Cichlids - Old World",
     limitations: {
@@ -69,11 +76,13 @@ export const specialtyAwards: SpecialtyAward[] = [
   },
   {
     name: "Cyprinids Specialist",
+    countsTowardMeta: true,
     requiredSpecies: 10,
     eligibilityFilter: (sub) => sub.species_class === "Cyprinids",
   },
   {
     name: "Killifish Specialist",
+    countsTowardMeta: true,
     requiredSpecies: 7,
     eligibilityFilter: (sub) => sub.species_class === "Killifish",
     limitations: {
@@ -88,16 +97,19 @@ export const specialtyAwards: SpecialtyAward[] = [
   },
   {
     name: "Livebearers Specialist",
+    countsTowardMeta: true,
     requiredSpecies: 8,
     eligibilityFilter: (sub) => sub.species_class === "Livebearers",
   },
   {
     name: "Marine Fish Specialist",
+    countsTowardMeta: true,
     requiredSpecies: 3,
     eligibilityFilter: (sub) => sub.species_class === "Marine" && sub.water_type === "Salt",
   },
   {
     name: "Marine Invertebrates & Corals Specialist",
+    countsTowardMeta: false,
     requiredSpecies: 7,
     eligibilityFilter: (sub) =>
       (sub.species_type === "Invert" && sub.water_type === "Salt") || sub.species_type === "Coral",
@@ -111,81 +123,85 @@ export const specialtyAwards: SpecialtyAward[] = [
   },
 ];
 
-/**
- * Meta-awards that are earned by achieving multiple specialty awards
- */
-export const metaAwards: SpecialtyAward[] = [
-  {
-    name: "Senior Specialist Award",
-    requiredSpecies: 4, // Actually requires 4 different specialty awards
-    eligibilityFilter: () => true, // Will be handled by special logic
-  },
-  {
-    name: "Expert Specialist Award",
-    requiredSpecies: 7, // Actually requires 7 different specialty awards
-    eligibilityFilter: () => true, // Will be handled by special logic
-  },
-];
+/** Stable definitions own both the meta thresholds and their presentation keys. */
+export const metaAwardDefinitions = {
+  seniorSpecialist: { name: "Senior Specialist Award", requiredAwards: 4 },
+  expertSpecialist: { name: "Expert Specialist Award", requiredAwards: 7 },
+};
+
+export const metaAwards = Object.values(metaAwardDefinitions);
+
+export interface SpecialtyAwardEvaluation {
+  award: SpecialtyAward;
+  eligibleSubmissions: SubmissionForAward[];
+  /** Case-insensitive scientific spellings, deliberately not catalogue Species ids. */
+  distinctSpecies: string[];
+  count: number;
+  requiredCount: number;
+  limitationMet: boolean;
+  qualified: boolean;
+}
 
 /**
- * Get specialty awards that count toward meta-awards
- * Excludes Marine Invertebrates & Corals Specialist as per requirement
+ * The one qualification rule, independent of grants and presentation.
+ * Limitations receive all eligible Submissions (not deduplicated evidence),
+ * preserving the existing limitation rules as well as spelling-based counting.
  */
+export function evaluateSpecialtyAwards(
+  submissions: SubmissionForAward[],
+  definitions: SpecialtyAward[] = specialtyAwards
+): SpecialtyAwardEvaluation[] {
+  return definitions.map((award) => {
+    const eligibleSubmissions = submissions.filter(award.eligibilityFilter);
+    const distinctSpecies = [
+      ...new Set(
+        eligibleSubmissions.map((submission) => submission.species_latin_name.toLowerCase())
+      ),
+    ];
+    const count = distinctSpecies.length;
+    const requiredCount = award.requiredSpecies;
+    const limitationMet = award.limitations?.validator(eligibleSubmissions) ?? true;
+    return {
+      award,
+      eligibleSubmissions,
+      distinctSpecies,
+      count,
+      requiredCount,
+      limitationMet,
+      qualified: count >= requiredCount && limitationMet,
+    };
+  });
+}
+
+/** Marine Invertebrates & Corals is explicitly excluded by its definition. */
 export function getCountableSpecialtyAwards(): string[] {
-  return specialtyAwards
-    .filter((award) => award.name !== "Marine Invertebrates & Corals Specialist")
-    .map((award) => award.name);
+  return specialtyAwards.filter((award) => award.countsTowardMeta).map((award) => award.name);
 }
 
-/**
- * Check if a member qualifies for meta-awards based on their existing specialty awards
- */
-export function checkMetaAwards(existingAwards: string[]): string[] {
+/** The caller chooses whether these are qualified specialties or existing grants. */
+export function evaluateMetaAwards(specialtyNames: string[]) {
   const countableAwards = getCountableSpecialtyAwards();
-  const earnedCountableAwards = existingAwards.filter((award) => countableAwards.includes(award));
-
-  const metaAwardsEarned: string[] = [];
-
-  // Senior Specialist: 4 different species groups (excluding invertebrates)
-  if (earnedCountableAwards.length >= 4 && !existingAwards.includes("Senior Specialist Award")) {
-    metaAwardsEarned.push("Senior Specialist Award");
-  }
-
-  // Expert Specialist: 7 different species groups (excluding invertebrates)
-  if (earnedCountableAwards.length >= 7 && !existingAwards.includes("Expert Specialist Award")) {
-    metaAwardsEarned.push("Expert Specialist Award");
-  }
-
-  return metaAwardsEarned;
+  const countedAwards = [...new Set(specialtyNames)].filter((name) =>
+    countableAwards.includes(name)
+  );
+  return metaAwards.map((award) => ({
+    award,
+    countedAwards,
+    count: countedAwards.length,
+    requiredCount: award.requiredAwards,
+    qualified: countedAwards.length >= award.requiredAwards,
+  }));
 }
 
-/**
- * Check if a member qualifies for any specialty awards based on their approved submissions
- */
+/** Newly earned meta-awards; existing grants are left untouched. */
+export function checkMetaAwards(existingAwards: string[]): string[] {
+  return evaluateMetaAwards(existingAwards)
+    .filter(({ award, qualified }) => qualified && !existingAwards.includes(award.name))
+    .map(({ award }) => award.name);
+}
+
 export function checkSpecialtyAwards(submissions: SubmissionForAward[]): string[] {
-  const earnedAwards: string[] = [];
-
-  for (const award of specialtyAwards) {
-    // Filter submissions that match this award's eligibility criteria
-    const eligibleSubmissions = submissions.filter((sub) => award.eligibilityFilter(sub));
-
-    // Count unique species (by latin name)
-    const uniqueSpecies = new Set(
-      eligibleSubmissions.map((sub) => sub.species_latin_name.toLowerCase())
-    );
-
-    // Check if they have enough species
-    if (uniqueSpecies.size >= award.requiredSpecies) {
-      // Check limitations if any
-      if (award.limitations) {
-        if (award.limitations.validator(eligibleSubmissions)) {
-          earnedAwards.push(award.name);
-        }
-      } else {
-        earnedAwards.push(award.name);
-      }
-    }
-  }
-
-  return earnedAwards;
+  return evaluateSpecialtyAwards(submissions)
+    .filter(({ qualified }) => qualified)
+    .map(({ award }) => award.name);
 }
