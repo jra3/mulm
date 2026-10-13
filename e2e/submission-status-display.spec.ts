@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import { login } from "./helpers/auth";
 import { TEST_USER, TEST_ADMIN, cleanupTestUserSubmissions, getTestDatabase, ensureTestUserExists } from "./helpers/testData";
 import { createTestSubmission } from "./helpers/submissions";
@@ -19,7 +19,7 @@ test.describe("Changes-Requested Status Display", () => {
 	let memberId: number;
 	let adminId: number;
 
-	test.beforeAll(async () => {
+	test.beforeEach(async () => {
 		// Clean up and ensure test users exist
 		await cleanupTestUserSubmissions(TEST_USER.email);
 		await ensureTestUserExists(TEST_USER.email, TEST_USER.password, TEST_USER.displayName, false);

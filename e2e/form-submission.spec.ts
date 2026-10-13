@@ -1,7 +1,8 @@
-import { test, expect } from "@playwright/test";
+import { saveSubmission } from "./helpers/submissionForm";
+import { test, expect } from "./fixtures";
 import { login, logout } from "./helpers/auth";
 import { TEST_USER, cleanupTestUserSubmissions, getSubmissionsForMember, getTestDatabase } from "./helpers/testData";
-import { fillTomSelectTypeahead, selectTomSelectMultiple, clearTomSelect } from "./helpers/tomSelect";
+import { fillTomSelectTypeahead, createTomSelectValue, selectTomSelectMultiple, clearTomSelect } from "./helpers/tomSelect";
 
 test.describe.configure({ mode: 'serial' });
 
@@ -195,179 +196,40 @@ test.describe("Form Submission Flow", () => {
 		}
 	});
 
-	test("should allow editing a draft submission", async ({ page }) => {
-		// Login
-		await login(page);
+	test("should allow editing a draft submission", async ({ page, member }) => {
+    await login(page, member);
+    await page.goto("/submissions/new");
+    await fillTomSelectTypeahead(page, "species_common_name", "Guppy", true);
+    await page.locator('[name="temperature"]').fill("74");
+    await saveSubmission(page, true);
+    const drafts = await getSubmissionsForMember(member.id);
+    expect(drafts).toHaveLength(1);
+    const submissionId = drafts[0].id;
+    await page.goto(`/submissions/${submissionId}`);
+    await expect(page.locator('#bapForm')).toBeVisible();
+    await page.locator('[name="temperature"]').fill("78");
+    await clearTomSelect(page, "species_common_name");
+    await createTomSelectValue(page, "species_common_name", "Updated Guppy");
+    await saveSubmission(page, true);
+    const saved = await getSubmissionsForMember(member.id);
+    expect(saved).toHaveLength(1);
+    expect(saved[0]).toMatchObject({ id: submissionId, species_common_name: "Updated Guppy", temperature: "78", submitted_on: null, species_id: null });
+  });
 
-		// Create a draft first
-		await page.goto("/submissions/new");
-		await page.waitForSelector("#bapForm");
-
-		await page.selectOption('select[name="water_type"]', "Fresh");
-		await page.selectOption('select[name="species_type"]', "Fish");
-
-		// Wait for HTMX swap to complete
-		await page.waitForLoadState("networkidle");
-		await page.waitForSelector('select[name="species_class"]', { state: "visible" });
-
-		await page.selectOption('select[name="species_class"]', "Livebearers");
-
-		const today = new Date().toISOString().split("T")[0];
-		await page.fill('input[name="reproduction_date"]', today);
-		await fillTomSelectTypeahead(page, "species_common_name", "Original Guppy");
-		await fillTomSelectTypeahead(page, "species_latin_name", "Poecilia reticulata");
-		await page.fill('input[name="temperature"]', "74");
-		await page.fill('input[name="ph"]', "7.0");
-		await page.fill('input[name="gh"]', "150");
-		await page.fill('input[name="count"]', "20");
-
-		// Scroll to ensure button is in view
-		await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-		await page.waitForTimeout(500);
-
-		// Save draft
-		const draftButton = page.locator('button[name="draft"]');
-		await draftButton.scrollIntoViewIfNeeded();
-		await draftButton.click();
-		await page.waitForLoadState("networkidle");
-
-		// After saving draft, should redirect to /me (which redirects to /member/{id})
-		await page.waitForTimeout(2000);
-		expect(page.url()).toMatch(/\/member\/\d+/);
-
-		// Find the draft submission in the member page - it should be the first row with "Draft" status
-		// The draft status badge (📝) is a link to the submission
-		const draftLink = page.locator('a[href^="/submissions/"]:has-text("📝")').first();
-		const href = await draftLink.getAttribute("href");
-		expect(href).toBeTruthy();
-
-		// Extract submission ID from href
-		const submissionIdMatch = href!.match(/\/submissions\/(\d+)/);
-		expect(submissionIdMatch).toBeTruthy();
-		const submissionId = submissionIdMatch![1];
-		console.log(`Found draft submission ID: ${submissionId}`);
-
-		// Edit the draft
-		await page.goto(`/submissions/${submissionId}`);
-		await page.waitForSelector("#bapForm");
-
-		// Change some fields - change temperature FIRST to avoid HTMX swaps resetting it
-		await page.fill('input[name="temperature"]', "78");
-
-		// Wait a bit before changing species name (which might trigger swaps)
-		await page.waitForTimeout(500);
-
-		// Clear the existing Tom Select value first, then fill with new value
-		await clearTomSelect(page, "species_common_name");
-		await page.waitForTimeout(300);
-		await fillTomSelectTypeahead(page, "species_common_name", "Updated Guppy");
-
-		// Wait for any HTMX swaps from species name change to complete
-		await page.waitForLoadState("networkidle");
-		await page.waitForTimeout(1000);
-
-		// Scroll to ensure button is in view
-		await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-		await page.waitForTimeout(500);
-
-		// Save edits - for drafts, use "Save Draft" button (not "Save Edits")
-		const saveButton = page.locator('button[name="draft"]');
-		await saveButton.scrollIntoViewIfNeeded();
-		await saveButton.click();
-		await page.waitForLoadState("networkidle");
-
-		// Give HTMX time to process the save
-		await page.waitForTimeout(2000);
-
-		// Verify changes in database
-		const db = await getTestDatabase();
-		try {
-			const submission = await db.get(
-				"SELECT * FROM submissions WHERE id = ?",
-				parseInt(submissionId)
-			);
-
-			// Tom Select may select different first results
-			expect(submission.species_common_name).toBeTruthy();
-			expect(submission.temperature).toBe("78");
-			// Should still be a draft
-			expect(submission.submitted_on).toBeNull();
-		} finally {
-			await db.close();
-		}
-	});
-
-	test("should delete a draft submission", async ({ page }) => {
-		// Login
-		await login(page);
-
-		// Create a draft
-		await page.goto("/submissions/new");
-		await page.waitForSelector("#bapForm");
-
-		await page.selectOption('select[name="water_type"]', "Fresh");
-		await page.selectOption('select[name="species_type"]', "Fish");
-
-		// Wait for HTMX swap to complete
-		await page.waitForLoadState("networkidle");
-		await page.waitForSelector('select[name="species_class"]', { state: "visible" });
-
-		await page.selectOption('select[name="species_class"]', "Livebearers");
-
-		const today = new Date().toISOString().split("T")[0];
-		await page.fill('input[name="reproduction_date"]', today);
-		await fillTomSelectTypeahead(page, "species_common_name", "To Delete");
-		await fillTomSelectTypeahead(page, "species_latin_name", "Deletis fishus");
-		await page.fill('input[name="temperature"]', "75");
-		await page.fill('input[name="ph"]', "7.0");
-		await page.fill('input[name="gh"]', "150");
-		await page.fill('input[name="count"]', "10");
-
-		// Scroll to ensure button is in view
-		await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-		await page.waitForTimeout(500);
-
-		// Save draft
-		const draftButton = page.locator('button[name="draft"]');
-		await draftButton.scrollIntoViewIfNeeded();
-		await draftButton.click();
-		await page.waitForLoadState("networkidle");
-
-		// After saving draft, should redirect to /me (which redirects to /member/{id})
-		await page.waitForTimeout(2000);
-		expect(page.url()).toMatch(/\/member\/\d+/);
-
-		// Find the draft submission in the member page by the draft badge
-		const draftLink = page.locator('a[href^="/submissions/"]:has-text("📝")').first();
-		const href = await draftLink.getAttribute("href");
-		expect(href).toBeTruthy();
-
-		// Extract submission ID from href
-		const submissionIdMatch = href!.match(/\/submissions\/(\d+)/);
-		expect(submissionIdMatch).toBeTruthy();
-		const submissionId = parseInt(submissionIdMatch![1]);
-		console.log(`Found draft submission ID to delete: ${submissionId}`);
-
-		// Navigate to the submission page to delete it
-		await page.goto(`/submissions/${submissionId}`);
-		await page.waitForSelector("#bapForm");
-
-		// Listen for confirm dialog and accept it
-		page.on("dialog", (dialog) => dialog.accept());
-
-		// Delete the draft
-		await page.click('button:has-text("Delete Draft")');
-
-		// Wait for redirect
-		await page.waitForLoadState("networkidle");
-
-		// Verify deletion in database
-		const db = await getTestDatabase();
-		try {
-			const submission = await db.get("SELECT * FROM submissions WHERE id = ?", submissionId);
-			expect(submission).toBeUndefined();
-		} finally {
-			await db.close();
-		}
-	});
+	test("should delete a draft submission", async ({ page, member }) => {
+    await login(page, member);
+    await page.goto("/submissions/new");
+    await page.locator('[name="species_class"]').selectOption("Livebearers");
+    await createTomSelectValue(page, "species_common_name", "To Delete");
+    await createTomSelectValue(page, "species_latin_name", "Deletis fishus");
+    await saveSubmission(page, true);
+    const drafts = await getSubmissionsForMember(member.id);
+    expect(drafts).toHaveLength(1);
+    await page.goto(`/submissions/${drafts[0].id}`);
+    await expect(page.locator('#bapForm')).toBeVisible();
+    page.once("dialog", dialog => dialog.accept());
+    await page.getByRole("button", { name: "Delete Draft", exact: true }).click();
+    await expect(page).toHaveURL(new URL("/", page.url()).href);
+    expect(await getSubmissionsForMember(member.id)).toHaveLength(0);
+  });
 });

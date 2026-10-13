@@ -182,9 +182,12 @@ mixin CRUDForm()
                                 option(value="yes", selected=hasCO2) Yes
 
                     div#CO2Desc(class=`${hasCO2 ? "" : "hidden"}`)
+                        +errorMessage("co2_description")
                         textarea.text-input(
                             id="co2_description"
                             name="co2_description"
+                            aria-invalid=errors.has("co2_description") ? "true" : "false"
+                            aria-describedby=errors.has("co2_description") ? "co2_description-error" : undefined
                             rows="4"
                             placeholder="Describe CO2 injection..."
                             aria-label="CO2 injection description")
