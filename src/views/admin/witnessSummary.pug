@@ -14,9 +14,9 @@ if summary.ready
 	.text-white.text-sm.mb-2.flex.justify-between.gap-3.items-baseline
 		span#witness-sum-lines= summary.lines.map((line) => `${line.label} ${line.amount}`).join(" + ")
 		b.whitespace-nowrap.text-base#witness-sum-total= `${summary.total} pts`
-	button.primary.w-full.h-12.text-base(id=button.id type="submit")= `${button.label} · ${summary.total} pts`
+	button.primary.w-full.min-h-12.text-base(id=button.id type="submit")= `${button.label} · ${summary.total} pts`
 else
 	.text-gray-200.text-sm.mb-2#witness-sum-hint= summary.hint
 	//- Visibly off, not the enabled blue (button.primary:disabled in src/index.css):
 	//- the panel's own gate, before the server's
-	button.primary.w-full.h-12.text-base(id=button.id type="submit" disabled)= button.label
+	button.primary.w-full.min-h-12.text-base(id=button.id type="submit" disabled)= button.label

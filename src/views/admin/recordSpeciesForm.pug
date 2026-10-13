@@ -107,7 +107,7 @@ include ../mixins/errorMessage.pug
 			input(type="checkbox" name="new_cares_species" value="on" checked=values.new_cares_species)
 			span CARES species
 
-	button.primary.w-full.h-12.text-base#witness-record-continue(
+	button.primary.w-full.min-h-12.text-base#witness-record-continue(
 		type="button"
 		hx-post=`/admin/submissions/${submission.id}/record-species`
 		hx-include="#witness-record"

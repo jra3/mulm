@@ -119,10 +119,17 @@ Use these component classes from `src/index.css` instead of long Tailwind chains
 
 ### Buttons
 ```css
-button.primary     /* Blue primary action buttons */
-button.destructive /* Red destructive action buttons */
-button.outline     /* Gray outline buttons */
+button.primary      /* Blue primary action buttons */
+a.primary           /* Navigation links styled as primary action buttons */
+.submission-actions /* Stack actions on phones; wrap them in a row from sm */
+button.destructive  /* Red destructive action buttons */
+button.outline      /* Gray outline buttons */
 ```
+
+Button defaults live in Tailwind’s components layer so sizing, typography, and
+layout utilities can override them. Buttons and primary links have a 44px minimum
+height and grow to fit wrapped labels. Use `min-h-12` for larger actions whose
+labels may wrap; use `.submission-actions` for groups on submission pages.
 
 ### Forms
 ```css
@@ -188,6 +195,21 @@ When adding new features:
 5. **Neutral info** - Use gray scale (`bg-gray-100`, `text-gray-600`)
 
 **Avoid**: Using colors outside this palette. Don't introduce new semantic colors (teal, pink, indigo) unless they serve a distinct, necessary purpose.
+
+## Committee queues
+
+Screening and approval share `admin/adminNav.pug`, program filters (All, BAP,
+HAP, CAP), and compact cards. Screening starts with every program and lists
+oldest submissions first; opening a card leads to the existing review page.
+The review link carries a `screening` filter (`all`, `fish`, `plant`, or `coral`).
+HTMX’s current-page URL preserves it through panel swaps, confirmation, and
+requests for changes, so the reviewer returns to the same queue. Direct review
+links retain the existing program-specific redirect.
+Waiting submissions are a secondary section of approval, ordered by eligibility
+date, with links to their full submissions. Rows with outstanding change requests
+say “Awaiting member changes”; their clock ending alone does not admit them to
+approval. The old `/admin/waiting-period`
+URLs redirect there and preserve the program filter.
 
 ## Date Formatting
 

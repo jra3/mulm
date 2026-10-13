@@ -1,39 +1,17 @@
-mixin adminNav(currentQueue, programCounts, witnessCounts)
-	.fixed.bottom-0.left-0.w-full.bg-white.border-t.border-gray-200.p-4.shadow-lg
-		.container.mx-auto
-			// Queue type selector
-			.flex.justify-center.mb-3
-				.flex.gap-2.text-base
-					if currentQueue === "witness"
-						span.font-bold.text-blue-600 Witness Queues
-					else
-						a.link(href="/admin/witness-queue/fish") Witness Queues
-					span.text-gray-400 |
-					if currentQueue === "waiting"
-						span.font-bold.text-blue-600 Waiting Period
-					else
-						a.link(href="/admin/waiting-period/fish") Waiting Period
-					span.text-gray-400 |
-					if currentQueue === "approval"
-						span.font-bold.text-blue-600 Approval Queue
-					else
-						a.link(href="/admin/queue") Approval Queue
-			
-			// Program buttons for current queue type
-			.flex.justify-center.space-x-4
-				if currentQueue === "witness"
-					+queueButton("fish", "Fish/Inverts", witnessCounts.fish, "witness")
-					+queueButton("plant", "Plants", witnessCounts.plant, "witness")
-					+queueButton("coral", "Corals", witnessCounts.coral, "witness")
-				else if currentQueue === "waiting"
-					// Waiting period doesn't use counts, just navigation
-					a(href="/admin/waiting-period/fish")
-						button.outline Fish/Inverts
-					a(href="/admin/waiting-period/plant")
-						button.outline Plants
-					a(href="/admin/waiting-period/coral")
-						button.outline Corals
-				else
-					+queueButton("fish", "Fish/Inverts", programCounts.fish)
-					+queueButton("plant", "Plants", programCounts.plant)
-					+queueButton("coral", "Corals", programCounts.coral)
+//- Shared queue navigation. Waiting belongs below the approval work.
+mixin adminNav(currentQueue, program, counts)
+	- const suffix = program ? `/${program}` : ""
+	- const base = currentQueue === "witness" ? "/admin/witness-queue" : "/admin/queue"
+	- const filterClass = (active) => active ? "bg-white text-gray-900 border-white" : "text-gray-200 border-gray-500 hover:bg-gray-600"
+	nav.flex.gap-4.text-sm.text-gray-300(aria-label="Committee queues")
+		a.py-2(class=currentQueue === "witness" ? "text-white font-semibold border-b-2 border-white" : "hover:text-white" href=`/admin/witness-queue${suffix}` aria-current=currentQueue === "witness" ? "page" : undefined) Screening
+		a.py-2(class=currentQueue === "approval" ? "text-white font-semibold border-b-2 border-white" : "hover:text-white" href=`/admin/queue${suffix}` aria-current=currentQueue === "approval" ? "page" : undefined) Approval
+	nav.flex.flex-wrap.items-center.gap-2.text-sm#queue-programs(aria-label="Programs")
+		a.px-3.py-1.rounded-full.border(href=base class=filterClass(!program) aria-current=!program ? "page" : undefined)= `All · ${counts.all}`
+		a.px-3.py-1.rounded-full.border(href=`${base}/fish` class=filterClass(program === "fish") aria-current=program === "fish" ? "page" : undefined)= `BAP · ${counts.fish}`
+		a.px-3.py-1.rounded-full.border(href=`${base}/plant` class=filterClass(program === "plant") aria-current=program === "plant" ? "page" : undefined)= `HAP · ${counts.plant}`
+		a.px-3.py-1.rounded-full.border(href=`${base}/coral` class=filterClass(program === "coral") aria-current=program === "coral" ? "page" : undefined)= `CAP · ${counts.coral}`
+
+mixin programChip(short)
+	- const color = short === "HAP" ? "bg-green-100 text-green-800" : short === "CAP" ? "bg-purple-100 text-purple-800" : "bg-blue-100 text-blue-800"
+	span.inline-block.text-xs.font-semibold.px-2.rounded-full.align-middle(class=color)= short

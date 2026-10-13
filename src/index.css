@@ -25,27 +25,43 @@
 	@apply text-white hover:text-gray-200;
 }
 
-button {
-	@apply rounded-2xl text-sm font-medium h-9 px-4 py-2 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2;
-}
+/* Defaults belong below utilities so controls can choose their size and layout. */
+@layer components {
+	button,
+	a.primary {
+		@apply rounded-2xl text-sm font-medium min-h-11 px-4 py-2 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2 text-center;
+	}
 
-button.primary {
-	@apply bg-blue-500 text-white hover:bg-blue-700 focus:ring-blue-500;
-}
+	button.primary,
+	a.primary {
+		@apply bg-blue-500 text-white hover:bg-blue-700 focus:ring-blue-500;
+	}
 
-/* A disabled primary button reads as off. Written here rather than as
-   disabled: utilities on the element because these component rules sit
-   outside Tailwind's layers and so win over any utility class. */
-button.primary:disabled {
-	@apply bg-gray-500 text-gray-200 cursor-not-allowed;
-}
+	/* A disabled primary action remains visibly unavailable. */
+	button.primary:disabled {
+		@apply bg-gray-500 text-gray-200 cursor-not-allowed;
+	}
 
-button.destructive {
-	@apply bg-red-500 text-white hover:bg-red-700 focus:ring-red-500;
-}
+	button.destructive {
+		@apply bg-red-500 text-white hover:bg-red-700 focus:ring-red-500;
+	}
 
-button.outline {
-	@apply border-gray-500 hover:bg-gray-200 focus:ring-gray-500;
+	button.outline {
+		@apply border-gray-500 hover:bg-gray-200 focus:ring-gray-500;
+	}
+
+	/* Action groups stack on phones and wrap at wider sizes. */
+	.submission-actions {
+		@apply flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center;
+	}
+
+	.submission-actions > form > button {
+		@apply w-full;
+	}
+
+	button:disabled, button.htmx-request {
+		@apply opacity-70 cursor-not-allowed;
+	}
 }
 
 /* HTMX loading indicator */
@@ -66,11 +82,6 @@ button.outline {
 	to {
 		transform: rotate(360deg);
 	}
-}
-
-/* Disabled button state for HTMX */
-button:disabled, button.htmx-request {
-	@apply opacity-70 cursor-not-allowed;
 }
 
 /* Admin Popover */

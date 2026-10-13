@@ -68,7 +68,6 @@ import { getBodyString } from "@/utils/request";
 import { checkAllMemberLevels } from "@/levelManager";
 import { checkAllSpecialtyAwards } from "@/specialtyAwardManager";
 import { logger } from "@/utils/logger";
-import { getStatusPresentation } from "@/utils/statusBadge";
 import * as lifecycle from "@/lifecycle";
 import { callerFor, sendLifecycleError } from "./lifecycleErrors";
 import {
@@ -219,6 +218,7 @@ export type WaitingRow = {
   species_common_name: string;
   programShort: string;
   readyOn: string;
+  changesRequested: boolean;
 };
 
 const PROGRAM_SHORT: Record<string, string> = { fish: "BAP", plant: "HAP", coral: "CAP" };
@@ -298,6 +298,7 @@ export async function approvalQueueLocals(viewer: NonNullable<MulmRequest["viewe
     species_common_name: speciesNamesOf(row).common,
     programShort: short(row),
     readyOn: formatShortDate(endsOn),
+    changesRequested: lifecycle.hasChangesRequested(row),
   }));
 
   const counts = {
@@ -335,86 +336,72 @@ export const showQueue = async (req: MulmRequest, res: Response) => {
   res.render("admin/queue", await approvalQueueLocals(req.viewer!, program));
 };
 
+/** Screening uses the same all-program view and filters as approval. */
 export const showWitnessQueue = async (req: MulmRequest, res: Response) => {
-  const { program = "fish" } = req.params;
-  if (programs.indexOf(program) === -1) {
+  const program = req.params.program ?? null;
+  if (program && !isProgramType(program)) {
     res.status(404).send("Invalid program");
     return;
   }
 
-  const [submissions, programCounts] = await Promise.all([
-    getQueue("witness", program),
+  const listed = program ? [program] : [...programs];
+  const [byProgram, programCounts] = await Promise.all([
+    Promise.all(listed.map((p) => getQueue("witness", p))),
     getQueueCounts("witness"),
   ]);
-
-  // Add status info to each submission
-  const submissionsWithStatus = submissions.map((sub) => ({
-    ...sub,
-    statusInfo: getStatusPresentation(sub),
-  }));
-
-  const subtitle = (() => {
-    switch (program) {
-      default:
-      case "fish":
-        return `Breeder Awards Program`;
-      case "plant":
-        return `Horticultural Awards Program`;
-      case "coral":
-        return `Coral Awards Program`;
-    }
-  })();
+  const submissions = byProgram
+    .flat()
+    .sort((a, b) => (a.submitted_on ?? "").localeCompare(b.submitted_on ?? "") || a.id - b.id)
+    .map((sub) => ({
+      ...sub,
+      species_common_name: speciesNamesOf(sub).common,
+      species_latin_name: speciesNamesOf(sub).latin,
+      programShort: PROGRAM_SHORT[sub.program] ?? sub.program,
+      mine: sub.member_id === req.viewer!.id,
+    }));
 
   res.render("admin/witnessQueue", {
-    title: "Screening Queue",
-    subtitle,
-    submissions: submissionsWithStatus,
+    title: "Screening queue",
+    subtitle: program && isProgramType(program) ? programMetadata[program].name : "Every Program",
+    submissions,
     program,
-    programCounts,
+    counts: {
+      all: Object.values(programCounts).reduce((sum, count) => sum + count, 0),
+      fish: programCounts.fish ?? 0,
+      plant: programCounts.plant ?? 0,
+      coral: programCounts.coral ?? 0,
+    },
   });
 };
 
-export const showWaitingPeriod = async (req: MulmRequest, res: Response) => {
-  const { program = "fish" } = req.params;
-  if (programs.indexOf(program) === -1) {
+/**
+ * HTMX keeps the review page's URL through panel swaps and dialogs. Its
+ * screening filter identifies the queue to return to; never redirect to an
+ * arbitrary client-supplied URL. Direct visits keep the legacy fallback.
+ */
+function screeningPathFrom(req: MulmRequest, submissionId: number): string | undefined {
+  const current = req.get("HX-Current-URL");
+  if (!current) return undefined;
+  try {
+    const url = new URL(current);
+    if (url.pathname !== `/submissions/${submissionId}`) return undefined;
+    const filter = url.searchParams.get("screening");
+    if (filter === "all") return "/admin/witness-queue";
+    if (filter && isProgramType(filter)) return `/admin/witness-queue/${filter}`;
+  } catch {
+    // Malformed or absent context falls back to the submission's Program.
+  }
+  return undefined;
+}
+
+/** Preserve bookmarks: waiting is a secondary section of the approval queue. */
+export const showWaitingPeriod = (req: MulmRequest, res: Response) => {
+  const program = req.params.program ?? null;
+  if (program && !isProgramType(program)) {
     res.status(404).send("Invalid program");
     return;
   }
-
-  // Everything screened whose clock has not run. The approval queue is a
-  // different page, and the clock alone decides which of the two a witnessed
-  // Submission is on.
-  const [waiting, programCounts, witnessCounts] = await Promise.all([
-    getQueue("waitingPeriod", program),
-    getQueueCounts("approval"),
-    getQueueCounts("witness"),
-  ]);
-
-  const submissionsWithStatus = waiting.map((sub) => ({
-    ...sub,
-    waitingStatus: lifecycle.waitingPeriod(sub),
-  }));
-
-  const subtitle = (() => {
-    switch (program) {
-      default:
-      case "fish":
-        return `Breeder Awards Program`;
-      case "plant":
-        return `Horticultural Awards Program`;
-      case "coral":
-        return `Coral Awards Program`;
-    }
-  })();
-
-  res.render("admin/waitingPeriod", {
-    title: "Auction Eligibility Monitor",
-    subtitle,
-    submissions: submissionsWithStatus,
-    program,
-    programCounts,
-    witnessCounts,
-  });
+  res.redirect(`${queuePath(program)}#queue-waiting`);
 };
 
 export const sendRequestChanges = async (req: MulmRequest, res: Response) => {
@@ -438,8 +425,8 @@ export const sendRequestChanges = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  // Redirect to approval queue for the submission's program
-  res.set("HX-Redirect", `/admin/queue/${submission.program}`).send();
+  // Keep screening work in its originating queue after sending it back.
+  res.set("HX-Redirect", screeningPathFrom(req, submission.id) ?? `/admin/queue/${submission.program}`).send();
 };
 
 export const requestChangesForm = async (req: MulmRequest, res: Response) => {
@@ -556,11 +543,10 @@ export const confirmWitnessAction = async (req: MulmRequest, res: Response) => {
   );
   if (!ran) return;
 
-  // The confirm gives the Submission its Species' Program, so the queue to
-  // return to is the settled one, read after the write, not the one it was
-  // filed under
+  // Preserve the originating filter. Direct visits fall back to the Species'
+  // settled Program, which can change when the Witness is confirmed.
   const settled = await getSubmissionById(submission.id);
-  res.set("HX-Redirect", `/admin/witness-queue/${settled?.program ?? submission.program}`).send();
+  res.set("HX-Redirect", screeningPathFrom(req, submission.id) ?? `/admin/witness-queue/${settled?.program ?? submission.program}`).send();
 };
 
 /** Whether a witness-panel request belongs to the correction form (#528): it says so in a `correction` field. */

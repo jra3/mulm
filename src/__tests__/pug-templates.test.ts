@@ -173,8 +173,8 @@ void describe("Pug Template Rendering", () => {
     fishTotalPoints: 150,
     plantTotalPoints: 75,
     coralTotalPoints: 25,
-    // Rows for the templates that take a `submissions` local: the waiting
-    // period queue (a queue row plus waitingStatus) and the re-witness letter
+    // Rows for the templates that take a `submissions` local: screening
+    // and the re-witness letter
     // (RewitnessLetterRow, src/notifications.ts)
     submissions: [
       {
@@ -741,6 +741,11 @@ void describe("Pug Template Rendering", () => {
 
           case "admin/queue.pug":
             Object.assign(templateData, sampleQueue);
+            break;
+
+          case "admin/witnessQueue.pug":
+            templateData.program = null;
+            templateData.counts = { all: 1, fish: 1, plant: 0, coral: 0 };
             break;
 
           case "admin/approveSheet.pug":
@@ -1484,7 +1489,7 @@ void describe("Pug Template Rendering", () => {
       const waiting = render({ summary: notReady });
       assert.match(waiting, /id="witness-sum-hint">Is the species right\? Answer above first</);
       assert.match(waiting, /id="witness-confirm"[^>]*disabled/);
-      assert.match(waiting, /<button class="primary w-full h-12 text-base" id="witness-confirm"[^>]*disabled/, "a primary button; button.primary:disabled in src/index.css greys it");
+      assert.match(waiting, /<button class="primary w-full min-h-12 text-base" id="witness-confirm"[^>]*disabled/, "a primary button; button.primary:disabled in src/index.css greys it");
     });
 
     void test("only the form's own submit names the Confirm button in hx-disabled-elt: requests from inside the form do not inherit it", () => {
@@ -1668,7 +1673,7 @@ void describe("Pug Template Rendering", () => {
         assert.match(html, /<input[^>]*type="checkbox"[^>]*name="new_cares_species"[^>]*value="on"/);
         assert.match(
           html,
-          /<button class="primary w-full h-12 text-base" id="witness-record-continue" type="button" hx-post="\/admin\/submissions\/42\/record-species" hx-include="#witness-record" hx-target="#witness-species" hx-swap="innerHTML" hx-disabled-elt="this">Record species and continue</
+          /<button class="primary w-full min-h-12 text-base" id="witness-record-continue" type="button" hx-post="\/admin\/submissions\/42\/record-species" hx-include="#witness-record" hx-target="#witness-species" hx-swap="innerHTML" hx-disabled-elt="this">Record species and continue</
         );
         // Back fetches the page and keeps only the panel, so nothing is created or lost
         assert.match(html, /hx-get="\/submissions\/42"[^>]*hx-select="#witnessPanel"[^>]*hx-target="#witnessPanel"[^>]*hx-swap="outerHTML"[^>]*hx-disabled-elt="this"[^>]*>Back</);
@@ -1795,11 +1800,11 @@ void describe("Pug Template Rendering", () => {
       assert.doesNotMatch(html, /submissions\/105\/approve|queue-arm-105|queue-approve-105/);
     });
 
-    void test("approved tonight and still waiting are listed, the latter greyed with a ready date and no button", () => {
+    void test("approved tonight and waiting are listed, with a ready date and a link to inspect waiting submissions", () => {
       const html = render();
 
       assert.match(html, /id="queue-approved-99"[^>]*>[\s\S]*?✓ Dan Wu · Apisto Rio Mamuru[\s\S]*?by Alex Kim[\s\S]*?<b[^>]*>20 pts</);
-      assert.match(html, /opacity-75" id="queue-waiting-106">[\s\S]*?Ken Ito · Red-tailed Goodeid[\s\S]*?ready 11\/29\/2026/);
+      assert.match(html, /id="queue-waiting-106" href="\/submissions\/106">[\s\S]*?Ken Ito · Red-tailed Goodeid[\s\S]*?ready 11\/29\/2026/);
       assert.doesNotMatch(html, /submissions\/106\/approve|submissions\/99\/approve/);
     });
 
@@ -1816,7 +1821,7 @@ void describe("Pug Template Rendering", () => {
       const html = render({ program: "plant" });
 
       assert.match(html, /href="\/admin\/queue">All · 2</);
-      assert.match(html, /bg-white text-gray-900[^>]*href="\/admin\/queue\/plant">HAP · 1</);
+      assert.match(html, /bg-white text-gray-900[^>]*href="\/admin\/queue\/plant" aria-current="page">HAP · 1</);
       assert.match(html, /text-gray-200[^>]*href="\/admin\/queue\/fish">BAP · 1</);
     });
   });

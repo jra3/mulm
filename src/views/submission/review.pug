@@ -197,7 +197,7 @@ html
         if isSelf
             section.bg-gray-100.py-6
                 div.max-w-4xl.mx-auto.text-center.px-4
-                    .flex.justify-center.gap-4.flex-wrap
+                    .submission-actions
                         if allowed.saveChanges && !changesRequested
                             a.primary(
                                 class="px-4 py-2 text-sm"
@@ -299,7 +299,7 @@ html
                                 .text-white.mb-4#approval-unbound
                                     p.font-semibold Not bound to a Species
                                     p.text-sm.text-gray-300 It cannot be approved until it is. Choose the Species on the correction form, with its points.
-                            .flex.justify-center.gap-4
+                            .submission-actions
                                 if allowed.correctPoints || !submission.species_id
                                     a.primary(class="px-4 py-2 text-sm" id="correct-points-link" href=`/admin/submissions/${submission.id}/correct-points`) Correct species and points
                                 if allowed.requestChanges
@@ -326,7 +326,7 @@ html
                         //- Species and points are corrected on the correction form (#528);
                         //- the dialog edits the member's details (#529)
                         if isApproved && !isSelf
-                            div.mb-6.flex.flex-wrap.gap-3
+                            div.mb-6.submission-actions
                                 a.primary(class="px-4 py-2 text-sm" id="correct-points-link" href=`/admin/submissions/${submission.id}/correct-points`) Correct species and points
                                 button.primary(
                                     type="button"
