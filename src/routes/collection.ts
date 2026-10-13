@@ -1,7 +1,8 @@
+import { createImageUpload } from "@/utils/image-upload-policy";
+import { media, type UploadedMedia } from "@/services/media";
 import { MulmRequest } from "@/sessions";
 import { Response, Router } from "express";
 import { z, ZodError } from "zod";
-import multer from "multer";
 import { query, writeConn } from "@/db/conn";
 import {
   getCollectionForMember,
@@ -22,33 +23,13 @@ import {
   canEditCollection,
 } from "@/forms/collection";
 import { logger } from "@/utils/logger";
-import { processImage, ImageValidationError } from "@/utils/image-processor";
-import {
-  isR2Enabled,
-  generateImageKey,
-  getPublicUrl,
-  uploadToR2,
-  ImageMetadata,
-} from "@/utils/r2-client";
+import { ImageValidationError } from "@/utils/image-processor";
+import { isR2Enabled, ImageMetadata } from "@/utils/r2-client";
 
 const router = Router();
 
 // Configure multer for memory storage (same as submission uploads)
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 20 * 1024 * 1024, // 20MB
-    files: 5, // Max 5 files at once
-  },
-  fileFilter: (req, file, cb) => {
-    const allowedMimes = ["image/jpeg", "image/png", "image/webp"];
-    if (allowedMimes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error("Invalid file type. Only JPEG, PNG, and WebP images are allowed."));
-    }
-  },
-});
+const upload = createImageUpload(5);
 
 /**
  * View a member's collection (public endpoint, JSON for HTMX)
@@ -497,6 +478,8 @@ router.post(
       return;
     }
 
+    const uploadedMedia: UploadedMedia[] = [];
+
     try {
       // Validate URL params
       const { id: entryId } = entryIdParamSchema.parse(req.params);
@@ -520,7 +503,6 @@ router.post(
       }
 
       const processedImages: ImageMetadata[] = [];
-      const uploadedKeys: string[] = [];
       const errors: string[] = [];
 
       // Process each uploaded file
@@ -528,51 +510,14 @@ router.post(
         const file = req.files[i];
 
         try {
-          // Process the image
-          const processed = await processImage(file.buffer, {
-            preferWebP: false,
-          });
-
-          // Generate unique keys for each size
-          const baseKey = generateImageKey(viewer.id, entryId, file.originalname);
-          const originalKey = baseKey.replace(/\.(jpg|jpeg|png|webp)$/i, "-original.$1");
-          const mediumKey = baseKey.replace(/\.(jpg|jpeg|png|webp)$/i, "-medium.$1");
-          const thumbnailKey = baseKey.replace(/\.(jpg|jpeg|png|webp)$/i, "-thumb.$1");
-
-          // Upload all sizes to R2
-          await Promise.all([
-            uploadToR2(
-              originalKey,
-              processed.original.buffer,
-              `image/${processed.original.format}`
-            ),
-            uploadToR2(mediumKey, processed.medium.buffer, `image/${processed.medium.format}`),
-            uploadToR2(
-              thumbnailKey,
-              processed.thumbnail.buffer,
-              `image/${processed.thumbnail.format}`
-            ),
-          ]);
-
-          uploadedKeys.push(originalKey, mediumKey, thumbnailKey);
-
-          // Create metadata entry
-          const metadata: ImageMetadata = {
-            key: originalKey,
-            url: getPublicUrl(originalKey),
-            size: processed.original.size,
-            uploadedAt: new Date().toISOString(),
-            contentType: `image/${processed.original.format}`,
-          };
-
-          processedImages.push(metadata);
-
-          logger.info("Collection image uploaded successfully", {
+          const uploaded = await media.upload(file.buffer, {
+            scope: "submissions",
             memberId: viewer.id,
-            entryId,
-            key: originalKey,
-            size: processed.original.size,
+            recordId: entryId,
+            filename: file.originalname,
           });
+          uploadedMedia.push(uploaded);
+          processedImages.push(uploaded.metadata);
         } catch (error) {
           if (error instanceof ImageValidationError) {
             errors.push(`${file.originalname}: ${error.message}`);
@@ -589,6 +534,8 @@ router.post(
         await updateCollectionEntry(entryId, viewer.id, { images: allImages });
       }
 
+      uploadedMedia.length = 0; // The committed collection entry owns these objects.
+
       // Return results
       res.json({
         success: true,
@@ -596,6 +543,7 @@ router.post(
         errors: errors.length > 0 ? errors : undefined,
       });
     } catch (error) {
+      await Promise.all(uploadedMedia.map((uploaded) => uploaded.cleanup()));
       // Zod validation errors
       if (error instanceof ZodError) {
         const errorMessages = error.issues.map((issue) => issue.message).join(", ");

@@ -568,42 +568,45 @@ export async function addSubmissionImage(
   submissionId: number,
   imageData: Omit<SubmissionImage, "id" | "submission_id" | "display_order">
 ): Promise<number> {
-  try {
-    // Get current max display order
-    const maxOrder = await query<{ max_order: number | null }>(
-      "SELECT MAX(display_order) as max_order FROM submission_images WHERE submission_id = ?",
-      [submissionId]
-    );
-    const nextOrder = (maxOrder[0]?.max_order ?? -1) + 1;
+  const [id] = await addSubmissionImages(submissionId, [imageData]);
+  return id;
+}
 
-    const stmt = await writeConn.prepare(`
+/** Atomically persist a successfully uploaded batch, without holding a transaction during R2 calls. */
+export async function addSubmissionImages(
+  submissionId: number,
+  images: Omit<SubmissionImage, "id" | "submission_id" | "display_order">[]
+): Promise<number[]> {
+  return withTransaction(async (db) => {
+    const maxOrder = await db.get<{ max_order: number | null }>(
+      "SELECT MAX(display_order) as max_order FROM submission_images WHERE submission_id = ?",
+      submissionId
+    );
+    let nextOrder = (maxOrder?.max_order ?? -1) + 1;
+    const ids: number[] = [];
+    const stmt = await db.prepare(`
       INSERT INTO submission_images
       (submission_id, r2_key, public_url, file_size, uploaded_at, content_type, display_order)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
-
     try {
-      const result = await stmt.run(
-        submissionId,
-        imageData.r2_key,
-        imageData.public_url,
-        imageData.file_size,
-        imageData.uploaded_at,
-        imageData.content_type,
-        nextOrder
-      );
-      return result.lastID as number;
+      for (const image of images) {
+        const result = await stmt.run(
+          submissionId,
+          image.r2_key,
+          image.public_url,
+          image.file_size,
+          image.uploaded_at,
+          image.content_type,
+          nextOrder++
+        );
+        ids.push(result.lastID as number);
+      }
     } finally {
       await stmt.finalize();
     }
-  } catch (err) {
-    logger.error("Failed to add submission image", err);
-    // Preserve constraint errors for better error messages
-    if (err instanceof Error && err.message.includes("UNIQUE constraint")) {
-      throw err;
-    }
-    throw new Error("Failed to add submission image", { cause: err });
-  }
+    return ids;
+  });
 }
 
 /**

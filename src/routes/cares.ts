@@ -1,8 +1,8 @@
+import { createImageUpload } from "@/utils/image-upload-policy";
+import { media, type UploadedMedia, imageVariantKeys } from "@/services/media";
 import { MulmRequest } from "@/sessions";
 import { Response, Router } from "express";
 import { ZodError } from "zod";
-import multer from "multer";
-import crypto from "crypto";
 import {
   registerForCares,
   updateCaresPhoto,
@@ -17,13 +17,8 @@ import { getCollectionEntry } from "@/db/collection";
 import { searchMembers as searchMembersDb } from "@/db/members";
 import { caresRegistrationSchema, caresFryShareSchema } from "@/forms/cares";
 import { logger } from "@/utils/logger";
-import { processImage, ImageValidationError } from "@/utils/image-processor";
-import {
-  isR2Enabled,
-  getPublicUrl,
-  uploadToR2,
-  deleteImage,
-} from "@/utils/r2-client";
+import { ImageValidationError } from "@/utils/image-processor";
+import { isR2Enabled } from "@/utils/r2-client";
 import { requireCaresRegistry } from "@/caresRegistry";
 
 const router = Router();
@@ -32,31 +27,7 @@ const router = Router();
 router.use(["/cares", "/dialog/cares", "/api/cares"], requireCaresRegistry);
 
 // Configure multer for single photo upload
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 20 * 1024 * 1024, // 20MB
-    files: 1,
-  },
-  fileFilter: (req, file, cb) => {
-    const allowedMimes = ["image/jpeg", "image/png", "image/webp"];
-    if (allowedMimes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error("Invalid file type. Only JPEG, PNG, and WebP images are allowed."));
-    }
-  },
-});
-
-/**
- * Generate a unique key for CARES photos
- */
-function generateCaresPhotoKey(memberId: number, entryId: number, filename: string): string {
-  const timestamp = Date.now();
-  const hash = crypto.randomBytes(8).toString("hex");
-  const extension = filename.split(".").pop()?.toLowerCase() || "jpg";
-  return `cares/${memberId}/${entryId}/${timestamp}-${hash}.${extension}`;
-}
+const upload = createImageUpload(1);
 
 /**
  * GET /dialog/cares/register/:id
@@ -149,30 +120,24 @@ router.post(
       return;
     }
 
+    let uploaded: UploadedMedia | undefined;
     try {
       const { collection_entry_id } = caresRegistrationSchema.parse(req.body);
 
-      // Process the image
-      const processed = await processImage(req.file.buffer, {
-        preferWebP: false,
+      const eligibility = await getCaresEligibility(collection_entry_id, viewer.id);
+      if (!eligibility) throw new Error("Collection entry not found or access denied");
+      if (!eligibility.eligible)
+        throw new Error("This species is not part of the CARES priority list");
+      if (eligibility.registered) throw new Error("This species is already registered for CARES");
+      uploaded = await media.upload(req.file.buffer, {
+        scope: "cares",
+        memberId: viewer.id,
+        recordId: collection_entry_id,
+        filename: req.file.originalname,
       });
-
-      // Generate keys and upload to R2
-      const baseKey = generateCaresPhotoKey(viewer.id, collection_entry_id, req.file.originalname);
-      const originalKey = baseKey.replace(/\.(jpg|jpeg|png|webp)$/i, "-original.$1");
-      const mediumKey = baseKey.replace(/\.(jpg|jpeg|png|webp)$/i, "-medium.$1");
-      const thumbnailKey = baseKey.replace(/\.(jpg|jpeg|png|webp)$/i, "-thumb.$1");
-
-      await Promise.all([
-        uploadToR2(originalKey, processed.original.buffer, `image/${processed.original.format}`),
-        uploadToR2(mediumKey, processed.medium.buffer, `image/${processed.medium.format}`),
-        uploadToR2(thumbnailKey, processed.thumbnail.buffer, `image/${processed.thumbnail.format}`),
-      ]);
-
-      const photoUrl = getPublicUrl(originalKey);
-
-      // Register for CARES
+      const { key: originalKey, url: photoUrl } = uploaded.metadata;
       await registerForCares(collection_entry_id, viewer.id, originalKey, photoUrl);
+      uploaded = undefined; // The committed registration now owns these objects.
 
       logger.info("CARES registration completed", {
         memberId: viewer.id,
@@ -195,6 +160,7 @@ router.post(
         </script>
       `);
     } catch (error) {
+      await uploaded?.cleanup();
       if (error instanceof ZodError) {
         const errorMessages = error.issues.map((issue) => issue.message).join(", ");
         res.status(400).send(`
@@ -284,6 +250,7 @@ router.post(
       return;
     }
 
+    let uploaded: UploadedMedia | undefined;
     try {
       const entryId = parseInt(req.params.id);
       if (isNaN(entryId)) {
@@ -296,38 +263,19 @@ router.post(
         return;
       }
 
-      // Process the image
-      const processed = await processImage(req.file.buffer, {
-        preferWebP: false,
+      const eligibility = await getCaresEligibility(entryId, viewer.id);
+      if (!eligibility) throw new Error("Collection entry not found or access denied");
+      if (!eligibility.registered) throw new Error("This species is not registered for CARES");
+      uploaded = await media.upload(req.file.buffer, {
+        scope: "cares",
+        memberId: viewer.id,
+        recordId: entryId,
+        filename: req.file.originalname,
       });
-
-      // Generate keys and upload to R2
-      const baseKey = generateCaresPhotoKey(viewer.id, entryId, req.file.originalname);
-      const originalKey = baseKey.replace(/\.(jpg|jpeg|png|webp)$/i, "-original.$1");
-      const mediumKey = baseKey.replace(/\.(jpg|jpeg|png|webp)$/i, "-medium.$1");
-      const thumbnailKey = baseKey.replace(/\.(jpg|jpeg|png|webp)$/i, "-thumb.$1");
-
-      await Promise.all([
-        uploadToR2(originalKey, processed.original.buffer, `image/${processed.original.format}`),
-        uploadToR2(mediumKey, processed.medium.buffer, `image/${processed.medium.format}`),
-        uploadToR2(thumbnailKey, processed.thumbnail.buffer, `image/${processed.thumbnail.format}`),
-      ]);
-
-      const photoUrl = getPublicUrl(originalKey);
-
-      // Update the photo
+      const { key: originalKey, url: photoUrl } = uploaded.metadata;
       const { oldPhotoKey } = await updateCaresPhoto(entryId, viewer.id, originalKey, photoUrl);
-
-      // Clean up old photo from R2
-      if (oldPhotoKey) {
-        const oldMediumKey = oldPhotoKey.replace("-original", "-medium");
-        const oldThumbKey = oldPhotoKey.replace("-original", "-thumb");
-        await Promise.all([
-          deleteImage(oldPhotoKey).catch(() => {}),
-          deleteImage(oldMediumKey).catch(() => {}),
-          deleteImage(oldThumbKey).catch(() => {}),
-        ]);
-      }
+      uploaded = undefined; // Never compensate the newly committed photo.
+      if (oldPhotoKey) await media.cleanup(imageVariantKeys(oldPhotoKey));
 
       logger.info("CARES photo updated", {
         memberId: viewer.id,
@@ -349,6 +297,7 @@ router.post(
         </script>
       `);
     } catch (error) {
+      await uploaded?.cleanup();
       if (error instanceof ImageValidationError) {
         res.status(400).send(`
           <div class="alert alert-warning" role="alert">
@@ -360,10 +309,7 @@ router.post(
       }
 
       if (error instanceof Error) {
-        if (
-          error.message.includes("not found") ||
-          error.message.includes("not registered")
-        ) {
+        if (error.message.includes("not found") || error.message.includes("not registered")) {
           res.status(400).send(`
             <div class="alert alert-warning" role="alert">
               <i class="fas fa-exclamation-triangle me-2"></i>

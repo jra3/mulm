@@ -1,14 +1,9 @@
+import { createImageUpload } from "../../utils/image-upload-policy";
+import { media, type UploadedMedia } from "../../services/media";
 import express from "express";
-import multer from "multer";
 import { MulmRequest } from "../../sessions";
-import { processImage, ImageValidationError } from "../../utils/image-processor";
-import {
-  isR2Enabled,
-  generateImageKey,
-  getPublicUrl,
-  deleteImage,
-  uploadToR2,
-} from "../../utils/r2-client";
+import { ImageValidationError } from "../../utils/image-processor";
+import { isR2Enabled, deleteImage } from "../../utils/r2-client";
 import { logger } from "../../utils/logger";
 import { withTransaction } from "../../db/conn";
 import { ImageMetadata } from "../../utils/r2-client";
@@ -17,27 +12,12 @@ import {
   deleteRateLimiter,
   progressRateLimiter,
 } from "../../middleware/rateLimiter";
-import { addSubmissionImage, deleteSubmissionImage } from "../../db/submissions";
+import { addSubmissionImages, deleteSubmissionImage } from "../../db/submissions";
 
 const router = express.Router();
 
 // Configure multer for memory storage
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 20 * 1024 * 1024, // 20MB per file - supports up to 48MP 8K images
-    files: 5, // Max 5 files per upload
-  },
-  fileFilter: (req, file, cb) => {
-    // Basic MIME type check (will validate magic bytes later)
-    const allowedMimes = ["image/jpeg", "image/png", "image/webp"];
-    if (allowedMimes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error("Invalid file type. Only JPEG, PNG, and WebP images are allowed."));
-    }
-  },
-});
+const upload = createImageUpload(5);
 
 // Progress tracking store (in production, use Redis or similar)
 const uploadProgress = new Map<string, { stage: string; percent: number; message: string }>();
@@ -61,29 +41,7 @@ function updateProgress(uploadId: string, stage: string, percent: number, messag
       uploadProgress.delete(uploadId);
     },
     5 * 60 * 1000
-  );
-}
-
-/**
- * Clean up uploaded files from R2
- * Used when upload fails or database transaction rolls back
- */
-async function cleanupUploadedFiles(keys: string[]): Promise<void> {
-  if (keys.length === 0) {
-    return;
-  }
-
-  logger.info("Cleaning up uploaded files", { count: keys.length });
-
-  const deletePromises = keys.map((key) =>
-    deleteImage(key).catch((err: unknown) => {
-      logger.error("Failed to cleanup file during batch delete", { key, error: err });
-      // Don't throw - best effort cleanup
-    })
-  );
-
-  await Promise.allSettled(deletePromises);
-  logger.info("Cleanup complete", { attempted: keys.length });
+  ).unref();
 }
 
 /**
@@ -118,7 +76,7 @@ router.post(
     }
 
     const processedImages: ImageMetadata[] = [];
-    const uploadedKeys: string[] = []; // Track all uploaded keys for cleanup
+    const uploadedMedia: UploadedMedia[] = [];
     const errors: string[] = [];
 
     try {
@@ -137,59 +95,27 @@ router.post(
             `Processing image ${i + 1} of ${req.files.length}`
           );
 
-          // Process the image
-          const processed = await processImage(file.buffer, {
-            preferWebP: (req.body as { preferWebP?: string }).preferWebP === "true",
-          });
-
-          // Generate unique keys for each size
-          const baseKey = generateImageKey(viewer.id, submissionId || 0, file.originalname);
-          const originalKey = baseKey.replace(/\.(jpg|jpeg|png|webp)$/i, "-original.$1");
-          const mediumKey = baseKey.replace(/\.(jpg|jpeg|png|webp)$/i, "-medium.$1");
-          const thumbnailKey = baseKey.replace(/\.(jpg|jpeg|png|webp)$/i, "-thumb.$1");
-
-          updateProgress(
-            uploadId,
-            "uploading",
-            fileProgress + 10,
-            `Uploading image ${i + 1} to storage...`
+          const uploaded = await media.upload(
+            file.buffer,
+            {
+              scope: "submissions",
+              memberId: viewer.id,
+              recordId: submissionId || 0,
+              filename: file.originalname,
+            },
+            {
+              preferWebP: (req.body as { preferWebP?: string }).preferWebP === "true",
+              onUploading: () =>
+                updateProgress(
+                  uploadId,
+                  "uploading",
+                  fileProgress + 10,
+                  `Uploading image ${i + 1} to storage...`
+                ),
+            }
           );
-
-          // Upload all sizes to R2
-          await Promise.all([
-            uploadToR2(
-              originalKey,
-              processed.original.buffer,
-              `image/${processed.original.format}`
-            ),
-            uploadToR2(mediumKey, processed.medium.buffer, `image/${processed.medium.format}`),
-            uploadToR2(
-              thumbnailKey,
-              processed.thumbnail.buffer,
-              `image/${processed.thumbnail.format}`
-            ),
-          ]);
-
-          // Track uploaded keys for potential cleanup
-          uploadedKeys.push(originalKey, mediumKey, thumbnailKey);
-
-          // Create metadata entry
-          const metadata: ImageMetadata = {
-            key: originalKey,
-            url: getPublicUrl(originalKey),
-            size: processed.original.size,
-            uploadedAt: new Date().toISOString(),
-            contentType: `image/${processed.original.format}`,
-          };
-
-          processedImages.push(metadata);
-
-          logger.info("Image uploaded successfully", {
-            memberId: viewer.id,
-            submissionId,
-            key: originalKey,
-            size: processed.original.size,
-          });
+          uploadedMedia.push(uploaded);
+          processedImages.push(uploaded.metadata);
         } catch (error) {
           if (error instanceof ImageValidationError) {
             errors.push(`${file.originalname}: ${error.message}`);
@@ -200,34 +126,21 @@ router.post(
         }
       }
 
-      updateProgress(uploadId, "complete", 100, "Upload complete");
-
-      // If this is for a submission, update the database
+      // Commit the successful files as a batch, after every network write has settled.
       if (submissionId && processedImages.length > 0) {
-        try {
-          // Add images to submission_images table
-          for (const img of processedImages) {
-            await addSubmissionImage(submissionId, {
-              r2_key: img.key,
-              public_url: img.url,
-              file_size: img.size,
-              uploaded_at: img.uploadedAt,
-              content_type: img.contentType || "image/jpeg",
-            });
-          }
-        } catch (error) {
-          logger.error("Failed to update submission with images", error);
-
-          // Clean up ALL uploaded R2 files on database transaction failure
-          logger.info("Cleaning up R2 uploads after database failure", {
-            keyCount: uploadedKeys.length,
-          });
-          await cleanupUploadedFiles(uploadedKeys);
-
-          // Rethrow the original error
-          throw error;
-        }
+        await addSubmissionImages(
+          submissionId,
+          processedImages.map((img) => ({
+            r2_key: img.key,
+            public_url: img.url,
+            file_size: img.size,
+            uploaded_at: img.uploadedAt,
+            content_type: img.contentType || "image/jpeg",
+          }))
+        );
       }
+      uploadedMedia.length = 0; // Persistence (or the staged response) owns the objects now.
+      updateProgress(uploadId, "complete", 100, "Upload complete");
 
       // Return results
       res.json({
@@ -237,6 +150,7 @@ router.post(
         errors: errors.length > 0 ? errors : undefined,
       });
     } catch (error) {
+      await Promise.all(uploadedMedia.map((uploaded) => uploaded.cleanup()));
       logger.error("Upload failed", error);
       updateProgress(uploadId, "error", 0, "Upload failed");
       res.status(500).json({
