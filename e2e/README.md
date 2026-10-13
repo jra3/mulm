@@ -1,10 +1,16 @@
 # E2E Testing with Playwright
 
-End-to-end tests for the BAP application using Playwright.
+End-to-end tests for the Portal using Playwright.
 
 ## Quick Start
 
 ```bash
+# First run: sample config (if absent), dependencies, CSS and browser
+# cp src/config.sample.json src/config.json
+npm ci
+npm run postcss
+npx playwright install chromium
+
 # Run all e2e tests (headless)
 npm run test:e2e
 
@@ -24,6 +30,67 @@ npm run test:e2e:report
 npm run test:e2e -- hello-world.spec.ts
 ```
 
+## Database, server, and member ownership
+
+Every invocation creates a new `mulm-e2e-*` directory under the OS temporary
+directory. Each worker migrates its own SQLite file, seeds reference Species,
+and starts the real Portal through `bootstrap()` on a kernel-assigned loopback port.
+Worker-local files also isolate first-time-species awards and SQLite transactions
+from other workers; tests still receive independent member accounts.
+It disables R2, MCP, jobs, and real email. No existing server is reused. Teardown
+stops the listener and closes SQLite before removing the directory, including
+when tests fail. A killed process can leave an identifiable temporary directory;
+a later run always gets a new directory.
+
+`MULM_E2E_DIRECTORY` and `MULM_E2E_RUN` are internal values created by global
+setup. Each worker sets `MULM_E2E_DATABASE` and receives its owned base URL. Helpers require the run's owner marker
+and explicit path; neither helper implementation falls back to a development
+file. `BASE_URL` is rejected. Remote/staging fixture commands have a separate
+lifecycle and must not use this mutation-test configuration.
+
+Import `test` from `./fixtures`, not directly from Playwright. Every test receives
+new member and committee accounts, including retries and repeats. Teardown records
+their IDs, deletes only their Submissions (including cascading child rows), then
+deletes those members. It never clears the catalogue or another test's member.
+`TEST_USER` / `TEST_ADMIN` are compatibility aliases assigned by the automatic
+fixture before `beforeEach`; use the explicit fixtures for new tests. Do not use
+these aliases in `beforeAll`, nor create mutable state shared between tests.
+
+```typescript
+import { test, expect } from "./fixtures";
+import { openSubmissionForm, choosePropagationSpecies, saveSubmission } from "./helpers/submissionForm";
+import { getSubmissionsForMember } from "./helpers/testData";
+
+test("saves a HAP draft", async ({ page, member }) => {
+  await openSubmissionForm(page, member, "Plant");
+  await choosePropagationSpecies(page, "Plant");
+  await saveSubmission(page, true);
+  expect(await getSubmissionsForMember(member.id)).toHaveLength(1);
+});
+```
+
+Reference Species belong in `helpers/referenceSpecies.ts`; tests must not remove
+or modify those shared Names. A test that exercises Species curation must create
+its own Species. Member-owned resources belong to that test's fixture accounts.
+
+Plant/Coral helpers wait for the outgoing HTMX form to detach, the replacement's
+Tom Select initialization, the selected Name and linked fields, and the resulting
+navigation or field error. `fillTomSelectTypeahead` chooses a catalogue Name;
+`createTomSelectValue` explicitly enters an unlisted spelling. Neither silently
+substitutes a free-text option for a missing catalogue result.
+
+Local and CI runs use two workers by default. Reproduce the isolation check with:
+
+```bash
+npm run test:e2e -- plant-submissions.spec.ts coral-submissions.spec.ts --workers=2 --repeat-each=2
+NODE_ENV=test npx tsx --test src/__tests__/e2e-helpers.test.ts src/__tests__/e2e-isolation.test.ts src/__tests__/e2e-server.test.ts
+npm run typecheck
+```
+
+Traces, screenshots and videos are retained on failure (including the first CI
+attempt); inspect the HTML report with `npm run test:e2e:report`. CI builds CSS
+before Playwright, and needs no separate database setup script.
+
 ## Test Structure
 
 ```
@@ -32,7 +99,7 @@ e2e/
 │   ├── auth.ts          # Authentication utilities
 │   ├── tomSelect.ts     # Tom Select dropdown interaction helpers
 │   └── testData.ts      # Test data seeding and cleanup
-├── global-setup.ts      # Runs once before all tests (creates test users)
+├── global-setup.ts      # Owns disposable database and server
 ├── hello-world.spec.ts  # ✅ Basic connectivity tests (4/4 passing)
 ├── form-field-linking.spec.ts  # ✅ Form field linking tests (11/11 passing)
 ├── form-submission.spec.ts     # ✅ Form submission flow tests (4/4 passing)
@@ -106,7 +173,7 @@ await ensureLoggedIn(page);
 import { ensureTestUserExists, cleanupTestUserSubmissions, TEST_USER } from "./helpers/testData";
 
 // Default test user
-const user = TEST_USER; // baptest+e2e@porcnick.com
+const user = TEST_USER; // Current test-scoped member; prefer the member fixture
 
 // Create/ensure test user exists
 const memberId = await ensureTestUserExists(email, password, displayName);
@@ -129,33 +196,19 @@ await deleteSubmission(submissionId);
 
 ### playwright.config.ts
 
-- **Base URL**: `http://localhost:4200`
-- **Test timeout**: 30 seconds
-- **Global setup**: Creates test user before all tests
-- **Web server**: Auto-starts `npm start` before tests
+- **Server**: Owned loopback listener on an ephemeral port
+- **Database**: New temporary SQLite file per worker
+- **Members**: New accounts per test, retry, and repeat
 - **Browsers**: Chromium (headless by default)
-- **Workers**: 4 parallel (1 in CI for stability)
+- **Workers**: 2 locally and in CI
 - **Retries**: 0 local, 2 in CI
-- **Screenshots**: Only on failure
-- **Videos**: Retain on failure only
-
-### Global Setup
-
-**scripts/setup-e2e-db.ts** runs before Playwright (via CI workflow):
-- Creates database and runs all migrations
-- **Seeds test species data** (Guppy, Swordtail, Platy)
-- Required for Tom Select typeahead fields to work properly
-
-**e2e/global-setup.ts** runs before all tests:
-- Creates test user `baptest+e2e@porcnick.com` if it doesn't exist
-- Uses proper scrypt password hashing (via `src/auth.ts`)
-- Idempotent - safe to run multiple times
+- **Traces/screenshots/videos**: Retain on failure
 
 ### Test Data Seeding
 
 **CRITICAL**: The CI database starts completely empty (just schema, no data).
 
-When adding new E2E tests that use species data, ensure the species exist in `scripts/setup-e2e-db.ts`:
+When adding new E2E tests that use species data, ensure the species exist in `e2e/helpers/referenceSpecies.ts`:
 
 ```typescript
 const testSpecies = [
@@ -253,7 +306,7 @@ await page.fill('input[name="email"]', 'test@example.com');
 
 // ✅ GOOD: Wait for specific state
 await page.waitForSelector('#form', { state: 'visible' });
-await page.waitForLoadState('networkidle');
+await expect(page.locator('[name="species_common_name"]')).toHaveClass(/tomselected/);
 
 // ❌ BAD: Arbitrary sleeps
 await page.waitForTimeout(1000); // Avoid unless absolutely necessary
@@ -300,16 +353,12 @@ await clearTomSelect(page, "species_common_name");
 
 ## Troubleshooting
 
-### Tests timeout waiting for server
+### Setup fails before tests start
 
-**Issue:** `Timed out waiting 120000ms from config.webServer`
-
-**Solution:** Ensure database is initialized:
-```bash
-npx ts-node scripts/setup-e2e-db.ts
-npm run build
-npm run test:e2e
-```
+Check the setup error: migrations and listener binding are awaited and reject
+startup immediately. Use a sample config locally, install the browser and build
+CSS with `npm run postcss`. Do not run a database setup command or point these
+mutation tests at an existing Portal.
 
 ### Tom Select fields not interacting
 
@@ -998,7 +1047,7 @@ await db.close();
 6. **Use database for setup** - Only test UI interactions you care about
 7. **Read error context files** - They show exactly what's on the page
 8. **Be specific with selectors** - Context matters when multiple elements match
-9. **CI database is empty by default** - Seed test data in setup-e2e-db.ts, not migrations
+9. **CI database is empty by default** - Seed reference Species in helpers/referenceSpecies.ts, not migrations
 10. **Debug logging reveals environment differences** - Add logging to understand CI vs local behavior
 
 The most important skill: **Iterate based on actual error messages**, not assumptions. Every test failure teaches you something about how HTMX works in this application.

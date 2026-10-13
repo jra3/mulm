@@ -1,4 +1,5 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
+import { saveSubmission } from "./helpers/submissionForm";
 import { login } from "./helpers/auth";
 import { TEST_USER, getTestDatabase } from "./helpers/testData";
 import { fillTomSelectTypeahead, getTomSelectValue } from "./helpers/tomSelect";
@@ -85,7 +86,7 @@ test.describe("BAP Form - Field Linking", () => {
 	test("a species with no common name fills the common name with its scientific name, and saving keeps the binding", async ({
 		page,
 	}) => {
-		// Seeded by scripts/setup-e2e-db.ts with no common Name (#421)
+		// Seeded by helpers/referenceSpecies.ts with no common Name (#421)
 		await fillTomSelectTypeahead(page, "species_latin_name", "Poeciliopsis nocommonus");
 
 		expect(await getTomSelectValue(page, "species_common_name")).toBe("Poeciliopsis nocommonus");
@@ -93,10 +94,7 @@ test.describe("BAP Form - Field Linking", () => {
 		expect(parseInt(speciesId)).toBeGreaterThan(0);
 
 		// The scientific Name in the common field agrees with the Species, so the save keeps the pick
-		const draftButton = page.locator('button[name="draft"]');
-		await draftButton.scrollIntoViewIfNeeded();
-		await draftButton.click();
-		await page.waitForLoadState("networkidle");
+		await saveSubmission(page, true);
 
 		const db = await getTestDatabase();
 		try {

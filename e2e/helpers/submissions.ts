@@ -1,3 +1,4 @@
+import { configureE2EDatabase } from "./database";
 import { db, ensureReady } from "@/db/conn";
 
 /**
@@ -5,7 +6,7 @@ import { db, ensureReady } from "@/db/conn";
  * Create test submissions directly in database to speed up admin workflow tests
  *
  * Uses global db() connection so it works with both:
- * - E2E tests (uses db/database.db)
+ * - E2E tests (uses the explicit disposable run database)
  * - Unit tests (uses overrideConnection with in-memory db)
  */
 
@@ -63,7 +64,10 @@ export interface TestSubmissionOptions {
  * @returns The created submission ID
  */
 export async function createTestSubmission(options: TestSubmissionOptions): Promise<number> {
-	await ensureReady();
+	if (process.env.MULM_E2E_DATABASE) {
+		configureE2EDatabase();
+		await ensureReady();
+	}
 	const dbConn = db(true); // Uses overridden connection in tests, else global writeConn
 
 	const now = new Date().toISOString();
@@ -202,7 +206,10 @@ export async function createTestSubmission(options: TestSubmissionOptions): Prom
  * Delete all submissions for a member (cleanup)
  */
 export async function deleteSubmissionsForMember(memberId: number): Promise<void> {
-	await ensureReady();
+	if (process.env.MULM_E2E_DATABASE) {
+		configureE2EDatabase();
+		await ensureReady();
+	}
 	const dbConn = db(true); // Uses global writeConn
 	await dbConn.run("DELETE FROM submissions WHERE member_id = ?", memberId);
 }

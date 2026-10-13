@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import { login } from "./helpers/auth";
 import { createTestSubmission } from "./helpers/submissions";
 import { getTestDatabase, TEST_USER, TEST_ADMIN } from "./helpers/testData";

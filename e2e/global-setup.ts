@@ -1,17 +1,14 @@
-import { ensureTestUserExists, TEST_USER } from "./helpers/testData";
+import { mkdtemp, writeFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { randomUUID } from "node:crypto";
 
-/**
- * Global setup runs once before all tests
- * Creates necessary test data in the database
- * Note: Test species are seeded by scripts/setup-e2e-db.ts (runs before this)
- */
-async function globalSetup() {
-	console.log("Running global setup for E2E tests...");
-
-	// Ensure test user exists
-	await ensureTestUserExists(TEST_USER.email, TEST_USER.password, TEST_USER.displayName || "E2E Test User");
-
-	console.log("Global setup complete ✓");
+/** The run owns the parent; workers own independent databases and listeners. */
+export default async function globalSetup() {
+  const directory = await mkdtemp(join(tmpdir(), "mulm-e2e-"));
+  process.env.MULM_E2E_RUN = randomUUID();
+  process.env.MULM_E2E_DIRECTORY = directory;
+  process.env.NODE_ENV = "test";
+  await writeFile(join(directory, "owner"), process.env.MULM_E2E_RUN);
+  return async () => rm(directory, { recursive: true, force: true });
 }
-
-export default globalSetup;

@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import { selectTomSelectMultiple } from "./helpers/tomSelect";
 
 test.describe("Tom Select Demo - Isolated Component Testing", () => {

@@ -1,6 +1,6 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page } from "./fixtures";
 import { login, logout } from "./helpers/auth";
-import { TEST_ADMIN, cleanupTestUserSubmissions, getTestDatabase, ensureTestUserExists } from "./helpers/testData";
+import { TEST_USER as MEMBER, TEST_ADMIN, cleanupTestUserSubmissions, getTestDatabase, ensureTestUserExists } from "./helpers/testData";
 import { createTestSubmission } from "./helpers/submissions";
 import { fillTomSelectTypeahead } from "./helpers/tomSelect";
 
@@ -11,17 +11,10 @@ import { fillTomSelectTypeahead } from "./helpers/tomSelect";
  * approves with two taps and computes first-time; a correction changes the
  * Species and points together, with a reason.
  *
- * A member of its own, so the other specs' cleanup of the shared test user
- * does not delete these rows mid-test.
+ * Each test receives its own member and committee accounts from the fixture.
  */
 
 test.describe.configure({ mode: "serial" });
-
-const MEMBER = {
-	email: "baptest+witness-points@porcnick.com",
-	password: "WitnessPoints123!",
-	displayName: "Witness Points Member",
-};
 
 /** Letters only: a scientific name is Genus species, no digits. */
 function uniqueEpithet(): string {

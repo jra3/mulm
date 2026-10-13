@@ -1,4 +1,4 @@
-import { Page } from "@playwright/test";
+import { expect, Page } from "@playwright/test";
 import { TEST_USER } from "./testData";
 
 /**
@@ -23,16 +23,8 @@ export async function login(page: Page, user: TestUser = TEST_USER): Promise<voi
 	await page.fill('input[name="email"]', user.email);
 	await page.fill('input[name="password"]', user.password);
 
-	// Submit form and wait for navigation to complete
-	await Promise.all([
-		page.waitForNavigation({ waitUntil: "networkidle" }),
-		page.click('button[type="submit"]'),
-	]);
-
-	// Verify we're logged in by checking for logout button
-	await page.waitForSelector('button:has-text("Log Out")', {
-		timeout: 5000,
-	});
+	await page.getByRole("button", { name: "Log In", exact: true }).click();
+	await expect(page.getByRole("button", { name: "Log Out", exact: true })).toBeVisible();
 }
 
 /**
