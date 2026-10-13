@@ -5,15 +5,16 @@
  * This module exports the server setup function that can be used by different transport layers.
  */
 
+import { z } from "zod";
+import { defineTool, registerTools, positiveId } from "./tools";
+
 import type { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import {
-  CallToolRequestSchema,
   ListResourcesRequestSchema,
-  ListToolsRequestSchema,
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { query, withTransaction } from "../db/conn";
-import { moveLoginMethods } from "../db/members";
+import { mergeMembers } from "../members/merge";
 import { containsPattern, containsSql } from "../db/likePattern";
 import { anyProgramSpeciesTypeSql, totalPointsSql } from "../points";
 
@@ -38,40 +39,44 @@ type MemberDetail = Member & {
   tank_preset_count: number;
 };
 
-// Tool argument types
-type ListMembersArgs = {
-  query?: string;
-  is_admin?: boolean;
-  has_submissions?: boolean;
-  limit?: number;
-  offset?: number;
-};
+const listMembersSchema = z.object({
+  query: z.string().describe("Search text (searches name and email)").optional(),
+  is_admin: z.boolean().describe("Filter by admin status").optional(),
+  has_submissions: z.boolean().describe("Filter members with submissions").optional(),
+  limit: z.number().int().nonnegative().describe("Max results (default: 100)").optional(),
+  offset: z.number().int().nonnegative().describe("Skip results (default: 0)").optional(),
+});
 
-type GetMemberDetailArgs = {
-  member_id: number;
-};
+const getMemberDetailSchema = z.object({
+  member_id: positiveId.describe("Member ID"),
+});
 
-type MergeMembersArgs = {
-  from_member_id: number;
-  to_member_id: number;
-  preview?: boolean;
-};
+const mergeMembersSchema = z.object({
+  from_member_id: positiveId.describe("Member to delete (source)"),
+  to_member_id: positiveId.describe("Member to keep (destination)"),
+  preview: z.boolean().describe("Preview changes without executing (default: false)").optional(),
+});
 
-type UpdateMemberArgs = {
-  member_id: number;
-  contact_email?: string;
-  display_name?: string;
-};
+const updateMemberSchema = z
+  .object({
+    member_id: positiveId.describe("Member ID"),
+    contact_email: z.string().describe("New email address (optional)").optional(),
+    display_name: z.string().describe("New display name (optional)").optional(),
+  })
+  .and(z.union([z.object({ contact_email: z.string() }), z.object({ display_name: z.string() })]));
 
-type DeleteMemberArgs = {
-  member_id: number;
-  force?: boolean;
-};
+const deleteMemberSchema = z.object({
+  member_id: positiveId.describe("Member ID"),
+  force: z
+    .boolean()
+    .describe("Force delete even if member has approved submissions (default: false)")
+    .optional(),
+});
 
-type SetAdminStatusArgs = {
-  member_id: number;
-  is_admin: boolean;
-};
+const setAdminStatusSchema = z.object({
+  member_id: positiveId.describe("Member ID"),
+  is_admin: z.boolean().describe("Admin status"),
+});
 
 /**
  * Initialize the Member Management MCP server with all handlers and tools.
@@ -216,148 +221,51 @@ export function initializeMemberServer(server: Server): void {
     }
   });
 
-  /**
-   * LIST TOOLS HANDLER
-   */
-  server.setRequestHandler(ListToolsRequestSchema, async () => {
-    return {
-      tools: [
-        {
-          name: "list_members",
-          description: "Search and list members with optional filters",
-          inputSchema: {
-            type: "object",
-            properties: {
-              query: { type: "string", description: "Search text (searches name and email)" },
-              is_admin: { type: "boolean", description: "Filter by admin status" },
-              has_submissions: { type: "boolean", description: "Filter members with submissions" },
-              limit: { type: "number", description: "Max results (default: 100)" },
-              offset: { type: "number", description: "Skip results (default: 0)" },
-            },
-          },
-        },
-        {
-          name: "get_member_detail",
-          description:
-            "Get comprehensive details for a member including submissions, awards, and credentials",
-          inputSchema: {
-            type: "object",
-            properties: {
-              member_id: { type: "number", description: "Member ID" },
-            },
-            required: ["member_id"],
-          },
-        },
-        {
-          name: "merge_members",
-          description: "Merge two member accounts (moves all data from one member to another)",
-          inputSchema: {
-            type: "object",
-            properties: {
-              from_member_id: { type: "number", description: "Member to delete (source)" },
-              to_member_id: { type: "number", description: "Member to keep (destination)" },
-              preview: {
-                type: "boolean",
-                description: "Preview changes without executing (default: false)",
-              },
-            },
-            required: ["from_member_id", "to_member_id"],
-          },
-        },
-        {
-          name: "update_member",
-          description: "Update member information (email, display name)",
-          inputSchema: {
-            type: "object",
-            properties: {
-              member_id: { type: "number", description: "Member ID" },
-              contact_email: { type: "string", description: "New email address (optional)" },
-              display_name: { type: "string", description: "New display name (optional)" },
-            },
-            required: ["member_id"],
-          },
-        },
-        {
-          name: "delete_member",
-          description: "Delete a member account with safety checks",
-          inputSchema: {
-            type: "object",
-            properties: {
-              member_id: { type: "number", description: "Member ID" },
-              force: {
-                type: "boolean",
-                description: "Force delete even if member has approved submissions (default: false)",
-              },
-            },
-            required: ["member_id"],
-          },
-        },
-        {
-          name: "set_admin_status",
-          description: "Grant or revoke admin privileges",
-          inputSchema: {
-            type: "object",
-            properties: {
-              member_id: { type: "number", description: "Member ID" },
-              is_admin: { type: "boolean", description: "Admin status" },
-            },
-            required: ["member_id", "is_admin"],
-          },
-        },
-      ],
-    };
-  });
-
-  /**
-   * CALL TOOL HANDLER
-   */
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const { name, arguments: args } = request.params;
-
-    try {
-      switch (name) {
-        case "list_members":
-          return await handleListMembers(args as ListMembersArgs);
-        case "get_member_detail":
-          return await handleGetMemberDetail(args as GetMemberDetailArgs);
-        case "merge_members":
-          return await handleMergeMembers(args as MergeMembersArgs);
-        case "update_member":
-          return await handleUpdateMember(args as UpdateMemberArgs);
-        case "delete_member":
-          return await handleDeleteMember(args as DeleteMemberArgs);
-        case "set_admin_status":
-          return await handleSetAdminStatus(args as SetAdminStatusArgs);
-        default:
-          throw new Error(`Unknown tool: ${name}`);
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: JSON.stringify(
-              {
-                success: false,
-                error: message,
-                error_code: "TOOL_EXECUTION_ERROR",
-              },
-              null,
-              2
-            ),
-          },
-        ],
-      };
-    }
-  });
+  registerTools(server, [
+    defineTool(
+      "list_members",
+      "Search and list members with optional filters",
+      listMembersSchema,
+      handleListMembers
+    ),
+    defineTool(
+      "get_member_detail",
+      "Get comprehensive details for a member including submissions, awards, and credentials",
+      getMemberDetailSchema,
+      handleGetMemberDetail
+    ),
+    defineTool(
+      "merge_members",
+      "Merge two member accounts (moves all data from one member to another)",
+      mergeMembersSchema,
+      handleMergeMembers
+    ),
+    defineTool(
+      "update_member",
+      "Update member information (email, display name)",
+      updateMemberSchema,
+      handleUpdateMember
+    ),
+    defineTool(
+      "delete_member",
+      "Delete a member account with safety checks",
+      deleteMemberSchema,
+      handleDeleteMember
+    ),
+    defineTool(
+      "set_admin_status",
+      "Grant or revoke admin privileges",
+      setAdminStatusSchema,
+      handleSetAdminStatus
+    ),
+  ]);
 }
 
 /**
  * TOOL IMPLEMENTATIONS
  */
 
-async function handleListMembers(args: ListMembersArgs) {
+async function handleListMembers(args: z.infer<typeof listMembersSchema>) {
   const { query: searchQuery, is_admin, has_submissions, limit = 100, offset = 0 } = args;
 
   const conditions: string[] = ["1=1"];
@@ -368,7 +276,7 @@ async function handleListMembers(args: ListMembersArgs) {
     params.push(is_admin ? 1 : 0);
   }
 
-  if (searchQuery && typeof searchQuery === 'string' && searchQuery.trim().length >= 2) {
+  if (searchQuery && typeof searchQuery === "string" && searchQuery.trim().length >= 2) {
     const searchPattern = containsPattern(searchQuery);
     conditions.push(`(${containsSql("m.display_name")} OR ${containsSql("m.contact_email")})`);
     params.push(searchPattern, searchPattern);
@@ -418,7 +326,7 @@ async function handleListMembers(args: ListMembersArgs) {
   };
 }
 
-async function handleGetMemberDetail(args: GetMemberDetailArgs) {
+async function handleGetMemberDetail(args: z.infer<typeof getMemberDetailSchema>) {
   const { member_id } = args;
 
   const members = await query<Member>("SELECT * FROM members WHERE id = ?", [member_id]);
@@ -512,154 +420,23 @@ async function handleGetMemberDetail(args: GetMemberDetailArgs) {
   };
 }
 
-export async function handleMergeMembers(args: MergeMembersArgs) {
-  const { from_member_id, to_member_id, preview } = args;
-
-  if (from_member_id === to_member_id) {
-    throw new Error("Cannot merge a member into itself");
-  }
-
-  // Get both members
-  const fromMembers = await query<Member>("SELECT * FROM members WHERE id = ?", [from_member_id]);
-  const toMembers = await query<Member>("SELECT * FROM members WHERE id = ?", [to_member_id]);
-
-  if (fromMembers.length === 0) {
-    throw new Error(`Source member ${from_member_id} not found`);
-  }
-  if (toMembers.length === 0) {
-    throw new Error(`Destination member ${to_member_id} not found`);
-  }
-
-  const fromMember = fromMembers[0];
-  const toMember = toMembers[0];
-
-  // Get counts for preview
-  const submissionCount = await query<{ count: number }>(
-    "SELECT COUNT(*) as count FROM submissions WHERE member_id = ?",
-    [from_member_id]
-  );
-
-  const awardCount = await query<{ count: number }>(
-    "SELECT COUNT(*) as count FROM awards WHERE member_id = ?",
-    [from_member_id]
-  );
-
-  const tankPresetCount = await query<{ count: number }>(
-    "SELECT COUNT(*) as count FROM tank_presets WHERE member_id = ?",
-    [from_member_id]
-  );
-
-  const previewData = {
-    from_member: {
-      id: fromMember.id,
-      email: fromMember.contact_email,
-      display_name: fromMember.display_name,
-      submission_count: submissionCount[0]?.count || 0,
-      award_count: awardCount[0]?.count || 0,
-      tank_preset_count: tankPresetCount[0]?.count || 0,
-    },
-    to_member: {
-      id: toMember.id,
-      email: toMember.contact_email,
-      display_name: toMember.display_name,
-    },
-    actions: [
-      `Move ${submissionCount[0]?.count || 0} submissions`,
-      `Move ${awardCount[0]?.count || 0} awards`,
-      `Move ${tankPresetCount[0]?.count || 0} tank presets`,
-      `Move Google, Apple and password logins the destination lacks`,
-      `Delete member ${from_member_id}`,
-    ],
-  };
-
-  if (preview) {
-    return {
-      content: [
-        {
-          type: "text" as const,
-          text: JSON.stringify(
-            {
-              success: true,
-              preview: true,
-              preview_data: previewData,
-              message: "Preview of merge operation (no changes made)",
-            },
-            null,
-            2
-          ),
-        },
-      ],
-    };
-  }
-
-  // Execute merge
-  const results = await withTransaction(async (db) => {
-    // Migrate submissions
-    const subStmt = await db.prepare("UPDATE submissions SET member_id = ? WHERE member_id = ?");
-    const subResult = await subStmt.run(to_member_id, from_member_id);
-    await subStmt.finalize();
-
-    // Migrate awards
-    const awardStmt = await db.prepare("UPDATE awards SET member_id = ? WHERE member_id = ?");
-    const awardResult = await awardStmt.run(to_member_id, from_member_id);
-    await awardStmt.finalize();
-
-    // Migrate tank presets
-    const tankStmt = await db.prepare("UPDATE tank_presets SET member_id = ? WHERE member_id = ?");
-    const tankResult = await tankStmt.run(to_member_id, from_member_id);
-    await tankStmt.finalize();
-
-    // Keep the source's logins where the destination has none of that kind,
-    // so a duplicate created by a Google or Apple sign-in (a Hide My Email
-    // relay address, say) still logs into the surviving member afterwards.
-    const loginsMoved = await moveLoginMethods(db, from_member_id, to_member_id);
-
-    // Delete source member (cascades whatever logins were not moved, plus
-    // sessions and auth_codes)
-    const deleteStmt = await db.prepare("DELETE FROM members WHERE id = ?");
-    await deleteStmt.run(from_member_id);
-    await deleteStmt.finalize();
-
-    return {
-      submissions_moved: subResult.changes,
-      awards_moved: awardResult.changes,
-      tank_presets_moved: tankResult.changes,
-      logins_moved: loginsMoved,
-    };
-  });
-
+export async function handleMergeMembers(args: z.infer<typeof mergeMembersSchema>) {
   return {
-    content: [
-      {
-        type: "text" as const,
-        text: JSON.stringify(
-          {
-            success: true,
-            from_member_id,
-            to_member_id,
-            ...results,
-            preview_data: previewData,
-            message: `Member ${from_member_id} merged into ${to_member_id} successfully`,
-          },
-          null,
-          2
-        ),
-      },
-    ],
+    content: [{ type: "text" as const, text: JSON.stringify(await mergeMembers(args), null, 2) }],
   };
 }
 
-async function handleUpdateMember(args: UpdateMemberArgs) {
+async function handleUpdateMember(args: z.infer<typeof updateMemberSchema>) {
   const { member_id, contact_email, display_name } = args;
 
   const updates: string[] = [];
   const values: (string | number)[] = [];
 
-  if (contact_email !== undefined && typeof contact_email === 'string') {
+  if (contact_email !== undefined && typeof contact_email === "string") {
     updates.push("contact_email = ?");
     values.push(contact_email.trim());
   }
-  if (display_name !== undefined && typeof display_name === 'string') {
+  if (display_name !== undefined && typeof display_name === "string") {
     updates.push("display_name = ?");
     values.push(display_name.trim());
   }
@@ -701,7 +478,7 @@ async function handleUpdateMember(args: UpdateMemberArgs) {
   };
 }
 
-async function handleDeleteMember(args: DeleteMemberArgs) {
+async function handleDeleteMember(args: z.infer<typeof deleteMemberSchema>) {
   const { member_id, force } = args;
 
   // Check if member exists
@@ -761,7 +538,7 @@ async function handleDeleteMember(args: DeleteMemberArgs) {
   };
 }
 
-async function handleSetAdminStatus(args: SetAdminStatusArgs) {
+async function handleSetAdminStatus(args: z.infer<typeof setAdminStatusSchema>) {
   const { member_id, is_admin } = args;
 
   const members = await query<Member>("SELECT * FROM members WHERE id = ?", [member_id]);
