@@ -1,12 +1,16 @@
+import type { Database } from "sqlite";
 import { query } from "@/db/conn";
 import { nameTable } from "./names";
 import { nameKinds, type NameKind, type Species } from "./types";
 
-/** One Species by id, or undefined. */
-export async function findSpeciesById(speciesId: number): Promise<Species | undefined> {
-  const rows = await query<Species>("SELECT * FROM species_name_group WHERE group_id = ?", [
-    speciesId,
-  ]);
+/** One Species by id, or undefined. Pass the transaction connection for a write decision. */
+export async function findSpeciesById(
+  speciesId: number,
+  db?: Database
+): Promise<Species | undefined> {
+  const sql = "SELECT * FROM species_name_group WHERE group_id = ?";
+  if (db) return db.get<Species>(sql, [speciesId]);
+  const rows = await query<Species>(sql, [speciesId]);
   return rows[0];
 }
 

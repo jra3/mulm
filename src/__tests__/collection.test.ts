@@ -6,6 +6,7 @@ import { overrideConnection } from "../db/conn";
 import {
   getCollectionForMember,
   addToCollection,
+  CollectionRefusal,
   updateCollectionEntry,
   removeFromCollection,
   getCollectionEntry,
@@ -147,10 +148,10 @@ void describe("Species Collection Database Module", () => {
       assert.notEqual(id1, id2);
     });
 
-    void test("should enforce foreign key constraint for invalid species", async () => {
+    void test("should refuse an invalid Species with a stable code", async () => {
       await assert.rejects(
         async () => await addToCollection(memberId1, { group_id: 99999 }),
-        /FOREIGN KEY constraint/
+        (error: unknown) => error instanceof CollectionRefusal && error.code === "missing-species"
       );
     });
 
