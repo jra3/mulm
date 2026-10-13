@@ -1,12 +1,15 @@
 import { query } from "@/db/conn";
-import { checkAllMemberLevels } from "@/levelManager";
+import { checkAllMemberLevels, type LevelCheckOptions } from "@/levelManager";
 import { logger } from "@/utils/logger";
 
 /**
  * Sweep all members and recalculate their award levels.
  * Corrects any levels that are out of sync with approved submissions.
+ * Always silent, including when a delivery callback is supplied.
  */
-export async function sweepMemberLevels(): Promise<{
+export async function sweepMemberLevels(
+  options?: Pick<LevelCheckOptions, "notifyLevelUpgrade">
+): Promise<{
   checked: number;
   updated: number;
   errors: number;
@@ -25,7 +28,10 @@ export async function sweepMemberLevels(): Promise<{
 
   for (const member of members) {
     try {
-      const results = await checkAllMemberLevels(member.id, { disableEmails: true });
+      const results = await checkAllMemberLevels(member.id, {
+        ...options,
+        disableEmails: true,
+      });
       checked++;
 
       for (const [program, result] of Object.entries(results)) {

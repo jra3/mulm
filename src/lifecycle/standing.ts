@@ -2,7 +2,7 @@ import { getMember, MemberRecord } from "@/db/members";
 import { recordActivity } from "@/db/activity";
 import { checkAndUpdateMemberLevel, type Program } from "@/levelManager";
 import { recomputeSpecialtyAwards } from "@/specialtyAwardManager";
-import { levelRules, programMetadata } from "@/programs";
+import { compareLevelChange, programMetadata } from "@/programs";
 import { logger } from "@/utils/logger";
 import { notifier } from "./consequences";
 
@@ -19,10 +19,9 @@ import { notifier } from "./consequences";
  * actually support.
  *
  * Who is told: a rise and a newly earned Award each congratulate the member and
- * post to the feed. A drop and a revocation tell nobody - the correction that
- * caused them does not email the member either, so announcing the knock-on
- * effect would describe a consequence while never mentioning its cause, and
- * their standing page already shows the truth.
+ * post to the feed. A drop, an unknown stored Level, and a revocation do not
+ * get congratulatory announcements; the correction letter and standing page
+ * already show the member the revised Points.
  *
  * Never throws: a member's standing failing to recompute must not undo an
  * approval that has already been recorded.
@@ -47,8 +46,10 @@ async function recomputeLevel(member: MemberRecord, program: Program): Promise<v
       return;
     }
 
-    if (!isRise(program, result.oldLevel, result.newLevel)) {
-      logger.info("Level dropped; telling nobody", {
+    const change = compareLevelChange(program, result.oldLevel, result.newLevel);
+    if (change !== "initial" && change !== "rise") {
+      logger.info("Level change does not establish a rise; telling nobody", {
+        change,
         memberId: member.id,
         program,
         from: result.oldLevel,
@@ -83,17 +84,4 @@ async function recomputeAwards(member: MemberRecord): Promise<void> {
   } catch (error) {
     logger.error("Failed to recompute specialty awards", error);
   }
-}
-
-/**
- * Whether a level change went up the ladder. A member with no level yet who
- * gains one has risen; anything else is decided by position in `levelRules`,
- * which is ordered by threshold.
- */
-function isRise(program: Program, oldLevel: string | undefined, newLevel: string): boolean {
-  if (!oldLevel) {
-    return true;
-  }
-  const ladder = levelRules[program].map(([name]) => name);
-  return ladder.indexOf(newLevel) > ladder.indexOf(oldLevel);
 }

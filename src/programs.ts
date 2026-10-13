@@ -152,6 +152,29 @@ export const levelRules: Record<string, LevelRules[]> = {
   ],
 };
 
+export type LevelChange = "initial" | "rise" | "unchanged" | "drop" | "unknown";
+
+/**
+ * Compare Levels only within their Program's ordered ladder. A missing stored
+ * Level is initial attainment (including Participant). An unrecognized label,
+ * including one from another Program, cannot establish a rise: repair it from
+ * approved Submissions silently instead of sending congratulations.
+ */
+export function compareLevelChange(
+  program: ProgramType,
+  oldLevel: string | null | undefined,
+  newLevel: string
+): LevelChange {
+  const ladder = levelRules[program].map(([name]) => name);
+  const next = ladder.indexOf(newLevel);
+  if (next === -1) return "unknown";
+  if (oldLevel == null) return "initial";
+  const previous = ladder.indexOf(oldLevel);
+  if (previous === -1) return "unknown";
+  if (next === previous) return "unchanged";
+  return next > previous ? "rise" : "drop";
+}
+
 export function calculateLevel(rules: LevelRules[], basePoints: number[], bonusPoints = 0) {
   const tally = pointsByCategory(basePoints);
   tally.total += bonusPoints;

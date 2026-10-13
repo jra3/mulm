@@ -1,10 +1,16 @@
 import { MemberRecord, getMember, updateMember } from "./db/members";
 import { getSubmissionsByMember } from "./db/submissions";
-import { calculateLevel, levelRules } from "./programs";
+import { calculateLevel, compareLevelChange, levelRules } from "./programs";
 import { onLevelUpgrade } from "./notifications";
 import { logger } from "./utils/logger";
 
 export type Program = "fish" | "plant" | "coral";
+
+export type LevelCheckOptions = {
+  disableEmails?: boolean;
+  /** Delivery is separate from calculation/persistence; defaults to email. */
+  notifyLevelUpgrade?: typeof onLevelUpgrade;
+};
 
 export type LevelCheckResult = {
   levelChanged: boolean;
@@ -20,7 +26,7 @@ export type LevelCheckResult = {
 export async function checkAndUpdateMemberLevel(
   memberId: number,
   program: Program,
-  options?: { disableEmails?: boolean }
+  options?: LevelCheckOptions
 ): Promise<LevelCheckResult> {
   try {
     const member = await getMember(memberId);
@@ -52,7 +58,7 @@ export async function checkAndUpdateMemberLevel(
     // Check if level has changed
     if (calculatedLevel !== currentLevel) {
       logger.info(
-        `Level upgrade detected for member ${memberId}: ${currentLevel} → ${calculatedLevel} (${program})`
+        `Level change detected for member ${memberId}: ${currentLevel} → ${calculatedLevel} (${program})`
       );
 
       // Update member's level in database
@@ -67,8 +73,10 @@ export async function checkAndUpdateMemberLevel(
       await updateMember(memberId, updateData);
 
       // Send email notification if they actually upgraded (not downgraded)
-      if (!options?.disableEmails && shouldSendUpgradeEmail(currentLevel, calculatedLevel)) {
-        await onLevelUpgrade(member, program, calculatedLevel, totalPoints);
+      const change = compareLevelChange(program, currentLevel, calculatedLevel);
+      if (!options?.disableEmails && (change === "initial" || change === "rise")) {
+        const notify = options?.notifyLevelUpgrade ?? onLevelUpgrade;
+        await notify(member, program, calculatedLevel, totalPoints);
         logger.info(
           `Level upgrade email sent to ${member.contact_email} for ${program} level: ${calculatedLevel}`
         );
@@ -94,7 +102,7 @@ export async function checkAndUpdateMemberLevel(
  */
 export async function checkAllMemberLevels(
   memberId: number,
-  options?: { disableEmails?: boolean }
+  options?: LevelCheckOptions
 ): Promise<{
   fish?: LevelCheckResult;
   plant?: LevelCheckResult;
@@ -128,23 +136,4 @@ function getCurrentLevel(member: MemberRecord, program: Program): string | undef
     default:
       return undefined;
   }
-}
-
-/**
- * Determine if we should send an upgrade email
- * Only send if it's a genuine upgrade (not null->null or downgrade)
- */
-function shouldSendUpgradeEmail(oldLevel: string | undefined, newLevel: string): boolean {
-  // Always send if going from null/undefined to a level
-  if (!oldLevel && newLevel) {
-    return true;
-  }
-
-  // Don't send if both are null/undefined
-  if (!oldLevel && !newLevel) {
-    return false;
-  }
-
-  // For now, send for any level change (could add level hierarchy checking later)
-  return oldLevel !== newLevel;
 }
