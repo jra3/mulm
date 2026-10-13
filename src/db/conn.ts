@@ -1,79 +1,89 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import sqlite3 from "sqlite3";
-import { open, Database } from "sqlite";
+import { Database } from "sqlite";
 import config from "../config.json";
 import { logger } from "@/utils/logger";
 
 export let readOnlyConn: Database;
 export let writeConn: Database;
 
-/**
- * Whether a test has taken the connections over.
- *
- * Importing this module starts `ready` below, which opens the real database,
- * runs every migration and then calls `init()`. A test that has already called
- * `overrideConnection` is racing that: whichever finishes last wins, and when
- * `ready` wins it silently repoints the module at the real file while the test
- * goes on inspecting its in-memory one.
- *
- * The race is invisible until the migrations are slow enough to land in the
- * middle of a run - a fresh CI checkout with no database file, say - and then
- * it surfaces as an unrelated suite failing on a row that "should have been
- * deleted". So `init()` stands down once a test owns the connections.
- */
-let overriddenForTests = false;
+/** Initialization is explicit and terminal: a failed bootstrap requires a restart. */
+let readiness: Promise<void> | undefined;
+let connectionMode: "read-write" | "read-only" | "test" | undefined;
 
 export function db(write = false) {
-  if (write) {
-    return writeConn;
-  } else {
-    return readOnlyConn;
+  const connection = write ? writeConn : readOnlyConn;
+  if (!connection) {
+    throw new Error("Database is not initialized; await ensureReady() before using it");
   }
+  return connection;
 }
-
-export async function init() {
-  if (overriddenForTests) {
-    return;
-  }
-
-  readOnlyConn = await open({
-    filename: config.database.file,
-    driver: sqlite3.Database,
-    mode: sqlite3.OPEN_READONLY,
-  });
-
-  writeConn = await open({
-    filename: config.database.file,
-    driver: sqlite3.Database,
-    mode: sqlite3.OPEN_READWRITE,
-  });
-}
-
-export const ready = (async () => {
-  const adminConn = await open({
-    filename: config.database.file,
-    driver: sqlite3.Database,
-    mode: sqlite3.OPEN_CREATE | sqlite3.OPEN_READWRITE,
-  });
-  await adminConn.migrate({
-    migrationsPath: "./db/migrations",
-  });
-  await adminConn.close();
-  await init();
-})().catch((error) => {
-  logger.error("Failed to initialize database", error);
-});
 
 /**
- * Used only in testing to create and use in-memory databases.
+ * Open the configured database once. Imports perform no database I/O.
  *
- * Takes the connections over for good: the bootstrap above will not reclaim
- * them afterwards, however long its migrations take.
+ * Read-only mode is for reporting/dry-run executables: it requires an existing
+ * database and never creates, migrates, or opens a writable connection. A
+ * process cannot promote a read-only initialization to read-write later.
+ * Failures are memoized along with successes, including concurrent callers.
+ */
+export function ensureReady(options: { readOnly?: boolean } = {}): Promise<void> {
+  if (connectionMode === "test") return readiness!;
+  const mode = options.readOnly ? "read-only" : "read-write";
+  if (connectionMode && connectionMode !== mode) {
+    return Promise.reject(new Error("Database initialization mode cannot change within a process"));
+  }
+  if (!readiness) {
+    connectionMode = mode;
+    readiness = initializeConnections(options.readOnly ?? false);
+  }
+  return readiness;
+}
+
+async function initializeConnections(readOnly: boolean): Promise<void> {
+  const connections = new Set<Database>();
+  const openConnection = async (mode: number) => {
+    const connection = new Database({
+      filename: config.database.file,
+      driver: sqlite3.Database,
+      mode,
+    });
+    await connection.open();
+    // sqlite3 closes its native handle on open failure. Calling close() on
+    // that failed wrapper can wait forever, so track only successful opens.
+    connections.add(connection);
+    return connection;
+  };
+  try {
+    if (!readOnly) {
+      const admin = await openConnection(sqlite3.OPEN_CREATE | sqlite3.OPEN_READWRITE);
+      await admin.migrate({ migrationsPath: "./db/migrations" });
+      await admin.close();
+      connections.delete(admin);
+    }
+    const reader = await openConnection(sqlite3.OPEN_READONLY);
+    const writer = readOnly ? reader : await openConnection(sqlite3.OPEN_READWRITE);
+    // Publish together only after every connection is usable.
+    readOnlyConn = reader;
+    writeConn = writer;
+  } catch (error) {
+    await Promise.allSettled([...connections].map(async (connection) => connection.close()));
+    throw error;
+  }
+}
+
+/**
+ * Install a test-owned connection before any configured-file initialization.
+ * Repeated fixture installations are allowed; the fixture owns their cleanup.
  */
 export function overrideConnection(conn: typeof readOnlyConn) {
-  overriddenForTests = true;
+  if (connectionMode && connectionMode !== "test") {
+    throw new Error("Install the test connection before calling ensureReady()");
+  }
+  connectionMode = "test";
   readOnlyConn = conn;
   writeConn = conn;
+  readiness ??= Promise.resolve();
 }
 
 type PartialRow = Record<string, string | number | boolean | null>;

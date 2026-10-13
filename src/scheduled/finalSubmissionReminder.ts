@@ -1,4 +1,4 @@
-import { ready } from "@/db/conn";
+import { ensureReady } from "@/db/conn";
 import { logger } from "@/utils/logger";
 import { markFinalSubmissionReminderSent } from "@/db/submissions";
 import { sendMeetingReminder, submissionsDueForMeetingReminder } from "@/lifecycle";
@@ -17,7 +17,7 @@ export async function runFinalSubmissionReminders(): Promise<{ sent: number; fai
   let failed = 0;
 
   try {
-    await ready;
+    await ensureReady();
 
     const candidates = await submissionsDueForMeetingReminder();
     if (candidates.length === 0) {

@@ -1,5 +1,5 @@
 import { deleteExpiredAuthCodes } from "@/db/auth";
-import { ready } from "@/db/conn";
+import { ensureReady } from "@/db/conn";
 import { logger } from "@/utils/logger";
 import { sweepMemberLevels } from "./level-sweep";
 
@@ -14,7 +14,7 @@ import { sweepMemberLevels } from "./level-sweep";
 export async function runDailyCleanup(): Promise<void> {
   try {
     // Wait for database to be initialized and migrations to complete
-    await ready;
+    await ensureReady();
 
     logger.info("Starting daily cleanup tasks");
 

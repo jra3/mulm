@@ -2,12 +2,17 @@ import { addAlias } from "module-alias";
 import path from "path";
 addAlias("@", path.join(__dirname, "..", "src"));
 
-import { init } from "@/db/conn";
+import { ensureReady } from "@/db/conn";
 import { sweepMemberLevels } from "@/scheduled/level-sweep";
 import { logger } from "@/utils/logger";
 
 async function main() {
-  await init();
+  if (process.argv.includes("--help") || process.argv.includes("-h")) {
+    console.log("Recompute member levels in the configured database.");
+    process.exit(0);
+  }
+
+  await ensureReady();
 
   const result = await sweepMemberLevels();
 

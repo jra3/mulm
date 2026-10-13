@@ -11,7 +11,7 @@ import { addAlias } from "module-alias";
 import path from "path";
 addAlias("@", path.join(__dirname, "..", "src"));
 
-import { init, withTransaction, query } from "@/db/conn";
+import { ensureReady, withTransaction, query } from "@/db/conn";
 import { Database } from "sqlite";
 
 interface MemberInfo {
@@ -70,7 +70,7 @@ async function mergeMembers(fromId: number, toId: number) {
 
     // Initialize database
     console.log("Initializing database connection...");
-    await init();
+    await ensureReady();
 
     // Get info about both members
     console.log(`\nFetching member information...`);
@@ -185,6 +185,10 @@ async function mergeMembers(fromId: number, toId: number) {
 
 // Get arguments
 const args = process.argv.slice(2);
+if (args.includes("--help") || args.includes("-h")) {
+  console.log("Usage: npm run script scripts/merge-members.ts <from_member_id> <to_member_id>");
+  process.exit(0);
+}
 if (args.length !== 2) {
   console.error("Usage: npm run script scripts/merge-members.ts <from_member_id> <to_member_id>");
   console.error("Example: npm run script scripts/merge-members.ts 7 15");

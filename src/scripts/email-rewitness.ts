@@ -38,12 +38,17 @@ import { addAlias } from "module-alias";
 import path from "path";
 addAlias("@", path.join(__dirname, ".."));
 
-import { ready, readOnlyConn, writeConn } from "@/db/conn";
+import { ensureReady, readOnlyConn, writeConn } from "@/db/conn";
 import { membersAwaitingRewitnessEmail, sendRewitnessEmails } from "@/lifecycle";
 import { logger } from "@/utils/logger";
 
 async function main(): Promise<number> {
-  await ready;
+  if (process.argv.includes("--help") || process.argv.includes("-h")) {
+    console.log("Send outstanding re-witness emails using the configured database.");
+    process.exit(0);
+  }
+
+  await ensureReady();
 
   const due = await membersAwaitingRewitnessEmail();
   if (due.length === 0) {

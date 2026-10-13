@@ -13,7 +13,7 @@
  *
  * Options:
  *   --csv-file <path>   Path to CSV file (default: ./cares_species.csv)
- *   --dry-run           Preview changes without updating database
+ *   --dry-run           Preview using an existing read-only database (no migrations)
  *   --verbose           Show detailed progress information
  *
  * CSV Format:
@@ -28,7 +28,7 @@
 import * as fs from "fs/promises";
 import * as path from "path";
 import { parse } from "csv-parse/sync";
-import { ready, db as appDb } from "@/db/conn";
+import { ensureReady, db as appDb } from "@/db/conn";
 import { recordIucnSync } from "@/db/iucn";
 import type { IUCNCategory } from "@/integrations/iucn";
 import { resolveSpecies, updateIucnStatus, type Species } from "@/species";
@@ -112,7 +112,7 @@ Usage:
 
 Options:
   --csv-file <path>   Path to CSV file (default: ./cares_species.csv)
-  --dry-run           Preview changes without updating database
+  --dry-run           Preview using an existing read-only database (no migrations)
   --verbose           Show detailed progress information
   --help, -h          Show this help message
 
@@ -263,9 +263,10 @@ async function importIUCNData() {
     process.exit(0);
   }
 
-  // The app's connection, migrated: the catalogue writes through it
+  // Dry runs read an existing database without migration; live imports prepare
+  // the app connections used by catalogue writes.
   console.log("\nConnecting to database...");
-  await ready;
+  await ensureReady({ readOnly: dryRun });
 
   const result: ImportResult = {
     matched: 0,

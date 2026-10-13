@@ -25,7 +25,7 @@ import { getQueueCounts } from "./db/submissions";
 import { getRecentActivity } from "./db/activity";
 import { getMemberByEmail, getMemberPassword } from "./db/members";
 import { checkPassword } from "./auth";
-import { ready, writeConn } from "./db/conn";
+import { ensureReady, writeConn } from "./db/conn";
 
 import {
   MulmRequest,
@@ -482,7 +482,7 @@ const HOST = "0.0.0.0"; // Listen on all interfaces
 // this, requests that hit during cold-start can dereference an undefined
 // connection in `query()` / `writeConn`.
 async function main() {
-  await ready;
+  await ensureReady();
   app.listen(PORT, HOST, () => {
     console.log(`Server running at http://localhost:${PORT}`);
     console.log(`Server running at https://${config.server.domain}`);

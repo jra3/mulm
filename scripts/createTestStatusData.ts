@@ -2,11 +2,17 @@ import * as path from "path";
 import { addAlias } from "module-alias";
 addAlias("@", path.join(__dirname, "../src"));
 
-import { db } from "@/db/conn";
+import { ensureReady, db } from "@/db/conn";
 import { createMember } from "@/db/members";
 import { logger } from "@/utils/logger";
 
 async function createTestStatusData() {
+  if (process.argv.includes("--help") || process.argv.includes("-h")) {
+    console.log("Create status fixtures in the configured database.");
+    process.exit(0);
+  }
+  await ensureReady();
+
   try {
     // Create a test user
     const testEmail = `baptest+status_${Date.now()}@porcnick.com`;
