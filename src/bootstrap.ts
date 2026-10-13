@@ -105,7 +105,9 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     try {
       await stop();
     } catch (cleanupError) {
-      throw new AggregateError([error, cleanupError], "Server startup and teardown failed");
+      throw new AggregateError([error, cleanupError], "Server startup and teardown failed", {
+        cause: cleanupError,
+      });
     }
     throw error;
   }

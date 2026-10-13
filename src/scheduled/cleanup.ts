@@ -39,6 +39,13 @@ let cleanupRunning: Promise<unknown> | undefined;
 let cleanupTimeout: NodeJS.Timeout | null = null;
 let cleanupInterval: NodeJS.Timeout | null = null;
 
+/** Keep a startup catch-up run owned until it finishes, even across the daily slot. */
+function launchScheduledRun(): void {
+  cleanupRunning ??= runDailyCleanup().finally(() => {
+    cleanupRunning = undefined;
+  });
+}
+
 /**
  * Start the scheduled cleanup task
  * Runs daily at 3:00 AM server time
@@ -46,7 +53,7 @@ let cleanupInterval: NodeJS.Timeout | null = null;
 export function startScheduledCleanup(): void {
   if (cleanupTimeout || cleanupInterval) return;
   // Run cleanup immediately on startup (to catch any missed cleanups)
-  cleanupRunning = runDailyCleanup();
+  launchScheduledRun();
 
   // Calculate milliseconds until next 3 AM
   const now = new Date();
@@ -64,12 +71,12 @@ export function startScheduledCleanup(): void {
 
   // Schedule first cleanup at 3 AM
   cleanupTimeout = setTimeout(() => {
-    cleanupRunning = runDailyCleanup();
+    launchScheduledRun();
 
     // Then run every 24 hours
     cleanupInterval = setInterval(
       () => {
-        cleanupRunning = runDailyCleanup();
+        launchScheduledRun();
       },
       24 * 60 * 60 * 1000
     ); // 24 hours

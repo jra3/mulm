@@ -53,6 +53,13 @@ let reminderRunning: Promise<unknown> | undefined;
 let reminderTimeout: NodeJS.Timeout | null = null;
 let reminderInterval: NodeJS.Timeout | null = null;
 
+/** Keep a startup catch-up run owned until it finishes, even across the daily slot. */
+function launchScheduledRun(): void {
+  reminderRunning ??= runFinalSubmissionReminders().finally(() => {
+    reminderRunning = undefined;
+  });
+}
+
 /**
  * Start the daily final-submission reminder task.
  * Runs immediately on startup (to catch any missed days while the machine was
@@ -61,7 +68,7 @@ let reminderInterval: NodeJS.Timeout | null = null;
 export function startFinalSubmissionReminders(): void {
   if (reminderTimeout || reminderInterval) return;
   // Run on startup to catch up on anything missed while the machine was stopped.
-  reminderRunning = runFinalSubmissionReminders();
+  launchScheduledRun();
 
   const now = new Date();
   const next4AM = new Date();
@@ -74,10 +81,10 @@ export function startFinalSubmissionReminders(): void {
   logger.info(`Next final-submission reminder run scheduled for ${next4AM.toISOString()}`);
 
   reminderTimeout = setTimeout(() => {
-    reminderRunning = runFinalSubmissionReminders();
+    launchScheduledRun();
     reminderInterval = setInterval(
       () => {
-        reminderRunning = runFinalSubmissionReminders();
+        launchScheduledRun();
       },
       24 * 60 * 60 * 1000
     );

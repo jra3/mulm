@@ -55,6 +55,13 @@ let digestRunning: Promise<unknown> | undefined;
 let digestTimeout: NodeJS.Timeout | null = null;
 let digestInterval: NodeJS.Timeout | null = null;
 
+/** Keep a startup catch-up run owned until it finishes, even across the daily slot. */
+function launchScheduledRun(): void {
+  digestRunning ??= runCommitteeDigest().finally(() => {
+    digestRunning = undefined;
+  });
+}
+
 /**
  * Start the daily committee digest. Runs on startup to catch up on a slot
  * missed while the machine was stopped (Fly scales to zero), then daily at
@@ -63,7 +70,7 @@ let digestInterval: NodeJS.Timeout | null = null;
  */
 export function startCommitteeDigest(): void {
   if (digestTimeout || digestInterval) return;
-  digestRunning = runCommitteeDigest();
+  launchScheduledRun();
 
   const now = new Date();
   const next = new Date();
@@ -75,10 +82,10 @@ export function startCommitteeDigest(): void {
   logger.info(`Next committee digest scheduled for ${next.toISOString()}`);
 
   digestTimeout = setTimeout(() => {
-    digestRunning = runCommitteeDigest();
+    launchScheduledRun();
     digestInterval = setInterval(
       () => {
-        digestRunning = runCommitteeDigest();
+        launchScheduledRun();
       },
       24 * 60 * 60 * 1000
     );
