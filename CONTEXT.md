@@ -32,7 +32,7 @@ The **coral** program — points for growing and propagating marine corals. Code
 _Avoid_: Coral Award Program spelled out (use CAP), coral program (member-facing)
 
 **Specialty Species Program**:
-Recognition for breeding a required number of distinct species within a defined group (e.g. 6 Anabantoids, 12 New World Cichlids). Implemented as Specialty Awards / meta-awards. Source of truth: `src/specialtyAwards.ts`, `src/specialtyAwardManager.ts`. (Not to be confused with the manual's unimplemented "Maintaining Species Program" — see Open questions.)
+Recognition for breeding a required number of distinct species within a defined group (e.g. 6 Anabantoids, 12 New World Cichlids). Implemented as Specialty Awards / meta-awards. Source of truth: `src/specialtyAwards.ts`, `src/specialtyAwardManager.ts`. (Not to be confused with the manual's unimplemented "Maintaining Species Program" — see Open questions.) Qualification comes from one pure evaluator in `src/specialtyAwards.ts`, over approved Submission facts read by `src/db/specialtyAwards.ts`. Distinct counts remain case-insensitive scientific spellings, not Species ids; limitations receive all eligible Submissions. Meta thresholds and countability live in the award definitions. Qualification is separate from a grant: recomputation may revoke only computed grants, never manual ones. The two live progress pages intentionally present these facts differently: account progress caps percentages, defers limitation failure until the threshold, and counts qualified-and-granted specialties toward meta progress; public member progress is uncapped, shows limitations immediately, and counts all granted countable specialties.
 _Avoid_: species group award, specialist program
 
 ### Points & levels

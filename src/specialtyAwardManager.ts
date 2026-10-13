@@ -1,59 +1,8 @@
 import { getMember, grantAward, revokeAward } from "./db/members";
-import {
-  checkSpecialtyAwards,
-  checkMetaAwards,
-  getCountableSpecialtyAwards,
-  metaAwards,
-  specialtyAwards,
-  SubmissionForAward,
-} from "./specialtyAwards";
+import { checkMetaAwards, evaluateMetaAwards } from "./specialtyAwards";
 import { query } from "./db/conn";
 import { logger } from "./utils/logger";
-import { programClassOfSubmissionSql, speciesOfSubmissionJoinSql } from "@/species";
-
-/**
- * Get approved submissions for a member with genus information for specialty award checking
- *
- * The Program class and genus are the bound Species', joined through the
- * catalogue's one definition of that relation, so a Species moved to another
- * Program class moves its Submissions' awards with it (see
- * `programClassOfSubmissionSql` for the unbound case).
- */
-async function getSubmissionsWithGenus(memberId: number): Promise<SubmissionForAward[]> {
-  const submissions = await query<{
-    species_class: string;
-    species_latin_name: string;
-    species_type: string;
-    water_type: string;
-    spawn_locations: string;
-    canonical_genus: string | null;
-  }>(
-    `
-		SELECT
-			${programClassOfSubmissionSql("s", "sng")} AS species_class,
-			s.species_latin_name,
-			s.species_type,
-			s.water_type,
-			s.spawn_locations,
-			sng.canonical_genus
-		FROM submissions s
-		${speciesOfSubmissionJoinSql("s", "sng")}
-		WHERE s.member_id = ?
-			AND s.submitted_on IS NOT NULL
-			AND s.approved_on IS NOT NULL
-	`,
-    [memberId]
-  );
-
-  return submissions.map((sub) => ({
-    species_class: sub.species_class,
-    species_latin_name: sub.species_latin_name,
-    species_type: sub.species_type,
-    water_type: sub.water_type,
-    spawn_locations: sub.spawn_locations,
-    canonical_genus: sub.canonical_genus || undefined,
-  }));
-}
+import { getSpecialtyAwardEvaluations } from "./db/specialtyAwards";
 
 /**
  * Bring a member's Specialty Awards into line with their approved Submissions.
@@ -77,10 +26,12 @@ export async function recomputeSpecialtyAwards(
     throw new Error(`Member ${memberId} not found`);
   }
 
-  const allSubmissions = await getSubmissionsWithGenus(memberId);
+  const evaluations = await getSpecialtyAwardEvaluations(memberId);
   const existingAwards = await getExistingSpecialtyAwards(memberId);
 
-  const earnedSpecialty = checkSpecialtyAwards(allSubmissions);
+  const earnedSpecialty = evaluations
+    .filter((evaluation) => evaluation.qualified)
+    .map(({ award }) => award.name);
   const earnedMeta = checkMetaAwards(earnedSpecialty);
   const earned = new Set([...earnedSpecialty, ...earnedMeta]);
 
@@ -199,79 +150,44 @@ export interface MetaAwardProgress {
  * Get detailed progress for all specialty awards for a member
  * Shows current progress even if not completed
  */
-export async function getSpecialtyAwardProgress(
-  memberId: number
-): Promise<{
+export async function getSpecialtyAwardProgress(memberId: number): Promise<{
   specialtyProgress: SpecialtyAwardProgress[];
   metaProgress: MetaAwardProgress[];
 }> {
-  // Get all approved submissions for this member
-  const allSubmissions = await getSubmissionsWithGenus(memberId);
-
-  // Get existing awards
+  const evaluations = await getSpecialtyAwardEvaluations(memberId);
   const existingAwards = await getExistingSpecialtyAwards(memberId);
 
-  // Calculate progress for each specialty award
-  const specialtyProgress: SpecialtyAwardProgress[] = specialtyAwards.map((award) => {
-    // Filter submissions that match this award's eligibility criteria
-    const eligibleSubmissions = allSubmissions.filter((sub) => award.eligibilityFilter(sub));
-
-    // Get unique species (by latin name)
-    const uniqueSpecies = new Set(
-      eligibleSubmissions.map((sub) => sub.species_latin_name.toLowerCase())
-    );
-
-    const currentSpecies = uniqueSpecies.size;
-    const requiredSpecies = award.requiredSpecies;
-    const percentage = Math.min(100, Math.round((currentSpecies / requiredSpecies) * 100));
-
-    // Check if limitation is met (if applicable)
-    let isLimitationMet = true;
-    if (award.limitations && currentSpecies >= requiredSpecies) {
-      isLimitationMet = award.limitations.validator(eligibleSubmissions);
-    }
-
-    const isCompleted =
-      currentSpecies >= requiredSpecies && isLimitationMet && existingAwards.includes(award.name);
-
+  // Account presentation: cap percentages, require qualification AND a grant,
+  // and defer a failed limitation until the species threshold has been reached.
+  const specialtyProgress: SpecialtyAwardProgress[] = evaluations.map((evaluation) => {
+    const { award, count, requiredCount, qualified, limitationMet, distinctSpecies } = evaluation;
+    const granted = existingAwards.includes(award.name);
     return {
       name: award.name,
-      requiredSpecies,
-      currentSpecies,
-      percentage,
-      isCompleted,
-      isLimitationMet,
+      requiredSpecies: requiredCount,
+      currentSpecies: count,
+      percentage: Math.min(100, Math.round((count / requiredCount) * 100)),
+      isCompleted: qualified && granted,
+      isLimitationMet: count < requiredCount || limitationMet,
       limitationDescription: award.limitations?.description || null,
-      speciesList: Array.from(uniqueSpecies),
+      speciesList: distinctSpecies,
     };
   });
 
-  // Calculate meta-award progress
-  const countableAwards = getCountableSpecialtyAwards();
+  // This page counts only currently qualified, granted specialties toward meta progress.
+  const completedNames = specialtyProgress
+    .filter((award) => award.isCompleted)
+    .map((award) => award.name);
+  const metaProgress: MetaAwardProgress[] = evaluateMetaAwards(completedNames).map(
+    (evaluation) => ({
+      name: evaluation.award.name,
+      requiredAwards: evaluation.requiredCount,
+      currentAwards: evaluation.count,
+      percentage: Math.min(100, Math.round((evaluation.count / evaluation.requiredCount) * 100)),
+      isCompleted: existingAwards.includes(evaluation.award.name),
+      completedSpecialtyAwards: evaluation.countedAwards,
+    })
+  );
 
-  // Count completed specialty awards (excluding Marine Invertebrates for meta-awards)
-  const completedSpecialtyAwards = specialtyProgress
-    .filter((sp) => sp.isCompleted && countableAwards.includes(sp.name))
-    .map((sp) => sp.name);
-
-  const metaProgress: MetaAwardProgress[] = metaAwards.map((metaAward) => {
-    const requiredAwards = metaAward.name === "Senior Specialist Award" ? 4 : 7;
-    const currentAwards = completedSpecialtyAwards.length;
-    const percentage = Math.min(100, Math.round((currentAwards / requiredAwards) * 100));
-    const isCompleted = existingAwards.includes(metaAward.name);
-
-    return {
-      name: metaAward.name,
-      requiredAwards,
-      currentAwards,
-      percentage,
-      isCompleted,
-      completedSpecialtyAwards,
-    };
-  });
-
-  return {
-    specialtyProgress,
-    metaProgress,
-  };
+  return { specialtyProgress, metaProgress };
 }
