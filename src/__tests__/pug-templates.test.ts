@@ -1489,7 +1489,7 @@ void describe("Pug Template Rendering", () => {
       const waiting = render({ summary: notReady });
       assert.match(waiting, /id="witness-sum-hint">Is the species right\? Answer above first</);
       assert.match(waiting, /id="witness-confirm"[^>]*disabled/);
-      assert.match(waiting, /<button class="primary w-full h-12 text-base" id="witness-confirm"[^>]*disabled/, "a primary button; button.primary:disabled in src/index.css greys it");
+      assert.match(waiting, /<button class="primary w-full min-h-12 text-base" id="witness-confirm"[^>]*disabled/, "a primary button; button.primary:disabled in src/index.css greys it");
     });
 
     void test("only the form's own submit names the Confirm button in hx-disabled-elt: requests from inside the form do not inherit it", () => {
@@ -1673,7 +1673,7 @@ void describe("Pug Template Rendering", () => {
         assert.match(html, /<input[^>]*type="checkbox"[^>]*name="new_cares_species"[^>]*value="on"/);
         assert.match(
           html,
-          /<button class="primary w-full h-12 text-base" id="witness-record-continue" type="button" hx-post="\/admin\/submissions\/42\/record-species" hx-include="#witness-record" hx-target="#witness-species" hx-swap="innerHTML" hx-disabled-elt="this">Record species and continue</
+          /<button class="primary w-full min-h-12 text-base" id="witness-record-continue" type="button" hx-post="\/admin\/submissions\/42\/record-species" hx-include="#witness-record" hx-target="#witness-species" hx-swap="innerHTML" hx-disabled-elt="this">Record species and continue</
         );
         // Back fetches the page and keeps only the panel, so nothing is created or lost
         assert.match(html, /hx-get="\/submissions\/42"[^>]*hx-select="#witnessPanel"[^>]*hx-target="#witnessPanel"[^>]*hx-swap="outerHTML"[^>]*hx-disabled-elt="this"[^>]*>Back</);
