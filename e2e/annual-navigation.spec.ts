@@ -6,8 +6,12 @@ for (const width of [320, 375, 390, 400, 430, 1280]) {
   test(`annual year menu stays beside its title at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 732 });
     await page.goto(`/annual/${year}/fish`);
-    const trigger = page.getByRole("button", { name: `Choose standings year, currently ${year}` });
+    const trigger = page.getByRole("button", { name: String(year), exact: true });
     const menu = page.getByRole("navigation", { name: "Standings year", exact: true });
+    await expect(
+      page.getByRole("heading", { name: `Annual Standings for ${year}`, exact: true })
+    ).toBeVisible();
+    await expect(trigger).toHaveAccessibleDescription("Choose a standings year");
     await trigger.click();
     await expect(menu).toBeVisible();
     await expect(trigger).toHaveAttribute("aria-expanded", "true");
@@ -40,7 +44,7 @@ test("year navigation preserves the program and program navigation preserves the
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`/annual/${year}/plant`);
-  await page.getByRole("button", { name: `Choose standings year, currently ${year}` }).click();
+  await page.getByRole("button", { name: String(year), exact: true }).click();
   await page
     .getByRole("navigation", { name: "Standings year", exact: true })
     .getByRole("link", { name: String(year - 1), exact: true })
@@ -61,7 +65,7 @@ test("year menu supports keyboard selection and remains anchored after resize", 
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`/annual/${year}/fish`);
-  const trigger = page.getByRole("button", { name: `Choose standings year, currently ${year}` });
+  const trigger = page.getByRole("button", { name: String(year), exact: true });
   await trigger.focus();
   await page.keyboard.press("Enter");
   const menu = page.getByRole("navigation", { name: "Standings year", exact: true });
@@ -77,7 +81,7 @@ test("year menu supports keyboard selection and remains anchored after resize", 
   await page.keyboard.press("End");
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL("/annual/2015/fish");
-  await page.getByRole("button", { name: "Choose standings year, currently 2015" }).click();
+  await page.getByRole("button", { name: "2015", exact: true }).click();
   await expect(menu.getByRole("link", { name: "2015", exact: true })).toBeFocused();
   await page.keyboard.press("Home");
   await page.keyboard.press("Enter");

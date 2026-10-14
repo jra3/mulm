@@ -8,10 +8,12 @@ html
 	body.bg-white.text-gray-800
 		+pageHeader(isLoggedIn, `Annual Standings for ${year}`)
 			span Annual Standings for
-			button.annual-year-trigger#annual-year-trigger(type="button" popovertarget="annual-year-menu" aria-controls="annual-year-menu" aria-expanded="false" aria-label=`Choose standings year, currently ${year}`)
+			button.annual-year-trigger#annual-year-trigger(type="button" popovertarget="annual-year-menu" aria-controls="annual-year-menu" aria-expanded="false" aria-describedby="annual-year-trigger-help")
 				= year
 				svg.w-4.h-4(viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true")
 					path(d="m6 9 6 6 6-6")
+
+		span.sr-only#annual-year-trigger-help Choose a standings year
 
 		nav.annual-year-menu#annual-year-menu(popover="auto" aria-label="Standings year")
 			- for (let choice = maxYear; choice >= minYear; choice--)
