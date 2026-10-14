@@ -7,6 +7,23 @@ html
 
 	body.bg-white.text-gray-800
 		+pageHeader(isLoggedIn, `Annual Standings for ${year}`)
+			span Annual Standings for
+			button.annual-year-trigger#annual-year-trigger(type="button" popovertarget="annual-year-menu" aria-controls="annual-year-menu" aria-expanded="false" aria-label=`Choose standings year, currently ${year}`)
+				= year
+				svg.w-4.h-4(viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true")
+					path(d="m6 9 6 6 6-6")
+
+		nav.annual-year-menu#annual-year-menu(popover="auto" aria-label="Standings year")
+			- for (let choice = maxYear; choice >= minYear; choice--)
+				a(href=`/annual/${choice}/${program}` aria-current=choice === year ? "page" : undefined)
+					= choice
+					if choice === year
+						span(aria-hidden="true") ✓
+
+		nav.bg-gray-100.px-4.pt-4(class="sm:hidden" aria-label="Standings program")
+			div.grid.rounded-xl.bg-gray-200.p-1(class="gap-0.5 grid-cols-[1fr_1.5fr_1fr]")
+				each label, value in { fish: "Breeder", plant: "Horticultural", coral: "Coral" }
+					a.flex.items-center.justify-center.min-h-11.rounded-lg.text-sm.text-gray-700(href=`/annual/${year}/${value}` class=program === value ? "bg-white shadow-sm font-semibold" : "hover:bg-gray-100" aria-current=program === value ? "page" : undefined)= label
 
 		section.bg-gray-100.py-4
 			div.max-w-4xl.mx-auto.text-center.px-4
@@ -31,7 +48,7 @@ html
 									+trophy(trophies[memberId])
 								td(class=heading)= member[1]
 
-		.w-full.bg-gray-300.p-4.shadow-md
+		.w-full.bg-gray-300.p-4.shadow-md.hidden(class="sm:block")
 			.container.mx-auto.flex.justify-center.items-center.space-x-4
 
 				if year > minYear
@@ -46,3 +63,5 @@ html
 
 				if year < maxYear
 					a.link(href=`/annual/${year+1}/${program}`)= `${year + 1} →`
+
+		script(src="/js/annual-standings.js" defer)

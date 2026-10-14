@@ -360,3 +360,28 @@ include mixins/forms.pug
 - Use `<time>` elements for dates (mixins handle this)
 - Ensure sufficient color contrast (design system colors are compliant)
 - Form inputs have associated `<label>` elements
+
+## Responsive dialogs and forms
+
+The `dialog()` mixin in `header.pug` provides the standard layout: full-screen
+on phones, then a centered card from `sm`, with `p-4 sm:p-6` content padding.
+Sign-in, collection, CARES, and committee action dialogs share it.
+
+The approved-submission editor retains a native `<dialog>` for `showModal()`,
+focus containment, and Escape dismissal. Its phone layout follows the same
+pattern using `h-dvh max-h-dvh`, with a centered, height-limited desktop layout.
+Keep the native element and its dismissal behavior when changing its appearance.
+
+Form grids use `grid-cols-1 md:grid-cols-2`. Full-row fields must use
+`md:col-span-2`, not unconditional `col-span-2`: an unconditional span creates
+a second implicit column even on phones. Apply this rule to every tab, including
+conditional fields such as the Plant/Coral CO₂ description.
+
+## Annual standings navigation
+
+`pageHeader()` accepts an optional content block for an interactive heading;
+ordinary callers retain the standard truncated title. Annual standings uses this
+slot for the year button. Its native HTML popover contains ordinary year links,
+positioned against that button by `public/js/annual-standings.js`. Keep the popup
+inside the viewport when resizing, and preserve the current program in year links.
+The phone program selector sits above the program heading and preserves the year.

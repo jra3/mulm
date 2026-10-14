@@ -641,3 +641,65 @@ th[role="columnheader"]:not([aria-sort]):after {
 .hovercard-content-inner .grid {
 	@apply gap-3;
 }
+
+/* Annual standings: the title opens an in-page, viewport-bounded year menu. */
+.annual-year-trigger {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	min-height: 44px;
+	padding: 0;
+	border: 0;
+	border-radius: 4px;
+	background: transparent;
+	box-shadow: none;
+	color: inherit;
+	font: inherit;
+	cursor: pointer;
+}
+
+.annual-year-trigger:focus-visible {
+	outline: 2px solid #2563eb;
+	outline-offset: 2px;
+}
+
+.annual-year-menu {
+	position: fixed;
+	inset: auto;
+	margin: 0;
+	padding: 4px;
+	width: 128px;
+	box-sizing: border-box;
+	background: white;
+	color: #374151;
+	border: 1px solid #d1d5db;
+	border-radius: 10px;
+	box-shadow: 0 8px 24px #0003;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+}
+
+.annual-year-menu a {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	min-height: 44px;
+	padding: 8px 12px;
+	border-radius: 6px;
+	font-size: 16px;
+	text-decoration: none;
+}
+
+.annual-year-menu a[aria-current] {
+	background: #e5e7eb;
+	font-weight: 700;
+}
+
+.annual-year-menu a:hover {
+	background: #f3f4f6;
+}
+
+.annual-year-menu a:focus-visible {
+	outline: 2px solid #2563eb;
+	outline-offset: -2px;
+}

@@ -131,7 +131,7 @@ html
 										rel="noopener noreferrer"
 									)
 										i.fas.fa-external-link-alt.text-blue-600.mr-3
-										.flex-1
+										.flex-1.min-w-0
 											.font-medium.text-blue-700.group-hover_text-blue-900
 												if url.includes('fishbase.se')
 													| FishBase Species Page
@@ -141,7 +141,7 @@ html
 													| GBIF Species Page
 												else
 													| External Reference
-											.text-sm.text-gray-500.truncate= url
+											.text-sm.text-gray-500(class="[overflow-wrap:anywhere]")= url
 										i.fas.fa-arrow-right.text-gray-400.group-hover_text-blue-600.ml-2
 
 					// Species Images

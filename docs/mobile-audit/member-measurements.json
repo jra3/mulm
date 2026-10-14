@@ -1,0 +1,310 @@
+[
+  {
+    "height": 1128,
+    "internalScroll": [],
+    "overflow": [],
+    "path": "/",
+    "scrollWidth": 375,
+    "width": 390
+  },
+  {
+    "height": 2659,
+    "internalScroll": [
+      {
+        "client": 343,
+        "cls": "overflow-x-auto w-full",
+        "scroll": 786,
+        "tag": "DIV",
+        "text": "StatusClassCommon NameLatin NameSubmitted OnSpecies PointsTotal Points"
+      },
+      {
+        "client": 343,
+        "cls": "overflow-x-auto w-full",
+        "scroll": 869,
+        "tag": "DIV",
+        "text": "StatusClassCommon NameLatin NameSubmitted OnSpecies PointsTotal Points"
+      },
+      {
+        "client": 343,
+        "cls": "overflow-x-auto w-full",
+        "scroll": 742,
+        "tag": "DIV",
+        "text": "StatusClassCommon NameLatin NameSubmitted OnSpecies PointsTotal Points"
+      }
+    ],
+    "overflow": [
+      {
+        "cls": "w-full bg-white shadow-sm rounded-lg",
+        "id": "",
+        "left": 16,
+        "right": 802,
+        "tag": "TABLE",
+        "text": "StatusClassCommon NameLatin NameSubmitted OnSpecies PointsTotal P",
+        "width": 786
+      },
+      {
+        "cls": "",
+        "id": "",
+        "left": 16,
+        "right": 802,
+        "tag": "THEAD",
+        "text": "StatusClassCommon NameLatin NameSubmitted OnSpecies PointsTotal P",
+        "width": 786
+      },
+      {
+        "cls": "",
+        "id": "",
+        "left": 16,
+        "right": 802,
+        "tag": "TR",
+        "text": "StatusClassCommon NameLatin NameSubmitted OnSpecies PointsTotal P",
+        "width": 786
+      },
+      {
+        "cls": "p-3 text-left font-bold text-gray-900 border-b-2 border-gray-300 bg-gray-50 cursor-pointer select-none hover:bg-gray-100",
+        "id": "",
+        "left": 366,
+        "right": 461,
+        "tag": "TH",
+        "text": "Latin Name",
+        "width": 94
+      },
+      {
+        "cls": "p-3 text-left font-bold text-gray-900 border-b-2 border-gray-300 bg-gray-50 cursor-pointer select-none hover:bg-gray-100",
+        "id": "",
+        "left": 461,
+        "right": 569,
+        "tag": "TH",
+        "text": "Submitted On",
+        "width": 108
+      },
+      {
+        "cls": "p-3 text-right font-bold text-gray-900 border-b-2 border-gray-300 bg-gray-50 cursor-pointer select-none hover:bg-gray-100",
+        "id": "",
+        "left": 569,
+        "right": 685,
+        "tag": "TH",
+        "text": "Species Points",
+        "width": 117
+      },
+      {
+        "cls": "p-3 text-right font-bold text-gray-900 border-b-2 border-gray-300 bg-gray-50 cursor-pointer select-none hover:bg-gray-100",
+        "id": "",
+        "left": 685,
+        "right": 802,
+        "tag": "TH",
+        "text": "Total Points",
+        "width": 117
+      },
+      {
+        "cls": "",
+        "id": "",
+        "left": 16,
+        "right": 802,
+        "tag": "TBODY",
+        "text": "📝DraftLivebearersGuppyPoecilia reticulata-UnapprovedUnapproved✅A",
+        "width": 786
+      },
+      {
+        "cls": "hover:bg-gray-50 bg-yellow-50",
+        "id": "",
+        "left": 16,
+        "right": 802,
+        "tag": "TR",
+        "text": "📝DraftLivebearersGuppyPoecilia reticulata-UnapprovedUnapproved",
+        "width": 786
+      },
+      {
+        "cls": "p-3 text-left border-b border-gray-200",
+        "id": "",
+        "left": 366,
+        "right": 461,
+        "tag": "TD",
+        "text": "Poecilia reticulata",
+        "width": 94
+      },
+      {
+        "cls": "flex items-center gap-2",
+        "id": "",
+        "left": 378,
+        "right": 449,
+        "tag": "DIV",
+        "text": "Poecilia reticulata",
+        "width": 70
+      },
+      {
+        "cls": "link",
+        "id": "",
+        "left": 378,
+        "right": 449,
+        "tag": "A",
+        "text": "Poecilia reticulata",
+        "width": 70
+      },
+      {
+        "cls": "p-3 text-left border-b border-gray-200",
+        "id": "",
+        "left": 461,
+        "right": 569,
+        "tag": "TD",
+        "text": "-",
+        "width": 108
+      },
+      {
+        "cls": "",
+        "id": "",
+        "left": 473,
+        "right": 480,
+        "tag": "SPAN",
+        "text": "-",
+        "width": 7
+      },
+      {
+        "cls": "p-3 text-right border-b border-gray-200",
+        "id": "",
+        "left": 569,
+        "right": 685,
+        "tag": "TD",
+        "text": "Unapproved",
+        "width": 117
+      },
+      {
+        "cls": "p-3 text-right border-b border-gray-200",
+        "id": "",
+        "left": 685,
+        "right": 802,
+        "tag": "TD",
+        "text": "Unapproved",
+        "width": 117
+      },
+      {
+        "cls": "hover:bg-gray-50 bg-green-50",
+        "id": "",
+        "left": 16,
+        "right": 802,
+        "tag": "TR",
+        "text": "✅ApprovedLivebearersGuppyPoecilia reticulata10/13/20261010",
+        "width": 786
+      },
+      {
+        "cls": "p-3 text-left border-b border-gray-200",
+        "id": "",
+        "left": 366,
+        "right": 461,
+        "tag": "TD",
+        "text": "Poecilia reticulata",
+        "width": 94
+      }
+    ],
+    "path": "/member/1",
+    "scrollWidth": 375,
+    "width": 390
+  },
+  {
+    "height": 1049,
+    "internalScroll": [],
+    "overflow": [],
+    "path": "/member/1/collection",
+    "scrollWidth": 375,
+    "width": 390
+  },
+  {
+    "height": 1631,
+    "internalScroll": [],
+    "overflow": [],
+    "path": "/account",
+    "scrollWidth": 375,
+    "width": 390
+  },
+  {
+    "height": 2880,
+    "internalScroll": [],
+    "overflow": [],
+    "path": "/account/awards",
+    "scrollWidth": 375,
+    "width": 390
+  },
+  {
+    "height": 3055,
+    "internalScroll": [],
+    "overflow": [],
+    "path": "/submissions/new",
+    "scrollWidth": 375,
+    "width": 390
+  },
+  {
+    "height": 3415,
+    "internalScroll": [],
+    "overflow": [],
+    "path": "/submissions/new?species_type=Plant",
+    "scrollWidth": 375,
+    "width": 390
+  },
+  {
+    "height": 3481,
+    "internalScroll": [],
+    "overflow": [],
+    "path": "/submissions/new?species_type=Coral",
+    "scrollWidth": 375,
+    "width": 390
+  },
+  {
+    "height": 3067,
+    "internalScroll": [],
+    "overflow": [
+      {
+        "cls": "",
+        "id": "species_common_name-ts-control",
+        "left": -9980,
+        "right": -9868,
+        "tag": "INPUT",
+        "text": "",
+        "width": 112
+      },
+      {
+        "cls": "",
+        "id": "species_latin_name-ts-control",
+        "left": -9980,
+        "right": -9868,
+        "tag": "INPUT",
+        "text": "",
+        "width": 112
+      }
+    ],
+    "path": "/submissions/1",
+    "scrollWidth": 375,
+    "width": 390
+  },
+  {
+    "height": 2251,
+    "internalScroll": [],
+    "overflow": [],
+    "path": "/submissions/2",
+    "scrollWidth": 375,
+    "width": 390
+  },
+  {
+    "height": 2590,
+    "internalScroll": [],
+    "overflow": [],
+    "path": "/submissions/3",
+    "scrollWidth": 375,
+    "width": 390
+  },
+  {
+    "height": 2179,
+    "internalScroll": [],
+    "overflow": [],
+    "path": "/submissions/5",
+    "scrollWidth": 375,
+    "width": 390
+  },
+  {
+    "height": 845,
+    "internalScroll": [],
+    "overflow": [],
+    "path": "/submissions/5/edit-media",
+    "scrollWidth": 375,
+    "width": 390
+  }
+]

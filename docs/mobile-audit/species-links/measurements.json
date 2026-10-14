@@ -1,0 +1,38 @@
+[
+  {
+    "variant": "before",
+    "width": 390,
+    "client": 390,
+    "scroll": 401
+  },
+  {
+    "variant": "after",
+    "width": 390,
+    "client": 390,
+    "scroll": 390
+  },
+  {
+    "variant": "after",
+    "width": 320,
+    "client": 320,
+    "scroll": 320
+  },
+  {
+    "variant": "after",
+    "width": 375,
+    "client": 375,
+    "scroll": 375
+  },
+  {
+    "variant": "after",
+    "width": 430,
+    "client": 430,
+    "scroll": 430
+  },
+  {
+    "variant": "after",
+    "width": 1280,
+    "client": 1280,
+    "scroll": 1280
+  }
+]
