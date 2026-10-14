@@ -1,11 +1,11 @@
-form.bg-white.rounded-lg(
+form.bg-white.w-full.overflow-y-auto(
+	class="max-h-dvh sm:max-h-[90vh] sm:rounded-lg"
 	hx-post=`/admin/submissions/${submission.id}/edit-approved`
-	style="width: 100%; max-height: 90vh; overflow-y: auto;"
 )
-	.p-6
-		.flex.justify-between.items-center.mb-6
-			h2.text-2xl.font-bold Edit Approved Submission
-			button.text-gray-500.hover_text-gray-700(
+	.p-4(class="sm:p-6")
+		.flex.justify-between.items-center.gap-3.mb-4(class="sm:mb-6")
+			h2#edit-approved-title.text-xl.font-bold.min-w-0.flex-1(class="sm:text-2xl") Edit Approved Submission
+			button.text-gray-500.shrink-0.min-w-11(class="hover:text-gray-700"
 				type="button"
 				onclick="document.getElementById('edit-approved-dialog').close()"
 				aria-label="Close"
@@ -48,7 +48,7 @@ form.bg-white.rounded-lg(
 
 		// Tab 1: Details
 		.tab-content.active(data-tab-content="details")
-			.grid.gap-4(class="md:grid-cols-2")
+			.grid.grid-cols-1.gap-4(class="md:grid-cols-2")
 				.form-group
 					label.input-label(for="reproduction_date") Reproduction Date
 					input.text-input(
@@ -102,7 +102,7 @@ form.bg-white.rounded-lg(
 							value=submission.propagation_method || ""
 						)
 
-				.form-group.col-span-2
+				.form-group(class="md:col-span-2")
 					label.input-label(for="video_url") Video URL
 					input.text-input(
 						type="url"
@@ -112,7 +112,7 @@ form.bg-white.rounded-lg(
 						placeholder="https://youtube.com/..."
 					)
 
-				.form-group.col-span-2
+				.form-group(class="md:col-span-2")
 					label.input-label(for="article_link") Article Link
 					input.text-input(
 						type="url"
@@ -122,7 +122,7 @@ form.bg-white.rounded-lg(
 						placeholder="https://example.com/my-breeding-article"
 					)
 
-				.form-group.col-span-2
+				.form-group(class="md:col-span-2")
 					label.input-label(for="notes") Breeder Notes
 					textarea.text-input(
 						id="notes"
@@ -134,7 +134,7 @@ form.bg-white.rounded-lg(
 
 		// Tab 2: Tank Info
 		.tab-content.hidden(data-tab-content="tank")
-			.grid.gap-4(class="md:grid-cols-2")
+			.grid.grid-cols-1.gap-4(class="md:grid-cols-2")
 				.form-group
 					label.input-label(for="tank_size") Tank Size
 					input.text-input(
@@ -272,7 +272,7 @@ form.bg-white.rounded-lg(
 							value=submission.co2 || ""
 						)
 
-					.form-group.col-span-2
+					.form-group(class="md:col-span-2")
 						label.input-label(for="co2_description") CO2 Description
 						input.text-input(
 							type="text"
@@ -355,6 +355,7 @@ form.bg-white.rounded-lg(
 			z-index: 1;
 		}
 		.form-group {
+			min-width: 0;
 			display: flex;
 			flex-direction: column;
 			gap: 0.5rem;
@@ -362,7 +363,4 @@ form.bg-white.rounded-lg(
 		.input-label.required::after {
 			content: " *";
 			color: #dc2626;
-		}
-		.col-span-2 {
-			grid-column: span 2 / span 2;
 		}

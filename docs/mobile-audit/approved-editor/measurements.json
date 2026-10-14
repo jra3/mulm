@@ -1,0 +1,206 @@
+[
+  {
+    "variant": "before",
+    "width": 390,
+    "client": 351,
+    "scroll": 426
+  },
+  {
+    "variant": "after",
+    "width": 390,
+    "client": 390,
+    "scroll": 390
+  },
+  {
+    "variant": "after",
+    "id": 5,
+    "width": 320,
+    "tab": "Details",
+    "client": 320,
+    "scroll": 320
+  },
+  {
+    "variant": "after",
+    "id": 5,
+    "width": 320,
+    "tab": "Tank Info",
+    "client": 320,
+    "scroll": 320
+  },
+  {
+    "variant": "after",
+    "id": 10,
+    "width": 320,
+    "tab": "Details",
+    "client": 320,
+    "scroll": 320
+  },
+  {
+    "variant": "after",
+    "id": 10,
+    "width": 320,
+    "tab": "Tank Info",
+    "client": 320,
+    "scroll": 320
+  },
+  {
+    "variant": "after",
+    "id": 15,
+    "width": 320,
+    "tab": "Details",
+    "client": 320,
+    "scroll": 320
+  },
+  {
+    "variant": "after",
+    "id": 15,
+    "width": 320,
+    "tab": "Tank Info",
+    "client": 320,
+    "scroll": 320
+  },
+  {
+    "variant": "after",
+    "id": 5,
+    "width": 375,
+    "tab": "Details",
+    "client": 375,
+    "scroll": 375
+  },
+  {
+    "variant": "after",
+    "id": 5,
+    "width": 375,
+    "tab": "Tank Info",
+    "client": 375,
+    "scroll": 375
+  },
+  {
+    "variant": "after",
+    "id": 10,
+    "width": 375,
+    "tab": "Details",
+    "client": 375,
+    "scroll": 375
+  },
+  {
+    "variant": "after",
+    "id": 10,
+    "width": 375,
+    "tab": "Tank Info",
+    "client": 375,
+    "scroll": 375
+  },
+  {
+    "variant": "after",
+    "id": 15,
+    "width": 375,
+    "tab": "Details",
+    "client": 375,
+    "scroll": 375
+  },
+  {
+    "variant": "after",
+    "id": 15,
+    "width": 375,
+    "tab": "Tank Info",
+    "client": 375,
+    "scroll": 375
+  },
+  {
+    "variant": "after",
+    "id": 5,
+    "width": 430,
+    "tab": "Details",
+    "client": 430,
+    "scroll": 430
+  },
+  {
+    "variant": "after",
+    "id": 5,
+    "width": 430,
+    "tab": "Tank Info",
+    "client": 430,
+    "scroll": 430
+  },
+  {
+    "variant": "after",
+    "id": 10,
+    "width": 430,
+    "tab": "Details",
+    "client": 430,
+    "scroll": 430
+  },
+  {
+    "variant": "after",
+    "id": 10,
+    "width": 430,
+    "tab": "Tank Info",
+    "client": 430,
+    "scroll": 430
+  },
+  {
+    "variant": "after",
+    "id": 15,
+    "width": 430,
+    "tab": "Details",
+    "client": 430,
+    "scroll": 430
+  },
+  {
+    "variant": "after",
+    "id": 15,
+    "width": 430,
+    "tab": "Tank Info",
+    "client": 430,
+    "scroll": 430
+  },
+  {
+    "variant": "after",
+    "id": 5,
+    "width": 1280,
+    "tab": "Details",
+    "client": 900,
+    "scroll": 900
+  },
+  {
+    "variant": "after",
+    "id": 5,
+    "width": 1280,
+    "tab": "Tank Info",
+    "client": 900,
+    "scroll": 900
+  },
+  {
+    "variant": "after",
+    "id": 10,
+    "width": 1280,
+    "tab": "Details",
+    "client": 900,
+    "scroll": 900
+  },
+  {
+    "variant": "after",
+    "id": 10,
+    "width": 1280,
+    "tab": "Tank Info",
+    "client": 900,
+    "scroll": 900
+  },
+  {
+    "variant": "after",
+    "id": 15,
+    "width": 1280,
+    "tab": "Details",
+    "client": 900,
+    "scroll": 900
+  },
+  {
+    "variant": "after",
+    "id": 15,
+    "width": 1280,
+    "tab": "Tank Info",
+    "client": 900,
+    "scroll": 900
+  }
+]

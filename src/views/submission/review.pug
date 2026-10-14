@@ -144,8 +144,9 @@ html
         // Dialog container for edit approved submission modal
         if isAdmin && isApproved && !isSelf
             dialog#edit-approved-dialog(
-                class="rounded-lg shadow-xl"
-                style="max-width: 900px; width: 90%; max-height: 90vh; padding: 0; border: none; margin: auto;"
+                class="w-full max-w-full h-dvh max-h-dvh m-0 p-0 border-0 shadow-xl " +
+                      "sm:w-[90%] sm:max-w-[900px] sm:h-auto sm:max-h-[90vh] sm:m-auto sm:rounded-lg"
+                aria-labelledby="edit-approved-title"
             )
 
             script.

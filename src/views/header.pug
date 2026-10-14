@@ -85,7 +85,11 @@ mixin pageHeader(loggedIn, title, subtitle, trophyData, trophyUniqueId)
 		div.max-w-7xl.mx-auto.px-4.py-4.flex.justify-between.items-center.gap-4
 			div(class="flex flex-col md:flex-row md:text-center gap-1 md:gap-2 md:items-center min-w-0 flex-1")
 				.flex.items-center.gap-2.min-w-0
-					h2.font-bold.p2.truncate(class="text-xl md:text-2xl")= title
+					h2.font-bold.p2(class=block ? "text-xl md:text-2xl flex flex-wrap items-center gap-x-1.5" : "text-xl md:text-2xl truncate")
+						if block
+							block
+						else
+							= title
 					if trophyUniqueId
 						+trophyWithHover(trophyData, trophyUniqueId)
 					else
