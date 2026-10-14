@@ -2,7 +2,7 @@
 
 The audit confirmed five mobile layout defects in the current checkout: admin species pagination, the approved submission editor, species external links, annual standings navigation, and the species bulk action toolbar. The first two deserve attention first because navigation controls or form fields leave the visible area. Most member forms fit the tested phone viewport, but submission histories still require substantial sideways scrolling.
 
-Three agents covered public pages, member workflows, and admin workflows. The lead agent independently reproduced the annual navigation issue and tested populated species reference links. This is an audit; application source files were not changed.
+Three agents covered public pages, member workflows, and admin workflows. The lead agent independently reproduced the annual navigation issue and tested populated species reference links. The audit itself changed no application source; approved repairs are recorded under [Review decisions](#review-decisions).
 
 ## Scope and evidence
 
