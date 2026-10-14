@@ -1,81 +1,84 @@
 import { describe, test } from "node:test";
 import assert from "node:assert";
-import { witnessSummary } from "../routes/submission";
+import { prepareWitnessPanel, type WitnessPanelInput } from "../forms/witnessPanel";
 import { committeeSpeciesChoice, speciesChosenByCommittee, speciesRecordedByWitness } from "../db/submission_notes";
-import { totalPoints } from "../points";
 
-/**
- * The witness panel's sticky bar is summed on the server over the one Points
- * rule, and says what is still missing until it can confirm. No database.
- */
-void describe("The witness panel's summary", () => {
-  const filled = {
-    bound: true,
-    species_settled: true,
-    points: 10 as number | null,
-    article_points: 5 as number | null,
-    cares_species: true,
-    flowered: false,
-    sexual_reproduction: false,
+/** Form behavior is tested through its prepared controls and summary together. */
+void describe("Witness form preparation", () => {
+  const input: WitnessPanelInput = {
+    submission: { program: "fish", article_link: "https://example.com/article" },
+    speciesFacts: { program: "fish", pointClass: 10, isCaresSpecies: true },
+    newSpecies: null,
+    speciesChosenByWitness: true,
   };
 
-  void test("not ready until the Species is chosen, then settled, then the base points chosen, in that order", () => {
-    assert.deepStrictEqual(witnessSummary({ ...filled, bound: false, species_settled: false, points: null }), {
-      ready: false,
-      lines: [],
-      total: 0,
-      hint: "Choose the species first",
+  void test("readiness follows choosing a Species, settling it, then choosing base points", () => {
+    assert.strictEqual(prepareWitnessPanel({ ...input, speciesFacts: null }).summary.hint, "Choose the species first");
+    const unsettled = prepareWitnessPanel({ ...input, speciesChosenByWitness: false });
+    assert.strictEqual(unsettled.pointsForm.settled, false);
+    assert.strictEqual(unsettled.summary.hint, "Is the species right? Answer above first");
+    const unvalued = prepareWitnessPanel({ ...input, speciesFacts: { ...input.speciesFacts!, pointClass: null } });
+    assert.strictEqual(unvalued.pointsForm.values.points, null);
+    assert.strictEqual(unvalued.summary.hint, "Choose the base points");
+  });
+
+  void test("Witness defaults and summary agree, without awarding first-time", () => {
+    const panel = prepareWitnessPanel(input);
+    assert.deepStrictEqual(panel.pointsForm.values, {
+      points: 10, article_points: 5, cares_species: true, flowered: false, sexual_reproduction: false, first_time_species: false,
     });
-    assert.strictEqual(witnessSummary({ ...filled, species_settled: false }).hint, "Is the species right? Answer above first");
-    assert.strictEqual(witnessSummary({ ...filled, points: null }).hint, "Choose the base points");
-  });
-
-  void test("first-time counts only when the correction form says so; the Witness never passes it", () => {
-    const corrected = witnessSummary({ ...filled, first_time_species: true });
-    assert.deepStrictEqual(corrected.lines.map((line) => line.label), [
-      "Base points",
-      "Article Bonus",
-      "First Time Species Bonus",
-      "CARES Species Bonus",
+    assert.strictEqual(panel.pointsForm.offered.first_time_species, false);
+    assert.strictEqual(panel.summary.ready, true);
+    assert.deepStrictEqual(panel.summary.lines, [
+      { label: "Base points", amount: 10 }, { label: "Article Bonus", amount: 5 }, { label: "CARES Species Bonus", amount: 5 },
     ]);
-    assert.strictEqual(corrected.total, totalPoints({ points: 10, article_points: 5, cares_species: true, first_time_species: true }));
-    assert.strictEqual(witnessSummary(filled).total, 20, "left off, it is not counted");
+    assert.strictEqual(panel.summary.total, 20);
   });
 
-  void test("ready: base points first, then each bonus that is set, adding up to the rule's total", () => {
-    const summary = witnessSummary(filled);
-    assert.strictEqual(summary.ready, true);
-    assert.strictEqual(summary.hint, null);
-    assert.deepStrictEqual(summary.lines, [
-      { label: "Base points", amount: 10 },
-      { label: "Article Bonus", amount: 5 },
-      { label: "CARES Species Bonus", amount: 5 },
-    ]);
-    assert.strictEqual(summary.total, 20);
-    assert.strictEqual(
-      summary.lines.reduce((sum, line) => sum + line.amount, 0),
-      totalPoints({ points: 10, article_points: 5, cares_species: true })
-    );
-  });
-
-  void test("the plant bonuses each add the base points", () => {
-    const summary = witnessSummary({
-      ...filled,
-      points: 15,
-      article_points: null,
-      cares_species: false,
-      flowered: true,
-      sexual_reproduction: true,
+  for (const program of ["fish", "plant", "coral"]) {
+    void test(`a correction entering ${program} starts every bonus afresh`, () => {
+      const panel = prepareWitnessPanel({
+        ...input,
+        submission: { program: program === "plant" ? "fish" : "plant", article_link: "https://example.com/article" },
+        speciesFacts: { program, pointClass: 15, isCaresSpecies: true },
+        correction: {
+          approved: true, speciesChanged: true,
+          current: { points: 10, article_points: 10, cares_species: true, flowered: true, sexual_reproduction: true, first_time_species: true },
+        },
+      });
+      assert.strictEqual(panel.pointsForm.bonusesReset, true);
+      assert.deepStrictEqual(panel.pointsForm.values, {
+        points: 15, article_points: null, cares_species: false, flowered: false, sexual_reproduction: false, first_time_species: false,
+      });
+      assert.deepStrictEqual(panel.summary.lines, [{ label: "Base points", amount: 15 }]);
+      assert.strictEqual(panel.summary.total, 15);
+      assert.strictEqual(panel.summaryButton?.label, "Save correction");
     });
-    assert.deepStrictEqual(
-      summary.lines.map((line) => [line.label, line.amount]),
-      [
-        ["Base points", 15],
-        ["Flowering Bonus", 15],
-        ["Sexual Reproduction Bonus", 15],
-      ]
-    );
-    assert.strictEqual(summary.total, 45);
+  }
+
+  void test("same-Program corrections preserve bonuses while base points and CARES follow the selected Species", () => {
+    const panel = prepareWitnessPanel({
+      ...input,
+      speciesFacts: { program: "fish", pointClass: 15, isCaresSpecies: false },
+      correction: {
+        approved: true, speciesChanged: true,
+        current: { points: 10, article_points: 10, cares_species: true, flowered: false, sexual_reproduction: false, first_time_species: true },
+      },
+    });
+    assert.strictEqual(panel.pointsForm.bonusesReset, false);
+    assert.deepStrictEqual(panel.pointsForm.values, {
+      points: 15, article_points: 10, cares_species: false, flowered: false, sexual_reproduction: false, first_time_species: true,
+    });
+    assert.strictEqual(panel.summary.total, 30);
+  });
+
+  void test("a recorded Species supplies the same defaults as a catalogue Species", () => {
+    const panel = prepareWitnessPanel({ ...input, speciesFacts: null, newSpecies: { program: "plant", pointClass: 15, isCaresSpecies: false } });
+    assert.strictEqual(panel.pointsForm.settled, true);
+    assert.strictEqual(panel.pointsForm.program, "plant");
+    assert.strictEqual(panel.pointsForm.offered.flowered, true);
+    assert.strictEqual(panel.pointsForm.offered.cares_species, false);
+    assert.strictEqual(panel.summary.total, 20);
   });
 });
 

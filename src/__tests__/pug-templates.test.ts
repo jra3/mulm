@@ -1,3 +1,4 @@
+import { prepareWitnessPanel, type WitnessPanelInput } from "../forms/witnessPanel";
 import { describe, test } from "node:test";
 import assert from "node:assert";
 import pug from "pug";
@@ -6,6 +7,11 @@ import fs from "fs";
 import { faker } from "@faker-js/faker";
 import { getNextLevel, programMetadata } from "../programs";
 import { bonusBreakdown } from "../points";
+
+/** Template fixtures use the same preparation as route-driven rendering. */
+function withWitnessPoints(data: Record<string, unknown>) {
+  return { ...data, pointsForm: prepareWitnessPanel(data as WitnessPanelInput).pointsForm };
+}
 
 /**
  * The approval queue page's locals (#527), as `approvalQueueLocals` in
@@ -930,7 +936,8 @@ void describe("Pug Template Rendering", () => {
             },
           });
 
-          const html = compiledTemplate(templateData);
+          const html = compiledTemplate(relativePath === "admin/witnessPanel.pug" || relativePath === "admin/correctPoints.pug"
+            ? withWitnessPoints(templateData) : templateData);
 
           // Basic validation that we got valid HTML
           assert.ok(html);
@@ -1050,7 +1057,7 @@ void describe("Pug Template Rendering", () => {
     const ready = { ready: true, lines: [{ label: "Base points", amount: 10 }, { label: "CARES Species Bonus", amount: 5 }], total: 15, hint: null };
     const notReady = { ready: false, lines: [], total: 0, hint: "Is the species right? Answer above first" };
     const render = (data: Record<string, unknown>) =>
-      pug.compileFile(path.join(viewsPath, "admin/witnessPanel.pug"), { basedir: viewsPath, pretty: false })({
+      pug.compileFile(path.join(viewsPath, "admin/witnessPanel.pug"), { basedir: viewsPath, pretty: false })(withWitnessPoints({
         ...baseMockData,
         isAdmin: true,
         submission: {
@@ -1074,7 +1081,7 @@ void describe("Pug Template Rendering", () => {
         summary: notReady,
         allowed: { confirmWitness: true, bindSpecies: true, requestChanges: true },
         ...data,
-      });
+      }));
     /** Two catalogue neighbours of what the member wrote, as `suggestSpecies` shapes them for the panel. */
     const neighbours = [
       { speciesId: 8, commonName: "Butterfly Goodeid", speciesName: "Ameca splendens", speciesType: "Fish", programClass: "Livebearers", pointClass: 10 },
@@ -1624,7 +1631,7 @@ void describe("Pug Template Rendering", () => {
       });
 
       void test("the page wraps the panel and sets the search up again on every swap", () => {
-        const html = pug.compileFile(path.join(viewsPath, "admin/correctPoints.pug"), { basedir: viewsPath, pretty: false })({
+        const html = pug.compileFile(path.join(viewsPath, "admin/correctPoints.pug"), { basedir: viewsPath, pretty: false })(withWitnessPoints({
           ...baseMockData,
           title: "Correct species and points",
           submission: { id: 42, program: "fish", species_type: "Fish", species_class: "Livebearers", species_common_name: "Guppy", species_latin_name: "Poecilia reticulata", member_name: "Jane Ortiz", reproduction_date: "Sep 20, 2026", article_link: null },
@@ -1639,7 +1646,7 @@ void describe("Pug Template Rendering", () => {
           summaryButton: { id: "correction-save", label: "Save correction" },
           allowed: { correctPoints: true },
           correction: { approved: false, speciesChanged: false, current },
-        });
+        }));
         assert.match(html, /<title>Correct species and points - BAS BAP<\/title>/);
         assert.match(html, /Guppy · Jane Ortiz/);
         assert.match(html, /id="witnessPanel"/);

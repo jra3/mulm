@@ -732,6 +732,99 @@ void describe("The committee corrects Species and points", () => {
     assert.match(missing.text, /Choose a Species that exists/);
   });
 
+  // Submit the successful controls actually rendered by the form, rather
+  // than hand-constructing an ideal request that could hide template drift.
+  function correctionControls(html: string): Record<string, string> {
+    const fields: Record<string, string> = {};
+    for (const [input] of html.matchAll(/<input\b[^>]*>/g)) {
+      const name = /\bname="([^"]+)"/.exec(input)?.[1];
+      const value = /\bvalue="([^"]*)"/.exec(input)?.[1];
+      if (!name || value === undefined) continue;
+      if (/type="(?:radio|checkbox)"/.test(input) && !/\bchecked(?:[= >])/.test(input)) continue;
+      fields[name] = value;
+    }
+    return fields;
+  }
+
+  for (const approved of [false, true]) {
+    for (const target of ["fish", "plant", "coral"] as const) {
+      void test(`changing Program to ${target} ${approved ? "after" : "before"} approval clears every rendered, summed and saved bonus`, async () => {
+        const source = target === "plant" ? "fish" : "plant";
+        const originalSpecies = await createSpecies({
+          canonicalGenus: "Originalus", canonicalSpeciesName: "example",
+          speciesType: source === "plant" ? "Plant" : "Fish",
+          programClass: source === "plant" ? "Cryptocoryne" : "Livebearers", pointClass: 10,
+        });
+        const chosenSpecies = await createSpecies({
+          canonicalGenus: "Correctus", canonicalSpeciesName: "example",
+          speciesType: target === "plant" ? "Plant" : target === "coral" ? "Coral" : "Fish",
+          programClass: target === "plant" ? "Cryptocoryne" : target === "coral" ? "Soft Corals" : "Livebearers",
+          pointClass: 15, isCaresSpecies: target === "fish",
+        });
+        const id = await submissionInState(testDb.db, approved ? "approved" : "waitingPeriod", {
+          memberId: ownerId, witnessedBy: committeeId, speciesId: originalSpecies,
+          program: source, speciesType: source === "plant" ? "Plant" : "Fish",
+          points: 10, articlePoints: 10, firstTimeSpecies: approved, caresSpecies: source === "fish",
+        });
+        if (source === "plant") {
+          await testDb.db.run("UPDATE submissions SET flowered = 1, sexual_reproduction = 1 WHERE id = ?", id);
+        }
+        const before = await getSubmissionById(id);
+        const res = await request(app()).get(`/admin/submissions/${id}/correct-points`)
+          .query({ species_id: chosenSpecies }).set("HX-Request", "true");
+        assert.strictEqual(res.status, 200);
+        assert.match(res.text, /id="correction-bonuses-reset"/);
+        assert.match(res.text, /All bonuses have been cleared/);
+        assert.match(res.text, /Save correction · 15 pts/);
+        assert.strictEqual(/name="first_time_species"/.test(res.text), approved);
+        assert.strictEqual(/name="cares_species"/.test(res.text), target === "fish");
+        assert.strictEqual(/name="flowered"/.test(res.text), target === "plant");
+        assert.strictEqual(/name="sexual_reproduction"/.test(res.text), target === "plant");
+        const body = correctionControls(res.text);
+        assert.strictEqual(body.points, "15");
+        assert.strictEqual(body.article_points, "0");
+        for (const flag of ["cares_species", "flowered", "sexual_reproduction", "first_time_species"]) {
+          assert.strictEqual(body[flag], undefined, `${flag} starts unchecked`);
+        }
+        const refresh = await request(app()).post(`/admin/submissions/${id}/witness-summary`).type("form").send(body);
+        assert.match(refresh.text, /Save correction · 15 pts/);
+        assert.deepStrictEqual(await getSubmissionById(id), before, "preparation and refresh write nothing");
+        const save = await request(app()).post(`/admin/submissions/${id}/correct-points`).type("form")
+          .send({ ...body, reason: "The Species belongs to a different Program" });
+        assert.strictEqual(save.headers["hx-redirect"], `/submissions/${id}`);
+        const after = (await getSubmissionById(id))!;
+        assert.strictEqual(after.program, target);
+        assert.strictEqual(after.species_id, chosenSpecies);
+        assert.strictEqual(after.points, 15);
+        assert.ok(!after.article_points);
+        assert.strictEqual(after.cares_species, 0);
+        assert.strictEqual(after.flowered, 0);
+        assert.strictEqual(after.sexual_reproduction, 0);
+        assert.strictEqual(after.first_time_species, approved ? 0 : null);
+        assert.strictEqual(after.witnessed_on, before!.witnessed_on);
+        assert.strictEqual(after.approved_on, before!.approved_on);
+      });
+    }
+  }
+
+  void test("after a Program reset new bonus choices survive summary refresh and Save", async () => {
+    const plant = await createSpecies({
+      canonicalGenus: "Cryptocoryne", canonicalSpeciesName: "example",
+      speciesType: "Plant", programClass: "Cryptocoryne", pointClass: 15,
+    });
+    const panel = await request(app()).get(`/admin/submissions/${witnessedId}/correct-points`).query({ species_id: plant });
+    const body = { ...correctionControls(panel.text), article_points: "5", flowered: "on" };
+    const refresh = await request(app()).post(`/admin/submissions/${witnessedId}/witness-summary`).type("form").send(body);
+    assert.match(refresh.text, /Save correction · 35 pts/);
+    const saved = await request(app()).post(`/admin/submissions/${witnessedId}/correct-points`).type("form")
+      .send({ ...body, reason: "The article describes the flowering plant" });
+    assert.strictEqual(saved.headers["hx-redirect"], `/submissions/${witnessedId}`);
+    const after = (await getSubmissionById(witnessedId))!;
+    assert.strictEqual(after.article_points, 5);
+    assert.strictEqual(after.flowered, 1);
+    assert.strictEqual(after.cares_species, 0);
+  });
+
   void test("saving writes the correction with its reason and returns to the Submission; the member is emailed the new breakdown", async () => {
     const res = await request(app())
       .post(`/admin/submissions/${witnessedId}/correct-points`)
@@ -823,15 +916,16 @@ void describe("The committee corrects Species and points", () => {
     assert.strictEqual(await resolveSpecies({ latinName: "Correctus novissimus" }), null, "created only by Save");
   });
 
-  void test("the sticky bar sums first-time on the correction form and names its button", async () => {
-    const bar = await request(app())
-      .post(`/admin/submissions/${witnessedId}/witness-summary`)
-      .type("form")
-      .send({ correction: "1", species_id: "7", species_settled: "1", points: "10", first_time_species: "on" });
-
+  void test("the sticky bar sums first-time only on an Approved correction and names its button", async () => {
+    const approvedId = await submissionInState(testDb.db, "approved", { memberId: ownerId, witnessedBy: committeeId, points: 10 });
+    const fields = { correction: "1", species_settled: "1", points: "10", first_time_species: "on" };
+    const bar = await request(app()).post(`/admin/submissions/${approvedId}/witness-summary`).type("form").send(fields);
     assert.match(bar.text, /id="witness-sum-lines">Base points 10 \+ First Time Species Bonus 5</);
     assert.match(bar.text, /id="correction-save" type="submit">Save correction · 15 pts</);
     assert.doesNotMatch(bar.text, /witness-confirm/);
+    const early = await request(app()).post(`/admin/submissions/${witnessedId}/witness-summary`).type("form").send(fields);
+    assert.match(early.text, /Save correction · 10 pts/);
+    assert.doesNotMatch(early.text, /First Time Species Bonus/);
   });
 });
 

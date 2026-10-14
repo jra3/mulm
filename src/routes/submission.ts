@@ -16,6 +16,7 @@ import {
   hasSupplements,
   isLivestock,
 } from "@/forms/submission";
+import { boundSpeciesFacts, loadWitnessPanel } from "@/forms/witnessPanel";
 import { extractValid } from "@/forms/utils";
 import { getQueryString, getBodyString } from "@/utils/request";
 import { MulmRequest } from "@/sessions";
@@ -27,18 +28,13 @@ import {
 } from "@/db/submissions";
 import {
   canonicalName as canonicalNameOf,
-  checkFormAgreement,
-  countSubmissionsOfSpecies,
   findSpeciesById,
-  isSpeciesType,
-  listNames,
-  suggestSpecies,
 } from "@/species";
 import * as lifecycle from "@/lifecycle";
 import { attempt, callerFor } from "./lifecycleErrors";
-import { committeeSpeciesChoice, getNotesForSubmission, speciesRecordedByWitness, type SubmissionNote } from "@/db/submission_notes";
+import { getNotesForSubmission, speciesRecordedByWitness } from "@/db/submission_notes";
 import { formatShortDate } from "@/utils/dateFormat";
-import { pointsBreakdown, programOfSpeciesType, type PointsBreakdown, type PointsRow } from "@/points";
+import { pointsBreakdown, type PointsBreakdown, type PointsRow } from "@/points";
 import { parseVideoUrlWithOEmbed, isValidVideoUrl } from "@/utils/videoParser";
 import config from "@/config.json";
 
@@ -168,7 +164,7 @@ export const view = async (req: MulmRequest, res: Response) => {
   // would award (`previewApproval`), the same preview the queue page shows
   const witnessPanel =
     viewer && aspect.isAdmin && state === "pendingWitness"
-      ? await witnessPanelLocals(submission, viewer, { notes: adminNotes })
+      ? await loadWitnessPanel(submission, viewer.id, { mode: "witness", notes: adminNotes })
       : null;
   const speciesFacts = witnessPanel
     ? witnessPanel.speciesFacts
@@ -346,278 +342,6 @@ export const renderEdit = async (req: MulmRequest, res: Response) => {
 };
 
 /**
- * What the witness panel and the committee's queue panel show about the Species a
- * Submission is bound to: its Canonical name, a common Name, its
- * classification and the Program it belongs to (which decides the bonuses the
- * witness panel offers, since confirming adopts it), its Point class (which
- * prefills the base points), and the bonuses it implies - first time in the
- * Program for this Species, and CARES. Null when the Submission is unbound,
- * which each panel says in its own way.
- */
-export async function boundSpeciesFacts(submission: Pick<db.Submission, "species_id">) {
-  const species = submission.species_id ? await findSpeciesById(submission.species_id) : undefined;
-  if (!species) return null;
-  // First-time is program-wide: no member has had this Species approved yet
-  const [submissionsOfSpecies, names] = await Promise.all([
-    countSubmissionsOfSpecies(species.group_id),
-    listNames(species.group_id),
-  ]);
-  return {
-    speciesId: species.group_id,
-    speciesName: canonicalNameOf(species),
-    commonName: names.common[0]?.name ?? null,
-    speciesType: species.species_type,
-    programClass: species.program_class,
-    program: programOfSpeciesType(species.species_type),
-    pointClass: species.base_points,
-    isFirstTime: submissionsOfSpecies.approved === 0,
-    priorBreedCount: submissionsOfSpecies.approved,
-    isCaresSpecies: species.is_cares_species === 1,
-  };
-}
-
-/**
- * The Program a Submission belongs to by its Species type, which is what a
- * Species recorded at the Witness takes (#522); the filed Program stands in
- * for a type the Programs do not know.
- */
-export function programOfSubmission(submission: Pick<db.Submission, "species_type" | "program">): string {
-  return isSpeciesType(submission.species_type) ? programOfSpeciesType(submission.species_type) : submission.program;
-}
-
-/** A catalogue neighbour of what the member wrote, as the witness panel lists it under "Did they mean one of these?". */
-export type SpeciesSuggestionFacts = {
-  speciesId: number;
-  commonName: string | null;
-  speciesName: string;
-  speciesType: string;
-  programClass: string;
-  pointClass: number | null;
-};
-
-/**
- * A Species the witness is recording, as the panel shows it between Record
- * species and continue and the confirm: not yet in the catalogue, so these
- * are the form's values plus the Submission's type and class, which the
- * Species will take (`recordSpecies`, src/lifecycle/transitions.ts).
- */
-export type NewSpeciesFacts = {
-  scientificName: string;
-  commonName: string | null;
-  speciesType: string;
-  programClass: string;
-  program: string;
-  pointClass: number;
-  isCaresSpecies: boolean;
-};
-
-/**
- * Everything the witness panel renders from, for the Submission page and for
- * the Record new species step, which re-renders the panel with the new
- * Species settled (#522). `newSpecies` is that Species as the step validated
- * it, carried in the panel's hidden fields until the confirm creates it;
- * `notes` are the Submission's changelog, passed in when the caller already
- * has them. The notes also say who witnessed a Submission before the reset
- * migration sent it back (#524), which the header shows as `originalWitness`.
- */
-export async function witnessPanelLocals(
-  submission: db.Submission,
-  viewer: NonNullable<MulmRequest["viewer"]>,
-  options: { notes?: SubmissionNote[]; newSpecies?: lifecycle.NewSpeciesAtWitness | null } = {}
-) {
-  const state = lifecycle.deriveState(submission);
-  const notes = options.notes ?? (await getNotesForSubmission(submission.id));
-  const [speciesFacts, agreement, suggested] = await Promise.all([
-    boundSpeciesFacts(submission),
-    submission.species_id ? checkFormAgreement(submission.species_id, submission) : undefined,
-    suggestSpecies(
-      { commonName: submission.species_common_name, latinName: submission.species_latin_name },
-      { exclude: submission.species_id }
-    ),
-  ]);
-  // The committee's choice of Species that stands, and who made it: this
-  // witness, or another committee member whose bind outlived a reset (#524)
-  const choice = committeeSpeciesChoice(notes);
-  const speciesChosenByWitness = choice !== null;
-  const speciesChooser = choice ? { name: choice.admin_name, isViewer: choice.admin_id === viewer.id } : null;
-  // Who saw the fry before migration 066 reset the Witness (#524), so the
-  // re-witnesser knows no fresh sighting is needed
-  const original = lifecycle.originalWitnessFromNotes(notes);
-  const draft = options.newSpecies ?? null;
-  const newSpecies: NewSpeciesFacts | null = draft
-    ? {
-        scientificName: `${draft.canonicalGenus} ${draft.canonicalSpeciesName}`,
-        commonName: draft.commonName,
-        speciesType: submission.species_type,
-        programClass: submission.species_class,
-        program: programOfSubmission(submission),
-        pointClass: draft.pointClass,
-        isCaresSpecies: draft.isCaresSpecies,
-      }
-    : null;
-  const settledProgram = newSpecies ? newSpecies.program : speciesFacts?.program;
-
-  return {
-    speciesFacts,
-    // Whether the committee, not the member, chose the bound Species: the
-    // panel then shows it as the committee's choice, not the member's, and
-    // says whose
-    speciesChosenByWitness,
-    speciesChooser,
-    originalWitness: original ? { name: original.name, date: formatShortDate(original.date) } : null,
-    classificationMismatch: agreement ? !agreement.classificationAgrees : false,
-    // Which spellings are already Names of the Species, for the Names to add
-    spellingAgreement: agreement ? { commonName: agreement.commonName, latinName: agreement.latinName } : null,
-    suggestions: suggested.map(
-      (species): SpeciesSuggestionFacts => ({
-        speciesId: species.group_id,
-        commonName: species.common_name,
-        speciesName: canonicalNameOf(species),
-        speciesType: species.species_type,
-        programClass: species.program_class,
-        pointClass: species.base_points,
-      })
-    ),
-    newSpecies,
-    // The sticky bar, as the panel's prefill sums
-    summary: witnessSummary({
-      bound: newSpecies != null || speciesFacts != null,
-      species_settled: newSpecies != null || speciesChosenByWitness,
-      points: newSpecies ? newSpecies.pointClass : (speciesFacts?.pointClass ?? null),
-      article_points: submission.article_link ? 5 : null,
-      cares_species:
-        settledProgram === "fish" ? Boolean(newSpecies ? newSpecies.isCaresSpecies : speciesFacts?.isCaresSpecies) : false,
-      flowered: false,
-      sexual_reproduction: false,
-    }),
-    allowed: allowedMoves(viewer, submission, state),
-    changesRequested: lifecycle.hasChangesRequested(submission),
-  };
-}
-
-/**
- * What the correction form (#528) renders beyond the witness panel's locals:
- * which side of approval the Submission is on, whether the Species settled on
- * the form is a change from the bound one (chosen on the form, written only
- * by Save), and the row's current points, which prefill the Points card
- * unless the Species changed, when the new Species' Point class does.
- */
-export type CorrectionFacts = {
-  approved: boolean;
-  speciesChanged: boolean;
-  current: {
-    points: number | null;
-    article_points: number | null;
-    cares_species: boolean;
-    flowered: boolean;
-    sexual_reproduction: boolean;
-    first_time_species: boolean;
-  };
-};
-
-/**
- * Everything the correction form renders from (#528): the witness panel's
- * Species and Points cards over the row's current values, with a reason and
- * Save correction in place of Confirm witness. `speciesId` is a Species
- * chosen on the form and carried in it, not yet written, so the panel shows
- * it settled and prefills the base points from its Point class; `newSpecies`
- * is one the Record new species step validated, as for the witness panel.
- * Nothing here is legal to post for a Submission the table refuses, which
- * the route checks before rendering.
- */
-export async function correctionPanelLocals(
-  submission: db.Submission,
-  viewer: NonNullable<MulmRequest["viewer"]>,
-  options: { speciesId?: number; newSpecies?: lifecycle.NewSpeciesAtWitness | null } = {}
-) {
-  const state = lifecycle.deriveState(submission);
-  const chosenId = options.newSpecies ? null : (options.speciesId ?? submission.species_id);
-  const speciesChanged = options.newSpecies != null || (chosenId != null && chosenId !== submission.species_id);
-  const [speciesFacts, agreement, suggested] = await Promise.all([
-    boundSpeciesFacts({ species_id: chosenId }),
-    chosenId ? checkFormAgreement(chosenId, submission) : undefined,
-    suggestSpecies(
-      { commonName: submission.species_common_name, latinName: submission.species_latin_name },
-      { exclude: chosenId }
-    ),
-  ]);
-  const draft = options.newSpecies ?? null;
-  const newSpecies: NewSpeciesFacts | null = draft
-    ? {
-        scientificName: `${draft.canonicalGenus} ${draft.canonicalSpeciesName}`,
-        commonName: draft.commonName,
-        speciesType: submission.species_type,
-        programClass: submission.species_class,
-        program: programOfSubmission(submission),
-        pointClass: draft.pointClass,
-        isCaresSpecies: draft.isCaresSpecies,
-      }
-    : null;
-  const approved = submission.approved_on != null;
-  const current = {
-    points: submission.points,
-    article_points: submission.article_points || null,
-    cares_species: Boolean(submission.cares_species),
-    flowered: Boolean(submission.flowered),
-    sexual_reproduction: Boolean(submission.sexual_reproduction),
-    first_time_species: Boolean(submission.first_time_species),
-  };
-  const settledProgram = newSpecies ? newSpecies.program : speciesFacts?.program;
-  // The Points card's prefill: the row as it stands, or the new Species' Point
-  // class and CARES flag when the Species changed; the member's bonuses stay
-  const prefill = {
-    points: speciesChanged ? (newSpecies ? newSpecies.pointClass : (speciesFacts?.pointClass ?? null)) : current.points,
-    cares_species: speciesChanged
-      ? settledProgram === "fish" && Boolean(newSpecies ? newSpecies.isCaresSpecies : speciesFacts?.isCaresSpecies)
-      : current.cares_species,
-  };
-
-  return {
-    speciesFacts,
-    speciesChosenByWitness: true,
-    speciesChooser: null,
-    originalWitness: null,
-    classificationMismatch: agreement ? !agreement.classificationAgrees : false,
-    spellingAgreement: null,
-    suggestions: suggested.map(
-      (species): SpeciesSuggestionFacts => ({
-        speciesId: species.group_id,
-        commonName: species.common_name,
-        speciesName: canonicalNameOf(species),
-        speciesType: species.species_type,
-        programClass: species.program_class,
-        pointClass: species.base_points,
-      })
-    ),
-    newSpecies,
-    correction: { approved, speciesChanged, current } satisfies CorrectionFacts,
-    summary: witnessSummary({
-      bound: newSpecies != null || speciesFacts != null,
-      species_settled: true,
-      points: prefill.points,
-      article_points: current.article_points,
-      cares_species: prefill.cares_species,
-      flowered: current.flowered,
-      sexual_reproduction: current.sexual_reproduction,
-      first_time_species: approved ? current.first_time_species : false,
-    }),
-    summaryButton: CORRECTION_BUTTON,
-    allowed: allowedMoves(viewer, submission, state),
-    changesRequested: lifecycle.hasChangesRequested(submission),
-  };
-}
-
-/** The sticky bar's button on the correction form, in place of Confirm witness. */
-export const CORRECTION_BUTTON = { id: "correction-save", label: "Save correction" };
-
-/** The witness panel's sticky bar: ready to confirm, or why not yet. */
-export type WitnessSummary = PointsBreakdown & {
-  ready: boolean;
-  /** What is still missing, when not ready. */
-  hint: string | null;
-};
-
-/**
  * The points a Submission's owner is shown before they are awarded (#523):
  * itemised as the witness set them, labelled "pending approval" by the views.
  * Null for everyone and everything else: the public never sees an unapproved
@@ -633,42 +357,6 @@ export function pendingPoints(
   if (!viewer || viewer.id !== submission.member_id) return null;
   if (submission.approved_on != null || submission.points == null) return null;
   return pointsBreakdown(submission);
-}
-
-/**
- * Sum what the witness panel has set so far, over the one Points rule
- * (`pointsBreakdown`, src/points.ts), so the bar's lines add up to its
- * total. Not ready until the Species is settled and the base points
- * chosen, in that order, which is also the order the panel asks them in.
- */
-export function witnessSummary(values: {
-  bound: boolean;
-  species_settled: boolean;
-  points: number | null;
-  article_points: number | null;
-  cares_species: boolean;
-  flowered: boolean;
-  sexual_reproduction: boolean;
-  /** The correction form's switch on an Approved Submission (#528); the Witness never sets it. */
-  first_time_species?: boolean;
-}): WitnessSummary {
-  const notYet = (hint: string): WitnessSummary => ({ ready: false, lines: [], total: 0, hint });
-  if (!values.bound) return notYet("Choose the species first");
-  if (!values.species_settled) return notYet("Is the species right? Answer above first");
-  if (values.points == null) return notYet("Choose the base points");
-
-  return {
-    ready: true,
-    ...pointsBreakdown({
-      points: values.points,
-      article_points: values.article_points,
-      cares_species: values.cares_species,
-      flowered: values.flowered,
-      sexual_reproduction: values.sexual_reproduction,
-      first_time_species: values.first_time_species ?? false,
-    }),
-    hint: null,
-  };
 }
 
 /**
