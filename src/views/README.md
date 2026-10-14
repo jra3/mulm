@@ -383,5 +383,8 @@ conditional fields such as the Plant/Coral CO₂ description.
 ordinary callers retain the standard truncated title. Annual standings uses this
 slot for the year button. Its native HTML popover contains ordinary year links,
 positioned against that button by `public/js/annual-standings.js`. Keep the popup
-inside the viewport when resizing, and preserve the current program in year links.
+inside the visual viewport when resizing or pinch-zooming, close it when its
+trigger scrolls out of view, and preserve the current program in year links.
+Future-year pages include their displayed year without expanding the historical
+year range.
 The phone program selector sits above the program heading and preserves the year.

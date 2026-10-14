@@ -3,36 +3,67 @@
     "variant": "before",
     "width": 390,
     "client": 390,
-    "scroll": 401
+    "scroll": 401,
+    "page": "/species/1724",
+    "element": "document.documentElement",
+    "browser": "Headless Chromium",
+    "reference": "https://www.fishbase.se/summary/Poecilia-reticulata.html",
+    "source": "prototype/mobile-species-links-20261014@f654926:src/views/species/external-links.prototype.cjs",
+    "note": "Separate 390px headless capture; the initial T3 audit measured 433px document width at a 375px viewport. These are different browser/viewport observations of the same species page, not annual standings data."
   },
   {
     "variant": "after",
     "width": 390,
     "client": 390,
-    "scroll": 390
+    "scroll": 390,
+    "page": "/species/1724",
+    "element": "document.documentElement",
+    "browser": "Headless Chromium",
+    "reference": "https://www.fishbase.se/summary/Poecilia-reticulata.html",
+    "source": "prototype/mobile-species-links-20261014@f654926:src/views/species/external-links.prototype.cjs"
   },
   {
     "variant": "after",
     "width": 320,
     "client": 320,
-    "scroll": 320
+    "scroll": 320,
+    "page": "/species/1724",
+    "element": "document.documentElement",
+    "browser": "Headless Chromium",
+    "reference": "https://www.fishbase.se/summary/Poecilia-reticulata.html",
+    "source": "prototype/mobile-species-links-20261014@f654926:src/views/species/external-links.prototype.cjs"
   },
   {
     "variant": "after",
     "width": 375,
     "client": 375,
-    "scroll": 375
+    "scroll": 375,
+    "page": "/species/1724",
+    "element": "document.documentElement",
+    "browser": "Headless Chromium",
+    "reference": "https://www.fishbase.se/summary/Poecilia-reticulata.html",
+    "source": "prototype/mobile-species-links-20261014@f654926:src/views/species/external-links.prototype.cjs"
   },
   {
     "variant": "after",
     "width": 430,
     "client": 430,
-    "scroll": 430
+    "scroll": 430,
+    "page": "/species/1724",
+    "element": "document.documentElement",
+    "browser": "Headless Chromium",
+    "reference": "https://www.fishbase.se/summary/Poecilia-reticulata.html",
+    "source": "prototype/mobile-species-links-20261014@f654926:src/views/species/external-links.prototype.cjs"
   },
   {
     "variant": "after",
     "width": 1280,
     "client": 1280,
-    "scroll": 1280
+    "scroll": 1280,
+    "page": "/species/1724",
+    "element": "document.documentElement",
+    "browser": "Headless Chromium",
+    "reference": "https://www.fishbase.se/summary/Poecilia-reticulata.html",
+    "source": "prototype/mobile-species-links-20261014@f654926:src/views/species/external-links.prototype.cjs"
   }
 ]

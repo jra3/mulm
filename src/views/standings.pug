@@ -13,9 +13,13 @@ html
 				svg.w-4.h-4(viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true")
 					path(d="m6 9 6 6 6-6")
 
-		span.sr-only#annual-year-trigger-help Choose a standings year
+		span#annual-year-trigger-help(hidden) Choose a standings year
 
 		nav.annual-year-menu#annual-year-menu(popover="auto" aria-label="Standings year")
+			if year > maxYear
+				a(href=`/annual/${year}/${program}` aria-current="page")
+					= year
+					span(aria-hidden="true") ✓
 			- for (let choice = maxYear; choice >= minYear; choice--)
 				a(href=`/annual/${choice}/${program}` aria-current=choice === year ? "page" : undefined)
 					= choice

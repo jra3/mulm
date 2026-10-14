@@ -87,3 +87,74 @@ test("year menu supports keyboard selection and remains anchored after resize", 
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(`/annual/${year + 1}/fish`);
 });
+
+test("year menu closes when its title scrolls off a short screen", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 200 });
+  await page.goto(`/annual/${year}/fish`);
+  const trigger = page.getByRole("button", { name: String(year), exact: true });
+  const menu = page.getByRole("navigation", { name: "Standings year", exact: true });
+  await trigger.click();
+  await expect(menu).toBeVisible();
+  await page.mouse.move(8, 190);
+  await page.mouse.wheel(0, 250);
+  await expect
+    .poll(async () => {
+      const box = (await trigger.boundingBox())!;
+      return box.y + box.height;
+    })
+    .toBeLessThanOrEqual(0);
+  await expect(menu).toBeHidden();
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
+});
+
+test("year menu fits the visible viewport after pinch zoom", async ({ page, context }) => {
+  await page.setViewportSize({ width: 320, height: 732 });
+  await page.goto(`/annual/${year}/fish`);
+  const trigger = page.getByRole("button", { name: String(year), exact: true });
+  const menu = page.getByRole("navigation", { name: "Standings year", exact: true });
+  await trigger.click();
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
+  const cdp = await context.newCDPSession(page);
+  await cdp.send("Emulation.setPageScaleFactor", { pageScaleFactor: 3 });
+  await expect.poll(() => page.evaluate(() => window.visualViewport!.scale)).toBe(3);
+  await expect(menu).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const viewport = window.visualViewport!;
+        const trigger = document.getElementById("annual-year-trigger")!.getBoundingClientRect();
+        const menu = document.getElementById("annual-year-menu")!.getBoundingClientRect();
+        const right = viewport.offsetLeft + viewport.width;
+        const bottom = viewport.offsetTop + viewport.height;
+        return {
+          triggerVisible:
+            trigger.left >= viewport.offsetLeft &&
+            trigger.right <= right &&
+            trigger.top >= viewport.offsetTop &&
+            trigger.bottom <= bottom,
+          menuVisible:
+            menu.left >= viewport.offsetLeft &&
+            menu.right <= right &&
+            menu.top >= viewport.offsetTop &&
+            menu.bottom <= bottom,
+        };
+      })
+    )
+    .toEqual({ triggerVisible: true, menuVisible: true });
+  await page.keyboard.press("Escape");
+  await expect(menu).toBeHidden();
+  await expect(trigger).toBeFocused();
+});
+
+test("future-year pages include their selected year without extending the year range", async ({
+  page,
+}) => {
+  const futureYear = year + 10;
+  await page.goto(`/annual/${futureYear}/fish`);
+  await page.getByRole("button", { name: String(futureYear), exact: true }).click();
+  const menu = page.getByRole("navigation", { name: "Standings year", exact: true });
+  const selected = menu.getByRole("link", { name: String(futureYear), exact: true });
+  await expect(selected).toBeFocused();
+  await expect(selected).toHaveAttribute("aria-current", "page");
+  await expect(menu.getByRole("link")).toHaveCount(year + 1 - 2015 + 2);
+});
