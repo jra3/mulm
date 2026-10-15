@@ -142,7 +142,8 @@ export function prepareWitnessPanel(input: WitnessPanelInput) {
     newSpecies != null ||
     (speciesFacts != null && (correction != null || input.speciesChosenByWitness));
   const keepCurrent = correction != null && !correction.speciesChanged;
-  const bonusesReset = correction != null && program !== submission.program;
+  const bonusesReset =
+    correction != null && correction.speciesChanged && program !== submission.program;
   const offered = offeredBonuses(program, correction?.approved ?? false);
   const current = correction?.current;
   const values = visiblePoints(

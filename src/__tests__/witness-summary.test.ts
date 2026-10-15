@@ -72,6 +72,22 @@ void describe("Witness form preparation", () => {
     assert.strictEqual(panel.summary.total, 30);
   });
 
+  void test("opening a correction keeps saved values when the bound Species' Program disagrees with the stored one", () => {
+    const panel = prepareWitnessPanel({
+      ...input,
+      submission: { program: "fish", article_link: "https://example.com/article" },
+      speciesFacts: { program: "plant", pointClass: 15, isCaresSpecies: false },
+      correction: {
+        approved: true, speciesChanged: false,
+        current: { points: 10, article_points: 10, cares_species: false, flowered: true, sexual_reproduction: true, first_time_species: true },
+      },
+    });
+    assert.strictEqual(panel.pointsForm.bonusesReset, false);
+    assert.deepStrictEqual(panel.pointsForm.values, {
+      points: 10, article_points: 10, cares_species: false, flowered: true, sexual_reproduction: true, first_time_species: true,
+    });
+  });
+
   void test("a recorded Species supplies the same defaults as a catalogue Species", () => {
     const panel = prepareWitnessPanel({ ...input, speciesFacts: null, newSpecies: { program: "plant", pointClass: 15, isCaresSpecies: false } });
     assert.strictEqual(panel.pointsForm.settled, true);
