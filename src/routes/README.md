@@ -219,8 +219,7 @@ load the panel and render it; `witnessPanel.pug` reads the prepared `pointsForm`
 values instead of reconstructing defaults. Summary refreshes use the same bonus
 availability rule over the posted controls, so choices made after a reset stay.
 
-On the correction form, choosing a Species whose Program differs from the saved
-Submission clears all bonuses, including article, CARES and first-time, and prefills its Point class.
-The form explains the reset. Same-Program selection retains its existing defaults.
-Nothing is written until Confirm witness or Save correction; the lifecycle still
-validates and performs each write in its transaction.
+The cross-Program bonus reset on the correction form is a domain rule owned by
+[`CONTEXT.md`](../../CONTEXT.md) (Approved). Nothing is written until Confirm
+witness or Save correction; the lifecycle still validates and performs each
+write in its transaction.
