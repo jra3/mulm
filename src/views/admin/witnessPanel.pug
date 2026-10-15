@@ -403,7 +403,7 @@ mixin witnessSuggestions()
 				//- change to what it sums, the Species and Points cards. Not the
 				//- Names or the reason: a refresh swaps the button out, and a
 				//- textarea's change fires on blur, under the tap on Save.
-				.sticky.bottom-0.bg-gray-700.rounded-lg.p-3#witness-footer(
+				.sticky.bottom-0.bg-gray-700.p-3#witness-footer(
 					hx-post=`/admin/submissions/${submission.id}/witness-summary`
 					hx-trigger="change from:#witness-species, change from:#witness-points"
 					hx-include="#witness-form"
