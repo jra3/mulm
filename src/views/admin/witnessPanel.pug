@@ -19,7 +19,7 @@
 //-   species_class, species_common_name, species_latin_name, member_name,
 //-   reproduction_date formatted, article_link)
 //- @param speciesFacts - the bound Species (`boundSpeciesFacts` in
-//-   src/routes/submission.ts), or null when unbound: speciesId, speciesName,
+//-   src/forms/witnessPanel.ts), or null when unbound: speciesId, speciesName,
 //-   commonName, speciesType, programClass, program, pointClass, isFirstTime,
 //-   priorBreedCount, isCaresSpecies. Confirming gives the Submission the
 //-   Species' Program, so the bonuses offered are that Program's, not the
@@ -34,11 +34,11 @@
 //-   the Witness (#524): who saw the fry under the old flow, read off the
 //-   reset note, so the re-witnesser asks for no fresh sighting. Null otherwise.
 //- @param suggestions - the catalogue's closest Species to what the member
-//-   wrote (`SpeciesSuggestionFacts[]`): speciesId, commonName, speciesName,
+//-   wrote: speciesId, commonName, speciesName,
 //-   speciesType, programClass, pointClass. Offered under "Did they mean one
 //-   of these?" wherever the search is.
 //- @param newSpecies - the Species the witness is recording
-//-   (`NewSpeciesFacts`), or null: scientificName, commonName, speciesType,
+//-   or null: scientificName, commonName, speciesType,
 //-   programClass, program, pointClass, isCaresSpecies. Shown settled and
 //-   carried to the confirm in hidden fields; the Points card prefills from it.
 //- @param classificationMismatch - whether the Submission's Species type or
@@ -48,17 +48,15 @@
 //-   "scientific-name" or "not-a-name" for each of the member's spellings,
 //-   when bound. Only a spelling that is not a Name is offered as one to add;
 //-   the common one is offered ticked, the Latin one unticked.
-//- @param summary - the sticky bar's initial state (`witnessSummary`)
+//- @param pointsForm - prepared Program, settled status, available bonuses and values
+//- @param summary - the sticky bar's initial state, prepared from those same values
 //- @param summaryButton - the sticky bar's button, { id, label }, or unset
 //-   for Confirm witness (the correction form passes Save correction)
 //- @param allowed - the moves this viewer may make
 //- @param changesRequested - whether the committee has changes outstanding:
 //-   the ball is with the member, so the panel offers nothing
-//- @param correction - `CorrectionFacts` (src/routes/submission.ts) on the
-//-   correction form, else unset: approved, speciesChanged (the Species
-//-   settled here is not the bound one), current (the row's points,
-//-   article_points, cares_species, flowered, sexual_reproduction,
-//-   first_time_species)
+//- @param correction - approved and speciesChanged, or null for the Witness.
+//-   Saved points remain inside form preparation; render pointsForm.values.
 
 - const shortNames = { fish: "BAP", plant: "HAP", coral: "CAP" }
 - const programShort = shortNames[submission.program] || submission.program
@@ -66,19 +64,17 @@
 - const recording = Boolean(newSpecies)
 - const bound = Boolean(speciesFacts)
 //- The Program the Submission will have once confirmed: the settled Species'
-- const settledProgram = recording ? newSpecies.program : bound ? speciesFacts.program : submission.program
-- const isBap = settledProgram === "fish"
-- const isHap = settledProgram === "plant"
-- const programMoves = bound && !recording ? speciesFacts.program !== submission.program : false
-- const settled = recording || (bound ? correcting || Boolean(speciesChosenByWitness) : false)
-//- A correction keeps the row's values unless the Species changed, when the new Species' Point class and CARES flag take over
-- const keepCurrent = correcting ? !correction.speciesChanged : false
-- const prefilledPoints = keepCurrent ? correction.current.points : recording ? newSpecies.pointClass : bound ? speciesFacts.pointClass : null
-- const prefilledCares = keepCurrent ? correction.current.cares_species : recording ? newSpecies.isCaresSpecies : bound ? speciesFacts.isCaresSpecies : false
+- const settledProgram = pointsForm.program
+- const programMoves = settledProgram !== submission.program
+- const settled = pointsForm.settled
+//- All initial values and Program-change resets are prepared together.
+- const keepCurrent = pointsForm.keepCurrent
+- const prefilledPoints = pointsForm.values.points
+- const prefilledCares = pointsForm.values.cares_species
 - const caresNote = recording ? "Not yet in the catalogue" : bound ? (speciesFacts.isCaresSpecies ? "Listed in the catalogue" : "Not listed in the catalogue") : ""
-- const prefilledArticle = correcting ? (correction.current.article_points || 0) : submission.article_link ? 5 : 0
-- const prefilledFlowered = correcting ? correction.current.flowered : false
-- const prefilledSexual = correcting ? correction.current.sexual_reproduction : false
+- const prefilledArticle = pointsForm.values.article_points || 0
+- const prefilledFlowered = pointsForm.values.flowered
+- const prefilledSexual = pointsForm.values.sexual_reproduction
 - const offerCommon = spellingAgreement ? spellingAgreement.commonName === "not-a-name" : false
 - const offerLatin = spellingAgreement ? spellingAgreement.latinName === "not-a-name" : false
 //- The member's common spelling is offered ticked as a Name only of the Species the member picked (the witness answered Yes); of one the committee chose instead it is offered unticked
@@ -335,8 +331,10 @@ mixin witnessSuggestions()
 							.bg-amber-50.border.border-amber-300.rounded.p-2.mt-2.text-sm#witness-no-point-class The catalogue has no Point class for this Species. The base points you choose become its Point class.
 
 					p.mt-4.mb-1(class=eyebrow) Bonuses
+					if pointsForm.bonusesReset
+						p.text-sm.text-amber-800.bg-amber-50.rounded.p-2.mb-2#correction-bonuses-reset(role="note") The Program changed. All bonuses have been cleared. Select any that apply before saving.
 					.divide-y.divide-gray-100
-						if isBap
+						if pointsForm.offered.cares_species
 							+witnessSwitch("cares_species", "CARES species", "+5", caresNote, prefilledCares)
 						.flex.items-center.gap-3.min-h-12.py-1
 							span.flex-1.min-w-0
@@ -347,13 +345,14 @@ mixin witnessSuggestions()
 									label.cursor-pointer
 										input.peer.sr-only(type="radio" name="article_points" value=option[0] id=`witness-article-${option[0]}` checked=option[0] === prefilledArticle)
 										span(class=chip)= option[1]
-						if isHap
+						if pointsForm.offered.flowered
 							+witnessSwitch("flowered", "Flowered", "+ base points", "", prefilledFlowered)
+						if pointsForm.offered.sexual_reproduction
 							+witnessSwitch("sexual_reproduction", "Sexual reproduction", "+ base points", "", prefilledSexual)
 						//- First-time is approval's to decide; only a correction to an Approved Submission changes the answer
-						if correcting && correction.approved
-							+witnessSwitch("first_time_species", "First-time species", "+5", "Approval decided this. Change it only if it was wrong.", correction.current.first_time_species)
-					if !(correcting && correction.approved)
+						if pointsForm.offered.first_time_species
+							+witnessSwitch("first_time_species", "First-time species", "+5", "Approval decided this. Change it only if it was wrong.", pointsForm.values.first_time_species)
+					if !pointsForm.offered.first_time_species
 						if recording || (bound && speciesFacts.isFirstTime)
 							p.text-xs.text-green-700.mt-2#witness-first-time No one has had this species approved yet. A first-time +5 is added at the meeting if this one is approved first.
 						else if bound
@@ -404,7 +403,7 @@ mixin witnessSuggestions()
 				//- change to what it sums, the Species and Points cards. Not the
 				//- Names or the reason: a refresh swaps the button out, and a
 				//- textarea's change fires on blur, under the tap on Save.
-				.sticky.bottom-0.bg-gray-700.rounded-lg.p-3#witness-footer(
+				.sticky.bottom-0.bg-gray-700.p-3#witness-footer(
 					hx-post=`/admin/submissions/${submission.id}/witness-summary`
 					hx-trigger="change from:#witness-species, change from:#witness-points"
 					hx-include="#witness-form"
