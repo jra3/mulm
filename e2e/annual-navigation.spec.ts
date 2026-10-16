@@ -1,6 +1,7 @@
 import { test, expect } from "./fixtures";
+import { currentBapYear } from "../src/bapYear";
 
-const year = new Date().getFullYear() - 1;
+const year = currentBapYear() - 1;
 
 for (const width of [320, 375, 390, 400, 430, 1280]) {
   test(`annual year menu stays beside its title at ${width}px`, async ({ page }) => {
