@@ -58,9 +58,8 @@ GET    /species              - Species browser
 GET    /species/:groupId     - Species group detail
 ```
 
-Annual standings from BAP 2027 use approval dates; earlier years use spawn dates.
-The BAP year is selected automatically and
-named for its ending year; the default changes September 1 in New York time.
+Annual standings use approval dates and an automatically selected BAP year,
+named for its ending year. The default changes September 1 in New York time.
 See [the calendar policy and historical-data limitations](../../docs/program-calendar.md).
 
 ### Authentication Routes

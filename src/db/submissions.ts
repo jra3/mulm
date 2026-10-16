@@ -304,33 +304,6 @@ export function getApprovedSubmissionsInDateRange(startDate: Date, endDate: Date
 }
 
 /**
- * Years before firstApprovalYear: points approved before approvedBefore whose
- * spawn calendar date falls in [startDate, endDate).
- */
-export function getApprovedSubmissionsBySpawnDate(
-  startDate: string,
-  endDate: string,
-  approvedBefore: Date,
-  program: string
-) {
-  return query<Submission>(
-    `
-		SELECT
-			submissions.*,
-			${totalPointsSql("submissions")} as total_points,
-			members.display_name as member_name
-		FROM submissions JOIN members
-		ON submissions.member_id == members.id
-		WHERE date(reproduction_date) >= ? AND date(reproduction_date) < ?
-		AND julianday(approved_on) < julianday(?)
-		AND approved_on IS NOT NULL AND points IS NOT NULL
-		AND program = ?
-	`,
-    [startDate, endDate, approvedBefore.toISOString(), program]
-  );
-}
-
-/**
  * The rows of one queue, for one Program.
  *
  * The membership rule is not written here: `queueSql` states the half a query

@@ -20,8 +20,8 @@ and never reset at a year boundary.
 
 ## Portal convention implemented here
 
-From **BAP 2027** on, annual standings use the date of Approval (`approved_on`),
-not reproduction, submission, or witnessing. The same convention applies to BAP, HAP and CAP.
+Annual standings use the date of Approval (`approved_on`), not reproduction,
+submission, or witnessing. The same convention applies to BAP, HAP and CAP.
 A June spawn presented and approved in September counts in the new BAP year;
 a July or August spawn presented in September does too. Pending points do not
 count. Correcting a spawn date does not move already-awarded points between years.
@@ -54,20 +54,6 @@ separate July Board meeting close would require its actual date and a decision
 about late/summer approvals. The code does not invent that date, stop the committee
 from approving, or move summer approvals to September automatically.
 
-## Years before BAP 2027
-
-BAP 2026 and earlier keep the previous rule: a submission counts in the year
-whose August 1–July 31 window contains its spawn date. Only submissions approved
-before September 1, 2026 count there; anything approved from that instant on
-belongs to an approval-date year. Every submission therefore counts in exactly
-one year, and a 2026 spawn first approved in September 2026 counts in BAP 2027.
-
-The cutover is `firstApprovalYear` in `src/bapYear.ts`. Earlier years cannot use
-approval dates because most of their records were backfilled with import-time
-approval dates (69 rows spawned 2001–2020 carry June 23, 2026). Counting those by
-approval would empty BAP 2018–2024 and move them into BAP 2025 and 2026, the
-year whose awards are presented in December 2026.
-
 ## Existing records and delayed entry
 
 `approved_on` currently records when the committee clicks Approve. This convention
@@ -79,8 +65,8 @@ recover that information.
 The historical CSV importer in `src/backfill/import.ts` currently sets
 `approved_on` to the **import time**, not a historical meeting date. The script
 helper in `scripts/lib/backfill.ts` accepts an explicit approval date but defaults
-to now. Those dates must be audited against club records before moving the cutover
-earlier. They cannot be corrected reliably from
+to now. Those dates must be audited against club records before treating a
+historical recalculation as authoritative. They cannot be corrected reliably from
 reproduction dates alone. This change does not rewrite records or manufacture
 historical meeting dates, and no production data was audited in this checkout.
 Lifetime totals are unaffected by the annual reporting change.

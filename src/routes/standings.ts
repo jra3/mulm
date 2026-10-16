@@ -1,13 +1,9 @@
 import { Member, getMembersList, getAwardsForMembers } from "@/db/members";
-import {
-  getApprovedSubmissions,
-  getApprovedSubmissionsBySpawnDate,
-  getApprovedSubmissionsInDateRange,
-} from "@/db/submissions";
+import { getApprovedSubmissions, getApprovedSubmissionsInDateRange } from "@/db/submissions";
 import { programs, minYear, levelRules } from "@/programs";
 import { MulmRequest } from "@/sessions";
 import { Response } from "express";
-import { bapYearRange, currentBapYear, firstApprovalYear, legacySpawnRange } from "@/bapYear";
+import { bapYearRange, currentBapYear } from "@/bapYear";
 import { getTrophyData } from "@/utils/awards";
 
 export const annual = async (req: MulmRequest, res: Response) => {
@@ -23,21 +19,9 @@ export const annual = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const byApproval = year >= firstApprovalYear;
-  const submissions = await (() => {
-    if (byApproval) {
-      const { start, end } = bapYearRange(year);
-      return getApprovedSubmissionsInDateRange(start, end, program);
-    }
-    // Approvals from the cutover onward belong to approval-date years only.
-    const { start, end } = legacySpawnRange(year);
-    return getApprovedSubmissionsBySpawnDate(
-      start,
-      end,
-      bapYearRange(firstApprovalYear).start,
-      program
-    );
-  })();
+  const { start, end } = bapYearRange(year);
+
+  const submissions = await getApprovedSubmissionsInDateRange(start, end, program);
   const names: Record<string, string> = {};
   const trophies: Record<string, ReturnType<typeof getTrophyData>> = {};
 
@@ -82,7 +66,6 @@ export const annual = async (req: MulmRequest, res: Response) => {
     maxYear: currentBapYear(),
     minYear,
     year,
-    byApproval,
     isLoggedIn: Boolean(req.viewer),
   });
 };

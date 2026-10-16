@@ -127,25 +127,6 @@ void describe("Annual standings", () => {
     }
   });
 
-  void test("years before the cutover count backfilled approvals by spawn date, each in one year", async () => {
-    const app = createApp({ env: { NODE_ENV: "test" } });
-    // Backfilled in June 2026 with an import-time approval date.
-    await submission("2026-06-23T12:00:00Z", "2016-03-01");
-    // Spawned in the last legacy window, approved after the September rollover.
-    await submission("2026-09-10T23:00:00Z", "2026-07-31");
-    const legacy = await request(app).get("/annual/2016/fish").expect(200);
-    assert.match(legacy.text, /Annual Breeder/);
-    assert.match(legacy.text, /Spawns August 1–July 31/);
-    assert.doesNotMatch(legacy.text, /regardless of the spawn date/);
-    const counts = await Promise.all(
-      [2016, 2026, 2027].map(async (year) => {
-        const page = await request(app).get(`/annual/${year}/fish`).expect(200);
-        return page.text.includes("Annual Breeder");
-      })
-    );
-    assert.deepEqual(counts, [true, false, true]);
-  });
-
   void test("explicit historical years work and malformed years are rejected", async () => {
     const app = createApp({ env: { NODE_ENV: "test" } });
     await request(app).get("/annual?year=2020").expect(302).expect("Location", "/annual/2020");
