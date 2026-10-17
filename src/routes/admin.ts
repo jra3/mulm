@@ -20,13 +20,10 @@ import { approveForm } from "@/forms/approve";
 import { editApprovedDetailsForm } from "@/forms/editApprovedDetails";
 import { bindSpeciesForm } from "@/forms/bindSpecies";
 import {
-  chosenSpeciesForm,
-  confirmWitnessSchema,
   recordSpeciesDraftForm,
   recordSpeciesForm,
-  witnessSummaryForm,
 } from "@/forms/confirmWitness";
-import { correctPointsSchema } from "@/forms/correctPoints";
+import { loadWitnessPanel, parsePointsCorrection, parseWitnessConfirmation, programOfSubmission, summarizeWitnessForm } from "@/forms/witnessPanel";
 import { z } from "zod";
 import { inviteSchema } from "@/forms/member";
 import { sendInviteEmail } from "@/notifications";
@@ -36,14 +33,7 @@ import { Response, NextFunction } from "express";
 import { createAuthCode } from "@/db/auth";
 import { AuthCode, generateRandomCode } from "@/auth";
 import { validateFormResult } from "@/forms/utils";
-import {
-  CORRECTION_BUTTON,
-  correctionPanelLocals,
-  programOfSubmission,
-  validateSubmission,
-  witnessPanelLocals,
-  witnessSummary,
-} from "./submission";
+import { allowedMoves, validateSubmission } from "./submission";
 import {
   isLivestock,
   foodTypes,
@@ -62,7 +52,6 @@ import {
   listNames,
 } from "@/species";
 import { findSubmissionsWithRecordedSpecies } from "@/db/submission_notes";
-import { programOfSpeciesType } from "@/points";
 import { formatShortDate } from "@/utils/dateFormat";
 import { getBodyString } from "@/utils/request";
 import { checkAllMemberLevels } from "@/levelManager";
@@ -499,20 +488,6 @@ function sendWitnessPanelRefusal(res: Response, messages: string[]): void {
 }
 
 /**
- * The Program a Submission has once the Witness is confirmed: its chosen
- * Species' Program, since the confirm adopts it. When the form names no
- * Species that exists, the witness is recording one, which takes the
- * Submission's type, so the Submission's own Program stands; the schema
- * refuses a species_id that is wrong anyway.
- */
-async function programAfterConfirm(body: unknown, submission: Pick<Submission, "program" | "species_type">): Promise<string> {
-  const chosen = chosenSpeciesForm.safeParse(body);
-  const species =
-    chosen.success && chosen.data.species_id !== undefined ? await findSpeciesById(chosen.data.species_id) : undefined;
-  return species ? programOfSpeciesType(species.species_type) : programOfSubmission(submission);
-}
-
-/**
  * POST /admin/submissions/:id/confirm-witness
  * The witness panel's confirm: the Species the witness settled on, the base
  * points and bonuses, and which spellings become Names, validated against
@@ -526,7 +501,7 @@ export const confirmWitnessAction = async (req: MulmRequest, res: Response) => {
   }
 
   const body: unknown = req.body ?? {};
-  const parsed = confirmWitnessSchema(await programAfterConfirm(body, submission)).safeParse(body);
+  const parsed = await parseWitnessConfirmation(body, submission);
   if (!parsed.success) {
     sendWitnessPanelRefusal(res, parsed.error.issues.map((issue) => issue.message));
     return;
@@ -666,13 +641,13 @@ export const recordSpeciesAction = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const panel = correction
-    ? await correctionPanelLocals(submission, req.viewer!, { newSpecies: parsed.data })
-    : await witnessPanelLocals(submission, req.viewer!, { newSpecies: parsed.data });
+  const panel = await loadWitnessPanel(submission, req.viewer!.id, { mode: correction ? "correction" : "witness", newSpecies: parsed.data });
   res.set("HX-Retarget", "#witnessPanel").set("HX-Reswap", "outerHTML");
   res.render("admin/witnessPanel", {
     submission: { ...submission, reproduction_date: formatShortDate(submission.reproduction_date) },
     ...panel,
+    allowed: allowedMoves(req.viewer, submission, lifecycle.deriveState(submission)),
+    changesRequested: lifecycle.hasChangesRequested(submission),
   });
 };
 
@@ -687,18 +662,13 @@ export const witnessSummaryAction = async (req: MulmRequest, res: Response) => {
     return;
   }
 
-  const parsed = witnessSummaryForm.safeParse(req.body ?? {});
+  const parsed = await summarizeWitnessForm(req.body ?? {}, submission);
   if (!parsed.success) {
     res.status(400).send(parsed.error.issues.map((issue) => issue.message).join("; "));
     return;
   }
 
-  const { species_id, new_scientific_name: recording, correction, ...values } = parsed.data;
-  res.render("admin/witnessSummary", {
-    // A Species being recorded counts as chosen, as does one bound or picked
-    summary: witnessSummary({ ...values, bound: recording || (species_id ?? submission.species_id) != null }),
-    summaryButton: correction ? CORRECTION_BUTTON : null,
-  });
+  res.render("admin/witnessSummary", parsed.data);
 };
 
 /** The correction form's query: a Species chosen on the form, as the picker (`group_id`) or a suggestion (`species_id`) names it. */
@@ -752,11 +722,13 @@ export const correctPointsFormAction = async (req: MulmRequest, res: Response) =
     return;
   }
 
-  const panel = await correctionPanelLocals(submission, req.viewer!, { speciesId });
+  const panel = await loadWitnessPanel(submission, req.viewer!.id, { mode: "correction", speciesId });
   const locals = {
     title: "Correct species and points",
     submission: { ...submission, reproduction_date: formatShortDate(submission.reproduction_date) },
     ...panel,
+    allowed: allowedMoves(req.viewer, submission, lifecycle.deriveState(submission)),
+    changesRequested: lifecycle.hasChangesRequested(submission),
   };
   if (req.get("HX-Request") === "true") {
     res.render("admin/witnessPanel", locals);
@@ -780,8 +752,7 @@ export const correctPointsAction = async (req: MulmRequest, res: Response) => {
   }
 
   const body: unknown = req.body ?? {};
-  const approved = submission.approved_on != null;
-  const parsed = correctPointsSchema(await programAfterConfirm(body, submission), { approved }).safeParse(body);
+  const parsed = await parsePointsCorrection(body, submission);
   if (!parsed.success) {
     sendWitnessPanelRefusal(res, parsed.error.issues.map((issue) => issue.message));
     return;

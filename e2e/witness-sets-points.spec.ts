@@ -30,7 +30,7 @@ function uniqueEpithet(): string {
  * win. The e2e seed's Species are shared with the other specs, which approve
  * some of them.
  */
-async function createFreshSpecies(pointClass: number | null): Promise<{ id: number; latin: string; common: string }> {
+async function createFreshSpecies(pointClass: number | null, speciesType: "Fish" | "Plant" = "Fish"): Promise<{ id: number; latin: string; common: string }> {
 	const epithet = uniqueEpithet();
 	const latin = `Poecilia ${epithet}`;
 	const common = `Witness Molly ${epithet}`;
@@ -38,8 +38,10 @@ async function createFreshSpecies(pointClass: number | null): Promise<{ id: numb
 	try {
 		const result = await db.run(
 			`INSERT INTO species_name_group (canonical_genus, canonical_species_name, program_class, species_type, base_points)
-			 VALUES ('Poecilia', ?, 'Livebearers', 'Fish', ?)`,
+			 VALUES ('Poecilia', ?, ?, ?, ?)`,
 			epithet,
+			speciesType === "Plant" ? "Cryptocoryne" : "Livebearers",
+			speciesType,
 			pointClass
 		);
 		const id = result.lastID as number;
@@ -489,6 +491,60 @@ test.describe("Correcting the Species and points", () => {
 		expect(approved.approved_on).toBeTruthy();
 		expect(approved.points).toBe(20);
 		expect(approved.first_time_species).toBe(1);
+	});
+
+	test("changing Programs resets every bonus, then fresh choices agree with the total and Save", async ({ page }) => {
+		const { memberId, adminId } = await memberIds();
+		const original = await createFreshSpecies(10);
+		const plant = await createFreshSpecies(15, "Plant");
+		const submissionId = await createTestSubmission({
+			memberId, submitted: true, witnessed: true, witnessedBy: adminId,
+			witnessedDaysAgo: 70, approved: true, approvedBy: adminId, bound: true,
+			speciesLatinName: original.latin, speciesCommonName: original.common,
+		});
+		const db = await getTestDatabase();
+		try {
+			await db.run("UPDATE submissions SET article_points = 10, cares_species = 1, first_time_species = 1 WHERE id = ?", submissionId);
+		} finally {
+			await db.close();
+		}
+		await login(page, TEST_ADMIN);
+		await page.goto(`/admin/submissions/${submissionId}/correct-points`);
+		await expect(page.locator("#correction-save")).toHaveText("Save correction · 30 pts");
+		await page.locator('label[for="witness-species-no"]').click();
+		await fillTomSelectTypeahead(page, "group_id", plant.latin, false, false);
+		await page.locator("#witness-species-use").click();
+		await expect(page.locator("#witness-bound-species")).toHaveText(plant.latin);
+		await expect(page.locator("#correction-bonuses-reset")).toContainText("All bonuses have been cleared");
+		await expect(page.locator("#witness-points-15")).toBeChecked();
+		await expect(page.locator("#witness-article-0")).toBeChecked();
+		await expect(page.locator('input[name="cares_species"]')).toHaveCount(0);
+		for (const name of ["flowered", "sexual_reproduction", "first_time_species"]) {
+			await expect(page.locator(`input[name="${name}"]`)).not.toBeChecked();
+		}
+		await expect(page.locator("#correction-save")).toHaveText("Save correction · 15 pts");
+		const unchanged = await readSubmission(submissionId);
+		expect(unchanged.species_id).toBe(original.id);
+		expect(unchanged.article_points).toBe(10);
+
+		// The reset is an initial default, not a rule that erases new choices.
+		await page.locator("label:has(#witness-article-5)").click();
+		await expect(page.locator("#correction-save")).toHaveText("Save correction · 20 pts");
+		await page.locator('label:has(input[name="flowered"])').click();
+		await expect(page.locator("#correction-save")).toHaveText("Save correction · 35 pts");
+		await page.locator("#correction-reason").fill("Corrected to the flowering plant described in the article");
+		await page.locator("#correction-save").click();
+		await page.waitForURL(new RegExp(`/submissions/${submissionId}$`));
+		const saved = await readSubmission(submissionId);
+		expect(saved.program).toBe("plant");
+		expect(saved.points).toBe(15);
+		expect(saved.article_points).toBe(5);
+		expect(saved.flowered).toBe(1);
+		expect(saved.sexual_reproduction).toBe(0);
+		expect(saved.cares_species).toBe(0);
+		expect(saved.first_time_species).toBe(0);
+		expect(saved.witnessed_by).toBe(adminId);
+		expect(saved.approved_on).toBeTruthy();
 	});
 
 	test("a correction after approval may change first-time, and the Edit Approved dialog has no points", async ({ page }) => {

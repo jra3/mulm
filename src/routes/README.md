@@ -214,3 +214,16 @@ HTMX handlers render the relevant Pug fragment directly (for example `account/se
 The production stack in `app.ts` includes cookie/body parsing, `sessionMiddleware` from `sessions.ts`, origin validation, session-token CSRF validation and route-specific rate limiters. Apple’s cross-site `POST /oauth/apple` callback is registered before the origin/CSRF middleware and validates the OAuth state cookie in its authentication handler. Google uses `GET /oauth/google`. See `middleware/originValidation.ts`, `middleware/csrfValidation.ts` and `middleware/rateLimiter.ts`.
 
 Upload handling is configured in [`api/upload.ts`](api/upload.ts). Development/test routes are guarded in `app.ts`; they are not available in production.
+
+## Witness and correction form preparation
+
+[`forms/witnessPanel.ts`](../forms/witnessPanel.ts) owns the Species facts, initial values, available bonus
+controls and matching total for both the Witness and correction forms. Routes
+load the panel and render it; `witnessPanel.pug` reads the prepared `pointsForm`
+values instead of reconstructing defaults. Summary refreshes use the same bonus
+availability rule over the posted controls, so choices made after a reset stay.
+
+The cross-Program bonus reset on the correction form is a domain rule owned by
+[`CONTEXT.md`](../../CONTEXT.md) (Approved). Nothing is written until Confirm
+witness or Save correction; the lifecycle still validates and performs each
+write in its transaction.
