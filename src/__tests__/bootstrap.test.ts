@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { createServer } from "node:http";
 import request from "supertest";
 import { bootstrap, type BootstrapEffects, type StartupService } from "../bootstrap";
+import { resolveMcpToken } from "../mcp/auth";
 
 function fakeEffects(events: string[], fail?: string): BootstrapEffects {
   const service = (name: string): StartupService => ({
@@ -21,7 +22,7 @@ function fakeEffects(events: string[], fail?: string): BootstrapEffects {
     jobs: [service("job1"), service("job2")],
   };
 }
-for (const failure of ["database", "storage", "mcp", "job2"]) {
+for (const failure of ["database", "storage", "job2"]) {
   void test(`startup failure in ${failure} cleans up acquired resources`, async () => {
     const events: string[] = [];
     await assert.rejects(
@@ -67,6 +68,47 @@ for (const env of [
     assert.equal(runtime.server.listening, false);
   });
 }
+void test("an MCP startup failure leaves the portal serving, with MCP unwound once", async () => {
+  const events: string[] = [];
+  const runtime = await bootstrap({
+    env: { NODE_ENV: "production", STAGING: "1" },
+    port: 0,
+    host: "127.0.0.1",
+    effects: fakeEffects(events, "mcp"),
+  });
+  try {
+    await request(runtime.server).get("/health").expect(200);
+    assert.deepEqual(events, ["start:database", "start:storage", "start:mcp", "stop:mcp"]);
+  } finally {
+    await runtime.stop();
+  }
+  assert.deepEqual(events, [
+    "start:database",
+    "start:storage",
+    "start:mcp",
+    "stop:mcp",
+    "stop:storage",
+    "stop:database",
+  ]);
+});
+
+void test("an MCP server bound off loopback with no token does not start, and the portal still does", async () => {
+  const events: string[] = [];
+  const effects = fakeEffects(events);
+  // The staging crash (2026-10-17): mcp.enabled on 0.0.0.0, no mcp.token
+  effects.mcp.start = () => {
+    events.push("start:mcp");
+    resolveMcpToken("0.0.0.0", undefined);
+  };
+  const runtime = await bootstrap({ env: { NODE_ENV: "test" }, port: 0, host: "127.0.0.1", effects });
+  try {
+    await request(runtime.server).get("/health").expect(200);
+    assert.deepEqual(events.slice(2), ["start:mcp", "stop:mcp"]);
+  } finally {
+    await runtime.stop();
+  }
+});
+
 void test("HTTP bind failure rejects and unwinds services", async () => {
   const busy = createServer();
   await new Promise<void>((resolve) => busy.listen(0, "127.0.0.1", resolve));
