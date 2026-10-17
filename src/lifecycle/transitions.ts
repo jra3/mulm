@@ -11,7 +11,7 @@ import {
 import { getMember, MemberRecord } from "@/db/members";
 import { addNote, getNotesForSubmission, speciesChosenByCommittee, type MemberSaveVoided } from "@/db/submission_notes";
 import { recordActivity } from "@/db/activity";
-import type { FormValues } from "@/forms/submission";
+import { hasSupplements, type FormValues } from "@/forms/submission";
 import type { Program } from "@/levelManager";
 import { isProgramType, type ProgramType } from "@/programs";
 import {
@@ -291,13 +291,15 @@ async function recordMemberSave(submissionId: number, caller: Caller, voided: Me
 
 /**
  * Put a committee change on the Submission's changelog: the structured
- * `admin_edit` note the review page renders as field, old and new.
+ * `admin_edit` note the review page renders as field, old and new. Pass the
+ * transaction's connection to commit the entry with the change it records.
  */
 async function recordAdminEdit(
   submissionId: number,
   caller: Caller,
   changes: Change[],
-  reason: string
+  reason: string,
+  db?: Database
 ): Promise<void> {
   await addNote(
     submissionId,
@@ -308,12 +310,22 @@ async function recordAdminEdit(
       reason,
       timestamp: new Date().toISOString(),
       admin_id: caller.id,
-    })
+    }),
+    db
   );
 }
 
-/** The supplements a form carries, as the normalized table wants them. */
-export function supplementsFromForm(form: FormValues): { type: string; regimen: string }[] {
+/** One normalized supplement row: what was dosed, and how. */
+export type Supplement = { type: string; regimen: string };
+
+/**
+ * The supplements a form carries, as the normalized table wants them: the
+ * `supplement_type[]` and `supplement_regimen[]` inputs paired by position,
+ * a row with both blank dropped.
+ */
+export function supplementsFromForm(
+  form: Pick<FormValues, "supplement_type" | "supplement_regimen">
+): Supplement[] {
   const types = form.supplement_type;
   const regimens = form.supplement_regimen;
   if (!Array.isArray(types) || !Array.isArray(regimens)) {
@@ -1295,13 +1307,29 @@ export type ApprovedDetails = Partial<Pick<Submission, (typeof DETAIL_FIELDS)[nu
  * The Witness is left alone (see `voidWitness`): the committee is amending
  * the record, not the member re-filing.
  *
+ * `supplements` (#158) is the Plant or Coral Submission's whole list of
+ * normalized supplement rows, in order, replacing what is stored. Left
+ * undefined, the rows are not touched: an edit that never showed them (a
+ * Fish Submission's dialog, a stale tab) cannot erase them. An empty list
+ * clears them. A list on a Species type that takes no supplements refuses
+ * the whole edit, as a Species or points field does: the caller proposed
+ * a change this Submission cannot carry, and dropping it quietly would
+ * report a save that did not happen. A supplements-only edit is an edit;
+ * it goes on the changelog as one `supplements` change whose old and new
+ * are the lists of `{ type, regimen }`.
+ *
+ * The details, the supplement rows and the changelog entry commit in one
+ * transaction: a failure anywhere leaves all three as they were, so a
+ * retry records the edit once.
+ *
  * Returns the fields that changed, which is also what the changelog records.
  */
 export async function editApprovedDetails(
   caller: Caller,
   submissionId: number,
   details: ApprovedDetails,
-  reason: string
+  reason: string,
+  supplements?: Supplement[]
 ): Promise<Change[]> {
   const trimmed = reason.trim();
   if (!trimmed) {
@@ -1317,9 +1345,18 @@ export async function editApprovedDetails(
       );
     }
   }
+  // The same rule as the form: a row with both halves blank is no row.
+  const proposedSupplements = supplements?.filter((row) => row.type || row.regimen);
 
   const changes = await withTransaction(async (db) => {
-    await guard(db, moves.editApprovedDetails, caller, submissionId);
+    const { submission } = await guard(db, moves.editApprovedDetails, caller, submissionId);
+    if (proposedSupplements !== undefined && !hasSupplements(submission.species_type)) {
+      throw new ValidationError(
+        `A ${submission.species_type} Submission takes no supplements`,
+        "supplements",
+        supplements
+      );
+    }
 
     // The full row, not just the guard's columns: the changelog diffs against
     // what is actually stored.
@@ -1329,26 +1366,52 @@ export async function editApprovedDetails(
     const before = rows[0];
 
     const diff = changesBetween(before, details);
+
+    let supplementsChanged = false;
+    if (proposedSupplements !== undefined) {
+      const current = await readSupplements(db, submissionId);
+      if (JSON.stringify(current) !== JSON.stringify(proposedSupplements)) {
+        supplementsChanged = true;
+        diff.push({ field: "supplements", old: current, new: proposedSupplements });
+      }
+    }
+
     if (diff.length === 0) {
       throw new ValidationError("No changes detected", "details", details);
     }
 
     const entries = Object.entries(details).filter(([, value]) => value !== undefined);
-    const setClause = entries.map(([field]) => `${field} = ?`).join(", ");
-    await runUpdate(
-      db,
-      `UPDATE submissions SET ${setClause} WHERE id = ? AND approved_on IS NOT NULL`,
-      [...entries.map(([, value]) => value), submissionId],
-      moves.editApprovedDetails
-    );
+    if (entries.length > 0) {
+      const setClause = entries.map(([field]) => `${field} = ?`).join(", ");
+      await runUpdate(
+        db,
+        `UPDATE submissions SET ${setClause} WHERE id = ? AND approved_on IS NOT NULL`,
+        [...entries.map(([, value]) => value), submissionId],
+        moves.editApprovedDetails
+      );
+    }
+    if (supplementsChanged && proposedSupplements !== undefined) {
+      await setSubmissionSupplements(submissionId, proposedSupplements, db);
+    }
 
+    await recordAdminEdit(submissionId, caller, diff, trimmed, db);
     return diff;
   });
 
-  await recordAdminEdit(submissionId, caller, changes, trimmed);
-
   logger.info("Approved submission details edited", { submissionId, by: caller.id, changes });
   return changes;
+}
+
+/** A Submission's supplement rows in order, read on the transaction's connection. */
+async function readSupplements(db: Database, submissionId: number): Promise<Supplement[]> {
+  const stmt = await db.prepare(
+    `SELECT supplement_type, supplement_regimen FROM submission_supplements
+       WHERE submission_id = ? ORDER BY display_order, id`
+  );
+  const rows: { supplement_type: string | null; supplement_regimen: string | null }[] =
+    await stmt.all(submissionId);
+  await stmt.finalize();
+  return rows.map((row) => ({ type: row.supplement_type ?? "", regimen: row.supplement_regimen ?? "" }));
 }
 
 /**

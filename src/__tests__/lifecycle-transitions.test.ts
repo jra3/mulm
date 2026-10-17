@@ -32,6 +32,7 @@ import {
   type SubmissionState,
 } from "@/lifecycle";
 import { query } from "@/db/conn";
+import { setSubmissionSupplements } from "@/db/submissions";
 import { addName, checkFormAgreement, createSpecies, findSpeciesById, listNames, resolveSpecies } from "@/species";
 import { addNote, findSubmissionsWithRecordedSpecies, getNotesForSubmission, speciesChosenByCommittee } from "@/db/submission_notes";
 import {
@@ -2271,6 +2272,188 @@ void describe("Submission lifecycle - transitions", () => {
       const after = (await readSubmission(id))!;
       assert.strictEqual(after.reproduction_date, "2024-03-01T00:00:00.000Z");
       assert.strictEqual(deriveState(after), "approved", "the clock has no say once approved");
+    });
+
+    // -----------------------------------------------------------------------
+    // Supplements (#158)
+    // -----------------------------------------------------------------------
+
+    const plant = () =>
+      submissionInState(ctx.db, "approved", {
+        memberId: ctx.member.id,
+        witnessedBy: ctx.admin.id,
+        speciesType: "Plant",
+        speciesClass: "Stem Plants",
+        program: "plant",
+      });
+    const rowsOf = async (id: number) =>
+      (
+        await query<{ supplement_type: string; supplement_regimen: string; display_order: number }>(
+          `SELECT supplement_type, supplement_regimen, display_order FROM submission_supplements
+             WHERE submission_id = ? ORDER BY display_order`,
+          [id]
+        )
+      ).map((row) => ({ type: row.supplement_type, regimen: row.supplement_regimen, order: row.display_order }));
+    const seeded = [
+      { type: "Root Tabs", regimen: "One per month" },
+      { type: "Liquid Fertilizer", regimen: "5 ml weekly" },
+    ];
+
+    void test("supplements are added, changed and removed as one list, with one changelog entry", async () => {
+      const id = await plant();
+      await setSubmissionSupplements(id, seeded);
+
+      const changes = await editApprovedDetails(
+        committee,
+        id,
+        { tank_size: "40 gallon" },
+        "Paper form lists a dosing pump",
+        [
+          { type: "Root Tabs", regimen: "Two per month" },
+          { type: "Dosing Pump", regimen: "Daily" },
+        ]
+      );
+
+      assert.deepStrictEqual(changes, [
+        { field: "tank_size", old: null, new: "40 gallon" },
+        {
+          field: "supplements",
+          old: seeded,
+          new: [
+            { type: "Root Tabs", regimen: "Two per month" },
+            { type: "Dosing Pump", regimen: "Daily" },
+          ],
+        },
+      ]);
+      assert.deepStrictEqual(await rowsOf(id), [
+        { type: "Root Tabs", regimen: "Two per month", order: 0 },
+        { type: "Dosing Pump", regimen: "Daily", order: 1 },
+      ]);
+      const notes = await changelog(id);
+      assert.strictEqual(notes.length, 1);
+      const note = JSON.parse(notes[0].note_text) as { reason: string; changes: Change[] };
+      assert.strictEqual(note.reason, "Paper form lists a dosing pump");
+      assert.deepStrictEqual(note.changes, changes);
+    });
+
+    void test("a supplements-only edit is an edit; posting the same list again is not", async () => {
+      const id = await plant();
+      const before = (await readSubmission(id))!;
+
+      const changes = await editApprovedDetails(committee, id, {}, "Member forgot the root tabs", [
+        { type: "Root Tabs", regimen: "One per month" },
+        { type: "", regimen: "" },
+      ]);
+
+      assert.deepStrictEqual(changes, [
+        { field: "supplements", old: [], new: [{ type: "Root Tabs", regimen: "One per month" }] },
+      ]);
+      assert.deepStrictEqual(await rowsOf(id), [{ type: "Root Tabs", regimen: "One per month", order: 0 }]);
+
+      assert.strictEqual(
+        await refusal(() =>
+          editApprovedDetails(committee, id, {}, "Same again", [{ type: "Root Tabs", regimen: "One per month" }])
+        ),
+        "validation"
+      );
+
+      const after = (await readSubmission(id))!;
+      assert.strictEqual(deriveState(after), "approved");
+      assert.strictEqual(after.points, before.points);
+      assert.strictEqual(after.species_id, before.species_id);
+      assert.strictEqual(after.witnessed_by, before.witnessed_by);
+      assert.strictEqual(after.approved_on, before.approved_on);
+      assert.strictEqual((await changelog(id)).length, 1);
+    });
+
+    void test("an empty list clears the supplements; no list at all leaves them", async () => {
+      const id = await plant();
+      await setSubmissionSupplements(id, seeded);
+
+      await editApprovedDetails(committee, id, { tank_size: "40 gallon" }, "Tank size only");
+      assert.deepStrictEqual(
+        (await rowsOf(id)).map(({ type, regimen }) => ({ type, regimen })),
+        seeded,
+        "an edit that does not carry supplements leaves them"
+      );
+
+      const changes = await editApprovedDetails(committee, id, {}, "Member used no supplements", []);
+      assert.deepStrictEqual(changes, [{ field: "supplements", old: seeded, new: [] }]);
+      assert.deepStrictEqual(await rowsOf(id), []);
+      assert.strictEqual((await changelog(id)).length, 2);
+    });
+
+    void test("a Species type without supplements refuses them, writing nothing", async () => {
+      const id = await at("approved");
+      const before = (await readSubmission(id))!;
+
+      await assert.rejects(
+        () => editApprovedDetails(committee, id, { tank_size: "20 gallon" }, "Fish do not dose", [{ type: "Root Tabs", regimen: "x" }]),
+        (err: unknown) => err instanceof ValidationError && /takes no supplements/.test(err.message)
+      );
+      assert.strictEqual((await readSubmission(id))!.tank_size, before.tank_size);
+      assert.deepStrictEqual(await rowsOf(id), []);
+      assert.deepStrictEqual(await changelog(id), []);
+    });
+
+    void test("supplements need the committee, never the submitter, and still refuse Species and points fields", async () => {
+      const id = await plant();
+      await setSubmissionSupplements(id, seeded);
+      const next = [{ type: "Dosing Pump", regimen: "Daily" }];
+
+      assert.strictEqual(await refusal(() => editApprovedDetails(member, id, {}, "Mine", next)), "authorization");
+      assert.strictEqual(await refusal(() => editApprovedDetails(otherMember, id, {}, "Theirs", next)), "authorization");
+      const own = await submissionInState(ctx.db, "approved", {
+        memberId: ctx.admin.id,
+        witnessedBy: ctx.otherAdmin!.id,
+        speciesType: "Plant",
+        program: "plant",
+      });
+      assert.strictEqual(await refusal(() => editApprovedDetails(committee, own, {}, "My own", next)), "authorization");
+
+      const smuggled: ApprovedDetails & Record<string, unknown> = { points: 20 };
+      await assert.rejects(
+        () => editApprovedDetails(committee, id, smuggled, "Trying it on", next),
+        (err: unknown) => err instanceof ValidationError && /correction form/.test(err.message)
+      );
+
+      assert.deepStrictEqual((await rowsOf(id)).map(({ type, regimen }) => ({ type, regimen })), seeded);
+      assert.deepStrictEqual(await changelog(id), []);
+      assert.deepStrictEqual(await changelog(own), []);
+    });
+
+    void test("details, supplements and the changelog entry commit together: a failure leaves all three, a retry records one edit", async () => {
+      const id = await plant();
+      await setSubmissionSupplements(id, seeded);
+      const before = (await readSubmission(id))!;
+      const next = [{ type: "Dosing Pump", regimen: "Daily" }];
+      const edit = () => editApprovedDetails(committee, id, { tank_size: "40 gallon" }, "Paper form", next);
+      const unchanged = async () => {
+        assert.strictEqual((await readSubmission(id))!.tank_size, before.tank_size);
+        assert.deepStrictEqual((await rowsOf(id)).map(({ type, regimen }) => ({ type, regimen })), seeded);
+        assert.deepStrictEqual(await changelog(id), []);
+      };
+
+      // The changelog entry is the last write: failing it must undo the rest
+      await ctx.db.exec(
+        `CREATE TRIGGER fail_note BEFORE INSERT ON submission_notes BEGIN SELECT RAISE(ABORT, 'note refused'); END`
+      );
+      await assert.rejects(edit);
+      await ctx.db.exec("DROP TRIGGER fail_note");
+      await unchanged();
+
+      // The supplement insert fails after the details were written and the old rows deleted
+      await ctx.db.exec(
+        `CREATE TRIGGER fail_supplement BEFORE INSERT ON submission_supplements BEGIN SELECT RAISE(ABORT, 'row refused'); END`
+      );
+      await assert.rejects(edit);
+      await ctx.db.exec("DROP TRIGGER fail_supplement");
+      await unchanged();
+
+      await edit();
+      assert.strictEqual((await readSubmission(id))!.tank_size, "40 gallon");
+      assert.deepStrictEqual((await rowsOf(id)).map(({ type, regimen }) => ({ type, regimen })), next);
+      assert.strictEqual((await changelog(id)).length, 1, "the retry is the one committed edit");
     });
   });
 

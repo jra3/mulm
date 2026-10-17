@@ -1,3 +1,5 @@
+include ../bapForm/supplementLine.pug
+
 form.bg-white.w-full.overflow-y-auto(
 	class="max-h-dvh sm:max-h-[90vh] sm:rounded-lg"
 	hx-post=`/admin/submissions/${submission.id}/edit-approved`
@@ -280,6 +282,30 @@ form.bg-white.w-full.overflow-y-auto(
 							name="co2_description"
 							value=submission.co2_description || ""
 						)
+
+					//- The normalized supplement rows (#158), edited as the Member
+					//- form edits them. `supplements_present` tells the save this
+					//- section was shown: with every row removed the inputs post
+					//- nothing, and the marker is what makes that "clear them all"
+					//- rather than "not edited" (src/forms/editApprovedDetails.ts).
+					.form-group(class="md:col-span-2")
+						input(type="hidden" name="supplements_present" value="1")
+						span.input-label Supplements
+						div.w-full.flex-col#edit-approved-supplements
+							if supplements && supplements.length
+								each supplement in supplements
+									+supplementLine(supplement.type, supplement.regimen)
+							else
+								+supplementLine("", "")
+						div
+							button.outline(
+								type="button"
+								hx-get="/submissions/new/addSupplement"
+								hx-swap="beforeend"
+								hx-target="#edit-approved-supplements"
+								aria-label="Add another supplement"
+								title="Add another supplement"
+							) Add +
 
 		// Required Reason (visible on all tabs)
 		.mt-6.p-4.bg-yellow-50.border.border-yellow-300.rounded
