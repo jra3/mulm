@@ -161,6 +161,15 @@ input[type="date"].text-input::-webkit-date-and-time-value {
 	@apply bg-gray-300;
 }
 
+/* A value on a read-only report: looks like a disabled input, but wraps */
+.report-value {
+	@apply border-2 border-gray-300 bg-gray-300 w-full min-w-0 px-3 py-1 text-base rounded-lg min-h-9 whitespace-pre-wrap break-words;
+}
+
+.report-value.unset {
+	@apply italic text-gray-600;
+}
+
 .text-input.error {
 	@apply border-red-500;
 }

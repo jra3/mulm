@@ -34,6 +34,7 @@ import * as lifecycle from "@/lifecycle";
 import { attempt, callerFor } from "./lifecycleErrors";
 import { getNotesForSubmission, speciesRecordedByWitness } from "@/db/submission_notes";
 import { formatShortDate } from "@/utils/dateFormat";
+import { submissionReport } from "@/submissionReport";
 import { pointsBreakdown, type PointsBreakdown, type PointsRow } from "@/points";
 import { parseVideoUrlWithOEmbed, isValidVideoUrl } from "@/utils/videoParser";
 import config from "@/config.json";
@@ -90,18 +91,6 @@ export const view = async (req: MulmRequest, res: Response) => {
     res.status(404).send("Submission not found");
     return;
   }
-
-  const parseStringArray = (jsonString: string): string[] => {
-    try {
-      const parsed: unknown = JSON.parse(jsonString);
-      if (Array.isArray(parsed) && parsed.every((item) => typeof item === "string")) {
-        return parsed;
-      }
-    } catch {
-      // JSON parse failed, return empty array
-    }
-    return [];
-  };
 
   let approver: MemberRecord | undefined;
   if (submission.approved_by != null) {
@@ -185,8 +174,9 @@ export const view = async (req: MulmRequest, res: Response) => {
     videoMetadata = await parseVideoUrlWithOEmbed(submission.video_url);
   }
 
-  // Fetch images from normalized table
+  // Fetch images and supplements from their normalized tables
   const images = await getSubmissionImages(submission.id);
+  const supplements = await getSubmissionSupplements(submission.id);
 
   // Prepare Open Graph data for social media sharing (approved submissions only)
   let ogData = null;
@@ -218,10 +208,10 @@ export const view = async (req: MulmRequest, res: Response) => {
           ? `${approver.display_name} - ${formatShortDate(submission.approved_on)}`
           : undefined,
 
-      foods: parseStringArray(submission.foods).join(","),
-      spawn_locations: parseStringArray(submission.spawn_locations).join(","),
       images, // Pass array of image objects instead of JSON string
     },
+    // The breeding, tank and supplement details, labelled for the Program
+    report: submissionReport(submission, supplements),
     canonicalName,
     name: speciesShown,
     boundSpecies: boundSpecies ?? null,
