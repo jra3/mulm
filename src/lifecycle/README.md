@@ -196,6 +196,21 @@ edit, since those changes carry consequences and go through
 `src/forms/editApprovedDetails.ts`) has no fields for them and links to
 the correction form instead.
 
+A Plant or Coral Submission's normalized supplement rows are details too
+(#158). `editApprovedDetails` takes an optional `supplements` list that
+replaces the stored rows in order. Left undefined, the rows are untouched,
+so an edit that never showed them cannot erase them; an empty list clears
+them. The dialog's supplements section posts a hidden `supplements_present=1`
+so the route can tell "every row removed" (the marker, no rows) from "not
+shown" (no marker). A list on a Species type without supplements
+(`hasSupplements`) refuses the whole edit, like a Species or points field.
+A supplements-only edit is an edit; it is one `supplements` change on the
+changelog, old and new as lists of `{ type, regimen }`. The column update,
+the supplement replacement and the `admin_edit` entry commit in one
+transaction (`addNote` and `setSubmissionSupplements` take its connection),
+so a failure anywhere leaves all three unchanged and a retry records one
+edit.
+
 ## In-flight Submissions went back for a Witness
 
 Points are set at the Witness now, and a Submission witnessed before that

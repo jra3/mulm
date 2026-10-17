@@ -59,6 +59,27 @@ void describe("The Edit Approved dialog's form", () => {
     assert.deepStrictEqual(Object.keys(result.data).sort(), ["reason", "tank_size"]);
   });
 
+  void test("supplements parse as the Member form's paired lists, with the section marker (#158)", () => {
+    const one = editApprovedDetailsForm.safeParse({
+      supplements_present: "1",
+      supplement_type: "Root Tabs",
+      supplement_regimen: "One per month",
+      reason: "Paper form",
+    });
+    assert.ok(one.success);
+    assert.deepStrictEqual(one.data.supplement_type, ["Root Tabs"]);
+    assert.deepStrictEqual(one.data.supplement_regimen, ["One per month"]);
+    assert.strictEqual(one.data.supplements_present, "1");
+
+    const cleared = editApprovedDetailsForm.safeParse({ supplements_present: "1", reason: "No supplements" });
+    assert.ok(cleared.success);
+    assert.strictEqual(cleared.data.supplement_type, undefined);
+
+    const bogus = editApprovedDetailsForm.safeParse({ supplements_present: "yes", reason: "Paper form" });
+    assert.ok(!bogus.success);
+    assert.deepStrictEqual(fields(bogus.error.issues), ["supplements_present"]);
+  });
+
   void test("links must be links", () => {
     const result = editApprovedDetailsForm.safeParse({ video_url: "not a url", article_link: "ftp", reason: "Fixing links" });
     assert.ok(!result.success);
