@@ -69,6 +69,7 @@ else if editLog
 				'co2': 'CO2',
 				'co2_description': 'CO2 Description',
 				'propagation_method': 'Propagation Method',
+				'supplements': 'Supplements',
 			};
 			return names[field] || field;
 		}
@@ -77,6 +78,14 @@ else if editLog
 			if (value === null || value === undefined) return '(none)';
 			if (value === '') return '(empty)';
 			if (typeof value === 'boolean') return value ? '✓ Yes' : '✗ No';
+
+			// The supplement rows (#158): a list of { type, regimen }
+			if (field === 'supplements' && Array.isArray(value)) {
+				if (value.length === 0) return '(none)';
+				return value
+					.map((row) => [row.type, row.regimen].filter(Boolean).join(': '))
+					.join('; ');
+			}
 
 			// Format dates nicely
 			if (field === 'reproduction_date' && value) {
