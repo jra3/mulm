@@ -3,25 +3,25 @@ import { getApprovedSubmissions, getApprovedSubmissionsInDateRange } from "@/db/
 import { programs, minYear, levelRules } from "@/programs";
 import { MulmRequest } from "@/sessions";
 import { Response } from "express";
+import { bapYearRange, currentBapYear } from "@/bapYear";
 import { getTrophyData } from "@/utils/awards";
 
 export const annual = async (req: MulmRequest, res: Response) => {
   const { stringYear, program = "fish" } = req.params;
-  const year = parseInt(stringYear);
+  const year = Number(stringYear);
   if (programs.indexOf(program) === -1) {
     res.status(404).send("Invalid program");
     return;
   }
 
-  if (isNaN(year) || year < minYear) {
+  if (!/^\d{4}$/.test(stringYear) || year < minYear) {
     res.status(422).send("Invalid year");
     return;
   }
 
-  const startDate = new Date(year - 1, 7, 1);
-  const endDate = new Date(year, 6, 31);
+  const { start, end } = bapYearRange(year);
 
-  const submissions = await getApprovedSubmissionsInDateRange(startDate, endDate, program);
+  const submissions = await getApprovedSubmissionsInDateRange(start, end, program);
   const names: Record<string, string> = {};
   const trophies: Record<string, ReturnType<typeof getTrophyData>> = {};
 
@@ -63,7 +63,7 @@ export const annual = async (req: MulmRequest, res: Response) => {
     names,
     trophies,
     program,
-    maxYear: new Date().getFullYear(),
+    maxYear: currentBapYear(),
     minYear,
     year,
     isLoggedIn: Boolean(req.viewer),

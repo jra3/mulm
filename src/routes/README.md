@@ -48,7 +48,7 @@ GET    /member/:memberId     - View member profile
 **Standings & Statistics**
 ```
 GET    /lifetime{/:program} - Cumulative program standings
-GET    /annual              - Redirect to the current awards year
+GET    /annual              - Redirect to the current BAP year (or ?year=YYYY)
 GET    /annual/:stringYear{/:program} - Annual program standings
 ```
 
@@ -57,6 +57,10 @@ GET    /annual/:stringYear{/:program} - Annual program standings
 GET    /species              - Species browser
 GET    /species/:groupId     - Species group detail
 ```
+
+Annual standings use approval dates and an automatically selected BAP year,
+named for its ending year. The default changes September 1 in New York time.
+See [the calendar policy and historical-data limitations](../../docs/program-calendar.md).
 
 ### Authentication Routes
 

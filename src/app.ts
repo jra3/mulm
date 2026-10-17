@@ -38,6 +38,8 @@ import { csrfValidation } from "./middleware/csrfValidation";
 import helmet from "helmet";
 import { getGoogleOAuthURL, beginOAuthFlow, isGoogleOAuthEnabled } from "./oauth";
 import { appleOAuthURL } from "./auth/apple";
+import { currentBapYear } from "./bapYear";
+import { minYear } from "./programs";
 import { getQueryString, getBodyString } from "./utils/request";
 import {
   loginRateLimiter,
@@ -176,8 +178,16 @@ export function createApp(dependencies: AppDependencies = {}) {
   const router = express.Router();
 
   router.get("/annual", (req, res) => {
-    const year = getQueryString(req, "year");
-    res.set("HX-Redirect", `/annual/${year}`).send();
+    const year = getQueryString(req, "year") || String(currentBapYear());
+    if (!/^\d{4}$/.test(year) || Number(year) < minYear) {
+      res.status(422).send("Invalid year");
+      return;
+    }
+    if (req.get("HX-Request") === "true") {
+      res.set("HX-Redirect", `/annual/${year}`).send();
+    } else {
+      res.redirect(`/annual/${year}`);
+    }
   });
   router.get("/annual/:stringYear{/:program}", standings.annual);
   router.get("/lifetime{/:program}", standings.lifetime);
@@ -231,8 +241,8 @@ export function createApp(dependencies: AppDependencies = {}) {
       witnessProgram,
       witnessCount,
       recentActivity,
-      currentYear: new Date().getFullYear(),
-      minStandingsYear: 2020,
+      currentYear: currentBapYear(),
+      minStandingsYear: minYear,
     });
   });
 

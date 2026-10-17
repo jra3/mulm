@@ -285,6 +285,7 @@ export async function deleteSubmissionRow(db: Database, id: number) {
   }
 }
 
+/** Approved points awarded in [startDate, endDate), regardless of the spawn date. */
 export function getApprovedSubmissionsInDateRange(startDate: Date, endDate: Date, program: string) {
   return query<Submission>(
     `
@@ -294,7 +295,7 @@ export function getApprovedSubmissionsInDateRange(startDate: Date, endDate: Date
 			members.display_name as member_name
 		FROM submissions JOIN members
 		ON submissions.member_id == members.id
-		WHERE reproduction_date > ? AND reproduction_date < ?
+		WHERE julianday(approved_on) >= julianday(?) AND julianday(approved_on) < julianday(?)
 		AND approved_on IS NOT NULL AND points IS NOT NULL
 		AND program = ?
 	`,
