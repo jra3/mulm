@@ -15,6 +15,16 @@ mixin reviewTextInput(labelText, name, type="text")
             name=name
             type=type)
 
+//- A report row (src/submissionReport.ts): what the member recorded, or that
+//- they recorded nothing, which is not the same as "No" or "0"
+mixin reportRow(row)
+    .grid.gap-2(class=row.wide ? "md:col-span-2" : undefined)
+        dt.input-label(id=`${row.id}-label`)= row.label
+        if row.value === null
+            dd.report-value.unset(id=row.id) Not recorded
+        else
+            dd.report-value(id=row.id)= row.value
+
 //- What a member of this species type produces, and what producing it is
 //- called. Worked out once here rather than in each panel that says it.
 - const isFlora = submission.species_type === 'Plant' || submission.species_type === 'Coral'
@@ -54,18 +64,9 @@ html
                         +iucnBadgeWithHover(name, name.group_id, 'sm')
                     if name && name.iucn_population_trend
                         +populationTrend(name.iucn_population_trend, 'sm')
-                div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
-                    +reviewTextInput("Common Name", "species_common_name")
-                    +reviewTextInput("Latin Name", "species_latin_name")
-                    +reviewTextInput("Spawn Date", "reproduction_date")
-                    +reviewTextInput("# of Fry", "count")
-
-                    +reviewTextInput("Species Type", "species_type")
-                    +reviewTextInput("Species Class", "species_class")
-                    +reviewTextInput("Water Type", "water_type")
-
-                    +reviewTextInput("Foods", "foods")
-                    +reviewTextInput("Spawn Locations", "spawn_locations")
+                dl.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
+                    each row in report.species
+                        +reportRow(row)
 
             div.max-w-4xl.mx-auto.text-left.pt-4.px-4
                 +submissionImages(submission.images, 'gallery')
@@ -83,22 +84,31 @@ html
             if submission.notes
                 div.max-w-4xl.mx-auto.text-left.pt-4.px-4
                     h2(class="text-l font-bold pt-2 mb-4") Breeder Notes
-                    p.text-gray-700.whitespace-pre-wrap= submission.notes
+                    p.text-gray-700.whitespace-pre-wrap.break-words= submission.notes
 
-            div.max-w-4xl.mx-auto.text-left.pt-4.px-4
+            div.max-w-4xl.mx-auto.text-left.pt-4.px-4#tank-details
                 h2(class="text-l font-bold pt-2 mb-4") Tank Details
-                div.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
-                    +reviewTextInput("Tank Size", "tank_size")
-                    +reviewTextInput("Filter Type", "filter_type")
-                    +reviewTextInput("Water Change Volume (%)", "water_change_volume")
-                    +reviewTextInput("Water Change Frequency", "water_change_frequency")
-                    +reviewTextInput("Temperature", "temperature")
-                    +reviewTextInput("pH", "ph")
-                    +reviewTextInput("Hardness (GH)", "gh")
-                    +reviewTextInput("Specific Gravity", "specific_gravity")
-                    +reviewTextInput("Substrate Type", "substrate_type")
-                    +reviewTextInput("Substrate Depth", "substrate_depth")
-                    +reviewTextInput("Substrate Color", "substrate_color")
+                dl.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
+                    each row in report.tank
+                        +reportRow(row)
+
+            if report.supplements
+                div.max-w-4xl.mx-auto.text-left.pt-4.px-4#supplements
+                    h2(class="text-l font-bold pt-2 mb-4") Supplements
+                    dl.grid.grid-cols-1.w-full.gap-2(class="md:grid-cols-2")
+                        each row in report.supplements.co2
+                            +reportRow(row)
+                    if report.supplements.rows.length > 0
+                        ul.mt-4.grid.gap-2#supplement-list
+                            each supplement in report.supplements.rows
+                                li.report-value.grid.gap-1(class="sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] sm:gap-4")
+                                    span.font-medium= supplement.type || "Unnamed supplement"
+                                    if supplement.regimen
+                                        span= supplement.regimen
+                                    else
+                                        span.italic.text-gray-600 No regimen recorded
+                    else
+                        p.mt-4.text-sm.text-gray-600#supplement-list-empty No other supplements recorded.
 
 
             //- Points the witness set but the committee has not awarded are
