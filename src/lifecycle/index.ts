@@ -85,6 +85,7 @@ export {
   type WitnessPoints,
   type PointsCorrection,
   type ApprovedDetails,
+  type Supplement,
   type NewSpeciesAtWitness,
   type ApprovalPreview,
 } from "./transitions";

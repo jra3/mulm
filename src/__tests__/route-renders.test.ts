@@ -9,7 +9,7 @@ import * as admin from "@/routes/admin";
 import * as member from "@/routes/member";
 import * as submission from "@/routes/submission";
 import { createMember } from "@/db/members";
-import { getSubmissionById } from "@/db/submissions";
+import { getSubmissionById, getSubmissionSupplements, setSubmissionSupplements } from "@/db/submissions";
 import { createSpecies, resolveSpecies } from "@/species";
 import { confirmWitness, resetNotifier, WITNESS_RESET_NOTE } from "@/lifecycle";
 import { addNote, getNotesForSubmission } from "@/db/submission_notes";
@@ -1076,6 +1076,80 @@ void describe("The Edit Approved dialog edits details only", () => {
     const waitingSave = await request(app()).post(`/admin/submissions/${waiting}/edit-approved`).type("form").send({ tank_size: "20", reason: "Early" });
     assert.strictEqual(waitingSave.status, 400);
     assert.notStrictEqual((await getSubmissionById(waiting))!.tank_size, "20");
+  });
+
+  // Supplements (#158): a Plant's dialog edits its normalized rows
+  const plant = () =>
+    submissionInState(testDb.db, "approved", {
+      memberId: ownerId,
+      witnessedBy: committeeId,
+      speciesType: "Plant",
+      speciesClass: "Stem Plants",
+      program: "plant",
+    });
+  const rowsOf = async (id: number) =>
+    (await getSubmissionSupplements(id)).map((row) => [row.supplement_type, row.supplement_regimen]);
+
+  void test("a plant's supplements are edited in the dialog and shown again on reopening it", async () => {
+    const id = await plant();
+    await setSubmissionSupplements(id, [{ type: "Root Tabs", regimen: "One per month" }]);
+
+    const shown = await request(app()).get(`/admin/submissions/${id}/edit-approved`);
+    assert.match(shown.text, /value="Root Tabs" name="supplement_type"/);
+    assert.match(shown.text, /name="supplements_present" value="1"/);
+
+    const res = await request(app())
+      .post(`/admin/submissions/${id}/edit-approved`)
+      .type("form")
+      .send({
+        supplements_present: "1",
+        supplement_type: ["Root Tabs", "Dosing Pump", ""],
+        supplement_regimen: ["Two per month", "Daily", ""],
+        reason: "The paper form lists a dosing pump",
+      });
+    assert.strictEqual(res.headers["hx-redirect"], `/submissions/${id}`);
+    assert.deepStrictEqual(await rowsOf(id), [["Root Tabs", "Two per month"], ["Dosing Pump", "Daily"]]);
+
+    const notes = await getNotesForSubmission(id);
+    assert.strictEqual(notes.length, 1);
+    const note = JSON.parse(notes[0].note_text) as { changes: { field: string }[] };
+    assert.deepStrictEqual(note.changes.map((c) => c.field), ["supplements"]);
+    assert.deepStrictEqual(sent.kinds, []);
+
+    const reopened = await request(app()).get(`/admin/submissions/${id}/edit-approved`);
+    assert.match(reopened.text, /value="Dosing Pump" name="supplement_type"/);
+    assert.match(reopened.text, /value="Daily" name="supplement_regimen"/);
+  });
+
+  void test("with the section marker and no rows the supplements are cleared; without it they are left", async () => {
+    const id = await plant();
+    await setSubmissionSupplements(id, [{ type: "Root Tabs", regimen: "One per month" }]);
+
+    await request(app())
+      .post(`/admin/submissions/${id}/edit-approved`)
+      .type("form")
+      .send({ tank_size: "40 gallon", reason: "A stale tab without the section" });
+    assert.deepStrictEqual(await rowsOf(id), [["Root Tabs", "One per month"]]);
+
+    const cleared = await request(app())
+      .post(`/admin/submissions/${id}/edit-approved`)
+      .type("form")
+      .send({ supplements_present: "1", reason: "The member used no supplements" });
+    assert.strictEqual(cleared.headers["hx-redirect"], `/submissions/${id}`);
+    assert.deepStrictEqual(await rowsOf(id), []);
+    assert.strictEqual((await getNotesForSubmission(id)).length, 2);
+  });
+
+  void test("supplements posted for a fish are refused in the banner, and nothing is written", async () => {
+    const res = await request(app())
+      .post(`/admin/submissions/${approvedId}/edit-approved`)
+      .type("form")
+      .send({ tank_size: "20 gallon", supplements_present: "1", supplement_type: "Root Tabs", supplement_regimen: "x", reason: "Trying it on" });
+    assert.strictEqual(res.headers["hx-retarget"], "#edit-approved-errors");
+    assert.match(res.text, /takes no supplements/);
+    assert.notStrictEqual((await getSubmissionById(approvedId))!.tank_size, "20 gallon");
+    assert.deepStrictEqual(await rowsOf(approvedId), []);
+    assert.strictEqual((await getNotesForSubmission(approvedId)).length, 0);
   });
 });
 
