@@ -9,7 +9,7 @@ import * as admin from "@/routes/admin";
 import * as member from "@/routes/member";
 import * as submission from "@/routes/submission";
 import { createMember } from "@/db/members";
-import { getSubmissionById } from "@/db/submissions";
+import { getSubmissionById, setSubmissionSupplements } from "@/db/submissions";
 import { createSpecies, resolveSpecies } from "@/species";
 import { confirmWitness, resetNotifier, WITNESS_RESET_NOTE } from "@/lifecycle";
 import { addNote, getNotesForSubmission } from "@/db/submission_notes";
@@ -371,6 +371,108 @@ void describe("Pending points are the owner's alone", () => {
     assert.strictEqual(res.status, 200);
     assert.doesNotMatch(res.text, /pending approval|Unapproved/);
     assert.match(res.text, /data-sort="15">15</);
+  });
+});
+
+/**
+ * The report on the Submission page, through the real route (#559): labels
+ * for the Program, the HAP/CAP details the form captures, and supplements
+ * loaded from their own table.
+ */
+void describe("The Submission page reports what its Program's form captured", () => {
+  let testDb: TestDatabase;
+  let memberId: number;
+  let committeeId: number;
+
+  beforeEach(async () => {
+    testDb = await createTestDatabase({ foreignKeys: "on", migrations: "latest" });
+    memberId = await createMember("grower@example.com", "Ana Ruiz");
+    committeeId = await createMember("committee@example.com", "Jane Ortiz");
+  });
+  afterEach(async () => {
+    await testDb.cleanup();
+  });
+
+  const app = () => appWith((a) => a.get("/submissions/:id", submission.view));
+
+  async function approved(fields: Record<string, string | null>, options: Partial<Parameters<typeof createUnboundSubmission>[1]> = {}) {
+    const id = await createUnboundSubmission(testDb.db, {
+      memberId,
+      submitted: true,
+      approved: true,
+      witnessedBy: committeeId,
+      approvedBy: committeeId,
+      points: 10,
+      ...options,
+    });
+    const entries = Object.entries(fields);
+    if (entries.length > 0) {
+      await testDb.db.run(
+        `UPDATE submissions SET ${entries.map(([field]) => `${field} = ?`).join(", ")} WHERE id = ?`,
+        [...entries.map(([, value]) => value), id]
+      );
+    }
+    return id;
+  }
+
+  void test("HAP: propagation, lighting, CO₂ and every supplement, under plant labels", async () => {
+    const id = await approved(
+      {
+        propagation_method: "Runners, then replanted",
+        light_type: "LED",
+        light_strength: "40 PAR",
+        light_hours: "8",
+        co2: "yes",
+        co2_description: "Pressurised, 1 bubble per second",
+        count: null,
+      },
+      { speciesType: "Plant", speciesClass: "Stem Plants", program: "plant", commonName: "Water wisteria", latinName: "Hygrophila difformis", foods: "[]", spawnLocations: "[]" }
+    );
+    await setSubmissionSupplements(id, [
+      { type: "Root tabs", regimen: "Monthly" },
+      { type: "Liquid fertilizer", regimen: "Twice weekly" },
+    ]);
+
+    const res = await request(app()).get(`/submissions/${id}`);
+
+    assert.strictEqual(res.status, 200);
+    assert.match(res.text, /id="reproduction_date-label">Date Propagated</);
+    assert.match(res.text, /id="propagation_method"[^>]*>Runners, then replanted</);
+    assert.match(res.text, /id="light_type"[^>]*>LED</);
+    assert.match(res.text, /id="light_hours"[^>]*>8</);
+    assert.match(res.text, /id="co2"[^>]*>Yes</);
+    assert.match(res.text, /id="co2_description"[^>]*>Pressurised, 1 bubble per second</);
+    assert.match(res.text, /Root tabs<\/span><span>Monthly</);
+    assert.match(res.text, /Liquid fertilizer<\/span><span>Twice weekly</);
+    assert.doesNotMatch(res.text, /# of Fry|Spawn Locations|Date Spawned/);
+  });
+
+  void test("BAP: fry, foods and spawn locations, and no plant sections", async () => {
+    const id = await approved({ count: "40", co2: "no" }, { speciesId: await ensureGuppySpecies(testDb.db) });
+
+    const res = await request(app()).get(`/submissions/${id}`);
+
+    assert.strictEqual(res.status, 200);
+    assert.match(res.text, /id="reproduction_date-label">Date Spawned</);
+    assert.match(res.text, /id="count"[^>]*>40</);
+    assert.match(res.text, /id="foods"[^>]*>Flakes, Live food</);
+    assert.match(res.text, /id="spawn_locations"[^>]*>Plants, Spawning mop</);
+    assert.doesNotMatch(res.text, /id="supplements"|Propagation Method|Lighting Type/);
+  });
+
+  void test("an older HAP report with nothing recorded says so, field by field", async () => {
+    const id = await approved(
+      { propagation_method: null, light_type: null, co2: null, count: null },
+      { speciesType: "Plant", speciesClass: "Stem Plants", program: "plant", foods: "[]", spawnLocations: "[]" }
+    );
+
+    const res = await request(app()).get(`/submissions/${id}`);
+
+    assert.strictEqual(res.status, 200);
+    assert.match(res.text, /id="propagation_method"[^>]*>Not recorded</);
+    assert.match(res.text, /id="light_type"[^>]*>Not recorded</);
+    assert.match(res.text, /id="co2"[^>]*>Not recorded</);
+    assert.match(res.text, /id="supplement-list-empty"/);
   });
 });
 

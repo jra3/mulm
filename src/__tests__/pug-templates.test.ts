@@ -162,6 +162,9 @@ void describe("Pug Template Rendering", () => {
       is_admin: false,
     },
 
+    // The review page's report sections (src/submissionReport.ts)
+    report: { species: [], tank: [], supplements: null },
+
     // Member data
     member: createMockMember(),
     witness: {
