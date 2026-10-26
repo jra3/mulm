@@ -1,3 +1,4 @@
+import type { Database } from "sqlite";
 import { z } from "zod";
 import { query, writeConn } from "./conn";
 
@@ -149,14 +150,16 @@ export async function findSubmissionsWithRecordedSpecies(submissionIds: number[]
 }
 
 /**
- * Add a new note to a submission
+ * Add a new note to a submission. Pass a transaction's connection to commit
+ * the note with the change it records; left off, it is written on its own.
  */
 export async function addNote(
   submissionId: number,
   adminId: number,
-  noteText: string
+  noteText: string,
+  db: Database = writeConn
 ): Promise<number> {
-  const stmt = await writeConn.prepare(`
+  const stmt = await db.prepare(`
 		INSERT INTO submission_notes (submission_id, admin_id, note_text)
 		VALUES (?, ?, ?)
 	`);

@@ -13,6 +13,7 @@ import {
   getQueueCounts,
   getSubmissionById,
   getSubmissionsByMember,
+  getSubmissionSupplements,
   type QueueSubmission,
   type Submission,
 } from "@/db/submissions";
@@ -1232,8 +1233,9 @@ function mayEditDetails(viewer: NonNullable<MulmRequest["viewer"]>, submission: 
 /**
  * GET /admin/submissions/:id/edit-approved
  * The Edit Approved Submission dialog: the member's details on an Approved
- * Submission, with a reason. The Species and points are not on it; it links
- * to the correction form for those (#529).
+ * Submission, with a reason, and a Plant or Coral Submission's supplement
+ * rows (#158). The Species and points are not on it; it links to the
+ * correction form for those (#529).
  */
 export const editApprovedSubmissionForm = async (req: MulmRequest, res: Response) => {
   const submission = await validateSubmission(req, res);
@@ -1268,6 +1270,13 @@ export const editApprovedSubmissionForm = async (req: MulmRequest, res: Response
     return [];
   };
 
+  const supplements = hasSupplements(submission.species_type)
+    ? (await getSubmissionSupplements(submission.id)).map((row) => ({
+        type: row.supplement_type,
+        regimen: row.supplement_regimen,
+      }))
+    : [];
+
   res.render("admin/editApprovedSubmission", {
     submission: {
       ...submission,
@@ -1278,6 +1287,7 @@ export const editApprovedSubmissionForm = async (req: MulmRequest, res: Response
       spawn_locations: parseStringArray(submission.spawn_locations),
     },
     member,
+    supplements,
     foodTypes,
     spawnLocations,
     // Conditional field visibility based on species type
@@ -1320,8 +1330,24 @@ export const saveApprovedSubmissionEdits = async (req: MulmRequest, res: Respons
     return;
   }
 
-  const { reason, foods, spawn_locations, reproduction_date, ...rest } = parsed.data;
+  const {
+    reason,
+    foods,
+    spawn_locations,
+    reproduction_date,
+    supplements_present,
+    supplement_type,
+    supplement_regimen,
+    ...rest
+  } = parsed.data;
   const details: lifecycle.ApprovedDetails = { ...rest };
+
+  // The supplements section marks itself (`supplements_present`, see the
+  // form schema): with the marker, the posted rows, none included, replace
+  // the stored ones; without it, they are left alone.
+  const supplements = supplements_present
+    ? lifecycle.supplementsFromForm({ supplement_type, supplement_regimen })
+    : undefined;
 
   // The form posts a day, the column holds an instant. The day the dialog
   // showed is the stored instant's UTC day: posted back unchanged, it is no
@@ -1348,7 +1374,13 @@ export const saveApprovedSubmissionEdits = async (req: MulmRequest, res: Respons
   }
 
   try {
-    const changes = await lifecycle.editApprovedDetails(callerFor(viewer!), submission.id, details, reason);
+    const changes = await lifecycle.editApprovedDetails(
+      callerFor(viewer!),
+      submission.id,
+      details,
+      reason,
+      supplements
+    );
     logger.info(`Approved submission ${submission.id} details edited by admin ${viewer!.id}`, { changes });
   } catch (err) {
     if (lifecycle.isLifecycleError(err)) {

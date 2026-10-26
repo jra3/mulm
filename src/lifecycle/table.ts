@@ -35,7 +35,7 @@ import { AuthorizationError, StateError, UnboundError } from "./errors";
  * |                         | create, base points and bonuses, first- | clock has not run); |                    |
  * |                         | time on Approved only, and a reason)    | Witness untouched   |                    |
  * | editApprovedDetails     | approved (takes the member's details:   | approved, details   | committee, not the submitter |
- * |                         | tank, foods, dates and the like, never  | changed; Species,   |                    |
+ * |                         | tank, foods, dates, supplements; never  | changed; Species,   |                    |
  * |                         | the Species or points, and a reason)    | points and Witness  |                    |
  * |                         |                                         | untouched           |                    |
  * | deleteSubmission        | draft (member); draft .. inApprovalQueue (committee) | gone   | member or committee|
