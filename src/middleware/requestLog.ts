@@ -5,7 +5,8 @@ import { logger } from "../utils/logger";
  * One log line per request, to find out who keeps waking the scale-to-zero
  * machine. Logs the path without its query string, which can carry reset
  * codes and OAuth state. Skips /health: Fly's checks hit it every 30s and
- * don't wake the machine.
+ * don't wake the machine. The IP comes from Fly-Client-IP: behind Fly's edge,
+ * req.ip resolves to the app's own ingress address.
  */
 export function formatRequestLine(fields: {
   method: string;
@@ -35,7 +36,7 @@ export function requestLog(req: Request, res: Response, next: NextFunction): voi
         path: req.path,
         status: res.statusCode,
         ms: Math.round(Number(process.hrtime.bigint() - start) / 1e6),
-        ip: req.ip,
+        ip: req.get("fly-client-ip") ?? req.ip,
         userAgent: req.get("user-agent"),
         referer: req.get("referer"),
       })
