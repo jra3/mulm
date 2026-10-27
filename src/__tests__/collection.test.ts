@@ -13,6 +13,7 @@ import {
   getSpeciesKeepers,
 } from "../db/collection";
 import type { ImageMetadata } from "../utils/r2-client";
+import { listNames } from "../species/names";
 
 void describe("Species Collection Database Module", () => {
   let db: Database;
@@ -518,6 +519,21 @@ void describe("Species Collection Database Module", () => {
       const entry = await getCollectionEntry(publicEntryId);
       assert.ok(entry);
       assert.equal(entry.group_id, speciesId1);
+    });
+
+    void test("shows the first common Name by text when the Species has several", async () => {
+      await db.run(
+        "INSERT INTO species_common_name (group_id, common_name) VALUES (?, ?)",
+        [speciesId1, "Banded Test Cichlid"]
+      );
+      // Without an ORDER BY, SQLite may return the rows in any order; this
+      // pragma makes it pick the other end, so a query relying on luck fails.
+      await db.exec("PRAGMA reverse_unordered_selects = ON");
+      const { common } = await listNames(speciesId1);
+
+      const entry = await getCollectionEntry(publicEntryId);
+      assert.equal(entry?.common_name, "Banded Test Cichlid");
+      assert.equal(entry?.common_name, common[0].name);
     });
 
     void test("should not get private entry without member ID", async () => {
