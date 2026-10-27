@@ -1,7 +1,7 @@
 import { query, withTransaction } from './conn';
 import type { Database } from 'sqlite';
 import type { ImageMetadata } from '../utils/r2-client';
-import { anyNameSql, speciesJoinSql, findSpeciesById } from "@/species";
+import { anyNameSql, scientificNameSql, speciesJoinSql, findSpeciesById } from "@/species";
 
 
 export type CollectionRefusalCode =
@@ -187,7 +187,7 @@ export async function getCollectionForMember(
   let sql = `
     SELECT
       c.*,
-      sng.canonical_genus || ' ' || sng.canonical_species_name AS canonical_scientific_name,
+      ${scientificNameSql("sng")} AS canonical_scientific_name,
       ${anyNameSql("common", "c.group_id")} AS canonical_common_name,
       sng.program_class,
       sng.species_type,
@@ -426,7 +426,7 @@ export async function getCollectionEntry(
   let sql = `
     SELECT
       c.*,
-      sng.canonical_genus || ' ' || sng.canonical_species_name AS canonical_scientific_name,
+      ${scientificNameSql("sng")} AS canonical_scientific_name,
       ${anyNameSql("common", "c.group_id")} AS canonical_common_name,
       sng.program_class,
       sng.species_type,
@@ -569,7 +569,7 @@ export async function getRecentCollectionAdditions(limit = 10): Promise<Collecti
   const rows = await query<CollectionRow>(
     `SELECT
       c.*,
-      sng.canonical_genus || ' ' || sng.canonical_species_name AS scientific_name,
+      ${scientificNameSql("sng")} AS scientific_name,
       ${anyNameSql("common", "c.group_id")} AS common_name,
       sng.program_class,
       sng.species_type,

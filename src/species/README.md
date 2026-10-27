@@ -31,7 +31,7 @@ the module's own business.
 | `agreement.ts` | `checkFormAgreement`: does a Submission's form (spellings, Species type, Program class) agree with a Species. The lifecycle's member saves read `agrees` to keep or clear a binding; the witness panel reads `classificationAgrees` to say that confirming will record the Species' values. |
 | `references.ts` | Rows in other tables that belong to a Species (collection, CARES, images, links, sync records) and what merge and delete do with each; `countReferencesOfSpecies`, `findMembersKeepingBoth`. |
 | `submissions.ts` | The Species-Submission relation, defined once as SQL (`speciesIdOfSubmissionSql`: the Submission's `species_id`); `countSubmissionsOfSpecies` for one Species, `countApprovedBySpecies` for a page of them (the approval queue's first-time preview). |
-| `sql.ts` | SQL fragments for other modules' queries: `speciesOfSubmissionJoinSql`, `programClassOfSubmissionSql`, `speciesJoinSql`, `speciesFromSql`, `anyNameSql`. |
+| `sql.ts` | SQL fragments for other modules' queries: `speciesOfSubmissionJoinSql`, `programClassOfSubmissionSql`, `speciesJoinSql`, `speciesFromSql`, `anyNameSql`, `scientificNameSql`. |
 | `status.ts` | Writers for columns other modules own the meaning of: `updateIucnStatus`, `updateLastExternalSync`. |
 | `listings.ts` | Read models: `searchSpeciesTypeahead`, `suggestSpecies` (the closest Species to a member's spellings, for the witness panel's "Did they mean one of these?"), `getSpeciesForExplorer` + `getExplorerFilterOptions`, `getSpeciesForAdmin`, `getSpeciesDetail` (with Names by kind, references, images), `getBreedersForSpecies`, `listSpeciesDueIucnSync`, `getSpeciesStatistics`. |
 
@@ -53,6 +53,7 @@ A query elsewhere that needs a Species' columns composes the fragments in
   class, or the member's entry for an unbound Submission. Specialty awards
   and their progress page.
 - `anyNameSql("common", "c.group_id")`: one Name of a kind, or NULL.
+- `scientificNameSql("sng")`: the joined Species' Canonical "Genus species", or NULL.
 
 When the tables change, these change and every query follows. Writes never go
 through fragments: they go through a catalogue function.

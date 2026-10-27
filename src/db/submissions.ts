@@ -4,7 +4,7 @@ import { logger } from "@/utils/logger";
 import { filterQueue, queueSql, type QueueName } from "@/lifecycle/queues";
 import { programOfSpeciesType, totalPointsSql } from "@/points";
 import type { Database } from "sqlite";
-import { anyNameSql, speciesOfSubmissionJoinSql } from "@/species";
+import { anyNameSql, scientificNameSql, speciesOfSubmissionJoinSql } from "@/species";
 
 // New normalized table types
 export type SubmissionImage = {
@@ -137,7 +137,7 @@ export type QueueSubmission = Submission & {
 
 /** The bound Species' names as columns, for a query that joined it as `alias` (`speciesOfSubmissionJoinSql`). */
 function boundSpeciesNamesSql(alias: string): string {
-  return `${alias}.canonical_genus || ' ' || ${alias}.canonical_species_name as bound_species_name,
+  return `${scientificNameSql(alias)} as bound_species_name,
       ${anyNameSql("common", `${alias}.group_id`)} as bound_common_name`;
 }
 

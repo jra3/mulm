@@ -8,6 +8,7 @@ import { query } from "@/db/conn";
 import { containsPattern, containsSql } from "@/db/likePattern";
 import { getSpeciesExternalReferences, getSpeciesImages, type SpeciesImage } from "@/db/speciesEnrichment";
 import type { SpeciesType } from "@/points";
+import { scientificNameSql } from "./sql";
 import { speciesIdOfSubmissionSql } from "./submissions";
 import { listNames, nameTable } from "./names";
 import type { NameKind, Species, SpeciesNames } from "./types";
@@ -183,7 +184,7 @@ export async function searchSpeciesTypeahead(
       'common' AS kind,
       cn.group_id,
       cn.common_name,
-      sng.canonical_genus || ' ' || sng.canonical_species_name AS scientific_name,
+      ${scientificNameSql("sng")} AS scientific_name,
       sng.program_class,
       sng.species_type,
       sng.canonical_genus,
