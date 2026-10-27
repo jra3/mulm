@@ -5,6 +5,13 @@ include ../mixins/errorMessage.pug
 	h2.text-2xl.font-bold.mb-2 Add to Collection
 	p.text-gray-600.text-sm.mb-4 Track species you currently keep in your tanks.
 
+	if speciesNotFound
+		.bg-yellow-50.border-l-4.border-yellow-400.p-2.mb-3.text-sm.text-yellow-800(role="status")
+			| That species could not be found. Search for it below or enter it manually.
+	if alreadyKept
+		.bg-blue-50.border-l-4.border-blue-400.p-2.mb-3.text-sm.text-blue-800(role="status")
+			| This species is already in your collection. Edit the existing entry from your collection page instead.
+
 	form(
 		hx-post="/api/collection"
 		hx-target="#dialogContent"
@@ -26,6 +33,8 @@ include ../mixins/errorMessage.pug
 					data-placeholder="Search species..."
 					hx-on:change="const item = this.tomselect?.options[this.value]; if (item) { document.getElementById('common_name').value = item.common_name || ''; document.getElementById('scientific_name').value = item.scientific_name || ''; }"
 				)
+					if preselected
+						option(value=preselected.group_id selected)= preselected.text
 				+errorMessage('group_id')
 
 			//- Option 2: Manual entry
@@ -41,6 +50,7 @@ include ../mixins/errorMessage.pug
 							name="common_name"
 							maxlength="200"
 							placeholder="e.g., Fancy Guppy"
+							value=preselected ? preselected.common_name : undefined
 						)
 						+errorMessage('common_name')
 
@@ -52,6 +62,7 @@ include ../mixins/errorMessage.pug
 							name="scientific_name"
 							maxlength="200"
 							placeholder="e.g., Poecilia reticulata"
+							value=preselected ? preselected.scientific_name : undefined
 						)
 						+errorMessage('scientific_name')
 

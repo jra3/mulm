@@ -9,7 +9,7 @@ import {
 } from "@/species";
 import { getCaresCoverageStats, getCaresMaintenersForSpecies } from "@/db/cares";
 import { canSeeCaresRegistry } from "@/caresRegistry";
-import { getSpeciesKeepers } from "@/db/collection";
+import { getCollectionForMember, getSpeciesKeepers } from "@/db/collection";
 import { getClassOptions } from "@/forms/submission";
 import { speciesExplorerQuerySchema } from "@/forms/species-explorer";
 import { validateQueryWithFallback } from "@/forms/utils";
@@ -80,10 +80,11 @@ export async function detail(req: MulmRequest, res: Response) {
   }
 
   try {
-    const [speciesDetail, breeders, keepers] = await Promise.all([
+    const [speciesDetail, breeders, keepers, viewerCollection] = await Promise.all([
       getSpeciesDetail(groupId),
       getBreedersForSpecies(groupId),
       getSpeciesKeepers(groupId),
+      viewer ? getCollectionForMember(viewer.id, { includePrivate: true }) : [],
     ]);
 
     if (!speciesDetail) {
@@ -114,6 +115,8 @@ export async function detail(req: MulmRequest, res: Response) {
       totalBreeders: breeders.length,
       keeperCount: keepers.count,
       keepers: keepers.members,
+      viewer,
+      inViewerCollection: viewerCollection.some((entry) => entry.group_id === groupId),
       caresMaintainers,
     });
   } catch (error) {
