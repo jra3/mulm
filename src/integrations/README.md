@@ -329,7 +329,7 @@ logger.error("IUCN API connection test failed", error);
 - **Sync Script:** `scripts/sync-iucn-data.ts` (`npm run script -- scripts/sync-iucn-data.ts --help`)
 - **CSV Import:** `scripts/import-cares-iucn-data.ts` (`npm run script -- scripts/import-cares-iucn-data.ts --help`)
 - **Migration:** `db/migrations/036-add-iucn-integration.sql`
-- **Types:** `src/config.json.d.ts` (Config interface)
+- **Types:** `src/config.d.json.ts` (Config interface)
 
 ### References
 
