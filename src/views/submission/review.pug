@@ -210,9 +210,9 @@ html
         //- Later and the close button hide it until the page is next opened.
         if caresPrompt
             section.bg-gray-100.pt-6#cares-prompt
-                div(class="status-panel bg-green-50 border-l-4 border-green-400 relative")
-                    .container.mx-auto.max-w-4xl
-                        button.absolute.top-2.right-4.text-green-800.font-bold(
+                div(class="status-panel bg-green-50 border-l-4 border-green-400")
+                    .container.mx-auto.max-w-4xl.relative
+                        button.absolute.top-0.right-0.text-green-800.font-bold(
                             type="button"
                             aria-label="Dismiss"
                             hx-on:click="document.getElementById('cares-prompt').remove()"
