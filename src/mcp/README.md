@@ -211,7 +211,7 @@ Both servers include:
 
 Both servers use the same database connection as the main application:
 - **Config**: `src/config.json`
-- **Database**: Path specified in config (`databaseFile`)
+- **Database**: Path specified in config (`database.file`)
 - **Mode**: Servers can read/write to the database
 - **Isolation**: Each tool call runs independently
 
