@@ -19,6 +19,7 @@ import { tankSettingsSchema } from "@/forms/tank";
 import { validateFormResult } from "@/forms/utils";
 import pug from "pug";
 import { getBodyString } from "@/utils/request";
+import { getSpecialtyAwardProgress } from "@/specialtyAwardManager";
 
 export const viewAccountSettings = async (req: MulmRequest, res: Response) => {
   const { viewer } = req;
@@ -300,7 +301,6 @@ export const viewSpecialtyAwards = async (req: MulmRequest, res: Response) => {
   }
 
   try {
-    const { getSpecialtyAwardProgress } = await import("@/specialtyAwardManager");
     const { specialtyProgress, metaProgress } = await getSpecialtyAwardProgress(viewer.id);
 
     res.render("account/specialtyAwards", {

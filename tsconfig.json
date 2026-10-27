@@ -6,9 +6,10 @@
 		"outDir": "./dist",
 		"rootDir": ".",
 		"resolveJsonModule": true,
+		"allowArbitraryExtensions": true,
 		"esModuleInterop": true,
 		"allowSyntheticDefaultImports": true,
-		"moduleResolution": "node",
+		"moduleResolution": "bundler",
 		"strict": true,
 		"sourceMap": false,
 		"inlineSourceMap": false,
@@ -19,9 +20,8 @@
 		"skipLibCheck": true,
 		"types": ["node"],
 
-		"baseUrl": ".",
 		"paths": {
-			"@/*": [ "src/*" ]
+			"@/*": [ "./src/*" ]
 		}
 	},
 	"include": ["**/*", "src/config.json"],

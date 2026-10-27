@@ -54,7 +54,7 @@ npm run test:e2e      # Playwright
 
 ## Configuration
 
-[`config.json.d.ts`](config.json.d.ts) exports the authoritative nested `Config` interface and the default JSON value type. Both `@/config.json` and relative `./config.json` / `../config.json` imports resolve this declaration. The required groups are `database`, `server`, `email` and `storage`; OAuth providers, external-data integrations and MCP remain optional. Consumers retain their existing defaults.
+[`config.d.json.ts`](config.d.json.ts) exports the authoritative nested `Config` interface and the default JSON value type. Both `@/config.json` and relative `./config.json` / `../config.json` imports resolve this declaration. The required groups are `database`, `server`, `email` and `storage`; OAuth providers, external-data integrations and MCP remain optional. Consumers retain their existing defaults.
 
 Use [`config.sample.json`](config.sample.json) as the starting point for a new local `src/config.json` (git-ignored). It contains placeholder credentials and disables email. Do not overwrite an existing local configuration or commit credentials. [`__tests__/config.typecheck.ts`](__tests__/config.typecheck.ts) checks the sample's inferred JSON shape and consistent import types during `npm run typecheck`; it does not load live configuration or add runtime validation. `tsconfig.json` explicitly includes the runtime JSON so compilation still copies it to `dist/src/config.json` alongside its consumers.
 
