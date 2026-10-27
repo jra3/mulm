@@ -134,6 +134,8 @@ mixin collectionCard(entry, canEdit = false, options = {})
 
 			//- Details: dates, visibility
 			div(class=variant === 'large' ? 'text-base' : 'text-sm' class="text-gray-600 mb-3 space-y-2")
+				if entry.removed_date
+					span.inline-block.px-2.py-1.text-xs.font-medium.bg-gray-200.text-gray-700.rounded-full No longer kept
 				if entry.acquired_date
 					.flex.items-center.gap-2
 						i.fas.fa-calendar-plus.w-4

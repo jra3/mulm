@@ -20,10 +20,23 @@ html
 
 		main.max-w-7xl.mx-auto.px-4.py-8(class="sm:px-6 lg:px-8")
 
+			- const historyEntries = history || []
+			- const stats = collectionStats || { current: 0, lifetime: 0 }
+
 			//- Stats and add button bar
 			.mb-6
 				.flex.justify-between.items-center.flex-wrap.gap-4
-					if collectionStats
+					if isSelf
+						//- Owner: Current / History switch. Current counts only species kept now;
+						//- History lists entries removed from the collection.
+						nav.flex.gap-1.bg-gray-100.rounded-lg.p-1(aria-label="Collection view")
+							each tab in [{ id: 'current', label: 'Current', count: stats.current }, { id: 'history', label: 'History', count: historyEntries.length }]
+								a.px-4.py-2.text-sm.font-medium.rounded-md(
+									href=`/member/${member.id}/collection?view=${tab.id}`
+									aria-current=view === tab.id ? 'page' : undefined
+									class=view === tab.id ? 'bg-white text-blue-700 shadow' : 'text-gray-600 hover:text-gray-900'
+								)= `${tab.label} (${tab.count})`
+					else if collectionStats
 						.text-lg.text-gray-600
 							if collectionStats.current > 0
 								span.font-semibold.text-blue-600= collectionStats.current
@@ -39,8 +52,28 @@ html
 							hx-swap="beforeend"
 						) Add Species
 
+				if isSelf
+					p.mt-3.text-sm.text-gray-500
+						if view === 'history'
+							| Species you no longer keep, most recently added first. These entries stay private to you.
+						else
+							| Species you keep now.
+						= ` Lifetime: ${stats.lifetime} ${stats.lifetime === 1 ? 'entry' : 'entries'} (current and no longer kept).`
+
 			//- Collection content
-			if collection && collection.length > 0
+			if view === 'history'
+				if historyEntries.length > 0
+					.grid.gap-6(class="grid-cols-1 lg:grid-cols-2")
+						each entry in historyEntries
+							+collectionCard(entry, false, {variant: 'large'})
+				else
+					.text-center.py-16
+						+emptyState("No Collection History Yet", {
+							emoji: "📜",
+							size: "xl",
+							subtitle: "When you remove a species from your collection, it is listed here with the date you removed it."
+						})
+			else if collection && collection.length > 0
 				//- 2 columns on desktop, 1 on mobile
 				.grid.gap-6(class="grid-cols-1 lg:grid-cols-2")
 					each entry in collection

@@ -126,6 +126,14 @@ export const addDialogQuerySchema = z.object({
 });
 
 /**
+ * Which part of a collection page to show. Anything else means Current.
+ * Only the owner can see History; the route enforces that.
+ */
+export const collectionPageQuerySchema = z.object({
+  view: z.enum(["current", "history"]).catch("current"),
+});
+
+/**
  * Schema for validating the entry ID URL parameter
  */
 export const entryIdParamSchema = z.object({

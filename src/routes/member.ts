@@ -9,6 +9,7 @@ import { getStatusPresentation } from "@/utils/statusBadge";
 import { getTrophyDataWithAwards } from "@/utils/awards";
 import { isInProgram } from "@/points";
 import { pendingPoints } from "./submission";
+import { collectionPageQuerySchema } from "@/forms/collection";
 
 export const view = async (req: MulmRequest, res: Response) => {
   const memberId = parseInt(req.params.memberId);
@@ -113,10 +114,25 @@ export const viewCollection = async (req: MulmRequest, res: Response) => {
   });
   const collectionStats = await getCollectionStats(memberId);
 
+  // History (removed entries) is the owner's alone; anyone else gets Current.
+  const requested = collectionPageQuerySchema.parse(req.query).view;
+  const view = isSelf ? requested : "current";
+  const history = isSelf
+    ? (
+        await getCollectionForMember(memberId, {
+          includeRemoved: true,
+          includePrivate: true,
+          viewerId: viewer?.id,
+        })
+      ).filter((entry) => entry.removed_date !== null)
+    : [];
+
   res.render("member/collection", {
     member,
     collection,
     collectionStats,
+    view,
+    history,
     isLoggedIn: Boolean(viewer),
     isSelf,
     isAdmin,
