@@ -1,6 +1,6 @@
 import { query, withTransaction } from './conn';
 import type { Database } from "sqlite";
-import { anyNameSql, speciesFromSql, speciesJoinSql } from "@/species";
+import { anyNameSql, scientificNameSql, speciesFromSql, speciesJoinSql } from "@/species";
 
 export interface CaresRegistration {
   group_id: number;
@@ -228,7 +228,7 @@ export async function getCaresProfile(memberId: number): Promise<CaresProfile> {
     `SELECT
       r.species_group_id AS group_id,
       ${anyNameSql("common", "r.species_group_id")} AS common_name,
-      sng.canonical_genus || ' ' || sng.canonical_species_name AS scientific_name,
+      ${scientificNameSql("sng")} AS scientific_name,
       r.registered_at,
       r.last_confirmed,
       r.photo_url,
@@ -271,10 +271,7 @@ export async function getCaresProfile(memberId: number): Promise<CaresProfile> {
         ${anyNameSql("common", "ca.species_group_id")},
         NULL
       ) AS common_name,
-      COALESCE(
-        sng.canonical_genus || ' ' || sng.canonical_species_name,
-        NULL
-      ) AS scientific_name,
+      ${scientificNameSql("sng")} AS scientific_name,
       ca.species_group_id
     FROM cares_article ca
     ${speciesJoinSql("ca.species_group_id", "sng")}
@@ -295,10 +292,7 @@ export async function getCaresProfile(memberId: number): Promise<CaresProfile> {
         ${anyNameSql("common", "fs.species_group_id")},
         NULL
       ) AS common_name,
-      COALESCE(
-        sng.canonical_genus || ' ' || sng.canonical_species_name,
-        NULL
-      ) AS scientific_name,
+      ${scientificNameSql("sng")} AS scientific_name,
       fs.species_group_id,
       CASE WHEN fs.recipient_member_id IS NULL AND fs.recipient_club IS NOT NULL THEN 1 ELSE 0 END AS is_external
     FROM cares_fry_share fs
@@ -364,7 +358,7 @@ export async function getCaresRegistrations(memberId: number): Promise<Array<{
     `SELECT
       r.species_group_id AS group_id,
       ${anyNameSql("common", "r.species_group_id")} AS common_name,
-      sng.canonical_genus || ' ' || sng.canonical_species_name AS scientific_name
+      ${scientificNameSql("sng")} AS scientific_name
     FROM cares_registration r
     ${speciesJoinSql("r.species_group_id", "sng")}
     WHERE r.member_id = ?

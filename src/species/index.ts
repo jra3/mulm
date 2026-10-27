@@ -79,6 +79,7 @@ export {
   speciesOfSubmissionJoinSql,
   programClassOfSubmissionSql,
   anyNameSql,
+  scientificNameSql,
 } from "./sql";
 
 // Read models: typeahead, suggestions, explorer, admin list, detail, breeders, IUCN due list, statistics.

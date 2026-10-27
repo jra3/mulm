@@ -44,6 +44,14 @@ export function programClassOfSubmissionSql(submission: SubmissionAlias, species
 }
 
 /**
+ * The Canonical scientific name ("Genus species") of the Species joined as
+ * `speciesAlias`, or NULL when none is joined.
+ */
+export function scientificNameSql(speciesAlias: string): string {
+  return `${speciesAlias}.canonical_genus || ' ' || ${speciesAlias}.canonical_species_name`;
+}
+
+/**
  * One Name of the kind for the Species `speciesIdExpr`, or NULL: a scalar
  * subquery. The first by text, which is the one `listNames` lists first, so
  * a page and a query agree on which common Name a Species goes by.
