@@ -57,24 +57,6 @@ export function validatePasswordComplexity(password: string): PasswordValidation
 }
 
 /**
- * Get password requirements message based on complexity level
- * Used for displaying hints to users
- */
-export function getPasswordRequirementsMessage(): string {
-  let message = `Must be at least ${MIN_LENGTH} characters`;
-
-  if (PASSWORD_COMPLEXITY_LEVEL >= 2) {
-    message += " and contain uppercase, lowercase, and numbers";
-  }
-
-  if (PASSWORD_COMPLEXITY_LEVEL >= 3) {
-    message += ", and a special character";
-  }
-
-  return message;
-}
-
-/**
  * Get detailed password requirements for UI
  */
 export function getPasswordRequirements(): Array<{ requirement: string; met?: boolean }> {

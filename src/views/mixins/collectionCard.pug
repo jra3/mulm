@@ -175,18 +175,3 @@ mixin collectionCard(entry, canEdit = false, options = {})
 			if entry.notes
 				div(class=variant === 'large' ? 'text-base' : 'text-sm' class="text-gray-700 mt-auto pt-3 border-t border-gray-200")
 					p(class=variant === 'large' ? '' : 'line-clamp-3')= entry.notes
-
-
-//- Collection Summary Card - Shows stats
-mixin collectionSummary(stats)
-	+card({variant: 'info', padding: 'md'})
-		.flex.items-center.justify-between
-			div
-				.text-2xl.font-bold.text-blue-900= stats.current || 0
-				.text-sm.text-blue-700 Current Species
-			.text-gray-400
-				i.fas.fa-fish(class="text-4xl")
-		if stats.lifetime && stats.lifetime > stats.current
-			.mt-3.pt-3.border-t.border-blue-200
-				.text-sm.text-blue-700
-					= `${stats.lifetime} total species kept (lifetime)`

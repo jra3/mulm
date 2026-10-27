@@ -63,10 +63,9 @@ presentation date or a documented correction is needed; the spawn date cannot
 recover that information.
 
 The historical CSV importer in `src/backfill/import.ts` currently sets
-`approved_on` to the **import time**, not a historical meeting date. The script
-helper in `scripts/lib/backfill.ts` accepts an explicit approval date but defaults
-to now. Those dates must be audited against club records before treating a
-historical recalculation as authoritative. They cannot be corrected reliably from
+`approved_on` to the **import time**, not a historical meeting date. Those dates
+must be audited against club records before treating a historical recalculation
+as authoritative. They cannot be corrected reliably from
 reproduction dates alone. This change does not rewrite records or manufacture
 historical meeting dates, and no production data was audited in this checkout.
 Lifetime totals are unaffected by the annual reporting change.

@@ -173,7 +173,6 @@ PATCH  /admin/members/:memberId                 - Update member
 POST   /admin/members/:memberId/check-levels    - Recalculate levels
 POST   /admin/members/:memberId/check-specialty-awards - Check specialty awards
 POST   /admin/members/:memberId/send-welcome    - Send welcome email
-POST   /admin/members/invite                    - Invite new member
 ```
 
 ## Route Guidelines

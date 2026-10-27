@@ -74,25 +74,6 @@ export async function onSubmissionSend(sub: Submission, member: MemberRecord) {
   );
 }
 
-export async function sendChangesRequest(sub: Submission, contact_email: string, content: string) {
-  if (EMAILS_DISABLED) {
-    logger.info("Email disabled - would have sent changes request", { submissionId: sub.id });
-    return;
-  }
-
-  await sendEmailWithRetry(
-    () =>
-      transporter.sendMail({
-        from: fromEmail,
-        to: contact_email,
-        bcc: DEBUG_EMAIL,
-        subject: `Changes Requested - ${sub.species_common_name}`,
-        text: content,
-      }),
-    { type: "changes_request", context: { submissionId: sub.id, recipient: contact_email } }
-  );
-}
-
 const renderOnChangesRequested = pug.compileFile("src/views/email/onChangesRequested.pug");
 export async function onChangesRequested(
   submission: Submission,

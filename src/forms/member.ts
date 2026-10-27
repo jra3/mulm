@@ -11,11 +11,3 @@ export const memberSchema = z.object({
   plant_level: z.string().max(50, "Level too long").optional(),
   coral_level: z.string().max(50, "Level too long").optional(),
 });
-
-export const inviteSchema = z.object({
-  contact_email: z
-    .string()
-    .email("Valid address required")
-    .max(100, "Email too long (max 100 characters)"),
-  display_name: z.string().max(100, "Name too long (max 100 characters)").optional(),
-});

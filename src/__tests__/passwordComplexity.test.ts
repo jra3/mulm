@@ -1,9 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert";
-import {
-  validatePasswordComplexity,
-  getPasswordRequirementsMessage,
-} from "../auth/passwordComplexity";
+import { validatePasswordComplexity } from "../auth/passwordComplexity";
 
 void describe("Password Complexity Validation", () => {
   void describe("Level 1 - Length Only (Default)", () => {
@@ -36,13 +33,6 @@ void describe("Password Complexity Validation", () => {
     void test("should accept passphrases", () => {
       const result = validatePasswordComplexity("correct horse battery staple");
       assert.strictEqual(result.valid, true);
-    });
-  });
-
-  void describe("Password Requirements Message", () => {
-    void test("should return appropriate message for current level", () => {
-      const message = getPasswordRequirementsMessage();
-      assert.ok(message.includes("12 characters"));
     });
   });
 

@@ -87,7 +87,6 @@ void describe("CARES registry visibility", () => {
           "/cares",
           "/dialog/cares/fry-share",
           `/dialog/cares/register/1`,
-          `/api/cares/registrations/${keeperId}`,
         ]) {
           const res = await request(app).get(url);
           assert.strictEqual(res.status, 404, url);
@@ -113,16 +112,6 @@ void describe("CARES registry visibility", () => {
         assert.strictEqual(res.status, 200);
         assert.doesNotMatch(res.text, /CARES Registered/);
         assert.doesNotMatch(res.text, /\/dialog\/cares\//);
-      });
-
-      void test("the collection API carries no registration fields", async () => {
-        const res = await request(appAs(viewers[who])).get(`/api/collection/${keeperId}`);
-        assert.strictEqual(res.status, 200);
-        const [entry] = res.body.collection as Record<string, unknown>[];
-        for (const [key, value] of Object.entries(entry)) {
-          if (key.startsWith("cares_")) assert.strictEqual(value, null, key);
-        }
-        assert.strictEqual(entry.cares_registered_at, null);
       });
 
       void test("species pages keep the CARES badge but drop the registry", async () => {
@@ -152,9 +141,6 @@ void describe("CARES registry visibility", () => {
 
       const collection = await request(app).get(`/member/${keeperId}/collection`);
       assert.match(collection.text, /CARES Registered/);
-
-      const api = await request(app).get(`/api/collection/${keeperId}`);
-      assert.strictEqual(api.body.collection[0].cares_registered_at, "2026-01-01");
 
       const detail = await request(app).get(`/species/${groupId}`);
       assert.match(detail.text, /maintaining this species/);

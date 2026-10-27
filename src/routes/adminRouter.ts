@@ -69,7 +69,6 @@ adminRouter.patch("/members/:memberId", admin.updateMemberFields);
 adminRouter.post("/members/:memberId/check-levels", admin.checkMemberLevels);
 adminRouter.post("/members/:memberId/check-specialty-awards", admin.checkMemberSpecialtyAwards);
 adminRouter.post("/members/:memberId/send-welcome", admin.sendWelcomeEmail);
-adminRouter.post("/members/invite", admin.inviteMember);
 
 adminRouter.post("/submissions/:id/bind-species", admin.bindSpeciesAction);
 adminRouter.post(

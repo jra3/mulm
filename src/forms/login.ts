@@ -4,7 +4,6 @@ import { validatePasswordComplexity } from "../auth/passwordComplexity";
 export const loginSchema = z.object({
   email: z.string().max(100, "Email too long (max 100 characters)"),
   password: z.string().max(100, "Password too long (max 100 characters)"),
-  rememberMe: z.boolean().optional(),
 });
 
 export const signupSchema = z
