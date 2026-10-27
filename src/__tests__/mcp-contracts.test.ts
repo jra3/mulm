@@ -10,7 +10,7 @@ import { join } from "node:path";
 import { initializeSpeciesServer } from "@/mcp/species-server-core";
 import { initializeMemberServer } from "@/mcp/member-server-core";
 import { initializeBackfillServer } from "@/mcp/backfill-server-core";
-import { createMember } from "@/db/members";
+import { createAppleAccount, createMember } from "@/db/members";
 import { createTestDatabase, type TestDatabase } from "./helpers/database";
 
 const initializers = {
@@ -265,6 +265,19 @@ void describe("MCP contracts over real in-memory client/server transports", () =
       (await backfill.readResource({ uri: "backfill://statistics" })).contents.length,
       1
     );
+  });
+
+  void test("member detail reports a Sign in with Apple login", async () => {
+    const memberId = await createMember("apple@example.com", "Apple Only");
+    await createAppleAccount(memberId, "apple-sub", "relay@privaterelay.appleid.com");
+    const members = await connect("members");
+    const result = payload(
+      await members.callTool({ name: "get_member_detail", arguments: { member_id: memberId } })
+    );
+    const member = z
+      .object({ has_password: z.boolean(), has_google_oauth: z.boolean(), has_apple: z.boolean() })
+      .parse(result.member);
+    assert.deepEqual(member, { has_password: false, has_google_oauth: false, has_apple: true });
   });
 
   void test("backfill file adapters preserve parse/validation/import reports and default execution", async () => {

@@ -32,6 +32,7 @@ type Member = {
 type MemberDetail = Member & {
   has_password: boolean;
   has_google_oauth: boolean;
+  has_apple: boolean;
   submission_count: number;
   approved_submission_count: number;
   total_points: number;
@@ -374,6 +375,11 @@ async function handleGetMemberDetail(args: z.infer<typeof getMemberDetailSchema>
     [member_id]
   );
 
+  const hasApple = await query<{ member_id: number }>(
+    "SELECT member_id FROM apple_account WHERE member_id = ?",
+    [member_id]
+  );
+
   // Get awards
   const awards = await query<{ award_name: string; date_awarded: string }>(
     "SELECT award_name, date_awarded FROM awards WHERE member_id = ? ORDER BY date_awarded DESC",
@@ -390,6 +396,7 @@ async function handleGetMemberDetail(args: z.infer<typeof getMemberDetailSchema>
     ...member,
     has_password: hasPassword.length > 0,
     has_google_oauth: hasGoogle.length > 0,
+    has_apple: hasApple.length > 0,
     submission_count: submissions[0]?.count || 0,
     approved_submission_count: approvedSubmissions[0]?.count || 0,
     total_points: totalPoints[0]?.total || 0,
