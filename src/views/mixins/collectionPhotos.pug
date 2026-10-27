@@ -1,0 +1,34 @@
+//- The photo grid in the Edit Collection Entry dialog. Each photo has a
+//- remove control that posts its stored key; the server answers with this
+//- grid re-rendered from the entry, plus a status line.
+//- @param {Object} entry - collection entry with images
+//- @param {Object} [status] - { message, type } shown above the grid
+mixin collectionPhotos(entry, status)
+	- const statusColors = { error: 'red', warning: 'yellow', success: 'green' }
+	div#collection-photos(
+		hx-on::before-swap="if (event.detail.xhr.status >= 400) { event.detail.shouldSwap = true; event.detail.isError = false; }"
+	)
+		if status
+			- const color = statusColors[status.type] || 'red'
+			p(class=`text-sm mt-2 px-2 py-1 border-l-4 bg-${color}-50 border-${color}-400 text-${color}-700` role="status")= status.message
+		if entry.images && entry.images.length > 0
+			div#image-preview-grid.grid.gap-1.mt-2(class="grid-cols-3")
+				each img, idx in entry.images
+					.relative
+						img.w-full.h-20.object-cover.rounded(
+							src=img.url.replace('-original', '-thumb')
+							alt=`Photo ${idx + 1}`
+						)
+						button.absolute.top-1.right-1.bg-red-600.text-white.rounded-full.w-7.h-7.flex.items-center.justify-center.text-sm.font-bold.shadow.hover_bg-red-700(
+							type="button"
+							hx-post=`/api/collection/${entry.id}/images/remove`
+							hx-vals=JSON.stringify({ key: img.key })
+							hx-confirm="Remove this photo?"
+							hx-target="#collection-photos"
+							hx-swap="outerHTML"
+							hx-disabled-elt="this"
+							aria-label=`Remove photo ${idx + 1}`
+							title="Remove photo"
+						) ×
+		else
+			p.text-xs.text-gray-500.mt-2 No photos yet.

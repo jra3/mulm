@@ -112,6 +112,11 @@ export const updateCollectionSchema = z.object({
   }
 );
 
+/** A photo to detach from a collection entry, by its stored key. */
+export const removeCollectionImageSchema = z.object({
+  key: z.string().min(1, "Photo key is required").max(500),
+});
+
 /**
  * The Species to preselect in the add dialog (?species=<group_id>), from a
  * Species detail page. Absent means the generic dialog.

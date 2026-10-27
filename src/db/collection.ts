@@ -6,7 +6,7 @@ import { anyNameSql, scientificNameSql, speciesJoinSql, findSpeciesById } from "
 
 export type CollectionRefusalCode =
   | "missing" | "forbidden" | "already-linked" | "duplicate" | "missing-species"
-  | "invalid" | "already-removed";
+  | "invalid" | "already-removed" | "missing-image";
 
 export class CollectionRefusal extends Error {
   constructor(public readonly code: CollectionRefusalCode, message: string) {
@@ -372,6 +372,33 @@ export async function updateCollectionEntry(
     } finally {
       await stmt.finalize();
     }
+  });
+}
+
+/**
+ * Detach one photo from an entry, identified by its stored key. The key must
+ * already be on this entry, so a stale or repeated request removes nothing.
+ * Storage objects are kept: nothing deletes images from R2 (see
+ * scheduled/cleanup.ts), so a photo another record still uses stays intact.
+ * Returns the photos left on the entry.
+ */
+export async function removeCollectionImage(
+  id: number,
+  memberId: number,
+  key: string
+): Promise<ImageMetadata[]> {
+  return withTransaction(async (db) => {
+    const entry = await ownedEntry(db, id, memberId);
+    const images = entry.images ? JSON.parse(entry.images) as ImageMetadata[] : [];
+    const remaining = images.filter((image) => image.key !== key);
+    if (remaining.length === images.length)
+      throw new CollectionRefusal("missing-image", "That photo is no longer on this entry.");
+    await db.run(
+      `UPDATE species_collection SET images = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ? AND member_id = ?`,
+      [remaining.length > 0 ? JSON.stringify(remaining) : null, id, memberId]
+    );
+    return remaining;
   });
 }
 

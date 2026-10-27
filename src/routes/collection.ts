@@ -10,6 +10,7 @@ import {
   removeFromCollection,
   getCollectionEntry,
   linkCollectionEntry,
+  removeCollectionImage,
   CollectionRefusal,
 } from "@/db/collection";
 import {
@@ -17,6 +18,7 @@ import {
   updateCollectionSchema,
   entryIdParamSchema,
   addDialogQuerySchema,
+  removeCollectionImageSchema,
   canEditCollection,
 } from "@/forms/collection";
 import { canonicalName, findSpeciesById, listNames } from "@/species";
@@ -476,5 +478,70 @@ router.post(
     }
   }
 );
+
+/**
+ * Remove one photo from a collection entry (owner only)
+ * POST /api/collection/:id/images/remove
+ *
+ * Detaches the photo's metadata from the entry; storage objects are not
+ * deleted. Responds with the entry's photo grid as it now stands, with a
+ * status line, so the edit dialog stays coherent after success or failure.
+ */
+router.post("/api/collection/:id/images/remove", async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+  if (!viewer) {
+    res.status(401).render("partials/message", { message: "Not authenticated", type: "error" });
+    return;
+  }
+
+  let entryId: number;
+  let key: string;
+  try {
+    entryId = entryIdParamSchema.parse(req.params).id;
+    key = removeCollectionImageSchema.parse(req.body).key;
+  } catch (error) {
+    const message =
+      error instanceof ZodError ? error.issues.map((issue) => issue.message).join(", ") : "Invalid request";
+    res.status(400).render("partials/message", { message, type: "warning" });
+    return;
+  }
+
+  const renderPhotos = async (status: number, message: string, type: string) => {
+    const entry = await getCollectionEntry(entryId, viewer.id);
+    if (!entry || entry.member_id !== viewer.id) {
+      res.status(status).render("partials/message", { message, type });
+      return;
+    }
+    res.status(status).render("partials/collection-photos", { entry, status: { message, type } });
+  };
+
+  try {
+    await removeCollectionImage(entryId, viewer.id, key);
+    await renderPhotos(200, "Photo removed.", "success");
+  } catch (error) {
+    if (error instanceof CollectionRefusal) {
+      if (error.code === "missing" || error.code === "forbidden") {
+        res.status(403).render("partials/message", {
+          message: "Access denied. You can only change your own collection entries.",
+          type: "error",
+        });
+        return;
+      }
+      await renderPhotos(409, "That photo was already removed. The photos below are current.", "warning");
+      return;
+    }
+
+    logger.error("Failed to remove collection image", error);
+    try {
+      await renderPhotos(500, "Could not remove the photo. Please try again.", "error");
+    } catch (renderError) {
+      logger.error("Failed to reload collection photos", renderError);
+      res.status(500).render("partials/message", {
+        message: "Could not remove the photo. Please try again.",
+        type: "error",
+      });
+    }
+  }
+});
 
 export default router;
