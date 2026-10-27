@@ -33,7 +33,15 @@ import {
 } from "@/lifecycle";
 import { query } from "@/db/conn";
 import { setSubmissionSupplements } from "@/db/submissions";
-import { addName, checkFormAgreement, createSpecies, findSpeciesById, listNames, resolveSpecies } from "@/species";
+import {
+  addName,
+  checkFormAgreement,
+  createSpecies,
+  findSpeciesById,
+  listNames,
+  resolveSpecies,
+  type PointClass,
+} from "@/species";
 import { addNote, findSubmissionsWithRecordedSpecies, getNotesForSubmission, speciesChosenByCommittee } from "@/db/submission_notes";
 import {
   ensureGuppySpecies,
@@ -1267,7 +1275,7 @@ void describe("Submission lifecycle - transitions", () => {
         first_time_species: row.first_time_species,
       };
     };
-    const unvaluedSpecies = (epithet: string, extra: { pointClass?: number | null; speciesType?: string; programClass?: string } = {}) =>
+    const unvaluedSpecies = (epithet: string, extra: { pointClass?: PointClass | null; speciesType?: string; programClass?: string } = {}) =>
       createSpecies({
         canonicalGenus: "Valuandus",
         canonicalSpeciesName: epithet,
@@ -1569,7 +1577,7 @@ void describe("Submission lifecycle - transitions", () => {
       const species = found.species;
       assert.deepStrictEqual(
         [species.species_type, species.program_class, species.base_points, species.is_cares_species],
-        ["Fish", "Cichlids - New World", 15, 1],
+        ["Fish", "Cichlids - New World", 15, true],
         "type and class from the Submission, Point class and CARES from the witness"
       );
       const names = await listNames(species.group_id);
@@ -1628,7 +1636,7 @@ void describe("Submission lifecycle - transitions", () => {
       const names = await listNames((await recorded())!.species.group_id);
       assert.deepStrictEqual(names.common, []);
       assert.strictEqual(names.scientific.length, 1);
-      assert.strictEqual((await recorded())!.species.is_cares_species, 0);
+      assert.strictEqual((await recorded())!.species.is_cares_species, false);
     });
 
     void test("recording over the member's own pick rebinds to the new Species", async () => {
@@ -1891,7 +1899,7 @@ void describe("Submission lifecycle - transitions", () => {
         first_time_species: row.first_time_species,
       };
     };
-    const freshSpecies = (epithet: string, extra: { pointClass?: number | null; speciesType?: string; programClass?: string } = {}) =>
+    const freshSpecies = (epithet: string, extra: { pointClass?: PointClass | null; speciesType?: string; programClass?: string } = {}) =>
       createSpecies({
         canonicalGenus: "Correctus",
         canonicalSpeciesName: epithet,

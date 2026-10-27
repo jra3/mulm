@@ -1,7 +1,7 @@
 import type { Database } from "sqlite";
 import { query } from "@/db/conn";
 import { nameTable } from "./names";
-import { nameKinds, type NameKind, type Species } from "./types";
+import { nameKinds, speciesOfRow, type NameKind, type Species, type SpeciesRow } from "./types";
 
 /** One Species by id, or undefined. Pass the transaction connection for a write decision. */
 export async function findSpeciesById(
@@ -9,19 +9,19 @@ export async function findSpeciesById(
   db?: Database
 ): Promise<Species | undefined> {
   const sql = "SELECT * FROM species_name_group WHERE group_id = ?";
-  if (db) return db.get<Species>(sql, [speciesId]);
-  const rows = await query<Species>(sql, [speciesId]);
-  return rows[0];
+  const row = db ? await db.get<SpeciesRow>(sql, [speciesId]) : (await query<SpeciesRow>(sql, [speciesId]))[0];
+  return row && speciesOfRow(row);
 }
 
 /** The Species with these ids that exist, in canonical-name order. */
 export async function findSpeciesByIds(speciesIds: number[]): Promise<Species[]> {
   if (speciesIds.length === 0) return [];
-  return query<Species>(
+  const rows = await query<SpeciesRow>(
     `SELECT * FROM species_name_group WHERE group_id IN (${speciesIds.map(() => "?").join(",")})
      ORDER BY canonical_genus, canonical_species_name`,
     speciesIds
   );
+  return rows.map(speciesOfRow);
 }
 
 /**
@@ -41,7 +41,7 @@ export async function findSpeciesByName(text: string, kind?: NameKind): Promise<
     })
     .join(" UNION ");
   const s = nameTable.scientific;
-  return query<Species>(
+  const rows = await query<SpeciesRow>(
     `SELECT * FROM species_name_group WHERE group_id IN (${matches})
      ORDER BY group_id IN (
          SELECT group_id FROM ${s.table} WHERE ${s.canonical} = 1 AND LOWER(${s.text}) = LOWER(?)
@@ -49,6 +49,7 @@ export async function findSpeciesByName(text: string, kind?: NameKind): Promise<
        canonical_genus, canonical_species_name`,
     [...kinds.map(() => trimmed), trimmed]
   );
+  return rows.map(speciesOfRow);
 }
 
 export type Resolution = {

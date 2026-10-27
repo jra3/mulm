@@ -620,11 +620,13 @@ void describe("Species catalogue", () => {
               canonicalSpeciesName: `pointus${bad}`,
               programClass: "Livebearers",
               speciesType: "Fish",
+              // @ts-expect-error not a Point class; untyped callers (forms, MCP) still get refused
               pointClass: bad,
             }),
           CatalogueRefusal
         );
         const id = await speciesWith({ genus: "Goodus", epithet: "pointus", pointClass: 10 });
+        // @ts-expect-error not a Point class; untyped callers (forms, MCP) still get refused
         await assert.rejects(() => updateSpecies(id, { pointClass: bad }), CatalogueRefusal);
         await assert.rejects(() => setPointClass([id], bad), CatalogueRefusal);
         assert.strictEqual((await findSpeciesById(id))?.base_points, 10);
