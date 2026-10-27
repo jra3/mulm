@@ -1,7 +1,6 @@
 import defaultConfig from "@/config.json";
 import express from "express";
 import cookieParser from "cookie-parser";
-// import multer from "multer"; // Used in feature branch
 
 import * as account from "@/routes/account";
 import adminRouter from "@/routes/adminRouter";
@@ -140,12 +139,6 @@ export function createApp(dependencies: AppDependencies = {}) {
   app.set("view engine", "pug");
 
   app.use(express.static(path.join(__dirname, "../public")));
-
-  // Multer configuration for file uploads (used in feature branch)
-  // const upload = multer({
-  // 	storage: multer.memoryStorage(),
-  // 	limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
-  // });
 
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));

@@ -562,7 +562,6 @@ void describe("Pug Template Rendering", () => {
     const skipPatterns = [
       /^header\.pug$/, // Mixed header file with mixins
       /^bapForm\/inputs\.pug$/, // Contains mixins only
-      /^typeahead-examples\.pug$/, // Uses undefined mixins
       /^account\/field\.pug$/, // Mixin-only template
       /^mixins\/date\.pug$/, // Date formatting mixins only
       /^mixins\/countBadge\.pug$/, // Mixin-only template
@@ -590,11 +589,9 @@ void describe("Pug Template Rendering", () => {
       /^admin\/adminActionsPanel\.pug$/, // Mixin-only template
       /^admin\/memberRow\.pug$/, // Mixin-only template
       /^admin\/queueButton\.pug$/, // Mixin-only template
-      /^bapForm\/style\.pug$/, // Style-only template
       /^bapForm\/supplementLine\.pug$/, // Mixin-only template
       /^bapForm\/supplementSingleLine\.pug$/, // Mixin-only template
       /^mixins\/submissionImages\.pug$/, // Mixin-only template
-      /^onSelectType\.pug$/, // Include-only template
       /^member\/caresSection\.pug$/, // Mixin-only template (included by member.pug)
       /^admin\/externalDataStatus\.pug$/, // Partial included by externalData.pug + served via HTMX
     ];

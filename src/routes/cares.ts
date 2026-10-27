@@ -279,26 +279,6 @@ router.post(
 );
 
 /**
- * GET /api/cares/registrations/:memberId
- * Get all CARES registrations for a member (JSON)
- */
-router.get("/api/cares/registrations/:memberId", async (req: MulmRequest, res: Response) => {
-  try {
-    const memberId = parseInt(req.params.memberId);
-    if (isNaN(memberId)) {
-      res.status(400).json({ error: "Invalid member ID" });
-      return;
-    }
-
-    const registrations = await getCaresRegistrations(memberId);
-    res.json({ registrations });
-  } catch (error) {
-    logger.error("Failed to get CARES registrations", error);
-    res.status(500).json({ error: "Failed to load registrations" });
-  }
-});
-
-/**
  * GET /dialog/cares/fry-share
  * Show the fry sharing dialog for recording distribution of CARES species
  */

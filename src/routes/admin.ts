@@ -1,7 +1,5 @@
 import {
-  createMember,
   getMember,
-  getMemberByEmail,
   getRosterWithPoints,
   getMemberWithPoints,
   updateMember,
@@ -26,14 +24,12 @@ import {
 } from "@/forms/confirmWitness";
 import { loadWitnessPanel, parsePointsCorrection, parseWitnessConfirmation, programOfSubmission, summarizeWitnessForm } from "@/forms/witnessPanel";
 import { z } from "zod";
-import { inviteSchema } from "@/forms/member";
 import { sendInviteEmail } from "@/notifications";
 import { getNextLevel, isProgramType, programMetadata, programs } from "@/programs";
 import { MulmRequest } from "@/sessions";
 import { Response, NextFunction } from "express";
 import { createAuthCode } from "@/db/auth";
 import { AuthCode, generateRandomCode } from "@/auth";
-import { validateFormResult } from "@/forms/utils";
 import { allowedMoves, validateSubmission } from "./submission";
 import {
   isLivestock,
@@ -810,47 +806,6 @@ export const adoptSpeciesClassificationAction = async (req: MulmRequest, res: Re
   if (!ran) return;
 
   res.set("HX-Refresh", "true").send();
-};
-
-export const inviteMember = async (req: MulmRequest, res: Response) => {
-  const errors = new Map<string, string>();
-  const renderDialog = () => {
-    res.render("admin/inviteUser", {
-      ...(req.body as object),
-      errors,
-    });
-  };
-
-  const parsed = inviteSchema.safeParse(req.body);
-  if (!validateFormResult(parsed, errors, renderDialog)) {
-    return;
-  }
-  const { contact_email, display_name } = parsed.data;
-  let member = await getMemberByEmail(contact_email);
-  if (member == undefined) {
-    const name = String(display_name);
-    if (name.length > 2) {
-      const member_id = await createMember(parsed.data.contact_email, name);
-      member = await getMember(member_id);
-    }
-
-    if (!member) {
-      res.send("Failed to create member");
-      return;
-    }
-  }
-
-  const codeEntry: AuthCode = {
-    member_id: member.id,
-    code: generateRandomCode(24),
-    // 1 week expiration
-    expires_on: new Date(Date.now() + 60 * 60 * 1000 * 24 * 7),
-    purpose: "password_reset",
-  };
-
-  await createAuthCode(codeEntry);
-  await sendInviteEmail(contact_email, member.display_name, codeEntry.code);
-  res.send("Invite sent");
 };
 
 export const sendWelcomeEmail = async (req: MulmRequest, res: Response) => {

@@ -11,8 +11,6 @@ import {
   getCollectionEntry,
   getCollectionStats,
   getSpeciesKeepers,
-  getRecentCollectionAdditions,
-  updateCollectionImages,
 } from "../db/collection";
 import type { ImageMetadata } from "../utils/r2-client";
 
@@ -259,7 +257,7 @@ void describe("Species Collection Database Module", () => {
       ];
 
       const id = await addToCollection(memberId2, { group_id: speciesId1 });
-      await updateCollectionImages(id, memberId2, images);
+      await updateCollectionEntry(id, memberId2, { images });
 
       const collection = await getCollectionForMember(memberId2, {
         viewerId: memberId2,
@@ -569,24 +567,10 @@ void describe("Species Collection Database Module", () => {
       assert.equal(stats.lifetime, 3);
     });
 
-    void test("should break down by program class", async () => {
-      const stats = await getCollectionStats(memberId1);
-      assert.equal(stats.byClass["Cichlids"], 1);
-      assert.equal(stats.byClass["Livebearers"], 1);
-      assert.equal(stats.byClass["Killifish"], undefined); // Removed
-    });
-
-    void test("should break down by species type", async () => {
-      const stats = await getCollectionStats(memberId1);
-      assert.equal(stats.byType["Fish"], 2);
-    });
-
     void test("should return zero counts for member with no collection", async () => {
       const stats = await getCollectionStats(memberId2);
       assert.equal(stats.current, 0);
       assert.equal(stats.lifetime, 0);
-      assert.deepEqual(stats.byClass, {});
-      assert.deepEqual(stats.byType, {});
     });
 
     void test("should handle member with only removed entries", async () => {
@@ -596,7 +580,6 @@ void describe("Species Collection Database Module", () => {
       const stats = await getCollectionStats(memberId2);
       assert.equal(stats.current, 0);
       assert.equal(stats.lifetime, 1);
-      assert.deepEqual(stats.byClass, {});
     });
   });
 
@@ -664,196 +647,6 @@ void describe("Species Collection Database Module", () => {
       const result = await getSpeciesKeepers(speciesId1);
       assert.equal(result.members[0].display_name, "Test User 1");
       assert.equal(result.members[1].display_name, "Test User 2");
-    });
-  });
-
-  void describe("getRecentCollectionAdditions", () => {
-    beforeEach(async () => {
-      // Add entries with full second delays to ensure proper ordering with SQLite timestamp precision
-      await addToCollection(memberId1, {
-        group_id: speciesId1,
-        visibility: "public",
-      });
-      await new Promise(resolve => setTimeout(resolve, 1100));
-      await addToCollection(memberId2, {
-        group_id: speciesId2,
-        visibility: "public",
-      });
-      await new Promise(resolve => setTimeout(resolve, 1100));
-      await addToCollection(memberId1, {
-        group_id: speciesId3,
-        visibility: "private",
-      }); // Should be excluded
-    });
-
-    void test("should return recent public additions", async () => {
-      const recent = await getRecentCollectionAdditions(10);
-      assert.equal(recent.length, 2);
-    });
-
-    void test("should order by most recent first", async () => {
-      const recent = await getRecentCollectionAdditions(10);
-      assert.equal(recent[0].common_name, "Test Livebearer 2");
-      assert.equal(recent[1].common_name, "Test Cichlid 1");
-    });
-
-    void test("shows the scientific name genus first", async () => {
-      const recent = await getRecentCollectionAdditions(10);
-      assert.equal(recent[1].scientific_name, "TestGenus testspecies1");
-    });
-
-    void test("should exclude private entries", async () => {
-      const recent = await getRecentCollectionAdditions(10);
-      assert.ok(recent.every(e => e.visibility === "public"));
-    });
-
-    void test("should exclude removed entries", async () => {
-      const entry = await db.get<{ id: number }>(
-        "SELECT id FROM species_collection WHERE group_id = ?",
-        speciesId2
-      );
-      if (!entry) throw new Error("Entry not found");
-      await removeFromCollection(entry.id, memberId2);
-
-      const recent = await getRecentCollectionAdditions(10);
-      assert.equal(recent.length, 1);
-      assert.equal(recent[0].common_name, "Test Cichlid 1");
-    });
-
-    void test("should respect limit parameter", async () => {
-      for (let i = 0; i < 5; i++) {
-        const species = await db.run(
-          `INSERT INTO species_name_group (
-            program_class, species_type, canonical_genus, canonical_species_name
-          ) VALUES ('Test', 'Fish', 'Test', 'species${i}')
-        `);
-        await addToCollection(memberId1, {
-          group_id: species.lastID,
-        });
-      }
-
-      const recent = await getRecentCollectionAdditions(3);
-      assert.equal(recent.length, 3);
-    });
-
-    void test("should include all necessary fields", async () => {
-      const recent = await getRecentCollectionAdditions(1);
-      const entry = recent[0];
-
-      assert.ok(entry.id);
-      assert.ok(entry.member_id);
-      assert.ok(entry.group_id);
-      assert.ok(entry.common_name || entry.scientific_name);
-      assert.ok(entry.member);
-      assert.equal(entry.removed_date, null);
-    });
-  });
-
-  void describe("updateCollectionImages", () => {
-    let entryId: number;
-
-    beforeEach(async () => {
-      entryId = await addToCollection(memberId1, { group_id: speciesId1 });
-    });
-
-    void test("should update images successfully", async () => {
-      const images: ImageMetadata[] = [
-        { key: "img1.jpg", url: "https://example.com/img1.jpg", size: 1000, uploadedAt: "2026-01-01T00:00:00Z" },
-        { key: "img2.jpg", url: "https://example.com/img2.jpg", size: 2000, uploadedAt: "2026-01-01T00:00:00Z" },
-      ];
-
-      await updateCollectionImages(entryId, memberId1, images);
-
-      const entry = await db.get(
-        "SELECT images FROM species_collection WHERE id = ?",
-        entryId
-      );
-      const parsed = JSON.parse(entry.images);
-      assert.equal(parsed.length, 2);
-    });
-
-    void test("should enforce maximum 5 images", async () => {
-      const images: ImageMetadata[] = [];
-      for (let i = 0; i < 6; i++) {
-        images.push({
-          key: `img${i}.jpg`,
-          url: `https://example.com/img${i}.jpg`,
-          size: 1000,
-          uploadedAt: "2026-01-01T00:00:00Z",
-        });
-      }
-
-      await assert.rejects(
-        async () => await updateCollectionImages(entryId, memberId1, images),
-        /Maximum 5 images allowed/
-      );
-    });
-
-    void test("should allow exactly 5 images", async () => {
-      const images: ImageMetadata[] = [];
-      for (let i = 0; i < 5; i++) {
-        images.push({
-          key: `img${i}.jpg`,
-          url: `https://example.com/img${i}.jpg`,
-          size: 1000,
-          uploadedAt: "2026-01-01T00:00:00Z",
-        });
-      }
-
-      await updateCollectionImages(entryId, memberId1, images);
-
-      const entry = await db.get(
-        "SELECT images FROM species_collection WHERE id = ?",
-        entryId
-      );
-      const parsed = JSON.parse(entry.images);
-      assert.equal(parsed.length, 5);
-    });
-
-    void test("should replace existing images", async () => {
-      const oldImages: ImageMetadata[] = [
-        { key: "old.jpg", url: "https://example.com/old.jpg", size: 1000, uploadedAt: "2026-01-01T00:00:00Z" },
-      ];
-      await updateCollectionImages(entryId, memberId1, oldImages);
-
-      const newImages: ImageMetadata[] = [
-        { key: "new.jpg", url: "https://example.com/new.jpg", size: 2000, uploadedAt: "2026-01-01T00:00:00Z" },
-      ];
-      await updateCollectionImages(entryId, memberId1, newImages);
-
-      const entry = await db.get(
-        "SELECT images FROM species_collection WHERE id = ?",
-        entryId
-      );
-      const parsed = JSON.parse(entry.images);
-      assert.equal(parsed.length, 1);
-      assert.equal(parsed[0].key, "new.jpg");
-    });
-
-    void test("should allow empty array to clear images", async () => {
-      const images: ImageMetadata[] = [
-        { key: "img.jpg", url: "https://example.com/img.jpg", size: 1000, uploadedAt: "2026-01-01T00:00:00Z" },
-      ];
-      await updateCollectionImages(entryId, memberId1, images);
-
-      await updateCollectionImages(entryId, memberId1, []);
-
-      const entry = await db.get(
-        "SELECT images FROM species_collection WHERE id = ?",
-        entryId
-      );
-      assert.equal(entry.images, "[]");
-    });
-
-    void test("should reject if member doesn't own entry", async () => {
-      const images: ImageMetadata[] = [
-        { key: "img.jpg", url: "https://example.com/img.jpg", size: 1000, uploadedAt: "2026-01-01T00:00:00Z" },
-      ];
-
-      await assert.rejects(
-        async () => await updateCollectionImages(entryId, memberId2, images),
-        /Collection entry not found or access denied/
-      );
     });
   });
 

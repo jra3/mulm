@@ -4,21 +4,16 @@ import { MulmRequest } from "@/sessions";
 import { Response, Router } from "express";
 import { z, ZodError } from "zod";
 import {
-  getCollectionForMember,
   addToCollection,
   updateCollectionEntry,
   removeFromCollection,
   getCollectionEntry,
-  getCollectionStats,
   linkCollectionEntry,
   CollectionRefusal,
 } from "@/db/collection";
-import { canSeeCaresRegistry } from "@/caresRegistry";
 import {
   addToCollectionSchema,
   updateCollectionSchema,
-  collectionViewSchema,
-  memberIdParamSchema,
   entryIdParamSchema,
   canEditCollection,
 } from "@/forms/collection";
@@ -30,48 +25,6 @@ const router = Router();
 
 // Configure multer for memory storage (same as submission uploads)
 const upload = createImageUpload(5);
-
-/**
- * View a member's collection (public endpoint, JSON for HTMX)
- * GET /api/collection/:memberId
- */
-router.get("/api/collection/:memberId", async (req: MulmRequest, res: Response) => {
-  try {
-    // Validate URL params
-    const { memberId } = memberIdParamSchema.parse(req.params);
-
-    // Validate query params
-    const { includeRemoved } = collectionViewSchema.parse(req.query);
-
-    const { viewer } = req;
-    const includePrivate = viewer?.id === memberId;
-
-    const collection = await getCollectionForMember(memberId, {
-      includeRemoved: Boolean(includeRemoved),
-      includePrivate,
-      viewerId: viewer?.id,
-      includeCaresRegistry: canSeeCaresRegistry(viewer),
-    });
-
-    const stats = await getCollectionStats(memberId);
-
-    res.json({
-      collection,
-      stats,
-      canEdit: viewer?.id === memberId,
-    });
-  } catch (error) {
-    // Zod validation errors
-    if (error instanceof ZodError) {
-      const errorMessages = error.issues.map((issue) => issue.message).join(", ");
-      res.status(400).json({ error: errorMessages });
-      return;
-    }
-
-    logger.error("Failed to get collection", error);
-    res.status(500).json({ error: "Failed to load collection" });
-  }
-});
 
 /**
  * Add species to collection (requires login)

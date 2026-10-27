@@ -83,8 +83,6 @@ export interface CollectionEntry {
 export interface CollectionStats {
   current: number;      // Currently kept species
   lifetime: number;     // Total species ever kept
-  byClass: Record<string, number>; // Breakdown by program class
-  byType: Record<string, number>;  // Breakdown by species type
 }
 
 export interface AddCollectionData {
@@ -137,16 +135,6 @@ interface StatsRow {
 }
 
 interface CountRow {
-  count: number;
-}
-
-interface ClassCountRow {
-  program_class: string;
-  count: number;
-}
-
-interface TypeCountRow {
-  species_type: string;
   count: number;
 }
 
@@ -489,33 +477,9 @@ export async function getCollectionStats(memberId: number): Promise<CollectionSt
     [memberId]
   );
 
-  const byClass = await query<ClassCountRow>(
-    `SELECT
-      sng.program_class,
-      COUNT(*) as count
-    FROM species_collection c
-    ${speciesJoinSql("c.group_id", "sng", { required: true })}
-    WHERE c.member_id = ? AND c.removed_date IS NULL
-    GROUP BY sng.program_class`,
-    [memberId]
-  );
-
-  const byType = await query<TypeCountRow>(
-    `SELECT
-      sng.species_type,
-      COUNT(*) as count
-    FROM species_collection c
-    ${speciesJoinSql("c.group_id", "sng", { required: true })}
-    WHERE c.member_id = ? AND c.removed_date IS NULL
-    GROUP BY sng.species_type`,
-    [memberId]
-  );
-
   return {
     current: stats[0]?.current || 0,
-    lifetime: stats[0]?.lifetime || 0,
-    byClass: Object.fromEntries(byClass.map(row => [row.program_class, row.count])),
-    byType: Object.fromEntries(byType.map(row => [row.species_type, row.count]))
+    lifetime: stats[0]?.lifetime || 0
   };
 }
 
@@ -560,59 +524,4 @@ export async function getSpeciesKeepers(
     count: countResult[0]?.count || 0,
     members: members
   };
-}
-
-/**
- * Get recent collection additions for activity feed
- */
-export async function getRecentCollectionAdditions(limit = 10): Promise<CollectionEntry[]> {
-  const rows = await query<CollectionRow>(
-    `SELECT
-      c.*,
-      ${scientificNameSql("sng")} AS scientific_name,
-      ${anyNameSql("common", "c.group_id")} AS common_name,
-      sng.program_class,
-      sng.species_type,
-      sng.is_cares_species,
-      m.display_name AS member_display_name
-    FROM species_collection c
-    ${speciesJoinSql("c.group_id", "sng", { required: true })}
-    JOIN members m ON c.member_id = m.id
-    WHERE c.visibility = 'public' AND c.removed_date IS NULL
-    ORDER BY c.created_at DESC
-    LIMIT ?`,
-    [limit]
-  );
-
-  return rows.map(row => ({
-    ...row,
-    images: row.images ? JSON.parse(row.images) as ImageMetadata[] : null,
-    common_name: row.common_name || null,
-    scientific_name: row.scientific_name || null,
-    species: {
-      program_class: row.program_class || null,
-      species_type: row.species_type || null,
-      is_cares_species: Boolean(row.is_cares_species)
-    },
-    member: {
-      id: row.member_id,
-      display_name: row.member_display_name || ''
-    }
-  }));
-}
-
-/**
- * Update collection images
- */
-export async function updateCollectionImages(
-  id: number,
-  memberId: number,
-  images: ImageMetadata[]
-): Promise<void> {
-  // Validate max 5 images
-  if (images.length > 5) {
-    throw new CollectionRefusal('invalid', 'Maximum 5 images allowed per collection entry');
-  }
-
-  await updateCollectionEntry(id, memberId, { images });
 }

@@ -445,30 +445,6 @@ export async function updateSubmission(id: number, updates: UpdateFor<Submission
 
 
 /**
- * Get all submissions approved today (in local time)
- * @returns Array of approved submissions from today with member names and total points
- */
-export function getTodayApprovedSubmissions() {
-  return query<
-    Submission &
-      Required<Pick<Submission, "submitted_on" | "approved_on" | "points" | "total_points">>
-  >(
-    `
-		SELECT
-			submissions.*,
-			${totalPointsSql("submissions")} as total_points,
-			members.display_name as member_name
-		FROM submissions JOIN members
-		ON submissions.member_id == members.id
-		WHERE DATE(approved_on) = DATE('now', 'localtime')
-		AND approved_on IS NOT NULL
-		AND points IS NOT NULL
-		ORDER BY approved_on DESC`,
-    []
-  );
-}
-
-/**
  * Get all submissions approved in the last 48 hours
  * @returns Array of approved submissions from the last 48 hours with member names and total points
  */

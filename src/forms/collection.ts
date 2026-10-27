@@ -113,29 +113,8 @@ export const updateCollectionSchema = z.object({
 );
 
 /**
- * Schema for collection view query parameters
+ * Schema for validating the entry ID URL parameter
  */
-export const collectionViewSchema = z.object({
-  includeRemoved: z
-    .string()
-    .optional()
-    .transform((val) => val === "true" || val === "1")
-    .default(false),
-});
-
-/**
- * Schema for validating URL parameters (memberId, entryId)
- */
-export const memberIdParamSchema = z.object({
-  memberId: z.coerce
-    .number({
-      error: (iss) =>
-        iss.input === undefined ? "Member ID is required" : "Member ID must be a number",
-    })
-    .int()
-    .positive("Member ID must be positive"),
-});
-
 export const entryIdParamSchema = z.object({
   id: z.coerce
     .number({
@@ -147,57 +126,10 @@ export const entryIdParamSchema = z.object({
 });
 
 /**
- * Schema for collection search/filter parameters
- */
-export const collectionFilterSchema = z.object({
-  species_type: z.enum(["Fish", "Invert", "Plant", "Coral"]).optional(),
-  program_class: z.string().optional(),
-  include_removed: z
-    .string()
-    .transform((val) => val === "true" || val === "1")
-    .optional(),
-  visibility: z.enum(["all", "public", "private"]).optional(),
-});
-
-/**
- * Schema for species search in collection add dialog
- */
-export const speciesSearchSchema = z.object({
-  q: z
-    .string()
-    .min(2, "Please enter at least 2 characters")
-    .max(100, "Search query too long"),
-  species_type: z.enum(["Fish", "Invert", "Plant", "Coral"]).optional(),
-});
-
-/**
  * Type exports for use in routes
  */
 export type AddToCollectionInput = z.infer<typeof addToCollectionSchema>;
 export type UpdateCollectionInput = z.infer<typeof updateCollectionSchema>;
-export type CollectionFilterInput = z.infer<typeof collectionFilterSchema>;
-export type SpeciesSearchInput = z.infer<typeof speciesSearchSchema>;
-
-/**
- * Helper to format collection entry for display
- */
-export function formatCollectionEntry(entry: {
-  quantity: number;
-  acquired_date: string;
-  removed_date?: string | null;
-}): string {
-  const parts = [`Qty: ${entry.quantity}`];
-
-  if (entry.acquired_date) {
-    parts.push(`Acquired: ${new Date(entry.acquired_date).toLocaleDateString()}`);
-  }
-
-  if (entry.removed_date) {
-    parts.push(`Removed: ${new Date(entry.removed_date).toLocaleDateString()}`);
-  }
-
-  return parts.join(" • ");
-}
 
 /**
  * Helper to determine if user can edit a collection entry
@@ -208,14 +140,4 @@ export function canEditCollection(
 ): boolean {
   if (!viewer) return false;
   return entry.member_id === viewer.id || Boolean(viewer.is_admin);
-}
-
-/**
- * Helper to determine collection visibility for a viewer
- */
-export function getVisibilityFilter(
-  memberId: number,
-  viewerId: number | null
-): "all" | "public" {
-  return memberId === viewerId ? "all" : "public";
 }

@@ -118,7 +118,7 @@ npm test           # Run test suite
 npm test -- --watch # Run tests in watch mode
 npm run lint       # Run ESLint
 npm run lint:fix   # Fix ESLint issues
-npm run script     # Run scripts with tsx, @/ aliases resolved (e.g., npm run script scripts/example.ts)
+npm run script     # Run scripts with tsx, @/ aliases resolved (e.g., npm run script scripts/import-aquatic-plants.ts)
 npm start          # Start production server (requires build first)
 ```
 
