@@ -1,5 +1,6 @@
 include ../header.pug
 include ../mixins/errorMessage.pug
+include ../mixins/collectionPhotos.pug
 
 +dialog()
 	h2.text-2xl.font-bold.mb-4 Edit Collection Entry
@@ -99,20 +100,8 @@ include ../mixins/errorMessage.pug
 						onchange=`uploadCollectionImages(${entry.id}, this.files)`
 					)
 
-				//- Image preview grid
-				if entry.images && entry.images.length > 0
-					div#image-preview-grid.grid.gap-1.mt-2(class="grid-cols-3")
-						each img, idx in entry.images
-							.relative.group
-								img.w-full.h-20.object-cover.rounded(
-									src=img.url.replace('-original', '-thumb')
-									alt=`Image ${idx + 1}`
-								)
-								button.absolute.top-0.right-0.bg-red-500.text-white.rounded-full.w-5.h-5.flex.items-center.justify-center.opacity-0.group-hover_opacity-100.transition-opacity.text-xs.font-bold(
-									type="button"
-									onclick=`removeCollectionImage(${entry.id}, ${idx}, '${img.key}')`
-									aria-label="Remove"
-								) ×
+				//- Photo grid with remove controls
+				+collectionPhotos(entry)
 
 			.flex.gap-2.justify-end.pt-2.border-t.border-gray-300
 				button.outline(
@@ -160,9 +149,4 @@ include ../mixins/errorMessage.pug
 			} finally {
 				document.getElementById('image-input-edit').value = '';
 			}
-		}
-
-		async function removeCollectionImage(entryId, index, key) {
-			if (!confirm('Remove this image?')) return;
-			alert('Image deletion will be implemented in a future update');
 		}

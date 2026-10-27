@@ -580,6 +580,7 @@ void describe("Pug Template Rendering", () => {
       /^mixins\/memberPointsHover\.pug$/, // Mixin-only template
       /^mixins\/errorMessage\.pug$/, // Mixin-only template
       /^mixins\/collectionCard\.pug$/, // Mixin-only template
+      /^mixins\/collectionPhotos\.pug$/, // Mixin-only template (tested via partials/collection-photos.pug)
       /^activity\/activity-item\.pug$/, // Mixin-only template
       /^activity\/activity-list-partial\.pug$/, // Partial template for HTMX pagination
       /^activity\/award-granted\.pug$/, // Include-only template
