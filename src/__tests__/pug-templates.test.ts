@@ -162,6 +162,9 @@ void describe("Pug Template Rendering", () => {
       is_admin: false,
     },
 
+    // The review page's report sections (src/submissionReport.ts)
+    report: { species: [], tank: [], supplements: null },
+
     // Member data
     member: createMockMember(),
     witness: {
@@ -2051,6 +2054,78 @@ void describe("Pug Template Rendering", () => {
       assert.match(plant, /name="co2"/);
       assert.doesNotMatch(plant, /name="flowered"|name="sexual_reproduction"/);
       assert.ok(html.length > 0);
+    });
+
+    const renderPlant = (supplements: { type: string; regimen: string }[]) =>
+      pug.compileFile(path.join(viewsPath, "admin/editApprovedSubmission.pug"), { basedir: viewsPath, pretty: false })({
+        ...baseMockData,
+        submission: { ...(baseMockData.submission as Record<string, unknown>), id: 79, species_type: "Plant", program: "plant", foods: [], spawn_locations: [] },
+        member: { display_name: "Dan Wu" },
+        supplements,
+        foodTypes: [],
+        spawnLocations: [],
+        isLivestock: false,
+        hasFoods: false,
+        hasSpawnLocations: false,
+        hasLighting: true,
+        hasSupplements: true,
+      });
+
+    void test("a plant's dialog shows its supplement rows, an Add button and the section marker (#158)", () => {
+      const html = renderPlant([
+        { type: "Root Tabs", regimen: "One per month" },
+        { type: "Dosing Pump", regimen: "Daily" },
+      ]);
+
+      assert.match(html, /<input type="hidden" name="supplements_present" value="1"/);
+      assert.match(html, /value="Root Tabs" name="supplement_type"/);
+      assert.match(html, /value="One per month" name="supplement_regimen"/);
+      assert.match(html, /value="Dosing Pump" name="supplement_type"/);
+      assert.match(html, /value="Daily" name="supplement_regimen"/);
+      assert.strictEqual(html.match(/name="supplement_type"/g)?.length, 2);
+      assert.match(html, /hx-get="\/submissions\/new\/addSupplement"[^>]*hx-target="#edit-approved-supplements"/);
+    });
+
+    void test("a plant with no supplements gets one blank row; a fish's dialog has no supplements section at all", () => {
+      const plant = renderPlant([]);
+      assert.strictEqual(plant.match(/name="supplement_type"/g)?.length, 1);
+      assert.match(plant, /name="supplements_present"/);
+
+      const fish = render();
+      assert.doesNotMatch(fish, /name="supplements_present"|name="supplement_type"|name="supplement_regimen"/);
+    });
+  });
+
+  void describe("A changelog entry shows supplement changes as rows (#158)", () => {
+    const render = (changes: unknown[]) =>
+      pug.compileFile(path.join(viewsPath, "admin/submissionNote.pug"), { basedir: viewsPath, pretty: false })({
+        note: {
+          id: 5,
+          submission_id: 77,
+          admin_name: "Ann Lee",
+          created_at: "2026-10-01T00:00:00.000Z",
+          note_text: JSON.stringify({ type: "admin_edit", reason: "Paper form", changes }),
+        },
+      });
+
+    void test("old and new supplement lists read as type: regimen, and an empty list as none", () => {
+      const html = render([
+        {
+          field: "supplements",
+          old: [{ type: "Root Tabs", regimen: "One per month" }],
+          new: [
+            { type: "Root Tabs", regimen: "Two per month" },
+            { type: "Dosing Pump", regimen: "" },
+          ],
+        },
+      ]);
+      assert.match(html, />Supplements:</);
+      assert.match(html, /line-through[^>]*>Root Tabs: One per month</);
+      assert.match(html, />Root Tabs: Two per month; Dosing Pump</);
+      assert.doesNotMatch(html, /\[object Object\]/);
+
+      const cleared = render([{ field: "supplements", old: [{ type: "Root Tabs", regimen: "x" }], new: [] }]);
+      assert.match(cleared, /font-semibold">\(none\)</);
     });
   });
 

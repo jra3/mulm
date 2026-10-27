@@ -38,6 +38,16 @@ export const editApprovedDetailsForm = z.object({
   co2: z.string().optional(),
   co2_description: z.string().optional(),
 
+  // Supplements (Plant and Coral, #158): the Member form's paired inputs,
+  // validated as it validates them. Removing every row from an HTML form
+  // posts nothing at all, which looks the same as a dialog that never showed
+  // the section, so the section also posts `supplements_present=1`: with it,
+  // the posted rows (none included) replace the stored ones; without it, the
+  // rows are left alone, so a Fish dialog or a stale tab cannot erase them.
+  supplements_present: z.literal("1").optional(),
+  supplement_type: multiSelect.optional(),
+  supplement_regimen: multiSelect.optional(),
+
   // Media
   video_url: z.string().url().optional().or(z.literal("")),
   article_link: z.string().url().optional().or(z.literal("")),

@@ -285,6 +285,7 @@ export async function deleteSubmissionRow(db: Database, id: number) {
   }
 }
 
+/** Approved points awarded in [startDate, endDate), regardless of the spawn date. */
 export function getApprovedSubmissionsInDateRange(startDate: Date, endDate: Date, program: string) {
   return query<Submission>(
     `
@@ -294,7 +295,7 @@ export function getApprovedSubmissionsInDateRange(startDate: Date, endDate: Date
 			members.display_name as member_name
 		FROM submissions JOIN members
 		ON submissions.member_id == members.id
-		WHERE reproduction_date > ? AND reproduction_date < ?
+		WHERE julianday(approved_on) >= julianday(?) AND julianday(approved_on) < julianday(?)
 		AND approved_on IS NOT NULL AND points IS NOT NULL
 		AND program = ?
 	`,
@@ -691,10 +692,14 @@ async function setSubmissionSupplementsInTransaction(
   const deleteStmt = await db.prepare(
     "DELETE FROM submission_supplements WHERE submission_id = ?"
   );
-  await deleteStmt.run(submissionId);
-  await deleteStmt.finalize();
+  try {
+    await deleteStmt.run(submissionId);
+  } finally {
+    await deleteStmt.finalize();
+  }
 
-  // Insert new supplements
+  // Insert new supplements. The statements are finalized on failure too, so
+  // a rolled-back transaction leaves none open on the shared connection.
   if (supplements.length > 0) {
     const insertStmt = await db.prepare(`
       INSERT INTO submission_supplements
@@ -702,15 +707,17 @@ async function setSubmissionSupplementsInTransaction(
       VALUES (?, ?, ?, ?)
     `);
 
-    for (let i = 0; i < supplements.length; i++) {
-      const supp = supplements[i];
-      if (supp.type || supp.regimen) {
-        // Only insert if at least one field is non-empty
-        await insertStmt.run(submissionId, supp.type, supp.regimen, i);
+    try {
+      for (let i = 0; i < supplements.length; i++) {
+        const supp = supplements[i];
+        if (supp.type || supp.regimen) {
+          // Only insert if at least one field is non-empty
+          await insertStmt.run(submissionId, supp.type, supp.regimen, i);
+        }
       }
+    } finally {
+      await insertStmt.finalize();
     }
-
-    await insertStmt.finalize();
   }
 }
 

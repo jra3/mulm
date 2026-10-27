@@ -48,7 +48,7 @@ GET    /member/:memberId     - View member profile
 **Standings & Statistics**
 ```
 GET    /lifetime{/:program} - Cumulative program standings
-GET    /annual              - Redirect to the current awards year
+GET    /annual              - Redirect to the current BAP year (or ?year=YYYY)
 GET    /annual/:stringYear{/:program} - Annual program standings
 ```
 
@@ -57,6 +57,10 @@ GET    /annual/:stringYear{/:program} - Annual program standings
 GET    /species              - Species browser
 GET    /species/:groupId     - Species group detail
 ```
+
+Annual standings use approval dates and an automatically selected BAP year,
+named for its ending year. The default changes September 1 in New York time.
+See [the calendar policy and historical-data limitations](../../docs/program-calendar.md).
 
 ### Authentication Routes
 
@@ -151,8 +155,8 @@ GET    /admin/submissions/:id/record-species   - The witness panel's Record new 
 POST   /admin/submissions/:id/record-species   - Record species and continue: the panel again, the new Species settled
 GET    /admin/submissions/:id/correct-points   - The correction form (#528): the panel's cards over the current values, a reason, Save correction; with ?species_id= or ?group_id= and HX-Request, the panel alone with that Species settled
 POST   /admin/submissions/:id/correct-points   - Save correction: Species and points in one write with a reason, from the Witness on
-GET    /admin/submissions/:id/edit-approved    - The Edit Approved Submission dialog (#529): the member's details only, with a reason; links to the correction form for Species and points
-POST   /admin/submissions/:id/edit-approved    - Save the details through editApprovedDetails: changelog entry, no email, no standings recompute
+GET    /admin/submissions/:id/edit-approved    - The Edit Approved Submission dialog (#529): the member's details only, with a reason, and a Plant or Coral Submission's supplement rows (#158); links to the correction form for Species and points
+POST   /admin/submissions/:id/edit-approved    - Save the details through editApprovedDetails: columns, supplement rows (replaced only when supplements_present=1 is posted) and one changelog entry in one transaction; no email, no standings recompute
 POST   /admin/submissions/:id/request-changes  - Request changes from submitter
 ```
 
