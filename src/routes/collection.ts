@@ -5,6 +5,7 @@ import { Response, Router } from "express";
 import { z, ZodError } from "zod";
 import {
   addToCollection,
+  getCollectionForMember,
   updateCollectionEntry,
   removeFromCollection,
   getCollectionEntry,
@@ -15,8 +16,10 @@ import {
   addToCollectionSchema,
   updateCollectionSchema,
   entryIdParamSchema,
+  addDialogQuerySchema,
   canEditCollection,
 } from "@/forms/collection";
+import { canonicalName, findSpeciesById, listNames } from "@/species";
 import { logger } from "@/utils/logger";
 import { ImageValidationError } from "@/utils/image-processor";
 import { isR2Enabled, ImageMetadata } from "@/utils/r2-client";
@@ -185,10 +188,46 @@ router.delete("/api/collection/:id", async (req: MulmRequest, res: Response) => 
  * Get add to collection dialog
  * GET /dialog/collection/add
  */
-router.get("/dialog/collection/add", (req: MulmRequest, res: Response) => {
-  res.render("dialog/collection-add", {
-    viewer: req.viewer,
-  });
+router.get("/dialog/collection/add", async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+  if (!viewer) {
+    res.status(401).send("Not authenticated");
+    return;
+  }
+
+  try {
+    // ?species=<group_id> preselects a Species; a bad or stale id falls back
+    // to the generic dialog with a notice, so the Member can still search.
+    const parsed = addDialogQuerySchema.safeParse(req.query);
+    const speciesId = parsed.success ? parsed.data.species : undefined;
+    const requested = !parsed.success || speciesId !== undefined;
+    const species = speciesId ? await findSpeciesById(speciesId) : undefined;
+
+    let preselected;
+    let alreadyKept = false;
+    if (species) {
+      const scientific = canonicalName(species);
+      const common = (await listNames(species.group_id)).common[0]?.name ?? null;
+      preselected = {
+        group_id: species.group_id,
+        text: common ? `${common} (${scientific})` : scientific,
+        common_name: common,
+        scientific_name: scientific,
+      };
+      const collection = await getCollectionForMember(viewer.id, { includePrivate: true });
+      alreadyKept = collection.some((entry) => entry.group_id === species.group_id);
+    }
+
+    res.render("dialog/collection-add", {
+      viewer,
+      preselected,
+      alreadyKept,
+      speciesNotFound: requested && !species,
+    });
+  } catch (error) {
+    logger.error("Failed to load add-to-collection dialog", error);
+    res.status(500).send("Failed to load dialog");
+  }
 });
 
 /**

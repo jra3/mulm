@@ -113,6 +113,14 @@ export const updateCollectionSchema = z.object({
 );
 
 /**
+ * The Species to preselect in the add dialog (?species=<group_id>), from a
+ * Species detail page. Absent means the generic dialog.
+ */
+export const addDialogQuerySchema = z.object({
+  species: z.coerce.number().int().positive().optional(),
+});
+
+/**
  * Schema for validating the entry ID URL parameter
  */
 export const entryIdParamSchema = z.object({
