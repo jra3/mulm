@@ -204,6 +204,36 @@ html
                             .flex.justify-center
                                 a.primary(class="px-4 py-2 text-sm" href=`/submissions/${submission.id}/edit`) Edit and Resubmit
 
+        //- The CARES registration prompt (#282): the route passes caresPrompt
+        //- to the owner of an Approved CARES Submission they have not
+        //- registered, while the registry's gate lets them see it. Maybe
+        //- Later and the close button hide it until the page is next opened.
+        if caresPrompt
+            section.bg-gray-100.pt-6#cares-prompt
+                div(class="status-panel bg-green-50 border-l-4 border-green-400")
+                    .container.mx-auto.max-w-4xl.relative
+                        button.absolute.top-0.right-0.text-green-800.font-bold(
+                            type="button"
+                            aria-label="Dismiss"
+                            hx-on:click="document.getElementById('cares-prompt').remove()"
+                        ) &times;
+                        h3.text-green-800.text-lg.font-semibold.mb-2 🐟 This is a CARES conservation species!
+                        p.text-green-700.mb-4
+                            | Help preserve #[span.italic= canonicalName] by registering it for the CARES Fish Preservation Program.
+                        .flex.flex-wrap.gap-2.items-center
+                            button.primary#cares-prompt-register(
+                                type="button"
+                                class="px-4 py-2 text-sm"
+                                hx-get=`/dialog/cares/register?species=${caresPrompt.groupId}`
+                                hx-target="body"
+                                hx-swap="beforeend"
+                            ) Register for CARES
+                            button.outline#cares-prompt-later(
+                                type="button"
+                                class="px-4 py-2 text-sm"
+                                hx-on:click="document.getElementById('cares-prompt').remove()"
+                            ) Maybe Later
+
         //- Owner action buttons section
         if isSelf
             section.bg-gray-100.py-6

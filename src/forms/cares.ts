@@ -18,6 +18,11 @@ export const caresRegistrationSchema = z.object({
 
 export type CaresRegistrationInput = z.infer<typeof caresRegistrationSchema>;
 
+/** The Species a registration is offered for, from `?species=` (#282). */
+export const caresOfferQuerySchema = z.object({
+  species: z.coerce.number().int().positive(),
+});
+
 /**
  * Schema for recording a fry share
  */
