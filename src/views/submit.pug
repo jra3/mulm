@@ -11,6 +11,15 @@ html
 
         +changesRequestedBanner(changesRequested)
 
+        //- Outside #bapForm, so the form's HTMX swaps leave it in place (#563)
+        section.bg-gray-100.pt-4
+            div.max-w-4xl.mx-auto.px-4
+                p.text-gray-600
+                    | New to the program?
+                    |
+                    a.link#first-submission-guide-link(href="/guide") Read the first-submission guide
+                    |  for how witnessing, the waiting period and approval work.
+
         include bapForm/form.pug
 
         script.

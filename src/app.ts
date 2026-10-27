@@ -250,6 +250,11 @@ export function createApp(dependencies: AppDependencies = {}) {
     });
   });
 
+  // First-Submission guide (#563): public, so a newcomer can read it before signing in
+  router.get("/guide", (req: MulmRequest, res) => {
+    res.render("guide", { title: "Your First Submission", isLoggedIn: Boolean(req.viewer) });
+  });
+
   // Submission routes (BAP/HAP/CAP)
   router.get("/submissions/new", submission.renderSubmissionForm);
   router.get("/submissions/new/addSupplement", (req, res) => {
