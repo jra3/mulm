@@ -1,0 +1,143 @@
+//- First-Submission guide (#563): how a claim moves from the tank to points in
+//- BAP, HAP and CAP. Lifecycle facts follow CONTEXT.md and ADR-0001/0003; the
+//- program rules are the Program Manual's. Public: no sign-in needed.
+//- Club logistics the repo does not document (who to contact for a Witness,
+//- meeting dates) are deliberately left to the Program Manual.
+//-
+//- @param isLoggedIn - whether the viewer is signed in
+//- @param title - page title
+
+include header.pug
+include mixins/card.pug
+
+mixin guideSection(id, heading)
+	section.py-6.border-b.border-gray-200(aria-labelledby=id)
+		h2.text-xl.font-bold.mb-3(class="sm:text-2xl" id=id)= heading
+		.space-y-3.text-gray-700
+			block
+
+doctype html
+html
+	+headTag(title)
+
+	body.bg-white.text-gray-800
+		+pageHeader(isLoggedIn, title)
+
+		main.max-w-3xl.mx-auto.px-4.pb-8
+			section.py-6.border-b.border-gray-200
+				p.text-lg.text-gray-700 How a spawn or propagation becomes points in the Portal, from choosing the Program to the meeting where the committee approves it.
+				p.mt-3.text-gray-700
+					| The official rules are in the
+					|
+					a.link(href="https://www.basny.org/Documents/BAP/BAS-BAP-Manual.pdf") Breeder &amp; Horticultural Awards Program Manual
+					| . It dates from 2009; where the Portal's process has changed since, this page describes the Portal.
+
+			nav.py-4.border-b.border-gray-200(aria-label="On this page")
+				ol.list-decimal.list-inside.text-gray-700.space-y-1
+					li: a.link(href="#guide-program") Choose a Program and a Species
+					li: a.link(href="#guide-report") Fill in and submit the report
+					li: a.link(href="#guide-witness") The Witness
+					li: a.link(href="#guide-waiting") The waiting period
+					li: a.link(href="#guide-meeting") Bring it to a meeting
+					li: a.link(href="#guide-examples") Examples
+					li: a.link(href="#guide-questions") Questions and corrections
+
+			+guideSection("guide-program", "1. Choose a Program and a Species")
+				p The Species type you choose on the form decides the Program:
+				ul.space-y-2
+					li
+						strong 🐠 BAP (Breeder Awards Program):
+						|  fish and invertebrates. Species type Fish or Invert.
+					li
+						strong 🌱 HAP (Horticultural Award Program):
+						|  aquatic plants. Species type Plant.
+					li
+						strong 🪸 CAP (Coral Award Program):
+						|  marine corals. Species type Coral.
+				p
+					| Then type the species' common or Latin name and pick it from the list. If it isn't listed, type the name you know; the committee settles the Species at the Witness. You can
+					|
+					a.link(href="/species") browse the species reports
+					|
+					| first, and the
+					|
+					a.link(href="https://docs.google.com/spreadsheets/d/1zhYbhFHmpubmx9ATacA14YVte8YeUHjVEBgY0aFrKMs/edit?gid=1900172349#gid=1900172349") points guide
+					|
+					| lists point values.
+				p Each species earns points once per member. Color variations are not separate species; a different Latin name is.
+
+			+guideSection("guide-report", "2. Fill in and submit the report")
+				p
+					if isLoggedIn
+						a.link(href="/submissions/new") Start a new species submission
+						| . You'll find the same button on Home.
+					else
+						| Log in from Home, then choose New Species Submission. You need to be logged in to submit.
+				p Enter the date the fish spawned or the plant or coral was propagated, your tank, and how you did it. Photos and a video help the committee identify the species.
+				p
+					strong Save Draft
+					|  keeps your work without sending it.
+					|
+					strong Submit
+					|  sends it to the committee, which then needs to witness it.
+				p If the committee asks for changes, you'll get an email saying what to fix. Open the submission and choose Edit and Resubmit.
+
+			+guideSection("guide-witness", "3. The Witness")
+				p A committee member other than you sees the fry, plants or coral and confirms that your report describes them and how you bred or propagated them. Arrange this with the Breeders Award Committee as the Program Manual's "Claiming Points" section describes.
+				p At the Witness, the committee member:
+				ul.list-disc.list-inside.space-y-1
+					li settles which Species it is
+					li sets the base points from the Species' point class (5, 10, 15 or 20)
+					li sets any bonuses, such as an article you've linked
+				p You'll get an email listing the points, and your submission page shows them as #[strong pending approval]. They don't count toward your level or the standings until the committee approves the submission.
+				+card({variant: 'warning', margin: ''})
+					p.font-semibold ⚠️ Editing after the Witness voids it
+					p.mt-1 If you save any change after the Witness, the points it set are cleared and the submission must be witnessed again. The form warns you before you save.
+
+			+guideSection("guide-waiting", "4. The waiting period")
+				p The waiting period counts from the spawn or propagation date:
+				ul.list-disc.list-inside.space-y-1
+					li 30 days for marine fish
+					li 60 days for everything else
+				p For fish, keep at least six fry alive through it. For plants and corals, the cutting should show reasonable growth.
+				p You don't need to do anything in the Portal when it ends. The submission joins the committee's approval queue on its own, and you'll get a reminder email that day.
+
+			+guideSection("guide-meeting", "5. Bring it to a meeting")
+				p Bring the fry, plants or coral to a monthly club meeting. A committee member approves the submission there, and the points are awarded: they count toward your level and the standings from then on.
+				p If you're the first member to bring in that species, approval adds a 5-point first-time bonus.
+
+			+guideSection("guide-examples", "6. Examples")
+				.space-y-4
+					+card({margin: ''})
+						h3.font-semibold.mb-1 🐠 BAP: a fish spawn
+						p Your Kribensis (Pelvicachromis pulcher) spawn. Choose Species type Fish, pick the name, enter the Date Spawned and submit. A committee member witnesses the fry and sets the points. A species on the CARES priority list adds 5 points on BAP. Keep at least six fry for 60 days, then bring them to a meeting.
+					+card({margin: ''})
+						h3.font-semibold.mb-1 🌱 HAP: a plant propagation
+						p Your Cryptocoryne wendtii sends up new plants. Choose Species type Plant, enter the Date Propagated and submit. At the Witness the plant's point value is set; flowering and sexual reproduction each add the plant's value again. After 60 days, bring the plants to a meeting.
+					+card({margin: ''})
+						h3.font-semibold.mb-1 🪸 CAP: a coral propagation
+						p A frag cut from your coral grows. Choose Species type Coral, enter the Date Propagated and submit. After the Witness and 60 days of growth, bring the coral to a meeting.
+
+			+guideSection("guide-questions", "7. Questions and corrections")
+				ul.list-disc.list-inside.space-y-2
+					li
+						strong Details wrong?
+						|  Open the submission from
+						|
+						if isLoggedIn
+							a.link(href="/me") your page
+						else
+							| your page (Me, after you log in)
+						|
+						| and choose Edit Submission. After the Witness, any edit means a new Witness.
+					li
+						strong Not ready yet?
+						|  Return to Draft takes the submission out of the committee's queue until you submit again. A draft can be deleted.
+					li
+						strong Points look wrong?
+						|  Reply to the email you got at the Witness. Your reply goes to the committee.
+					li
+						strong After approval:
+						|  you can still change the photos and video with Edit Photos &amp; Video. Points and other details are corrected by the committee.
+
+		+footer()
