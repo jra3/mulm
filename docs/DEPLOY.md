@@ -92,7 +92,7 @@ For an emergency rollback when a deploy is mid-flight, the prior machine version
 
 ## Database Migrations
 
-Migrations in `db/migrations/NNN-*.sql` run automatically on app boot (see `start.sh`). For a deploy that includes a migration:
+Migrations in `db/migrations/NNN-*.sql` run automatically on app boot, when the app opens its database (`src/db/conn.ts`). For a deploy that includes a migration:
 
 - Migrations are forward-only — no automatic rollback path.
 - Test on staging first (staging restores from prod's replica, so it has prod's schema).

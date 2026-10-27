@@ -32,7 +32,7 @@ A web application for managing aquarium society Breeder Awards Programs (BAP), t
 - **Template Engine**: Pug templates
 - **Interactivity**: HTMX for dynamic updates
 - **Styling**: Tailwind CSS with PostCSS
-- **Build Tools**: esbuild for bundling
+- **Build Tools**: `tsc` for TypeScript, PostCSS for CSS
 
 ### Infrastructure
 - **Hosting**: Fly.io (app `basny-bap`, region `ewr`)
@@ -47,7 +47,7 @@ App construction, startup ownership, and test teardown are documented in [docs/a
 
 ### Prerequisites
 
-- Node.js 20.x or higher
+- Node.js 24.x
 - npm or yarn
 - SQLite3
 
@@ -68,32 +68,16 @@ cp src/config.sample.json src/config.json
 
 ### Configuration
 
-Create `src/config.json` with the following structure (see `src/config.sample.json` for complete example):
+Create `src/config.json` from `src/config.sample.json`. The top-level sections are `database`, `server`, `email`, `oauth` (Google and Apple), `storage` (R2), `iucn`, `wikipedia`, `gbif` and `mcp`:
 
 ```json
 {
-  "databaseFile": "db/database.db",
-  "domain": "localhost:4200",
-  "disableEmails": true,
-  "googleClientId": "",
-  "googleClientSecret": "",
-  "adminsEmail": "admin@example.com",
-  "bugReportEmail": "bugs@example.com",
-  "fromEmail": "noreply@example.com",
-  "smtpPassword": "",
-  "smtpHost": "",
-  "smtpPort": 465,
-  "smtpSecure": true,
-  "s3AccessKeyId": "",
-  "s3Secret": "",
-  "s3Url": "",
-  "s3Bucket": "",
-  "r2PublicUrl": "",
-  "mcp": {
-    "enabled": false,
-    "port": 3001,
-    "host": "127.0.0.1"
-  }
+  "database": { "file": "db/database.db" },
+  "server": { "domain": "localhost:4200" },
+  "email": { "disableEmails": true, "...": "..." },
+  "oauth": { "google": { "...": "..." }, "apple": { "...": "..." } },
+  "storage": { "s3AccessKeyId": "", "s3Secret": "", "s3Url": "", "s3Bucket": "", "r2PublicUrl": "" },
+  "mcp": { "enabled": false, "port": 3001, "host": "127.0.0.1", "token": "" }
 }
 ```
 

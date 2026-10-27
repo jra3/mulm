@@ -47,30 +47,9 @@ All scripts support these arguments:
 --db=/path/to/db    # Custom database path
 ```
 
-## Automated Sync (Cron)
+## Automated Sync
 
-### Setup
-
-```bash
-# On production server
-cd /opt/basny
-./scripts/setup-external-data-cron.sh
-
-# Custom schedule (2 AM Sundays)
-./scripts/setup-external-data-cron.sh --schedule "0 2 * * 0"
-```
-
-### Monitor
-
-```bash
-# View logs
-tail -f /var/log/mulm/external-data-sync.log
-
-# Check cron
-crontab -l
-```
-
-See [docs/EXTERNAL_DATA_CRON_SETUP.md](../docs/EXTERNAL_DATA_CRON_SETUP.md) for complete guide.
+There is no scheduled sync in production. The old EC2 cron setup is gone, and whether to run sync on Fly or remove the feature is open in #461.
 
 ## Workflow Examples
 
@@ -83,17 +62,6 @@ npm run script scripts/sync-all-species-full-database.ts -- --execute --download
 # Continue until complete (run ~5 times for full database)
 npm run script scripts/sync-all-species-full-database.ts -- --execute --download-images --batch-size=500
 ```
-
-### Regular Updates (Automated)
-
-Set up cron job to run daily at 3 AM - automatically syncs species not updated in 90 days:
-
-```bash
-# On production server
-./scripts/setup-external-data-cron.sh
-```
-
-The cron job uses the full-database orchestrator with `--download-images`.
 
 ### Sync Specific Species Types
 
@@ -251,7 +219,6 @@ Safe to run while site is live (during low-traffic hours).
 ## Related Documentation
 
 - [External Data Sources Wiki](https://github.com/jra3/mulm/wiki/External-Data-Sources) - Complete integration guide
-- [EXTERNAL_DATA_CRON_SETUP.md](../docs/EXTERNAL_DATA_CRON_SETUP.md) - Production cron setup
 - [Database Schema Wiki](https://github.com/jra3/mulm/wiki/Database-Schema) - Schema documentation
 
 ---
