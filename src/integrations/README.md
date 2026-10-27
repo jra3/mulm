@@ -491,4 +491,3 @@ This allows tests to run continuously while handling:
 
 - [Wiki - External Data Sources](https://github.com/jra3/mulm/wiki/External-Data-Sources) - Complete integration guide
 - [scripts/README_EXTERNAL_DATA.md](../../scripts/README_EXTERNAL_DATA.md) - Sync script documentation
-- [docs/EXTERNAL_DATA_CRON_SETUP.md](../../docs/EXTERNAL_DATA_CRON_SETUP.md) - Production automation

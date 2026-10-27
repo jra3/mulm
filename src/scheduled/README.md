@@ -1,63 +1,38 @@
 # Scheduled Tasks
 
-This directory contains scheduled background tasks that run automatically.
+Background jobs that run inside the app process. There is no cron: each job is
+a timer started by `src/bootstrap.ts`, and only in live production
+(`isLiveProduction()` in `src/utils/environment.ts`: `NODE_ENV=production` and
+not staging). Staging, development and tests run none of them.
 
-## Daily Cleanup Task
+Prod scales to zero, so every job also runs once at startup to catch up on
+anything missed while the machine was stopped, then daily at a fixed hour of
+server time.
 
-### Overview
-The daily cleanup task (`cleanup.ts`) removes expired data from the database to prevent unnecessary data accumulation.
+| Job | File | Daily at | What it does |
+|---|---|---|---|
+| Daily cleanup | `cleanup.ts` | 3:00 AM | Deletes expired password reset tokens (`auth_codes`) and runs the level sweep |
+| Level sweep | `level-sweep.ts` | (part of cleanup) | Recalculates every member's award level from approved submissions; silent, sends no mail |
+| Final-submission reminders | `finalSubmissionReminder.ts` | 4:00 AM | Emails members whose waiting period has elapsed; marks each sent only after delivery, so failures retry next run |
+| Committee digest | `committeeDigest.ts` | 7:00 AM | Emails the committee what is still waiting on them; at most once per daily slot (last run kept in settings), so cold starts don't resend |
 
-### Schedule
-- **First run**: Immediately when the application starts
-- **Recurring**: Daily at 3:00 AM server time
-- **Duration**: Typically completes in under 1 second
+Nothing here deletes images from R2.
 
-### What Gets Cleaned Up
+Each job exports a `start…`/`stop…` pair; `bootstrap.ts` stops them on
+shutdown. A run in progress at shutdown is awaited.
 
-1. **Expired Password Reset Tokens** (`auth_codes` table)
-   - Removes tokens that have expired
-   - Password reset tokens typically expire after 1 hour
+## Tests
 
-### Implementation Details
-
-The cleanup is implemented in `src/scheduled/cleanup.ts` and integrated into the main application startup in `src/index.ts`.
-
-```typescript
-// Runs immediately on startup
-void runDailyCleanup();
-
-// Schedules daily execution at 3 AM
-startScheduledCleanup();
-```
-
-### Logging
-
-All cleanup operations are logged with the following format:
-- Start: `Starting daily cleanup tasks`
-- Auth codes: `Deleted N expired auth codes`
-- Complete: `Daily cleanup tasks completed successfully`
-- Errors: `Error during daily cleanup` (with error details)
-
-### Testing
-
-Tests for the cleanup functionality are located in `src/__tests__/cleanup.test.ts`.
-
-To run the cleanup tests:
 ```bash
 npm test -- src/__tests__/cleanup.test.ts
+npm test -- src/__tests__/finalSubmissionReminder.test.ts
+npm test -- src/__tests__/committeeDigest.test.ts
+npm test -- src/__tests__/bootstrap.test.ts
 ```
 
-### Stopping Cleanup (for testing/shutdown)
+## Monitoring
 
-The cleanup scheduler can be stopped using:
-```typescript
-import { stopScheduledCleanup } from './scheduled/cleanup';
-stopScheduledCleanup();
-```
-
-### Monitoring
-
-Monitor cleanup effectiveness by checking:
-1. Application logs for daily cleanup messages
-2. Database table size for `auth_codes`
-3. Error logs for any cleanup failures
+`flyctl logs --app basny-bap`. Each job logs its next scheduled run at startup
+and a summary line per run (`Daily cleanup tasks completed successfully`,
+`Final-submission reminders complete: sent=N, failed=N`, and so on). Errors are
+logged and never crash the app.

@@ -74,7 +74,7 @@ Sign in with Apple needs `oauth.apple = { teamId, keyId, servicesId, privateKey 
 | While running | `litestream replicate` (continuous WAL → R2) | **disabled** — runs `node` directly |
 | After a restore | — | mirrors `basny-bap-data` into `basny-bap-staging-data` in the background |
 | Auto-refresh | — | on a boot more than 7 days after the last restore; restores to a side file and keeps the old DB if the refresh fails |
-| Scheduled jobs (daily cleanup, final-submission reminders, committee digest) | run | **disabled** — `isLiveProduction()` in `src/index.ts` |
+| Scheduled jobs (daily cleanup, final-submission reminders, committee digest) | run | **disabled** — `isLiveProduction()` in `src/bootstrap.ts` |
 
 The staging mode prevents staging from ever writing to R2, so it cannot pollute prod's generation history. Staging holds no prod write key: `CONFIG_JSON.storage` points at its own bucket with a key scoped to it, and `PROD_R2_READ_ACCESS_KEY_ID` / `PROD_R2_READ_SECRET_ACCESS_KEY` are read-only on `basny-bap-data` and `basny-db-replica`.
 
@@ -138,5 +138,3 @@ litestream restore -config litestream.yml -o db/database.db
 ## Related Docs
 
 - [`DEPLOY.md`](./DEPLOY.md) — day-to-day bugfix-to-prod runbook
-- [`FLY_MIGRATION.md`](./FLY_MIGRATION.md) — full migration playbook (phases, rollback, prose rationale)
-- [`FLY_MIGRATION_EXECUTION.md`](./FLY_MIGRATION_EXECUTION.md) — locked decision record + progress log for the EC2→Fly cutover

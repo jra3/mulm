@@ -35,9 +35,6 @@ two files for anything load-bearing.
 - **[`SENDMAIL_CONFIGURATION.md`](./SENDMAIL_CONFIGURATION.md)** — how the app
   sends email on Fly (SMTP settings live in the `email` block of the
   `CONFIG_JSON` secret; ssmtp-on-EC2 is gone).
-- **[`TAILSCALE_MIGRATION.md`](./TAILSCALE_MIGRATION.md)** — superseded. Fly has
-  no public SSH box; shell access is `flyctl ssh console`, so Tailscale is no
-  longer part of the access model.
 
 ## Access at a glance
 

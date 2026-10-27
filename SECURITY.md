@@ -41,12 +41,12 @@ Please include the following information in your report:
 
 This application implements several security measures:
 
-- **Authentication**: Google OAuth 2.0
+- **Authentication**: Email/password, Google OAuth 2.0, Sign in with Apple
 - **Session Management**: Secure, HTTP-only cookies with CSRF protection
 - **Input Validation**: Zod schema validation on all user inputs
 - **SQL Injection Protection**: Parameterized queries throughout
-- **Rate Limiting**: nginx-level protection against abuse
-- **HTTPS**: Enforced via Let's Encrypt SSL certificates
+- **Rate Limiting**: application-level limits on sensitive routes (`src/middleware/rateLimiter.ts`)
+- **HTTPS**: Enforced at Fly's edge (`force_https` in `fly.toml`), with Fly-managed certificates
 - **Image Uploads**: Server-side validation and sanitization
 - **Dependencies**: Automated updates via Dependabot
 
