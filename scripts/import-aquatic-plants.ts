@@ -9,7 +9,7 @@
 /**
  * Import Aquatic Plants from CSV
  *
- * Reads all_aquatic_plants_unified.csv and generates SQL INSERT statements
+ * Reads data/all_aquatic_plants_unified.csv and generates SQL INSERT statements
  * for populating species_name_group and species_name tables with plant data.
  *
  * Output: db/migrations/021-import-aquatic-plants.sql
@@ -98,7 +98,7 @@ function escapeSql(str: string): string {
 }
 
 async function main() {
-  const csvPath = path.join(process.cwd(), "all_aquatic_plants_unified.csv");
+  const csvPath = path.join(process.cwd(), "data", "all_aquatic_plants_unified.csv");
   const outputPath = path.join(process.cwd(), "db", "migrations", "021-import-aquatic-plants.sql");
 
   console.log("Reading CSV:", csvPath);

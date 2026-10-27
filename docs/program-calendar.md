@@ -6,7 +6,7 @@ The [published BAS manual](https://www.basny.org/Documents/BAP/BAS-BAP-Manual.pd
 page 8 ([local text](../manual/BAS-BAP-Manual.txt)), requires verification after
 raising the fry; spawning by itself does not complete a claim. The original
 manual permits either a return visit or presentation at a meeting. The portal's
-[current instructions](../RULES.md#4-bring-to-monthly-auction) explicitly say:
+[submission email](../src/views/email/onSubmission.pug) explicitly says:
 “Points are awarded at the meeting” when the offspring are presented.
 [Approval](../CONTEXT.md) records that presentation; points set at the Witness
 remain pending until Approval.

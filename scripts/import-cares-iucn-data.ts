@@ -12,7 +12,7 @@
  *   npm run script -- scripts/import-cares-iucn-data.ts [options]
  *
  * Options:
- *   --csv-file <path>   Path to CSV file (default: ./cares_species.csv)
+ *   --csv-file <path>   Path to CSV file (default: ./data/cares_species.csv)
  *   --dry-run           Preview using an existing read-only database (no migrations)
  *   --verbose           Show detailed progress information
  *
@@ -92,7 +92,7 @@ interface ImportResult {
 // Parse command line arguments
 function parseArgs(): { csvFile: string; dryRun: boolean; verbose: boolean } {
   const args = process.argv.slice(2);
-  let csvFile = "./cares_species.csv";
+  let csvFile = "./data/cares_species.csv";
   let dryRun = false;
   let verbose = false;
 
@@ -111,7 +111,7 @@ Usage:
   npm run script -- scripts/import-cares-iucn-data.ts [options]
 
 Options:
-  --csv-file <path>   Path to CSV file (default: ./cares_species.csv)
+  --csv-file <path>   Path to CSV file (default: ./data/cares_species.csv)
   --dry-run           Preview using an existing read-only database (no migrations)
   --verbose           Show detailed progress information
   --help, -h          Show this help message
