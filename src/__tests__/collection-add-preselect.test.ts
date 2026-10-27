@@ -58,7 +58,7 @@ void describe("add to collection from a Species page", () => {
     const res = await request(appAs(memberId)).get(`/species/${speciesId}`);
     assert.equal(res.status, 200);
     assert.ok(res.text.includes(addButtonFor(speciesId)), "Add to Collection carries the Species");
-    assert.match(res.text, /No members currently keep this species. Be the first/);
+    assert.match(res.text, /No members publicly list this species yet. Be the first/);
   });
 
   void test("members see the Add action alongside one or many keepers", async () => {
@@ -81,7 +81,7 @@ void describe("add to collection from a Species page", () => {
     const page = await request(appAs()).get(`/species/${speciesId}`);
     assert.equal(page.status, 200);
     assert.ok(!page.text.includes("/dialog/collection/add"));
-    assert.match(page.text, /No members currently keep this species/);
+    assert.match(page.text, /No members publicly list this species yet/);
     assert.doesNotMatch(page.text, /Be the first/);
 
     const dialog = await request(appAs()).get(`/dialog/collection/add?species=${speciesId}`);
@@ -94,6 +94,9 @@ void describe("add to collection from a Species page", () => {
     assert.ok(!res.text.includes(addButtonFor(speciesId)));
     assert.match(res.text, /In your collection/);
     assert.ok(res.text.includes(`href="/member/${memberId}/collection"`));
+    // A private keeper is not a public keeper, and is not told to be the first.
+    assert.match(res.text, /No members publicly list this species yet</);
+    assert.doesNotMatch(res.text, /currently keep|Be the first/);
   });
 
   void test("a removed entry does not count as kept", async () => {

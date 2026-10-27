@@ -65,9 +65,9 @@ html
 								if keeperCount > 0
 									= `${keeperCount} member${keeperCount === 1 ? '' : 's'} currently keep${keeperCount === 1 ? 's' : ''} this species`
 								else if viewer && !inViewerCollection
-									| No members currently keep this species. Be the first to add it to your collection.
+									| No members publicly list this species yet. Be the first to add it to your collection.
 								else
-									| No members currently keep this species
+									| No members publicly list this species yet
 						if viewer
 							if inViewerCollection
 								a.px-3.py-1.text-sm.font-medium.text-blue-700.bg-white.hover_bg-blue-100.rounded-md.border.border-blue-300(
