@@ -13,10 +13,12 @@ import {
   isMemberCaresParticipant,
   getMemberCaresCount,
   createFryShare,
+  getCaresOffer,
 } from "@/db/cares";
 import { getCollectionEntry } from "@/db/collection";
 import { searchMembers as searchMembersDb } from "@/db/members";
-import { caresRegistrationSchema, caresFryShareSchema } from "@/forms/cares";
+import { caresRegistrationSchema, caresFryShareSchema, caresOfferQuerySchema } from "@/forms/cares";
+import { canonicalName, findSpeciesById } from "@/species";
 import { logger } from "@/utils/logger";
 import { ImageValidationError } from "@/utils/image-processor";
 import { isR2Enabled } from "@/utils/r2-client";
@@ -78,6 +80,64 @@ router.get("/dialog/cares/register/:id", async (req: MulmRequest, res: Response)
     });
   } catch (error) {
     logger.error("Failed to load CARES registration dialog", error);
+    res.status(500).send("Failed to load registration form");
+  }
+});
+
+/**
+ * GET /dialog/cares/register?species=:groupId
+ * The registration dialog with a Species already chosen, for the prompt on an
+ * Approved Submission (#282). A registration is made from a collection entry,
+ * so with one this is the entry's dialog; without one the dialog adds the
+ * Species to the collection first.
+ */
+router.get("/dialog/cares/register", async (req: MulmRequest, res: Response) => {
+  const { viewer } = req;
+  if (!viewer) {
+    res.status(401).send("Not authenticated");
+    return;
+  }
+
+  const refuse = (status: number, message: string) =>
+    res.status(status).render("dialog/cares-register-species", { refusal: message });
+
+  const parsed = caresOfferQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    refuse(400, "Choose a species to register for CARES.");
+    return;
+  }
+
+  try {
+    const groupId = parsed.data.species;
+    const offer = await getCaresOffer(viewer.id, groupId);
+    if (!offer) {
+      refuse(404, "That species is not in the database.");
+      return;
+    }
+    if (!offer.eligible) {
+      refuse(400, "This species is not part of the CARES priority list.");
+      return;
+    }
+    if (offer.registered) {
+      refuse(400, "You have already registered this species for CARES.");
+      return;
+    }
+
+    if (offer.entryId != null) {
+      const entry = await getCollectionEntry(offer.entryId, viewer.id);
+      if (entry) {
+        res.render("dialog/cares-register", { viewer, entry, isUpdate: false, photoUrl: null });
+        return;
+      }
+    }
+
+    const species = await findSpeciesById(groupId);
+    res.render("dialog/cares-register-species", {
+      groupId,
+      speciesName: species ? canonicalName(species) : "",
+    });
+  } catch (error) {
+    logger.error("Failed to load CARES registration dialog for a species", error);
     res.status(500).send("Failed to load registration form");
   }
 });

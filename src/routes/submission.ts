@@ -39,6 +39,8 @@ import { submissionReport } from "@/submissionReport";
 import { pointsBreakdown, type PointsBreakdown, type PointsRow } from "@/points";
 import { parseVideoUrlWithOEmbed, isValidVideoUrl } from "@/utils/videoParser";
 import config from "@/config.json";
+import { canSeeCaresRegistry } from "@/caresRegistry";
+import { getCaresOffer } from "@/db/cares";
 
 async function getFormTemplateData(isAdmin: boolean, speciesType: string) {
   const members = isAdmin ? await getMembersList() : [];
@@ -179,6 +181,15 @@ export const view = async (req: MulmRequest, res: Response) => {
   const images = await getSubmissionImages(submission.id);
   const supplements = await getSubmissionSupplements(submission.id);
 
+  // The CARES registration prompt (#282): the owner of an Approved Submission
+  // of a CARES-listed Species they have not registered is offered the
+  // registration, behind the registry's gate. Never a registration itself.
+  const caresPrompt =
+    viewer && aspect.isSelf && aspect.isApproved && canSeeCaresRegistry(viewer) &&
+    boundSpecies?.is_cares_species
+      ? await caresPromptFor(viewer.id, boundSpecies.group_id)
+      : null;
+
   // Prepare Open Graph data for social media sharing (approved submissions only)
   let ogData = null;
   if (aspect.isApproved) {
@@ -227,9 +238,15 @@ export const view = async (req: MulmRequest, res: Response) => {
     adminNotes,
     videoMetadata,
     ogData,
+    caresPrompt,
     ...aspect,
   });
 };
+
+async function caresPromptFor(memberId: number, groupId: number) {
+  const offer = await getCaresOffer(memberId, groupId);
+  return offer?.eligible && !offer.registered ? { groupId } : null;
+}
 
 /**
  * Render the Submission form over an existing Submission.

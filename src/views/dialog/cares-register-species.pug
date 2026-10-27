@@ -1,0 +1,39 @@
+include ../header.pug
+
+//- Registering a chosen Species for CARES (#282). A registration is made from
+//- a collection entry; with one the route renders the entry's own dialog, so
+//- this is either why the Species can't be registered, or step one: add it to
+//- the collection.
++dialog()
+	h2.text-2xl.font-bold.mb-2 Register for CARES
+	if refusal
+		div(class="bg-yellow-50 border-l-4 border-yellow-400 p-3 mb-4")#cares-register-refusal
+			p.text-yellow-700.text-sm= refusal
+		.flex.justify-end
+			button.outline(
+				type="button"
+				hx-on:click="document.getElementById('dialog').remove()"
+			) Close
+	else
+		p.text-gray-600.text-sm.mb-4
+			| CARES registrations are kept from your collection. Add #[strong.italic= speciesName] to your collection first, then register it with a photo.
+
+		form#cares-add-to-collection(
+			hx-post="/api/collection"
+			hx-target="#dialogContent"
+			hx-swap="innerHTML"
+		)
+			input(type="hidden" name="group_id" value=groupId)
+			.flex.flex-col.gap-4
+				.space-y-1
+					label.input-label(for="visibility") Visibility in your collection
+					select.text-input(id="visibility" name="visibility")
+						option(value="public" selected) Public
+						option(value="private") Private
+
+				.flex.gap-2.justify-end.pt-2.border-t.border-gray-300
+					button.outline(
+						type="button"
+						hx-on:click="document.getElementById('dialog').remove()"
+					) Cancel
+					button.primary(type="submit") Add to Collection

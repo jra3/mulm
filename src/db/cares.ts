@@ -219,6 +219,44 @@ export async function getCaresEligibility(
 }
 
 /**
+ * Whether a member could register a Species for CARES: it is on the CARES
+ * priority list and the member has no registration for it. Also the member's
+ * current collection entry for the Species, the entry the registration dialog
+ * works from, if there is one. Null when the Species does not exist.
+ */
+export async function getCaresOffer(
+  memberId: number,
+  groupId: number
+): Promise<{
+  eligible: boolean;
+  registered: boolean;
+  entryId: number | null;
+} | null> {
+  const rows = await query<{
+    is_cares_species: number | null;
+    registration_id: number | null;
+    entry_id: number | null;
+  }>(
+    `SELECT sng.is_cares_species, r.id AS registration_id,
+       (SELECT c.id FROM species_collection c
+        WHERE c.member_id = ? AND c.group_id = sng.group_id AND c.removed_date IS NULL
+        ORDER BY c.id LIMIT 1) AS entry_id
+     FROM ${speciesFromSql("sng")}
+     LEFT JOIN cares_registration r
+       ON r.member_id = ? AND r.species_group_id = sng.group_id
+     WHERE sng.group_id = ?`,
+    [memberId, memberId, groupId]
+  );
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    eligible: Boolean(row.is_cares_species),
+    registered: row.registration_id != null,
+    entryId: row.entry_id,
+  };
+}
+
+/**
  * Get CARES profile data for a member: registrations with seal info,
  * articles, and fry sharing history.
  */
