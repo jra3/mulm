@@ -25,6 +25,7 @@ import * as db from "@/db/submissions";
 import {
   getSubmissionImages,
   getSubmissionSupplements,
+  type SubmissionImage,
 } from "@/db/submissions";
 import {
   canonicalName as canonicalNameOf,
@@ -273,15 +274,7 @@ async function renderEditForm(
       spawn_locations: parseJsonStringArray(submission.spawn_locations),
       supplement_type: supplements.map((s) => s.supplement_type),
       supplement_regimen: supplements.map((s) => s.supplement_regimen),
-      images: JSON.stringify(
-        images.map((img) => ({
-          key: img.r2_key,
-          url: img.public_url,
-          size: img.file_size,
-          uploadedAt: img.uploaded_at,
-          contentType: img.content_type,
-        }))
-      ),
+      images: imagesForUploadWidget(images),
     },
     errors: new Map(),
     changesRequested,
@@ -592,6 +585,22 @@ export const remove = async (req: MulmRequest, res: Response) => {
 };
 
 /**
+ * Serialize stored images into the shape the upload widget's client script reads
+ * (`key`, `url`, ...), not the raw `submission_images` columns.
+ */
+function imagesForUploadWidget(images: SubmissionImage[]): string {
+  return JSON.stringify(
+    images.map((img) => ({
+      key: img.r2_key,
+      url: img.public_url,
+      size: img.file_size,
+      uploadedAt: img.uploaded_at,
+      contentType: img.content_type,
+    }))
+  );
+}
+
+/**
  * GET /submissions/:id/edit-media
  * Renders form for editing photos and video on approved submissions (owner only)
  */
@@ -628,7 +637,7 @@ export const renderEditMedia = async (req: MulmRequest, res: Response) => {
     submission,
     form: {
       id: submission.id,
-      images: JSON.stringify(images),
+      images: imagesForUploadWidget(images),
       video_url: submission.video_url || "",
     },
   });
