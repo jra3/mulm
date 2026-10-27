@@ -137,17 +137,7 @@ router.patch("/api/collection/:id", async (req: MulmRequest, res: Response) => {
     // Validate URL params
     const { id: entryId } = entryIdParamSchema.parse(req.params);
 
-    // Verify ownership
-    const entry = await getCollectionEntry(entryId, viewer.id);
-    if (!entry || entry.member_id !== viewer.id) {
-      res.status(403).render("partials/message", {
-        message: "Access denied. You can only edit your own collection entries.",
-        type: "error",
-      });
-      return;
-    }
-
-    // Validate request body
+    // Validate request body; updateCollectionEntry checks ownership in its single read
     const updates = updateCollectionSchema.parse(req.body);
     await updateCollectionEntry(entryId, viewer.id, updates);
 
@@ -167,9 +157,13 @@ router.patch("/api/collection/:id", async (req: MulmRequest, res: Response) => {
     }
 
     if (error instanceof CollectionRefusal) {
-      res
-        .status(error.code === "missing" || error.code === "forbidden" ? 403 : 400)
-        .render("partials/message", { message: error.message, type: "warning" });
+      const denied = error.code === "missing" || error.code === "forbidden";
+      res.status(denied ? 403 : 400).render("partials/message", {
+        message: denied
+          ? "Access denied. You can only edit your own collection entries."
+          : error.message,
+        type: denied ? "error" : "warning",
+      });
       return;
     }
 

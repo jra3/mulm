@@ -307,7 +307,12 @@ export async function updateCollectionEntry(
   updates: UpdateCollectionData
 ): Promise<void> {
   return withTransaction(async (db) => {
-    const owned = await ownedEntry(db, id, memberId);
+    // One read serves the ownership check and the shown-name comparison.
+    const current = await getCollectionEntry(id, memberId, db);
+    const message = "Collection entry not found or access denied";
+    if (!current) throw new CollectionRefusal("missing", message);
+    if (current.member_id !== memberId) throw new CollectionRefusal("forbidden", message);
+
     // Build dynamic update query
     const updateFields: string[] = ['updated_at = CURRENT_TIMESTAMP'];
     const params: (string | number | null)[] = [];
@@ -315,15 +320,13 @@ export async function updateCollectionEntry(
     // Changing a name converts the entry to a custom one (group_id = NULL).
     // The edit dialog always posts both names, so compare against what it showed.
     // Empty and null count as equal, and surrounding whitespace is ignored.
-    const namesPosted = updates.common_name !== undefined || updates.scientific_name !== undefined;
-    const current = namesPosted ? await getCollectionEntry(id, memberId, db) : null;
     const nameChanged = (posted: string | null | undefined, shown: string | null | undefined) =>
       posted !== undefined && (posted?.trim() || null) !== (shown?.trim() || null);
 
-    const changesName = nameChanged(updates.common_name, current?.common_name) ||
-      nameChanged(updates.scientific_name, current?.scientific_name);
-    if (updates.removed_date === null && owned.group_id && !changesName)
-      await refuseCurrentDuplicate(db, memberId, owned.group_id, id);
+    const changesName = nameChanged(updates.common_name, current.common_name) ||
+      nameChanged(updates.scientific_name, current.scientific_name);
+    if (updates.removed_date === null && current.group_id && !changesName)
+      await refuseCurrentDuplicate(db, memberId, current.group_id, id);
 
     if (changesName) {
       updateFields.push('group_id = ?');
