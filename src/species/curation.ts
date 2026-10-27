@@ -9,7 +9,7 @@ import { logger } from "@/utils/logger";
 import { CatalogueRefusal, isUniqueViolation, speciesNotFound } from "./errors";
 import { findSpeciesById } from "./lookup";
 import { listNames, nameTable } from "./names";
-import { admitPointClass } from "./pointClass";
+import { admitPointClass, type PointClass } from "./pointClass";
 import {
   countReferencesOfSpecies,
   deleteEnrichmentAndSyncRecords,
@@ -19,7 +19,16 @@ import {
   type SpeciesReferences,
 } from "./references";
 import { countSubmissionsOfSpecies } from "./submissions";
-import { canonicalName, isSpeciesType, nameKinds, speciesTypes, type NameKind, type Species } from "./types";
+import {
+  canonicalName,
+  isSpeciesType,
+  nameKinds,
+  speciesOfRow,
+  speciesTypes,
+  type NameKind,
+  type Species,
+  type SpeciesRow,
+} from "./types";
 
 function admitSpeciesType(value: string): string {
   if (!isSpeciesType(value)) {
@@ -42,7 +51,7 @@ export type NewSpecies = {
   canonicalSpeciesName: string;
   programClass: string;
   speciesType: string;
-  pointClass?: number | null;
+  pointClass?: PointClass | null;
   isCaresSpecies?: boolean;
   /** A common Name to add alongside the Canonical name, if the Species has one. */
   commonName?: string | null;
@@ -67,7 +76,7 @@ function admitNewSpecies(data: NewSpecies) {
 
 /** Insert the Species row, its flagged scientific Name and its common Name, on `db`. */
 async function insertSpecies(db: Database, admitted: ReturnType<typeof admitNewSpecies>): Promise<Species> {
-  const row = await db.get<Species>(
+  const row = await db.get<SpeciesRow>(
     `INSERT INTO species_name_group (
       program_class, species_type, canonical_genus, canonical_species_name,
       base_points, is_cares_species
@@ -84,7 +93,7 @@ async function insertSpecies(db: Database, admitted: ReturnType<typeof admitNewS
       admitted.commonName,
     ]);
   }
-  return row;
+  return speciesOfRow(row);
 }
 
 /**
@@ -150,7 +159,7 @@ export async function createSpeciesOn(db: Database, data: NewSpecies): Promise<S
 export type SpeciesUpdate = {
   programClass?: string;
   speciesType?: string;
-  pointClass?: number | null;
+  pointClass?: PointClass | null;
   isCaresSpecies?: boolean;
 };
 

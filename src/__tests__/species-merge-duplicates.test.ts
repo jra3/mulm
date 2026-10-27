@@ -24,6 +24,8 @@ void describe("Species merge with duplicate synonyms", () => {
         canonical_genus TEXT NOT NULL,
         canonical_species_name TEXT NOT NULL,
         species_type TEXT,
+        base_points INTEGER,
+        is_cares_species INTEGER NOT NULL DEFAULT 0,
         UNIQUE(canonical_genus, canonical_species_name)
       );
 

@@ -59,7 +59,7 @@ export async function boundSpeciesFacts(submission: Pick<Submission, "species_id
     pointClass: species.base_points,
     isFirstTime: submissionsOfSpecies.approved === 0,
     priorBreedCount: submissionsOfSpecies.approved,
-    isCaresSpecies: species.is_cares_species === 1,
+    isCaresSpecies: species.is_cares_species,
   };
 }
 

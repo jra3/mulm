@@ -11,7 +11,7 @@ import type { SpeciesType } from "@/points";
 import { scientificNameSql } from "./sql";
 import { speciesIdOfSubmissionSql } from "./submissions";
 import { listNames, nameTable } from "./names";
-import type { NameKind, Species, SpeciesNames } from "./types";
+import { speciesOfRow, type NameKind, type Species, type SpeciesNames, type SpeciesRow } from "./types";
 
 export type SpeciesFilters = {
   species_type?: string;
@@ -287,7 +287,12 @@ export async function suggestSpecies(
     ORDER BY score DESC, canonical_genus, canonical_species_name
     LIMIT ?
   `;
-  return query<SpeciesSuggestion>(sql, [...tokens.flat(), options.exclude ?? null, limit]);
+  const rows = await query<SpeciesRow & { common_name: string | null }>(sql, [
+    ...tokens.flat(),
+    options.exclude ?? null,
+    limit,
+  ]);
+  return rows.map((row) => ({ ...speciesOfRow(row), common_name: row.common_name }));
 }
 
 export async function getSpeciesForExplorer(

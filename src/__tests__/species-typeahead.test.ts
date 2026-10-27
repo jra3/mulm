@@ -548,8 +548,8 @@ void describe("searchSpeciesTypeahead - Split Schema", () => {
         "Zzameca by genus, common-name word and the stems; Zzilyodon by the goodeid stem alone"
       );
       assert.deepStrictEqual(
-        [found[0].common_name, found[0].canonical_genus, found[0].canonical_species_name, found[0].base_points, found[0].program_class],
-        ["Zzbutterfly Zzgoodeid", "Zzameca", "zzsplendens", 10, "Livebearers"]
+        [found[0].common_name, found[0].canonical_genus, found[0].canonical_species_name, found[0].base_points, found[0].program_class, found[0].is_cares_species],
+        ["Zzbutterfly Zzgoodeid", "Zzameca", "zzsplendens", 10, "Livebearers", false]
       );
     });
 

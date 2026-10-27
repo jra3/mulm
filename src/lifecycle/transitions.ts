@@ -25,6 +25,7 @@ import {
 } from "@/points";
 import {
   addName,
+  admitPointClass,
   canonicalName,
   CatalogueRefusal,
   checkFormAgreement,
@@ -697,7 +698,7 @@ async function recordSpecies(db: Database, submission: Submission, draft: NewSpe
       commonName: draft.commonName,
       programClass: submission.species_class,
       speciesType: submission.species_type,
-      pointClass: draft.pointClass,
+      pointClass: admitPointClass(draft.pointClass),
       isCaresSpecies: draft.isCaresSpecies,
     });
   } catch (err) {

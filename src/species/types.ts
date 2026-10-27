@@ -1,4 +1,5 @@
 import type { SpeciesType } from "@/points";
+import { admitPointClass, type PointClass } from "./pointClass";
 
 /**
  * A Species as the catalogue returns it: the identity row. `group_id` and the
@@ -9,12 +10,12 @@ import type { SpeciesType } from "@/points";
 export type Species = {
   group_id: number;
   program_class: string;
-  species_type: string;
+  species_type: SpeciesType;
   canonical_genus: string;
   canonical_species_name: string;
   /** The Point class, or null when unset. */
-  base_points: number | null;
-  is_cares_species: number;
+  base_points: PointClass | null;
+  is_cares_species: boolean;
   iucn_redlist_category?: string | null;
   iucn_population_trend?: string | null;
   iucn_redlist_url?: string | null;
@@ -51,6 +52,30 @@ export const speciesTypes = [
 
 export function isSpeciesType(value: string): value is SpeciesType {
   return speciesTypes.some((t) => t === value);
+}
+
+/** A `species_name_group` row as SQLite returns it. */
+export type SpeciesRow = Omit<Species, "species_type" | "base_points" | "is_cares_species"> & {
+  species_type: string;
+  base_points: number | null;
+  is_cares_species: number;
+};
+
+/**
+ * Parse a `species_name_group` row into a Species. The schema's CHECK and the
+ * catalogue's writers keep these columns valid, so a row that fails is
+ * corrupt and throws.
+ */
+export function speciesOfRow(row: SpeciesRow): Species {
+  if (!isSpeciesType(row.species_type)) {
+    throw new Error(`Species ${row.group_id} has an unknown Species type: ${row.species_type}`);
+  }
+  return {
+    ...row,
+    species_type: row.species_type,
+    base_points: admitPointClass(row.base_points),
+    is_cares_species: row.is_cares_species === 1,
+  };
 }
 
 /** The Canonical name as one string, genus then epithet. */
