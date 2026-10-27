@@ -35,6 +35,7 @@ import {
 import { createOriginValidation, buildAllowedOrigins } from "./middleware/originValidation";
 import { canSeeCaresRegistry } from "./caresRegistry";
 import { csrfValidation } from "./middleware/csrfValidation";
+import { requestLog } from "./middleware/requestLog";
 import helmet from "helmet";
 import { getGoogleOAuthURL, beginOAuthFlow, isGoogleOAuthEnabled } from "./oauth";
 import { appleOAuthURL } from "./auth/apple";
@@ -82,6 +83,9 @@ export function createApp(dependencies: AppDependencies = {}) {
   if (env.NODE_ENV === "production") {
     app.set("trust proxy", 1);
   }
+
+  // First, so static files and rejected requests are logged too.
+  app.use(requestLog);
 
   // Security headers (non-CSP subset only — CSP is deferred to issue #19 Phase 3,
   // blocked by existing inline JS). HSTS only in production (HTTPS); clickjacking
