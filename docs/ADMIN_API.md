@@ -20,7 +20,8 @@ The `admin-token` CLI runs inside the app's container, where it is compiled to `
 
 ```bash
 APP=basny-bap   # or basny-bap-staging
-curl -sf https://bap.basny.org/health >/dev/null   # staging: wake it first, ssh won't
+HOST=https://bap.basny.org   # or https://basny-bap-staging.fly.dev
+curl -sf "$HOST/health" >/dev/null   # staging: wake it first, ssh won't
 flyctl ssh console --app $APP -C "su nodejs -s /bin/sh -c 'cd /app && node src/cli/admin-token.js mint --member you@example.com --name laptop'"
 ```
 
