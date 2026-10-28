@@ -277,6 +277,25 @@ void describe("Submission lifecycle - transitions", () => {
       assert.strictEqual(await refusal(() => deleteSubmission(otherMember, id)), "authorization");
     });
 
+    void test("a save cannot hand the Submission to another member or renumber it", async () => {
+      const draft = await at("draft");
+      await saveDraft(member, draft, { ...form, id: 9999, member_id: otherMember.id });
+      assert.strictEqual((await readSubmission(draft))?.member_id, ctx.member.id);
+      assert.strictEqual(await readSubmission(9999), undefined);
+
+      const inFlight = await at("waitingPeriod");
+      await saveChanges(member, inFlight, { ...(await formFor(inFlight)), member_id: otherMember.id });
+      assert.strictEqual((await readSubmission(inFlight))?.member_id, ctx.member.id);
+    });
+
+    void test("a created Submission belongs to the member it was created for, whatever the form says", async () => {
+      const unowned = await createSubmission(member, ctx.member.id, { ...form, member_id: undefined }, { submit: false });
+      assert.strictEqual((await readSubmission(unowned))?.member_id, ctx.member.id);
+
+      const misowned = await createSubmission(member, ctx.member.id, { ...form, member_id: otherMember.id }, { submit: true });
+      assert.strictEqual((await readSubmission(misowned))?.member_id, ctx.member.id);
+    });
+
     void test("a committee member does not type into another member's Submission", async () => {
       // The committee changes a Submission by asking for changes, not by
       // editing it. The exceptions are a correction to the Species and
