@@ -15,6 +15,7 @@ import * as tank from "@/routes/tank";
 import * as species from "@/routes/species";
 import * as typeahead from "@/routes/typeahead";
 import uploadRouter from "@/routes/api/upload";
+import adminApiRouter from "@/routes/api/admin";
 
 import { getQueueCounts } from "./db/submissions";
 import { getRecentActivity } from "./db/activity";
@@ -139,6 +140,11 @@ export function createApp(dependencies: AppDependencies = {}) {
   app.set("view engine", "pug");
 
   app.use(express.static(path.join(__dirname, "../public")));
+
+  // The admin API authenticates by bearer token alone (#595). It goes ahead of
+  // the cookie, session, Origin and CSRF middleware, so a session cookie can
+  // never authenticate it and a browser can't be tricked into using it.
+  app.use("/api/admin", adminApiRouter);
 
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));

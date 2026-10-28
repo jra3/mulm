@@ -104,6 +104,7 @@ npm run lint       # Run ESLint
 npm run lint:fix   # Fix ESLint issues
 npm run script     # Run scripts with tsx, @/ aliases resolved (e.g., npm run script scripts/import-aquatic-plants.ts)
 npm start          # Start production server (requires build first)
+npm run admin-token -- list  # Mint/list/revoke admin API tokens locally (see docs/ADMIN_API.md)
 ```
 
 ### Development Server
@@ -177,6 +178,7 @@ npm test -- --watch
 - `awards` - Award definitions and point thresholds
 - `sessions` - Cookie-based session storage
 - `activity_feed` - Activity log for member dashboard
+- `admin_api_tokens` - Hashed bearer tokens for the admin API
 
 ### Migrations
 
@@ -194,6 +196,7 @@ Comprehensive documentation is available in the [GitHub Wiki](https://github.com
 
 - **[Deploy runbook](docs/DEPLOY.md)** - Day-to-day bugfix-to-prod flow (staging → prod, rollback, migrations)
 - **[Infrastructure reference](docs/INFRASTRUCTURE.md)** - Fly.io topology, Litestream/R2 backups, costs
+- **[Admin API](docs/ADMIN_API.md)** - `/api/admin` bearer-token API; minting, storing and revoking tokens
 - **[Security Overview](https://github.com/jra3/mulm/wiki/Security-Overview)** - Security posture, audits, and active initiatives
 
 ## Deployment

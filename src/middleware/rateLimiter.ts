@@ -269,3 +269,26 @@ export const oauthRateLimiter = rateLimit({
   },
   skip: (req) => requestEnvironment(req).NODE_ENV === "test",
 });
+
+/**
+ * Rate limiter for the admin API (/api/admin). Runs before the bearer check,
+ * so it is keyed by IP and also caps token guessing.
+ */
+export const adminApiRateLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 120, // 120 requests per minute per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => getIpKey(req),
+  handler: (_req, res) => {
+    logger.warn("Admin API rate limit exceeded", {
+      ip: _req.ip,
+      path: _req.path,
+    });
+    res.status(429).json({
+      error: "rate_limited",
+      message: "Too many requests. Please wait a minute and try again.",
+    });
+  },
+  skip: (req) => requestEnvironment(req).NODE_ENV === "test",
+});

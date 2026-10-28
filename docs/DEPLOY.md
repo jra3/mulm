@@ -71,7 +71,7 @@ It's transient — `flyctl` is checking the listener before Node has bound to `0
 ./scripts/staging.sh login admin          # prints a logged-in cookie jar path (or: member)
 ```
 
-**Data.** Staging restores read-only from prod's Litestream replica and never replicates back, then mirrors prod's images (`basny-bap-data`) into its own bucket (`basny-bap-staging-data`) in the background (`src/staging/mirror-images.ts`). Both reads use the read-only `PROD_R2_READ_*` key; staging's own storage key reaches only its bucket. A boot more than 7 days after the last restore refreshes automatically. `refresh` deletes staging's DB files and restarts the machine; on boot `start.sh` finds no DB and restores from R2, and refuses to start if that restore fails rather than run on an empty DB. The restore wipes the test logins, so `refresh` reseeds them; the mirror removes staging test uploads.
+**Data.** Staging restores read-only from prod's Litestream replica and never replicates back, then mirrors prod's images (`basny-bap-data`) into its own bucket (`basny-bap-staging-data`) in the background (`src/staging/mirror-images.ts`). Both reads use the read-only `PROD_R2_READ_*` key; staging's own storage key reaches only its bucket. A boot more than 7 days after the last restore refreshes automatically. `refresh` deletes staging's DB files and restarts the machine; on boot `start.sh` finds no DB and restores from R2, and refuses to start if that restore fails rather than run on an empty DB. The restore wipes the test logins, so `refresh` reseeds them; the mirror removes staging test uploads. The restore also deletes every admin API token, so prod's tokens never work on staging ([ADMIN_API.md](ADMIN_API.md)).
 
 **Test logins.** `seed` runs `src/staging/seed.ts` inside the container, which refuses unless `STAGING=1`. It sets random passwords on `baptest+admin@porcnick.com` (admin) and `baptest+e2e@porcnick.com` (member), clears their lockouts and sessions, and touches no other account. The passwords are new on every run and stored only in `~/.config/mulm/staging-test-users.env` (mode 600).
 
@@ -126,6 +126,8 @@ flyctl secrets set CONFIG_JSON="$(cat config.production.json)" --app basny-bap
 ```
 
 Setting a secret triggers a rolling restart automatically.
+
+Admin API tokens are not Fly secrets: they live hashed in the database and are minted, listed and revoked with the `admin-token` CLI over `flyctl ssh console`. See [ADMIN_API.md](ADMIN_API.md).
 
 ## What `flyctl deploy` Does Under the Hood
 

@@ -33,6 +33,7 @@
 		"format": "prettier --write \"src/**/*.{ts,js,json}\" \"scripts/**/*.{ts,js}\"",
 		"format:check": "prettier --check \"src/**/*.{ts,js,json}\" \"scripts/**/*.{ts,js}\"",
 		"script": "tsx",
+		"admin-token": "tsx src/cli/admin-token.ts",
 		"prepare": "husky || true"
 	},
 	"repository": {

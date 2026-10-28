@@ -37,6 +37,8 @@ Authentication implementations are:
 - Sign in with Apple: [`auth/apple.ts`](auth/apple.ts).
 - HTTP authentication handlers: [`routes/auth.ts`](routes/auth.ts).
 
+The admin API (`/api/admin`, [`routes/api/admin.ts`](routes/api/admin.ts)) authenticates by bearer token alone: `adminApiAuth` in [`middleware/adminApiAuth.ts`](middleware/adminApiAuth.ts) checks an admin API token ([`db/adminTokens.ts`](db/adminTokens.ts)) and sets `req.adminApi`, never `req.viewer`. See [ADMIN_API.md](../docs/ADMIN_API.md).
+
 The middleware order and OAuth callback exceptions live in `app.ts`. See [routing](routes/README.md) for CSRF and request conventions.
 
 ## Tests

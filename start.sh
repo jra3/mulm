@@ -25,6 +25,14 @@ DB=/mnt/app-data/database/database.db
 # The refresh restores to a side file and swaps it in only on success, so a
 # failed refresh keeps the old DB, and staging never boots on an empty one.
 RESTORED_AT=/mnt/app-data/database/.restored-at
+# Prod's admin API tokens must not work on staging (docs/ADMIN_API.md), so a
+# restored copy loses them before it is swapped in. A prod without migration
+# 067 has no such table and nothing to delete.
+drop_prod_admin_tokens() {
+  if [ -n "$(sqlite3 -init /dev/null "$1" "SELECT name FROM sqlite_master WHERE type='table' AND name='admin_api_tokens'")" ]; then
+    sqlite3 -init /dev/null "$1" "DELETE FROM admin_api_tokens"
+  fi
+}
 if [ "$STAGING" = "1" ]; then
   if [ -n "$PROD_R2_READ_ACCESS_KEY_ID" ] && [ -n "$PROD_R2_READ_SECRET_ACCESS_KEY" ]; then
     export LITESTREAM_ACCESS_KEY_ID="$PROD_R2_READ_ACCESS_KEY_ID"
@@ -32,7 +40,8 @@ if [ "$STAGING" = "1" ]; then
     if [ ! -f "$DB" ] || [ ! -f "$RESTORED_AT" ] || [ -n "$(find "$RESTORED_AT" -mtime +6)" ]; then
       echo "STAGING: no database, or data over a week old; refreshing from prod's replica."
       rm -f "$DB.restoring" "$DB.restoring-wal" "$DB.restoring-shm"
-      if litestream restore -config /etc/litestream.yml -o "$DB.restoring" "$DB"; then
+      if litestream restore -config /etc/litestream.yml -o "$DB.restoring" "$DB" \
+        && drop_prod_admin_tokens "$DB.restoring"; then
         rm -f "$DB" "$DB-wal" "$DB-shm"
         mv "$DB.restoring" "$DB"
         touch "$RESTORED_AT"
