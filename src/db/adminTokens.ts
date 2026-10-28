@@ -109,8 +109,8 @@ export async function verifyAdminToken(token: string, now = new Date()): Promise
       [hash]
     )
   ).pop();
-  // The lookup is by hash, so this compare is belt and braces: it keeps the
-  // decision itself constant-time whatever the index does.
+  // The lookup is by hash, so timing reveals nothing about the token itself.
+  // This constant-time compare is belt and braces, not the protection.
   if (!row || !timingSafeEqual(Buffer.from(row.token_hash), Buffer.from(hash))) {
     return { ok: false, reason: "invalid" };
   }
