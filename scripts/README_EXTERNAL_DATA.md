@@ -47,9 +47,9 @@ All scripts support these arguments:
 --db=/path/to/db    # Custom database path
 ```
 
-## Automated Sync
+## Where Sync Runs
 
-There is no scheduled sync in production. The old EC2 cron setup is gone, and whether to run sync on Fly or remove the feature is open in #461.
+Enrichment runs off-box, never inside the Fly app: run these scripts locally or from a cron job on another machine. The app has no in-app sync or admin page for it (removed in #461). Pushing results to prod goes through the admin REST API (#595); until that lands, the scripts write only to the database they're pointed at.
 
 ## Workflow Examples
 

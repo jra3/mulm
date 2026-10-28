@@ -82,7 +82,7 @@ Species explorer and admin tables also use contained horizontal scrolling. They 
 | --- | --- |
 | Public | Home, current/prior annual standings, all lifetime programs, species explorer and multiple species details, populated breeder reports and collection cards, public member profile, empty activity, mobile menu, sign-in and sign-up dialogs. |
 | Member | Signed-in home; profile and submission histories; collection and Add/Edit dialogs; account settings, new/edit tank presets, awards progress; Fish/Plant/Coral new forms; draft, pending, waiting and approved submission views; media editor; Save/Load Tank sidebars. |
-| Admin | Approval and witness queues including expanded controls; request-changes dialog; approved editor and points correction; members and inline edit; species first/middle pages, selection toolbar and bulk points dialog; species editor, name-entry and merge forms; no-results filtering; canonical recommendations; live settings and external data. |
+| Admin | Approval and witness queues including expanded controls; request-changes dialog; approved editor and points correction; members and inline edit; species first/middle pages, selection toolbar and bulk points dialog; species editor, name-entry and merge forms; no-results filtering; canonical recommendations; live settings and external data (page since removed, #461). |
 
 The [member route measurements](mobile-audit/member-measurements.json) preserve the 13-route member sweep. The [public](mobile-audit/public.md), [member](mobile-audit/member.md), and [admin](mobile-audit/admin.md) reports contain detailed reproduction and coverage notes. The public pass preceded the lead agent’s populated external-link follow-up, which confirmed defect 3 above.
 

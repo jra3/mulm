@@ -2,9 +2,8 @@
  * Import-only tooling: this script writes the species tables directly, not
  * through the Species catalogue (`@/species`). Do not copy this pattern into
  * `src/`. It is a CLI backfill with its own connection, and stamps
- * `last_external_sync` with raw SQL. The in-app sync
- * (`src/services/externalDataSync.ts`) writes through the catalogue's
- * `updateLastExternalSync`.
+ * `last_external_sync` with raw SQL. Enrichment runs off-box with these
+ * scripts; pushing results to prod is via the admin API (#595).
  */
 /**
  * Sync GBIF External Data

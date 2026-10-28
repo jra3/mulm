@@ -1,8 +1,7 @@
 /**
- * Columns on the Species row whose meaning belongs to other modules: the IUCN
- * Red List status and the date of the last external-data sync. Those modules
- * decide what to write; the catalogue writes it, so it stays the only writer
- * of the species tables.
+ * Columns on the Species row whose meaning belongs to another module: the IUCN
+ * Red List status. That module decides what to write; the catalogue writes
+ * it, so it stays the only writer of the species tables.
  */
 import { writeConn } from "@/db/conn";
 import type { IUCNCategory, PopulationTrend } from "@/integrations/iucn";
@@ -54,25 +53,6 @@ export async function updateIucnStatus(speciesId: number, status: IucnStatus): P
     }
     logger.error(`Failed to update IUCN status of Species ${speciesId}`, err);
     throw new Error("Failed to update IUCN status", { cause: err });
-  }
-  if (changes === 0) throw speciesNotFound(speciesId);
-}
-
-/** Record that a Species' external data (links, images) was last synced at `when`. */
-export async function updateLastExternalSync(speciesId: number, when: Date): Promise<void> {
-  let changes: number;
-  try {
-    const stmt = await writeConn.prepare(
-      "UPDATE species_name_group SET last_external_sync = ? WHERE group_id = ?"
-    );
-    try {
-      changes = (await stmt.run(when.toISOString(), speciesId)).changes || 0;
-    } finally {
-      await stmt.finalize();
-    }
-  } catch (err) {
-    logger.error(`Failed to record external sync of Species ${speciesId}`, err);
-    throw new Error("Failed to record external sync", { cause: err });
   }
   if (changes === 0) throw speciesNotFound(speciesId);
 }

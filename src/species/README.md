@@ -32,7 +32,7 @@ the module's own business.
 | `references.ts` | Rows in other tables that belong to a Species (collection, CARES, images, links, sync records) and what merge and delete do with each; `countReferencesOfSpecies`, `findMembersKeepingBoth`. |
 | `submissions.ts` | The Species-Submission relation, defined once as SQL (`speciesIdOfSubmissionSql`: the Submission's `species_id`); `countSubmissionsOfSpecies` for one Species, `countApprovedBySpecies` for a page of them (the approval queue's first-time preview). |
 | `sql.ts` | SQL fragments for other modules' queries: `speciesOfSubmissionJoinSql`, `programClassOfSubmissionSql`, `speciesJoinSql`, `speciesFromSql`, `anyNameSql`, `scientificNameSql`. |
-| `status.ts` | Writers for columns other modules own the meaning of: `updateIucnStatus`, `updateLastExternalSync`. |
+| `status.ts` | Writer for a column another module owns the meaning of: `updateIucnStatus`. |
 | `listings.ts` | Read models: `searchSpeciesTypeahead`, `suggestSpecies` (the closest Species to a member's spellings, for the witness panel's "Did they mean one of these?"), `getSpeciesForExplorer` + `getExplorerFilterOptions`, `getSpeciesForAdmin`, `getSpeciesDetail` (with Names by kind, references, images), `getBreedersForSpecies`, `listSpeciesDueIucnSync`, `getSpeciesStatistics`. |
 
 ## Reading a Species from another module's query
@@ -142,7 +142,7 @@ through fragments: they go through a catalogue function.
 
 - External references and images: `src/db/speciesEnrichment.ts`. #404 keeps
   enrichment in its own modules; the detail read model reads it, the admin
-  edit route and the external-data sync write it. Merge and delete move or
+  edit route writes it (bulk enrichment runs off-box via `scripts/sync-*.ts`). Merge and delete move or
   remove them by Species id and nothing more (`references.ts`).
 - IUCN status logic and sync: `src/db/iucn.ts`, `src/integrations/iucn.ts`.
   The catalogue writes the IUCN columns (`status.ts`) and lists who is due a

@@ -69,8 +69,8 @@ export {
 // The Species-Submission relation, one definition.
 export { countSubmissionsOfSpecies, countApprovedBySpecies } from "./submissions";
 
-// Columns other modules own the meaning of; the catalogue writes them.
-export { updateIucnStatus, updateLastExternalSync, type IucnStatus } from "./status";
+// A column another module owns the meaning of; the catalogue writes it.
+export { updateIucnStatus, type IucnStatus } from "./status";
 
 // SQL fragments for modules that read a Species alongside their own tables.
 export {
