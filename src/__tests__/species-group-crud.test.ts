@@ -174,7 +174,7 @@ void describe("Species catalogue: create, classify, rename, delete, Point class"
               speciesType: "Fish",
               canonicalGenus: "Genus",
               canonicalSpeciesName: "species",
-              // @ts-expect-error not a Point class; untyped callers (forms, MCP) still get refused
+              // @ts-expect-error not a Point class; untyped callers (forms, the admin API) still get refused
               pointClass: bad,
             }),
           { message: /Point class must be one of 5, 10, 15, 20/ }
@@ -437,7 +437,7 @@ void describe("Species catalogue: create, classify, rename, delete, Point class"
 
     void test("should throw error for a Point class outside the tally keys", async () => {
       for (const bad of [-1, 0, 7, 25, 101]) {
-        // @ts-expect-error not a Point class; untyped callers (forms, MCP) still get refused
+        // @ts-expect-error not a Point class; untyped callers (forms, the admin API) still get refused
         await assert.rejects(async () => await updateSpecies(testGroupId, { pointClass: bad }), {
           message: /Point class must be one of 5, 10, 15, 20/,
         });

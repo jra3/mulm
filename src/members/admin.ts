@@ -1,8 +1,8 @@
 /**
  * The committee's operations on Member records, as the admin API (#595)
  * exposes them: search, a detail view with logins, editing the name and
- * address, deleting, and granting or revoking admin. Ported from the member
- * MCP tools. Merging lives in ./merge.ts. Who may do what (an admin acting on
+ * address, deleting, and granting or revoking admin. Merging lives in
+ * ./merge.ts. Who may do what (an admin acting on
  * themselves) is the caller's business.
  */
 import { query, withTransaction } from "../db/conn";
@@ -209,8 +209,8 @@ export type DeletedMember = {
 
 /**
  * Delete a member, refusing one with approved Submissions unless forced. The
- * member's admin API tokens are revoked in the same transaction. Like the MCP
- * tool this replaces, it deletes only the members row; with foreign keys
+ * member's admin API tokens are revoked in the same transaction. It deletes
+ * only the members row; with foreign keys
  * unenforced in production their Submissions and logins are left behind.
  * Returns undefined when there is no such member.
  */

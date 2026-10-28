@@ -25,5 +25,5 @@
 		}
 	},
 	"include": ["**/*", "src/config.json"],
-	"exclude": ["infrastructure/cdk.out", "node_modules", "dist", "scripts", "src/__tests__", "**/*.test.ts", "src/mcp"]
+	"exclude": ["infrastructure/cdk.out", "node_modules", "dist", "scripts", "src/__tests__", "**/*.test.ts"]
 }

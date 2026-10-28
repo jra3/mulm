@@ -30,7 +30,6 @@ export async function startWorkerPortal() {
           stop: closeConnections,
         },
         storage: inert,
-        mcp: inert,
         jobs: [],
       },
     });

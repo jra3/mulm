@@ -62,7 +62,7 @@ is entered after a September rollover for an earlier meeting, a distinct actual
 presentation date or a documented correction is needed; the spawn date cannot
 recover that information.
 
-The historical CSV importer in `src/backfill/import.ts` currently sets
+The historical CSV import (since removed, #595) set
 `approved_on` to the **import time**, not a historical meeting date. Those dates
 must be audited against club records before treating a historical recalculation
 as authoritative. They cannot be corrected reliably from

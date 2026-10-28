@@ -68,7 +68,7 @@ cp src/config.sample.json src/config.json
 
 ### Configuration
 
-Create `src/config.json` from `src/config.sample.json`. The top-level sections are `database`, `server`, `email`, `oauth` (Google and Apple), `storage` (R2), `iucn`, `wikipedia`, `gbif` and `mcp`:
+Create `src/config.json` from `src/config.sample.json`. The top-level sections are `database`, `server`, `email`, `oauth` (Google and Apple), `storage` (R2), `iucn`, `wikipedia` and `gbif`:
 
 ```json
 {
@@ -76,8 +76,7 @@ Create `src/config.json` from `src/config.sample.json`. The top-level sections a
   "server": { "domain": "localhost:4200" },
   "email": { "disableEmails": true, "...": "..." },
   "oauth": { "google": { "...": "..." }, "apple": { "...": "..." } },
-  "storage": { "s3AccessKeyId": "", "s3Secret": "", "s3Url": "", "s3Bucket": "", "r2PublicUrl": "" },
-  "mcp": { "enabled": false, "port": 3001, "host": "127.0.0.1", "token": "" }
+  "storage": { "s3AccessKeyId": "", "s3Secret": "", "s3Url": "", "s3Bucket": "", "r2PublicUrl": "" }
 }
 ```
 

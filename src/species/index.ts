@@ -3,8 +3,8 @@
  *
  * One module owns Species identity, Names, the Canonical name, Program class,
  * Species type, Point class and the CARES flag. Admin routes, the approval
- * handler, MCP tools, backfill and the IUCN, external-data, CARES, collection
- * and Submission data modules cross this interface for anything about a
+ * handler, the admin API and the IUCN, external-data, CARES, collection and
+ * Submission data modules cross this interface for anything about a
  * Species.
  *
  * What it does not own: IUCN status, external references and images
@@ -93,8 +93,6 @@ export {
   getBreedersForSpecies,
   getExplorerFilterOptions,
   listSpeciesDueIucnSync,
-  getSpeciesStatistics,
-  type SpeciesStatistics,
   type SpeciesFilters,
   type SpeciesExplorerItem,
   type SpeciesNameRecord,

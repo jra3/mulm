@@ -129,6 +129,21 @@ Setting a secret triggers a rolling restart automatically.
 
 Admin API tokens are not Fly secrets: they live hashed in the database and are minted, listed and revoked with the `admin-token` CLI over `flyctl ssh console`. See [ADMIN_API.md](ADMIN_API.md).
 
+### After the MCP removal deploys (#595)
+
+The MCP servers are gone; the admin API ([ADMIN_API.md](ADMIN_API.md)) replaces them. The app ignores a leftover `mcp` key in `CONFIG_JSON`, so remove it once the deploy is live, on each app. `secrets set` replaces the whole secret, so start from the config the machine is running:
+
+```bash
+app=basny-bap-staging   # then repeat with app=basny-bap
+flyctl ssh console --app "$app" -C "cat /app/src/config.json" > "/tmp/$app.json"
+jq 'del(.mcp)' "/tmp/$app.json" > "/tmp/$app.new.json"
+diff "/tmp/$app.json" "/tmp/$app.new.json"   # check: only the mcp block goes
+flyctl secrets set CONFIG_JSON="$(cat "/tmp/$app.new.json")" --app "$app"
+rm "/tmp/$app.json" "/tmp/$app.new.json"
+```
+
+Fly needs no MCP port or service: `fly.toml` and `fly.staging.toml` only expose the Portal on 4200.
+
 ## What `flyctl deploy` Does Under the Hood
 
 1. Tars your working tree (respecting `.dockerignore`) and uploads to Fly's remote builder.

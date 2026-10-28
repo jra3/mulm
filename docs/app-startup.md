@@ -1,8 +1,8 @@
 # Portal app construction and startup
 
 `src/app.ts` exports `createApp({ env, config })`. It returns the real Express
-middleware/router/view stack; it does not initialize SQLite/R2, listen, start
-MCP, or schedule jobs. `env` defaults to a snapshot of `process.env` and controls
+middleware/router/view stack; it does not initialize SQLite/R2, listen, or
+schedule jobs. `env` defaults to a snapshot of `process.env` and controls
 HTTP policy: production proxy trust/HSTS, session cookie names and attributes,
 Origin allowlists, rate-limit test bypasses, and development routes. `config`
 optionally supplies the composition's domain and bug-report email. Provider
@@ -13,7 +13,7 @@ so notification code also disables real email.
 `src/index.ts` is the executable (`npm run dev`, or `npm start` after building).
 It invokes `bootstrap()` from `src/bootstrap.ts`, then installs SIGTERM/SIGINT
 handlers. Bootstrap awaits memoized database initialization/migrations before
-initializing R2 and starting MCP and the Portal HTTP listener. Initialization or
+initializing R2 and starting the Portal HTTP listener. Initialization or
 bind failure rejects startup and unwinds resources already acquired. Jobs start
 only with `NODE_ENV=production` and `STAGING` other than `1`.
 
@@ -24,7 +24,7 @@ for running scheduled work, closes listeners, destroys the R2 client, and closes
 the configured database handles. Database initialization/shutdown is terminal
 within a process; use a new process to restart. Cleanup failures are reported
 without skipping the remaining resources. Tests may replace bootstrap's narrow
-`effects` services (`database`, `storage`, `mcp`, `jobs`), each with `start` and
+`effects` services (`database`, `storage`, `jobs`), each with `start` and
 `stop`, to exercise startup failures without external services.
 
 Full-app Supertest tests install a disposable SQLite connection with
