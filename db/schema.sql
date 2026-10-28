@@ -437,3 +437,14 @@ CREATE TABLE cares_registration (
   UNIQUE (member_id, species_group_id)
 );
 CREATE INDEX idx_cares_registration_species ON cares_registration(species_group_id);
+CREATE TABLE admin_api_tokens (
+  id INTEGER PRIMARY KEY,
+  member_id INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  token_hash TEXT NOT NULL UNIQUE,
+  created_at TEXT NOT NULL,
+  last_used_at TEXT,
+  expires_at TEXT,
+  revoked_at TEXT
+);
+CREATE INDEX idx_admin_api_tokens_member ON admin_api_tokens(member_id);

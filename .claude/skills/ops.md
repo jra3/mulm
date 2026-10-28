@@ -9,7 +9,7 @@ Use this skill for production operations, deployment, and infrastructure tasks.
 - **Stack**: Dockerfile-based Fly Machine; TLS/ingress handled by fly-proxy
 - **Database**: SQLite on the `basny_data` volume at `/mnt/app-data/database/database.db`
 - **Backups**: Litestream continuous replication to Cloudflare R2 (`basny-db-replica`)
-- **Docs**: See `docs/DEPLOY.md` (runbook) and `docs/INFRASTRUCTURE.md` (topology)
+- **Docs**: See `docs/DEPLOY.md` (runbook), `docs/INFRASTRUCTURE.md` (topology) and `docs/ADMIN_API.md` (admin API tokens)
 
 ## Quick Commands
 
@@ -30,6 +30,9 @@ flyctl ssh console --app basny-bap
 
 # Pull prod DB into local dev (Litestream restore from R2)
 ./infrastructure/sync-db-from-production.sh
+
+# Admin API tokens: mint (shown once), list, revoke. See docs/ADMIN_API.md
+flyctl ssh console --app basny-bap -C "su nodejs -s /bin/sh -c 'cd /app && node src/cli/admin-token.js list'"
 ```
 
 ## Staging

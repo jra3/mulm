@@ -126,6 +126,10 @@ _Avoid_: user, breeder, hobbyist, aquarist, account, household (these are roles/
 The body — a chairperson plus an even number of members, appointed by the Board — that witnesses spawns, keeps records, assigns point values, and presents awards. In the Portal, committee actions are performed by members with `is_admin`.
 _Avoid_: BAP committee, the committee (when ambiguous), admins (in domain prose)
 
+**Admin API token**:
+A bearer credential that lets a script act as one committee member (`is_admin`) on the admin API, `/api/admin` (#595). Minted with the `admin-token` CLI inside the Portal's container, shown once, and stored only as a SHA-256 hash in `admin_api_tokens` (`src/db/adminTokens.ts`). It carries no scopes: it can do what its member can, and only while that member is still an admin. Writes made with it are attributed to that member. Revoked, never deleted. Operations: [docs/ADMIN_API.md](docs/ADMIN_API.md).
+_Avoid_: API key, MCP token, session (it is none of these)
+
 **Claiming points**:
 The member-side act of submitting and following through on a spawn/propagation so points are recorded. It is the breeder's responsibility to file and verify.
 _Avoid_: requesting points, filing
