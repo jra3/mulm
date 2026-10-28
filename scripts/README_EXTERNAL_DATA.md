@@ -49,7 +49,7 @@ All scripts support these arguments:
 
 ## Where Sync Runs
 
-Enrichment runs off-box, never inside the Fly app: run these scripts locally or from a cron job on another machine. The app has no in-app sync or admin page for it (removed in #461). Pushing results to prod goes through the admin REST API (#595); until that lands, species data is written only to the database the scripts are pointed at. `--download-images` also uploads image objects to the R2 bucket in `config.storage.s3Bucket`, so a run against a local database can still leave objects in that bucket.
+Enrichment runs off-box, never inside the Fly app: run these scripts locally or from a cron job on another machine. The app has no in-app sync or admin page for it (removed in #461). The scripts write species data only to the database they're pointed at; `scripts/push-external-data.ts` then pushes the changes to prod through the admin API. See [`docs/EXTERNAL_DATA_CRON.md`](../docs/EXTERNAL_DATA_CRON.md) for the whole pipeline. `--download-images` also uploads image objects to the R2 bucket in `config.storage.s3Bucket`, so a run against a local database can still leave objects in that bucket.
 
 ## Workflow Examples
 
