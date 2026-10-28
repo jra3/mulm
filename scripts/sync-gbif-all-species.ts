@@ -3,7 +3,7 @@
  * through the Species catalogue (`@/species`). Do not copy this pattern into
  * `src/`. It is a CLI backfill with its own connection, and stamps
  * `last_external_sync` with raw SQL. Enrichment runs off-box with these
- * scripts; pushing results to prod will go through the admin API once #595 lands.
+ * scripts; scripts/push-external-data.ts pushes results to prod (docs/EXTERNAL_DATA_CRON.md).
  */
 /**
  * Sync GBIF External Data

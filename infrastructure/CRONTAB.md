@@ -50,7 +50,7 @@ Wikipedia/Wikidata and GBIF enrichment does not run on Fly. The app has no
 in-app sync or admin page for it (removed in #461). Run the
 `scripts/sync-*.ts` scripts locally or from a cron job on another machine; see
 [`scripts/README_EXTERNAL_DATA.md`](../scripts/README_EXTERNAL_DATA.md).
-Once #595 lands, results are pushed to prod through the admin REST API. Until then, a run updates only the database it is pointed at, plus any R2 image uploads.
+A run updates only the database it is pointed at, plus any R2 image uploads; `scripts/push-external-data.ts` pushes the results to prod through the admin API. See [`docs/EXTERNAL_DATA_CRON.md`](../docs/EXTERNAL_DATA_CRON.md) for the crontab.
 
 ## Other scheduled jobs
 

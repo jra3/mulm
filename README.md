@@ -196,6 +196,7 @@ Comprehensive documentation is available in the [GitHub Wiki](https://github.com
 - **[Deploy runbook](docs/DEPLOY.md)** - Day-to-day bugfix-to-prod flow (staging → prod, rollback, migrations)
 - **[Infrastructure reference](docs/INFRASTRUCTURE.md)** - Fly.io topology, Litestream/R2 backups, costs
 - **[Admin API](docs/ADMIN_API.md)** - `/api/admin` bearer-token API; minting, storing and revoking tokens
+- **[External data cron](docs/EXTERNAL_DATA_CRON.md)** - Off-box Wikipedia/GBIF enrichment, pushed to prod over the admin API
 - **[Security Overview](https://github.com/jra3/mulm/wiki/Security-Overview)** - Security posture, audits, and active initiatives
 
 ## Deployment

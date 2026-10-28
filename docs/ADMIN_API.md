@@ -223,6 +223,8 @@ curl -s -H "$AUTH" -H 'Content-Type: application/json' -X POST "$BAP/species/poi
 
 `PUT /:id/external-data` with `external_references` (URLs), `image_links` (URLs) or both. Each list given **replaces** that list outright, in the order given; `[]` clears it. A list left out is untouched. Every call stamps the Species' last external sync. Returns `200 { group_id, external_references, image_links, last_external_sync }`.
 
+`scripts/push-external-data.ts` pushes a local database's lists through this endpoint, writing only the Species that differ; [EXTERNAL_DATA_CRON.md](EXTERNAL_DATA_CRON.md) runs it as an off-box cron job.
+
 ```bash
 curl -s -H "$AUTH" -H 'Content-Type: application/json' -X PUT "$BAP/species/123/external-data" \
   -d '{"external_references":["https://www.fishbase.se/summary/4768"],"image_links":[]}'
