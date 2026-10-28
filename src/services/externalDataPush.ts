@@ -291,12 +291,12 @@ export class SpeciesApi {
     return speciesResponse.parse(await res.json());
   }
 
-  /** Replace both lists; returns what the remote now holds. */
-  async put(groupId: number, data: Pick<ExternalData, "external_references" | "image_links">) {
-    const res = await this.request("PUT", `/${groupId}/external-data`, {
-      external_references: data.external_references,
-      image_links: data.image_links,
-    });
+  /** Replace each list given (one left out is untouched); returns what the remote now holds. */
+  async put(
+    groupId: number,
+    lists: Partial<Pick<ExternalData, "external_references" | "image_links">>
+  ) {
+    const res = await this.request("PUT", `/${groupId}/external-data`, lists);
     if (!res.ok) throw new Error(`PUT ${groupId}: ${res.status} ${await errorMessage(res)}`);
     return speciesResponse
       .pick({ group_id: true, external_references: true, image_links: true })
@@ -366,7 +366,13 @@ export async function pushExternalData(
         changes.forEach((line) => log(line));
         continue;
       }
-      const written = await api.put(local.group_id, local);
+      // Send only the lists that differ: the API stores image URLs without
+      // their attribution and license, so rewriting an unchanged image list
+      // would drop them.
+      const written = await api.put(local.group_id, {
+        ...(plan.references ? { external_references: local.external_references } : {}),
+        ...(plan.images ? { image_links: local.image_links } : {}),
+      });
       if (
         diffList(written.external_references, local.external_references) ||
         diffList(written.image_links, local.image_links)

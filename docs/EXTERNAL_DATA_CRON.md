@@ -50,7 +50,7 @@ npm run script scripts/push-external-data.ts -- <selection> [--execute] [--db=PA
 | `--since=<ISO date>` | Species whose local `last_external_sync` is at or after the date |
 | `--all` | every Species in the local database |
 
-It is a dry-run unless you pass `--execute`. For each Species it GETs prod's copy and compares the external references and image links with the local ones, order included. Only a Species that differs is written, with both lists; each replaces prod's list.
+It is a dry-run unless you pass `--execute`. For each Species it GETs prod's copy and compares the external references and image links with the local ones, order included. Only a Species that differs is written, and only the lists that differ are sent; each replaces prod's list of that kind.
 
 It skips and reports:
 
@@ -68,7 +68,7 @@ Exit status is `0` when nothing failed, `1` when any Species failed, and `2` for
 
 The remote is `--url`, else `BASNY_API_URL`, else `https://bap.basny.org`. Requests are 600 ms apart (`--delay-ms`), under the API's limit of 120 a minute per IP. On a `429` it waits for `Retry-After` and retries, up to 5 times. The token is never printed.
 
-Image attribution, license and title don't reach prod. The API takes image URLs only, so an image list that changes is stored on prod without that metadata.
+Image attribution, license and title don't reach prod. The API takes image URLs only, so when a Species' image list changes, prod stores the new list without that metadata, for its existing images too. An unchanged image list isn't sent, so it keeps its metadata.
 
 ## Cron
 

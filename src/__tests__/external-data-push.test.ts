@@ -186,6 +186,7 @@ void describe("retryDelayMs", () => {
 /** A remote holding `held`, recording each request. */
 function fakeRemote(held: Record<number, ExternalData>) {
   const calls: string[] = [];
+  const bodies: unknown[] = [];
   const fetchImpl = (async (url: string, init?: RequestInit) => {
     const method = init?.method ?? "GET";
     const pathname = new URL(url).pathname;
@@ -196,20 +197,15 @@ function fakeRemote(held: Record<number, ExternalData>) {
     const id = Number(pathname.split("/")[4]);
     if (!held[id]) return Response.json({ error: "not_found", message: "nope" }, { status: 404 });
     if (method === "PUT") {
-      const body = JSON.parse(init?.body as string) as Pick<
-        ExternalData,
-        "external_references" | "image_links"
-      >;
+      const body = JSON.parse(init?.body as string) as Partial<ExternalData>;
+      bodies.push(body);
       held[id] = { ...held[id], ...body };
-      return Response.json({
-        group_id: id,
-        ...body,
-        last_external_sync: "2026-10-28T00:00:00.000Z",
-      });
+      const { external_references, image_links } = held[id];
+      return Response.json({ group_id: id, external_references, image_links });
     }
     return Response.json({ ...held[id], names: { common: [], scientific: [] } });
   }) as unknown as typeof fetch;
-  return { calls, fetchImpl };
+  return { calls, bodies, fetchImpl };
 }
 
 const noSleep = () => Promise.resolve();
@@ -247,7 +243,7 @@ void describe("pushExternalData", () => {
 
   void test("execute PUTs only the Species that differs, then a rerun finds it unchanged", async () => {
     const held = remote();
-    const { calls, fetchImpl } = fakeRemote(held);
+    const { calls, bodies, fetchImpl } = fakeRemote(held);
     const api = new SpeciesApi("https://x.example", "basny_test", 0, fetchImpl, noSleep);
     const first = await pushExternalData(locals(), api, true, () => {});
     assert.strictEqual(first.updated, 1);
@@ -256,6 +252,11 @@ void describe("pushExternalData", () => {
       ["PUT /api/admin/species/1/external-data"]
     );
     assert.deepStrictEqual(held[1].external_references, ["https://a.example/new"]);
+    assert.deepStrictEqual(
+      bodies,
+      [{ external_references: ["https://a.example/new"] }],
+      "only the list that differs"
+    );
     const again = await pushExternalData(locals(), api, true, () => {});
     assert.deepStrictEqual(again, { checked: 4, unchanged: 2, updated: 0, skipped: 2, failed: 0 });
   });

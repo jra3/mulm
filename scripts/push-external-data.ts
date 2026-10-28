@@ -6,8 +6,8 @@
  * docs/ADMIN_API.md for the token.
  *
  * For each selected Species it GETs the remote Species and compares both lists
- * with the local ones. Only a Species that differs is written, with a PUT of
- * both lists (each replaces the remote list). It skips, and reports, a Species
+ * with the local ones. Only a Species that differs is written: a PUT of the
+ * lists that differ, each replacing the remote list of that kind. It skips, and reports, a Species
  * the remote doesn't have, one whose Canonical name differs (the local copy is
  * stale), and a push that would empty a list the remote has.
  *
