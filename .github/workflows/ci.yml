@@ -35,8 +35,8 @@ jobs:
         run: npm audit --audit-level=critical
         continue-on-error: true
 
-      # The build's tsconfig leaves out tests and the MCP servers; this checks
-      # them too, so a test can't assert fields its subject no longer has.
+      # The build's tsconfig leaves out tests; this checks them too, so a
+      # test can't assert fields its subject no longer has.
       - name: Type check
         run: npm run typecheck
 

@@ -1,5 +1,5 @@
 /**
- * /api/admin/members (#595): the member MCP tools as REST. An admin may not
+ * /api/admin/members (#595): member administration as REST. An admin may not
  * demote, delete or merge away the member their own token acts as (409).
  * See docs/ADMIN_API.md#members.
  */

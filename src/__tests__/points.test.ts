@@ -614,7 +614,7 @@ void describe("Points - SQL fragment agrees with the TypeScript function", () =>
   });
 
   /**
-   * The MCP member-detail tool reports one cross-program grand total while the
+   * The admin API's member detail reports one cross-program grand total while the
    * roster reports three per-program totals. They must be the same arithmetic,
    * so a row belonging to no program - or approved but never submitted - must
    * not be counted by one surface and left out by the other.

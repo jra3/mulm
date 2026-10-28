@@ -29,7 +29,6 @@ import {
   findSpeciesByIds,
   listSpeciesDueIucnSync,
   updateName,
-  getSpeciesStatistics,
   previewMerge,
   findNames,
   canonicalName,
@@ -620,13 +619,13 @@ void describe("Species catalogue", () => {
               canonicalSpeciesName: `pointus${bad}`,
               programClass: "Livebearers",
               speciesType: "Fish",
-              // @ts-expect-error not a Point class; untyped callers (forms, MCP) still get refused
+              // @ts-expect-error not a Point class; untyped callers (forms, the admin API) still get refused
               pointClass: bad,
             }),
           CatalogueRefusal
         );
         const id = await speciesWith({ genus: "Goodus", epithet: "pointus", pointClass: 10 });
-        // @ts-expect-error not a Point class; untyped callers (forms, MCP) still get refused
+        // @ts-expect-error not a Point class; untyped callers (forms, the admin API) still get refused
         await assert.rejects(() => updateSpecies(id, { pointClass: bad }), CatalogueRefusal);
         await assert.rejects(() => setPointClass([id], bad), CatalogueRefusal);
         assert.strictEqual((await findSpeciesById(id))?.base_points, 10);
@@ -651,19 +650,6 @@ void describe("Species catalogue", () => {
         [a, b]
       );
       assert.deepStrictEqual(await findSpeciesByIds([]), []);
-    });
-
-    void test("getSpeciesStatistics counts Species, CARES and Point class set or unset", async () => {
-      const before = await getSpeciesStatistics();
-      await speciesWith({ genus: "Statsus", epithet: "set", pointClass: 10 });
-      await speciesWith({ genus: "Statsus", epithet: "unset" });
-
-      const after = await getSpeciesStatistics();
-      assert.strictEqual(after.total_species, before.total_species + 2);
-      assert.strictEqual(after.with_base_points, before.with_base_points + 1);
-      assert.strictEqual(after.without_base_points, before.without_base_points + 1);
-      assert.strictEqual(after.by_type.Fish, (before.by_type.Fish ?? 0) + 2);
-      assert.strictEqual(after.cares_species, before.cares_species);
     });
 
     void test("listSpeciesDueIucnSync lists never-synced and stale Species of the type", async () => {

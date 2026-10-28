@@ -1,9 +1,9 @@
 # The Species catalogue
 
 One module owns **Species identity, Names, the Canonical name, Program class,
-Species type, Point class and the CARES flag**. Admin routes, the approval
-handler, the lifecycle module, MCP tools, backfill and the IUCN and
-external-data modules ask it about a Species. It is the only writer of the
+Species type, Point class and the CARES flag**. Admin routes, the admin API,
+the approval handler, the lifecycle module and the IUCN and external-data
+modules ask it about a Species. It is the only writer of the
 species tables, and no other module in `src/` names them in SQL.
 
 Spec: [#404](https://github.com/jra3/mulm/issues/404). Vocabulary:
@@ -13,8 +13,8 @@ class). Decisions: `docs/adr/0002-canonical-name-is-a-flagged-name-row.md`
 
 ## The interface is `index.ts`
 
-Callers import from `@/species` (the MCP cores, which use relative imports
-throughout, import `../species`) and nothing else. The files behind it are
+Callers import from `@/species` (or `../species` from relative-import code)
+and nothing else. The files behind it are
 the module's own business.
 
 ## What's where
@@ -33,7 +33,7 @@ the module's own business.
 | `submissions.ts` | The Species-Submission relation, defined once as SQL (`speciesIdOfSubmissionSql`: the Submission's `species_id`); `countSubmissionsOfSpecies` for one Species, `countApprovedBySpecies` for a page of them (the approval queue's first-time preview). |
 | `sql.ts` | SQL fragments for other modules' queries: `speciesOfSubmissionJoinSql`, `programClassOfSubmissionSql`, `speciesJoinSql`, `speciesFromSql`, `anyNameSql`, `scientificNameSql`. |
 | `status.ts` | Writers for columns other modules own the meaning of: `updateIucnStatus`, `updateLastExternalSync`. |
-| `listings.ts` | Read models: `searchSpeciesTypeahead`, `suggestSpecies` (the closest Species to a member's spellings, for the witness panel's "Did they mean one of these?"), `getSpeciesForExplorer` + `getExplorerFilterOptions`, `getSpeciesForAdmin`, `getSpeciesDetail` (with Names by kind, references, images), `getBreedersForSpecies`, `listSpeciesDueIucnSync`, `getSpeciesStatistics`. |
+| `listings.ts` | Read models: `searchSpeciesTypeahead`, `suggestSpecies` (the closest Species to a member's spellings, for the witness panel's "Did they mean one of these?"), `getSpeciesForExplorer` + `getExplorerFilterOptions`, `getSpeciesForAdmin`, `getSpeciesDetail` (with Names by kind, references, images), `getBreedersForSpecies`, `listSpeciesDueIucnSync`. |
 
 ## Reading a Species from another module's query
 
@@ -83,7 +83,8 @@ through fragments: they go through a catalogue function.
   already has (any case; its spelling is corrected), or a new one - and leaves
   the previous Canonical name as an unflagged scientific Name, never a common
   Name. A change of case only is a spelling fix and keeps nothing. The admin
-  edit form, MCP `update_canonical_name` and IUCN recommendation accept all
+  edit form, the admin API's `PATCH /species/:id/canonical-name` and IUCN
+  recommendation accept all
   call `renameCanonical`; accept passes `alongside` to mark the recommendation in
   the same transaction.
 - **Merge** moves every Name of the loser to the winner, deduplicated without
@@ -112,8 +113,8 @@ through fragments: they go through a catalogue function.
 - **A Submission's spellings become Names only at the Witness**, when the
   witness ticks them on the witness panel (`confirmWitness` in
   `src/lifecycle`, which calls `addName`). Every other `addName` caller adds
-  text a curator typed: the admin Species edit page and MCP
-  `add_species_name`.
+  text a curator typed: the admin Species edit page and the admin API's
+  `POST /species/:id/names`.
 
 ## The schema today, and what changes next
 
@@ -129,7 +130,7 @@ through fragments: they go through a catalogue function.
   stay on the Submission as submitted. A Submission approved before binding
   existed may be unbound (`species_id` NULL).
 - **`group_id`** is the Species' id under its column name. Read models,
-  routes, views, forms and MCP arguments all say `group_id`; it is renamed
+  routes, views, forms and admin API fields all say `group_id`; it is renamed
   when the column is, not before. The one exception is the Submission
   form's hidden `species_id`, named for the Submission's column it claims.
 - **Collection and CARES** join a Species by `group_id` through the

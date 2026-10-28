@@ -1,7 +1,6 @@
 /**
  * Species endpoints of the admin API (#595), mounted at /api/admin/species.
- * They port the species MCP tools onto the same catalogue, enrichment and
- * IUCN operations; see the Species section of docs/ADMIN_API.md.
+ * They expose the catalogue, enrichment and IUCN operations; see the Species section of docs/ADMIN_API.md.
  */
 import express, { type NextFunction, type Response } from "express";
 import { z } from "zod";

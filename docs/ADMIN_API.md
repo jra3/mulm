@@ -18,16 +18,16 @@ A JSON API under `/api/admin` for scripts that act as an admin (#595). It authen
 
 ## Members
 
-`/api/admin/members` ports the member MCP tools. Code: `src/routes/api/admin/members.ts` over `src/members/admin.ts` and `src/members/merge.ts`.
+`/api/admin/members` administers Member records. Code: `src/routes/api/admin/members.ts` over `src/members/admin.ts` and `src/members/merge.ts`.
 
-| Method | Path | Does | MCP tool |
-|---|---|---|---|
-| GET | `/api/admin/members` | Search and list | `list_members` |
-| GET | `/api/admin/members/:id` | One member, with logins | `get_member_detail` |
-| PATCH | `/api/admin/members/:id` | Change name and/or email | `update_member` |
-| PUT | `/api/admin/members/:id/admin` | Grant or revoke admin | `set_admin_status` |
-| DELETE | `/api/admin/members/:id` | Delete | `delete_member` |
-| POST | `/api/admin/members/:id/merge` | Merge `:id` into another member | `merge_members` |
+| Method | Path | Does |
+|---|---|---|
+| GET | `/api/admin/members` | Search and list |
+| GET | `/api/admin/members/:id` | One member, with logins |
+| PATCH | `/api/admin/members/:id` | Change name and/or email |
+| PUT | `/api/admin/members/:id/admin` | Grant or revoke admin |
+| DELETE | `/api/admin/members/:id` | Delete |
+| POST | `/api/admin/members/:id/merge` | Merge `:id` into another member |
 
 You can't use a token to demote, delete or merge away the member it acts as: those are `409`. Ask another admin, or use the web admin.
 
@@ -97,7 +97,7 @@ Returns `{ "member": { "id": 42, "display_name": "Jane Smith", "is_admin": true 
 
 ### DELETE /members/:id
 
-Refused with `409` if the member has approved Submissions, unless you add `?force=true`. Revokes the member's admin API tokens, then deletes only the `members` row, as the MCP tool did. Foreign keys aren't enforced in production, so their Submissions and logins stay in the database, orphaned.
+Refused with `409` if the member has approved Submissions, unless you add `?force=true`. Revokes the member's admin API tokens, then deletes only the `members` row. Foreign keys aren't enforced in production, so their Submissions and logins stay in the database, orphaned.
 
 ```bash
 curl -s -X DELETE -H "Authorization: Bearer $TOKEN" "$API/members/42"
@@ -172,7 +172,7 @@ Staging restores prod's database, which carries prod's token hashes. `start.sh` 
 
 ## Species
 
-Ports the species MCP tools (`src/mcp/species-server-core.ts`) onto the same catalogue, enrichment and IUCN operations. Code: `src/routes/api/admin/species.ts`. Every path below is under `/api/admin/species`.
+The catalogue, enrichment and IUCN operations. Code: `src/routes/api/admin/species.ts`. Every path below is under `/api/admin/species`.
 
 Conventions for this section:
 

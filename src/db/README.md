@@ -3,8 +3,7 @@
 Importing `conn.ts`, the Species catalogue, or a fixture performs no database
 I/O. Executables must parse arguments, handle help, and select their mode before
 calling `await ensureReady()` and before serving requests or using repository
-functions. The Portal awaits readiness before listening; scheduled jobs and
-standalone MCP servers also await it.
+functions. The Portal awaits readiness before listening; scheduled jobs also await it.
 
 `ensureReady()` creates the configured database if needed, migrates it, then
 opens read and write connections. Concurrent callers share one promise; neither

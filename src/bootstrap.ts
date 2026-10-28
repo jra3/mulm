@@ -3,7 +3,6 @@ import type { Server } from "node:http";
 import { createApp, type AppDependencies } from "./app";
 import { ensureReady, closeConnections } from "./db/conn";
 import { initR2, closeR2 } from "./utils/r2-client";
-import { startMcpHttpServer, stopMcpHttpServer } from "./mcp/http-server";
 import { startScheduledCleanup, stopScheduledCleanup } from "./scheduled/cleanup";
 import {
   startFinalSubmissionReminders,
@@ -11,7 +10,6 @@ import {
 } from "./scheduled/finalSubmissionReminder";
 import { startCommitteeDigest, stopCommitteeDigest } from "./scheduled/committeeDigest";
 import { isLiveProduction } from "./utils/environment";
-import { logger } from "./utils/logger";
 
 type Stop = () => void | Promise<void>;
 export interface StartupService {
@@ -23,7 +21,6 @@ export interface StartupService {
 export interface BootstrapEffects {
   database: StartupService;
   storage: StartupService;
-  mcp: StartupService;
   jobs: StartupService[];
 }
 const productionEffects: BootstrapEffects = {
@@ -34,7 +31,6 @@ const productionEffects: BootstrapEffects = {
     },
     stop: closeR2,
   },
-  mcp: { start: startMcpHttpServer, stop: stopMcpHttpServer },
   jobs: [
     { start: startScheduledCleanup, stop: stopScheduledCleanup },
     { start: startFinalSubmissionReminders, stop: stopFinalSubmissionReminders },
@@ -81,29 +77,10 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     cleanup.push(service.stop);
     await service.start();
   };
-  // A service the portal runs without. The MCP server is an admin side door:
-  // a bad config (bound off loopback with no token) or a taken port leaves
-  // MCP down and logged, not the whole site down. Down is still closed: an
-  // MCP server that failed to start serves nothing, authenticated or not.
-  const startOptional = async (name: string, service: StartupService) => {
-    try {
-      await service.start();
-    } catch (error) {
-      logger.error(`${name} failed to start; continuing without it`, error);
-      try {
-        await service.stop();
-      } catch (stopError) {
-        logger.error(`${name} failed to stop after a failed start`, stopError);
-      }
-      return;
-    }
-    cleanup.push(service.stop);
-  };
   try {
     await start(effects.database);
     await start(effects.storage);
     const app = createApp({ ...options, env });
-    await startOptional("MCP HTTP server", effects.mcp);
     const server = await listen(
       app,
       options.port ?? Number(env.PORT ?? 4200),

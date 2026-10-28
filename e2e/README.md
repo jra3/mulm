@@ -37,7 +37,7 @@ directory. Each worker migrates its own SQLite file, seeds reference Species,
 and starts the real Portal through `bootstrap()` on a kernel-assigned loopback port.
 Worker-local files also isolate first-time-species awards and SQLite transactions
 from other workers; tests still receive independent member accounts.
-It disables R2, MCP, jobs, and real email. No existing server is reused. Teardown
+It disables R2, jobs, and real email. No existing server is reused. Teardown
 stops the listener and closes SQLite before removing the directory, including
 when tests fail. A killed process can leave an identifiable temporary directory;
 a later run always gets a new directory.

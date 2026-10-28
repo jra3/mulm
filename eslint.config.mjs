@@ -12,7 +12,7 @@ export default [
 	// Main source files
 	{
 		files: ["src/**/*.{ts,js}"],
-		ignores: ["src/__tests__/**", "**/*.test.ts", "src/mcp/**"],
+		ignores: ["src/__tests__/**", "**/*.test.ts"],
 		languageOptions: { globals: {...globals.browser, ...globals.node} },
 	},
 	pluginJs.configs.recommended,
@@ -20,7 +20,7 @@ export default [
 	...tseslint.configs.recommendedTypeChecked,
 	{
 		files: ["src/**/*.{ts,js}"],
-		ignores: ["src/__tests__/**", "**/*.test.ts", "src/mcp/**"],
+		ignores: ["src/__tests__/**", "**/*.test.ts"],
 		languageOptions: {
 			parserOptions: {
 				projectService: true,
@@ -53,24 +53,6 @@ export default [
 			"@typescript-eslint/no-unsafe-member-access": "off",
 			"@typescript-eslint/no-unsafe-assignment": "off",
 			"@typescript-eslint/no-unsafe-argument": "off",
-			"@typescript-eslint/require-await": "off"
-		}
-	},
-
-	// MCP servers - separate tsconfig
-	{
-		files: ["src/mcp/**/*.ts"],
-		languageOptions: {
-			globals: {...globals.node},
-			parserOptions: {
-				project: "./tsconfig.mcp.json",
-				tsconfigRootDir: import.meta.dirname,
-			},
-		},
-		rules: {
-			"@typescript-eslint/no-explicit-any": "warn",
-			"@typescript-eslint/no-floating-promises": "error",
-			"@typescript-eslint/no-misused-promises": "error",
 			"@typescript-eslint/require-await": "off"
 		}
 	},

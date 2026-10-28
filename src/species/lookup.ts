@@ -66,9 +66,8 @@ export type Resolution = {
  * name it is wins, else the one with the lowest Canonical name, so the answer
  * is stable.
  *
- * This is the lookup historical imports bind by (it was the backfill tools'
- * private matcher). It is exact, not fuzzy: suggesting the Species a member
- * probably meant is separate work.
+ * This is the lookup imports bind by. It is exact, not fuzzy: suggesting the
+ * Species a member probably meant is separate work.
  */
 export async function resolveSpecies(spellings: {
   commonName?: string | null;

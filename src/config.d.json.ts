@@ -61,13 +61,6 @@ export interface Config {
     timeoutMs: number;
     wikidataUrl?: string;
   };
-  mcp?: {
-    enabled: boolean;
-    port: number;
-    host: string;
-    /** Bearer token; required when host is not loopback. */
-    token?: string;
-  };
 }
 
 const config: Config;
