@@ -8,6 +8,7 @@
  * revoked, never deleted.
  */
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import type { Database } from "sqlite";
 import { query, writeConn } from "./conn";
 
 export const ADMIN_TOKEN_PREFIX = "basny_";
@@ -149,6 +150,24 @@ export async function listAdminTokens(): Promise<AdminTokenListing[]> {
      FROM admin_api_tokens t JOIN members m ON m.id = t.member_id
      ORDER BY t.id DESC`
   );
+}
+
+/**
+ * Revoke every live token a member holds, inside the transaction that deletes
+ * or merges the member away. Foreign keys are not enforced in production, so
+ * the table's ON DELETE CASCADE cannot be relied on to remove them; revoking
+ * also keeps the row as a record of who held it. Returns how many it revoked.
+ */
+export async function revokeMemberAdminTokens(
+  conn: Database,
+  memberId: number,
+  now = new Date()
+): Promise<number> {
+  const result = await conn.run(
+    "UPDATE admin_api_tokens SET revoked_at = ? WHERE member_id = ? AND revoked_at IS NULL",
+    [now.toISOString(), memberId]
+  );
+  return result.changes ?? 0;
 }
 
 /** Revoke a token. Returns false if there is no such token or it was already revoked. */

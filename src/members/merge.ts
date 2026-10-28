@@ -1,5 +1,6 @@
 import { query, withTransaction } from "../db/conn";
 import { moveLoginMethods } from "../db/members";
+import { revokeMemberAdminTokens } from "../db/adminTokens";
 import type { MemberRecord } from "../db/members";
 
 export type MergeMembersInput = { from_member_id: number; to_member_id: number; preview?: boolean };
@@ -63,6 +64,7 @@ export async function mergeMembers(args: MergeMembersInput) {
       `Move ${awardCount[0]?.count || 0} awards`,
       `Move ${tankPresetCount[0]?.count || 0} tank presets`,
       `Move Google, Apple and password logins the destination lacks`,
+      `Revoke member ${from_member_id}'s admin API tokens`,
       `Delete member ${from_member_id}`,
     ],
   };
@@ -98,6 +100,10 @@ export async function mergeMembers(args: MergeMembersInput) {
     // relay address, say) still logs into the surviving member afterwards.
     const loginsMoved = await moveLoginMethods(db, from_member_id, to_member_id);
 
+    // The source's admin API tokens die with it rather than moving: they were
+    // minted for that member's admin rights, not the destination's.
+    const adminTokensRevoked = await revokeMemberAdminTokens(db, from_member_id);
+
     // Delete source member (cascades whatever logins were not moved, plus
     // sessions and auth_codes)
     const deleteStmt = await db.prepare("DELETE FROM members WHERE id = ?");
@@ -109,6 +115,7 @@ export async function mergeMembers(args: MergeMembersInput) {
       awards_moved: awardResult.changes,
       tank_presets_moved: tankResult.changes,
       logins_moved: loginsMoved,
+      admin_tokens_revoked: adminTokensRevoked,
     };
   });
 
