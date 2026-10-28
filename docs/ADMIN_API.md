@@ -5,7 +5,7 @@ A JSON API under `/api/admin` for scripts that act as an admin (#595). It authen
 - A token acts as the admin it was minted for, with no scopes. Every request re-checks that the member is still an admin; a demoted admin's tokens get `403`.
 - Tokens look like `basny_` plus 43 base64url characters. The table (`admin_api_tokens`) stores only the SHA-256; the token is shown once, at mint.
 - No expiry unless you pass `--expires-days`. Revoked tokens stay listed.
-- 120 requests per minute per IP. Errors are JSON: `{ "error": "unauthorized", "message": "…" }` with `400`, `401`, `403`, `404`, `429` or `500`.
+- 120 requests per minute per IP. Errors are JSON: `{ "error": "unauthorized", "message": "…" }` with `400`, `401`, `403`, `404`, `409`, `429` or `500`.
 - Code: `src/db/adminTokens.ts` (tokens), `src/middleware/adminApiAuth.ts` (bearer check), `src/routes/api/admin.ts` (endpoints), `src/cli/admin-token.ts` (CLI).
 
 ## Endpoints
@@ -13,6 +13,8 @@ A JSON API under `/api/admin` for scripts that act as an admin (#595). It authen
 | Method | Path | Returns |
 |---|---|---|
 | GET | `/api/admin/whoami` | `{ member: { id, display_name }, token: { id, name, created_at, expires_at } }` |
+| * | `/api/admin/members…` | See [Members](#members) |
+| * | `/api/admin/species…` | See [Species](#species) |
 
 ## Members
 
