@@ -32,7 +32,7 @@ the module's own business.
 | `references.ts` | Rows in other tables that belong to a Species (collection, CARES, images, links, sync records) and what merge and delete do with each; `countReferencesOfSpecies`, `findMembersKeepingBoth`. |
 | `submissions.ts` | The Species-Submission relation, defined once as SQL (`speciesIdOfSubmissionSql`: the Submission's `species_id`); `countSubmissionsOfSpecies` for one Species, `countApprovedBySpecies` for a page of them (the approval queue's first-time preview). |
 | `sql.ts` | SQL fragments for other modules' queries: `speciesOfSubmissionJoinSql`, `programClassOfSubmissionSql`, `speciesJoinSql`, `speciesFromSql`, `anyNameSql`, `scientificNameSql`. |
-| `status.ts` | Writer for a column another module owns the meaning of: `updateIucnStatus`. |
+| `status.ts` | Writers for columns other modules own the meaning of: `updateIucnStatus`, `updateLastExternalSync`. |
 | `listings.ts` | Read models: `searchSpeciesTypeahead`, `suggestSpecies` (the closest Species to a member's spellings, for the witness panel's "Did they mean one of these?"), `getSpeciesForExplorer` + `getExplorerFilterOptions`, `getSpeciesForAdmin`, `getSpeciesDetail` (with Names by kind, references, images), `getBreedersForSpecies`, `listSpeciesDueIucnSync`, `getSpeciesStatistics`. |
 
 ## Reading a Species from another module's query
