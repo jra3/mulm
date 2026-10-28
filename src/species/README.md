@@ -142,7 +142,7 @@ through fragments: they go through a catalogue function.
 
 - External references and images: `src/db/speciesEnrichment.ts`. #404 keeps
   enrichment in its own modules; the detail read model reads it, the admin
-  edit route and the external-data sync write it. Merge and delete move or
+  edit route writes it (bulk enrichment runs off-box via `scripts/sync-*.ts`). Merge and delete move or
   remove them by Species id and nothing more (`references.ts`).
 - IUCN status logic and sync: `src/db/iucn.ts`, `src/integrations/iucn.ts`.
   The catalogue writes the IUCN columns (`status.ts`) and lists who is due a

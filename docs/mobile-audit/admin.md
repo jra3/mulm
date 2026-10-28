@@ -59,7 +59,7 @@ All browser checks at390×844. Successful normal-layout/no-page-overflow checks:
 - `/admin/species/1/edit`: base editor, Add Common Name inline form (input165px, no page overflow), Merge Species dialog (content375/scroll375); no species/name save, merge or delete submitted.
 - `/admin/species/canonical-recommendations`: populated synthetic pending row, sync banner and status control rendered; no accept/reject or external sync triggered.
 - `/admin/live-settings`: rendered configuration/preview, no page overflow; no saved message.
-- `/admin/external-data`: idle state, no page overflow; no sync started.
+- `/admin/external-data`: idle state, no page overflow; no sync started. (Page removed in #461.)
 
 ## Limits and reproducibility
 

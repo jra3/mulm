@@ -44,21 +44,20 @@ There are no long-lived Docker images accumulating on a host. Each deploy
 provisions a fresh machine from the `Dockerfile`, so the weekly `docker system
 prune` job has no purpose here.
 
-## Other scheduled jobs (e.g. external-data sync)
+## Species external-data sync — runs off-box
 
-If a genuinely periodic task is still needed (for example, the species
-external-data sync scripts under `scripts/`), note that **the source
-infrastructure docs do not specify a Fly-native cron/scheduler mechanism** for
-this app. Don't assume one exists. Options, none of which are currently
-documented here:
+Wikipedia/Wikidata and GBIF enrichment does not run on Fly. The app has no
+in-app sync or admin page for it (removed in #461). Run the
+`scripts/sync-*.ts` scripts locally or from a cron job on another machine; see
+[`scripts/README_EXTERNAL_DATA.md`](../scripts/README_EXTERNAL_DATA.md).
+Once #595 lands, results are pushed to prod through the admin REST API. Until then, a run updates only the database it is pointed at, plus any R2 image uploads.
 
-- Run the script manually/locally when needed (`npm run script scripts/<name>.ts`).
-- If a recurring schedule becomes a requirement, decide on and document a
-  mechanism (e.g. an external scheduler invoking the work) — and update
-  `docs/INFRASTRUCTURE.md` as the canonical reference at that time.
+## Other scheduled jobs
 
-Until then, treat these as manual operations and refer to
-[`docs/INFRASTRUCTURE.md`](../docs/INFRASTRUCTURE.md).
+If another periodic task becomes a requirement, decide on a mechanism and
+document it in [`docs/INFRASTRUCTURE.md`](../docs/INFRASTRUCTURE.md). The
+infrastructure docs don't specify a Fly-native scheduler for this app; don't
+assume one exists.
 
 ## References
 
