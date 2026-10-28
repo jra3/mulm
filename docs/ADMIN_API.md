@@ -5,7 +5,7 @@ A JSON API under `/api/admin` for scripts that act as an admin (#595). It authen
 - A token acts as the admin it was minted for, with no scopes. Every request re-checks that the member is still an admin; a demoted admin's tokens get `403`.
 - Tokens look like `basny_` plus 43 base64url characters. The table (`admin_api_tokens`) stores only the SHA-256; the token is shown once, at mint.
 - No expiry unless you pass `--expires-days`. Revoked tokens stay listed.
-- 120 requests per minute per IP. Errors are JSON: `{ "error": "unauthorized", "message": "…" }` with `400`, `401`, `403`, `404`, `429` or `500`.
+- 120 requests per minute per IP. Errors are JSON: `{ "error": "unauthorized", "message": "…" }` with `400`, `401`, `403`, `404`, `409`, `429` or `500`.
 - Code: `src/db/adminTokens.ts` (tokens), `src/middleware/adminApiAuth.ts` (bearer check), `src/routes/api/admin.ts` (endpoints), `src/cli/admin-token.ts` (CLI).
 
 ## Endpoints
@@ -13,6 +13,113 @@ A JSON API under `/api/admin` for scripts that act as an admin (#595). It authen
 | Method | Path | Returns |
 |---|---|---|
 | GET | `/api/admin/whoami` | `{ member: { id, display_name }, token: { id, name, created_at, expires_at } }` |
+| * | `/api/admin/members…` | See [Members](#members) |
+| * | `/api/admin/species…` | See [Species](#species) |
+
+## Members
+
+`/api/admin/members` ports the member MCP tools. Code: `src/routes/api/admin/members.ts` over `src/members/admin.ts` and `src/members/merge.ts`.
+
+| Method | Path | Does | MCP tool |
+|---|---|---|---|
+| GET | `/api/admin/members` | Search and list | `list_members` |
+| GET | `/api/admin/members/:id` | One member, with logins | `get_member_detail` |
+| PATCH | `/api/admin/members/:id` | Change name and/or email | `update_member` |
+| PUT | `/api/admin/members/:id/admin` | Grant or revoke admin | `set_admin_status` |
+| DELETE | `/api/admin/members/:id` | Delete | `delete_member` |
+| POST | `/api/admin/members/:id/merge` | Merge `:id` into another member | `merge_members` |
+
+You can't use a token to demote, delete or merge away the member it acts as: those are `409`. Ask another admin, or use the web admin.
+
+Errors: `400` for a bad id, query or body (unknown fields included), `404` for an unknown member, `409` for a refusal. The message says which.
+
+```bash
+TOKEN=$(cat ~/.config/basny/admin-token)
+API=https://bap.basny.org/api/admin
+```
+
+### GET /members
+
+Query parameters, all optional:
+
+- `query`: matches name or email, case-insensitively; ignored under 2 characters
+- `is_admin`, `has_submissions`: `true` or `false`. `has_submissions` counts approved Submissions only.
+- `limit`: 1–500, default 100. `offset`: default 0.
+
+Ordered by display name.
+
+```bash
+curl -s -H "Authorization: Bearer $TOKEN" "$API/members?query=smith&is_admin=false"
+```
+
+```json
+{ "count": 1, "members": [ { "id": 42, "email": "jane@example.com", "display_name": "Jane Smith",
+  "is_admin": false, "submission_count": 3, "fish_level": "Breeder", "plant_level": null, "coral_level": null } ] }
+```
+
+### GET /members/:id
+
+```bash
+curl -s -H "Authorization: Bearer $TOKEN" "$API/members/42"
+```
+
+```json
+{ "member": { "id": 42, "email": "jane@example.com", "display_name": "Jane Smith", "is_admin": false,
+  "fish_level": "Breeder", "plant_level": null, "coral_level": null,
+  "logins": { "password": true, "google": null, "apple": { "email": "x1y2@privaterelay.appleid.com" } },
+  "submission_count": 4, "approved_submission_count": 3, "total_points": 35,
+  "awards": ["Breeder"], "tank_presets": ["Shelf 2"] } }
+```
+
+`logins` says how the member can sign in: a password, and the Google and Apple accounts with their addresses, or `null` where there is none. `total_points` sums awarded points across all three Programs.
+
+### PATCH /members/:id
+
+Body: `display_name`, `contact_email`, or both. Both are trimmed; the name is 1–100 characters and the email must be a valid address. Anything else in the body, `is_admin` included, is a `400`.
+
+```bash
+curl -s -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"display_name": "Jane Q. Smith"}' "$API/members/42"
+```
+
+Returns `{ "member": … }` as GET does. `409` if another member already has the email in any case.
+
+### PUT /members/:id/admin
+
+Body: `{ "is_admin": true }` or `{ "is_admin": false }`.
+
+```bash
+curl -s -X PUT -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"is_admin": true}' "$API/members/42/admin"
+```
+
+Returns `{ "member": { "id": 42, "display_name": "Jane Smith", "is_admin": true } }`. `409` when revoking admin from the token's own member. A demoted member's tokens aren't revoked; they get `403` until the member is an admin again.
+
+### DELETE /members/:id
+
+Refused with `409` if the member has approved Submissions, unless you add `?force=true`. Revokes the member's admin API tokens, then deletes only the `members` row, as the MCP tool did. Foreign keys aren't enforced in production, so their Submissions and logins stay in the database, orphaned.
+
+```bash
+curl -s -X DELETE -H "Authorization: Bearer $TOKEN" "$API/members/42"
+```
+
+```json
+{ "deleted": { "id": 42, "display_name": "Jane Smith", "submission_count": 1,
+  "approved_submission_count": 0, "admin_tokens_revoked": 0 } }
+```
+
+### POST /members/:id/merge
+
+Merges member `:id` into `into_member_id`. `:id` is the duplicate: its Submissions, awards and tank presets move to `into_member_id`, along with each kind of login (Google, Apple, password) the survivor lacks. Then `:id` is deleted and its admin API tokens are revoked; they don't move to the survivor. The survivor keeps its own name, email and admin status.
+
+Body: `{ "into_member_id": 7, "preview": true }`. With `preview`, nothing changes and you get the counts that would move. `400` if `into_member_id` is `:id`; `404` if either member is missing; `409` if `:id` is the token's own member. Merging another member into yourself is allowed.
+
+```bash
+curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"into_member_id": 7, "preview": true}' "$API/members/42/merge"
+```
+
+The response is what `merge_members` returned: `from_member_id`, `to_member_id`, `submissions_moved`, `awards_moved`, `tank_presets_moved`, `logins_moved`, `admin_tokens_revoked` and `preview_data`.
 
 ## Minting a token
 

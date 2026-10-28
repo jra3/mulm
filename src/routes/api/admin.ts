@@ -12,6 +12,7 @@ import {
   type AdminApiRequest,
 } from "../../middleware/adminApiAuth";
 import { logger } from "../../utils/logger";
+import membersRouter from "./admin/members";
 import speciesRouter from "./admin/species";
 
 const router = express.Router();
@@ -33,6 +34,7 @@ router.get("/whoami", (req: AdminApiRequest, res) => {
   });
 });
 
+router.use("/members", membersRouter);
 router.use("/species", speciesRouter);
 
 router.use((req, res) => {
