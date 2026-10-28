@@ -161,9 +161,11 @@ export function formToRow(memberId: number, form: FormValues): SubmissionRow {
   };
 
   return {
-    member_id: memberId,
     program,
     ...form,
+    // Which row, and whose, come from the caller, never the form (#578).
+    id: undefined,
+    member_id: memberId,
     member_name: undefined,
     member_email: undefined,
     // The binding is the lifecycle's to decide (`bindingAfterSave`), never the form's to write.
