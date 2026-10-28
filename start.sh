@@ -29,7 +29,9 @@ RESTORED_AT=/mnt/app-data/database/.restored-at
 # restored copy loses them before it is swapped in. A prod without migration
 # 067 has no such table and nothing to delete.
 drop_prod_admin_tokens() {
-  if [ -n "$(sqlite3 -init /dev/null "$1" "SELECT name FROM sqlite_master WHERE type='table' AND name='admin_api_tokens'")" ]; then
+  # A failed lookup must fail the refresh, not read as "no table".
+  table=$(sqlite3 -init /dev/null "$1" "SELECT name FROM sqlite_master WHERE type='table' AND name='admin_api_tokens'") || return 1
+  if [ -n "$table" ]; then
     sqlite3 -init /dev/null "$1" "DELETE FROM admin_api_tokens"
   fi
 }
