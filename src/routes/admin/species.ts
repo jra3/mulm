@@ -22,7 +22,7 @@ import { mergeSpeciesSchema } from "@/forms/speciesMerge";
 import { logger } from "@/utils/logger";
 import * as z from "zod";
 
-const refusalStatus: Record<RefusalCode, number> = {
+export const refusalStatus: Record<RefusalCode, number> = {
   not_found: 404,
   invalid: 400,
   point_class: 400,

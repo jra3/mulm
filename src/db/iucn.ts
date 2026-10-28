@@ -6,9 +6,9 @@
  */
 
 import type { Database } from "sqlite";
-import type { IUCNCategory, PopulationTrend } from "@/integrations/iucn";
+import type { IUCNCategory, IUCNClient, PopulationTrend } from "@/integrations/iucn";
 import { logger } from "@/utils/logger";
-import { CatalogueRefusal, renameCanonical, speciesFromSql } from "@/species";
+import { CatalogueRefusal, renameCanonical, speciesFromSql, updateIucnStatus } from "@/species";
 
 /**
  * IUCN data to be stored/updated
@@ -113,6 +113,56 @@ export async function recordIucnSync(
     logger.error("Failed to record IUCN sync", { groupId, status, error: err });
     throw new Error("Failed to record sync log", { cause: err });
   }
+}
+
+export type IucnSyncResult = {
+  group_id: number;
+  scientific_name: string;
+  status: SyncStatus;
+  category?: IUCNCategory;
+  error?: string;
+};
+
+/**
+ * Look one Species up on the IUCN Red List by its Canonical name, write what
+ * was found to the Species and record the attempt in the sync log. An API
+ * failure is recorded and returned as `api_error`, not thrown.
+ */
+export async function syncSpeciesIucn(
+  db: Database,
+  client: IUCNClient,
+  species: { group_id: number; canonical_genus: string; canonical_species_name: string }
+): Promise<IucnSyncResult> {
+  const scientificName = `${species.canonical_genus} ${species.canonical_species_name}`;
+  let status: SyncStatus = "not_found";
+  let errorMessage: string | undefined;
+  let iucnData: IUCNData | undefined;
+
+  try {
+    const iucnResult = await client.getSpeciesByName(scientificName);
+    if (iucnResult) {
+      status = "success";
+      iucnData = {
+        category: iucnResult.category,
+        taxonId: iucnResult.taxonid,
+        populationTrend: iucnResult.population_trend,
+      };
+      await updateIucnStatus(species.group_id, iucnData);
+    }
+  } catch (error) {
+    status = "api_error";
+    errorMessage = error instanceof Error ? error.message : "Unknown error";
+    logger.error(`Failed to sync IUCN data for ${scientificName}`, error);
+  }
+
+  await recordIucnSync(db, species.group_id, status, iucnData, errorMessage);
+  return {
+    group_id: species.group_id,
+    scientific_name: scientificName,
+    status,
+    category: iucnData?.category,
+    error: errorMessage,
+  };
 }
 
 /**
@@ -236,6 +286,14 @@ export async function getIucnSyncStats(db: Database): Promise<IUCNSyncStats> {
 // ============================================================================
 // Canonical Name Recommendations
 // ============================================================================
+
+/** No pending recommendation has this id: it never existed, or was already reviewed. */
+export class RecommendationNotFound extends Error {
+  constructor(recommendationId: number) {
+    super(`Pending recommendation ${recommendationId} not found`);
+    this.name = "RecommendationNotFound";
+  }
+}
 
 /**
  * Status of a canonical name recommendation
@@ -410,7 +468,7 @@ export async function acceptCanonicalRecommendation(
     );
 
     if (!rec) {
-      throw new Error(`Pending recommendation ${recommendationId} not found`);
+      throw new RecommendationNotFound(recommendationId);
     }
 
     // The same rename as the admin edit form: the catalogue keeps the old
@@ -437,7 +495,7 @@ export async function acceptCanonicalRecommendation(
     });
     // Re-throw our own errors and the catalogue's refusals with their messages
     if (err instanceof CatalogueRefusal) throw err;
-    if (err instanceof Error && err.message.includes("not found")) {
+    if (err instanceof RecommendationNotFound) {
       throw err;
     }
     throw new Error("Failed to accept canonical recommendation", { cause: err });
@@ -471,7 +529,7 @@ export async function rejectCanonicalRecommendation(
     );
 
     if (!result.changes || result.changes === 0) {
-      throw new Error(`Pending recommendation ${recommendationId} not found`);
+      throw new RecommendationNotFound(recommendationId);
     }
 
     return true;
@@ -482,7 +540,7 @@ export async function rejectCanonicalRecommendation(
       error: err,
     });
     // Re-throw our own errors with their original messages
-    if (err instanceof Error && err.message.includes("not found")) {
+    if (err instanceof RecommendationNotFound) {
       throw err;
     }
     throw new Error("Failed to reject canonical recommendation", { cause: err });

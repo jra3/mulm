@@ -12,6 +12,7 @@ import {
   type AdminApiRequest,
 } from "../../middleware/adminApiAuth";
 import { logger } from "../../utils/logger";
+import speciesRouter from "./admin/species";
 
 const router = express.Router();
 
@@ -31,6 +32,8 @@ router.get("/whoami", (req: AdminApiRequest, res) => {
     },
   });
 });
+
+router.use("/species", speciesRouter);
 
 router.use((req, res) => {
   sendApiError(res, 404, "not_found", `No admin API endpoint ${req.method} ${req.path}`);
