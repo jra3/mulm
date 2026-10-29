@@ -222,6 +222,8 @@ void describe("POST /api/admin/submissions/:id/correction", () => {
       .expect(400);
     assert.match(badSpecies.body.message, /Species that exists/);
     await api.post(`/${id}/correction`, { group_id: "guppy", reason: "Bind" }).expect(400);
+    await api.post(`/${id}/correction`, { group_id: true, reason: "Bind" }).expect(400);
+    await api.post(`/${id}/correction`, { group_id: String(guppy), reason: "Bind" }).expect(400);
 
     const unknown = await api.post("/99999/correction", { group_id: guppy, reason: "Bind" }).expect(404);
     assert.equal(unknown.body.error, "not_found");

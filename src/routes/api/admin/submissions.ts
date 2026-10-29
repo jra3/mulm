@@ -154,7 +154,7 @@ router.get("/:id", async (req: AdminApiRequest, res) => {
 
 const correctionBody = z
   .object({
-    group_id: id,
+    group_id: z.number().int().positive(),
     reason: z.string().trim().min(1, "Say why the Submission is being corrected").max(2000),
     points: z.number().int().optional(),
     article_points: z.number().int().nullable().optional(),
