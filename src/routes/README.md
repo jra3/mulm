@@ -160,6 +160,16 @@ POST   /admin/submissions/:id/edit-approved    - Save the details through editAp
 POST   /admin/submissions/:id/request-changes  - Request changes from submitter
 ```
 
+**Admin API** (bearer token only, JSON; [ADMIN_API.md](../../docs/ADMIN_API.md))
+```
+GET    /api/admin/whoami                         - The token's admin and the token
+*      /api/admin/members…                       - Member administration (api/admin/members.ts)
+*      /api/admin/species…                       - Catalogue, enrichment and IUCN (api/admin/species.ts)
+GET    /api/admin/submissions                    - Find Submissions: unbound, state, member_id, limit, offset
+GET    /api/admin/submissions/:id                - One Submission, with its bound Species' Canonical name
+POST   /api/admin/submissions/:id/correction     - correctPoints: bind or rebind and correct points with a reason; notify (default false), preview
+```
+
 **Admin Dialogs** (HTMX)
 ```
 GET    /admin/dialog/submissions/:id/request-changes  - Request changes form

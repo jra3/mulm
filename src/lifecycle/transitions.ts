@@ -1098,6 +1098,18 @@ export type PointsCorrection = WitnessPoints & {
   first_time_species?: boolean;
 };
 
+/** How a correction runs. */
+export type CorrectionOptions = {
+  /**
+   * Whether the member is written to: the witness or approval letter again,
+   * and a Level rise or Specialty Award the correction earns. Default true,
+   * as the web panel has always done. The admin API defaults it to false,
+   * for corrections of the committee's own record the member need not hear
+   * about; the feed and standing are updated either way.
+   */
+  notify?: boolean;
+};
+
 /**
  * Correct a Submission's Species and points, with a stated reason, from the
  * Witness on: in the waiting period, in the approval queue and once Approved.
@@ -1121,6 +1133,7 @@ export type PointsCorrection = WitnessPoints & {
  * <reason>". After it, the feed entry is updated in place rather than
  * announced again, the member's standing is recomputed (in the Program it
  * left too, if the Species moved it), and the approval email goes again.
+ * With `notify: false` the standing and feed still follow, but no letter goes.
  *
  * Returns the fields that changed, which is also what the changelog records.
  */
@@ -1128,96 +1141,16 @@ export async function correctPoints(
   caller: Caller,
   submissionId: number,
   correction: PointsCorrection,
-  reason: string
+  reason: string,
+  options: CorrectionOptions = {}
 ): Promise<Change[]> {
-  const trimmed = reason.trim();
-  if (!trimmed) {
-    throw new ValidationError("A correction needs a stated reason", "reason", reason);
-  }
+  const notify = options.notify ?? true;
+  const trimmed = correctionReason(reason);
   assertWitnessPointsWellFormed(correction);
 
-  const { before, after, changes, species, valued } = await withTransaction(async (db) => {
-    // The whole row, not the guard's columns: the changelog diffs against it
-    const stmt = await db.prepare("SELECT * FROM submissions WHERE id = ?");
-    const rows: Submission[] = await stmt.all(submissionId);
-    await stmt.finalize();
-    const before = rows[0];
-    if (!before) {
-      throw new ValidationError("Submission not found", "submissionId", submissionId);
-    }
-    const named = await speciesNamedOrBound(before, correction);
-
-    assertMoveIsLegal(moves.correctPoints, {
-      state: deriveState(before),
-      changesPending: hasChangesRequested(before),
-      actor: actorFor(caller, before),
-      actorId: caller.id,
-      isOwner: before.member_id === caller.id,
-      // The Species the correction names settles the Submission as a bound one does
-      bound: named != null || correction.new_species != null,
-    });
-
-    const approved = before.approved_on != null;
-    if (!approved && correction.first_time_species !== undefined) {
-      throw new ValidationError(
-        "First-time is decided at approval; it cannot be set before then",
-        "first_time_species",
-        correction.first_time_species
-      );
-    }
-
-    // The guard refused an unbound Submission above, so there is a Species,
-    // or one to record: created here so a refusal below rolls it back
-    const chosen = correction.new_species ? await recordSpecies(db, before, correction.new_species) : named!;
-    assertBonusesFit(programOfSpeciesType(chosen.species_type), correction);
-
-    const speciesChanges = await settleSpecies(db, before, chosen, moves.correctPoints);
-    if (correction.new_species) {
-      speciesChanges.unshift({ field: "new_species", old: null, new: canonicalName(chosen) });
-    }
-
-    const points: Record<string, unknown> = {
-      points: correction.points,
-      article_points: correction.article_points,
-      cares_species: correction.cares_species,
-      flowered: correction.flowered,
-      sexual_reproduction: correction.sexual_reproduction,
-      first_time_species: approved ? correction.first_time_species : undefined,
-    };
-    // No article bonus is stored as NULL since ADR-0003 and as 0 before it;
-    // the two mean the same, so a correction that keeps "none" changes nothing
-    const pointChanges = changesBetween({ ...before, article_points: before.article_points || null }, points);
-    const changes = [...speciesChanges, ...pointChanges];
-    if (changes.length === 0) {
-      throw new ValidationError("No changes detected", "updates", correction);
-    }
-
-    await runUpdate(
-      db,
-      `UPDATE submissions SET
-         points = ?,
-         article_points = ?,
-         cares_species = ?,
-         flowered = ?,
-         sexual_reproduction = ?,
-         first_time_species = COALESCE(?, first_time_species)
-       WHERE id = ? AND (approved_on IS NOT NULL OR witness_verification_status = 'confirmed')`,
-      [
-        correction.points,
-        correction.article_points,
-        correction.cares_species ? 1 : 0,
-        correction.flowered ? 1 : 0,
-        correction.sexual_reproduction ? 1 : 0,
-        approved && correction.first_time_species !== undefined ? (correction.first_time_species ? 1 : 0) : null,
-        submissionId,
-      ],
-      moves.correctPoints
-    );
-
-    const valued = chosen.base_points == null && (await ensurePointClass(db, chosen.group_id, correction.points));
-    const afterRows: Submission[] = await db.all("SELECT * FROM submissions WHERE id = ?", submissionId);
-    return { before, after: afterRows[0], changes, species: chosen, valued };
-  });
+  const { before, after, changes, species, valued } = await withTransaction((db) =>
+    writeCorrection(db, caller, submissionId, correction)
+  );
 
   await recordAdminEdit(submissionId, caller, changes, trimmed);
 
@@ -1226,12 +1159,12 @@ export async function correctPoints(
     if (after.approved_on != null) {
       // Awarded points moved: the feed entry, the standing and the member's letter follow
       await announceApproval(after, member);
-      await recomputeStanding(member.id, programOf(after));
+      await recomputeStanding(member.id, programOf(after), { notify });
       if (programOf(before) !== programOf(after)) {
-        await recomputeStanding(member.id, programOf(before));
+        await recomputeStanding(member.id, programOf(before), { notify });
       }
-      await notifier().approved(after, member);
-    } else {
+      if (notify) await notifier().approved(after, member);
+    } else if (notify) {
       // Pending points moved: the member hears the new breakdown, and why
       const [witnessMember, submissionsOfSpecies] = await Promise.all([
         after.witnessed_by == null ? Promise.resolve(undefined) : getMember(after.witnessed_by),
@@ -1252,9 +1185,144 @@ export async function correctPoints(
     approved: after.approved_on != null,
     speciesId: species.group_id,
     pointClassSet: valued,
+    notified: notify,
     changes,
   });
   return changes;
+}
+
+/** What a previewed correction would do: the changelog it would write, and the row after it. */
+export type CorrectionPreview = { changes: Change[]; after: Submission };
+
+/** Carries a previewed correction out of the transaction it rolls back. */
+class PreviewRollback extends Error {
+  constructor(public readonly preview: CorrectionPreview) {
+    super("Correction previewed; rolled back");
+  }
+}
+
+/**
+ * Preview `correctPoints`: run the same transaction, with the same refusals,
+ * then roll it back. Nothing is written, no changelog entry, no letter, no
+ * standing recomputed. The result is what the correction would change now;
+ * a write between preview and correction can make the real one differ.
+ */
+export async function previewCorrection(
+  caller: Caller,
+  submissionId: number,
+  correction: PointsCorrection,
+  reason: string
+): Promise<CorrectionPreview> {
+  correctionReason(reason);
+  assertWitnessPointsWellFormed(correction);
+  try {
+    await withTransaction(async (db) => {
+      const { changes, after } = await writeCorrection(db, caller, submissionId, correction);
+      throw new PreviewRollback({ changes, after });
+    });
+  } catch (err) {
+    if (err instanceof PreviewRollback) return err.preview;
+    throw err;
+  }
+  throw new Error("Previewed correction committed");
+}
+
+/** The stated reason, trimmed, or a refusal for an empty one. */
+function correctionReason(reason: string): string {
+  const trimmed = reason.trim();
+  if (!trimmed) {
+    throw new ValidationError("A correction needs a stated reason", "reason", reason);
+  }
+  return trimmed;
+}
+
+/** The correction's writes, inside the caller's transaction: guard, settle the Species, write the points. */
+async function writeCorrection(
+  db: Database,
+  caller: Caller,
+  submissionId: number,
+  correction: PointsCorrection
+): Promise<{ before: Submission; after: Submission; changes: Change[]; species: Species; valued: boolean }> {
+  // The whole row, not the guard's columns: the changelog diffs against it
+  const stmt = await db.prepare("SELECT * FROM submissions WHERE id = ?");
+  const rows: Submission[] = await stmt.all(submissionId);
+  await stmt.finalize();
+  const before = rows[0];
+  if (!before) {
+    throw new ValidationError("Submission not found", "submissionId", submissionId);
+  }
+  const named = await speciesNamedOrBound(before, correction);
+
+  assertMoveIsLegal(moves.correctPoints, {
+    state: deriveState(before),
+    changesPending: hasChangesRequested(before),
+    actor: actorFor(caller, before),
+    actorId: caller.id,
+    isOwner: before.member_id === caller.id,
+    // The Species the correction names settles the Submission as a bound one does
+    bound: named != null || correction.new_species != null,
+  });
+
+  const approved = before.approved_on != null;
+  if (!approved && correction.first_time_species !== undefined) {
+    throw new ValidationError(
+      "First-time is decided at approval; it cannot be set before then",
+      "first_time_species",
+      correction.first_time_species
+    );
+  }
+
+  // The guard refused an unbound Submission above, so there is a Species,
+  // or one to record: created here so a refusal below rolls it back
+  const chosen = correction.new_species ? await recordSpecies(db, before, correction.new_species) : named!;
+  assertBonusesFit(programOfSpeciesType(chosen.species_type), correction);
+
+  const speciesChanges = await settleSpecies(db, before, chosen, moves.correctPoints);
+  if (correction.new_species) {
+    speciesChanges.unshift({ field: "new_species", old: null, new: canonicalName(chosen) });
+  }
+
+  const points: Record<string, unknown> = {
+    points: correction.points,
+    article_points: correction.article_points,
+    cares_species: correction.cares_species,
+    flowered: correction.flowered,
+    sexual_reproduction: correction.sexual_reproduction,
+    first_time_species: approved ? correction.first_time_species : undefined,
+  };
+  // No article bonus is stored as NULL since ADR-0003 and as 0 before it;
+  // the two mean the same, so a correction that keeps "none" changes nothing
+  const pointChanges = changesBetween({ ...before, article_points: before.article_points || null }, points);
+  const changes = [...speciesChanges, ...pointChanges];
+  if (changes.length === 0) {
+    throw new ValidationError("No changes detected", "updates", correction);
+  }
+
+  await runUpdate(
+    db,
+    `UPDATE submissions SET
+       points = ?,
+       article_points = ?,
+       cares_species = ?,
+       flowered = ?,
+       sexual_reproduction = ?,
+       first_time_species = COALESCE(?, first_time_species)
+     WHERE id = ? AND (approved_on IS NOT NULL OR witness_verification_status = 'confirmed')`,
+    [
+      correction.points,
+      correction.article_points,
+      correction.cares_species ? 1 : 0,
+      correction.flowered ? 1 : 0,
+      correction.sexual_reproduction ? 1 : 0,
+      approved && correction.first_time_species !== undefined ? (correction.first_time_species ? 1 : 0) : null,
+      submissionId,
+    ],
+    moves.correctPoints
+  );
+
+  const valued = chosen.base_points == null && (await ensurePointClass(db, chosen.group_id, correction.points));
+  const afterRows: Submission[] = await db.all("SELECT * FROM submissions WHERE id = ?", submissionId);
+  return { before, after: afterRows[0], changes, species: chosen, valued };
 }
 
 /**

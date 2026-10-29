@@ -159,6 +159,19 @@ void describe("Submission lifecycle - standing", () => {
       assert.strictEqual(after.length, before);
     });
 
+    void test("a correction with notify: false still raises the Level and posts it, but sends no letter", async () => {
+      const { ids } = await approveAnabantoids(2, 10); // 20 points: Participant
+      sent.clear();
+
+      await correctPoints(committee, ids[0], await correctionOf(ids[0], { points: 20 }), "Wrong point class", {
+        notify: false,
+      });
+
+      assert.strictEqual((await getMember(ctx.member.id))!.fish_level, "Hobbyist");
+      assert.ok((await feed()).some((e) => e.activity_type === "level_up" && e.related_id === "fish:Hobbyist"));
+      assert.deepStrictEqual(sent.kinds, []);
+    });
+
     void test("a rise congratulates the member and posts to the feed", async () => {
       await approveAnabantoids(3, 10); // 30 points: past Hobbyist at 25
 
