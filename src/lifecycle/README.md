@@ -170,6 +170,14 @@ row). After it, the feed entry is updated in place rather than announced
 again, the member's standing is recomputed, in the Program the Submission
 left too when the Species moved it, and the approval email goes again.
 
+`correctPoints` takes `{ notify }`, default true. With `notify: false` no
+letter goes: not the witness or approval email, and not a Level rise or
+Specialty Award letter from the recompute (`recomputeStanding`'s own
+`notify`). The feed and standing still follow. The web panel always
+notifies; the admin API defaults to false. `previewCorrection` runs the same
+transaction and refusals, then rolls back, returning the changes and the row
+as it would be; nothing is written and nobody is told.
+
 Once the Witness is confirmed a plain `bindSpecies` or
 `adoptSpeciesClassification` is refused as the wrong moment: both are legal
 in pendingWitness only. The Species then changes only together with the

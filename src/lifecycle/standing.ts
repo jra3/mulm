@@ -25,19 +25,27 @@ import { notifier } from "./consequences";
  *
  * Never throws: a member's standing failing to recompute must not undo an
  * approval that has already been recorded.
+ *
+ * `notify: false` keeps the feed entries but sends no letter (a correction
+ * made through the admin API without notifying).
  */
-export async function recomputeStanding(memberId: number, program: Program): Promise<void> {
+export async function recomputeStanding(
+  memberId: number,
+  program: Program,
+  options: { notify?: boolean } = {}
+): Promise<void> {
+  const notify = options.notify ?? true;
   const member = await getMember(memberId);
   if (!member) {
     logger.error("Cannot recompute standing: member not found", { memberId });
     return;
   }
 
-  await recomputeLevel(member, program);
-  await recomputeAwards(member);
+  await recomputeLevel(member, program, notify);
+  await recomputeAwards(member, notify);
 }
 
-async function recomputeLevel(member: MemberRecord, program: Program): Promise<void> {
+async function recomputeLevel(member: MemberRecord, program: Program, notify: boolean): Promise<void> {
   try {
     // The Level module owns the ladder; it is told not to send, because who
     // hears about a change is this module's business.
@@ -68,16 +76,17 @@ async function recomputeLevel(member: MemberRecord, program: Program): Promise<v
       level: result.newLevel,
       total_points: totalPoints,
     });
-    await notifier().levelUp(member, program, result.newLevel, totalPoints);
+    if (notify) await notifier().levelUp(member, program, result.newLevel, totalPoints);
   } catch (error) {
     logger.error("Failed to recompute level", error);
   }
 }
 
-async function recomputeAwards(member: MemberRecord): Promise<void> {
+async function recomputeAwards(member: MemberRecord, notify: boolean): Promise<void> {
   try {
     // Granting an Award posts its own feed entry, and revoking one removes it.
     const { granted } = await recomputeSpecialtyAwards(member.id);
+    if (!notify) return;
     for (const awardName of granted) {
       await notifier().specialtyAward(member, awardName);
     }

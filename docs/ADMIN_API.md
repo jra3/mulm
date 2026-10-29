@@ -15,6 +15,7 @@ A JSON API under `/api/admin` for scripts that act as an admin (#595). It authen
 | GET | `/api/admin/whoami` | `{ member: { id, display_name }, token: { id, name, created_at, expires_at } }` |
 | * | `/api/admin/members…` | See [Members](#members) |
 | * | `/api/admin/species…` | See [Species](#species) |
+| * | `/api/admin/submissions…` | See [Submissions](#submissions) |
 
 ## Members
 
@@ -290,3 +291,63 @@ IUCN sometimes knows a Species by another name; those suggestions wait here for 
 curl -s -H "$AUTH" "$BAP/species/canonical-recommendations?status=pending"
 curl -s -H "$AUTH" -X POST "$BAP/species/canonical-recommendations/7/accept"
 ```
+
+## Submissions
+
+Find Submissions, and correct one's Species and points after its Witness. Code: `src/routes/api/admin/submissions.ts` over `src/lifecycle` (`correctPoints`, `previewCorrection`).
+
+| Method | Path | Body or query | Returns |
+|---|---|---|---|
+| GET | `/api/admin/submissions` | `unbound`, `state`, `member_id`, `limit` (1–500, 100), `offset` (0) | `200 { total_count, submissions: [{ id, member_id, member_name, state, species_common_name, species_latin_name, species_id, species_type, species_class, program, points, submitted_on, witnessed_on, approved_on }] }`, newest first |
+| GET | `/api/admin/submissions/:id` | | `200 { submission }`: the list fields plus `species_canonical_name` (null when unbound), `article_points`, `cares_species`, `flowered`, `sexual_reproduction`, `first_time_species`, `changes_requested_on` |
+| POST | `/api/admin/submissions/:id/correction` | see below | `200 { preview, submission_id, changes: [{ field, old, new }], notified, submission }` |
+
+List filters: `unbound=true` is `species_id IS NULL`, `unbound=false` the bound ones. `state` is one of `draft`, `pendingWitness`, `waitingPeriod`, `inApprovalQueue`, `approved`, derived the way the lifecycle derives it. Unknown query parameters are `400`.
+
+### POST /submissions/:id/correction
+
+The web correction form's move (`lifecycle.correctPoints`) over the API. It settles the Submission on a Species and writes the points in one transaction, with one changelog entry naming the token's admin and the reason. On an approved Submission it refreshes the feed entry and recomputes the member's standing, in the Program it left too if the Species moved it. It is legal in the waiting period, the approval queue and Approved, never on your own Submission.
+
+Body:
+
+- `group_id` (required): the Species to settle on. Recording a new Species isn't supported here; create it with `POST /api/admin/species` first.
+- `reason` (required, non-empty): goes on the changelog.
+- Optional points fields: `points` (5, 10, 15, 20), `article_points` (`null`, 5, 10), `cares_species`, `flowered`, `sexual_reproduction`, and on an approved Submission `first_time_species`. **Any field left out keeps the Submission's current value**, so a pure bind sends only `group_id` and `reason`.
+- `notify` (default **false**): whether the member is written to. The web form always resends the witness letter (before approval) or the approval letter (after), and any Level rise or Specialty Award letter the recompute earns. Corrections through the API are mostly the committee fixing its own record, such as binding a Species the member already named, so by default nobody is emailed. The feed entry and standing update either way. Send `true` to email as the web form does.
+- `preview` (default false): runs the same checks and the same writes in a transaction, then rolls it back. You get `changes` and the `submission` as it would be; nothing is written, no changelog entry, no email, `notified: false`.
+
+Errors: `400` for a bad body, a missing reason, a `group_id` that doesn't exist, a bonus the Species' Program can't carry (a fish Submission with `flowered: true`), `first_time_species` before approval, or a correction that changes nothing. `404` for an unknown Submission. `409` when the lifecycle refuses the move: the Submission is before its Witness, or it is your own.
+
+Binding the Species can change the Submission's `species_type`, `species_class` and `program` to the Species'. Those show in `changes`. If the new Program can't carry a bonus the row has, send that bonus as `false` in the same call.
+
+### Binding an approved Submission that has no Species
+
+```bash
+TOKEN=$(cat ~/.config/basny/admin-token)
+API=https://bap.basny.org/api/admin
+
+# 1. Find them
+curl -s -H "Authorization: Bearer $TOKEN" "$API/submissions?unbound=true&state=approved"
+
+# 2. Find the Species the member named
+curl -s -H "Authorization: Bearer $TOKEN" "$API/species?q=reticulata"
+
+# 3. Preview the bind
+curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"group_id": 123, "reason": "Bind to the catalogue Species", "preview": true}' \
+  "$API/submissions/61/correction"
+
+# 4. Bind it
+curl -s -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"group_id": 123, "reason": "Bind to the catalogue Species"}' \
+  "$API/submissions/61/correction"
+```
+
+```json
+{ "preview": false, "submission_id": 61,
+  "changes": [ { "field": "species", "old": null, "new": "Poecilia reticulata" } ],
+  "notified": false,
+  "submission": { "id": 61, "species_id": 123, "species_canonical_name": "Poecilia reticulata", "points": 10, "...": "..." } }
+```
+
+Points are kept. If the Species' class differs from what the member filed, `changes` also lists `species_class` (and `species_type`, `program` where they differ).
